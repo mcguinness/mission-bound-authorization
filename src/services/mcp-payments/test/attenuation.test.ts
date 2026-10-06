@@ -127,7 +127,7 @@ async function dpopProof(
 
 beforeAll(async () => {
   asKeys = await generateKeyPair("ES256", { extractable: true });
-  asPub = { ...(await exportJWK(asKeys.publicKey)), kid: "as-token", alg: "ES256" };
+  asPub = { ...(await exportJWK(asKeys.publicKey)), kid: "as-attenuation", alg: "ES256" };
   holderKeys = await generateKeyPair("ES256", { extractable: true });
   delegateKeys = await generateKeyPair("ES256", { extractable: true });
   const holderJkt = await calculateJwkThumbprint(await exportJWK(holderKeys.publicKey));
@@ -178,7 +178,7 @@ beforeAll(async () => {
 
   // Root over both tools; child narrows to invoice.read only (keeping the
   // read tool's constraints so it stays capability-monotone).
-  const derived = await deriveAttenuationRoot(kernel, asKeys.privateKey, "as-token", {
+  const derived = await deriveAttenuationRoot(kernel, asKeys.privateKey, "as-attenuation", {
     missionId: mission.id,
     aud: CANONICAL_RESOURCE,
     clientId: "ap-agent",
@@ -203,6 +203,7 @@ beforeAll(async () => {
     payments: new PaymentsStore(),
     loadView,
     jwks: { keys: [asPub] },
+    keyRoles: { accessToken: [], attenuationRoot: ["as-attenuation"], transactionToken: [] },
     issuer: AS_ISS,
   });
   facts = await server.validateAttenuationChain(chain, await dpopProof(CANONICAL_RESOURCE, child), CANONICAL_RESOURCE, "POST");

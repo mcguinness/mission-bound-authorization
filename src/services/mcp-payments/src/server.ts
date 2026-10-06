@@ -22,7 +22,6 @@ import {
 } from "@mission/core";
 import {
   calculateJwkThumbprint,
-  createLocalJWKSet,
   decodeProtectedHeader,
   type JWK,
   type JWTPayload,
@@ -63,6 +62,7 @@ import {
 } from "./pep.js";
 import { type DpopPresentation, verifyDpopProof } from "./dpop.js";
 import { readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
+import { type KeyResolver, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
 import {
   openTxnStores,
   type TxnConsumeOutcome,
@@ -295,6 +295,14 @@ export interface McpServerDeps {
   payments: PaymentsStore;
   loadView: (ref: MissionReference) => LoadedView | undefined;
   jwks: { keys: Record<string, unknown>[] };
+  /**
+   * @spec runtime-oauth#token-validation (#825, D312) — the `kid`s trusted
+   * for each token class, configured locally. Access tokens and attenuation
+   * roots resolve from `jwks`, transaction tokens from `txnTokenJwks`, each
+   * only among its own role's keys. Never defaulted: a shared JWKS and
+   * distinct `typ` strings do not enforce key purpose.
+   */
+  keyRoles: KeyRoles;
   issuer: string;
   /** Transaction-assurance tier (M5); omit for a core-tier-only server. */
   transaction?: { engine: TransactionEngine; connectors: Connectors; evidence: EvidenceStore };
@@ -377,8 +385,12 @@ export interface TransactionToolResult {
 
 export class McpPaymentsServer {
   get capabilityCatalog() { return this.deps.pep.capabilityCatalog; }
-  private readonly resolveKey;
-  private readonly resolveTxnKey?: ReturnType<typeof createLocalJWKSet>;
+  /** Keys pinned to the access-token role (@spec runtime-oauth#token-validation, D312). */
+  private readonly resolveAccessKey: KeyResolver;
+  /** Keys pinned to the attenuation-root role. */
+  private readonly resolveRootKey: KeyResolver;
+  /** Keys pinned to the transaction-token role; absent when the txn tier is off. */
+  private readonly resolveTxnKey?: KeyResolver;
   /** @spec txn-authorization#offline-verification — the retained pending operations. */
   private readonly txnPending: TxnPendingStore;
   /** @spec txn-authorization#offline-verification — the `txn` consumption domain. */
@@ -387,8 +399,13 @@ export class McpPaymentsServer {
   private readonly dpopReplay: DpopProofReplay;
   constructor(private readonly deps: McpServerDeps) {
     if (deps.enforcementScopeStatement) deps.enforcementScopeStatement = loadRuntimePosture(deps.enforcementScopeStatement);
-    this.resolveKey = createLocalJWKSet(deps.jwks as never);
-    if (deps.txnTokenJwks) this.resolveTxnKey = createLocalJWKSet(deps.txnTokenJwks as never);
+    const pinned = roleKeyResolvers(deps.keyRoles, {
+      jwks: deps.jwks,
+      txnTokenJwks: deps.txnTokenJwks,
+    });
+    this.resolveAccessKey = pinned.accessToken;
+    this.resolveRootKey = pinned.attenuationRoot;
+    if (deps.txnTokenJwks) this.resolveTxnKey = pinned.transactionToken;
     const stores = deps.txnStores ?? openTxnStores();
     this.txnPending = stores.pending;
     this.txnConsumption = stores.consumption;
@@ -482,7 +499,7 @@ export class McpPaymentsServer {
     htm: string,
   ): Promise<{ payload: JWTPayload; typ: unknown; cnfJkt: string }> {
     refuseTransactionToken(accessToken);
-    const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveKey, {
+    const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveAccessKey, {
       issuer: this.deps.issuer,
       audience: CANONICAL_RESOURCE,
     });
@@ -639,7 +656,7 @@ export class McpPaymentsServer {
    */
   async validateMissionToken(accessToken: string): Promise<MissionBoundTokenFacts> {
     refuseTransactionToken(accessToken);
-    const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveKey, {
+    const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveAccessKey, {
       issuer: this.deps.issuer,
       audience: CANONICAL_RESOURCE,
     });
@@ -842,10 +859,11 @@ export class McpPaymentsServer {
   ): Promise<MissionBoundTokenFacts> {
     if (chain.length === 0) throw new Error("empty attenuation chain");
 
-    // Root: under the AS JWKS, audience-scoped, the `aat+jwt` profile with its
+    // Root: under the AS keys pinned to the attenuation-root role, audience-
+    // scoped, the `aat+jwt` profile with its
     // typed claim set (@spec runtime-oauth#token-validation, #825), and
     // iss == mission.issuer.
-    const { payload: rootPayload, protectedHeader: rootHeader } = await jwtVerify(chain[0] as string, this.resolveKey, {
+    const { payload: rootPayload, protectedHeader: rootHeader } = await jwtVerify(chain[0] as string, this.resolveRootKey, {
       issuer: this.deps.issuer,
       audience: CANONICAL_RESOURCE,
       algorithms: ["ES256"],

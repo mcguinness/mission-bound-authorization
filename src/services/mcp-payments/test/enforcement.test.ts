@@ -127,6 +127,7 @@ d("M4 core enforcement tier", () => {
       payments,
       loadView: loadViewFor(VIEW),
       jwks: { keys: [] },
+      keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
       // @spec runtime#idempotency (#918): the keyed schedule writes reserve here.
       writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
@@ -306,6 +307,7 @@ d("M4 core enforcement tier", () => {
       payments,
       loadView: loadViewFor(containedView),
       jwks: { keys: [] },
+      keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
     });
     const res = await containedServer.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);

@@ -103,6 +103,7 @@ function buildServer(missionView: MissionView, fga: Fga) {
     payments,
     loadView,
     jwks: { keys: [] },
+    keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
   });
   return { server, evidence };
@@ -138,6 +139,7 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
       payments,
       loadView,
       jwks: { keys: [] },
+      keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
     });
 
@@ -190,6 +192,7 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
       payments,
       loadView,
       jwks: { keys: [] },
+      keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
     });
 
@@ -259,6 +262,7 @@ describe("buildEvidenceKeyResolver: emitter + audience binding (#739 review poin
       payments,
       loadView,
       jwks: { keys: [] },
+      keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
     });
     const res = await server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);

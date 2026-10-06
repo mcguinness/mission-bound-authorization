@@ -134,6 +134,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
           ? { view: view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
           : undefined,
       jwks: { keys: [] },
+      keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
     });
     return { server, evidence };
@@ -305,7 +306,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       loadView,
       instanceEpoch: "epoch-1",
     });
-    const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: ISSUER });
+    const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] }, issuer: ISSUER });
 
     const res = await server.callReadTool("list_invoices", {}, TOKEN, () => {
       // Mid-flight, exactly in the decision->execute window: the Mission's
@@ -379,7 +380,7 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
       loadView,
       instanceEpoch: "epoch-1",
     });
-    const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: ISSUER });
+    const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] }, issuer: ISSUER });
     return { server };
   }
 
