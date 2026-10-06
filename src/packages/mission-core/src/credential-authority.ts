@@ -259,6 +259,55 @@ export interface CredentialTarget {
 /** The facts about an action an enforcement point establishes by itself. */
 export type CredentialFacts = Omit<CredentialTarget, "approvalEnforced">;
 
+/** Whether an entry names the action's resource and action, before any constraint. */
+export function entryMatchesAction(
+  entry: CredentialAuthorityEntry,
+  facts: Pick<CredentialFacts, "resource" | "action">,
+): boolean {
+  return entry.resource === facts.resource && entry.actions.includes(facts.action);
+}
+
+/** The constraint gates an evaluation of one entry reached, and whether each held. */
+export interface CredentialConstraintTrace {
+  satisfied: boolean;
+  /** The keys whose gate ran, in order; a gate after a failed one is never reached. */
+  evaluated: ("vendors" | "max_amount")[];
+}
+
+/**
+ * Evaluate an entry's establishable constraints gate by gate, `vendors` then
+ * `max_amount`, stopping at the first that fails. `evaluated` is what Decision
+ * Evidence may record for the entry: a check never reached is never listed
+ * (@spec runtime-evidence#decision-evidence-object).
+ */
+export function credentialConstraintGates(
+  entry: CredentialAuthorityEntry,
+  facts: Pick<CredentialFacts, "vendorIds" | "amount">,
+): CredentialConstraintTrace {
+  const c = entry.constraints;
+  const evaluated: CredentialConstraintTrace["evaluated"] = [];
+  if (c?.vendors !== undefined) {
+    evaluated.push("vendors");
+    const vendors = c.vendors;
+    if (facts.vendorIds.length === 0 || !facts.vendorIds.every((v) => vendors.includes(v))) {
+      return { satisfied: false, evaluated };
+    }
+  }
+  if (c?.max_amount !== undefined) {
+    evaluated.push("max_amount");
+    const amt = facts.amount;
+    if (
+      !amt ||
+      amt.currency !== c.max_amount.currency ||
+      !isValidAmount(amt.amount) ||
+      compareAmounts(amt.amount, c.max_amount.amount) > 0
+    ) {
+      return { satisfied: false, evaluated };
+    }
+  }
+  return { satisfied: true, evaluated };
+}
+
 /**
  * Whether an entry covers the action on the facts an enforcement point
  * establishes by itself: resource, action, every vendor reached and the
@@ -268,19 +317,7 @@ export type CredentialFacts = Omit<CredentialTarget, "approvalEnforced">;
  * rest (@spec runtime#input-authority, D312).
  */
 export function entryCoversFacts(entry: CredentialAuthorityEntry, facts: CredentialFacts): boolean {
-  if (entry.resource !== facts.resource || !entry.actions.includes(facts.action)) return false;
-  const c = entry.constraints;
-  if (!c) return true;
-  if (c.vendors !== undefined) {
-    if (facts.vendorIds.length === 0) return false;
-    if (!facts.vendorIds.every((v) => c.vendors?.includes(v))) return false;
-  }
-  if (c.max_amount !== undefined) {
-    const amt = facts.amount;
-    if (!amt || amt.currency !== c.max_amount.currency || !isValidAmount(amt.amount)) return false;
-    if (compareAmounts(amt.amount, c.max_amount.amount) > 0) return false;
-  }
-  return true;
+  return entryMatchesAction(entry, facts) && credentialConstraintGates(entry, facts).satisfied;
 }
 
 /**

@@ -1242,6 +1242,15 @@ export class Pep {
     let targetVendorId: string | undefined;
     if (mapping.targetsVendor && args.vendor_id !== undefined) {
       targetVendorId = this.deps.payments.getVendor(String(args.vendor_id))?.id;
+      // @spec authzen#context-credential, authzen#runtime-denial-classification
+      // (D324): the target is the vendor the store resolved, never the
+      // argument, and it rides the request so the credential bound and the
+      // Mission's vendor constraint both evaluate the target this PEP
+      // established. A vendor read is a read of that vendor object; one the
+      // store does not hold keeps the server resource and names no vendor.
+      if (targetVendorId !== undefined) {
+        resourceObj = { type: "vendor", id: targetVendorId, properties: { vendor_id: targetVendorId } };
+      }
     }
     if (mapping.needsInvoice) {
       const invoiceId = String(args.invoice_id ?? "");

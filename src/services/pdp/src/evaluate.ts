@@ -20,7 +20,8 @@ import {
   computeAnchor,
   conditionsNoBroader,
   type CredentialAuthorityEntry,
-  coveringCredentialEntries,
+  credentialConstraintGates,
+  entryMatchesAction,
   isSubsetEntry,
   parseCredentialAuthority,
   type EntitlementObservation,
@@ -1189,9 +1190,14 @@ async function evaluateInner(
   //     within the credential's own authority, matched independently of the
   //     Mission entry above and never substituted by it. One credential entry
   //     must cover the action whole, on the same facts the Mission bound
-  //     reads: resource, action, every vendor reached, and the amount. Its
-  //     approval requirement joins step 8's. A failure is `out_of_authority`
-  //     (no new wire value), recorded with the credential entry's constraint keys.
+  //     reads: resource, action, every vendor reached, and the amount. A
+  //     failure is classified as the Mission bound's is (@spec authzen#
+  //     runtime-denial-classification, #801; D324): no entry naming the
+  //     resource and action is `out_of_authority`; entries that name them but
+  //     none of which satisfies its vendor and amount constraints is
+  //     `parameter_violation`. Each gate records its key where it runs, so a
+  //     check never reached is never listed. Its approval requirement joins
+  //     step 8's.
   //
   //     Its discharge condition is read through the Mission entries it can
   //     derive from, because discharge state is kept per Mission entry digest
@@ -1237,22 +1243,29 @@ async function evaluateInner(
     }
     return { state: sources > 0 ? "live" : "unestablished" };
   };
-  let dischargedSource: string | undefined;
-  const credentialCandidates = coveringCredentialEntries(credentialAuthority, {
+  const credentialFacts = {
     resource: audience ?? "",
     action: req.action.name,
     vendorIds: credentialVendorIds,
     ...(req.context.amount ? { amount: req.context.amount } : {}),
-  }).filter((c) => {
+  };
+  const credentialMatches = credentialAuthority.filter((c) => entryMatchesAction(c, credentialFacts));
+  if (credentialMatches.length === 0) return deny("out_of_authority");
+  const credentialSatisfying: CredentialAuthorityEntry[] = [];
+  for (const c of credentialMatches) {
+    contributions.add(c.type);
+    const gates = credentialConstraintGates(c, credentialFacts);
+    for (const key of gates.evaluated) contributions.add(key);
+    if (gates.satisfied) credentialSatisfying.push(c);
+  }
+  if (credentialSatisfying.length === 0) return deny("parameter_violation");
+  let dischargedSource: string | undefined;
+  const credentialCandidates = credentialSatisfying.filter((c) => {
+    if (c.constraints?.terminal_when?.length) contributions.add("terminal_when");
     const discharge = credentialDischarge(c);
     if (discharge.state === "discharged") dischargedSource ??= discharge.digest;
     return discharge.state === "live";
   });
-  for (const c of credentialAuthority) {
-    if (c.resource !== audience || !c.actions.includes(req.action.name)) continue;
-    contributions.add(c.type);
-    for (const key of Object.keys(c.constraints ?? {})) contributions.add(key);
-  }
   if (credentialCandidates.length === 0) {
     if (dischargedSource !== undefined) {
       return {
@@ -1409,7 +1422,12 @@ async function evaluateInner(
   // delegated leaf carrying `requires_action_approval: true` is gated even
   // where deployment policy alone would not gate the action.
   const entryRequiresApproval = entry.constraints?.requires_action_approval;
-  if (entryRequiresApproval !== undefined) contributions.add("requires_action_approval");
+  if (
+    entryRequiresApproval !== undefined ||
+    credentialCandidates.some((c) => c.constraints?.requires_action_approval !== undefined)
+  ) {
+    contributions.add("requires_action_approval");
+  }
   if (
     opts.requiresActionApproval?.(req.action.name, actionClass) ||
     entryRequiresApproval === true ||
