@@ -998,6 +998,14 @@ Mission-bound token through the assembled path (#1105).
 
 ## 6. Unsupported and residual
 
+**Required, not met (runtime overlay).** These block the AS-native payments
+target's acceptance. Neither is unsupported, and neither can become an
+exclusion.
+
+- The credential authority at the PDP: carriage, PDP evaluation and PDP-side
+  witnesses, and key-role separation (#825 PR 2). §5.1.
+- Independently administered Resource policy (#828). §5.2.
+
 **Unsupported.** Each is refused or visibly absent; none is partial support.
 
 1. Creating the Mission Record atomically with issuance of the authorization
@@ -1013,6 +1021,16 @@ Mission-bound token through the assembled path (#1105).
    and the grant index do not survive a restart, so every refresh after a
    restart is refused. A file-backed kernel alone establishes no durability
    for them. §4.5.
+
+Runtime overlay:
+
+7. A state source for a PEP or PDP separated from the AS (#1101). This target
+   uses the declared local read (D293). §5.3.
+8. A permit-lifetime or idempotency control for `hold_transfer` (#1080). §5.5.
+9. Running the declared outcome reconciliation, its alert, and recovery of a
+   prior process's claims (#1103). §5.7.
+10. An assembled deployment of exactly this topology: the shipped stack also
+    mounts the MAS join route on the payments resource (#1105).
 
 **Residual.**
 
@@ -1040,6 +1058,13 @@ Mission-bound token through the assembled path (#1105).
   own expiry, with no `mission_error` (§3.5).
 - The JWT-only `plain-rs` accepts a token until `exp` plus its clock
   tolerance (§3.6).
+- Runtime overlay: an admitted high-consequence action runs to completion
+  inside its permit and lease after a revocation (§5.3); the operation key
+  omits `idempotency_key`, so a repeat for an unchanged invoice is refused
+  (§5.5); a failed `completed` write after a connector commit leaves the
+  effect without Execution Evidence (§5.6; #1104); a successful call outside
+  the transaction tier has no Execution Evidence (§5.6); the Operation
+  Profile's intake rules are not implemented (§5.4; #1106).
 
 **No test yet.**
 
@@ -1056,6 +1081,13 @@ Mission-bound token through the assembled path (#1105).
 - Introspection: a signed token with no issuance record (§3.8).
 - Replay: authorization-code reuse (§4.4).
 - Recovery: an assembled AS restarted on a file-backed kernel (§4.5).
+- Runtime overlay: a Mission the loader does not find on the Mission-bound
+  path, and the run-to-completion interval (§5.3); the PDP emitter throwing,
+  a Refusal Record emission throwing, both `suppressExecution` gaps and the
+  failed `completed` write, each distinguishing a refusal before any effect
+  from missing evidence after one (§5.6; #1104); reconciliation across a
+  restart (§5.7; #1103); an AS-issued token through the assembled path
+  (#1105).
 
 ## 7. Provider-specific notes (oidc-provider 9.10)
 
