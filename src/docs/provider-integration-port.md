@@ -821,7 +821,7 @@ Mission-bound token through the assembled path (#1105).
 | Credential validation | Yes. Credential authority at the PDP is not met: acceptance gate (#825) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport and PEP-level (§5.1) | The PDP neither receives nor evaluates the credential authority (#825 PR 2); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
 | Independent Resource policy | Yes, not met: acceptance gate (#828) | The PDP's OpenFGA check and action-to-relation map (§5.2) | In the decision | None | Nothing durable; the tuple is injected per check | PDP-level, [FGA] (§5.2) | The shipped model cannot deny independently of Mission authority (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
-| Target and parameter binding | Yes | `buildEffectiveParams`, `parameterDigest`; `verifyPermitAtUse` (§5.4) | Digest at the decision; re-derived and compared at admission and before release | None | The payments store is reseeded per boot | Server-level, [FGA] (§5.4) | The Operation Profile's intake rules are not implemented (#1106) |
+| Target and parameter binding | Yes | `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read and write paths write nothing before the effect; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level, [FGA] (§5.4) | A single-record read re-derives no digest at use; the Operation Profile's intake rules are not implemented (#1106) (§5.4) |
 | Permit redemption | Transaction tier and keyed writes | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction | None; settlement is awaited | Claim and reservation files survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | `hold_transfer` has no permit control (#1080); one redemption per operation key per process (§5.5) |
 | Evidence | Yes | The PDP's emitter; `recordRefusal`, `suppressExecution`; the executor's `completed` write (§5.6) | Synchronous in the request; Decision Evidence is verified before release | None | Retention is in memory and lost at restart | PEP-level (§5.6) | A failed `completed` write after a connector commit is silent (#1104); no Execution Evidence on a successful call outside the transaction tier (§5.6) |
 | Recovery and reconciliation | Declared by the Enforcement Scope Statement | `reconcileClaims`, `reconcile`, the reservation `sweep()` (§5.7) | None runs | Reconciliation would be the overlay's only asynchronous work | A prior process's claim closes `indeterminate` and its key stays refused (§5.7) | PEP-level restart witness (§5.7); the PDP crash boundary (§5.5) | No production caller and no alert (#1103) |
@@ -926,22 +926,54 @@ Mission-bound token through the assembled path (#1105).
 - **Hook.** `buildEffectiveParams`
   (`services/mcp-payments/src/effective-params.ts:27-44`) builds the effective
   parameters from the payments store, never from tool arguments, and
-  `parameterDigest` (`:83`) commits them into the decision request.
-  `verifyPermitAtUse` (`pep.ts:1943`) re-derives the parameters and compares
-  the digest and the phase at admission and again before release. A mismatch
-  is suppressed `parameter_mismatch` with no effect. A compound action's phase
-  rides `context.action_phase` and is checked at every use.
-- **Boundary.** In request. Nothing is written before release.
+  `parameterDigest` (`:83`) commits them into the decision request. Three
+  separate PEP checks run at use:
+  - `verifyPermitAtUse` (`pep.ts:1943`) runs the permit-use table
+    (`pep.ts:416-456`): the permit's bound phase against the crossing's phase
+    (`phase_mismatch`), then `valid_until` (`permit_expired`). It compares no
+    digest.
+  - `reverifyCapability` (`pep.ts:2064`) re-checks the capability snapshot
+    (`capability_source_unresolvable`).
+  - `reverify` (`pep.ts:1975`, a single-record operation) and `reverifyList`
+    (`pep.ts:2015`, a list read) re-derive the effective parameters and
+    compare the digest (`parameter_mismatch`; a target that no longer resolves
+    is also `parameter_mismatch`).
+- **Order and boundary, by dispatch path** (`dispatchPathFor`, called from
+  both transports):
+  - Read (`callReadTool`, `server.ts:952`): the permit-use table, the
+    capability check, `reverifyList` for a list read, the permit-use table
+    again, then the read. A single-record read re-derives no digest at use.
+    Nothing is written.
+  - Write (`callWriteTool`, `server.ts:1041`): the permit-use table, the
+    capability check, `reverify`, the permit-use table again, then the
+    effect. For a keyed reversible write, the effect is the reservation
+    transaction (§5.5). Nothing is written before it.
+  - Transaction tier (`callTransactionTool`, `server.ts:1298`): the
+    permit-use table at admission (`:1366`); single-use redemption (`:1408`),
+    which writes the engine's operation state; then the capability check
+    (`:1439`), the execution lease (`:1457`), `reverify` (`:1463`) and the
+    permit-use table again (`:1475`); then the `txn` consumption, where a
+    transaction token is presented, and the connector commit (`:1528-1539`).
+    A refusal after redemption marks the operation `abandoned` and records
+    suppressed Execution Evidence, which settles the PDP claim `failed`
+    because the attempt is redeemed (`pep.ts:1871-1874`). The permit is spent;
+    a retry needs a fresh decision (code reading).
 - **Asynchronous work.** None.
 - **Crash and recovery.** The payments store is in memory and reseeded per
-  boot.
+  boot. A crash after redemption and before the connector commit leaves a
+  `permit_issued` claim, which closes `indeterminate` (§5.7).
 - **Tests (server-level):**
-  - [FGA] `M4 core enforcement tier > scenario 3: TOCTOU -- invoice mutated between decision and execute -> parameter_mismatch refusal`
-  - `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting prepare's permit, zero connector effects`
-- **Residual.** The payments Operation Profile promises NFC normalization and
-  refusal of unknown or authoritative members at intake; neither is
-  implemented, and its schema list differs from the served catalog (#1106,
-  pending a ruling).
+  - [FGA] `M4 core enforcement tier > scenario 3: TOCTOU -- invoice mutated between decision and execute -> parameter_mismatch refusal` (write path, digest)
+  - [FGA] `M5 transaction-assurance tier > TOCTOU in the decision->commit window refuses before the connector commits` (transaction tier, digest after redemption, zero connector effects)
+  - `GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > a Mission-authority change landing in the decision->execute window is caught by reverification, never executed on the stale normalized scope (TOCTOU)` (list read)
+  - `compound-action phases (@spec runtime#compound-actions) > compares the bound phase before any effect on all three dispatch paths` (phase)
+  - `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting prepare's permit, zero connector effects` (phase)
+- **Residual.** A single-record read re-derives no digest at use; its fresh
+  decision is the binding. A transaction-tier refusal after redemption spends
+  the permit, and no test asserts the spent state. The payments Operation
+  Profile promises NFC normalization and refusal of unknown or authoritative
+  members at intake; neither is implemented, and its schema list differs from
+  the served catalog (#1106, pending a ruling).
 
 ### 5.5 Permit redemption
 
@@ -1088,8 +1120,10 @@ Runtime overlay:
   tolerance (§3.6).
 - Runtime overlay: the in-process mediated channel verifies no proof of
   possession, so high-consequence claims hold on the HTTP entry point only
-  (§5.1); an admitted high-consequence action runs to completion inside its
-  permit and lease after a revocation (§5.3); the operation key
+  (§5.1); a single-record read re-derives no digest at use, and a
+  transaction-tier refusal after redemption spends the permit (§5.4); an
+  admitted high-consequence action runs to completion inside its permit and
+  lease after a revocation (§5.3); the operation key
   omits `idempotency_key`, so a repeat for an unchanged invoice is refused
   (§5.5); a failed `completed` write after a connector commit leaves the
   effect without Execution Evidence (§5.6; #1104); a successful call outside
