@@ -430,8 +430,8 @@ replenish the predecessor's allowance of counted derivations:
   AS-policy ceiling or `requested_derivation_limit` narrows it
   further, and omitting or raising the request neither removes nor
   raises it. A predecessor without a `derivation_limit` has no finite
-  limit to pass on, and the successor's is established as that
-  document's Effective Limit section states.
+  limit to pass on, and the successor's is established as Mission
+  Derivation Limits' Effective Limit section states.
 - The Mission Issuer MUST read the predecessor's committed count and
   transfer it in the atomic step above that activates the successor,
   supersedes the predecessor, and commits the creation reservation,
@@ -442,8 +442,9 @@ replenish the predecessor's allowance of counted derivations:
   derivation, charged to the successor in that same atomic step and
   never again to the predecessor. Where the carried-forward count plus
   that derivation would exceed the successor's `derivation_limit`,
-  the Mission Issuer MUST refuse the drawdown as that document's
-  Enforcement at Issuance section refuses a derivation (`invalid_grant`,
+  the Mission Issuer MUST refuse the drawdown as Mission Derivation
+  Limits' Enforcement at Issuance section refuses a derivation
+  (`invalid_grant`,
   with its `mission_error` diagnostic), creating no successor,
   superseding no predecessor, and counting nothing.
 - An exact creation retry MUST return the recorded result without
@@ -847,8 +848,9 @@ convention, none of which require registration.
   adopted, a policy drawdown carries its predecessor's committed
   derivation count and limit forward (a stricter ceiling can narrow
   the limit; nothing raises or resets it), counts its successor access
-  token once in the atomic creation step, and is refused under that
-  document's enforcement rule, creating and superseding nothing, when
+  token once in the atomic creation step, and is refused under Mission
+  Derivation Limits' enforcement rule, creating and superseding
+  nothing, when
   the limit would be exceeded (#1079).
 - Audit Linkage and In-Ceiling Expansion name the drawdown policy as
   the approval event's decision mechanism, not its approver; the

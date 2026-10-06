@@ -25515,7 +25515,7 @@
    "id": "progressive.drawdown-derivation.exhaustion-refuses",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Where the carried-forward count plus that derivation would exceed the successor's `derivation_limit`, the Mission Issuer MUST refuse the drawdown as that document's Enforcement at Issuance section refuses a derivation (`invalid_grant`, with its `mission_error` diagnostic), creating no successor, superseding no predecessor, and counting nothing",
+   "text": "Where the carried-forward count plus that derivation would exceed the successor's `derivation_limit`, the Mission Issuer MUST refuse the drawdown as Mission Derivation Limits' Enforcement at Issuance section refuses a derivation (`invalid_grant`, with its `mission_error` diagnostic), creating no successor, superseding no predecessor, and counting nothing",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
