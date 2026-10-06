@@ -404,7 +404,7 @@ classes whose consequence needs one.
 
 ## Implementation Map {#implementation-map}
 
-The core establishes six properties; {{conformance}} states the
+This document establishes six properties; {{conformance}} states the
 requirements that realize them:
 
 1. The task is disclosed: the approval rendering shows the Intent's
@@ -4070,8 +4070,8 @@ that supports none of them is still conformant:
   Authorization Server in another trust domain. An implementation
   claiming this capability preserves, across the hop:
 
-  1. the Mission reference (`mission.id`, `mission.issuer`,
-     `authority_hash`), carried intact;
+  1. the Mission reference (`mission.id`, `mission.issuer`) and the
+     `authority_hash` the projection carries, intact;
   2. authority that only narrows ({{subset}});
   3. projection performed only by, or under the authorization of, the
      Mission `issuer`, gated on the Mission's `active` state
@@ -5903,8 +5903,8 @@ Cross-Domain:
 : Exercises Lifecycle-Gated Authorization, Structured Authority,
   Monotonic Derivation, and Credential-Bound. Carries these four
   always-supplied guarantees across the domain hop: the Mission
-  reference and `authority_hash` intact, authority that only
-  narrows, and projection gated on active state, while adding an
+  reference and the `authority_hash` the projection carries,
+  intact, authority that only narrows, and projection gated on active state, while adding an
   interoperable projection surface the guarantees alone do not
   provide. It does not become Portable Evidence by crossing a
   domain: that claim activates only when an Evidence, Mandate, or
@@ -5915,6 +5915,13 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Implementation Map and Mapping Assessment, Cross-Domain: the
+  Mission reference is `mission.id` and `mission.issuer`;
+  `authority_hash` is the value the projection carries, not part of
+  the reference (#1086). The Implementation Map says "this
+  document" rather than "the core" (#1089). No requirement
+  changed.
 
 - Mission Approval: the approval event is the atomic, adjudicated
   transition that creates a Mission under its approval basis, for
