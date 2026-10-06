@@ -108,24 +108,33 @@ describe("the as-native target excludes the MAS join route at startup (D315)", (
 });
 
 /**
- * The target's assertions on one composition. `live` selects a live OpenFGA
- * ([FGA], skipped without one); otherwise only the OpenFGA client is stubbed.
- * The negatives run before the one positive: the HTTP channel serves a single
- * MCP session, so only the positive may initialize one.
+ * One as-native composition and the target's assertions on it. `live`
+ * selects a live OpenFGA; otherwise only the OpenFGA client is stubbed. The
+ * negatives run before the one positive: the HTTP channel serves a single MCP
+ * session, so only the positive may initialize one.
  */
-function describeTarget(title: string, opts: { live: boolean; asPort: number }): void {
-  (opts.live && !up ? describe.skip : describe)(title, () => {
-    let stack: DemoStack;
-    let connect: MockInstance | undefined;
-    let issued: IssuedMission;
-    let missionId: string;
-    const decisions: { audience: string; permit: boolean }[] = [];
+function targetFixture(opts: { live: boolean; asPort: number }) {
+  let stack: DemoStack;
+  let connect: MockInstance | undefined;
+  let issued: IssuedMission;
+  let missionId: string;
+  const decisions: { audience: string; permit: boolean }[] = [];
 
-    beforeAll(async () => {
+  /** Evidence and decisions so far: a refusal at the gate leaves both unchanged. */
+  const snapshot = () => ({
+    evidence: stack.evidence.all().length,
+    ledger: stack.connectors.ledgerEntries().length,
+    decisions: decisions.length,
+  });
+
+  return {
+    async setup(): Promise<void> {
       if (!opts.live) {
-        connect = vi
-          .spyOn(Fga, "connect")
-          .mockResolvedValue({ fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test" });
+        connect = vi.spyOn(Fga, "connect").mockResolvedValue({
+          fga: { checkWithContext: async () => true } as unknown as Fga,
+          storeId: "test",
+          modelId: "test",
+        });
       }
       stack = await composeStack({
         openfgaUrl: opts.live ? API_URL : "http://unused.test",
@@ -136,7 +145,9 @@ function describeTarget(title: string, opts: { live: boolean; asPort: number }):
         claimsFile: tempClaimsFile(),
         writeReservationsFile: tempReservationsFile(),
       });
-      stack.onEnforce((e) => decisions.push({ audience: e.envelope.resource.properties.audience, permit: e.decision.decision }));
+      stack.onEnforce((e) =>
+        decisions.push({ audience: e.envelope.resource.properties.audience, permit: e.decision.decision }),
+      );
       const as = stack.authServer;
       if (!as) throw new Error("the as-native target runs the AS");
       // A real Mission-bound token: the agent's PAR, Bob's approval for
@@ -170,9 +181,9 @@ function describeTarget(title: string, opts: { live: boolean; asPort: number }):
       if (!claims.mission) throw new Error("the AS issued no Mission-bound token");
       expect(claims.aud).toBe(CANONICAL_RESOURCE);
       missionId = claims.mission.id;
-    }, 60_000);
+    },
 
-    afterAll(async () => {
+    async teardown(): Promise<void> {
       await stack?.resourceChannel?.close();
       await stack?.masGovernedChannel?.close();
       stack?.authServer?.closeAuthServer();
@@ -182,22 +193,15 @@ function describeTarget(title: string, opts: { live: boolean; asPort: number }):
       stack?.payments.db.close();
       stack?.kernel.db.close();
       connect?.mockRestore();
-    });
+    },
 
-    /** Evidence and decisions so far: a refusal at the gate leaves both unchanged. */
-    const snapshot = () => ({
-      evidence: stack.evidence.all().length,
-      ledger: stack.connectors.ledgerEntries().length,
-      decisions: decisions.length,
-    });
-
-    it("mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience", () => {
+    topology(): void {
       expect(stack.masGovernedChannel).toBeUndefined();
       expect(stack.resourceChannel?.url).toBe(CANONICAL_RESOURCE);
       expect(stack.issuer).toBe(`http://localhost:${opts.asPort}`);
-    });
+    },
 
-    it("refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision", async () => {
+    async noProof(): Promise<void> {
       const before = snapshot();
       const res = await fetch(CANONICAL_RESOURCE, {
         method: "POST",
@@ -216,9 +220,9 @@ function describeTarget(title: string, opts: { live: boolean; asPort: number }):
       await init.text();
       expect(init.status).toBe(401);
       expect(snapshot()).toEqual(before);
-    });
+    },
 
-    it("refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision", async () => {
+    async otherKey(): Promise<void> {
       const before = snapshot();
       const otherKeys: DpopKeys = await generateKeyPair("ES256", { extractable: true });
       const res = await fetch(CANONICAL_RESOURCE, {
@@ -236,9 +240,9 @@ function describeTarget(title: string, opts: { live: boolean; asPort: number }):
       // initialize a session.
       await expect(createHttpMediatedClient(CANONICAL_RESOURCE, issued.accessToken, otherKeys)).rejects.toThrow();
       expect(snapshot()).toEqual(before);
-    });
+    },
 
-    it("refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it", async () => {
+    async baselineJoin(): Promise<void> {
       const before = snapshot();
       const as = stack.authServer;
       if (!as) throw new Error("the as-native target runs the AS");
@@ -273,9 +277,9 @@ function describeTarget(title: string, opts: { live: boolean; asPort: number }):
       expect(res.status).toBe(401);
       expect(stack.masGovernedChannel).toBeUndefined();
       expect(snapshot()).toEqual(before);
-    });
+    },
 
-    it("carries the AS-issued Mission-bound token with a valid DPoP proof through mcp-payments and the PDP to one permitted read", async () => {
+    async permittedRead(): Promise<void> {
       const before = snapshot();
       const { client, close } = await createHttpMediatedClient(CANONICAL_RESOURCE, issued.accessToken, issued.dpopKeys);
       try {
@@ -288,17 +292,50 @@ function describeTarget(title: string, opts: { live: boolean; asPort: number }):
       // Exactly one PDP decision, a permit, on the declared audience, and the
       // PDP's own Decision Evidence for this Mission retained by the PEP.
       expect(decisions.slice(before.decisions)).toEqual([{ audience: CANONICAL_RESOURCE, permit: true }]);
-      const records = stack.evidence.forMission(missionId).filter((e) => e.kind === "decision");
-      expect(records).toHaveLength(1);
-    });
-  });
+      expect(stack.evidence.forMission(missionId).filter((e) => e.kind === "decision")).toHaveLength(1);
+    },
+  };
 }
 
-describeTarget("the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315)", {
-  live: false,
-  asPort: 14105,
+const stubbed = targetFixture({ live: false, asPort: 14105 });
+describe("the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315)", () => {
+  beforeAll(stubbed.setup, 60_000);
+  afterAll(stubbed.teardown);
+  it("mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience", () => {
+    stubbed.topology();
+  });
+  it("refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision", async () => {
+    await stubbed.noProof();
+  });
+  it("refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision", async () => {
+    await stubbed.otherKey();
+  });
+  it("refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it", async () => {
+    await stubbed.baselineJoin();
+  });
+  it("carries the AS-issued Mission-bound token with a valid DPoP proof through mcp-payments and the PDP to one permitted read", async () => {
+    await stubbed.permittedRead();
+  });
 });
-describeTarget("the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315)", {
-  live: true,
-  asPort: 14106,
+
+const live = targetFixture({ live: true, asPort: 14106 });
+const dLive = up ? describe : describe.skip;
+dLive("the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315)", () => {
+  beforeAll(live.setup, 60_000);
+  afterAll(live.teardown);
+  it("mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience", () => {
+    live.topology();
+  });
+  it("refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision", async () => {
+    await live.noProof();
+  });
+  it("refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision", async () => {
+    await live.otherKey();
+  });
+  it("refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it", async () => {
+    await live.baselineJoin();
+  });
+  it("carries the AS-issued Mission-bound token with a valid DPoP proof through mcp-payments and the PDP to one permitted read", async () => {
+    await live.permittedRead();
+  });
 });
