@@ -5920,6 +5920,13 @@ Cross-Domain:
 
 -01
 
+- Implementation Map and Mapping Assessment, Cross-Domain: the
+  Mission reference is `mission.id` and `mission.issuer`;
+  `authority_hash` is the value the projection carries, not part of
+  the reference (#1086). The Implementation Map says "this
+  document" rather than "the core" (#1089). No requirement
+  changed.
+
 - Mission Intent: `purpose` stays the configured-mapping lookup key,
   whose candidates the Intent, policy, and the approval event bound;
   in any other decision it can contribute only to a refusal or to
@@ -5928,13 +5935,6 @@ Cross-Domain:
   after approval the approved Mission's value is the one consulted.
   This replaces the rule that `purpose` affects no other issuance
   decision and is inert after approval (#1102).
-
-- Implementation Map and Mapping Assessment, Cross-Domain: the
-  Mission reference is `mission.id` and `mission.issuer`;
-  `authority_hash` is the value the projection carries, not part of
-  the reference (#1086). The Implementation Map says "this
-  document" rather than "the core" (#1089). No requirement
-  changed.
 
 - Mission Approval: the approval event is the atomic, adjudicated
   transition that creates a Mission under its approval basis, for
