@@ -818,7 +818,7 @@ Mission-bound token through the assembled path (#1105).
 
 | Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
-| Credential validation | Yes. Credential authority at the PDP is not met: acceptance gate (#825) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport and PEP-level (§5.1) | The PDP neither receives nor evaluates the credential authority (#825 PR 2); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
+| Credential validation | Yes. Credential authority at the PDP is not met: acceptance gate (#825) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport and PEP-level (§5.1) | The PDP neither receives nor evaluates the credential authority (#825 PRs 2a, 2b; D312); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
 | Independent Resource policy | Yes, not met: acceptance gate (#828) | The PDP's OpenFGA check and action-to-relation map (§5.2) | In the decision | None | Nothing durable; the tuple is injected per check | PDP-level, [FGA] (§5.2) | The shipped model cannot deny independently of Mission authority (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read and write paths write nothing before the effect; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level, [FGA] (§5.4) | A single-record read re-derives no digest at use; the Operation Profile's intake rules are not implemented (#1106) (§5.4) |
@@ -869,10 +869,13 @@ Mission-bound token through the assembled path (#1105).
   - [FGA] `M5 transaction-assurance tier > refuses a transaction credential on the transport that cannot prove possession (@spec txn-authorization#offline-verification)` (mediated channel)
 - **Required, not met.** The PDP neither receives nor evaluates the
   credential authority: it matches the kernel's current Authority Set
-  (`evaluate.ts:1070-1077`). #825 PR 2 owns the `context.credential.authority`
-  carrier, the PDP-side witnesses, whether the PEP check stays, and key-role
-  separation. Credential expiry is checked at validation only; the PDP records
-  `context.credential.expires_at` without denying on it.
+  (`evaluate.ts:1070-1077`). D312 splits the rest of #825 into three PRs: 2a
+  pins each signing key to its token role; 2b adds the
+  `context.credential.authority` carrier, PDP enforcement independent of the
+  PEP, the PEP pre-check redesign and `context.credential.expires_at`
+  validation; 2c audits the issuance paths. Today credential expiry is checked
+  at validation only, and the PDP records `context.credential.expires_at`
+  without denying on it.
 - **Residual.** On the in-process mediated channel every action, the
   high-consequence classes included, runs on a token whose possession is not
   proven. D240 requires a current proof of possession for a credential used
@@ -1062,8 +1065,8 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 target's acceptance. Neither is unsupported, and neither can become an
 exclusion.
 
-- The credential authority at the PDP: carriage, PDP evaluation and PDP-side
-  witnesses, and key-role separation (#825 PR 2). §5.1.
+- The credential authority at the PDP: key-role pinning, carriage, PDP
+  evaluation and PDP-side witnesses (#825 PRs 2a and 2b, D312). §5.1.
 - Independently administered Resource policy (#828). §5.2.
 
 **Unsupported.** Each is refused or visibly absent; none is partial support.
