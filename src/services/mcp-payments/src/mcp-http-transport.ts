@@ -262,12 +262,19 @@ async function authenticate(
 /**
  * Start a real HTTP MCP channel: a node HTTP server that gates every request with
  * the DPoP-auth middleware, in front of a single {@link StreamableHTTPServerTransport}
- * + MCP `Server`. Binds an ephemeral port on 127.0.0.1 and reports the actual URL.
+ * + MCP `Server`. Binds an ephemeral port on 127.0.0.1 by default and reports the
+ * actual URL.
  */
 export async function createHttpMcpChannel(
   paymentsServer: McpPaymentsServer,
   opts?: {
     host?: string;
+    /**
+     * The port to bind. Default 0, an ephemeral port. A deployment serving its
+     * declared resource audience passes that audience's port; a port already in
+     * use rejects rather than waiting.
+     */
+    port?: number;
     /**
      * @spec authority-server#mission-join (#557) — this route is MAS-governed:
      * it admits an ordinary OAuth credential with no `mission` claim and joins
@@ -309,7 +316,19 @@ export async function createHttpMcpChannel(
   // Bind 127.0.0.1 explicitly: listen(0) alone binds :: and address() reports an
   // IPv6 host, which would break the URL handed to the client and the Host the
   // server reconstructs htu from.
-  await new Promise<void>((resolve) => httpServer.listen(0, host, () => resolve()));
+  try {
+    await new Promise<void>((resolve, reject) => {
+      httpServer.once("error", reject);
+      httpServer.listen(opts?.port ?? 0, host, () => {
+        httpServer.off("error", reject);
+        resolve();
+      });
+    });
+  } catch (err) {
+    await transport.close().catch(() => {});
+    await mcpServer.close().catch(() => {});
+    throw err;
+  }
   const addr = httpServer.address();
   const port = typeof addr === "object" && addr !== null ? addr.port : 0;
   const url = `http://${host}:${port}/mcp`;
