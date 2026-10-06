@@ -11,8 +11,8 @@
     "content_sha256": "ebcea1b67c1c23cd2b22614cbd969b6ce9122b39e5dd04ad3893a0e786e26b89"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "b34bff74fc38b9a1631ccd61e1da89b243e5a846",
-    "content_sha256": "fb585c98974afe9866ea14b52266e3e9721f7fd5c48a793fd87432f7c433abc6"
+    "revision": "9a355d750e21cebe6f16a1a32ef26efa671eb1b5",
+    "content_sha256": "9a4c11a5159c757dbd4deae1a4d063caaf0e676603653006e839f43c4fcac35c"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "40705c1d1bab1ee18d0a5345f3071aaaa30d2031",
@@ -12694,9 +12694,51 @@
      "name": "Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor, so both bounds evaluate it (@spec authzen#context-credential, authzen#runtime-denial-classification, D324) > sends the PDP the vendor the store resolved, as the vendor object the read targets",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor, so both bounds evaluate it (@spec authzen#context-credential, authzen#runtime-denial-classification, D324) > permits a vendor both the constrained credential and the Mission allow",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor, so both bounds evaluate it (@spec authzen#context-credential, authzen#runtime-denial-classification, D324) > refuses a vendor the credential excludes, before the PDP",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor, so both bounds evaluate it (@spec authzen#context-credential, authzen#runtime-denial-classification, D324) > refuses a vendor the Mission excludes though the credential allows it: parameter_violation, in the response and the signed record",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor to both bounds and to resource policy (live OpenFGA, D324) > permits a vendor both the constrained credential and the Mission allow",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor to both bounds and to resource policy (live OpenFGA, D324) > refuses a vendor the credential excludes",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor to both bounds and to resource policy (live OpenFGA, D324) > refuses a vendor the Mission excludes though the credential allows it, parameter_violation",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#825 PR 2b (D312): both bounds are witnessed at the PDP itself, with the PEP pre-check bypassed. The credential bound arrives as `context.credential.authority` and is matched whole-entry, independently of the Mission entry: a narrower credential refuses an action the allowing Mission and policy permit, including its vendor (one object or every collection member) and amount constraints, embedded and over the remote channel. The current-effective-authority bound keeps its witnesses: a Mission narrowed after issuance refuses what the broader credential covers. The PEP still refuses, before any decision request, what it can establish itself (resource, action, vendors, amount)."
+   "notes": "#825 PR 2b (D312): both bounds are witnessed at the PDP itself, with the PEP pre-check bypassed. The credential bound arrives as `context.credential.authority` and is matched whole-entry, independently of the Mission entry: a narrower credential refuses an action the allowing Mission and policy permit, including its vendor (one object or every collection member) and amount constraints, embedded and over the remote channel. The current-effective-authority bound keeps its witnesses: a Mission narrowed after issuance refuses what the broader credential covers. The PEP still refuses, before any decision request, what it can establish itself (resource, action, vendors, amount). A vendor read carries the vendor the store resolved, as the vendor object it targets, so both bounds evaluate that target (D324); the live OpenFGA tests cover the same three outcomes against resource policy."
   },
   {
    "id": "runtime.decision-inputs.no-substitute-approved-set",
@@ -16652,7 +16694,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an action is refused out_of_authority unless one credential entry covers its resource, action, every vendor reached and its amount; coverage split across entries does not permit"
+    "normative": "an action is permitted only if one credential entry covers its resource, action, every vendor reached and its amount; constraints satisfied by different entries never combine, so an action whose matching entries each fail one constraint is refused (parameter_violation)"
    },
    "level": "unit",
    "coverage": "tested",
@@ -16692,8 +16734,86 @@
      "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > requires the action-bound approval a credential entry demands, though neither the Mission nor the deployment does",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > never combines constraints from two entries: each failing one gate is parameter_violation, one satisfying both permits",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ]
+  },
+  {
+   "id": "authzen.context-credential.failure-classification",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "An action that no entry of `authority` names by resource and action is denied `out_of_authority`. An action that entries name, but whose parameters violate a constraint on each of them, is denied `parameter_violation`, as on the matched Mission entry",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no credential entry naming the resource and action answers out_of_authority; credential entries that name them, none of which satisfies its vendor and amount constraints, answer parameter_violation, for a credential mirroring the Mission entry and for an independently narrower one alike, in the response and the signed Decision Evidence, which lists only the constraint gates reached"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > refuses an action the allowing Mission and policy permit but the narrower credential omits",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > holds the credential's vendor constraint for one object and for every member of a collection",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > holds the credential's amount cap, by exact decimal comparison and currency",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > matches one whole entry: an action from one entry never combines with another entry's coverage",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers out_of_authority when no credential entry names the resource and action, recording no credential gate",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers a mirrored credential's failure with %s as the Mission's own constraint does: parameter_violation",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers an independently narrower credential's failure with %s as parameter_violation, listing only the gates reached",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "D324 extends #801's split to the credential bound: reordering it after the Mission's own checks alone was declined, since a narrower credential's identical constraint failure would still be classified differently. Discharge and approval keep their dedicated handling (unestablished-condition, context-approval)."
   },
   {
    "id": "authzen.context-credential.authority-no-substitute",
@@ -20988,6 +21108,30 @@
      "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a delegate narrowing failure records the loaded entry types without inventing checks of their constraints",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers out_of_authority when no credential entry names the resource and action, recording no credential gate",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers an independently narrower credential's failure with %s as parameter_violation, listing only the gates reached",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > never combines constraints from two entries: each failing one gate is parameter_violation, one satisfying both permits",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > records a credential entry's discharge and approval keys only where those checks run (D324)",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
    "notes": "The PDP-owned evaluation trace records only inspected entry types and reached constraint gates, including delegate narrowing, before signing; no outcomes are inferred for unvisited entries. The identifiers are authorization_details entry types and constraints keys, as the member's definition and its worked example require, not per-entry instance identifiers; a permit's individual entry stays identified by authorizing_entry or entry_digest. The evaluated key is recorded whichever reason the deny carries, so a target excluded by a vendors constraint records vendors under parameter_violation (out_of_authority before #801)."
@@ -21058,6 +21202,18 @@
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
      "name": "Mission Receipt build + verify > an unknown denial reason remains a deny and can never become an execution authorization",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers a mirrored credential's failure with %s as the Mission's own constraint does: parameter_violation",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers an independently narrower credential's failure with %s as parameter_violation, listing only the gates reached",
      "level": "unit",
      "surface": "evidence-emission"
     }

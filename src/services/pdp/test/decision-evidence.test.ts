@@ -127,6 +127,27 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     expect(record.contributing_constraints).toEqual(["mission_resource_access", "vendors"]);
   });
 
+  it("records a credential entry's discharge and approval keys only where those checks run (D324)", async () => {
+    const close = { event_type: "accounting-period-closed", discharge_authority: "close-2026-q3" };
+    const v = view();
+    v.authority_set[0]!.constraints = { terminal_when: [close] } as never;
+    const credential = (constraints: Record<string, unknown>) => ({
+      authority: [{ type: "mission_resource_access" as const, resource: RESOURCE, actions: ["payments:invoice.read"], constraints }],
+    });
+    // Discharge is resolved and step 8 reads the approval flag: both are listed.
+    const reached = req();
+    reached.context.credential = credential({ terminal_when: [close], requires_action_approval: false }) as never;
+    const permitted = await recorded(reached, v);
+    expect(permitted.decision.decision).toBe(true);
+    expect(permitted.record.contributing_constraints).toEqual(["mission_resource_access", "terminal_when", "requires_action_approval"]);
+    // A vendor failure stops before discharge and approval: neither is listed.
+    const stopped = req();
+    stopped.context.credential = credential({ vendors: ["globex"], terminal_when: [close], requires_action_approval: true }) as never;
+    const denied = await recorded(stopped, v);
+    expect(denied.record.denial_reason).toBe("parameter_violation");
+    expect(denied.record.contributing_constraints).toEqual(["mission_resource_access", "vendors"]);
+  });
+
   describe("a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324)", () => {
     type Constraints = Record<string, unknown>;
     const credentialEntry = (constraints?: Constraints, actions = ["payments:invoice.read"]) => ({
