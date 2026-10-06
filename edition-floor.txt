@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-06T00:42:04Z
-Source repository commit: aa53686a61a3924d6f9e9ef9e1ff316cf7564e78
+Generated: 2026-10-06T00:58:51Z
+Source repository commit: b28227447321cdc4b6f2c05f76af340067ea2acc
 Member count: 7
 
 Reading order:
@@ -1752,7 +1752,10 @@ Table of Contents
       stop at once; an outstanding credential ends at the earliest of an
       applicable revocation, a state-aware or runtime check that reaches
       it, or its own expiry (Section 10.4;
-      [I-D.draft-mcguinness-oauth-mission-status]).
+      [I-D.draft-mcguinness-oauth-mission-status]).  Revocation does not
+      prohibit equivalent authority under a separately approved Mission
+      ([I-D.draft-mcguinness-mission-security-model], Section 
+      "Revocation-to-Action Latency").
 
    *Attribution is carried, never inferred*:  Each role in the actor
       chain travels in its own construct, and the evidence layer records
@@ -5392,6 +5395,11 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Revocation is possession-independent points at the Security
+      Model's statement that revocation does not prohibit equivalent
+      authority under a separately approved Mission.  No profile's
+      requirements change.
 
    *  Composition states that cross-issuer joint authorization is
       outside the family's scope: independent issuers run independent
