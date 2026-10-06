@@ -361,15 +361,14 @@ launcher with that route excluded.
 
 Adopted (D284) as the first runtime reference target; not a conformance
 class, and no production-readiness or interoperability claim. This document
-is #253 Sketch step 1. Next:
+is #253 Sketch step 1. The runtime integration port (step 2) is
+[provider-integration-port.md](provider-integration-port.md) §5, which maps
+the overlay's obligations to their hooks in the port's eight columns. Next:
 
-1. **Runtime integration port (step 2):** extend
-   [provider-integration-port.md](provider-integration-port.md) with protected
-   state and lifecycle and resource composition rows, in its eight columns.
-2. **Acceptance pack (step 3):** the launcher (#1105) and the vectors of
+1. **Acceptance pack (step 3):** the launcher (#1105) and the vectors of
    §10, after the required enforcement gaps (#825, #828) and the recovery
    gaps (#1103, #1104) are resolved.
-3. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
+2. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
    independently and separately pinned.
 
 A later commit invalidates any statement here until it is re-checked against
