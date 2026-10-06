@@ -4368,8 +4368,8 @@ reveals least, and omitting the attribute reveals nothing.
 ### Token Theft {#token-theft}
 
 Derived tokens are sender-constrained (DPoP {{RFC9449}} or mTLS
-{{RFC8705}}) at the levels set in {{mission-bound-tokens}} and
-{{delegation}}. A stolen token is bounded by the Authority Set and the
+{{RFC8705}}) where {{mission-bound-tokens}} and {{delegation}} require
+it. A stolen token is bounded by the Authority Set and the
 Mission lifetime regardless, but sender-constraint prevents replay by a
 different party.
 
