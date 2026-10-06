@@ -208,3 +208,61 @@ describe("the key-role pin is checked at startup (@spec runtime-oauth#token-vali
     );
   });
 });
+
+describe("one key material serves one role, whatever kids it is published under (@spec runtime-oauth#token-validation, D312, #1123 review)", () => {
+  it("refuses one key published as the access-token kid and the transaction kid, across jwks and txnTokenJwks", () => {
+    const asTokenAlias = { ...txn.jwk, kid: "as-token" };
+    expect(() =>
+      roleKeyResolvers(
+        { accessToken: ["as-token"], attenuationRoot: [], transactionToken: ["as-txn"] },
+        { jwks: { keys: [asTokenAlias] }, txnTokenJwks: { keys: [txn.jwk] } },
+      ),
+    ).toThrow(/transactionToken kid as-txn is the same key as accessToken kid as-token/);
+  });
+
+  it("refuses to construct a server whose access and transaction roles share one key under two kids", () => {
+    const shared = { ...txn.jwk, kid: "as-token" };
+    expect(
+      () =>
+        new McpPaymentsServer({
+          pep: undefined as never,
+          payments: new PaymentsStore(),
+          loadView: () => undefined,
+          jwks: { keys: [shared] },
+          txnTokenJwks: { keys: [txn.jwk] },
+          asIssuer: ISSUER,
+          keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: ["as-txn"] },
+          issuer: ISSUER,
+        }),
+    ).toThrow(/is the same key as/);
+  });
+
+  it("refuses one key published as the access-token kid and the attenuation-root kid in one key set", () => {
+    const rootAlias = { ...access.jwk, kid: "as-attenuation" };
+    expect(() =>
+      roleKeyResolvers(
+        { accessToken: ["as-token"], attenuationRoot: ["as-attenuation"], transactionToken: [] },
+        { jwks: { keys: [access.jwk, rootAlias] } },
+      ),
+    ).toThrow(/attenuationRoot kid as-attenuation is the same key as accessToken kid as-token/);
+  });
+
+  it("allows one key under two kids within one role (a rotation alias)", () => {
+    const rotationAlias = { ...access.jwk, kid: "as-token-2" };
+    expect(() =>
+      roleKeyResolvers(
+        { accessToken: ["as-token", "as-token-2"], attenuationRoot: [], transactionToken: [] },
+        { jwks: { keys: [access.jwk, rotationAlias] } },
+      ),
+    ).not.toThrow();
+  });
+
+  it("refuses a pinned key that is not a public EC, OKP or RSA key", () => {
+    expect(() =>
+      roleKeyResolvers(
+        { accessToken: ["as-hmac"], attenuationRoot: [], transactionToken: [] },
+        { jwks: { keys: [{ kty: "oct", k: "c2VjcmV0", kid: "as-hmac", alg: "HS256" }] } },
+      ),
+    ).toThrow(/is not a public EC, OKP or RSA key/);
+  });
+});
