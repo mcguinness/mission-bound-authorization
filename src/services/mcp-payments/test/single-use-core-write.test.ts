@@ -155,9 +155,11 @@ describe("single-use permits on the core write path (@spec runtime#single-use-id
 
     // The keyed writes: a request without a key is refused by the PDP, and a
     // keyed one is permitted under the short validity window and no use limit.
-    const keyless = await h.server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);
-    expect(keyless.ok).toBe(false);
-    expect(keyless.denial_reason).toBe("parameter_violation");
+    for (const tool of ["schedule_payment", "cancel_scheduled_payment"]) {
+      const keyless = await h.server.callWriteTool(tool, { invoice_id: "inv-1" }, TOKEN);
+      expect(keyless.ok, tool).toBe(false);
+      expect(keyless.denial_reason, tool).toBe("parameter_violation");
+    }
     for (const tool of ["schedule_payment", "cancel_scheduled_payment"]) {
       const res = await h.server.callWriteTool(tool, { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, TOKEN);
       expect(res.ok, `${tool}: ${JSON.stringify(res)}`).toBe(true);
