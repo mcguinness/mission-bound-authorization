@@ -123,8 +123,83 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     };
     const { record, decision } = await recorded(r, view());
     expect(decision.decision).toBe(false);
-    expect(record.denial_reason).toBe("out_of_authority");
+    expect(record.denial_reason).toBe("parameter_violation");
     expect(record.contributing_constraints).toEqual(["mission_resource_access", "vendors"]);
+  });
+
+  describe("a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324)", () => {
+    type Constraints = Record<string, unknown>;
+    const credentialEntry = (constraints?: Constraints, actions = ["payments:invoice.read"]) => ({
+      type: "mission_resource_access" as const,
+      resource: RESOURCE,
+      actions,
+      ...(constraints ? { constraints } : {}),
+    });
+    /** A request for `vendors` (one object, or a collection) with an optional amount, carrying `credential` (neutral if omitted). */
+    const ask = (o: { vendors?: string[]; amount?: [string, string]; credential?: unknown[] } = {}): EvaluationRequest => {
+      const r = req();
+      const vendors = o.vendors ?? ["acme"];
+      r.resource.properties = {
+        ...r.resource.properties,
+        vendor_id: vendors[0] as string,
+        ...(vendors.length > 1 ? { vendor_ids: vendors } : {}),
+      };
+      if (o.amount) r.context.amount = { amount: o.amount[0], currency: o.amount[1] };
+      if (o.credential) r.context.credential = { authority: o.credential as never };
+      return r;
+    };
+    const missionWith = (constraints: Constraints) => {
+      const v = view();
+      v.authority_set[0]!.constraints = constraints as never;
+      return v;
+    };
+    /** The reason in the response and in the signed record, and the keys the record lists. */
+    const outcome = async (r: EvaluationRequest, v: MissionView) => {
+      const { record, decision } = await recorded(r, v);
+      expect(record.denial_reason).toBe(decision.decision ? undefined : decision.context.denial_reason);
+      return { reason: decision.decision ? "permit" : decision.context.denial_reason, keys: record.contributing_constraints };
+    };
+
+    it("answers out_of_authority when no credential entry names the resource and action, recording no credential gate", async () => {
+      const r = ask({ credential: [credentialEntry({ vendors: ["acme"] }, ["payments:vendor.read"])] });
+      expect(await outcome(r, view())).toEqual({ reason: "out_of_authority", keys: ["mission_resource_access"] });
+    });
+
+    it.each<[string, Constraints, { vendors?: string[]; amount?: [string, string] }, string[]]>([
+      ["a vendor outside the entry's vendors", { vendors: ["globex"] }, {}, ["mission_resource_access", "vendors"]],
+      ["an amount over the cap", { max_amount: { amount: "100.00", currency: "USD" } }, { amount: ["150.00", "USD"] }, ["mission_resource_access", "max_amount"]],
+      ["an amount in another currency", { max_amount: { amount: "100.00", currency: "USD" } }, { amount: ["50.00", "EUR"] }, ["mission_resource_access", "max_amount"]],
+      ["a collection member outside the entry's vendors", { vendors: ["acme"] }, { vendors: ["acme", "globex"] }, ["mission_resource_access", "vendors"]],
+    ])("answers a mirrored credential's failure with %s as the Mission's own constraint does: parameter_violation", async (_label, constraints, target, keys) => {
+      const missionOnly = await outcome(ask(target), missionWith(constraints));
+      const mirrored = await outcome(ask({ ...target, credential: [credentialEntry(constraints)] }), missionWith(constraints));
+      expect(missionOnly).toEqual({ reason: "parameter_violation", keys });
+      expect(mirrored).toEqual(missionOnly);
+    });
+
+    it.each<[string, Constraints, { vendors?: string[]; amount?: [string, string] }, string[]]>([
+      ["a vendor outside its vendors, never reaching its cap", { vendors: ["globex"], max_amount: { amount: "500.00", currency: "USD" } }, { amount: ["20.00", "USD"] }, ["mission_resource_access", "vendors"]],
+      ["an amount over its cap", { vendors: ["acme"], max_amount: { amount: "100.00", currency: "USD" } }, { amount: ["150.00", "USD"] }, ["mission_resource_access", "vendors", "max_amount"]],
+      ["an amount in another currency", { vendors: ["acme"], max_amount: { amount: "100.00", currency: "USD" } }, { amount: ["50.00", "EUR"] }, ["mission_resource_access", "vendors", "max_amount"]],
+      ["no amount for its cap", { max_amount: { amount: "100.00", currency: "USD" } }, {}, ["mission_resource_access", "max_amount"]],
+      ["a collection member outside its vendors", { vendors: ["acme"] }, { vendors: ["acme", "globex"] }, ["mission_resource_access", "vendors"]],
+    ])("answers an independently narrower credential's failure with %s as parameter_violation, listing only the gates reached", async (_label, constraints, target, keys) => {
+      // The Mission entry carries no constraint: only the credential's can fail.
+      expect(await outcome(ask({ ...target, credential: [credentialEntry(constraints)] }), view())).toEqual({ reason: "parameter_violation", keys });
+    });
+
+    it("never combines constraints from two entries: each failing one gate is parameter_violation, one satisfying both permits", async () => {
+      const halves = [
+        credentialEntry({ vendors: ["acme"], max_amount: { amount: "10.00", currency: "USD" } }),
+        credentialEntry({ vendors: ["globex"], max_amount: { amount: "500.00", currency: "USD" } }),
+      ];
+      expect(await outcome(ask({ amount: ["20.00", "USD"], credential: halves }), view())).toEqual({
+        reason: "parameter_violation",
+        keys: ["mission_resource_access", "vendors", "max_amount"],
+      });
+      const whole = credentialEntry({ vendors: ["acme"], max_amount: { amount: "500.00", currency: "USD" } });
+      expect((await outcome(ask({ amount: ["20.00", "USD"], credential: [...halves, whole] }), view())).reason).toBe("permit");
+    });
   });
 
   it("a delegate narrowing failure records the loaded entry types without inventing checks of their constraints", async () => {

@@ -109,19 +109,19 @@ describe("the PDP enforces the credential bound independently (@spec runtime#inp
   it("holds the credential's vendor constraint for one object and for every member of a collection", async () => {
     const acmeOnly = { authority: [entry(["payments:invoice.read", "payments:vendor.read"], { vendors: ["acme"] })] };
     expect(reason(await evaluate(req(acmeOnly), opts()))).toBe("permit");
-    expect(reason(await evaluate(req(acmeOnly, { vendor: "globex" }), opts()))).toBe("out_of_authority");
+    expect(reason(await evaluate(req(acmeOnly, { vendor: "globex" }), opts()))).toBe("parameter_violation");
     expect(
       reason(await evaluate(req(acmeOnly, { action: "payments:vendor.read", vendors: ["acme", "globex"] }), opts())),
-    ).toBe("out_of_authority");
+    ).toBe("parameter_violation");
   });
 
   it("holds the credential's amount cap, by exact decimal comparison and currency", async () => {
     const capped = { authority: [entry(["payments:invoice.read"], { max_amount: { amount: "100.00", currency: "USD" } })] };
     const amount = (value: string, currency = "USD") => ({ extra: { amount: { amount: value, currency } } });
     expect(reason(await evaluate(req(capped, amount("100.00")), opts()))).toBe("permit");
-    expect(reason(await evaluate(req(capped, amount("100.01")), opts()))).toBe("out_of_authority");
-    expect(reason(await evaluate(req(capped, amount("50.00", "EUR")), opts()))).toBe("out_of_authority");
-    expect(reason(await evaluate(req(capped), opts()))).toBe("out_of_authority");
+    expect(reason(await evaluate(req(capped, amount("100.01")), opts()))).toBe("parameter_violation");
+    expect(reason(await evaluate(req(capped, amount("50.00", "EUR")), opts()))).toBe("parameter_violation");
+    expect(reason(await evaluate(req(capped), opts()))).toBe("parameter_violation");
   });
 
   it("matches one whole entry: an action from one entry never combines with another entry's coverage", async () => {
@@ -132,8 +132,10 @@ describe("the PDP enforces the credential bound independently (@spec runtime#inp
       ],
     };
     // invoice.read for acme would permit only by unioning the first entry's
-    // action with the second entry's vendor.
-    expect(reason(await evaluate(req(split), opts()))).toBe("out_of_authority");
+    // action with the second entry's vendor. The first entry names the action
+    // and fails its own vendor constraint, so this is a parameter violation
+    // (D324); the second never names the action.
+    expect(reason(await evaluate(req(split), opts()))).toBe("parameter_violation");
   });
 });
 

@@ -156,11 +156,20 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
       client,
     );
     expect(narrowed.decision).toBe(false);
-    expect(narrowed.context.denial_reason).toBe("out_of_authority");
+    // The entry names the action and fails its own vendor constraint (D324).
+    expect(narrowed.context.denial_reason).toBe("parameter_violation");
+    const otherAction = await evaluateRemote(
+      withAuthority({
+        authority: [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:vendor.read"] }],
+      }),
+      client,
+    );
+    expect(otherAction.decision).toBe(false);
+    expect(otherAction.context.denial_reason).toBe("out_of_authority");
     const missing = await evaluateRemote(withAuthority({}), client);
     expect(missing.decision).toBe(false);
     expect(missing.context.denial_reason).toBe("credential_invalid");
-    expect(evaluations.n).toBe(2);
+    expect(evaluations.n).toBe(3);
   });
 
   it("a request with no channel signature is refused before evaluation, with zero PDP evaluation", async () => {
