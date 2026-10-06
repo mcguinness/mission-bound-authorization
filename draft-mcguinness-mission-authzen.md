@@ -2921,6 +2921,14 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 
 \[\[ To be removed from the final specification ]]
 
+- `context.credential` carries `authority`, the validated credential's
+  own authority entries, REQUIRED when `credential` is present. The PDP
+  evaluates it independently of the current effective authority, one
+  whole entry at a time. Rule 6 returns `credential_invalid` for a
+  missing or not-understood authority; `out_of_authority` covers both
+  bounds, and the coordinated Decision Evidence member
+  `authority_bound` records which one failed (#825).
+
 - The RAR remediation grain cites the working-group successor
   draft-ietf-oauth-rar-metadata-remediation and defers its routing to
   the issuance profile's remediation routing instead of restating it.

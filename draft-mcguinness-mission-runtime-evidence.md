@@ -2389,6 +2389,11 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- `authority_bound` is a coordinated Decision Evidence extension
+  member, registered and owned by the AuthZEN profile: which authority
+  bound an `out_of_authority` deny failed, `credential` or `mission`
+  (#825).
+
 - `join_view_id` is a coordinated Decision Evidence extension member,
   registered and owned by the Mission Authority Server: the
   joined-view commitment of a decision reached over a successful
