@@ -762,7 +762,8 @@ in Execution Evidence, without new members.
 
 The `credential` member carries credential-derived facts the PEP has
 already validated and that the PDP needs to enforce the runtime
-decision's time, issuer, and sender-constraint checks:
+decision's time, issuer, sender-constraint, and credential-authority
+checks:
 
 `issuer`:
 : REQUIRED when known. A string containing a URI. The credential
@@ -779,7 +780,29 @@ decision's time, issuer, and sender-constraint checks:
   digest of that value, included only after the PEP has verified the
   proof-of-possession check for the presented credential.
 
+`authority`:
+: REQUIRED when `credential` is present. An array of authority
+  entries: the credential authority ({{I-D.draft-mcguinness-mission-runtime}}) of the validated
+  credential, in its credential profile's representation (the OAuth
+  realization is the token's `authorization_details`, or, for an
+  ordinary token joined to a Mission, the entries the deployment maps
+  its granted scope to, {{I-D.draft-mcguinness-mission-runtime-oauth}}). The PEP supplies it only from the
+  validated credential, never from the Mission's authority.
+
 The PEP MUST NOT include unverified credential claims in this member.
+
+The PDP evaluates the action against `authority` independently of the
+current effective authority, and never substitutes any record of
+Mission authority for it ({{I-D.draft-mcguinness-mission-runtime}}). One entry MUST cover the action
+whole: its resource, its action, and every constraint the entry
+carries; a constraint from one entry never combines with an action
+from another. An entry's `requires_action_approval` requires an
+action-bound approval exactly as the same constraint on an Authority
+Set entry does ({context-approval}). An entry's discharge condition
+(`terminal_when`) is not evaluated against the credential entry: it
+is enforced through the current effective authority, which excludes
+a discharged entry. When no entry covers the action, the PDP returns
+`out_of_authority`.
 
 ## Action Parameters and Parameter Digest {#parameter-digest}
 
@@ -1293,7 +1316,10 @@ self-consistent:
    omitted; the view the PDP loaded, or the Mission record it
    evaluates directly, is authoritative.
 6. When `context.credential.expires_at` is present, it has not passed;
-   otherwise the PDP returns `credential_invalid`.
+   and when `context.credential` is present, its `authority` is
+   present and contains only entries whose type and members the PDP
+   understands ({{context-credential}}); otherwise the PDP returns
+   `credential_invalid`.
 7. The freshness conveyed in `context.mission_state_observation` the
    PEP supplied is within the deployment's staleness bound; otherwise
    the PDP returns `stale_state`, with the freshness-window violation
@@ -1929,7 +1955,10 @@ one defined by the runtime profile. This section binds those
 conditions to AuthZEN responses and gives the denial-reason identifiers
 carried in Decision Evidence:
 
-- `out_of_authority`: the action is not within the Authority Set.
+- `out_of_authority`: the action is not within the credential
+  authority ({{context-credential}}) or the current effective
+  authority ({{I-D.draft-mcguinness-mission-runtime}}); the Decision Evidence `authority_bound`
+  member records which ({{evidence}}).
 - `approval_required`: deployment or Resource policy requires an
   action-bound approval for this action
   ({{I-D.draft-mcguinness-mission-runtime}}) and no `context.approval`
@@ -1971,8 +2000,8 @@ carried in Decision Evidence:
   the PDP cannot establish the runtime actor context
   ({{I-D.draft-mcguinness-mission-runtime}}).
 - `credential_invalid`: token-derived credential facts supplied by the
-  PEP are expired, inconsistent, or otherwise not usable for a runtime
-  decision.
+  PEP are expired, inconsistent, missing a required member, or
+  otherwise not usable for a runtime decision.
 - `parameter_violation`: parameters violate a constraint the PDP
   evaluated, the recomputed digest does not match, or a required
   `parameter_digest` is absent for a parameter-bound action.
@@ -2242,7 +2271,7 @@ carrier's extensibility rule.
 | Capability definition the PEP must present not resolvable before the decision request | Refusal Record | `capability_source_unresolvable` |
 | Decision Evidence for a permit absent or not verifiable, so no relied-upon decision was obtained | Refusal Record | `decision_evidence_unverifiable` |
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
-| Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
+| Action outside the credential authority or the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
 | Resource policy requires a stronger authentication context, satisfiable by in-process step-up with no change to credential-bound inputs | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
 | Resource policy requires a stronger authentication context satisfiable only by a new access token (RFC 9470) | PDP denial (with obligation) | `resource_policy` with the step-up obligation ({{AUTHZEN-OBL}}) |
 | Resource policy requires a stronger authentication context and refuses outright, no step-up path available | PDP denial | `resource_policy` |
@@ -2253,7 +2282,7 @@ carrier's extensibility rule.
 | Mission not `active`, including a passed `expires_at` | PDP denial | `mission_inactive` |
 | External Mission-binding join verification fails | PDP denial | `mission_binding_failed` |
 | Required `act` chain missing or malformed | PDP denial | `actor_invalid` |
-| Credential facts expired or inconsistent | PDP denial | `credential_invalid` |
+| Credential facts expired, inconsistent, or without the required `authority` | PDP denial | `credential_invalid` |
 | Parameter constraint violated, PDP digest mismatch, or required digest absent | PDP denial | `parameter_violation` |
 | Idempotency key and operation identity match a prior unresolved or completed claim | PDP denial | `duplicate_suppressed` |
 | Idempotency key reused with a different operation identity | PDP denial | `idempotency_conflict` |
@@ -2389,15 +2418,25 @@ evidence duty in its own internal form instead
 its own record identifier (`evidence_id`, `execution_id`, or
 `refusal_id`). Every core Decision Evidence and Execution Evidence
 member is defined directly by the runtime evidence companion. This
-profile registers one Decision Evidence extension member of its own,
+profile registers two Decision Evidence extension members of its own,
 `mission_history` (the policy-selected history predicates and their
-outcomes), under that companion's coordinated-extension rule
+outcomes) and `authority_bound` (defined below), under that
+companion's coordinated-extension rule
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}); it also carries
 other coordinated extension members whose semantics are owned
 elsewhere, for example `taint` (owned by the harness profile,
 {{I-D.draft-mcguinness-mission-harness}}) and `capability_source`
 (owned by the Mission Capability Binding companion,
 {{I-D.draft-mcguinness-mission-capability-binding}}).
+
+`authority_bound`:
+: CONDITIONAL. A string, recorded at the top level of Decision
+  Evidence: `credential` when the action is outside the credential
+  authority ({{context-credential}}), `mission` when it is outside
+  the current effective authority ({{I-D.draft-mcguinness-mission-runtime}}). REQUIRED on a deny with
+  `denial_reason` `out_of_authority`, and absent otherwise. When both
+  bounds exclude the action, the PDP records the one it evaluated
+  first.
 
 This profile's own contribution is the mapping: which decision
 request and response members the PDP and PEP echo into a record, and
@@ -2691,8 +2730,8 @@ privacy properties of the Decision Evidence, Execution Evidence, and
 Refusal Record objects, including their status as PII sinks,
 parameter exposure, and actor-chain correlation, are the runtime
 evidence companion's ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
-This profile's one coordinated extension member, `mission_history`
-({{evidence}}), carries behavioral history predicates and their
+This profile's coordinated extension member `mission_history`
+({{evidence}}) carries behavioral history predicates and their
 outcomes and inherits that guidance in full: it is subject to the
 same PII-sink, access-control, and retention treatment as the OAuth binding
 record, with no exemption. This profile otherwise defines no

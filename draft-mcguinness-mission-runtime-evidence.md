@@ -618,8 +618,9 @@ canonicalization, and integrity envelope a deployment emits.
 A Decision Evidence Object is closed to uncoordinated extension; see
 {{evidence-extensions}} for the extension rule and the coordinated
 extension members a deployment following the AuthZEN profile
-commonly carries (`taint`, `mission_history`, `capability_source`,
-`hop_reference`, `principal_mapping`, `join_view_id`).
+commonly carries (`taint`, `mission_history`, `authority_bound`,
+`capability_source`, `hop_reference`, `principal_mapping`,
+`join_view_id`).
 
 ## Refusal Record {#pre-decision-refusal}
 
@@ -1897,6 +1898,12 @@ a common wire carrier.
   decision, whether or not the request carried a Mission history
   member. Registered and owned by the AuthZEN profile
   ({{I-D.draft-mcguinness-mission-authzen}}).
+
+`authority_bound`:
+: CONDITIONAL. A string, recorded at the top level of Decision
+  Evidence: which authority bound an `out_of_authority` deny failed,
+  `credential` or `mission`. Registered and owned by the AuthZEN
+  profile ({{I-D.draft-mcguinness-mission-authzen}}).
 
 `capability_source`:
 : OPTIONAL. An object, recorded on Decision Evidence: the
