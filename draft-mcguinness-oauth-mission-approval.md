@@ -228,7 +228,7 @@ refuse creation atomically: no Mission exists, and the deferred
 approval resolves to `denied` ({{state-machine}}). The next
 authenticated poll returns `access_denied`, the deferred substrate's
 outcome for a request that could not be granted. Its
-`error_description` SHOULD say that the requested Mission expiry
+`error_description` SHOULD say that the effective Mission expiry
 passed; it is diagnostic only, and a client acts on the error code.
 `expired_token` remains the outcome of the pending request's own
 lifetime elapsing ({{pending-staleness}}), a different case.
