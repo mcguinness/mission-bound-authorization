@@ -68,8 +68,8 @@ so this target cannot pass acceptance while either is missing.
 
 | Dimension | Adopted (D284, D293) | Reference at `e9001b2f` | Status | Gap owner |
 |---|---|---|---|---|
-| Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `composeStack({ withAuthServer: true })` (`demo/src/stack.ts:191`) runs the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:273-275`), the PEP `mcp-payments-pep` (`stack.ts:706-708`), the PDP (`stack.ts:539`), OpenFGA, and the in-process approval service. The resource audience is `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:69`); nothing listens there. The AS JWKS is fetched once at assembly (`stack.ts:373`) | Partial | Launcher for exactly this topology: #1105. JWKS reload: #831 |
-| Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude the MAS route on this target: #1105 (#818 owns MAS; #956 Q2 its declaration in the shared demo) |
+| Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `pnpm as-native` (§11) runs `composeStack({ target: "as-native" })` (`demo/src/stack.ts:191`): the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:273-275`), the PEP `mcp-payments-pep` (`stack.ts:706-708`) served over HTTP MCP at the resource audience `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:69`), the PDP (`stack.ts:539`), OpenFGA, and the in-process approval service: `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience`. The AS JWKS is fetched once at assembly (`stack.ts:373`) | Partial | JWKS reload: #831 |
+| Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation over HTTP MCP, with a DPoP proof verified on every request, and the AuthZEN request (§4, §5). The in-process mediated channel is outside this target (D315). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, and the shared demo mounts a MAS join route there; the target mounts none, and a configuration that would mount one fails startup: `the as-native target excludes the MAS join route at startup (D315) > fails startup, before connecting to anything, when the payments resource is configured governed` | HTTP entry point only (D315) | #818 owns MAS; #956 Q2 its declaration in the shared demo |
 | Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1095`) | Partial | `hold_transfer` permit control: #1080. Profile drift (§3): #1106 |
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:665-672`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
 | Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP only: an action outside the verified token's own `authorization_details` is refused before the PDP, which does not evaluate it. Independent Resource policy is not implemented (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR 1 merged as #1062; PRs 2a to 2c remain, D312). Resource policy: #828 |
@@ -329,10 +329,12 @@ metadata that publishes the Enforcement Scope Statement.
 ## 10. Acceptance prerequisites
 
 The assembled acceptance pack (#253 Sketch step 3) pins the assembled path's
-revision and exercises each vector below. Only the `src/demo/test` files
-`remote-pdp-stack`, `mas-join-stack` and `pep-emission-boundary` run
-`composeStack`; no test yet drives an AS-issued Mission-bound token through
-`mcp-payments` and the real PDP (#1105).
+revision and exercises each vector below. It runs on the `pnpm as-native`
+composition (§11) and reaches the PEP only through the HTTP MCP endpoint at
+the declared audience, never the in-process mediated channel (D315). One test
+drives an AS-issued Mission-bound token with a DPoP proof over that endpoint
+through `mcp-payments` and the real PDP: [FGA]
+`the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > carries the AS-issued Mission-bound token with a valid DPoP proof through mcp-payments and the PDP to one permitted read`.
 
 The pack cannot pass while #825 or #828 is unmet (§1).
 
@@ -359,11 +361,27 @@ correct surface and role.
 
 ## 11. Run it
 
-No launcher assembles exactly this topology yet. `pnpm demo:serve`,
-`pnpm exhibit`, `pnpm agent` and `pnpm demo` assemble `composeStack` and need
-`docker compose up -d` (OpenFGA) and `pnpm setup` (`src/DEMO.md`); they also
-start the excluded MAS route and other surfaces. #1105 owns a dedicated
-launcher with that route excluded.
+`pnpm as-native` (`scripts/as-native.mjs`, `demo/src/as-native-serve.ts`)
+assembles this target with `composeStack({ target: "as-native" })`: the AS on
+4400, the `mcp-payments` PEP over HTTP MCP at `http://localhost:4403/mcp`, the
+PDP, OpenFGA and the in-process approval service, with no MAS join route. It
+prints the issuer, the resource audience and the PDP mode, and needs only
+`pnpm setup` and `docker compose up -d` (OpenFGA).
+
+The target is HTTP MCP with verified DPoP only (D315). A request without a
+proof, or with a proof under a key other than the token's `cnf.jkt`, is
+refused before the PEP, and so is a baseline-Join credential:
+`the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision`,
+`the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision`
+and
+`the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it`.
+The in-process mediated channel, which the demo agent uses, is outside the
+target's claims; its possession gap stays documented (§8). The endpoint holds
+one MCP session per boot.
+
+`pnpm demo:serve`, `pnpm exhibit`, `pnpm agent` and `pnpm demo` assemble the
+shared demo composition (`src/DEMO.md`), which also starts the MAS join route
+and other surfaces.
 
 ## 12. Status
 

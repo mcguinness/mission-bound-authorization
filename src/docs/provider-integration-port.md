@@ -810,11 +810,16 @@ one process. The PDP is a direct call by default, with no PEP
 authentication (`services/pdp/src/decision-channel.ts:56-61`).
 `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret
 that is never configured, so it cannot cross processes as shipped (`:64-66`).
-The tests cited here drive the PEP (`enforce`), the in-process
-`mcp-payments` server methods or the PDP directly; none of them goes over the
-MCP transport. Tests marked
-[FGA] are skipped without a live OpenFGA. No test yet drives an AS-issued
-Mission-bound token through the assembled path (#1105).
+Most tests cited here drive the PEP (`enforce`), the in-process
+`mcp-payments` server methods or the PDP directly, not the MCP transport.
+Tests marked
+[FGA] are skipped without a live OpenFGA. The AS-native target and its
+acceptance pack are HTTP MCP with verified DPoP (D315): they reach the PEP
+only through the endpoint `composeStack({ target: "as-native" })` serves at
+the declared resource audience, and exclude the in-process mediated channel.
+[FGA]
+`the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > carries the AS-issued Mission-bound token with a valid DPoP proof through mcp-payments and the PDP to one permitted read`
+drives an AS-issued Mission-bound token through that assembled path.
 
 | Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
@@ -834,8 +839,9 @@ Mission-bound token through the assembled path (#1105).
     `validateCredential` with the request's DPoP presentation calls
     `validateToken`, which runs `verifyDpopBoundToken` (`server.ts:478-495`):
     signature, issuer, audience, `cnf.jkt` and the DPoP proof over this
-    request. A MAS-governed route calls `validateGatewayCredential` instead;
-    that route is excluded from this target (#1105).
+    request. The target serves this entry point at the declared resource
+    audience. A MAS-governed route calls `validateGatewayCredential` instead;
+    the target mounts none (D315).
   - **In-process mediated channel** (`services/mcp-payments/src/mcp-transport.ts:121`,
     `:147`): `validateCredential` with no proof calls `validateMissionToken`
     (`server.ts:640-653`): signature, issuer and audience. It carries
@@ -843,7 +849,8 @@ Mission-bound token through the assembled path (#1105).
     because the channel has no HTTP request to bind one to. It refuses a
     transaction token (`txn_pop_required`), so a challenged retry goes over
     HTTP. The demo agent (`pnpm agent`, through `createMediatedHarness`) uses
-    this channel with AS-issued Mission-bound tokens.
+    this channel with AS-issued Mission-bound tokens. The AS-native target
+    and its acceptance pack exclude it (D315).
 
   Both then apply `missionBoundFactsFrom` (`server.ts:506-539`) and
   `readMissionAccessClaims`
@@ -867,6 +874,7 @@ Mission-bound token through the assembled path (#1105).
   - `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route` (PEP-level)
   - `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > refuses vendor lookup under an invoice-only token, and lets a broad token reach the PDP, on the same broad Mission` (PEP-level)
   - [FGA] `M5 transaction-assurance tier > refuses a transaction credential on the transport that cannot prove possession (@spec txn-authorization#offline-verification)` (mediated channel)
+  - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision`, `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision` and `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it` (HTTP transport, assembled path)
 - **Required, not met.** The PDP neither receives nor evaluates the
   credential authority: it matches the kernel's current Authority Set
   (`evaluate.ts:1070-1077`). D312 splits the rest of #825 into three PRs: 2a
@@ -880,9 +888,9 @@ Mission-bound token through the assembled path (#1105).
   high-consequence classes included, runs on a token whose possession is not
   proven. D240 requires a current proof of possession for a credential used
   on a high-consequence action (`runtime.custody.high-consequence-credential-sender-constrained`,
-  `todo`), so this target's high-consequence claims hold on the HTTP entry
-  point only. #825 records the limitation; a shared verifier never claims a
-  proof it did not receive.
+  `todo`). The AS-native target and its acceptance pack therefore exclude
+  this channel (D315), and the gap stays documented here. #825 records the
+  limitation; a shared verifier never claims a proof it did not receive.
 
 ### 5.2 Independent Resource policy
 
