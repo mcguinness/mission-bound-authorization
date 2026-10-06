@@ -4281,24 +4281,15 @@ authority to act on what it read acquires it only through an authorized
 derivation or delegation bounded by the Mission ({{delegation}}), not
 from the artifact.
 
-Revocation acts on the `mission_id` independent of possession of any
-token ({{revocation}}); authority is likewise independent of possession
-of any information. This document constrains not what agents communicate
-but what that communication can confer, so coordination between agents
-cannot circumvent Mission authority.
-
-The threat is emergent authority through coordination. Multiple agents
-executing independently bounded work communicate through shared state,
-so discoveries, credentials, techniques, or intermediate results persist
-across runtimes and Missions, and individually acceptable actions
-compose into behavior that no single Mission authorized. Unlike a
-compromised or multiplied agent acting within one Mission's Authority
-Set, the composing units are independent Missions coordinating through a
-carrier outside any Mission's gate. The mechanism that upholds the
-invariant across such a carrier (work-product provenance and a
-non-transitive Mission-to-Mission handoff) is specified by Mission Work
-Products {{I-D.draft-mcguinness-oauth-mission-work-products}}; this
-document takes no normative dependency on it.
+The threat is emergent authority through coordination: independent
+Missions communicating through shared state, so that individually
+acceptable actions compose into behavior no single Mission authorized
+({{I-D.draft-mcguinness-mission-security-model}}). The mechanism that
+upholds the invariant across such a carrier (work-product provenance
+and a non-transitive Mission-to-Mission handoff) is specified by
+Mission Work Products
+{{I-D.draft-mcguinness-oauth-mission-work-products}}; this document
+takes no normative dependency on it.
 
 ## Enforcement Boundaries {#sec-enforcement}
 
