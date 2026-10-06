@@ -4529,6 +4529,54 @@
    "notes": "Both refusal arms (unparseable and already-past) are invalid_request at submission acceptance, judged against the kernel clock. The requested value is never rewritten forward. Row replaces the pre-#525 invalid_authorization_details behavior."
   },
   {
+   "id": "core.intent.purpose-restrictive-use",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-intent",
+   "text": "In any other decision, `purpose` MAY contribute only to a refusal or to stricter treatment",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "outside the configured-mapping lookup, an AS may refuse, or apply stricter treatment to, a submission on its purpose, and that is the only effect purpose has on the decision; a runner never fails an AS for refusing or tightening on purpose"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No purpose decision path in the reference AS: kernel/intent.ts only validates purpose as a string, and deriveAuthoritySet (kernel/derive.ts) keys configured-mapping mode on target_resources and never reads purpose. Planned surface: derivation (deriveAuthoritySet) and the authorization decision, once deployment policy can refuse or tighten on purpose."
+  },
+  {
+   "id": "core.intent.purpose-never-widens",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-intent",
+   "text": "its value, its absence, or a substituted value MUST NOT supply, widen, relax, or refresh authority, or replace a check that applies independently of it",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "outside the configured-mapping lookup, submissions that differ only in purpose (a value, a different value, or none) receive no wider Authority Set, no relaxed or refreshed authority, and no skipped check; any difference purpose makes is a refusal or stricter treatment"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "A prohibition every AS meets; the reference AS meets it trivially. No purpose decision path in the reference AS: kernel/intent.ts only validates purpose as a string, and deriveAuthoritySet (kernel/derive.ts) keys configured-mapping mode on target_resources and never reads purpose. Planned test surface: derivation, an output-bound invariance test over deriveAuthoritySet (kernel.test.ts) with Intents differing only in purpose, once a purpose path exists. Runtime decision points are covered by the runtime.classification purpose rows."
+  },
+  {
    "id": "core.record.effective-not-later-than-requested",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
@@ -11309,6 +11357,52 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Misfit for a PDP-only unit test: classification assignment (whether purpose or deployment policy lowers an action's class) happens in the PEP's static action-to-class map (mcp-payments/src/pep.ts), never inside evaluate(), which receives action_class as an already-decided opaque label and has no classifier or floor table of its own. No lowering mechanism exists in evaluate.ts to exercise."
+  },
+  {
+   "id": "runtime.classification.purpose-may-raise",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "A Mission's `purpose`, or deployment policy, MAY raise an action to a stricter class.",
+   "role": "PDP",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP whose policy raises an action's class on the Mission's purpose applies the stricter class's gating to that action; raising is the only classification effect purpose has"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No purpose path: the PEP's static action-to-class map (mcp-payments/src/pep.ts) and evaluate() (services/pdp) never read purpose, and the PDP's Mission view carries no purpose member. Planned surface: decision-request, a PDP classification test once policy can key a class raise on the approved Mission's purpose."
+  },
+  {
+   "id": "runtime.classification.purpose-from-approved-mission",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "The `purpose` consulted is the approved Mission's, from its Mission state or a validated projection of it ({{I-D.draft-mcguinness-oauth-mission}}), never a value the request asserts.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the purpose a PDP's classification consults is the approved Mission's; a decision request that carries a different purpose, or none, gets the same classification, and no class falls below the floor"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No purpose path: the PEP's static action-to-class map (mcp-payments/src/pep.ts) and evaluate() (services/pdp) never read purpose, and the PDP's Mission view carries no purpose member. Planned surface: decision-request, a PDP test that a request-asserted purpose differing from the Mission's changes no classification, once the PDP reads the Mission's purpose."
   },
   {
    "id": "runtime.classification.no-evasion-and-write-floor",
