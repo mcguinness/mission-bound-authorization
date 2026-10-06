@@ -4379,12 +4379,9 @@ Delegation ({{delegation}}) widens the set of parties holding
 Mission-derived authority. Because authority only narrows down the
 chain, a compromised actor can act only within its narrowed
 `authorization_details`, for the lifetime of the token it holds. The
-per-entry delegation constraints ({{delegation-constraints}}) bound this
-exposure at approval time:
-
-- a non-delegable entry never reaches a delegate;
-- `max_depth` caps how far an entry can propagate; and
-- `allowed_delegates` restricts who can receive it.
+per-entry delegation constraints (delegability, `max_depth`, and
+`allowed_delegates`, {{delegation-constraints}}) bound this exposure at
+approval time.
 
 `max_depth` bounds the length of a delegation chain, not its breadth:
 only `allowed_delegates` bounds fan-out to many distinct depth-1
