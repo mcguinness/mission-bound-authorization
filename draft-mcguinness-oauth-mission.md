@@ -4424,10 +4424,8 @@ or route on `client_id`.
 
 The `mission` claim and `authorization_details` are carried inside the
 {{RFC9068}} JWT and covered by the AS's token signature, so their
-integrity reduces to the AS's signing key. The AS publishes its
-verification keys, and rotation retires a key from signing but keeps it
-resolvable while tokens signed under it remain valid
-({{mission-bound-tokens}}).
+integrity reduces to the AS's signing key, whose publication and
+rotation {{mission-bound-tokens}} specifies.
 
 Verification for audit outlives validity; keeping a key resolvable for
 the audit horizon ({{mission-record}}) of every Mission whose tokens it
