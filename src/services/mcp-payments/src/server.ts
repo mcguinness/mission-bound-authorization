@@ -75,7 +75,12 @@ import type { EvidenceStore } from "./evidence.js";
 import { operationKey, type TransactionEngine } from "./transaction.js";
 import { recordRedeemingAttempt } from "./redemption-status.js";
 import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
-import type { WriteEffectOutcome, WriteReservation, WriteReservationStore } from "./write-reservations.js";
+import {
+  CONSUMED_PERMIT_RETENTION_MARGIN_MS,
+  type WriteEffectOutcome,
+  type WriteReservation,
+  type WriteReservationStore,
+} from "./write-reservations.js";
 
 /** Called only after this path's signature, issuer/chain and expiry checks. */
 function verifiedCredentialRef(payload: JWTPayload): { issuer?: string; expires_at?: string } {
@@ -348,7 +353,10 @@ export interface McpServerDeps {
    * store for keyed reversible writes, a durable single-writer file named in
    * configuration. Never defaulted: absent, every keyed reversible write is
    * refused `consumption_unavailable` and executes nothing, since without the
-   * store exactly-once cannot be established.
+   * store exactly-once cannot be established. @spec
+   * runtime#single-use-identifiers (#1080): the same file records the
+   * consumed identifiers of single-use permits on the core write path, and
+   * absent, such a permit is refused the same way.
    */
   writeReservations?: WriteReservationStore;
 }
@@ -984,7 +992,11 @@ export class McpPaymentsServer {
     // @spec runtime#idempotency (#918): a keyed reversible write's effect is
     // reachable only through its reservation, so a caller that sends one down
     // the read path is served by the write path, never by an unreserved effect.
-    if (this.isKeyedReversibleWrite(tool)) return this.callWriteTool(tool, args, token, beforeReverify, signals);
+    // @spec runtime#single-use-identifiers (#1080): so is every other
+    // reversible write, whose single-use permit only the write path redeems.
+    if (this.deps.pep.toolAction(tool)?.actionClass === REVERSIBLE_WRITE_CLASS) {
+      return this.callWriteTool(tool, args, token, beforeReverify, signals);
+    }
     const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
     if (!res.permitted) {
       return {
@@ -1099,7 +1111,59 @@ export class McpPaymentsServer {
     // Operation Profile can have moved during the reads above.
     const live = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!live.ok) return { ok: false, refusal_reason: live.error };
+    // @spec runtime#single-use-identifiers (#1080, D317): a single-use permit
+    // is redeemed last, after every check that could refuse it, so an earlier
+    // refusal never burns it; redemption and release are synchronous, with no
+    // await between them.
+    const singleUse = this.takeSingleUse(attempt, res.decision);
+    if (singleUse !== undefined) {
+      await this.deps.pep.suppressExecution(attempt, singleUse);
+      return {
+        ok: false,
+        refusal_reason: singleUse === "condition_unrecognized" ? "unrecognized_condition" : singleUse,
+      };
+    }
     return { ok: true, result: this.execute(tool, args) };
+  }
+
+  /**
+   * @spec runtime#single-use-identifiers, authzen#response-context `use_limit`
+   * (#1080, D317): "the PEP owns the consumed-identifier store and refuses a
+   * re-presented consumed `evaluation_id`". Where the permit carries
+   * `use_limit`, take its single use in this PEP's durable store and return
+   * nothing; otherwise return the Execution Evidence `error` that refuses it:
+   *
+   * | Case | `error` |
+   * |---|---|
+   * | `use_limit` other than 1 (this PEP meters single use only) | `condition_unrecognized` |
+   * | no store configured, or the store cannot be written | `consumption_unavailable` |
+   * | the identifier is already consumed | `permit_consumed` |
+   *
+   * A permit with no `use_limit` returns nothing and touches no store. The
+   * record is retained until the permit's `valid_until` plus
+   * {@link CONSUMED_PERMIT_RETENTION_MARGIN_MS}. Synchronous, so the caller
+   * releases the effect with no await after the redemption.
+   */
+  private takeSingleUse(attempt: ExecutionAttempt, decision: Decision): string | undefined {
+    const useLimit = permitConditions(decision)?.use_limit;
+    if (useLimit === undefined) return undefined;
+    if (useLimit !== 1) return "condition_unrecognized";
+    const store = this.deps.writeReservations;
+    if (!store) return "consumption_unavailable";
+    const validUntilMs =
+      typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : Number.NaN;
+    if (!Number.isFinite(validUntilMs)) return "permit_expired";
+    try {
+      const first = store.consumePermit({
+        evaluationId: attempt.evaluationId,
+        action: attempt.action,
+        executionId: attempt.executionId,
+        retainUntilMs: validUntilMs + CONSUMED_PERMIT_RETENTION_MARGIN_MS,
+      });
+      return first ? undefined : "permit_consumed";
+    } catch {
+      return "consumption_unavailable";
+    }
   }
 
   /**

@@ -294,10 +294,11 @@ describe("the PEP's reservation and retention for keyed reversible writes (@spec
       expect(() => openWriteReservationStore({ file: undefined, owner: OWNER })).toThrow(/no store file is configured/);
       expect(() => openWriteReservationStore({ file: ":memory:", owner: OWNER })).toThrow(/in-memory store is not durable/);
       expect(() => openWriteReservationStore({ file, owner: "mcp-payments-pdp" })).toThrow(/owned by mcp-payments-pep/);
-      // A build that migrated this file one version further.
+      // A build that migrated this file one version further than this
+      // build's two (the reservations, then the consumed identifiers, #1080).
       const newer = tempFile();
       openWriteReservationStore({ file: newer, owner: OWNER }).close();
-      openDurableStore({ file: newer, owner: OWNER, migrations: ["SELECT 1", "SELECT 1"] }).close();
+      openDurableStore({ file: newer, owner: OWNER, migrations: ["SELECT 1", "SELECT 1", "SELECT 1"] }).close();
       expect(() => openWriteReservationStore({ file: newer, owner: OWNER })).toThrow(/newer than this build/);
       // The statement names mcp-payments-pep as the reservation owner.
       const foreign = openEphemeralWriteReservationStore({ owner: "another-pep" });
