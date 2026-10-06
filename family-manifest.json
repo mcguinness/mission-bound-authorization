@@ -2122,6 +2122,7 @@
    "normative_references": [
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion"
    ],
    "adoption_requires": [
@@ -2133,6 +2134,12 @@
      "when": "drawdown maps to the runtime profile's action classes",
      "requires": [
       "draft-mcguinness-mission-runtime"
+     ]
+    },
+    {
+     "when": "the deployment also adopts Mission Derivation Limits",
+     "requires": [
+      "draft-mcguinness-oauth-mission-derivation-limits"
      ]
     }
    ],
@@ -2149,6 +2156,7 @@
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-template"
@@ -2458,6 +2466,7 @@
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
+    "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-template"
    ]
   },
