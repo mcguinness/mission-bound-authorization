@@ -1076,3 +1076,14 @@ Authorization work for the incident-response experience that shaped
 this surface.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- A bulk `suspend` whose `on_expiry` is `resume` needs the distinct or
+  elevated `resume` grant, checked at dry run and again at execute
+  before any member changes. The caller is each committed schedule's
+  committing party, an omitted schedule is preserved, and an execute
+  must match the dry run's `suspend_until` as well as its `on_expiry`
+  (#1002).

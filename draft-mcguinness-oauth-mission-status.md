@@ -1927,6 +1927,15 @@ Authorization work for feedback that shaped these extensions.
 
 \[\[ To be removed from the final specification ]]
 
+- A `suspend` whose `on_expiry` is `resume` needs the authorization
+  the deployment requires for a direct `resume` as well as for
+  `suspend`, including when it replaces the schedule of a Mission
+  already suspended, and the AS records each schedule's committing
+  party. Omitting both schedule members preserves the recorded
+  schedule. A schedule applies only while current, never to a later
+  suspension, and expiry governs a `suspend_until` at or after
+  `expires_at` (#1002).
+
 - Authentication failures at the Status and Lifecycle endpoints: a
   failed access token gets a 401 `WWW-Authenticate` challenge in its
   scheme (`Bearer` or `DPoP`); a request with no credential gets a
