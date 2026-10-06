@@ -254,7 +254,7 @@ export const REVERSIBLE_WRITE_REFUSAL_ERRORS: Readonly<Record<string, string>> =
  * reverification, where concurrent in-process attempts interleave after each
  * found the pair free; inside the one local transaction (a throw rolls the
  * effect and the reservation back together); and after its commit but before
- * the response. The core write path (#1080) honors `atReverification` alone,
+ * the response. The unkeyed write path (#1080) honors `atReverification` alone,
  * where concurrent presentations of one single-use permit interleave after
  * admission and before its redemption.
  */
@@ -357,7 +357,7 @@ export interface McpServerDeps {
    * refused `consumption_unavailable` and executes nothing, since without the
    * store exactly-once cannot be established. @spec
    * runtime#single-use-identifiers (#1080): the same file records the
-   * consumed identifiers of single-use permits on the core write path, and
+   * consumed identifiers of single-use permits on the unkeyed write path, and
    * absent, such a permit is refused the same way.
    */
   writeReservations?: WriteReservationStore;

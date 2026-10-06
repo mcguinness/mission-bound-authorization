@@ -15,7 +15,7 @@
  * payments store.
  *
  * @spec runtime#single-use-identifiers (#1080, D317): the same file holds the
- * consumed-identifier record for a single-use permit on the core write path,
+ * consumed-identifier record for a single-use permit on the unkeyed write path,
  * a `consequential_write` that elects no key control. Its own table, keyed on
  * the permit's `evaluation_id` and taken by one atomic insert
  * ({@link WriteReservationStore.consumePermit}), so it survives a restart
@@ -79,7 +79,7 @@ CREATE TABLE payment_schedules (
 ) STRICT;
 CREATE UNIQUE INDEX one_active ON payment_schedules (mission_issuer, mission_id, invoice_id) WHERE state = 'scheduled';
 `,
-  // Version 2 (#1080, D317): the core write path's consumed single-use
+  // Version 2 (#1080, D317): the unkeyed write path's consumed single-use
   // decision identifiers. One row per redeemed `evaluation_id`, kept until
   // `retain_until_ms`, which is never earlier than the end of the permit's
   // acceptance window.

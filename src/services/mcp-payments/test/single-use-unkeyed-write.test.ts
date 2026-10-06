@@ -1,12 +1,12 @@
 /**
  * @spec runtime#permit-binding, runtime#single-use-identifiers,
  * authzen#response-context `use_limit` (#1080, D317): single-use permits on
- * the core write path, end to end through this resource's real PEP, the real
+ * the unkeyed write path, end to end through this resource's real PEP, the real
  * PDP, its evidence store, and a real store file.
  *
  * `hold_transfer`, the prepare phase of `payments:payment.execute`, is a
  * `consequential_write` that elects no key control, so its permit carries
- * `use_limit: 1`. The core write path redeems the permit's `evaluation_id`
+ * `use_limit: 1`. The unkeyed write path redeems the permit's `evaluation_id`
  * once, as its last step before release, in the PEP's durable store; a second
  * presentation of the same Decision is suppressed `permit_consumed` and
  * releases nothing, also after a restart on the same file. The keyed writes
@@ -45,7 +45,7 @@ const ISSUER = "https://as.test";
 const OWNER = "mcp-payments-pep";
 const MISSION = "msn_1080";
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
-const tempFile = (): string => join(mkdtempSync(join(tmpdir(), "single-use-core-write-")), "write-reservations.sqlite");
+const tempFile = (): string => join(mkdtempSync(join(tmpdir(), "single-use-unkeyed-write-")), "write-reservations.sqlite");
 
 const TOKEN: TokenFacts = {
   sub: "alice",
@@ -144,7 +144,7 @@ const conditionsOf = (d: Decision | undefined) =>
   d?.context.conditions as { valid_until?: string; use_limit?: number } | undefined;
 const HELD = { held: true, invoice_id: "inv-1" };
 
-describe("single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080)", () => {
+describe("single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080)", () => {
   it("at the resource operation, the hold_transfer permit carries use_limit: 1, and the keyed writes keep the key control with no use_limit", async () => {
     const h = harness();
     const held = await hold(h);
