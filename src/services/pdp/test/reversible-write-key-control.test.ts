@@ -200,3 +200,34 @@ describe("the PDP refuses a declared reversible write that carries no idempotenc
     expect(Date.parse(shippedUntil) - NOW.getTime()).toBe(300_000);
   });
 });
+
+describe("a reversible write that elects no key control defaults to single use (@spec runtime#permit-binding, #1080)", () => {
+  it("the prepare-phase hold (payments:payment.execute, no key control) is permitted with use_limit: 1, with or without a key, and no claim; a keyed write carries none; a class-wide key control removes the default", async () => {
+    for (const k of [undefined, KEY]) {
+      const permit = await evaluate(request("payments:payment.execute", k), opts);
+      expect(permit.decision, String(k)).toBe(true);
+      const conditions = permit.context.conditions as { valid_until: string; use_limit?: number };
+      expect(conditions.use_limit).toBe(1);
+      expect(Date.parse(conditions.valid_until)).toBeGreaterThan(NOW.getTime());
+    }
+    for (const action of ["payments:payment.schedule", "payments:payment.schedule.cancel"]) {
+      const keyed = await evaluate(request(action, KEY), opts);
+      expect(keyed.decision, action).toBe(true);
+      expect((keyed.context.conditions as { use_limit?: number }).use_limit, action).toBeUndefined();
+    }
+    // The default follows the declaration, not the action name: under a
+    // class-wide key control the same hold needs a key and carries no use limit.
+    const classWide = withDeclarations((d) => {
+      d.splice(1);
+      if (d[0]) d[0].mediated_class_or_scope = "consequential_write";
+    }) as unknown as RuntimePosture;
+    const classOpts = {
+      ...opts,
+      reversibleWritePermitMaxSeconds: (c: string | undefined, a: string) => reversibleWritePermitMaxSeconds(classWide, c, a),
+    };
+    expect((await evaluate(request("payments:payment.execute"), classOpts)).context.denial_reason).toBe("parameter_violation");
+    const keyedHold = await evaluate(request("payments:payment.execute", KEY), classOpts);
+    expect(keyedHold.decision).toBe(true);
+    expect((keyedHold.context.conditions as { use_limit?: number }).use_limit).toBeUndefined();
+  });
+});

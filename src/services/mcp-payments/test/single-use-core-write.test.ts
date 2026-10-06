@@ -1,0 +1,283 @@
+/**
+ * @spec runtime#permit-binding, runtime#single-use-identifiers,
+ * authzen#response-context `use_limit` (#1080, D317): single-use permits on
+ * the core write path, end to end through this resource's real PEP, the real
+ * PDP, its evidence store, and a real store file.
+ *
+ * `hold_transfer`, the prepare phase of `payments:payment.execute`, is a
+ * `consequential_write` that elects no key control, so its permit carries
+ * `use_limit: 1`. The core write path redeems the permit's `evaluation_id`
+ * once, as its last step before release, in the PEP's durable store; a second
+ * presentation of the same Decision is suppressed `permit_consumed` and
+ * releases nothing, also after a restart on the same file. The keyed writes
+ * keep their idempotency-key control and carry no use limit.
+ *
+ * A re-presentation is built by replaying a captured Decision in place of a
+ * fresh one, the way a PEP that re-presents a Decision would. Every store is
+ * a real file in a fresh temporary directory on a clock the test drives; the
+ * FGA layer is a stub that always permits, so this file never skips.
+ */
+
+import { randomUUID } from "node:crypto";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import type { Decision, Fga, MissionView } from "@mission/pdp";
+import {
+  CANONICAL_RESOURCE,
+  CONSUMED_PERMIT_RETENTION_MARGIN_MS,
+  createEphemeralEvidenceKeys,
+  EvidenceStore,
+  type ExecutionEvidence,
+  McpPaymentsServer,
+  openWriteReservationStore,
+  PaymentsStore,
+  Pep,
+  type TokenFacts,
+  type WriteReservationStore,
+} from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+
+const KEYS = createEphemeralEvidenceKeys();
+const BASE_MS = Date.parse("2026-10-05T12:00:00.000Z");
+const ISSUER = "https://as.test";
+const OWNER = "mcp-payments-pep";
+const MISSION = "msn_1080";
+const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
+const tempFile = (): string => join(mkdtempSync(join(tmpdir(), "single-use-core-write-")), "write-reservations.sqlite");
+
+const TOKEN: TokenFacts = {
+  sub: "alice",
+  clientId: "ap-agent",
+  mission: { id: MISSION, issuer: ISSUER, authority_hash: `sha-256:${MISSION}` },
+  cnfJkt: "jkt-1080",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
+};
+
+const VIEW: MissionView = {
+  id: MISSION,
+  issuer: ISSUER,
+  state: "active",
+  version: 1,
+  authority_hash: `sha-256:${MISSION}`,
+  authority_set: [
+    {
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: ["payments:payment.execute", "payments:payment.schedule", "payments:payment.schedule.cancel"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ],
+  subject: { iss: ISSUER, sub: "alice" },
+  client_id: "ap-agent",
+};
+
+function harness(o: { file?: string; store?: "none" } = {}) {
+  let nowMs = BASE_MS;
+  const now = () => new Date(nowMs);
+  let replayed: Decision | undefined;
+  let mutate: ((d: Decision) => Decision) | undefined;
+  let captured: Decision | undefined;
+  const payments = new PaymentsStore();
+  payments.seed(
+    [{ id: "acme", name: "Acme", status: "approved" }],
+    [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
+  );
+  const loadView = (ref: { id: string; issuer: string }) =>
+    ref.id === MISSION && ref.issuer === ISSUER
+      ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: now().toISOString() } }
+      : undefined;
+  const evidence = new EvidenceStore(KEYS.signing, KEYS.resolver);
+  const file = o.file ?? tempFile();
+  const store: WriteReservationStore | undefined =
+    o.store === "none" ? undefined : openWriteReservationStore({ file, owner: OWNER, now });
+  const pep = new Pep({
+    // A replayed Decision stands in for a fresh one: the SAME evaluation
+    // identifier, conditions and signed Decision Evidence, presented again.
+    decide: async (req, options) => {
+      const decision = replayed ?? (await KEYS.decide(req, options));
+      return mutate ? mutate(decision) : decision;
+    },
+    observe: ({ decision }) => {
+      captured = decision;
+    },
+    payments,
+    evidence,
+    fga: alwaysAllowFga,
+    modelId: "model-1080",
+    loadView,
+    instanceEpoch: "epoch-1080",
+    now,
+  });
+  const server = new McpPaymentsServer({
+    pep,
+    payments,
+    loadView,
+    jwks: { keys: [] },
+    keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
+    issuer: ISSUER,
+    ...(store ? { writeReservations: store } : {}),
+  });
+  return {
+    server,
+    evidence,
+    store,
+    file,
+    lastDecision: () => captured,
+    replay: (d: Decision | undefined) => {
+      replayed = d;
+    },
+    mutateDecision: (m: ((d: Decision) => Decision) | undefined) => {
+      mutate = m;
+    },
+    advance: (ms: number) => {
+      nowMs += ms;
+    },
+    executions: () => evidence.forMission(MISSION).filter((e): e is ExecutionEvidence => e.kind === "execution"),
+  };
+}
+type Harness = ReturnType<typeof harness>;
+
+const hold = (h: Harness) => h.server.callWriteTool("hold_transfer", { invoice_id: "inv-1" }, TOKEN);
+const conditionsOf = (d: Decision | undefined) =>
+  d?.context.conditions as { valid_until?: string; use_limit?: number } | undefined;
+const HELD = { held: true, invoice_id: "inv-1" };
+
+describe("single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080)", () => {
+  it("at the resource operation, the hold_transfer permit carries use_limit: 1, and the keyed writes keep the key control with no use_limit", async () => {
+    const h = harness();
+    const held = await hold(h);
+    expect(held, JSON.stringify(held)).toEqual({ ok: true, result: HELD });
+    const holdPermit = h.lastDecision();
+    expect(holdPermit?.decision).toBe(true);
+    expect(conditionsOf(holdPermit)?.use_limit).toBe(1);
+
+    // The keyed writes: a request without a key is refused by the PDP, and a
+    // keyed one is permitted under the short validity window and no use limit.
+    const keyless = await h.server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);
+    expect(keyless.ok).toBe(false);
+    expect(keyless.denial_reason).toBe("parameter_violation");
+    for (const tool of ["schedule_payment", "cancel_scheduled_payment"]) {
+      const res = await h.server.callWriteTool(tool, { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, TOKEN);
+      expect(res.ok, `${tool}: ${JSON.stringify(res)}`).toBe(true);
+      const permit = h.lastDecision();
+      expect(permit?.decision, tool).toBe(true);
+      expect(conditionsOf(permit)?.use_limit, tool).toBeUndefined();
+      const windowMs = Date.parse(conditionsOf(permit)?.valid_until ?? "") - BASE_MS;
+      expect(windowMs, tool).toBeGreaterThan(0);
+      expect(windowMs, tool).toBeLessThanOrEqual(300_000);
+    }
+    // Only the single-use permit took a consumed-identifier record.
+    expect(h.store?.consumedPermits().map((c) => c.evaluationId)).toEqual([holdPermit?.context.decision_id]);
+    h.store?.close();
+  });
+
+  it("a second presentation of one hold_transfer Decision is refused permit_consumed, releases no second hold, and records the suppression against the same evaluation_id", async () => {
+    const h = harness();
+    expect(await hold(h)).toEqual({ ok: true, result: HELD });
+    const permit = h.lastDecision();
+    const evaluationId = permit?.context.decision_id as string;
+
+    h.replay(permit);
+    const again = await hold(h);
+    expect(again).toEqual({ ok: false, refusal_reason: "permit_consumed" });
+    expect(h.executions().map((e) => [e.content.outcome, e.content.error, e.content.evaluation_id, e.content.emitter.role])).toEqual([
+      ["suppressed", "permit_consumed", evaluationId, "pep"],
+    ]);
+    expect(h.store?.consumedPermits().map((c) => c.evaluationId)).toEqual([evaluationId]);
+    h.store?.close();
+  });
+
+  it("a presentation refused before redemption burns nothing, and two concurrent presentations of that Decision release at most one hold", async () => {
+    const h = harness();
+    // Refused at the final permit-use check (the permit expired during the
+    // awaited reads), which runs before redemption.
+    const refused = await h.server.callWriteTool("hold_transfer", { invoice_id: "inv-1" }, TOKEN, () => h.advance(301_000));
+    expect(refused).toEqual({ ok: false, refusal_reason: "permit_expired" });
+    expect(h.store?.consumedPermits()).toEqual([]);
+    const permit = h.lastDecision();
+    expect(conditionsOf(permit)?.use_limit).toBe(1);
+
+    // Back inside the window, the same unconsumed Decision presented twice at once.
+    h.advance(-301_000);
+    h.replay(permit);
+    const results = await Promise.all([hold(h), hold(h)]);
+    expect(results.filter((r) => r.ok)).toEqual([{ ok: true, result: HELD }]);
+    expect(results.filter((r) => !r.ok)).toEqual([{ ok: false, refusal_reason: "permit_consumed" }]);
+    expect(h.executions().map((e) => e.content.error)).toEqual(["permit_expired", "permit_consumed"]);
+    expect(h.store?.consumedPermits()).toHaveLength(1);
+    h.store?.close();
+  });
+
+  it("the consumed record survives a store reopen: a new server on the same file refuses the replay permit_consumed with no hold", async () => {
+    const file = tempFile();
+    const before = harness({ file });
+    expect(await hold(before)).toEqual({ ok: true, result: HELD });
+    const permit = before.lastDecision();
+    before.store?.close();
+
+    const after = harness({ file });
+    after.replay(permit);
+    const replayed = await hold(after);
+    expect(replayed).toEqual({ ok: false, refusal_reason: "permit_consumed" });
+    expect(after.executions().map((e) => [e.content.outcome, e.content.error])).toEqual([["suppressed", "permit_consumed"]]);
+    after.store?.close();
+  });
+
+  it("a consumed-identifier store that cannot be written, or none configured, refuses consumption_unavailable with no hold", async () => {
+    const broken = harness();
+    broken.store?.close();
+    const failed = await hold(broken);
+    expect(failed).toEqual({ ok: false, refusal_reason: "consumption_unavailable" });
+    expect(broken.executions().map((e) => [e.content.outcome, e.content.error])).toEqual([["suppressed", "consumption_unavailable"]]);
+
+    const absent = harness({ store: "none" });
+    const unconfigured = await hold(absent);
+    expect(unconfigured).toEqual({ ok: false, refusal_reason: "consumption_unavailable" });
+    expect(absent.executions().map((e) => e.content.error)).toEqual(["consumption_unavailable"]);
+  });
+
+  it("a use_limit other than 1, which this PEP cannot meter, is refused condition_unrecognized with no hold and no consumed record", async () => {
+    const h = harness();
+    h.mutateDecision((d) => ({
+      ...d,
+      context: { ...d.context, conditions: { ...(d.context.conditions as Record<string, unknown>), use_limit: 2 } },
+    }));
+    const res = await hold(h);
+    expect(res).toEqual({ ok: false, refusal_reason: "unrecognized_condition" });
+    expect(h.executions().map((e) => e.content.error)).toEqual(["condition_unrecognized"]);
+    expect(h.store?.consumedPermits()).toEqual([]);
+    h.store?.close();
+  });
+
+  it("a hold_transfer sent down the read path is served by the write path, so its replay is refused permit_consumed", async () => {
+    const h = harness();
+    const first = await h.server.callReadTool("hold_transfer", { invoice_id: "inv-1" }, TOKEN);
+    expect(first).toEqual({ ok: true, result: HELD });
+    h.replay(h.lastDecision());
+    const again = await h.server.callReadTool("hold_transfer", { invoice_id: "inv-1" }, TOKEN);
+    expect(again).toEqual({ ok: false, refusal_reason: "permit_consumed" });
+    h.store?.close();
+  });
+
+  it("retains each consumed identifier through the permit's whole acceptance window: until valid_until plus the margin, and a sweep at valid_until keeps it", async () => {
+    const h = harness();
+    expect(await hold(h)).toEqual({ ok: true, result: HELD });
+    const permit = h.lastDecision();
+    const validUntilMs = Date.parse(conditionsOf(permit)?.valid_until ?? "");
+    expect(h.store?.consumedPermits().map((c) => c.retainUntilMs)).toEqual([validUntilMs + CONSUMED_PERMIT_RETENTION_MARGIN_MS]);
+
+    // The last instant this PEP still accepts the permit: the record stands.
+    h.advance(validUntilMs - BASE_MS);
+    expect(h.store?.sweepConsumedPermits()).toBe(0);
+    h.replay(permit);
+    expect(await hold(h)).toEqual({ ok: false, refusal_reason: "permit_consumed" });
+
+    // Past the retention the sweep removes it, and the permit itself is long expired.
+    h.advance(CONSUMED_PERMIT_RETENTION_MARGIN_MS + 1);
+    expect(h.store?.sweepConsumedPermits()).toBe(1);
+    expect(await hold(h)).toEqual({ ok: false, refusal_reason: "permit_expired" });
+    h.store?.close();
+  });
+});
