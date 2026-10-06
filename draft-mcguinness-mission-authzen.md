@@ -782,23 +782,27 @@ checks:
 
 `authority`:
 : REQUIRED when `credential` is present. An array of authority
-  entries: the credential authority ({{I-D.draft-mcguinness-mission-runtime}}) of the validated
+  entries: the credential authority
+  ({{I-D.draft-mcguinness-mission-runtime}}) of the validated
   credential, in its credential profile's representation (the OAuth
   realization is the token's `authorization_details`, or, for an
   ordinary token joined to a Mission, the entries the deployment maps
-  its granted scope to, {{I-D.draft-mcguinness-mission-runtime-oauth}}). The PEP supplies it only from the
-  validated credential, never from the Mission's authority.
+  its granted scope to,
+  {{I-D.draft-mcguinness-mission-runtime-oauth}}). The PEP supplies it
+  only from the validated credential, never from the Mission's
+  authority.
 
 The PEP MUST NOT include unverified credential claims in this member.
 
 The PDP evaluates the action against `authority` independently of the
 current effective authority, and never substitutes any record of
-Mission authority for it ({{I-D.draft-mcguinness-mission-runtime}}). One entry MUST cover the action
-whole: its resource, its action, and every constraint the entry
-carries; a constraint from one entry never combines with an action
-from another. An entry's `requires_action_approval` requires an
-action-bound approval exactly as the same constraint on an Authority
-Set entry does ({context-approval}). An entry's discharge condition
+Mission authority for it ({{I-D.draft-mcguinness-mission-runtime}}).
+One entry MUST cover the action whole: its resource, its action, and
+every constraint the entry carries; a constraint from one entry never
+combines with an action from another. An entry's
+`requires_action_approval` requires an action-bound approval exactly
+as the same constraint on an Authority Set entry does
+({{context-approval}}). An entry's discharge condition
 (`terminal_when`) is not evaluated against the credential entry: it
 is enforced through the current effective authority, which excludes
 a discharged entry. When no entry covers the action, the PDP returns
@@ -1252,7 +1256,17 @@ Authorization: ...
     },
     "credential": {
       "issuer": "https://as.example.com",
-      "expires_at": "2026-11-02T09:14:00Z"
+      "expires_at": "2026-11-02T09:14:00Z",
+      "authority": [
+        {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": ["journal-entries.write"],
+          "constraints": {
+            "max_amount": { "amount": "500.00", "currency": "USD" }
+          }
+        }
+      ]
     }
   }
 }
@@ -1471,7 +1485,19 @@ Authorization: ...
         "actor": { "client_id": "s6BhdRkqt3" },
         "credential": {
           "issuer": "https://as.example.com",
-          "expires_at": "2026-11-02T09:14:00Z"
+          "expires_at": "2026-11-02T09:14:00Z",
+          "authority": [
+            {
+              "type": "mission_resource_access",
+              "resource": "https://erp.example.com",
+              "actions": ["journal-entries.write"],
+              "constraints": {
+                "max_amount": {
+                  "amount": "500.00", "currency": "USD"
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -1507,7 +1533,19 @@ Authorization: ...
         "actor": { "client_id": "s6BhdRkqt3" },
         "credential": {
           "issuer": "https://as.example.com",
-          "expires_at": "2026-11-02T09:14:00Z"
+          "expires_at": "2026-11-02T09:14:00Z",
+          "authority": [
+            {
+              "type": "mission_resource_access",
+              "resource": "https://erp.example.com",
+              "actions": ["journal-entries.write"],
+              "constraints": {
+                "max_amount": {
+                  "amount": "500.00", "currency": "USD"
+                }
+              }
+            }
+          ]
         }
       }
     }
@@ -1957,8 +1995,8 @@ carried in Decision Evidence:
 
 - `out_of_authority`: the action is not within the credential
   authority ({{context-credential}}) or the current effective
-  authority ({{I-D.draft-mcguinness-mission-runtime}}); the Decision Evidence `authority_bound`
-  member records which ({{evidence}}).
+  authority ({{I-D.draft-mcguinness-mission-runtime}}); the Decision
+  Evidence `authority_bound` member records which ({{evidence}}).
 - `approval_required`: deployment or Resource policy requires an
   action-bound approval for this action
   ({{I-D.draft-mcguinness-mission-runtime}}) and no `context.approval`
@@ -2433,7 +2471,8 @@ elsewhere, for example `taint` (owned by the harness profile,
 : CONDITIONAL. A string, recorded at the top level of Decision
   Evidence: `credential` when the action is outside the credential
   authority ({{context-credential}}), `mission` when it is outside
-  the current effective authority ({{I-D.draft-mcguinness-mission-runtime}}). REQUIRED on a deny with
+  the current effective authority
+  ({{I-D.draft-mcguinness-mission-runtime}}). REQUIRED on a deny with
   `denial_reason` `out_of_authority`, and absent otherwise. When both
   bounds exclude the action, the PDP records the one it evaluated
   first.
