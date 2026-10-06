@@ -25548,7 +25548,7 @@
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "an exact creation retry with the same creation_request_id returns the committed successor and its access token, and the successor's derivation count is unchanged"
+    "normative": "creation accounting never repeats: an exact creation retry with the same creation_request_id recovers the committed successor and records no second creation charge for the drawdown's access token, whether or not recovery mints a fresh delivery token. While the delivered access token is still valid, the retry returns that token and the successor's derivation count is unchanged; after it expires, a fresh delivery token is ordinary issuance, counted once (progressive.drawdown-derivation.recovery-token-gated)"
    },
    "level": "endpoint",
    "coverage": "todo",
