@@ -2422,13 +2422,23 @@ result shape completely. The Entry Discharge companion registers
 <code>discharge</code> this way: it commits that a completion condition has
 fired, discharging a Mission-record entry, and is defined in full by
 that companion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>).<a href="#section-5.1-6" class="pilcrow">¶</a></p>
-<p id="section-5.1-7">A <code>suspend</code> <span class="bcp14">MAY</span> carry <code>suspend_until</code> with a <span class="bcp14">REQUIRED</span> <code>on_expiry</code>. When
-<code>suspend_until</code> passes, the AS <span class="bcp14">MUST</span> apply <code>on_expiry</code> (transition to
+<p id="section-5.1-7">A <code>suspend</code> <span class="bcp14">MAY</span> carry <code>suspend_until</code> with a <span class="bcp14">REQUIRED</span> <code>on_expiry</code>; the
+pair is the Mission's schedule. When the <code>suspend_until</code> of a current
+schedule passes, the AS <span class="bcp14">MUST</span> apply <code>on_expiry</code> (transition to
 <code>active</code> for <code>resume</code>, or to <code>revoked</code> for <code>revoke</code>) and emit the
 corresponding transition, without a further request. While the Mission
 is <code>suspended</code> under a deadline, both <code>suspend_until</code> and <code>on_expiry</code>
 surface in the signed Mission Status Response (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>)
 so a consumer sees the pending outcome.<a href="#section-5.1-7" class="pilcrow">¶</a></p>
+<p id="section-5.1-8">The AS authorizes a schedule when it commits it
+(<a href="#lifecycle-authorization" class="auto internal xref">Section 5.5</a>) and does not re-authorize it at the
+deadline: a later expiry or withdrawal of the committing party's grant
+does not by itself cancel it. A schedule is current until its
+suspension ends or an authorized replacement supersedes it
+(<a href="#idempotency" class="auto internal xref">Section 5.7</a>). The AS <span class="bcp14">MUST NOT</span> apply a schedule that is no longer
+current, so an earlier deadline never acts on a later suspension. A
+deadline applies only a transition legal from the Mission's current
+state (<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>) and never changes a terminal Mission.<a href="#section-5.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="legal-transitions">
@@ -2515,7 +2525,10 @@ idempotent success, with the <code>resume</code> exception above. Any other
 operation not legal from the current state, including <code>resume</code> on a
 Mission that is not <code>suspended</code>, is refused as a conflict. A Mission
 that reaches its <code>expires_at</code> transitions to <code>expired</code> independently of
-this endpoint, from <code>active</code> or <code>suspended</code>.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+this endpoint, from <code>active</code> or <code>suspended</code>. When a schedule's
+<code>suspend_until</code> is at or after the Mission's <code>expires_at</code>, expiry
+governs: the Mission becomes <code>expired</code> at <code>expires_at</code>, and the AS
+<span class="bcp14">MUST NOT</span> apply that schedule's <code>on_expiry</code>.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-machine">
@@ -2709,8 +2722,10 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
         </table>
 <p id="section-5.3-4"><code>revoke</code> and the Mission's <code>expires_at</code> both apply in <code>suspended</code> as
 well as <code>active</code>, so a suspended Mission can still be terminated or
-expire. The <code>superseded</code> and <code>cascaded</code> rows are companion-defined and
-shown here for reference:
+expire. A <code>suspend_until</code> row fires only for a current schedule whose
+deadline falls before <code>expires_at</code> (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>,
+Operations; <a href="#legal-transitions" class="auto internal xref">Section 5.2</a>). The <code>superseded</code> and <code>cascaded</code>
+rows are companion-defined and shown here for reference:
 <code>superseded</code> is committed by the expansion profile and requires an
 <code>active</code> predecessor
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>); <code>cascaded</code> is
@@ -2754,7 +2769,7 @@ scope, exactly as a companion-registered extension operation such as
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>).<a href="#section-5.4-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="authorization">
+<div id="lifecycle-authorization">
 <section id="section-5.5">
         <h3 id="name-authorization">
 <a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-authorization" class="section-name selfRef">Authorization</a>
@@ -2810,9 +2825,21 @@ the containment a <code>suspend</code> established, a deployment <span class="bc
 distinct or elevated authorization for <code>resume</code>, mirroring the
 treatment of bulk <code>resume</code> in Mission Management
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>).<a href="#section-5.5-7" class="pilcrow">¶</a></p>
-<p id="section-5.5-8">The AS <span class="bcp14">MUST</span> refuse an unauthorized lifecycle request with the
+<p id="section-5.5-8">A <code>suspend</code> whose <code>on_expiry</code> is <code>resume</code> schedules a later <code>resume</code>.
+The AS <span class="bcp14">MUST</span> authorize it against both the caller's authorization for
+<code>suspend</code> and the authorization the deployment requires for a direct
+<code>resume</code> of that Mission, including when it sets or replaces the
+schedule of a Mission already <code>suspended</code>, whoever suspended it. The
+AS checks both before any change and refuses a caller lacking either
+as an unauthorized lifecycle request (below), leaving the Mission's
+state and schedule unchanged. A <code>suspend</code> whose <code>on_expiry</code> is
+<code>revoke</code> needs only the authorization for <code>suspend</code>.<a href="#section-5.5-8" class="pilcrow">¶</a></p>
+<p id="section-5.5-9">The AS <span class="bcp14">MUST</span> record with each committed schedule its committing party,
+the acting party of the request that committed it; an authorized
+replacement records its own.<a href="#section-5.5-9" class="pilcrow">¶</a></p>
+<p id="section-5.5-10">The AS <span class="bcp14">MUST</span> refuse an unauthorized lifecycle request with the
 not-found response shape of <a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>, so the endpoint
-does not act as a Mission enumeration oracle.<a href="#section-5.5-8" class="pilcrow">¶</a></p>
+does not act as a Mission enumeration oracle.<a href="#section-5.5-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="worked-examples">
@@ -2989,11 +3016,17 @@ the baseline a Mission holds before any suspension, so <code>resume</code> on an
 <code>active</code> Mission (one never suspended, or already resumed) or on a
 terminal Mission is not idempotent success but a conflict.<a href="#section-5.7-6" class="pilcrow">¶</a></p>
 <p id="section-5.7-7">One idempotent case carries metadata. A <code>suspend</code> against a
-<code>suspended</code> Mission whose <code>suspend_until</code> or <code>on_expiry</code> differ from
-the recorded values <span class="bcp14">MUST</span> update the recorded values, emitting the
-corresponding transition-metadata change and reporting the updated
-values in the response; silent acceptance without effect is not
-conforming.<a href="#section-5.7-7" class="pilcrow">¶</a></p>
+<code>suspended</code> Mission that carries a <code>suspend_until</code> and <code>on_expiry</code>
+pair differing from the recorded schedule, or where none is recorded,
+replaces the schedule once authorized (<a href="#lifecycle-authorization" class="auto internal xref">Section 5.5</a>):
+the AS <span class="bcp14">MUST</span> update the recorded values and their committing party,
+emitting the corresponding transition-metadata change and reporting
+the updated values in the response; silent acceptance without effect
+is not conforming. A <code>suspend</code> that omits both members leaves the
+recorded schedule, if any, and its committing party unchanged:
+omission never clears a deadline. A <code>suspend</code> carrying only one of
+the two remains invalid (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>, Operations)
+and changes nothing.<a href="#section-5.7-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship-to-rfc-7009">
@@ -3888,48 +3921,58 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Authentication failures at the Status and Lifecycle endpoints: a
+          <p id="appendix-A-2.1.1">A <code>suspend</code> whose <code>on_expiry</code> is <code>resume</code> needs the authorization
+the deployment requires for a direct <code>resume</code> as well as for
+<code>suspend</code>, including when it replaces the schedule of a Mission
+already suspended, and the AS records each schedule's committing
+party. Omitting both schedule members preserves the recorded
+schedule. A schedule applies only while current, never to a later
+suspension, and expiry governs a <code>suspend_until</code> at or after
+<code>expires_at</code> (#1002).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Authentication failures at the Status and Lifecycle endpoints: a
 failed access token gets a 401 <code>WWW-Authenticate</code> challenge in its
 scheme (<code>Bearer</code> or <code>DPoP</code>); a request with no credential gets a
 challenge for each accepted access-token scheme, always with
 <code>resource_metadata</code>; failed mTLS or private-key-JWT client
 authentication, or no credential where no access-token scheme is
-accepted, gets 400 <code>invalid_client</code> (#972 item 18).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">A derivation refused because the Mission is <code>suspended</code> or
-<code>completed</code> carries the <code>mission_error</code> value <code>mission_suspended</code> or
-<code>mission_completed</code>, so a client can tell a refusal that a <code>resume</code>
-lifts from a terminal one.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+accepted, gets 400 <code>invalid_client</code> (#972 item 18).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">A caller may request the projection for an audience other than its
+          <p id="appendix-A-2.3.1">A derivation refused because the Mission is <code>suspended</code> or
+<code>completed</code> carries the <code>mission_error</code> value <code>mission_suspended</code> or
+<code>mission_completed</code>, so a client can tell a refusal that a <code>resume</code>
+lifts from a terminal one.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">A caller may request the projection for an audience other than its
 own, such as each resource a Mission Issuance Grant consuming
 Authorization Server serves, only where the Mission Issuer's
 configuration authorizes it; the consumer checks <code>aud</code> against the
-<code>audience</code> its request named (#963).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">The mutual-TLS method value is <code>tls_client_auth</code>, the registered
-<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> spelling, and an absent endpoint auth-methods member is
-never read from token-endpoint metadata. The Mission Authority Server
-publishes the same per-endpoint members.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+<code>audience</code> its request named (#963).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">A refresh against a suspended Mission is checked, and refused, before
-its refresh token is consumed, so a <code>resume</code> restores refresh with the
-same token; issuance-time validation still governs a concurrent
-suspension (#914).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.5.1">The mutual-TLS method value is <code>tls_client_auth</code>, the registered
+<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> spelling, and an absent endpoint auth-methods member is
+never read from token-endpoint metadata. The Mission Authority Server
+publishes the same per-endpoint members.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Added conditional carryover correlation on an old child's cascaded
-observation; no state or authority is inferred from the pointer (#576).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.6.1">A refresh against a suspended Mission is checked, and refused, before
+its refresh token is consumed, so a <code>resume</code> restores refresh with the
+same token; issuance-time validation still governs a concurrent
+suspension (#914).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">Operational Considerations added (#310): recovery sizing for the
+          <p id="appendix-A-2.7.1">Added conditional carryover correlation on an old child's cascaded
+observation; no state or authority is inferred from the pointer (#576).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">Operational Considerations added (#310): recovery sizing for the
 advertised propagation ceiling, the per-surface distribution posture,
 and the operator observations after a degraded surface recovers. No
-freshness window is extended and no member is added.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+freshness window is extended and no member is added.<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
