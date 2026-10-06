@@ -1144,8 +1144,8 @@ other state is non-deriving.
 well as `active`, so a suspended Mission can still be terminated or
 expire. A `suspend_until` row fires only for a current schedule whose
 deadline falls before `expires_at` ({{mission-lifecycle-endpoint}},
-Operations; {{legal-transitions}}). The `superseded` and `cascaded` rows are companion-defined and
-shown here for reference:
+Operations; {{legal-transitions}}). The `superseded` and `cascaded`
+rows are companion-defined and shown here for reference:
 `superseded` is committed by the expansion profile and requires an
 `active` predecessor
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}); `cascaded` is

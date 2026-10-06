@@ -646,11 +646,11 @@ On `mode` `execute` the AS MUST verify that the presented
 
 An execute whose `operation`, `filter`, `suspend_until`, or
 `on_expiry` differs from what the token pins MUST be refused with
-`invalid_bulk_token`, executing nothing. An execute any of whose pinned members has left
-the caller's filter scope (administrative metadata changed under the
-reviewed set, {{admin-metadata}}) MUST be refused with
-`stale_bulk_token`, executing nothing and naming no member; the
-caller re-runs the dry run under current scope
+`invalid_bulk_token`, executing nothing. An execute any of whose
+pinned members has left the caller's filter scope (administrative
+metadata changed under the reviewed set, {{admin-metadata}}) MUST be
+refused with `stale_bulk_token`, executing nothing and naming no
+member; the caller re-runs the dry run under current scope
 ({{bulk-token-security}}). For a `suspend` whose `on_expiry` is
 `resume`, the AS MUST verify again that the caller holds the `resume`
 grant of {{blast-radius}}, and MUST refuse a caller that no longer
@@ -669,7 +669,8 @@ event type and no transactionality: transitions commit independently,
 and a failure on one member MUST NOT roll back another.
 
 For a `suspend`, those semantics include the status profile's schedule
-rules: on a member already `suspended`, a request that omits
+rules ({{I-D.draft-mcguinness-oauth-mission-status}}): on a member
+already `suspended`, a request that omits
 `suspend_until` and `on_expiry` leaves the member's recorded schedule
 and its committing party unchanged, and one that carries them
 replaces that schedule. The caller is the committing party of every
