@@ -803,11 +803,15 @@ narrowed `scope`. It has the following members:
 : OPTIONAL. A string. A URI identifying the purpose of the
   task, recorded for disclosure and audit. Its semantics are
   deployment- or registry-defined and opaque to this document. It is
-  an opaque lookup key: a configured mapping can key on it
-  ({{authorization-derivation}}), and the derived set stays bounded
-  by the Intent and by policy like any derivation. Other than as that
-  lookup key, `purpose` MUST NOT affect the derived Authority Set or
-  any issuance decision; once the Mission is approved it is inert.
+  an opaque lookup key: a configured mapping can key on it to select
+  candidate entries, which the Intent, policy, and the approval event
+  bound like any derivation ({{authorization-derivation}}); the key
+  alone grants no authority. In any other decision, `purpose` MAY
+  contribute only to a refusal or to stricter treatment: its value,
+  its absence, or a substituted value MUST NOT supply, widen, relax,
+  or refresh authority, or replace a check that applies independently
+  of it. After approval, the `purpose` consulted is the approved
+  Mission's, or a validated projection of it.
 
 `expires_at`:
 : REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time: the
@@ -5915,6 +5919,15 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Mission Intent: `purpose` stays the configured-mapping lookup key,
+  whose candidates the Intent, policy, and the approval event bound;
+  in any other decision it can contribute only to a refusal or to
+  stricter treatment, never supplying, widening, relaxing, or
+  refreshing authority or replacing an independent check, and
+  after approval the approved Mission's value is the one consulted.
+  This replaces the rule that `purpose` affects no other issuance
+  decision and is inert after approval (#1102).
 
 - Implementation Map and Mapping Assessment, Cross-Domain: the
   Mission reference is `mission.id` and `mission.issuer`;
