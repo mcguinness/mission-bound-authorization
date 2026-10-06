@@ -15,10 +15,13 @@
 import { type ContextActor, validateContextActor } from "@mission/actor-chain";
 import {
   AUTHORITY_ENTRY_TYP,
+  type AuthorityEntry as CoreAuthorityEntry,
   compareAmounts,
   computeAnchor,
+  conditionsNoBroader,
   type CredentialAuthorityEntry,
   coveringCredentialEntries,
+  isSubsetEntry,
   parseCredentialAuthority,
   type EntitlementObservation,
   entitlementPermits,
@@ -1187,32 +1190,82 @@ async function evaluateInner(
   //     Mission entry above and never substituted by it. One credential entry
   //     must cover the action whole, on the same facts the Mission bound
   //     reads: resource, action, every vendor reached, and the amount. Its
-  //     discharge condition is honored only where the Mission entry matched in
-  //     step 5 carries every one of its conditions, so 5b already governs it;
-  //     its approval requirement joins step 8's. A failure is `out_of_authority`
+  //     approval requirement joins step 8's. A failure is `out_of_authority`
   //     (no new wire value), recorded with the credential entry's constraint keys.
+  //
+  //     Its discharge condition is read through the Mission entries it can
+  //     derive from, because discharge state is kept per Mission entry digest
+  //     (5b), never per condition: two entries can carry one condition and
+  //     differ in state. A source is a recognized entry of the set step 5
+  //     searched that the credential entry is no broader than (@spec mission#
+  //     subset; discharge#subset-extension) and that carries exactly its
+  //     conditions by canonical identity, so the PDP holds state for each one.
+  //     With no source the condition cannot be established and does not permit
+  //     (`out_of_authority`). If ANY source is discharged the entry does not
+  //     permit either, deliberately, even when another source is live: the PDP
+  //     cannot tell which one the credential derives from, and it refuses that
+  //     ambiguity. That refusal is 5b's `authority_discharged`, naming the
+  //     discharged source, so the answer does not depend on entry order.
   const credentialVendorIds: readonly string[] =
     req.resource.properties?.vendor_ids ??
     (req.resource.properties?.vendor_id ? [req.resource.properties.vendor_id] : []);
-  const missionDischarge = entry.constraints?.terminal_when ?? [];
+  const credentialDischarge = (
+    c: CredentialAuthorityEntry,
+  ): { state: "live" | "unestablished" } | { state: "discharged"; digest: string } => {
+    const conditions = c.constraints?.terminal_when;
+    if (!conditions?.length) return { state: "live" };
+    const asEntry: CoreAuthorityEntry = {
+      type: c.type,
+      resource: c.resource,
+      actions: c.actions,
+      ...(c.constraints ? { constraints: c.constraints } : {}),
+    };
+    let sources = 0;
+    for (const m of candidateAuthoritySet) {
+      if (m.type !== MISSION_RESOURCE_ACCESS_TYPE) continue;
+      const source: CoreAuthorityEntry = {
+        type: m.type,
+        resource: m.resource,
+        actions: m.actions,
+        ...(m.constraints ? { constraints: m.constraints } : {}),
+      };
+      if (!isSubsetEntry(asEntry, source)) continue;
+      if (!conditionsNoBroader(m.constraints?.terminal_when, conditions)) continue;
+      sources++;
+      const digest = computeAnchor(AUTHORITY_ENTRY_TYP, view.issuer, m as never);
+      if (dischargedDigests?.includes(digest)) return { state: "discharged", digest };
+    }
+    return { state: sources > 0 ? "live" : "unestablished" };
+  };
+  let dischargedSource: string | undefined;
   const credentialCandidates = coveringCredentialEntries(credentialAuthority, {
     resource: audience ?? "",
     action: req.action.name,
     vendorIds: credentialVendorIds,
     ...(req.context.amount ? { amount: req.context.amount } : {}),
-  }).filter((c) =>
-    (c.constraints?.terminal_when ?? []).every((cond) =>
-      missionDischarge.some(
-        (m) => m.event_type === cond.event_type && m.discharge_authority === cond.discharge_authority,
-      ),
-    ),
-  );
+  }).filter((c) => {
+    const discharge = credentialDischarge(c);
+    if (discharge.state === "discharged") dischargedSource ??= discharge.digest;
+    return discharge.state === "live";
+  });
   for (const c of credentialAuthority) {
     if (c.resource !== audience || !c.actions.includes(req.action.name)) continue;
     contributions.add(c.type);
     for (const key of Object.keys(c.constraints ?? {})) contributions.add(key);
   }
-  if (credentialCandidates.length === 0) return deny("out_of_authority");
+  if (credentialCandidates.length === 0) {
+    if (dischargedSource !== undefined) {
+      return {
+        decision: false,
+        context: base({
+          denial_reason: "authority_discharged",
+          reason: "authority_discharged",
+          entry_digest: dischargedSource,
+        }),
+      };
+    }
+    return deny("out_of_authority");
+  }
   const credentialRequiresApproval = credentialCandidates.every(
     (c) => c.constraints?.requires_action_approval === true,
   );

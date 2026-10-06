@@ -149,7 +149,7 @@ describe("the credential's discharge and approval conditions are decided at the 
     ],
   });
 
-  it("honors a discharge condition the matched Mission entry carries, so the Mission's discharge state governs it", async () => {
+  it("honors a discharge condition its source Mission entry carries, so that entry's discharge state governs it", async () => {
     const credential = { authority: [entry(["payments:invoice.read"], { terminal_when: [CLOSE] })] };
     expect(reason(await evaluate(req(credential), opts(missionWithClose)))).toBe("permit");
     const missionEntry = missionWithClose.authority_set[0];
@@ -163,12 +163,39 @@ describe("the credential's discharge and approval conditions are decided at the 
     expect(reason(await evaluate(req(credential), opts(discharged)))).toBe("authority_discharged");
   });
 
-  it("refuses a discharge condition the matched Mission entry does not carry: the PDP holds no state for it", async () => {
+  it("refuses a discharge condition no Mission entry it derives from carries: the PDP holds no state for it", async () => {
     const credential = {
       authority: [entry(["payments:invoice.read"], { terminal_when: [{ event_type: "other-event" }] })],
     };
     expect(reason(await evaluate(req(credential), opts(missionWithClose)))).toBe("out_of_authority");
     expect(reason(await evaluate(req(credential), opts()))).toBe("out_of_authority");
+    // A further condition the source lacks, and one that differs from the
+    // source's only in discharge_authority, are no more established.
+    const added = { authority: [entry(["payments:invoice.read"], { terminal_when: [CLOSE, { event_type: "other-event" }] })] };
+    expect(reason(await evaluate(req(added), opts(missionWithClose)))).toBe("out_of_authority");
+    const unpinned = { authority: [entry(["payments:invoice.read"], { terminal_when: [{ event_type: CLOSE.event_type }] })] };
+    expect(reason(await evaluate(req(unpinned), opts(missionWithClose)))).toBe("out_of_authority");
+  });
+
+  it("never borrows another Mission entry's live state: any discharged source refuses, whatever the entry order (#1133 review P1)", async () => {
+    const live = entry(["payments:invoice.read", "payments:vendor.read"], { terminal_when: [CLOSE] });
+    const done = entry(["payments:invoice.read"], { terminal_when: [CLOSE] });
+    const doneDigest = computeAnchor(AUTHORITY_ENTRY_TYP, ISSUER, done as unknown as JsonValue);
+    const mission = (set: unknown[]) =>
+      view({ authority_set: set as MissionView["authority_set"], discharged: { entry_digests: [doneDigest] } });
+    const credential = { authority: [done] };
+    for (const set of [[live, done], [done, live]]) {
+      const decision = await evaluate(req(credential), opts(mission(set)));
+      expect(reason(decision)).toBe("authority_discharged");
+      expect(decision.context.entry_digest).toBe(doneDigest);
+    }
+    // The live entry's own credential, and one narrowed from it to vendor
+    // reads, derive from no discharged entry and permit.
+    expect(reason(await evaluate(req({ authority: [live] }), opts(mission([live, done]))))).toBe("permit");
+    const vendorOnly = { authority: [entry(["payments:vendor.read"], { terminal_when: [CLOSE] })] };
+    expect(
+      reason(await evaluate(req(vendorOnly, { action: "payments:vendor.read" }), opts(mission([live, done])))),
+    ).toBe("permit");
   });
 
   it("requires the action-bound approval a credential entry demands, though neither the Mission nor the deployment does", async () => {
@@ -206,8 +233,30 @@ describe("credential facts the PDP cannot use refuse credential_invalid (@spec a
     ["a constraint it cannot enforce", [entry(["payments:invoice.read"], { time_window: "9-5" })]],
     ["a malformed amount cap", [entry(["payments:invoice.read"], { max_amount: { amount: "ten", currency: "USD" } })]],
     ["a non-array value", { type: "mission_resource_access" }],
+    ["an empty discharge condition list", [entry(["payments:invoice.read"], { terminal_when: [] })]],
+    [
+      "two discharge conditions sharing a canonical form",
+      [
+        entry(["payments:invoice.read"], {
+          terminal_when: [CLOSE, { discharge_authority: CLOSE.discharge_authority, event_type: CLOSE.event_type }],
+        }),
+      ],
+    ],
+    [
+      "a malformed discharge_authority",
+      [entry(["payments:invoice.read"], { terminal_when: [{ event_type: "x", discharge_authority: "two words" }] })],
+    ],
   ])("refuses a credential authority with %s", async (_label, authority) => {
     expect(reason(await evaluate(req({ authority }), opts()))).toBe("credential_invalid");
+  });
+
+  it("refuses a discharge condition carrying a member the profile does not define, though the Mission entry carries it without one (#1133 review P2)", async () => {
+    const mission = view({ authority_set: [entry(["payments:invoice.read"], { terminal_when: [CLOSE] })] as MissionView["authority_set"] });
+    const extended = { authority: [entry(["payments:invoice.read"], { terminal_when: [{ ...CLOSE, scope: "q3" }] })] };
+    expect(reason(await evaluate(req({ authority: [entry(["payments:invoice.read"], { terminal_when: [CLOSE] })] }), opts(mission)))).toBe(
+      "permit",
+    );
+    expect(reason(await evaluate(req(extended), opts(mission)))).toBe("credential_invalid");
   });
 
   it("refuses a credential whose expiry has passed or cannot be read", async () => {

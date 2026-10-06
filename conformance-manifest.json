@@ -16677,13 +16677,13 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
-     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > honors a discharge condition the matched Mission entry carries, so the Mission's discharge state governs it",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > honors a discharge condition its source Mission entry carries, so that entry's discharge state governs it",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
-     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > refuses a discharge condition the matched Mission entry does not carry: the PDP holds no state for it",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > refuses a discharge condition no Mission entry it derives from carries: the PDP holds no state for it",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -16752,24 +16752,31 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a credential entry's terminal_when permits only where the Mission entry matched for the action carries each of its conditions, so the PDP's own discharge state governs it; a condition it holds no state for refuses out_of_authority"
+    "normative": "a credential entry's terminal_when is read through the Mission entries it can derive from (no broader than the entry, carrying exactly its conditions by canonical identity), whose discharge state the PDP holds by entry digest; with no such entry the condition refuses out_of_authority, and if any such entry is discharged it refuses authority_discharged, whatever the entry order"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
-     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > honors a discharge condition the matched Mission entry carries, so the Mission's discharge state governs it",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > honors a discharge condition its source Mission entry carries, so that entry's discharge state governs it",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
-     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > refuses a discharge condition the matched Mission entry does not carry: the PDP holds no state for it",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > refuses a discharge condition no Mission entry it derives from carries: the PDP holds no state for it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > never borrows another Mission entry's live state: any discharged source refuses, whatever the entry order (#1133 review P1)",
      "level": "unit",
      "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "Discharge state is kept per Mission entry digest, never per condition, so two entries carrying one condition can differ in state; the credential entry is therefore resolved to every entry it could derive from, and one discharged among them refuses even when another is live, since the PDP cannot tell which one the credential derives from (#1133 review P1)."
   },
   {
    "id": "authzen.context-credential.authority-no-fallback",
@@ -16808,6 +16815,12 @@
      "file": "src/services/pdp/test/remote-channel.test.ts",
      "name": "Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)",
      "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a discharge condition carrying a member the profile does not define, though the Mission entry carries it without one (#1133 review P2)",
+     "level": "unit",
      "surface": "decision-request"
     }
    ]

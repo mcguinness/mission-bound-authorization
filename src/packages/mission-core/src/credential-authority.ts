@@ -15,6 +15,7 @@
 import type { AATConstraint, AATTools } from "./attenuation-chain.js";
 import { parseAatToolId } from "./attenuation-chain.js";
 import type { AuthorityEntry, TerminalWhenCondition } from "./authority-entry.js";
+import { conditionCanonicalBytes } from "./authority-subset.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 
 /** One entry of a verified credential's authority. */
@@ -47,6 +48,9 @@ const CONSTRAINT_KEYS = new Set([
   "requires_action_approval",
   "terminal_when",
 ]);
+
+/** @spec discharge#terminal-when — `1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )`. */
+const DISCHARGE_AUTHORITY = /^[A-Za-z0-9\-_:.]{1,64}$/;
 
 const nonEmptyString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -92,18 +96,37 @@ function parseConstraints(
     out.requires_action_approval = value.requires_action_approval;
   }
   if (value.terminal_when !== undefined) {
-    if (
-      !Array.isArray(value.terminal_when) ||
-      !value.terminal_when.every(
-        (c) =>
-          isObject(c) &&
-          nonEmptyString(c.event_type) &&
-          (c.discharge_authority === undefined || nonEmptyString(c.discharge_authority)),
-      )
-    ) {
+    // @spec discharge#terminal-when — the shape the AS admits: one or more
+    // conditions, each exactly { event_type, discharge_authority? }, the
+    // authority in its registered syntax, no two sharing a canonical form.
+    // An unknown member is refused, never dropped: condition identity is the
+    // whole object's canonical bytes, so ignoring a member misreads it.
+    const conditions = value.terminal_when;
+    if (!Array.isArray(conditions) || conditions.length === 0) {
       throw new CredentialAuthorityError(`${at}.constraints.terminal_when is malformed`);
     }
-    out.terminal_when = (value.terminal_when as TerminalWhenCondition[]).map((c) => ({ ...c }));
+    const seen = new Set<string>();
+    for (const c of conditions) {
+      const bytes = conditionCanonicalBytes(c);
+      if (bytes === undefined) {
+        throw new CredentialAuthorityError(
+          `${at}.constraints.terminal_when carries a condition other than { event_type, discharge_authority? }`,
+        );
+      }
+      if (seen.has(bytes)) {
+        throw new CredentialAuthorityError(
+          `${at}.constraints.terminal_when carries two identical conditions`,
+        );
+      }
+      seen.add(bytes);
+      const authority = (c as TerminalWhenCondition).discharge_authority;
+      if (authority !== undefined && !DISCHARGE_AUTHORITY.test(authority)) {
+        throw new CredentialAuthorityError(
+          `${at}.constraints.terminal_when carries a malformed discharge_authority`,
+        );
+      }
+    }
+    out.terminal_when = (conditions as TerminalWhenCondition[]).map((c) => ({ ...c }));
   }
   return out;
 }
