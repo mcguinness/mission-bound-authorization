@@ -312,7 +312,7 @@ the store.
      `missionBoundGrants.record`. Two writes on two handles, in no shared
      transaction.
   4. For an Intent-only request, `details.save()` of the marked
-     `authorization_details` (§6).
+     `authorization_details` (§7).
   5. `interactionFinished`: a 303 to the resume URL (`lib/provider.js`
      L229-233). oidc-provider issues the authorization code on that later
      request.
@@ -362,7 +362,7 @@ the store.
 
 - **Hook.** oidc-provider's `authorization_code` grant consumes the code
   (`lib/actions/grants/authorization_code.js` L89) and then calls `at.save()`
-  (L127). Inside `save()` (§6), `extraTokenClaims` runs
+  (L127). Inside `save()` (§7), `extraTokenClaims` runs
   `projectMissionBoundScope` and then `kernel.gateDerivation`, and returns the
   `mission` claim. `formats.customizers.jwt` applies the projected `scope`.
   oidc-provider signs the token and emits `access_token.issued`, whose
@@ -556,7 +556,7 @@ the store.
     `invalid_target` for a Mission-bound token the projection did not decide,
     and for an `act`-bearing token to an audience the mapping does not
     classify Mission-aware.
-  - Recording: `issueRefreshToken` and the response-`scope` middleware (§6).
+  - Recording: `issueRefreshToken` and the response-`scope` middleware (§7).
 - **Boundary.** In request, read-only against the mapping loaded at boot
   (`SCOPE_PROJECTION`, `loadScopeProjection`). The token-endpoint call runs
   before `gateDerivation`, so a refusal there counts nothing. The refresh
@@ -785,7 +785,7 @@ The state gate after rotation (§3.6) is partly fixed by the refresh pre-check
 (#914). What remains, a state change between the pre-check and the save-time
 gate, is the pre-check-to-commit window of #250's cross-step atomic domain.
 
-## 5. Unsupported and residual
+## 6. Unsupported and residual
 
 **Unsupported.** Each is refused or visibly absent; none is partial support.
 
@@ -846,7 +846,7 @@ gate, is the pre-check-to-commit window of #250's cross-step atomic domain.
 - Replay: authorization-code reuse (§4.4).
 - Recovery: an assembled AS restarted on a file-backed kernel (§4.5).
 
-## 6. Provider-specific notes (oidc-provider 9.10)
+## 7. Provider-specific notes (oidc-provider 9.10)
 
 These are honest workarounds and ordering facts, not protocol requirements.
 
@@ -902,7 +902,7 @@ These are honest workarounds and ordering facts, not protocol requirements.
   `grant.error` listener in `buildProvider` adds `mission_error` to the
   rendered `invalid_grant` body.
 
-## 7. Status
+## 8. Status
 
 Documentation of the current reference implementation. It is not an
 owner-accepted conformance class, makes no production-readiness claim, and
