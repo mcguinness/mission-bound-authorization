@@ -4460,14 +4460,12 @@ audited.
 
 ### Authority Hash Is Not a Mission Identifier {#authority-hash-is-not-a-mission-identifier}
 
-`authority_hash` commits the approved Authority Set, not the Mission.
-Two distinct Missions that approve byte-identical authority carry the
-same `authority_hash`: a successor Mission that re-approves the same
-Authority Set, or an unrelated Mission with the same derived authority,
-differs in its `intent_hash`, `approver`, and `id` while sharing the
-`authority_hash`. It is therefore not globally unique to a Mission, and
-{{integrity-anchors}} forbids its use as a Mission Identifier or as a
-replay or idempotency key for a Mission.
+`authority_hash` commits the approved Authority Set, not the Mission:
+two Missions that approve byte-identical authority (a successor that
+re-approves the same Authority Set, or an unrelated Mission with the
+same derived authority) share it while differing in `intent_hash`,
+`approver`, and `id`, which is why {{integrity-anchors}} forbids its
+use as a Mission Identifier or as a replay or idempotency key.
 
 A consumer that needs to bind to or correlate a specific Mission uses
 the Mission Identifier, and `intent_hash` and `approver` distinguish
