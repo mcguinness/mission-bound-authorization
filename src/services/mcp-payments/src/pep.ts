@@ -15,7 +15,8 @@ import { type ActObject, buildContextActor, flattenActChain } from "@mission/act
 import {
   type ActionPhase,
   type CredentialAuthorityEntry,
-  credentialAuthorityPermits,
+  coveringCredentialEntries,
+  credentialEntriesFromAuthority,
   type IdempotencyScope,
   idempotencyScopeDigest,
   isActionPhase,
@@ -1110,6 +1111,11 @@ export class Pep {
     // case, where no delegate policy is consulted at all).
     let isBaselineJoin = false;
     let delegateDepth: number | undefined;
+    // @spec authzen#context-credential (#825, D312) — the credential's own
+    // authority as the PDP receives it: the Mission-bound credential's
+    // verified entries, or, on the baseline-Join path, the entries the
+    // deployment's resolver maps the ordinary credential's authority to.
+    let carriedAuthority: readonly CredentialAuthorityEntry[] | undefined;
 
     if (token.mission) {
       // @spec authority-server#reference-verification — a propagated Mission
@@ -1176,6 +1182,14 @@ export class Pep {
       // silently unbounded one.
       const ordinaryAuthority = this.deps.masJoin.resolveOrdinaryAuthority?.(token);
       if (!ordinaryAuthority) return await this.refuse(token, "out_of_authority", mapping.action, loaded.view);
+      // The same entries reach the PDP as the credential bound, so a remote
+      // PDP enforces them too rather than only this non-empty gate. Entries
+      // the bound cannot read in full refuse here, never reach it narrowed.
+      try {
+        carriedAuthority = credentialEntriesFromAuthority(ordinaryAuthority);
+      } catch {
+        return await this.refuse(token, "out_of_authority", mapping.action, loaded.view);
+      }
       const boundAuthority = loaded.view.authority_set.filter((e) =>
         ordinaryAuthority.some((o) => o.resource === e.resource && e.actions.every((a) => o.actions.includes(a))),
       );
@@ -1320,21 +1334,20 @@ export class Pep {
           : resourceObj.type === "vendor" && resourceObj.id !== UNSCOPED_VENDOR_OBJECT
           ? ((resourceObj.properties?.vendor_ids as readonly string[] | undefined) ?? [resourceObj.id])
           : [];
+      // Only what this PEP can establish refuses here: resource, action, every
+      // vendor reached and the amount. An entry's discharge condition and
+      // approval requirement turn on Mission state and approvals the PDP
+      // holds, so they reach the PDP with the credential's authority and the
+      // PDP decides them (D312).
       const covered =
         Array.isArray(token.credentialAuthority) &&
-        credentialAuthorityPermits(token.credentialAuthority, {
+        coveringCredentialEntries(token.credentialAuthority, {
           resource: CANONICAL_RESOURCE,
           action: mapping.action,
           vendorIds,
           ...(amount ? { amount } : {}),
-          // An approval requirement on the credential is honored only where
-          // this resource has itself established the approval: a verified
-          // transaction credential matched to the operation it retained, with
-          // the approval derived from it. The deployment's approval callback
-          // configures a co-resident PDP and never reaches a remote one, so it
-          // establishes nothing here.
-          approvalEnforced: token.txn !== undefined && actionApproval !== undefined,
-        });
+        }).length > 0;
+      carriedAuthority = token.credentialAuthority;
       if (!covered) {
         await this.recordRefusal(token, "out_of_authority", mapping.action, view, undefined, { resource: resourceObj });
         return { permitted: false, denial_reason: "out_of_authority" };
@@ -1419,10 +1432,14 @@ export class Pep {
         // from its own read.
         ...(this.placement === "pep" ? { mission_state_observation: observation } : {}),
         actor: contextActor,
-        ...(token.credential ? { credential: {
-          ...(typeof token.credential.issuer === "string" ? { issuer: token.credential.issuer } : {}),
-          ...(typeof token.credential.expires_at === "string" ? { expires_at: token.credential.expires_at } : {}),
-        } } : {}),
+        // @spec authzen#context-credential (#825, D312): verified facts only,
+        // and the credential's own authority on every decision, so the PDP
+        // enforces the credential bound itself.
+        credential: {
+          ...(typeof token.credential?.issuer === "string" ? { issuer: token.credential.issuer } : {}),
+          ...(typeof token.credential?.expires_at === "string" ? { expires_at: token.credential.expires_at } : {}),
+          ...(carriedAuthority !== undefined ? { authority: carriedAuthority } : {}),
+        },
         // @spec capability-binding#context-capability-source — the PEP supplies
         // the binding for a catalog-sourced action, and omits the member entirely
         // for a non-catalog one.
