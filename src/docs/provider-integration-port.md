@@ -1028,11 +1028,21 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Tests (PEP-level):**
   - `a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence`
   - `retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart` (on a file-backed store, not the shipped one)
-- **Residual.** The `completed` write after a connector commit has no error
-  handling: if it fails, the effect stands, no Execution Evidence exists and
-  the claim is not settled. The other three emission failures fail closed
-  with no test. Both are #1104's. A successful call outside the transaction
-  tier emits no Execution Evidence.
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > the PDP's Decision Evidence emitter throws: the claim is released, the PEP refuses pdp_unreachable, and nothing executes`
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a Refusal Record emission throws: the call rejects, nothing is recorded, and nothing executes`
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > suppressExecution returns effective_parameter_digest_unobservable when the permit's target no longer resolves, and retains nothing`
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > suppressExecution retries once on the same execution identity, returns emission_failed after a second failure, and never retains a disposition twice`
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a completed write that fails once is retried on the same execution identity: one record, the claim settles completed, one effect`
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a completed write that fails twice reports the gap: the effect stands once, the claim is not settled completed, and neither a retry nor reconciliation repeats the effect`
+- **Residual.** The `completed` write after a connector commit retries once
+  on the same execution identity. A second failure leaves the effect without
+  Execution Evidence: the call returns `ok: false` with
+  `gap: "emission_failed"` and the committed `result`, never a
+  `refusal_reason`; the operation stays `connector_committed`; and the claim
+  stays unsettled until reconciliation, which does not run (#1103). No
+  durable queue retries a still-failing record (#594 W4-4). The other three
+  emission failures refuse before any effect. A successful call outside the
+  transaction tier emits no Execution Evidence.
 
 ### 5.7 Recovery and reconciliation
 
@@ -1149,10 +1159,7 @@ Runtime overlay:
 - Replay: authorization-code reuse (§4.4).
 - Recovery: an assembled AS restarted on a file-backed kernel (§4.5).
 - Runtime overlay: a Mission the loader does not find on the Mission-bound
-  path, and the run-to-completion interval (§5.3); the PDP emitter throwing,
-  a Refusal Record emission throwing, both `suppressExecution` gaps and the
-  failed `completed` write, each distinguishing a refusal before any effect
-  from missing evidence after one (§5.6; #1104); reconciliation across a
+  path, and the run-to-completion interval (§5.3); reconciliation across a
   restart (§5.7; #1103); an AS-issued token through the assembled path
   (#1105).
 
