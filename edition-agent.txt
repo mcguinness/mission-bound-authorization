@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-06T18:44:21Z
-Source repository commit: 9630525795ea014b42e053e912babc5739183d3f
+Generated: 2026-10-06T22:06:44Z
+Source repository commit: b0be36245861e4247c272a2180cd99497be62a4c
 Member count: 9
 
 Reading order:
@@ -2878,16 +2878,17 @@ Table of Contents
    capabilities.  The family manifest records each stack's exact
    membership.
 
-   *  *Protocol core* (Baseline Issuance): the OAuth binding alone, the
-      standardizable primitive of approved, anchored, state-gated
-      Missions, meeting the Mission Context requirements (Appendix A).
+   *  *OAuth issuance binding* (Baseline Issuance): the OAuth binding
+      alone, the standardizable primitive of approved, anchored, state-
+      gated Missions, meeting the Mission Context requirements
+      (Appendix A).
 
-   *  *Reference security architecture* (Runtime-Enforced): the protocol
-      core plus runtime enforcement, its AuthZEN profile, runtime
-      evidence (the decision and execution objects AuthZEN consumes),
-      and a freshness source (Status is the reference choice).  Adoption
-      closure brings in the substrate contract, the normative kernel of
-      runtime and AuthZEN.
+   *  *Reference security architecture* (Runtime-Enforced): the OAuth
+      issuance binding plus runtime enforcement, its AuthZEN profile,
+      runtime evidence (the decision and execution objects AuthZEN
+      consumes), and a freshness source (Status is the reference
+      choice).  Adoption closure brings in the substrate contract, the
+      normative kernel of runtime and AuthZEN.
 
    *  *Recommended agent architecture* (Governed Agent): what a
       deployment running autonomous AI agents should build.
@@ -7510,7 +7511,7 @@ Table of Contents
 
 1.1.  Implementation Map
 
-   The core establishes six properties; Section 18 states the
+   This document establishes six properties; Section 18 states the
    requirements that realize them:
 
    1.  The task is disclosed: the approval rendering shows the Intent's
@@ -7917,11 +7918,15 @@ Table of Contents
    purpose:  OPTIONAL.  A string.  A URI identifying the purpose of the
       task, recorded for disclosure and audit.  Its semantics are
       deployment- or registry-defined and opaque to this document.  It
-      is an opaque lookup key: a configured mapping can key on it
-      (Section 5), and the derived set stays bounded by the Intent and
-      by policy like any derivation.  Other than as that lookup key,
-      purpose MUST NOT affect the derived Authority Set or any issuance
-      decision; once the Mission is approved it is inert.
+      is an opaque lookup key: a configured mapping can key on it to
+      select candidate entries, which the Intent, policy, and the
+      approval event bound like any derivation (Section 5); the key
+      alone grants no authority.  In any other decision, purpose MAY
+      contribute only to a refusal or to stricter treatment: its value,
+      its absence, or a substituted value MUST NOT supply, widen, relax,
+      or refresh authority, or replace a check that applies
+      independently of it.  After approval, the purpose consulted is the
+      approved Mission's, or a validated projection of it.
 
    expires_at:  REQUIRED.  A string.  An RFC 3339 [RFC3339] date-time:
       the client's requested not-after ceiling for the Mission's
@@ -11288,8 +11293,8 @@ Table of Contents
       Authorization Server in another trust domain.  An implementation
       claiming this capability preserves, across the hop:
 
-      1.  the Mission reference (mission.id, mission.issuer,
-          authority_hash), carried intact;
+      1.  the Mission reference (mission.id, mission.issuer) and the
+          authority_hash the projection carries, intact;
 
       2.  authority that only narrows (Section 5.1);
 
@@ -11467,11 +11472,12 @@ Table of Contents
 
    Against the untrusted-content leg, it contributes one thing:
    success_criteria is inert, granting, widening, and gating no
-   authority, purpose shapes authority only as a lookup key of the pre-
-   approval derivation whose result the Approver reads and consents to,
-   and goal bounds it only through that disclosure (Section 4,
-   Section 5).  Authority is fixed at the approval event, so injected
-   text cannot expand an approved Mission.
+   authority, purpose supplies candidate authority only as a lookup key
+   of the pre-approval derivation whose result the Approver reads and
+   consents to and otherwise can only refuse or tighten, and goal bounds
+   it only through that disclosure (Section 4, Section 5).  Authority is
+   fixed at the approval event, so injected text cannot expand an
+   approved Mission.
 
    This document does not constrain the external-communication leg and
    provides no information-flow control.  It models authority over
@@ -13715,18 +13721,34 @@ Appendix F.  OAuth Binding Mapping Assessment
    Cross-Domain:  Exercises Lifecycle-Gated Authorization, Structured
       Authority, Monotonic Derivation, and Credential-Bound.  Carries
       these four always-supplied guarantees across the domain hop: the
-      Mission reference and authority_hash intact, authority that only
-      narrows, and projection gated on active state, while adding an
-      interoperable projection surface the guarantees alone do not
-      provide.  It does not become Portable Evidence by crossing a
-      domain: that claim activates only when an Evidence, Mandate, or
-      audit companion is active, and Cross-Domain is not among them.
+      Mission reference and the authority_hash the projection carries,
+      intact, authority that only narrows, and projection gated on
+      active state, while adding an interoperable projection surface the
+      guarantees alone do not provide.  It does not become Portable
+      Evidence by crossing a domain: that claim activates only when an
+      Evidence, Mandate, or audit companion is active, and Cross-Domain
+      is not among them.
 
 Appendix G.  Document History
 
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Implementation Map and Mapping Assessment, Cross-Domain: the
+      Mission reference is mission.id and mission.issuer; authority_hash
+      is the value the projection carries, not part of the reference
+      (#1086).  The Implementation Map says "this document" rather than
+      "the core" (#1089).  No requirement changed.
+
+   *  Mission Intent: purpose stays the configured-mapping lookup key,
+      whose candidates the Intent, policy, and the approval event bound;
+      in any other decision it can contribute only to a refusal or to
+      stricter treatment, never supplying, widening, relaxing, or
+      refreshing authority or replacing an independent check, and after
+      approval the approved Mission's value is the one consulted.  This
+      replaces the rule that purpose affects no other issuance decision
+      and is inert after approval (#1102).
 
    *  Mission Approval: the approval event is the atomic, adjudicated
       transition that creates a Mission under its approval basis, for
@@ -18233,7 +18255,10 @@ Table of Contents
        consequential and gated.
 
    2.  A Mission's purpose, or deployment policy, MAY raise an action to
-       a stricter class.
+       a stricter class.  The purpose consulted is the approved
+       Mission's, from its Mission state or a validated projection of it
+       ([I-D.draft-mcguinness-oauth-mission]), never a value the request
+       asserts.
 
    3.  A Mission's purpose or deployment policy MUST NOT lower an action
        below any minimum classification the Resource policy (Section 7)
@@ -20413,11 +20438,12 @@ Table of Contents
    requested tool fits the task extracted from the conversation, MAY be
    supplied to the PDP as advisory decision input.  Such a signal MAY
    contribute to a denial; it MUST NOT widen, grant, or refresh
-   authority, consistent with the inert treatment of goal and purpose in
-   the issuance profile ([I-D.draft-mcguinness-oauth-mission]).  Gating
-   authority on intent inference is out of scope: verifying an agent's
-   declared reasoning against the task is an attestation problem outside
-   both layers, and intent inference is not reliable enough to be load-
+   authority, consistent with the issuance profile's treatment of goal
+   as inert and of purpose as restrictive outside its configured-mapping
+   lookup ([I-D.draft-mcguinness-oauth-mission]).  Gating authority on
+   intent inference is out of scope: verifying an agent's declared
+   reasoning against the task is an attestation problem outside both
+   layers, and intent inference is not reliable enough to be load-
    bearing for high-consequence authority.
 
 17.5.  Classification Integrity
@@ -20936,6 +20962,14 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Action Classification: the purpose that may raise a class is the
+      approved Mission's, from its Mission state or a validated
+      projection, never a value the request asserts.  The semantic
+      intent-alignment signal's bound cites the issuance profile's
+      treatment of purpose as restrictive outside its configured-mapping
+      lookup rather than as inert.  The rule 2 statement adds a
+      requirement; the signal's requirement is unchanged (#1102).
 
    *  The rendering_independence assurance row names the action-bound
       approval it is evaluated per; "approval event" is reserved for the
