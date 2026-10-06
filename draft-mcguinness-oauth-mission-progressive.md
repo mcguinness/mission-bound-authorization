@@ -52,6 +52,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-mission-discovery:
@@ -410,6 +418,47 @@ lost response is recovered through `creation_request_id`
 Idempotency"). A drawdown that falls back to a fresh human approval
 completes deferred or interactively, as any expansion does.
 
+**Derivation limits.** This paragraph binds only a deployment that
+also adopts Mission Derivation Limits
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}). A policy
+drawdown continues its predecessor's undertaking, so it cannot
+replenish the predecessor's allowance of counted derivations:
+
+- The successor MUST carry forward the predecessor's committed
+  derivation count. Where the predecessor has a `derivation_limit`,
+  the successor's `derivation_limit` MUST NOT exceed it: a stricter
+  AS-policy ceiling or `requested_derivation_limit` narrows it
+  further, and omitting or raising the request neither removes nor
+  raises it. A predecessor without a `derivation_limit` has no finite
+  limit to pass on, and the successor's is established as Mission
+  Derivation Limits' Effective Limit section states.
+- The Mission Issuer MUST read the predecessor's committed count and
+  transfer it in the atomic step above that activates the successor,
+  supersedes the predecessor, and commits the creation reservation,
+  after any predecessor derivation that commits first. Concurrent
+  derivation under the predecessor and competing or duplicate
+  drawdowns MUST NOT fork or replenish the remaining allowance.
+- The successor access token the drawdown response returns is one
+  derivation, charged to the successor in that same atomic step and
+  never again to the predecessor. Where the carried-forward count plus
+  that derivation would exceed the successor's `derivation_limit`,
+  the Mission Issuer MUST refuse the drawdown as Mission Derivation
+  Limits' Enforcement at Issuance section refuses a derivation
+  (`invalid_grant`,
+  with its `mission_error` diagnostic), creating no successor,
+  superseding no predecessor, and counting nothing.
+- An exact creation retry MUST return the recorded result without
+  repeating its accounting; returning the existing access token adds
+  no derivation. A fresh delivery token minted on recovery is ordinary
+  issuance ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section
+  "Recovery is delivery"), counted against and gated by the
+  successor's `derivation_limit`.
+
+A successor created by a fresh human approval establishes its limit
+afresh, as Mission Derivation Limits states. This bounds counted
+derivations through the drawdown succession only, not a Mission's
+descendants, other tokens, or resource effects.
+
 Skipping the interactive prompt also skips the expansion profile's
 child-cascade consent notice
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and supersession
@@ -723,13 +772,18 @@ Authorization** is a conforming expansion-capable Mission Issuer
   the chain's root Mission and counted across `predecessor` links,
   publish the concrete rate bound in the Mission Deployment Profile, and
   record each as an approval event carrying the chain's cumulative
-  drawdown count ({{in-ceiling-expansion}}, {{audit-linkage}}); and
+  drawdown count ({{in-ceiling-expansion}}, {{audit-linkage}});
 - bound each chain by the published ceiling review cadence, refusing
   policy adjudication past it, and rendering the chain's record since
   the prior review in the review approval's disclosure
   ({{ceiling-review}}); state the cadence effective under each
   drawdown policy version in that policy's own versioned content
-  ({{ceiling-review}}).
+  ({{ceiling-review}}); and
+- where the deployment also adopts Mission Derivation Limits, carry a
+  policy drawdown's derivation count and limit forward, count its
+  successor access token once, and refuse a drawdown that would
+  exceed the limit without creating a successor or superseding the
+  predecessor ({{in-ceiling-expansion}}).
 
 # Security Considerations {#security-considerations}
 
@@ -790,6 +844,14 @@ convention, none of which require registration.
 
 -01
 
+- In-ceiling expansion: where Mission Derivation Limits is also
+  adopted, a policy drawdown carries its predecessor's committed
+  derivation count and limit forward (a stricter ceiling can narrow
+  the limit; nothing raises or resets it), counts its successor access
+  token once in the atomic creation step, and is refused under Mission
+  Derivation Limits' enforcement rule, creating and superseding
+  nothing, when
+  the limit would be exceeded (#1079).
 - Audit Linkage and In-Ceiling Expansion name the drawdown policy as
   the approval event's decision mechanism, not its approver; the
   Approver who consented the ceiling stays the `consent_principal`,
