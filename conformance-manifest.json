@@ -11,12 +11,12 @@
     "content_sha256": "bac0c0baea183b6e594d4adc7b9fee19791d9e5e6c7490004da921889eac3f8d"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "6f10361ef7fae0c457e78b003860587fb773ac4f",
-    "content_sha256": "37d43c72d0ca7ebba7e3e2495460b125128ed61d60317542b473904ddab13cf0"
+    "revision": "2353e7d8a451dfb1ae5e926a5a4b955fc2201c24",
+    "content_sha256": "66a74b798e1c8066256ab065cb0503dcab105a8d215cab3b6913fc9ad7daea59"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "40705c1d1bab1ee18d0a5345f3071aaaa30d2031",
-    "content_sha256": "ea9be2ae2bb1b15bd13e30d8a9bdf328bfcbb89f15621f6cf31bf75eb400fca3"
+    "revision": "60a99793fffb4d41ad89835eb6ef0af48aac20d7",
+    "content_sha256": "6dfcf6287f87fa0b1ddd1896bb943b9b6c08b42e7a2205dd221dcf0a52106d02"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "0c7ba9c38604240dbfbaa2b95586a235ed2dc0ca",
@@ -9818,9 +9818,15 @@
      "name": "composed stack: the MAS-governed channel joins an ordinary credential (#557) > permits a joined read end to end, with authority drawn from the referenced Mission",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8's three bounds, one denial each (@spec authority-server#mission-join rule 8) > bound 1 rides the decision request as context.credential.authority, and the PDP decides over the Mission's own view",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. Moved partial -> tested by #557 stage C2's outside-the-Mission negative: this reference implementation's ordinary credentials carry no authorization_details member, so the substitution is attempted through the credential-authority evaluator instead (the acting credential's own authority names the action, the Mission does not), which is the same claim the clause makes. The composed-stack entry shows the positive over the shipped configuration and auto-skips without OpenFGA; the unit negative always runs."
+   "notes": "#557. The clause's \"since the credential carries none\" refers to the Authority Set: an ordinary credential carries no Mission authority. Its own authority, the deployment's mapping of its granted scope, is the separate credential authority bound (#825 PR 2b, D312): it rides the decision request as context.credential.authority, and the PDP decides over the referenced Mission's own view, never a view narrowed to the credential. The bound-2 negative shows the credential's own coverage of an action never substitutes for the Mission's: the join succeeds and the action outside the joined authority is denied out_of_authority. The composed-stack entry shows the positive over the shipped configuration and auto-skips without OpenFGA; the unit cases always run."
   },
   {
    "id": "mas.baseline-join.three-bound-intersection",
@@ -12645,7 +12651,7 @@
     "normative": "an action outside the applicable entry of the credential authority, or outside the Mission's current effective authority, is refused"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
@@ -12658,9 +12664,51 @@
      "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > an action absent from the policy's action-to-relation map fails closed (out_of_authority), never reaching the FGA check",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > an allowing Mission and Resource policy never repair a narrower credential",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > an allowing Mission and Resource policy never repair a narrower credential",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > a Mission narrowed after issuance refuses even a credential that covers the action",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > a Mission narrowed after issuance refuses even a credential that covers the action",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > narrows independently by resource, action, vendor, and amount, and a cap in another currency is not comparable",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > refuses an action that only a union of two entries would permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > covers a collection read only when one entry covers every vendor it reaches",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Partial (#846): the cited tests witness the current-effective-authority bound only (an action outside the Mission's approved set is refused). The credential-authority bound, a credential narrowed below its Mission evaluated at its own narrower entry, is unwitnessed: #825 demonstrated that the resource path drops authorization_details and evaluates the Mission's broader set. The endpoint-level test needs live OpenFGA and sandbox-skip locally; the unit-level test runs unconditionally against a stub Fga and proves the same 'no applicable entry -> refused' rule for an action absent from the policy's action map entirely, so this row has non-skipping local coverage too. 'vendor outside the constraint -> deny parameter_violation (entry matched, constraint fails)' (same file) is no longer cited here (#801): a vendors constraint that excludes the target is a matched entry whose constraint fails, not an entry falling outside this row's resource/actions match, so it no longer supports this row's claim."
+   "notes": "#825 PR 2b (D312): both bounds are witnessed at the PDP with no PEP in the path, over a real remote decision channel and co-resident. The credential authority bound: the PEP carries the acting credential's own authority as context.credential.authority, and the PDP refuses out_of_authority (Decision Evidence authority_bound credential) when no single entry covers the action, under an allowing Mission and an allowing Resource policy; resource, action, vendor and amount narrow independently, a union of entries never covers, and a collection read needs every vendor covered. The current effective authority bound: the evaluate.test.ts cases and a Mission narrowed after issuance (an action dropped, an entry contained) refuse a credential that still covers the action. The endpoint-level evaluate.test.ts case needs live OpenFGA; the remote-channel cases use a stub Fga and never skip."
   },
   {
    "id": "runtime.decision-inputs.no-substitute-approved-set",
@@ -12681,9 +12729,34 @@
     "normative": "a credential narrowed below its Mission's approved set is refused an action the Mission allows but the credential's own authority omits"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#846 specification slice. The implementation defect is #825: the resource path drops the token's authorization_details and evaluates the Mission's broader authority_set, so no test can witness this row until that fix lands."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > an allowing Mission and Resource policy never repair a narrower credential",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > an allowing Mission and Resource policy never repair a narrower credential",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > refuses credential_invalid for %s, never falling back to the Mission (rule 6)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > an empty authority covers nothing, and a live expiry is accepted",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#825 PR 2b (D312): the PDP evaluates context.credential.authority independently of the Mission view it loaded. A credential narrowed to the invoice read is refused the vendor read its broad Mission allows; a credential with no authority, an unreadable authority, or an empty one is refused (credential_invalid, or out_of_authority for the empty set), never evaluated against the Mission's authority. Witnessed with no PEP in the path, over a real remote decision channel and co-resident."
   },
   {
    "id": "runtime.decision-inputs.containment-narrowing-source",
@@ -13105,12 +13178,12 @@
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-decision-inputs.test.ts",
-     "name": "Time input: a Mission state source reporting the Mission expired refuses (@spec runtime#input-time) > a Mission state of expired refuses the action; evaluate() has no token-exp input to depend on in the first place",
+     "name": "Time input: a Mission state source reporting the Mission expired refuses (@spec runtime#input-time) > a Mission state of expired refuses the action while the credential's own expiry is still live",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "Tested the \"or reports the Mission expired\" arm: a Mission state of \"expired\" refuses via the active-state gate, trivially independent of the token's own exp since evaluate() has no token-exp input in the first place. NOT tested (no code path): the other arm, \"where a Mission state source does expose it [expires_at]\"; MissionView carries no expires_at member and evaluateInner never reads one."
+   "notes": "Tested the \"or reports the Mission expired\" arm: a Mission state of \"expired\" refuses via the active-state gate while the request's context.credential.expires_at is still live and its authority covers the action, and the same request against an active Mission permits. NOT tested (no code path): the other arm, \"where a Mission state source does expose it [expires_at]\"; MissionView carries no expires_at member and evaluateInner never reads one."
   },
   {
    "id": "runtime.decision-inputs.active-state-required",
@@ -16099,6 +16172,48 @@
    "notes": "#702: authority_hash left context.mission's baseline (formerly REQUIRED) member set and joined policy_view_id/policy_version as an optional member whose omission this rule already covered; extended to name it explicitly rather than leaving the extension implicit."
   },
   {
+   "id": "authzen.pdp-request.consistency-credential-valid",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "When `context.credential.expires_at` is present, it has not passed; and when `context.credential` is present, its `authority` is present and contains only entries whose type and members the PDP understands ({{context-credential}}); otherwise the PDP returns `credential_invalid`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a present context.credential whose expires_at is malformed or has passed, or whose authority is absent, not an array, or carries an entry type, member, or constraint the PDP does not understand, is denied credential_invalid and never evaluated against the Mission's authority; a live expiry is accepted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > refuses credential_invalid for %s, never falling back to the Mission (rule 6)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > refuses credential_invalid for %s, never falling back to the Mission (rule 6)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > an empty authority covers nothing, and a live expiry is accepted",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#825 PR 2b (D312). Rule 6's expires_at check had no implementation before this change."
+  },
+  {
    "id": "authzen.pdp-request.consistency-parameter-digest-presence-and-match",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
@@ -16545,6 +16660,168 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "authzen.context-credential.authority-from-validated-credential",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "The PEP supplies it only from the validated credential, never from the Mission's authority.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every decision request carries context.credential.authority, drawn from the validated credential (an access token's authorization_details, or an ordinary joined token's scope-mapped entries), never from the Mission's Authority Set: a credential narrower than its Mission is sent as issued"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > forwards an approval requirement and a discharge condition to the PDP, which holds approval and Mission state",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8's three bounds, one denial each (@spec authority-server#mission-join rule 8) > bound 1 rides the decision request as context.credential.authority, and the PDP decides over the Mission's own view",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#825 PR 2b (D312). Both cited credentials differ from the Mission's Authority Set, so the carried value is distinguishable from it. The PEP sends context.credential on every request, so the member's REQUIRED-when-present rule always applies here."
+  },
+  {
+   "id": "authzen.context-credential.whole-entry-coverage",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "One entry MUST cover the action whole: its resource, its action, and every constraint the entry carries; a constraint from one entry never combines with an action from another.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action that no single entry of context.credential.authority covers (its resource, its action, every vendor the action reaches, and an amount within the cap in the same currency) is denied out_of_authority under an allowing Mission and Resource policy; entries that would cover only in union refuse"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > narrows independently by resource, action, vendor, and amount, and a cap in another currency is not comparable",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > narrows independently by resource, action, vendor, and amount, and a cap in another currency is not comparable",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > refuses an action that only a union of two entries would permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > refuses an action that only a union of two entries would permit",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > covers a collection read only when one entry covers every vendor it reaches",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > covers a collection read only when one entry covers every vendor it reaches",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (remote) (@spec authzen#context-credential, #825) > an allowing Mission and Resource policy never repair a narrower credential",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > an allowing Mission and Resource policy never repair a narrower credential",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#825 PR 2b (D312). The PDP runs this bound after the Mission's own checks, so a credential mirroring its Mission keeps the Mission's parameter_violation for a failed constraint; only a credential narrower than its Mission is refused here."
+  },
+  {
+   "id": "authzen.evidence.authority-bound-on-out-of-authority",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "evidence",
+   "text": "REQUIRED on a deny with `denial_reason` `out_of_authority`, and absent otherwise.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the signed Decision Evidence of an out_of_authority deny carries authority_bound: credential when the credential authority excluded the action, mission when the current effective authority or Resource policy did; a permit and every other denial carry none, and the emitter refuses to sign a record that disagrees"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > signs authority_bound on an out_of_authority deny and on no other decision",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > an allowing Mission and Resource policy never repair a narrower credential",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > a Mission narrowed after issuance refuses even a credential that covers the action",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > records the Mission bound for a Resource-policy refusal past a covering credential",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/credential-authority-bound.test.ts",
+     "name": "the PDP enforces the credential authority bound (co-resident) (@spec authzen#context-credential, #825) > a credential that mirrors its Mission keeps the Mission's classification of a failed constraint",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#825 PR 2b (D312). The member is a coordinated extension the AuthZEN profile registers (runtime-evidence#evidence-extensions)."
   },
   {
    "id": "authzen.parameter-digest.parameters-must-be-normalized-object",
