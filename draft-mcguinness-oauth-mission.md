@@ -4251,9 +4251,10 @@ resources the approved task needs, and per-task Missions
 
 Against the untrusted-content leg, it contributes one thing:
 `success_criteria` is inert, granting, widening, and gating no
-authority, `purpose` shapes authority only as a lookup key of the
-pre-approval derivation whose result the Approver reads and consents to,
-and `goal` bounds it only through that disclosure
+authority, `purpose` supplies candidate authority only as a lookup key
+of the pre-approval derivation whose result the Approver reads and
+consents to and otherwise can only refuse or tighten, and `goal`
+bounds it only through that disclosure
 ({{mission-intent}}, {{authorization-derivation}}). Authority is fixed
 at the approval event, so injected text cannot expand an approved
 Mission.
