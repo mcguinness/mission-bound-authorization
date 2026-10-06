@@ -17,6 +17,8 @@ import {
   AUTHORITY_ENTRY_TYP,
   compareAmounts,
   computeAnchor,
+  type CredentialAuthorityEntry,
+  coveringCredentialEntry,
   type EntitlementObservation,
   entitlementPermits,
   type EntitlementResolver,
@@ -26,6 +28,7 @@ import {
   isValidAmount,
   MISSION_ORIGIN_SUBJECT_TYP,
   type OriginPrincipal,
+  parseCredentialAuthority,
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
 } from "@mission/core";
@@ -39,7 +42,6 @@ import type {
   RuntimeConditions,
   RuntimePrincipalMapping,
   RuntimeCapabilitySource,
-  RuntimeCredentialRef,
 } from "./decision-evidence.js";
 import { runtimeCapabilitySourceOf, evaluationRequestDigest } from "./decision-evidence.js";
 import type { Fga } from "./fga.js";
@@ -101,6 +103,23 @@ export interface ActionApproval {
   approved_until?: string;
   parameter_digest: string;
   state?: string;
+}
+
+/**
+ * @spec authzen#context-credential — the credential-derived facts the
+ * authenticated PEP established from the validated credential. Distinct from
+ * the Decision Evidence `credential` member, which records only issuer and
+ * expiry.
+ */
+export interface CredentialContext {
+  issuer?: string;
+  expires_at?: string;
+  /**
+   * REQUIRED when `credential` is present: the validated credential's own
+   * authority, in its profile's representation. Typed `unknown` because the
+   * PDP reads it in full or refuses it (rule 6), never trusts its shape.
+   */
+  authority?: unknown;
 }
 
 export interface EvaluationRequest {
@@ -179,7 +198,7 @@ export interface EvaluationRequest {
     };
     actor?: ContextActor;
     /** Already verified by the authenticated PEP; never populated from tool arguments. */
-    credential?: RuntimeCredentialRef;
+    credential?: CredentialContext;
     capability_source?: RuntimeCapabilitySource;
     /**
      * @spec authzen#context-audience-freshness: CONDITIONAL, present where
@@ -243,6 +262,12 @@ export interface EvaluationRequest {
 }
 
 export type DenialReason =
+  /**
+   * @spec authzen#pdp-request rule 6 — the PEP-supplied credential facts are
+   * expired, malformed, or carry no `authority`, or an authority entry the PDP
+   * does not understand. Never a fallback to the Mission's authority.
+   */
+  | "credential_invalid"
   /**
    * @spec capability-binding#capability-drift-reason — the coordinated extension
    * value this family reserves: a catalog-sourced action whose approved entry
@@ -483,13 +508,21 @@ interface ClaimContext {
 }
 
 /**
- * @spec authority-server#join-rules rule 9 (#972 item 27a) — private
- * per-evaluation state, like {@link ClaimContext}: the joined-view commitment
- * step 4b sets once the baseline Join succeeds, read only by the Decision
- * Evidence emitter. Never placed on the AuthZEN response context.
+ * Private per-evaluation state, like {@link ClaimContext}, read only by the
+ * Decision Evidence emitter and never placed on the AuthZEN response context.
  */
-interface JoinTrace {
+interface EvidenceTrace {
+  /**
+   * @spec authority-server#join-rules rule 9 (#972 item 27a) — the
+   * joined-view commitment step 4b sets once the baseline Join succeeds.
+   */
   viewId?: string;
+  /**
+   * @spec authzen#evidence `authority_bound` — which bound an
+   * `out_of_authority` deny failed: `credential` for the credential
+   * authority, `mission` otherwise.
+   */
+  authorityBound?: "credential" | "mission";
 }
 
 /**
@@ -528,8 +561,8 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       // never reconstruct outcomes by rewalking the authority set after a deny.
       const contributions = new Set<string>();
       const claim: ClaimContext = {};
-      const join: JoinTrace = {};
-      const decision = await evaluateInner(req, opts, contributions, claim, join);
+      const trace: EvidenceTrace = {};
+      const decision = await evaluateInner(req, opts, contributions, claim, trace);
       span.setAttribute("mission.action", req.action.name);
       span.setAttribute("mission.decision", decision.decision);
       if (decision.context.denial_reason) {
@@ -541,7 +574,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       if (claim.retransmitted) return decision;
       try {
         if (opts.evidence) {
-          decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions, requestDigest, join);
+          decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions, requestDigest, trace);
         }
         // The single writer persists the whole decision before it returns,
         // so a crash after this point yields at most this same permit again.
@@ -577,7 +610,7 @@ async function emitDecisionEvidence(
   decision: Decision,
   contributions: ReadonlySet<string>,
   requestDigest: string,
-  join: Readonly<JoinTrace>,
+  trace: Readonly<EvidenceTrace>,
 ): Promise<DecisionEvidenceObject> {
   const { view } = opts;
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
@@ -621,7 +654,12 @@ async function emitDecisionEvidence(
     // this decision was reached over a successful join, a later policy
     // denial included. A failed join or a direct Mission-bound decision
     // never set it.
-    ...(join.viewId !== undefined ? { join_view_id: join.viewId } : {}),
+    ...(trace.viewId !== undefined ? { join_view_id: trace.viewId } : {}),
+    // @spec authzen#evidence `authority_bound`: on every `out_of_authority`
+    // deny, and on no other decision.
+    ...(decision.context.denial_reason === "out_of_authority" && trace.authorityBound !== undefined
+      ? { authority_bound: trace.authorityBound }
+      : {}),
     subject: {
       id: req.subject.id,
       ...(req.subject.properties?.iss !== undefined ? { properties: { iss: req.subject.properties.iss } } : {}),
@@ -665,7 +703,7 @@ async function evaluateInner(
   opts: EvaluateOptions,
   contributions: Set<string>,
   claim: ClaimContext,
-  join: JoinTrace,
+  trace: EvidenceTrace,
 ): Promise<Decision> {
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
@@ -697,7 +735,7 @@ async function evaluateInner(
   // @spec authority-server#mission-join (#557 review point 1) — set once
   // step 4b below resolves the baseline Join; step 5 matches against its
   // narrowed set. Step 4b also records the joined-view commitment in
-  // `join` (rule 9, #972 item 27a), so the decision's signed Decision
+  // `trace` (rule 9, #972 item 27a), so the decision's signed Decision
   // Evidence carries `join_view_id` whichever later step denies.
   let joinedAuthority: { disposition: "direct" | "delegate"; clientId: string; authoritySet: AuthorityEntry[] } | undefined;
   // @spec authzen#response-context: `evaluation_id` is the profile's own
@@ -728,10 +766,14 @@ async function evaluateInner(
   // member for the denial classification; `denial_reason` (the pre-existing
   // deployment field, also the Decision Evidence member name per
   // authzen#failure-condition-coverage) is kept alongside it, additive.
-  const deny = (denial_reason: DenialReason): Decision => ({
-    decision: false,
-    context: base({ denial_reason, reason: denial_reason }),
-  });
+  // @spec authzen#evidence `authority_bound`: every `out_of_authority` deny
+  // records the bound it failed. Only the credential-authority check (step
+  // 7a) names `credential`; every other one is the Mission's bound or the
+  // declared scope the request would broaden.
+  const deny = (denial_reason: DenialReason, bound: "credential" | "mission" = "mission"): Decision => {
+    if (denial_reason === "out_of_authority") trace.authorityBound = bound;
+    return { decision: false, context: base({ denial_reason, reason: denial_reason }) };
+  };
 
   // @spec authzen#context-action-phase — "The PDP MUST reject a value outside
   // this set". A phase the PDP cannot place under any published compound-action
@@ -815,6 +857,30 @@ async function evaluateInner(
       // longer relied on; otherwise it caps the permit below.
       if (freshUntilMs <= now().getTime()) return deny("stale_state");
       signedFreshUntilMs = freshUntilMs;
+    }
+  }
+
+  // 2b. Credential facts (@spec authzen#pdp-request rule 6,
+  // authzen#context-credential). A present `credential` carries the validated
+  // credential's own `authority`, read in full here or refused; an expiry
+  // that is malformed or has passed refuses the same way. Nothing here falls
+  // back to the Mission's authority: step 7a evaluates the credential's
+  // entries as their own bound.
+  let credentialEntries: readonly CredentialAuthorityEntry[] | undefined;
+  const credential: unknown = req.context.credential;
+  if (credential !== undefined) {
+    if (typeof credential !== "object" || credential === null || Array.isArray(credential)) {
+      return deny("credential_invalid");
+    }
+    const { expires_at, authority } = credential as CredentialContext;
+    if (expires_at !== undefined) {
+      const expiresAtMs = rfc3339Ms(expires_at);
+      if (expiresAtMs === undefined || expiresAtMs <= now().getTime()) return deny("credential_invalid");
+    }
+    try {
+      credentialEntries = parseCredentialAuthority(authority);
+    } catch {
+      return deny("credential_invalid");
     }
   }
 
@@ -1049,7 +1115,7 @@ async function evaluateInner(
     // policy_view_id: it tells a joined decision from a direct Mission-bound
     // one, and one joined view (a subject/client/delegate-narrowed authority
     // set) from another (#557 review point 4).
-    join.viewId = joinViewId(view, modelId, joinedAuthority);
+    trace.viewId = joinViewId(view, modelId, joinedAuthority);
   }
 
   // 5. Authority entry match: the approved entry's resource is matched
@@ -1277,6 +1343,38 @@ async function evaluateInner(
     }
   }
 
+  // 7a. The credential authority bound (@spec authzen#context-credential,
+  //     runtime#input-authority), evaluated independently of every step
+  //     above: one entry of the credential's own authority must cover the
+  //     action whole (resource, action, every vendor the action reaches, the
+  //     amount). An allowing Mission or Resource policy never repairs a
+  //     credential that does not. It runs after the Mission's own checks, so
+  //     a credential that mirrors its Mission keeps the Mission's
+  //     classification of a failed constraint (`parameter_violation`, #801),
+  //     and only a credential narrower than its Mission is refused here. Its
+  //     discharge condition is not evaluated against the credential entry: a
+  //     discharged entry left the current effective authority at step 5b.
+  //     Its approval requirement joins step 8's.
+  let credentialEntry: CredentialAuthorityEntry | undefined;
+  if (credentialEntries !== undefined) {
+    const props = req.resource.properties as Record<string, unknown> | undefined;
+    const targetVendorIds = Array.isArray(props?.vendor_ids)
+      ? (props.vendor_ids as unknown[]).filter((v): v is string => typeof v === "string")
+      : typeof props?.vendor_id === "string" && props.vendor_id.length > 0
+        ? [props.vendor_id]
+        : [];
+    for (const e of credentialEntries) contributions.add(e.type);
+    credentialEntry = coveringCredentialEntry(credentialEntries, {
+      resource: typeof audience === "string" ? audience : "",
+      action: req.action.name,
+      vendorIds: targetVendorIds,
+      ...(req.context.amount !== undefined ? { amount: req.context.amount } : {}),
+    });
+    if (!credentialEntry) return deny("out_of_authority", "credential");
+    if (credentialEntry.constraints?.vendors !== undefined) contributions.add("vendors");
+    if (credentialEntry.constraints?.max_amount !== undefined) contributions.add("max_amount");
+  }
+
   // 8. Action-bound approval (@spec authzen#context-approval): when policy
   //    requires one, the presented approval MUST match the request's
   //    parameter_digest and be within the max approval age; else deny
@@ -1285,9 +1383,19 @@ async function evaluateInner(
   // predicate OR the matched entry's effective Common Constraint, so a
   // delegated leaf carrying `requires_action_approval: true` is gated even
   // where deployment policy alone would not gate the action.
+  // @spec authzen#context-credential: the covering credential entry's
+  // `requires_action_approval` requires the approval exactly as the same
+  // constraint on the Authority Set entry does.
   const entryRequiresApproval = entry.constraints?.requires_action_approval;
-  if (entryRequiresApproval !== undefined) contributions.add("requires_action_approval");
-  if (opts.requiresActionApproval?.(req.action.name, actionClass) || entryRequiresApproval === true) {
+  const credentialRequiresApproval = credentialEntry?.constraints?.requires_action_approval;
+  if (entryRequiresApproval !== undefined || credentialRequiresApproval !== undefined) {
+    contributions.add("requires_action_approval");
+  }
+  if (
+    opts.requiresActionApproval?.(req.action.name, actionClass) ||
+    entryRequiresApproval === true ||
+    credentialRequiresApproval === true
+  ) {
     const appr = req.context.action_approval;
     const maxAge = (opts.maxApprovalAgeSeconds ?? 300) * 1000;
     const valid =

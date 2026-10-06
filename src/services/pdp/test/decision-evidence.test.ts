@@ -243,7 +243,8 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
       { iss: "https://as.test", sub: "root", sub_profile: "service", cnf: { secret }, secret },
       { iss: "https://as.test", sub: "leaf", secret, act: { secret } },
     ] } as never;
-    request.context.credential = { issuer: "https://as.test", expires_at: "2026-07-22T13:00:00Z", raw_token: secret, confirmation: { secret }, claims: { secret } } as never;
+    request.context.credential = { issuer: "https://as.test", expires_at: "2026-07-22T13:00:00Z", raw_token: secret, confirmation: { secret }, claims: { secret },
+      authority: [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme", secret] } }] } as never;
     request.context.parameter_digest = canonicalDigest({ secret });
     const decision = await evaluate(request, opts({ evidence: emitter }));
     expect(decision.decision).toBe(true);
@@ -353,6 +354,30 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
     await expect(emitter.emit({ ...input, action_class: "privileged_administration" })).rejects.toThrow("use_limit 1");
     await expect(emitter.emit({ ...input, entry_digest: undefined })).rejects.toThrow("entry digest and conditions");
     await expect(emitter.emit({ ...input, action_class: "unregistered" as never })).rejects.toThrow("unknown action class");
+  });
+
+  // @spec authzen#evidence `authority_bound`: "REQUIRED on a deny with
+  // `denial_reason` `out_of_authority`, and absent otherwise."
+  it("signs authority_bound on an out_of_authority deny and on no other decision", async () => {
+    const { emitter, resolve } = emitterFixture();
+    const permit = {
+      mission: { id: "msn", issuer: "https://as.test", policy_view_id: "pv" }, subject: { id: "alice" },
+      resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, audience: RESOURCE,
+      evaluation_id: "evaluation", decision: "permit" as const, evaluated_at: NOW.toISOString(),
+      entry_digest: canonicalDigest({ entry: true }), conditions: { valid_until: NOW.toISOString() },
+      evaluation_request_digest: canonicalDigest({ request: "as submitted" }),
+    };
+    const outOfAuthority = { ...permit, decision: "deny" as const, denial_reason: "out_of_authority", entry_digest: undefined, conditions: undefined };
+    await expect(emitter.emit(outOfAuthority)).rejects.toThrow("authority_bound");
+    await expect(emitter.emit({ ...permit, authority_bound: "mission" })).rejects.toThrow("authority_bound");
+    await expect(emitter.emit({ ...outOfAuthority, denial_reason: "parameter_violation", authority_bound: "credential" })).rejects.toThrow("authority_bound");
+    await expect(emitter.emit({ ...outOfAuthority, authority_bound: "token" as never })).rejects.toThrow("unknown authority_bound");
+    for (const bound of ["credential", "mission"] as const) {
+      const record = await emitter.emit({ ...outOfAuthority, authority_bound: bound });
+      expect(record.authority_bound).toBe(bound);
+      expect(await verifyEvidenceEnvelope(record, DECISION_EVIDENCE_MEDIA_TYPE, resolve)).toEqual({ valid: true });
+    }
+    expect(await emitter.emit(permit)).not.toHaveProperty("authority_bound");
   });
 
   // @spec runtime-evidence#decision-evidence-object: without

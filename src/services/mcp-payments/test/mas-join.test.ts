@@ -431,6 +431,25 @@ describe("baseline MAS Join: rule 8's three bounds, one denial each (@spec autho
     });
     expect(res.permitted, JSON.stringify(res)).toBe(true);
   });
+
+  it("bound 1 rides the decision request as context.credential.authority, and the PDP decides over the Mission's own view", async () => {
+    // @spec authzen#context-credential (#825): a remote PDP receives only the
+    // request, so the acting credential's scope-mapped entries travel in it,
+    // and the view the PDP evaluates is never narrowed to them.
+    const seen: Array<{ req: EvaluationRequest; view: MissionView }> = [];
+    const decide: DecisionFn = async (req, options) => {
+      seen.push({ req, view: options.view });
+      return EVIDENCE_KEYS.decide(req, options);
+    };
+    const pep = build({ decide, masJoin: { resolveOrdinaryAuthority: BROAD_CREDENTIAL } });
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res.permitted, JSON.stringify(res)).toBe(true);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!.req.context.credential?.authority).toEqual(BROAD_CREDENTIAL());
+    expect(seen[0]!.view).toBe(view);
+  });
 });
 
 describe("baseline MAS Join: the Mission-bound path is unaffected (@spec authority-server#mission-join)", () => {

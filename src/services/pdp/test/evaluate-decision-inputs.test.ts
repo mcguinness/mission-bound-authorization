@@ -106,14 +106,27 @@ describe("Actor context: a malformed act chain entry is refused (@spec runtime#i
 });
 
 describe("Time input: a Mission state source reporting the Mission expired refuses (@spec runtime#input-time)", () => {
-  it("a Mission state of expired refuses the action; evaluate() has no token-exp input to depend on in the first place", async () => {
-    // EvaluationRequest carries no token-expiry field at all (see evaluate.ts's
-    // context type), so this outcome cannot be reached through a token exp
-    // check; it is the Mission active-state gate (step 2) firing on the
-    // deployment's own state-source report, independent by construction.
-    const dec = await evaluate(req(), optsWith({ checkWithContext: async () => true } as unknown as Fga, view({ state: "expired" })));
+  it("a Mission state of expired refuses the action while the credential's own expiry is still live", async () => {
+    // The credential's expiry (`context.credential.expires_at`, rule 6) is
+    // live and its authority covers the action, so this outcome cannot be
+    // reached through a credential expiry check; it is the Mission
+    // active-state gate (step 2) firing on the deployment's own state-source
+    // report. The same request against an active Mission permits.
+    const live = req({
+      context: {
+        mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
+        credential: {
+          issuer: "https://as.test",
+          expires_at: new Date(NOW.getTime() + 3600_000).toISOString(),
+          authority: [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }],
+        },
+      },
+    });
+    const allow = { checkWithContext: async () => true } as unknown as Fga;
+    const dec = await evaluate(live, optsWith(allow, view({ state: "expired" })));
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("mission_inactive");
+    expect((await evaluate(live, optsWith(allow))).decision).toBe(true);
   });
 
   // The other disjunct of the row ("a Mission state source ... does expose

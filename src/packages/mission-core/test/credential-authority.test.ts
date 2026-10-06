@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   CredentialAuthorityError,
   type CredentialTarget,
+  coveringCredentialEntry,
   credentialAuthorityPermits,
   credentialEntriesFromAatTools,
   parseCredentialAuthority,
@@ -23,7 +24,6 @@ const target = (over: Partial<CredentialTarget> = {}): CredentialTarget => ({
   resource: R,
   action: "payments:invoice.read",
   vendorIds: ["acme"],
-  approvalEnforced: false,
   ...over,
 });
 
@@ -150,15 +150,33 @@ describe("credentialAuthorityPermits: one whole entry must cover the action (#82
     ).toBe(false);
   });
 
-  it("honors an approval requirement only where the path enforces one, and never a discharge condition", () => {
+  it("leaves an approval requirement and a discharge condition to the PDP, still bounded by the entry's other constraints", () => {
+    // Both are evaluated where approval and Mission state are held
+    // (@spec authzen#context-credential): coverage is resource, action,
+    // vendor and amount.
     const approval = parseCredentialAuthority([
-      entry({ constraints: { requires_action_approval: true } }),
+      entry({ constraints: { requires_action_approval: true, vendors: ["acme"] } }),
     ]);
-    expect(credentialAuthorityPermits(approval, target())).toBe(false);
-    expect(credentialAuthorityPermits(approval, target({ approvalEnforced: true }))).toBe(true);
+    expect(coveringCredentialEntry(approval, target())).toBe(approval[0]);
+    expect(credentialAuthorityPermits(approval, target({ vendorIds: ["globex"] }))).toBe(false);
     const discharge = parseCredentialAuthority([
       entry({ constraints: { terminal_when: [{ event_type: "invoice.paid" }] } }),
     ]);
-    expect(credentialAuthorityPermits(discharge, target())).toBe(false);
+    expect(credentialAuthorityPermits(discharge, target())).toBe(true);
+    expect(credentialAuthorityPermits(discharge, target({ action: "payments:vendor.read" }))).toBe(
+      false,
+    );
+  });
+
+  it("prefers a covering entry that requires no approval, so approval is demanded only when every covering entry does", () => {
+    const gated = entry({ constraints: { requires_action_approval: true } });
+    const open = entry({ constraints: { vendors: ["acme"] } });
+    const both = parseCredentialAuthority([gated, open]);
+    expect(coveringCredentialEntry(both, target())).toBe(both[1]);
+    // `open` does not cover globex, so only the gated entry does.
+    expect(coveringCredentialEntry(both, target({ vendorIds: ["globex"] }))).toBe(both[0]);
+    expect(
+      coveringCredentialEntry(both, target({ action: "payments:vendor.read" })),
+    ).toBeUndefined();
   });
 });

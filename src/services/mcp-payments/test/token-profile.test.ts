@@ -9,7 +9,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import type { Fga, MissionView } from "@mission/pdp";
+import type { EvaluationRequest, Fga, MissionView } from "@mission/pdp";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -233,7 +233,14 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
       type: "server",
       id: CANONICAL_RESOURCE,
     });
-    expect((await attempt(BROAD, "lookup_vendor", { vendor_id: "acme" })).decided).toHaveLength(1);
+    const broad = await attempt(BROAD, "lookup_vendor", { vendor_id: "acme" });
+    expect(broad.decided).toHaveLength(1);
+    // @spec authzen#context-credential: the decision request carries the
+    // verified credential's own authority, and the resolved vendor the PDP
+    // evaluates a vendor bound against.
+    const sent = broad.decided[0] as EvaluationRequest;
+    expect(sent.context.credential?.authority).toEqual(BROAD);
+    expect(sent.resource.properties.vendor_id).toBe("acme");
   });
 
   it("narrows by vendor independently of the Mission", async () => {
@@ -277,30 +284,21 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
     refusedBeforePdp(await attempt(bound, "lookup_vendor", { vendor_id: "initech" }), { type: "server", id: CANONICAL_RESOURCE });
   });
 
-  it("honors an approval requirement only with a verified transaction credential's approval, whatever the local approval callback says", async () => {
-    const facts = await overHttp(
-      await mint({ authorization_details: [entry(["payments:invoice.read"], { requires_action_approval: true })] }),
-    );
-    // The callback would make a co-resident PDP require approval; a remote
-    // PDP never receives it, so it establishes nothing at this PEP.
-    const local = { requiresActionApproval: () => true };
-    const now = Math.floor(Date.now() / 1000);
-    const txn = { txn: "txn_825", jti: "jti_825", iatS: now, expS: now + 60, parameterDigest: "sha-256:op" };
-    const approval = { id: "apr_825", approved_at: new Date().toISOString(), parameter_digest: "sha-256:op" };
-
-    for (const [presented, approvalInput] of [
-      [facts, undefined],
-      [facts, approval],
-      [{ ...facts, txn }, undefined],
-    ] as const) {
-      const x = pepRecording(local);
-      const result = await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, presented as TokenFacts, approvalInput);
-      expect(result).toMatchObject({ permitted: false, denial_reason: "out_of_authority" });
-      expect(x.decided).toHaveLength(0);
+  it("forwards an approval requirement and a discharge condition to the PDP, which holds approval and Mission state", async () => {
+    // The PDP evaluates both against the same entries
+    // (services/pdp/test/credential-authority-bound.test.ts); this PEP refuses
+    // only what it can establish, so neither entry is refused here.
+    for (const constraints of [{ requires_action_approval: true }, { terminal_when: [{ event_type: "invoice.paid" }] }]) {
+      const details = [entry(["payments:invoice.read"], constraints)];
+      const x = await attempt(details, "get_invoice", { invoice_id: "inv-1" });
+      expect(x.decided).toHaveLength(1);
+      expect((x.decided[0] as EvaluationRequest).context.credential?.authority).toEqual(details);
+      // The entry's other bounds still refuse before the PDP.
+      refusedBeforePdp(
+        await attempt([entry(["payments:invoice.read"], { ...constraints, vendors: ["globex"] })], "get_invoice", { invoice_id: "inv-1" }),
+        { type: "invoice", id: "inv-1" },
+      );
     }
-    const x = pepRecording(local);
-    await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, { ...facts, txn } as TokenFacts, approval);
-    expect(x.decided).toHaveLength(1);
   });
 
   it("applies the same bound to a token validated over the mediated channel", async () => {

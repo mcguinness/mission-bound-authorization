@@ -8,8 +8,9 @@
  * Fail-closed throughout. A credential whose authority this module cannot read
  * in full (an unknown entry type or member, or a constraint this enforcement
  * point cannot evaluate) is refused when it is verified, never normalized into
- * a broader grant; and an entry whose condition cannot be established at this
- * enforcement point never permits.
+ * a broader grant. Coverage is the entry's resource, action, vendor and amount
+ * bounds; an entry's approval requirement and discharge condition are the
+ * PDP's, which holds approval and Mission state (@spec authzen#context-credential).
  */
 
 import type { AATConstraint, AATTools } from "./attenuation-chain.js";
@@ -226,21 +227,19 @@ export interface CredentialTarget {
   vendorIds: readonly string[];
   /** The action's amount, resolved by the enforcement point, when it has one. */
   amount?: { amount: string; currency: string };
-  /**
-   * Whether this enforcement path independently requires an action-bound
-   * approval for the action, so an entry demanding one is honored.
-   */
-  approvalEnforced: boolean;
 }
 
-function entryPermits(entry: CredentialAuthorityEntry, target: CredentialTarget): boolean {
+/**
+ * Whether one entry covers the action: its resource, its action, and every
+ * vendor and amount bound it carries. `requires_action_approval` does not
+ * decide coverage; the PDP requires the approval for the covering entry. Nor
+ * does `terminal_when`: a discharged entry leaves the current effective
+ * authority, which the PDP evaluates as its own bound.
+ */
+function entryCovers(entry: CredentialAuthorityEntry, target: CredentialTarget): boolean {
   if (entry.resource !== target.resource || !entry.actions.includes(target.action)) return false;
   const c = entry.constraints;
   if (!c) return true;
-  // A discharge condition is evaluated against Mission state this credential
-  // check does not hold, so an entry carrying one cannot be shown undischarged.
-  if (c.terminal_when !== undefined && c.terminal_when.length > 0) return false;
-  if (c.requires_action_approval === true && !target.approvalEnforced) return false;
   if (c.vendors !== undefined) {
     if (target.vendorIds.length === 0) return false;
     if (!target.vendorIds.every((v) => c.vendors?.includes(v))) return false;
@@ -254,15 +253,26 @@ function entryPermits(entry: CredentialAuthorityEntry, target: CredentialTarget)
 }
 
 /**
- * Whether the credential's own authority covers the action. One entry must
- * permit it whole: an action from one entry never combines with a constraint
- * satisfied by another.
+ * The credential entry that covers the action whole, or `undefined`: an
+ * action from one entry never combines with a constraint satisfied by
+ * another. Of several covering entries, one that requires no action-bound
+ * approval is preferred, so the credential demands an approval only when every
+ * entry covering the action does.
  */
+export function coveringCredentialEntry(
+  entries: readonly CredentialAuthorityEntry[],
+  target: CredentialTarget,
+): CredentialAuthorityEntry | undefined {
+  const covering = entries.filter((entry) => entryCovers(entry, target));
+  return covering.find((e) => e.constraints?.requires_action_approval !== true) ?? covering[0];
+}
+
+/** Whether the credential's own authority covers the action ({@link coveringCredentialEntry}). */
 export function credentialAuthorityPermits(
   entries: readonly CredentialAuthorityEntry[],
   target: CredentialTarget,
 ): boolean {
-  return entries.some((entry) => entryPermits(entry, target));
+  return coveringCredentialEntry(entries, target) !== undefined;
 }
 
 /** A Mission Authority Set entry read as credential authority (for fixtures and projections). */

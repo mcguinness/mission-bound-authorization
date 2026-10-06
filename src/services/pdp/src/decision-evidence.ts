@@ -176,6 +176,9 @@ export function runtimeCapabilitySourceOf(presented: unknown): RuntimeCapability
   };
 }
 
+/** @spec authzen#evidence `authority_bound` values. */
+export type AuthorityBound = "credential" | "mission";
+
 /** @spec runtime-evidence#decision-evidence-object (lines 331-573): the closed wire object. */
 export interface DecisionEvidenceObject {
   evidence_id: string;
@@ -190,6 +193,14 @@ export interface DecisionEvidenceObject {
    * of the record; never echoed in the AuthZEN response context.
    */
   join_view_id?: string;
+  /**
+   * @spec authzen#evidence, runtime-evidence#evidence-extensions
+   * `authority_bound` — the bound an `out_of_authority` deny failed:
+   * `credential` (the presented credential's own authority) or `mission`
+   * (the current effective authority). A top-level coordinated extension
+   * member the AuthZEN profile owns; REQUIRED on that deny, absent otherwise.
+   */
+  authority_bound?: AuthorityBound;
   subject: RuntimeSubjectRef;
   resource: RuntimeResourceRef;
   action: RuntimeActionRef;
@@ -280,6 +291,8 @@ export interface DecisionEvidenceEmissionInput {
   mission: RuntimeMissionRef;
   /** The PDP's joined-view commitment, set only when this decision rode a successful join. */
   join_view_id?: string;
+  /** Which bound an `out_of_authority` deny failed; required on that deny, refused on any other. */
+  authority_bound?: AuthorityBound;
   subject: RuntimeSubjectRef;
   resource: RuntimeResourceRef;
   action: RuntimeActionRef;
@@ -384,6 +397,15 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
       if (input.decision === "permit" && classes.slice(2).includes(action_class) && input.conditions?.use_limit !== 1) {
         throw new Error("Decision Evidence high-consequence permit requires use_limit 1");
       }
+      // @spec authzen#evidence `authority_bound`: REQUIRED on an
+      // `out_of_authority` deny, absent otherwise.
+      const outOfAuthority = input.decision === "deny" && input.denial_reason === "out_of_authority";
+      if (outOfAuthority !== (input.authority_bound !== undefined)) {
+        throw new Error("Decision Evidence authority_bound is required on an out_of_authority deny and absent otherwise");
+      }
+      if (input.authority_bound !== undefined && input.authority_bound !== "credential" && input.authority_bound !== "mission") {
+        throw new Error("Decision Evidence has an unknown authority_bound");
+      }
       const class_source: RuntimeClassSource = input.action_class !== undefined ? "deployment" : "default";
       if (input.parameter_digest === undefined && !(typeof input.evaluation_request_digest === "string" && input.evaluation_request_digest.length > 0)) {
         throw new Error("Decision Evidence requires the evaluation request digest when parameter_digest is absent");
@@ -404,6 +426,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         evaluation_id: input.evaluation_id,
         mission,
         ...(input.join_view_id !== undefined ? { join_view_id: requiredString(input.join_view_id) } : {}),
+        ...(input.authority_bound !== undefined ? { authority_bound: input.authority_bound } : {}),
         subject: { id: requiredString(input.subject.id),
           ...(typeof input.subject.type === "string" ? { type: input.subject.type } : {}),
           ...(typeof input.subject.properties?.iss === "string" ? { properties: { iss: input.subject.properties.iss } } : {}),
