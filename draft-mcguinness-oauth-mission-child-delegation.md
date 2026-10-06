@@ -679,7 +679,7 @@ authorization grant of {{child-client-identity}}, never a child token.
 ~~~
 
 The completion in step 2 is deployment-specific ({{completion}}). A
-deployment MAY require a fresh approval event for Child Mission
+deployment MAY require a fresh human approval for Child Mission
 creation, completing via the deferred token response or the interactive
 approval, or MAY allow policy to approve child creation synchronously
 when the parent Mission's Authority Set explicitly permits it. Step 1
@@ -2197,6 +2197,10 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Completion: a deployment can require a fresh human approval for
+  child creation; every child creation, human or policy-adjudicated,
+  is the Child Mission's approval event (#1078).
 
 - Mission Record Requirements: under `policy_drawdown` the record's
   `approval_event_id` is the creation's `activation_event_id`, never

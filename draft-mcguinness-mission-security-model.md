@@ -1081,6 +1081,9 @@ Emergent authority through coordination (independent Missions):
   carrier; shared-state effect classification, an audience envelope, and
   lineage-keyed aggregate bounds are anticipated defense-in-depth, not
   yet specified ({{I-D.draft-mcguinness-oauth-mission-work-products}}).
+  Joint authorization across independent issuers is outside the
+  family's scope ({{I-D.draft-mcguinness-mission-architecture}},
+  Section "Mission Invariants").
 
 Injection steers discovery (the agent binds the attacker's resource):
 : Addressed by default-closed discovery (no consented ceiling, no
@@ -1519,6 +1522,10 @@ model and pipeline layers, and saying so is the point:
   prohibit equivalent authority under a separately approved Mission,
   and that preventing re-approval takes policy over the relevant
   approval paths.
+
+- The emergent-authority residual points at the Architecture's
+  statement that cross-issuer joint authorization is outside the
+  family's scope.
 
 - The effective-ceiling composition residual states that the
   per-Mission figures do not compose into a lifetime total, and

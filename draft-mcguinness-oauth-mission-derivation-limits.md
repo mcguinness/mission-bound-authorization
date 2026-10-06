@@ -440,8 +440,9 @@ granted the `derivations_remaining` disclosure privilege:
 
 # Approval Rendering {#approval-rendering}
 
-Where an effective `derivation_limit` is established, the AS MUST
-render it for consent at the approval event, as context beside the
+Where an effective `derivation_limit` is established at a human
+approval event, the AS MUST render it for consent at that event, as
+context beside the
 derived Authority Set, in the rendering step of the OAuth binding's
 approval sequence ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Mission Approval"). The rendering shows the established value, not
@@ -640,6 +641,9 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 
 -00
 
+- Approval Rendering applies where the limit is established at a
+  human approval event; a policy-adjudicated instance has no consent
+  rendering (#1078).
 - What Counts states that a child-creation token exchange is not
   counted against the Parent Mission's limit, and that the child's
   redemption of its initial grant counts against the child's own
