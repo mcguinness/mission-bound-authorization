@@ -70,7 +70,7 @@ so this target cannot pass acceptance while either is missing.
 |---|---|---|---|---|
 | Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `composeStack({ withAuthServer: true })` (`demo/src/stack.ts:191`) runs the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:273-275`), the PEP `mcp-payments-pep` (`stack.ts:706-708`), the PDP (`stack.ts:539`), OpenFGA, and the in-process approval service. The resource audience is `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:69`); nothing listens there. The AS JWKS is fetched once at assembly (`stack.ts:373`) | Partial | Launcher for exactly this topology: #1105. JWKS reload: #831 |
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude the MAS route on this target: #1105 (#818 owns MAS; #956 Q2 its declaration in the shared demo) |
-| Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1095`) | Partial | `hold_transfer` permit control: #1080. Profile drift (§3): #1106 |
+| Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1095`) | Partial | Statement publication of the single-use default (§3): #1080. Profile drift (§3): #1106 |
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:665-672`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
 | Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP only: an action outside the verified token's own `authorization_details` is refused before the PDP, which does not evaluate it. Independent Resource policy is not implemented (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR 1 merged as #1062; PRs 2a to 2c remain, D312). Resource policy: #828 |
 | Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | Emission failures: #1104 |
@@ -93,7 +93,7 @@ Statement declares:
 | `schedule_payment` | `payments:payment.schedule` | `consequential_write` | | keyed write | PEP reservation (#918) | invoice form |
 | `cancel_scheduled_payment` | `payments:payment.schedule.cancel` | `consequential_write` | | keyed write | PEP reservation | invoice form |
 | `check_transfer` | `payments:payment.execute` | `consequential_read` | preflight | read | | invoice form |
-| `hold_transfer` | `payments:payment.execute` | `consequential_write` | prepare | unkeyed write | none | invoice form |
+| `hold_transfer` | `payments:payment.execute` | `consequential_write` | prepare | unkeyed write | single-use permit, PEP-redeemed (#1080) | invoice form |
 | `execute_wire_transfer` | `payments:payment.execute` | `irreversible_action` | commit | transaction | PDP claim (#917) | invoice form |
 | `send_remittance_email` | `payments:remittance.send` | `external_commitment` | | transaction | PDP claim | invoice form |
 
@@ -105,7 +105,8 @@ Statement declares:
 
 Residuals:
 
-- **`hold_transfer`** has no permit-lifetime or idempotency control and stores nothing: `execute()` returns `{held: true}` (`services/mcp-payments/src/server.ts:1705-1706`). It is in the allowlist as the prepare phase. #1080 owns the permit control. No test yet.
+- **`hold_transfer`** takes the single-use permit control. The PDP sets `use_limit: 1` on every `consequential_write` permit that no key control covers (`evaluate`, `services/pdp/src/evaluate.ts`), and the core write path redeems the permit's `evaluation_id` once, after the last permit-use check and immediately before the effect, in the PEP's durable store (`McpPaymentsServer.takeSingleUse`, `services/mcp-payments/src/server.ts`). A second presentation is suppressed `permit_consumed` with no effect: `single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080) > a second presentation of one hold_transfer Decision is refused permit_consumed, releases no second hold, and records the suppression against the same evaluation_id`. Two concurrent presentations release one hold: `single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080) > a presentation refused before redemption burns nothing, and two concurrent presentations of that Decision release at most one hold`. A store that cannot be written refuses `consumption_unavailable`: `single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080) > a consumed-identifier store that cannot be written, or none configured, refuses consumption_unavailable with no hold`. Two separately authorized holds each place a hold; the control bounds one permit, not the action. The hold itself stores nothing: `execute()` returns `{held: true}`.
+- **The single-use default is not published.** The Enforcement Scope Statement declares the key control for the two keyed writes and has no member for a single-use default, so `hold_transfer`'s control is enforced but undeclared. #1080.
 - **Operation Profile drift.** The profile says arguments are NFC-normalized and unknown members are refused `invalid_request`; neither is implemented in `services/mcp-payments/src`. Its `note` and `execute_after` members are neither served nor read. The key format is checked by the PDP (`evaluate.ts:1396`, `:1414`), not a schema. The schema list also omits `idempotency_key` on the two transaction-tier tools and lists an unserved `list_invoices` `status` filter. #1106 (owner ruling pending).
 
 ## 4. State and freshness
@@ -220,7 +221,7 @@ the connector effect, then evidence, then claim settlement.
 | Store | Backing as shipped | Atomic unit | Restart |
 |---|---|---|---|
 | PDP idempotency claims | SQLite file `var/pdp-idempotency-claims.sqlite`, exclusive lock, WAL, `synchronous=FULL` (`stack.ts:531-538`) | lookup and insert in one transaction; the decision is persisted before the response | a prior boot's `permit_issued` becomes `unresolved`; an unpersisted `claimed` is adoptable; `unresolved` closes `indeterminate` at `valid_until` plus 30 s plus PT15M and is never purged |
-| PEP write reservations | SQLite file `var/pep-write-reservations.sqlite` (`stack.ts:553-559`) | reservation, effect and completion in one transaction | survives; completed rows read absent after P7D; its `sweep()` has no production caller |
+| PEP write reservations | SQLite file `var/pep-write-reservations.sqlite` (`stack.ts:553-559`) | reservation, effect and completion in one transaction; a single-use permit's consumed identifier is one insert | survives; completed rows read absent after P7D; a consumed identifier is kept until its permit's `valid_until` plus 30 s (`CONSUMED_PERMIT_RETENTION_MARGIN_MS`); neither `sweep()` nor `sweepConsumedPermits()` has a production caller |
 | `TransactionEngine` | in memory (`services/mcp-payments/src/transaction.ts:41`) | redemption is three statements, not one transaction | lost, with every redemption record. Every process reuses the constant epoch `demo-epoch` (`demo/src/stack.ts:704`), so D39's prior-epoch rejection (`transaction.ts:60-61`) never fires: a restarted engine has no record of earlier redemptions. The PEP's `instanceEpoch` is also `demo-epoch` (`stack.ts:740`) and is never read |
 | Connectors, txn stores, evidence retention | in memory | one insert per operation key; atomic first use of a `txn` | lost |
 | Payments store, DPoP replay cache, actor records | in memory, seeded per boot | none | lost or reseeded |
@@ -230,7 +231,9 @@ the connector effect, then evidence, then claim settlement.
 Witnesses for the durable stores:
 `PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a persisted permit is unknown after restart: suppressed, never returned, never fresh`
 and
-`the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the persisted store reopens with the record > a key scheduled before the store closed resolves against its record from a new server on the same file`.
+`the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the persisted store reopens with the record > a key scheduled before the store closed resolves against its record from a new server on the same file`,
+and
+`single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080) > the consumed record survives a store reopen: a new server on the same file refuses the replay permit_consumed with no hold`.
 
 Residuals:
 
@@ -248,7 +251,7 @@ unsupported obligation is refused or its claim excluded.
 |---|---|---|---|
 | Reads (`list_invoices`, `get_invoice`, `lookup_vendor`, `check_transfer`) | per-call decision on current Mission authority and state; per-action `vendors` | Execution Evidence on success | #825 and #828 (required, §1) |
 | Keyed writes (`schedule_payment`, `cancel_scheduled_payment`) | per-action `max_amount` and `vendors`; PEP-reserved idempotency with a durable record | reservation sweep; reconciliation of a `reserved` row | #1103 |
-| Prepare (`hold_transfer`) | per-call decision; phase binding | idempotency or permit-lifetime control; any stored effect | #1080 |
+| Prepare (`hold_transfer`) | per-call decision; phase binding; single-use permit redeemed once in the PEP's durable store | idempotency across separately authorized holds; any stored effect (the hold is a stub); the single-use default in the statement | #1080 |
 | Transaction tier (`execute_wire_transfer`, `send_remittance_email`) | single-use permit, execution lease, PDP-held Exact claim, digest and phase binding, Execution Evidence; action-bound approval for remittance | restart recovery beyond the claim store; reconciliation run; transaction-grade resource witnesses; a failed commit predicate that retains the permit | #1103, #1104, #250, #817 |
 | Every path | per-action limits only | any aggregate cap; compromise containment; unattended prohibited-class exception | excluded by D284; #825 and #828 are required, not excluded (§1) |
 
@@ -268,7 +271,7 @@ That test uses another member; no test names `max_budget`.
 **Unmet obligations by owner:**
 
 - Blocking acceptance: #825 (token authority; PR 1 merged as #1062, PRs 2a to 2c remain per D312) and #828 (Resource policy).
-- Acceptance-pack prerequisites: #1105 (launcher, MAS route excluded), #1103 (reconciliation never runs), #1104 (emission failures), #1106 (Operation Profile drift), #1080 (`hold_transfer` permit control).
+- Acceptance-pack prerequisites: #1105 (launcher, MAS route excluded), #1103 (reconciliation never runs), #1104 (emission failures), #1106 (Operation Profile drift), #1080 (the statement does not publish the single-use default).
 - Separated deployment only: #1101 (state source under D293).
 - Also open: #826 (Approver versus Subject; implemented by #1074, D306, awaiting acceptance), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
 - #917 and #918 are closed as implemented (D245, D247); their leftovers are owned by #1103 and #1080.

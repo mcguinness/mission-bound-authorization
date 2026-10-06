@@ -821,8 +821,8 @@ Mission-bound token through the assembled path (#1105).
 | Credential validation | Yes. Credential authority at the PDP is not met: acceptance gate (#825) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport and PEP-level (§5.1) | The PDP neither receives nor evaluates the credential authority (#825 PRs 2a, 2b; D312); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
 | Independent Resource policy | Yes, not met: acceptance gate (#828) | The PDP's OpenFGA check and action-to-relation map (§5.2) | In the decision | None | Nothing durable; the tuple is injected per check | PDP-level, [FGA] (§5.2) | The shipped model cannot deny independently of Mission authority (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
-| Target and parameter binding | Yes | `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read and write paths write nothing before the effect; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level, [FGA] (§5.4) | A single-record read re-derives no digest at use; the Operation Profile's intake rules are not implemented (#1106) (§5.4) |
-| Permit redemption | Transaction tier and keyed writes | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction | None; settlement is awaited | Claim and reservation files survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | `hold_transfer` has no permit control (#1080); one redemption per operation key per process (§5.5) |
+| Target and parameter binding | Yes | `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level, [FGA] (§5.4) | A single-record read re-derives no digest at use; the Operation Profile's intake rules are not implemented (#1106) (§5.4) |
+| Permit redemption | Transaction tier, keyed writes, and single-use permits on the core write path | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation; `takeSingleUse` (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction. A core-write redemption is one insert, immediately before the effect | None; settlement is awaited | Claim, reservation and consumed-identifier records survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | The statement does not publish the single-use default (#1080); one redemption per operation key per process (§5.5) |
 | Evidence | Yes | The PDP's emitter; `recordRefusal`, `suppressExecution`; the executor's `completed` write (§5.6) | Synchronous in the request; Decision Evidence is verified before release | None | Retention is in memory and lost at restart | PEP-level (§5.6) | A failed `completed` write after a connector commit is silent (#1104); no Execution Evidence on a successful call outside the transaction tier (§5.6) |
 | Recovery and reconciliation | Declared by the Enforcement Scope Statement | `reconcileClaims`, `reconcile`, the reservation `sweep()` (§5.7) | None runs | Reconciliation would be the overlay's only asynchronous work | A prior process's claim closes `indeterminate` and its key stays refused (§5.7) | PEP-level restart witness (§5.7); the PDP crash boundary (§5.5) | No production caller and no alert (#1103) |
 
@@ -946,11 +946,13 @@ Mission-bound token through the assembled path (#1105).
   - Read (`callReadTool`, `server.ts:952`): the permit-use table, the
     capability check, `reverifyList` for a list read, the permit-use table
     again, then the read. A single-record read re-derives no digest at use.
-    Nothing is written.
+    Nothing is written. A `consequential_write` sent down this path is
+    served by the write path.
   - Write (`callWriteTool`, `server.ts:1041`): the permit-use table, the
-    capability check, `reverify`, the permit-use table again, then the
+    capability check, `reverify`, the permit-use table again, then, for a
+    permit carrying `use_limit`, its single-use redemption (§5.5), then the
     effect. For a keyed reversible write, the effect is the reservation
-    transaction (§5.5). Nothing is written before it.
+    transaction (§5.5). Nothing else is written before the effect.
   - Transaction tier (`callTransactionTool`, `server.ts:1298`): the
     permit-use table at admission (`:1366`); single-use redemption (`:1408`),
     which writes the engine's operation state; then the capability check
@@ -992,12 +994,27 @@ Mission-bound token through the assembled path (#1105).
     and commits the effect, the reservation and the result in one local
     transaction (`server.ts:1261`;
     `services/mcp-payments/src/write-reservations.ts:228`).
-  - Other paths redeem nothing; each crossing takes a fresh decision.
+  - Single-use permits on the core write path: the PDP sets `use_limit: 1` on
+    every `consequential_write` permit that no key control covers, which is
+    `hold_transfer` alone. `callWriteTool` redeems a permit carrying
+    `use_limit` after the last permit-use check, with no await before the
+    effect (`takeSingleUse`): one insert keyed on `evaluation_id` into the
+    `consumed_permits` table of the same store (`consumePermit`). A consumed
+    identifier refuses `permit_consumed`; a store that is absent or cannot be
+    written refuses `consumption_unavailable`; a `use_limit` other than 1
+    refuses `condition_unrecognized`. Each record is kept until the permit's
+    `valid_until` plus 30 s (`CONSUMED_PERMIT_RETENTION_MARGIN_MS`): the PEP
+    accepts a permit only until `valid_until` on its own clock, and the
+    margin covers a backward clock step. `sweepConsumedPermits()` has no
+    production caller.
+  - Read paths redeem nothing; each crossing takes a fresh decision.
 - **Boundary.** The claim insert is one transaction in the PDP's store.
   Redemption, effect, evidence and settlement follow as separate writes, in
-  that order. A keyed write is one local transaction.
+  that order. A keyed write is one local transaction. A core-write
+  redemption is one insert; the effect follows it synchronously.
 - **Asynchronous work.** None. `settleClaim` is awaited.
-- **Crash and recovery.** The claim and reservation files survive a restart.
+- **Crash and recovery.** The claim and reservation files survive a restart,
+  and with them the consumed identifiers.
   The engine's redemption records do not, and every process reuses the epoch
   `demo-epoch` (`stack.ts:704`), so single use across a restart rests on the
   persisted claim and reservations (the contract's §7). Surviving is not
@@ -1007,8 +1024,18 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
   - [FGA] `M5 transaction-assurance tier > a FRESH permit for an already-claimed operation is refused as operation_already_claimed and does not double-execute` (server-level)
   - `PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a persisted permit is unknown after restart: suppressed, never returned, never fresh` (PDP-level)
   - `the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the persisted store reopens with the record > a key scheduled before the store closed resolves against its record from a new server on the same file` (server-level)
-- **Residual.** `hold_transfer`, the prepare phase, carries no permit-lifetime
-  or idempotency control (#1080). The operation key omits `idempotency_key`:
+  - `a reversible write that elects no key control defaults to single use (@spec runtime#permit-binding, #1080) > the prepare-phase hold (payments:payment.execute, no key control) is permitted with use_limit: 1, with or without a key, and no claim; a keyed write carries none; a class-wide key control removes the default` (PDP-level)
+  - `single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080) > at the resource operation, the hold_transfer permit carries use_limit: 1, and the keyed writes keep the key control with no use_limit` (server-level)
+  - `single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080) > a second presentation of one hold_transfer Decision is refused permit_consumed, releases no second hold, and records the suppression against the same evaluation_id` (server-level)
+  - `single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080) > a presentation refused before redemption burns nothing, and two concurrent presentations of that Decision release at most one hold` (server-level)
+  - `single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080) > the consumed record survives a store reopen: a new server on the same file refuses the replay permit_consumed with no hold` (server-level)
+  - `single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080) > a consumed-identifier store that cannot be written, or none configured, refuses consumption_unavailable with no hold` (server-level)
+  - `single-use permits on the core write path (@spec runtime#single-use-identifiers, #1080) > retains each consumed identifier through the permit's whole acceptance window: until valid_until plus the margin, and a sweep at valid_until keeps it` (server-level)
+- **Residual.** The Enforcement Scope Statement has no member for the
+  single-use default, so `hold_transfer`'s control is enforced but not
+  published (#1080). A single-use permit bounds one permit, not the action:
+  two separately authorized holds each place a hold, and the hold stores
+  nothing. The operation key omits `idempotency_key`:
   one redemption is allowed per Mission, action, phase and digest per process,
   so a repeat is refused, never executed twice (a stated bound).
 
@@ -1089,7 +1116,8 @@ Runtime overlay:
 
 7. A state source for a PEP or PDP separated from the AS (#1101). This target
    uses the declared local read (D293). §5.3.
-8. A permit-lifetime or idempotency control for `hold_transfer` (#1080). §5.5.
+8. Publication of the single-use default for a reversible write with no key
+   control in the Enforcement Scope Statement (#1080). §5.5.
 9. Running the declared outcome reconciliation, its alert, and recovery of a
    prior process's claims (#1103). §5.7.
 10. An assembled deployment of exactly this topology: the shipped stack also
