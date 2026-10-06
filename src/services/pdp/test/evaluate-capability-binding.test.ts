@@ -4,7 +4,7 @@ import { evaluate, type EvaluationRequest, type EvaluateOptions } from "../src/e
 import type { Fga } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 
 const resource = "https://payments.test/mcp", action = "payments:invoice.read";
 const binding: CapabilitySourceBinding = { action, tool_id: "mcp://payments.test/tools/get_invoice", source_uri: "https://payments.test/.well-known/mcp", source_digest: capabilitySourceDigest({ name: "get_invoice" }), operation_ref: "get_invoice" };

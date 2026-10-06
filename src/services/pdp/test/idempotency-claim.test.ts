@@ -38,7 +38,7 @@ import { decisionCacheKey } from "../src/projections.js";
 import { EXECUTION_EVIDENCE_MEDIA_TYPE, signEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
 import { CLAIM_OWNER, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const OTHER_RESOURCE = "http://localhost:4499/mcp";

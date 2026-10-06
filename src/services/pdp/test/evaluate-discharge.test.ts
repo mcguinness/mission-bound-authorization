@@ -31,7 +31,7 @@ import { describe, expect, it } from "vitest";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const ISSUER = "https://as.test";

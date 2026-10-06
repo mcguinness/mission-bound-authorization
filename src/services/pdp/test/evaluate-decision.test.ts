@@ -27,7 +27,7 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");

@@ -20,7 +20,7 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 
 // @spec runtime#idempotency (#917): every high-consequence permit is claimed;
 // a fixture domain that also mediates privileged administration.
