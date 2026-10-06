@@ -11,12 +11,12 @@
     "content_sha256": "ebcea1b67c1c23cd2b22614cbd969b6ce9122b39e5dd04ad3893a0e786e26b89"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "2353e7d8a451dfb1ae5e926a5a4b955fc2201c24",
-    "content_sha256": "66a74b798e1c8066256ab065cb0503dcab105a8d215cab3b6913fc9ad7daea59"
+    "revision": "c7ca134d578117acd1f20198bc72d532fd721b92",
+    "content_sha256": "195d56f2a3f63d8fc8fc8986e1b49b1aa1c1b545c4cfc10a3038a9db086c3ec3"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "60a99793fffb4d41ad89835eb6ef0af48aac20d7",
-    "content_sha256": "6dfcf6287f87fa0b1ddd1896bb943b9b6c08b42e7a2205dd221dcf0a52106d02"
+    "revision": "c7ca134d578117acd1f20198bc72d532fd721b92",
+    "content_sha256": "1e1999cad8be39ff2b2871c38dd118d66da73e29bbd8ee46e833511b932ae89f"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "f483680b18f8f7734f96cf6bb521e65941174247",
