@@ -16737,6 +16737,41 @@
    ]
   },
   {
+   "id": "authzen.context-credential.unestablished-condition",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "A condition on that entry that the PDP cannot establish from its own state does not permit",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a credential entry's terminal_when permits only where the Mission entry matched for the action carries each of its conditions, so the PDP's own discharge state governs it; a condition it holds no state for refuses out_of_authority"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > honors a discharge condition the matched Mission entry carries, so the Mission's discharge state governs it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > refuses a discharge condition the matched Mission entry does not carry: the PDP holds no state for it",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
    "id": "authzen.context-credential.authority-no-fallback",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-credential",

@@ -107,6 +107,26 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     expect(unsupported.record.contributing_constraints).toEqual(["future-entry"]);
   });
 
+  it("a credential-bound deny lists the credential entry's type and constraint keys (@spec runtime-evidence#decision-evidence-object, #825 PR 2b)", async () => {
+    // The Mission entry carries no constraint; only the credential's own
+    // vendors constraint can have failed, and the record names it.
+    const r = req();
+    r.context.credential = {
+      authority: [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read"],
+          constraints: { vendors: ["globex"] },
+        },
+      ],
+    };
+    const { record, decision } = await recorded(r, view());
+    expect(decision.decision).toBe(false);
+    expect(record.denial_reason).toBe("out_of_authority");
+    expect(record.contributing_constraints).toEqual(["mission_resource_access", "vendors"]);
+  });
+
   it("a delegate narrowing failure records the loaded entry types without inventing checks of their constraints", async () => {
     const v = view(); v.authority_set[0]!.join_delegation = { max_depth: 0 };
     v.authority_set[0]!.constraints = { max_amount: { amount: "0", currency: "USD" } };
