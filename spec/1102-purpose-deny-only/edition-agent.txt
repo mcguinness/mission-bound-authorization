@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-06T19:18:53Z
-Source repository commit: 684995e0a5be8530dda2e1241b8bbe1e25627b11
+Generated: 2026-10-06T21:50:05Z
+Source repository commit: 5d1de4de8420302e09c10c4ae047210f8bfda84f
 Member count: 9
 
 Reading order:
@@ -11472,11 +11472,12 @@ Table of Contents
 
    Against the untrusted-content leg, it contributes one thing:
    success_criteria is inert, granting, widening, and gating no
-   authority, purpose shapes authority only as a lookup key of the pre-
-   approval derivation whose result the Approver reads and consents to,
-   and goal bounds it only through that disclosure (Section 4,
-   Section 5).  Authority is fixed at the approval event, so injected
-   text cannot expand an approved Mission.
+   authority, purpose supplies candidate authority only as a lookup key
+   of the pre-approval derivation whose result the Approver reads and
+   consents to and otherwise can only refuse or tighten, and goal bounds
+   it only through that disclosure (Section 4, Section 5).  Authority is
+   fixed at the approval event, so injected text cannot expand an
+   approved Mission.
 
    This document does not constrain the external-communication leg and
    provides no information-flow control.  It models authority over
