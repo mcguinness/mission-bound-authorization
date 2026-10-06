@@ -799,9 +799,12 @@ Authority Set, or any other record of Mission authority, for
 `authority`. A condition on that entry that the PDP cannot establish
 from its own state does not permit, and an action-approval requirement
 on it applies as one on the matched Mission entry does
-({{context-approval}}). An action outside `authority` is denied
-`out_of_authority`. A request whose `authority` is absent, or carries
-an entry the PDP cannot evaluate in full, is denied
+({{context-approval}}). An action that no entry of `authority` names
+by resource and action is denied `out_of_authority`. An action that
+entries name, but whose parameters violate a constraint on each of
+them, is denied `parameter_violation`, as on the matched Mission entry
+({{runtime-denial-classification}}). A request whose `authority` is
+absent, or carries an entry the PDP cannot evaluate in full, is denied
 `credential_invalid`: the PDP MUST NOT fall back to the Mission's
 authority.
 
@@ -2300,7 +2303,8 @@ carrier's extensibility rule.
 | Required `act` chain missing or malformed | PDP denial | `actor_invalid` |
 | Credential facts expired or inconsistent | PDP denial | `credential_invalid` |
 | Credential authority absent, or carrying an entry the PDP cannot evaluate in full | PDP denial | `credential_invalid` |
-| Action outside the presented credential's own authority, established by the PDP | PDP denial | `out_of_authority` |
+| No entry of the presented credential's own authority names the action's resource and action, established by the PDP | PDP denial | `out_of_authority` |
+| Entries of the presented credential's own authority name the action, but its parameters violate a constraint on each | PDP denial | `parameter_violation` |
 | Parameter constraint violated, PDP digest mismatch, or required digest absent | PDP denial | `parameter_violation` |
 | Idempotency key and operation identity match a prior unresolved or completed claim | PDP denial | `duplicate_suppressed` |
 | Idempotency key reused with a different operation identity | PDP denial | `idempotency_conflict` |
@@ -2894,7 +2898,9 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
   own `authorization_details`, on every decision; the PDP enforces it
   as the credential authority bound, independently of the matched
   Mission entry, and denies `credential_invalid` when it is absent or
-  not evaluable (#825).
+  not evaluable (#825). An action no credential entry names is
+  `out_of_authority`; one whose parameters violate a constraint on
+  every entry that names it is `parameter_violation`.
 
 - The RAR remediation grain cites the working-group successor
   draft-ietf-oauth-rar-metadata-remediation and defers its routing to
