@@ -27,10 +27,12 @@ import {
   EvidenceStore,
   McpPaymentsServer,
   PaymentsStore,
+  PaymentsToolCatalog,
   Pep,
   type RefusalRecord,
   TransactionEngine,
 } from "../src/index.js";
+import { admitArguments } from "../src/intake.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
@@ -60,7 +62,7 @@ const VIEW: MissionView = {
   client_id: "ap-agent",
 };
 
-async function build() {
+async function build(catalogSource?: () => string) {
   const payments = new PaymentsStore();
   payments.seed(
     [{ id: "acme", name: "Acme", status: "approved" }],
@@ -88,6 +90,7 @@ async function build() {
     modelId: "unit-test-model",
     loadView,
     instanceEpoch: "epoch-1106",
+    ...(catalogSource ? { capabilityCatalog: new PaymentsToolCatalog(catalogSource) } : {}),
   });
   const kp = await generateKeyPair("ES256", { extractable: true });
   const server = new McpPaymentsServer({
@@ -170,6 +173,43 @@ describe("intake refuses a request outside the tool's served schema before any P
       );
       expectIntakeRefusal(h, res, "payments:payment.execute", member);
     }
+  });
+
+  it("a missing required member, a non-string value and a pattern miss are refused invalid_request with no PDP call and one Refusal Record", async () => {
+    const cases: Array<[string, string, Record<string, unknown>, string]> = [
+      ["missing member", "get_invoice", {}, "payments:invoice.read"],
+      ["non-string value", "get_invoice", { invoice_id: 42 }, "payments:invoice.read"],
+      ["pattern miss", "execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: "has spaces in it, not allowed" }, "payments:payment.execute"],
+    ];
+    for (const [label, tool, args, action] of cases) {
+      const h = await build();
+      expectIntakeRefusal(h, await h.client.callTool(tool, args, h.jwt), action, label);
+    }
+  });
+
+  it("a served schema that cannot be read at intake is refused capability_source_unresolvable, never admitted unvalidated", async () => {
+    // The catalog fails only on the first read, intake's; the PEP's own
+    // later read would succeed, so admitting the request here would reach the
+    // PDP with arguments no schema checked.
+    let reads = 0;
+    const text = TRUSTED_TOOL_CATALOGS.find((c) => c.service_id === "payments")?.text ?? "";
+    const h = await build(() => {
+      reads += 1;
+      if (reads === 1) throw new Error("catalog offline");
+      return text;
+    });
+    const res = await h.client.callTool("get_invoice", { invoice_id: "inv-1", note: "unchecked" }, h.jwt);
+    expect(res).toEqual({ ok: false, refusal_reason: "capability_source_unresolvable" });
+    expect(h.pdpCalls).toHaveLength(0);
+    expect(h.evidence.all().map((r) => [r.kind, (r.content as { denial_reason?: string }).denial_reason])).toEqual([
+      ["refusal", "capability_source_unresolvable"],
+    ]);
+  });
+
+  it("a schema keyword intake does not implement is a configuration fault, never a constraint silently left unenforced", () => {
+    const schema = { type: "object", properties: { invoice_id: { type: "string", maxLength: 8 } }, additionalProperties: false };
+    expect(() => admitArguments(schema, { invoice_id: "inv-1" })).toThrow(/unsupported keyword maxLength/);
+    expect(() => admitArguments({ type: "object", properties: {}, additionalProperties: true }, {})).toThrow(/must be closed/);
   });
 
   it("every served input schema is closed and declares no authoritative member of the invoice it targets", () => {
