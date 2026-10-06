@@ -625,14 +625,25 @@ issuance profile's approval steps:
    it verified, never from the grant request's `user` member, the
    Mission Intent, or other unauthenticated client input.
 3. Derive the Authority Set from the Intent and the authority
-   proposal ({{mission-intent}}), and render it for consent on the
-   interaction surface under the issuance profile's rendering rules
+   proposal ({{mission-intent}}).
+4. Establish the authority source under the issuance profile's rules:
+   from trusted configuration or authenticated governance state,
+   never from client assertion, with the Approver authorized to
+   activate it and the derived Authority Set within it.
+5. Establish the effective Mission expiry: the requested
+   `intent.expires_at` ceiling narrowed by applicable policy, under
+   the issuance profile's bounds.
+6. Render the Authority Set for consent on the interaction surface
+   under the issuance profile's rendering rules
    ({{security-rendering}}).
-4. Compute the integrity anchors with the authorization server's
+7. Compute the integrity anchors with the authorization server's
    grant endpoint URI as the envelope `iss` ({{mission-record}}).
-5. Create the Mission record in the `active` state atomically with
-   the approval decision. The grant request MUST NOT reach the
-   _approved_ state under the Mission before the record is `active`.
+8. Create the Mission record in the `active` state atomically with
+   the approval decision, rechecking at that commit that the
+   effective expiry is strictly later than the creation instant;
+   where it is not, no Mission is created. The grant request MUST NOT
+   reach the _approved_ state under the Mission before the record is
+   `active`.
 
 ## Approval Modes {#approval-modes}
 
@@ -1094,11 +1105,13 @@ The contextual-governance kernel maps as follows:
    modification never revises the record behind its reference:
    approved widening yields a successor Mission ({{intent-first}},
    {{mission-record}}, {{drawdown}}).
-5. **Approval ceremony**: grant processing performs the five
-   approval steps in the interactive or deferred mode, or under a
-   companion-supplied standing basis, binding one proposal revision,
-   and creates the record `active` atomically with approval;
-   the grant does not reach _approved_ before the record does
+5. **Approval ceremony**: grant processing performs the issuance
+   profile's approval steps (Approver, Subject, derivation, authority
+   source, effective expiry, rendering, anchors) in the interactive or
+   deferred mode, or under a companion-supplied standing basis,
+   binding one proposal revision, and creates the record `active`
+   atomically with approval, rechecking the effective expiry at that
+   commit; the grant does not reach _approved_ before the record does
    ({{approval}}, {{revision}}).
 6. **Governance gate**: only the issuance profile's `active` state
    is active. Every other or unrecognized value fails closed at
