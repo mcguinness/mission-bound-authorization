@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-06T00:26:27Z
-Source repository commit: 51ae8d3e317eac8a31a18c7c7931773cd3fbdf6d
+Generated: 2026-10-06T00:42:05Z
+Source repository commit: aa53686a61a3924d6f9e9ef9e1ff316cf7564e78
 Member count: 9
 
 Reading order:
@@ -1836,6 +1836,12 @@ Table of Contents
       [I-D.draft-mcguinness-mission-metering]).  The OAuth binding
       states the same property in its "Composition and the Effective
       Ceiling" section ([I-D.draft-mcguinness-oauth-mission]).
+
+      Cross-issuer joint authorization is outside the family's scope.
+      Independent issuers run independent Missions, each bounded on its
+      own, and no aggregate bound follows from the individual Mission
+      bounds.  Evidence can correlate such Missions, but it does not
+      make an operation require every issuer's approval.
 
 9.  Meaning and Derivation
 
@@ -5388,6 +5394,12 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Composition states that cross-issuer joint authorization is
+      outside the family's scope: independent issuers run independent
+      Missions, each bounded on its own, and evidence that correlates
+      them does not make an operation require every issuer's approval.
+      No profile's requirements change.
 
    *  Approval Fidelity and the level table distinguish the direct
       approval event from creation under a standing consent: every
