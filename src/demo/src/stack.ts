@@ -162,6 +162,16 @@ export interface DemoStack {
    * channels are untouched. Close it with `masGovernedChannel.close()`.
    */
   masGovernedChannel?: HttpMcpChannel;
+  /**
+   * @spec runtime-oauth#token-validation (D315): the HTTP MCP endpoint at the
+   * declared resource audience (`url` is exactly `CANONICAL_RESOURCE`),
+   * verifying a DPoP proof on every request. Started only for the `as-native`
+   * target; Mission-bound only, so it admits no ordinary credential. Close it
+   * with `resourceChannel.close()`.
+   */
+  resourceChannel?: HttpMcpChannel;
+  /** The decision channel's mode, as resolved from the option or `MISSION_PDP_MODE`. */
+  pdpMode: "co-resident" | "remote";
   /** Trusted operator shutdown/fault-injection seam, never agent-accessible. */
   decisionChannel: { close: () => Promise<void> };
   /**
@@ -214,7 +224,30 @@ export async function composeStack(opts: {
    * passes its own, as for `claimsFile`.
    */
   writeReservationsFile?: string;
+  /**
+   * D284, D315: `as-native` assembles #253's first runtime target. It implies
+   * `withAuthServer`, mounts no MAS join route on the payments resource, and
+   * serves the HTTP MCP transport at the declared resource audience with DPoP
+   * verified on every request. Absent: the shared demo composition, unchanged.
+   */
+  target?: "as-native";
+  /**
+   * @spec authority-server#mission-join (#557): the resources this deployment's
+   * MAS join governs. Defaults to `config/mas-join.json` `governed_resources`,
+   * less the payments resource under the `as-native` target.
+   */
+  masGovernedResources?: readonly string[];
 }): Promise<DemoStack> {
+  const asNative = opts.target === "as-native";
+  const masGovernedResources =
+    opts.masGovernedResources ??
+    (asNative ? MAS_JOIN.governed_resources.filter((r) => r !== CANONICAL_RESOURCE) : MAS_JOIN.governed_resources);
+  // D315: the as-native target excludes the MAS route (#818 owns it), so a
+  // configuration that would still mount it on the payments resource fails
+  // startup here, before anything connects or listens.
+  if (asNative && masGovernedResources.includes(CANONICAL_RESOURCE)) {
+    throw new Error(`the as-native target mounts no MAS join route, but ${CANONICAL_RESOURCE} is configured governed (D315)`);
+  }
   const mode = opts.pdpMode ?? process.env.MISSION_PDP_MODE ?? "co-resident";
   if (mode !== "co-resident" && mode !== "remote") throw new Error("MISSION_PDP_MODE must be co-resident or remote");
   const conn = await Fga.connect({ apiUrl: opts.openfgaUrl, presharedKey: opts.presharedKey, ...(opts.caCertPath ? { caCertPath: opts.caCertPath } : {}) });
@@ -270,7 +303,7 @@ export async function composeStack(opts: {
   // lazily because the resource's own metadata names that listener's origin.
   let paymentsServerRef: McpPaymentsServer | undefined;
 
-  if (opts.withAuthServer) {
+  if (opts.withAuthServer || asNative) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
     const asUrl = `http://localhost:${asPort}`;
     // The RS's txn-challenge signing key (rs-txn); the AS is configured with its
@@ -789,9 +822,23 @@ export async function composeStack(opts: {
   // governed. It is a SECOND channel: the Mission-bound channels keep
   // `validateCredential` and keep rejecting a credential with no `mission`
   // claim, so turning the Join on never loosens an existing route.
-  const masGovernedChannel = MAS_JOIN.governed_resources.includes(CANONICAL_RESOURCE)
+  const masGovernedChannel = masGovernedResources.includes(CANONICAL_RESOURCE)
     ? await createHttpMcpChannel(server, { masGoverned: true })
     : undefined;
+  // D315: the as-native target's one resource entry point, at the declared
+  // audience itself, so the `htu` a client signs and the `aud` the AS issues
+  // name the same URL. It is the Mission-bound channel (`validateCredential`
+  // with the request's DPoP proof); the in-process mediated channel is outside
+  // this target's claims.
+  let resourceChannel: HttpMcpChannel | undefined;
+  if (asNative) {
+    const audience = new URL(CANONICAL_RESOURCE);
+    resourceChannel = await createHttpMcpChannel(server, { host: audience.hostname, port: Number(audience.port) });
+    if (resourceChannel.url !== CANONICAL_RESOURCE) {
+      await resourceChannel.close();
+      throw new Error(`the as-native endpoint ${resourceChannel.url} is not the declared audience ${CANONICAL_RESOURCE}`);
+    }
+  }
 
   // Transparency + producers.
   const transparencyKey = TOPOLOGY.keys.transparency;
@@ -854,6 +901,8 @@ export async function composeStack(opts: {
     revokedInstances,
     actorRecords,
     ...(masGovernedChannel ? { masGovernedChannel } : {}),
+    ...(resourceChannel ? { resourceChannel } : {}),
+    pdpMode: mode,
     viewFor,
     publishEvidence,
     onEnforce: (fn) => {
