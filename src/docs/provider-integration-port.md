@@ -5,8 +5,10 @@ Authorization Server meets where its OAuth provider and its Mission store
 meet. This document maps each obligation to the hook the reference AS uses on
 the issuance-only path, and states for each one the transaction boundary, the
 permitted asynchronous work, the crash and recovery behavior, the
-public-surface test, and what is unsupported. It documents the reference
-implementation at this revision. Each behavioral statement cites a function or
+public-surface test, and what is unsupported. Section 5 does the same for
+the runtime overlay of the AS-native payments target: the obligations its PEP
+and PDP meet when they consume what this AS issued and committed. It documents
+the reference implementation at this revision. Each behavioral statement cites a function or
 an exact test (`describe > it`). A statement with no witnessing test says
 "no test yet". A statement taken from reading code alone says "code reading".
 
@@ -29,12 +31,17 @@ references are to version 9.10.0 under `lib/`. Tests are in
   Topology, claims and the evidence index are in
   [issuance-only-deployment.md](issuance-only-deployment.md). Its §4 hook
   inventory is the starting point here.
+- **The runtime overlay.** The AS-native payments target (#253, D284) adds the
+  `mcp-payments` PEP and the reference PDP to this path. Its deployment
+  contract is [initial-runtime-deployment.md](initial-runtime-deployment.md);
+  §5 maps its obligations.
 - **Not covered.** Delegation families, Child Missions, expansion, deferred
   tokens, templates and cross-domain paths share some hooks. They are not part
   of this path and appear only where a shared hook behaves differently for
   them.
 
-Five stores take part. No transaction spans two of them.
+Five stores take part. No transaction spans two of them. The runtime overlay
+adds its own stores (the deployment contract's §7).
 
 | Store | Holds | Persistence |
 |---|---|---|
@@ -907,4 +914,6 @@ These are honest workarounds and ordering facts, not protocol requirements.
 Documentation of the current reference implementation. It is not an
 owner-accepted conformance class, makes no production-readiness claim, and
 adds no normative text. An unsupported obligation listed here constrains what
-the issuance-only deployment may claim; it is not partial support.
+the issuance-only deployment, or for §5 the AS-native payments target, may
+claim; it is not partial support. A required obligation that is not met (§6)
+blocks that target's acceptance and is never an exclusion.
