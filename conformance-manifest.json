@@ -13935,12 +13935,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
-     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > a keyed tool called without a key is refused by the PDP and executes nothing",
+     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > a keyed tool called without a key, or with a malformed one, is refused invalid_request at intake before any PDP call, and executes nothing",
      "level": "endpoint",
      "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed (#917): every tool the Operation Profile places in a high-consequence class (execute_wire_transfer, send_remittance_email) defines an idempotency key and its served schema requires idempotency_key in the Operation Profile format (16 to 128 characters of ALPHA / DIGIT / \"-\" / \"_\"); the PDP refuses a missing or malformed key with parameter_violation in all three classes, privileged administration through a fixture statement and action because the shipped deployment offers none."
+   "notes": "Witnessed (#917): every tool the Operation Profile places in a high-consequence class (execute_wire_transfer, send_remittance_email) defines an idempotency key and its served schema requires idempotency_key in the Operation Profile format (16 to 128 characters of ALPHA / DIGIT / \"-\" / \"_\"); the PDP refuses a missing or malformed key with parameter_violation in all three classes, privileged administration through a fixture statement and action because the shipped deployment offers none. At the resource's tool boundary, intake (D316) refuses a missing or malformed key invalid_request before any PDP call; the PDP check stays as defense for a key that reaches it directly."
   },
   {
    "id": "runtime.idempotency.atomic-claim-and-linearizable-consumption",
