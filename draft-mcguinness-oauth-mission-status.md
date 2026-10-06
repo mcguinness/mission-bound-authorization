@@ -1045,13 +1045,24 @@ result shape completely. The Entry Discharge companion registers
 fired, discharging a Mission-record entry, and is defined in full by
 that companion ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
-A `suspend` MAY carry `suspend_until` with a REQUIRED `on_expiry`. When
-`suspend_until` passes, the AS MUST apply `on_expiry` (transition to
+A `suspend` MAY carry `suspend_until` with a REQUIRED `on_expiry`; the
+pair is the Mission's schedule. When the `suspend_until` of a current
+schedule passes, the AS MUST apply `on_expiry` (transition to
 `active` for `resume`, or to `revoked` for `revoke`) and emit the
 corresponding transition, without a further request. While the Mission
 is `suspended` under a deadline, both `suspend_until` and `on_expiry`
 surface in the signed Mission Status Response ({{mission-status-response}})
 so a consumer sees the pending outcome.
+
+The AS authorizes a schedule when it commits it
+({{lifecycle-authorization}}) and does not re-authorize it at the
+deadline: a later expiry or withdrawal of the committing party's grant
+does not by itself cancel it. A schedule is current until its
+suspension ends or an authorized replacement supersedes it
+({{idempotency}}). The AS MUST NOT apply a schedule that is no longer
+current, so an earlier deadline never acts on a later suspension. A
+deadline applies only a transition legal from the Mission's current
+state ({{legal-transitions}}) and never changes a terminal Mission.
 
 ## Legal Transitions {#legal-transitions}
 
@@ -1088,7 +1099,10 @@ idempotent success, with the `resume` exception above. Any other
 operation not legal from the current state, including `resume` on a
 Mission that is not `suspended`, is refused as a conflict. A Mission
 that reaches its `expires_at` transitions to `expired` independently of
-this endpoint, from `active` or `suspended`.
+this endpoint, from `active` or `suspended`. When a schedule's
+`suspend_until` is at or after the Mission's `expires_at`, expiry
+governs: the Mission becomes `expired` at `expires_at`, and the AS
+MUST NOT apply that schedule's `on_expiry`.
 
 ## Consolidated State Machine {#state-machine}
 
@@ -1128,7 +1142,9 @@ other state is non-deriving.
 
 `revoke` and the Mission's `expires_at` both apply in `suspended` as
 well as `active`, so a suspended Mission can still be terminated or
-expire. The `superseded` and `cascaded` rows are companion-defined and
+expire. A `suspend_until` row fires only for a current schedule whose
+deadline falls before `expires_at` ({{mission-lifecycle-endpoint}},
+Operations; {{legal-transitions}}). The `superseded` and `cascaded` rows are companion-defined and
 shown here for reference:
 `superseded` is committed by the expansion profile and requires an
 `active` predecessor
@@ -1233,8 +1249,9 @@ as an unauthorized lifecycle request (below), leaving the Mission's
 state and schedule unchanged. A `suspend` whose `on_expiry` is
 `revoke` needs only the authorization for `suspend`.
 
-The AS MUST record with each committed schedule the acting party that
-committed it; an authorized replacement records its own.
+The AS MUST record with each committed schedule its committing party,
+the acting party of the request that committed it; an authorized
+replacement records its own.
 
 The AS MUST refuse an unauthorized lifecycle request with the
 not-found response shape of {{mission-status-errors}}, so the endpoint
@@ -1414,11 +1431,17 @@ the baseline a Mission holds before any suspension, so `resume` on an
 terminal Mission is not idempotent success but a conflict.
 
 One idempotent case carries metadata. A `suspend` against a
-`suspended` Mission whose `suspend_until` or `on_expiry` differ from
-the recorded values MUST update the recorded values, emitting the
-corresponding transition-metadata change and reporting the updated
-values in the response; silent acceptance without effect is not
-conforming.
+`suspended` Mission that carries a `suspend_until` and `on_expiry`
+pair differing from the recorded schedule, or where none is recorded,
+replaces the schedule once authorized ({{lifecycle-authorization}}):
+the AS MUST update the recorded values and their committing party,
+emitting the corresponding transition-metadata change and reporting
+the updated values in the response; silent acceptance without effect
+is not conforming. A `suspend` that omits both members leaves the
+recorded schedule, if any, and its committing party unchanged:
+omission never clears a deadline. A `suspend` carrying only one of
+the two remains invalid ({{mission-lifecycle-endpoint}}, Operations)
+and changes nothing.
 
 ## Relationship to RFC 7009
 
