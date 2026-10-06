@@ -1652,18 +1652,34 @@ other unauthenticated client input.<a href="#section-6-2.2.1" class="pilcrow">¶
 </li>
         <li id="section-6-2.3">
           <p id="section-6-2.3.1">Derive the Authority Set from the Intent, and from the authority
-proposal where one was pushed (<a href="#mission-intent" class="auto internal xref">Section 5</a>),
-and render it for consent on the owner surface under the
-issuance profile's rendering rules (<a href="#security-rendering" class="auto internal xref">Section 13.2</a>).<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+proposal where one was pushed (<a href="#mission-intent" class="auto internal xref">Section 5</a>).<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-2.4">
-          <p id="section-6-2.4.1">Compute the integrity anchors with the authorization server's
-issuer identifier as the envelope <code>iss</code>.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.4.1">Establish the authority source under the issuance profile's rules:
+from trusted configuration or authenticated governance state,
+never from client assertion, with the Approver authorized to
+activate it and the derived Authority Set within it.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-2.5">
-          <p id="section-6-2.5.1">Create the Mission record in the <code>active</code> state atomically with
-the approval decision. The token endpoint <span class="bcp14">MUST NOT</span> complete a
-ticket exchange under the Mission before the record is <code>active</code>.<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.5.1">Establish the effective Mission expiry: the requested
+<code>intent.expires_at</code> ceiling narrowed by applicable policy, under
+the issuance profile's bounds.<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-2.6">
+          <p id="section-6-2.6.1">Render the Authority Set for consent on the owner surface under
+the issuance profile's rendering rules (<a href="#security-rendering" class="auto internal xref">Section 13.2</a>).<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-2.7">
+          <p id="section-6-2.7.1">Compute the integrity anchors with the authorization server's
+issuer identifier as the envelope <code>iss</code>.<a href="#section-6-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-2.8">
+          <p id="section-6-2.8.1">Create the Mission record in the <code>active</code> state atomically with
+the approval decision, rechecking at that commit that the
+effective expiry is strictly later than the creation instant;
+where it is not, no Mission is created. The token endpoint
+<span class="bcp14">MUST NOT</span> complete a ticket exchange under the Mission before the
+record is <code>active</code>.<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
 <p id="section-6-3">Both native assessment outcomes realize the approval event:<a href="#section-6-3" class="pilcrow">¶</a></p>
@@ -2118,9 +2134,11 @@ mechanism, not a substrate-kernel requirement
 </li>
         <li id="section-10-3.5">
           <p id="section-10-3.5.1"><strong>Approval ceremony</strong>: UMA authorization assessment performs the
-five approval steps in either the deferred owner-decision or
-pre-registered-policy mode and creates the record <code>active</code>
-atomically with approval (<a href="#approval" class="auto internal xref">Section 6</a>).<a href="#section-10-3.5.1" class="pilcrow">¶</a></p>
+issuance profile's approval steps (Approver, Subject, derivation,
+authority source, effective expiry, rendering, anchors) in either
+the deferred owner-decision or pre-registered-policy mode and
+creates the record <code>active</code> atomically with approval, rechecking
+the effective expiry at that commit (<a href="#approval" class="auto internal xref">Section 6</a>).<a href="#section-10-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-10-3.6">
           <p id="section-10-3.6.1"><strong>Governance gate</strong>: only the issuance profile's <code>active</code> state is

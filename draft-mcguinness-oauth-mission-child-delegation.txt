@@ -977,14 +977,17 @@ Table of Contents
    event.  It MUST commit the issuance profile's integrity anchors
    ([I-D.draft-mcguinness-oauth-mission]): authority_hash over the child
    Authority Set, intent_hash over the child Mission Intent, and, where
-   the exchange carried an authority proposal, proposal_hash over it,
-   and it MUST produce record the issuance profile's approval.
+   the exchange carried an authority proposal, proposal_hash over it.
+   It MUST create the Child Mission record required by the issuance
+   profile and this section.
 
    A Child Mission is created under a parent grant rather than a first-
-   party approval (Section 2), so its human accountability is inherited
-   from the Parent Mission's own approval.  The Child Mission's
-   approval_basis (the issuance profile's Mission Record member,
-   [I-D.draft-mcguinness-oauth-mission]) records how.
+   party approval (Section 2).  Where policy adjudicates its creation,
+   its human accountability is inherited from the Parent Mission's own
+   approval; where a human approves its creation, that human is
+   accountable.  The Child Mission's approval_basis (the issuance
+   profile's Mission Record member,
+   [I-D.draft-mcguinness-oauth-mission]) records which.
 
    Where the deployment requires a human approval event for child
    creation (Section 5), that event meets the issuance profile's
@@ -1897,9 +1900,9 @@ Table of Contents
    *  record the parent member on child Mission records and tokens;
 
    *  record the Child Mission's approval_basis (Section 6.1): direct
-      for a human-approved child, policy_drawdown for one policy
-      adjudicates, with consent_principal always the Parent Mission's
-      human approver;
+      for a human-approved child, with the child's human Approver as
+      consent_principal, and policy_drawdown for one policy adjudicates,
+      with the Parent Mission's human approver as consent_principal;
 
    *  implement cascade revocation; and
 
@@ -2377,6 +2380,12 @@ Appendix A.  Experimental Consumer-Verified Cascade Modes
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Mission Record Requirements: the delegation event creates the
+      Child Mission record the issuance profile and this section
+      require; human accountability is inherited from the parent only
+      where policy adjudicates; Conformance names consent_principal per
+      basis (#1121).
 
    *  Completion: a deployment can require a fresh human approval for
       child creation; every child creation, human or policy-adjudicated,

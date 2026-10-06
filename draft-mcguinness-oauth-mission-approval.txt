@@ -216,12 +216,26 @@ Table of Contents
    5.  Issuance then completes per the deferred substrate: the next poll
        resolves to a Mission-bound token response.
 
-   This relocation relies on a core extensibility seam for approval
-   sequencing, under discussion upstream.  The issuance profile
-   specifies the approval event and authorization-code issuance as one
-   atomic step, so a deployment claims conformance to this profile's
-   relocated sequencing rather than unqualified conformance to that
-   original step; what the approval commits is unchanged.
+   The creation commit of step 4 inherits the issuance profile's
+   effective-expiry recheck ([I-D.draft-mcguinness-oauth-mission],
+   Section "Mission Approval").  Where the effective expiry is at or
+   before the creation instant, as when the requested intent.expires_at
+   ceiling passed while the approval was pending, the Mission Issuer
+   MUST refuse creation atomically: no Mission exists, and the deferred
+   approval resolves to denied (Section 4.3).  The next authenticated
+   poll returns access_denied, the deferred substrate's outcome for a
+   request that could not be granted.  Its error_description SHOULD say
+   that the effective Mission expiry passed; it is diagnostic only, and
+   a client acts on the error code. expired_token remains the outcome of
+   the pending request's own lifetime elapsing (Section 4.4), a
+   different case.
+
+   This relocation uses the issuance profile's approval-event sequencing
+   seam ([I-D.draft-mcguinness-oauth-mission], Section "Extensibility"),
+   which lets a companion profile relocate the approval event relative
+   to code issuance provided the steps and their atomicity hold
+   unchanged, and names this profile as such a companion.  What the
+   approval commits is unchanged.
 
    Deferral changes only the timing of the approval event.  The
    Authority Set the token is issued against, its authority_hash, and
@@ -239,14 +253,16 @@ Table of Contents
    The issuance profile runs the approval event as the OAuth
    authorization-code flow initiated from the PAR-issued request_uri, in
    ordered steps: authenticate the Approver, establish the Subject,
+   establish the authority source, establish the effective expiry,
    render the derived Authority Set for consent, compute the integrity
    anchors, and create the Mission record atomically with issuance of
-   the authorization code ([I-D.draft-mcguinness-oauth-mission]).  Under
-   deferral those steps divide between the front channel and the review
-   surface:
+   the authorization code, rechecking the effective expiry at that
+   commit ([I-D.draft-mcguinness-oauth-mission]).  Under deferral those
+   steps divide between the front channel and the review surface:
 
-   *  Authenticating the Approver, establishing the Subject, rendering
-      for consent, and computing the integrity anchors all move to the
+   *  Authenticating the Approver, establishing the Subject and the
+      authority source, establishing the effective expiry, rendering for
+      consent, and computing the integrity anchors all move to the
       asynchronous review surface and execute at the approval event
       (Section 4.1).
 
@@ -267,14 +283,16 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission]).
 
    *  Creating the Mission record, the final step, executes atomically
-      with the approval decision rather than with the code
-      (Section 4.1).
+      with the approval decision rather than with the code, with its
+      effective-expiry recheck (Section 4.1).
 
 4.3.  Deferred Approval State Machine
 
    A deferred approval is in one of these states: pending, approved,
    denied, expired, or cancelled.  The Mission Issuer starts a deferred
-   approval in pending and MAY move it to approved or denied.  The
+   approval in pending and MAY move it to approved or denied.  A
+   decision to approve whose creation commit fails the effective-expiry
+   recheck moves it to denied, never approved (Section 4.1).  The
    pending lifetime elapsing moves it to expired (Section 4.4), and
    client cancellation under the deferred substrate moves it to
    cancelled ([I-D.draft-gerber-oauth-deferred-token-response]).
@@ -287,7 +305,7 @@ Table of Contents
               | pending |  lifetime elapsed --> expired    (terminal)
               +---------+  client cancels   --> cancelled  (terminal)
                 |
-      approve   |
+      approve   |  (commit fails the expiry recheck --> denied)
                 v
              approved  (terminal; Mission created active)
 
@@ -302,9 +320,11 @@ Table of Contents
 
    A deferred approval MUST carry a deployment-set maximum pending
    lifetime, after which it resolves to expired_token per the deferred
-   substrate.  Staleness of the proposal itself needs no separate rule:
-   derivation is mechanical and happens once, at the approval event,
-   over the policy and capability catalog then in force
+   substrate.  That lifetime is the pending request's own, distinct from
+   the Mission expiry ceiling the creation commit rechecks
+   (Section 4.1).  Staleness of the proposal itself needs no separate
+   rule: derivation is mechanical and happens once, at the approval
+   event, over the policy and capability catalog then in force
    ([I-D.draft-mcguinness-oauth-mission]), so the reviewer always
    decides over an Authority Set derived and rendered under current
    policy, never one derived under superseded policy.

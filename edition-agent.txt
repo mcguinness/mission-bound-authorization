@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-06T05:29:04Z
-Source repository commit: e3cdc100d5f69bc282e3518e8728e7ecc6bb4b12
+Generated: 2026-10-06T18:44:21Z
+Source repository commit: 9630525795ea014b42e053e912babc5739183d3f
 Member count: 9
 
 Reading order:
@@ -19618,15 +19618,16 @@ Table of Contents
    |Section 5.4)           |                                              |classes    |service's     |             |unavailable   |
    |                       |                                              |claimed    |operator key  |             |              |
    +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
-   |rendering_independence:|Independent service evidence, the committed   |The        |The party     |Per approval |An approval   |
-   |the disclosure is      |Consent Evidence where available              |rendering  |evaluating the|event        |event lacking |
-   |derived from the bound |                                              |component's|evidence,     |             |this evidence |
-   |normalized parameters, |                                              |output for |against the   |             |cannot be     |
-   |never composed by the  |                                              |the        |rendering     |             |counted toward|
-   |agent (Section 9.5.1,  |                                              |approval   |component's or|             |the claim; a  |
-   |Section 5.4)           |                                              |event      |Consent       |             |class with no |
-   |                       |                                              |claimed    |Evidence      |             |such event    |
-   |                       |                                              |           |signer's key  |             |verified does |
+   |rendering_independence:|Independent service evidence, the committed   |The        |The party     |Per action-  |An action-    |
+   |the disclosure is      |Consent Evidence where available              |rendering  |evaluating the|bound        |bound approval|
+   |derived from the bound |                                              |component's|evidence,     |approval     |lacking this  |
+   |normalized parameters, |                                              |output for |against the   |             |evidence      |
+   |never composed by the  |                                              |the action-|rendering     |             |cannot be     |
+   |agent (Section 9.5.1,  |                                              |bound      |component's or|             |counted toward|
+   |Section 5.4)           |                                              |approval   |Consent       |             |the claim; a  |
+   |                       |                                              |claimed    |Evidence      |             |class with no |
+   |                       |                                              |           |signer's key  |             |such approval |
+   |                       |                                              |           |              |             |verified does |
    |                       |                                              |           |              |             |not carry the |
    |                       |                                              |           |              |             |claim         |
    +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
@@ -20935,6 +20936,10 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The rendering_independence assurance row names the action-bound
+      approval it is evaluated per; "approval event" is reserved for the
+      Mission's creation (#1120).
 
    *  Mission State and Freshness states credential expiry and the
       state-gated refresh cycle as one Credential-lifetime freshness

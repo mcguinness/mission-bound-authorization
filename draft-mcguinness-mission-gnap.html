@@ -1732,18 +1732,35 @@ Mission Intent, or other unauthenticated client input.<a href="#section-7-2.2.1"
 </li>
         <li id="section-7-2.3">
           <p id="section-7-2.3.1">Derive the Authority Set from the Intent and the authority
-proposal (<a href="#mission-intent" class="auto internal xref">Section 5</a>), and render it for consent on the
-interaction surface under the issuance profile's rendering rules
-(<a href="#security-rendering" class="auto internal xref">Section 14.3</a>).<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+proposal (<a href="#mission-intent" class="auto internal xref">Section 5</a>).<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-2.4">
-          <p id="section-7-2.4.1">Compute the integrity anchors with the authorization server's
-grant endpoint URI as the envelope <code>iss</code> (<a href="#mission-record" class="auto internal xref">Section 8</a>).<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.4.1">Establish the authority source under the issuance profile's rules:
+from trusted configuration or authenticated governance state,
+never from client assertion, with the Approver authorized to
+activate it and the derived Authority Set within it.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-2.5">
-          <p id="section-7-2.5.1">Create the Mission record in the <code>active</code> state atomically with
-the approval decision. The grant request <span class="bcp14">MUST NOT</span> reach the
-<em>approved</em> state under the Mission before the record is <code>active</code>.<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.5.1">Establish the effective Mission expiry: the requested
+<code>intent.expires_at</code> ceiling narrowed by applicable policy, under
+the issuance profile's bounds.<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-2.6">
+          <p id="section-7-2.6.1">Render the Authority Set for consent on the interaction surface
+under the issuance profile's rendering rules
+(<a href="#security-rendering" class="auto internal xref">Section 14.3</a>).<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-2.7">
+          <p id="section-7-2.7.1">Compute the integrity anchors with the authorization server's
+grant endpoint URI as the envelope <code>iss</code> (<a href="#mission-record" class="auto internal xref">Section 8</a>).<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-2.8">
+          <p id="section-7-2.8.1">Create the Mission record in the <code>active</code> state atomically with
+the approval decision, rechecking at that commit that the
+effective expiry is strictly later than the creation instant;
+where it is not, no Mission is created. The grant request <span class="bcp14">MUST NOT</span>
+reach the <em>approved</em> state under the Mission before the record is
+<code>active</code>.<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
 <div id="approval-modes">
@@ -2301,11 +2318,13 @@ approved widening yields a successor Mission (<a href="#intent-first" class="aut
 <a href="#mission-record" class="auto internal xref">Section 8</a>, <a href="#drawdown" class="auto internal xref">Section 10.3</a>).<a href="#section-11-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-11-3.5">
-          <p id="section-11-3.5.1"><strong>Approval ceremony</strong>: grant processing performs the five
-approval steps in the interactive or deferred mode, or under a
-companion-supplied standing basis, binding one proposal revision,
-and creates the record <code>active</code> atomically with approval;
-the grant does not reach <em>approved</em> before the record does
+          <p id="section-11-3.5.1"><strong>Approval ceremony</strong>: grant processing performs the issuance
+profile's approval steps (Approver, Subject, derivation, authority
+source, effective expiry, rendering, anchors) in the interactive or
+deferred mode, or under a companion-supplied standing basis,
+binding one proposal revision, and creates the record <code>active</code>
+atomically with approval, rechecking the effective expiry at that
+commit; the grant does not reach <em>approved</em> before the record does
 (<a href="#approval" class="auto internal xref">Section 7</a>, <a href="#revision" class="auto internal xref">Section 7.2</a>).<a href="#section-11-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-11-3.6">
