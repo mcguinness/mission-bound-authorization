@@ -268,7 +268,7 @@ That test uses another member; no test names `max_budget`.
 **Unmet obligations by owner:**
 
 - Blocking acceptance: #825 (token authority; PR 1 merged as #1062, PRs 2a to 2c remain per D312) and #828 (Resource policy).
-- Acceptance-pack prerequisites: #1105 (launcher, MAS route excluded), #1103 (reconciliation never runs), #1104 (emission failures), #1106 (Operation Profile drift), #1080 (`hold_transfer` permit control).
+- Acceptance-pack prerequisites: #1105 (which AS capability set `pnpm as-native` runs; the launcher itself is delivered), #1103 (reconciliation never runs), #1104 (emission failures), #1106 (Operation Profile drift), #1080 (`hold_transfer` permit control).
 - Separated deployment only: #1101 (state source under D293).
 - Also open: #826 (Approver versus Subject; implemented by #1074, D306, awaiting acceptance), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
 - #917 and #918 are closed as implemented (D245, D247); their leftovers are owned by #1103 and #1080.
@@ -391,7 +391,7 @@ is #253 Sketch step 1. The runtime integration port (step 2) is
 [provider-integration-port.md](provider-integration-port.md) §5, which maps
 the overlay's obligations to their hooks in the port's eight columns. Next:
 
-1. **Acceptance pack (step 3):** the launcher (#1105) and the vectors of
+1. **Acceptance pack (step 3):** `pnpm as-native` (#1105) and the vectors of
    §10, after the required enforcement gaps (#825, #828) and the recovery
    gaps (#1103, #1104) are resolved.
 2. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated

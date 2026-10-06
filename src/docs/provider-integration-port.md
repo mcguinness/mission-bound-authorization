@@ -1100,8 +1100,10 @@ Runtime overlay:
 8. A permit-lifetime or idempotency control for `hold_transfer` (#1080). §5.5.
 9. Running the declared outcome reconciliation, its alert, and recovery of a
    prior process's claims (#1103). §5.7.
-10. An assembled deployment of exactly this topology: the shipped stack also
-    mounts the MAS join route on the payments resource (#1105).
+10. An assembled deployment of exactly the contract's components:
+    `pnpm as-native` mounts no MAS join route, but it runs the full reference
+    AS capability set rather than the floor's, and builds the cross-domain
+    objects in process (#1105).
 
 **Residual.**
 
@@ -1161,8 +1163,8 @@ Runtime overlay:
   a Refusal Record emission throwing, both `suppressExecution` gaps and the
   failed `completed` write, each distinguishing a refusal before any effect
   from missing evidence after one (§5.6; #1104); reconciliation across a
-  restart (§5.7; #1103); an AS-issued token through the assembled path
-  (#1105).
+  restart (§5.7; #1103); the assembled-path test against a live OpenFGA runs
+  only in CI (§5).
 
 ## 7. Provider-specific notes (oidc-provider 9.10)
 
