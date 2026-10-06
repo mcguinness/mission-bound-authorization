@@ -66,7 +66,7 @@ function reachableEmitters(root: unknown): string[] {
 
 d("the composed stack hands its PEP no PDP emission capability (#741, PR #753 review)", () => {
   it("no value at any depth of the real PepDeps exposes an `emit` function, and there is no `decisionEvidence` member", async () => {
-    const stack = await composeStack({ openfgaUrl: API_URL, presharedKey: KEY, ...(CA ? { caCertPath: CA } : {}), claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() });
+    const stack = await composeStack({ openfgaUrl: API_URL, presharedKey: KEY, ...(CA ? { caCertPath: CA } : {}), claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile(), resourcePolicyStore: { bootstrap: "development" } });
     const deps = (stack.pep as unknown as Pep & { deps: PepDeps }).deps;
     expect(reachableEmitters(deps)).toEqual([]);
     expect("decisionEvidence" in deps).toBe(false);

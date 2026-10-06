@@ -29,6 +29,7 @@ import {
   type AuthServerExtras,
   type DemoStack,
 } from "./stack.js";
+import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { label as humanName } from "./labels.js";
 import { clientAssertionSigner, dpopProofFor, tokenGrantRequest } from "./oauth-client.js";
 import { issueMissionToken } from "./approval-console.js";
@@ -1019,6 +1020,7 @@ async function main() {
   const stack = await composeStack({
     openfgaUrl: process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url,
     presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
+    resourcePolicyStore: resourcePolicyStoreFromEnv(),
     caCertPath: ca,
     withAuthServer: true,
   });
