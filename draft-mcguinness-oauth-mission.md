@@ -5916,6 +5916,13 @@ Cross-Domain:
 
 -01
 
+- Implementation Map and Mapping Assessment, Cross-Domain: the
+  Mission reference is `mission.id` and `mission.issuer`;
+  `authority_hash` is the value the projection carries, not part of
+  the reference (#1086). The Implementation Map says "this
+  document" rather than "the core" (#1089). No requirement
+  changed.
+
 - Mission Approval: the approval event is the atomic, adjudicated
   transition that creates a Mission under its approval basis, for
   every basis. The authorization-code flow and its steps are the
