@@ -72,7 +72,7 @@ so this target cannot pass acceptance while either is missing.
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude the MAS route on this target: #1105 (#818 owns MAS; #956 Q2 its declaration in the shared demo) |
 | Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1095`) | Partial | `hold_transfer` permit control: #1080. Profile drift (§3): #1106 |
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:665-672`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
-| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP only: an action outside the verified token's own `authorization_details` is refused before the PDP, which does not evaluate it. Independent Resource policy is not implemented (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR 1 merged as #1062; PR 2 remains). Resource policy: #828 |
+| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP only: an action outside the verified token's own `authorization_details` is refused before the PDP, which does not evaluate it. Independent Resource policy is not implemented (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR 1 merged as #1062; PRs 2a to 2c remain, D312). Resource policy: #828 |
 | Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | Emission failures: #1104 |
 | Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain and the PEP write reservations are durable files; every other store is in memory (§7). The declared reconciler is not run | Partial | Reconciliation never runs: #1103. #250, #831 |
 | Claims | Per-action limits only; execution and transaction handling for applicable operations; no aggregate cap, compromise containment or unattended prohibited-class exception | §8 | Partial | §8 |
@@ -178,10 +178,12 @@ honored only with a verified transaction credential's approval
 A narrowed token is therefore honored as narrower at the PEP. The Mission-bound
 path does not read `scope`. Credential expiry is checked only at validation;
 the PDP records `context.credential.expires_at` in evidence but does not deny
-on it. Remaining under #825 (PR 2): the PDP neither receives nor evaluates the
+on it. Remaining under #825: the PDP neither receives nor evaluates the
 credential authority (no `context.credential.authority` carrier; it matches
 the kernel's current Authority Set, `evaluate.ts:1070-1077`), so there is no
-PDP-side witness; whether the PEP pre-check stays; and key-role separation.
+PDP-side witness. D312 adopts that carrier and splits the work: 2a key-role
+pinning, 2b the carrier with PDP enforcement and the PEP pre-check redesign,
+2c the issuance audit.
 
 **Independently administered Resource policy:** not implemented. The OpenFGA
 relations admit only `mission` subjects (`services/pdp/src/fga.ts:20-47`) and
@@ -250,6 +252,12 @@ unsupported obligation is refused or its claim excluded.
 | Transaction tier (`execute_wire_transfer`, `send_remittance_email`) | single-use permit, execution lease, PDP-held Exact claim, digest and phase binding, Execution Evidence; action-bound approval for remittance | restart recovery beyond the claim store; reconciliation run; transaction-grade resource witnesses; a failed commit predicate that retains the permit | #1103, #1104, #250, #817 |
 | Every path | per-action limits only | any aggregate cap; compromise containment; unattended prohibited-class exception | excluded by D284; #825 and #828 are required, not excluded (§1) |
 
+**High-consequence claims hold on the HTTP entry point only.** The HTTP
+transport verifies a DPoP proof of possession; the in-process mediated
+channel, which the demo agent uses, validates the token without one
+([provider-integration-port.md](provider-integration-port.md) §5.1). A
+high-consequence action on that channel runs on an unproven token.
+
 **The aggregate-cap exclusion is enforced by refusal.** The issuer refuses an
 Intent carrying a member it does not implement, such as `max_budget`, under
 the closed-top-level rule (`validateMissionIntent`,
@@ -259,7 +267,7 @@ That test uses another member; no test names `max_budget`.
 
 **Unmet obligations by owner:**
 
-- Blocking acceptance: #825 (token authority; PR 1 merged as #1062, PR 2 remains) and #828 (Resource policy).
+- Blocking acceptance: #825 (token authority; PR 1 merged as #1062, PRs 2a to 2c remain per D312) and #828 (Resource policy).
 - Acceptance-pack prerequisites: #1105 (launcher, MAS route excluded), #1103 (reconciliation never runs), #1104 (emission failures), #1106 (Operation Profile drift), #1080 (`hold_transfer` permit control).
 - Separated deployment only: #1101 (state source under D293).
 - Also open: #826 (Approver versus Subject; implemented by #1074, D306, awaiting acceptance), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
@@ -331,7 +339,7 @@ The pack cannot pass while #825 or #828 is unmet (§1).
 | Vector | Existing witness | Gap |
 |---|---|---|
 | Valid request | [FGA] `M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded` | not on the assembled path |
-| Narrowed token | at the PEP only: `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > narrows by vendor independently of the Mission` | no PDP-side witness and not on the assembled path; #825 PR 2; required, blocks acceptance |
+| Narrowed token | at the PEP only: `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > narrows by vendor independently of the Mission` | no PDP-side witness and not on the assembled path; #825 PR 2b; required, blocks acceptance |
 | Independent policy revocation | a stubbed policy only: `finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result` | #828; required, blocks acceptance |
 | Stale or non-active Mission at admission and at each fresh commit-phase decision | the §4 refusal table; `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare` | not on the assembled path |
 | Run to completion after an earlier valid permit | none | no test yet that an admitted action completes only inside its permit and lease bounds and that the next decision refuses; no instantaneous revocation is implied (§4) |
@@ -361,15 +369,14 @@ launcher with that route excluded.
 
 Adopted (D284) as the first runtime reference target; not a conformance
 class, and no production-readiness or interoperability claim. This document
-is #253 Sketch step 1. Next:
+is #253 Sketch step 1. The runtime integration port (step 2) is
+[provider-integration-port.md](provider-integration-port.md) §5, which maps
+the overlay's obligations to their hooks in the port's eight columns. Next:
 
-1. **Runtime integration port (step 2):** extend
-   [provider-integration-port.md](provider-integration-port.md) with protected
-   state and lifecycle and resource composition rows, in its eight columns.
-2. **Acceptance pack (step 3):** the launcher (#1105) and the vectors of
+1. **Acceptance pack (step 3):** the launcher (#1105) and the vectors of
    §10, after the required enforcement gaps (#825, #828) and the recovery
    gaps (#1103, #1104) are resolved.
-3. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
+2. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
    independently and separately pinned.
 
 A later commit invalidates any statement here until it is re-checked against

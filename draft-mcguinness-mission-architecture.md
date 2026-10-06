@@ -1824,7 +1824,10 @@ not baseline AAuth Mission Context properties.
   derivation and refresh stop at once; an outstanding credential ends
   at the earliest of an applicable revocation, a state-aware or runtime
   check that reaches it, or its own expiry ({{validity-model}};
-  {{I-D.draft-mcguinness-oauth-mission-status}}).
+  {{I-D.draft-mcguinness-oauth-mission-status}}). Revocation does not
+  prohibit equivalent authority under a separately approved Mission
+  ({{I-D.draft-mcguinness-mission-security-model}}, Section
+  "Revocation-to-Action Latency").
 
 **Attribution is carried, never inferred**:
 : Each role in the actor chain travels in its own construct, and the
@@ -4183,6 +4186,11 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Revocation is possession-independent points at the Security Model's
+  statement that revocation does not prohibit equivalent authority
+  under a separately approved Mission. No profile's requirements
+  change.
 
 - Composition states that cross-issuer joint authorization is outside
   the family's scope: independent issuers run independent Missions,

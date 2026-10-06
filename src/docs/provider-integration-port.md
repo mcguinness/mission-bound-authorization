@@ -5,8 +5,10 @@ Authorization Server meets where its OAuth provider and its Mission store
 meet. This document maps each obligation to the hook the reference AS uses on
 the issuance-only path, and states for each one the transaction boundary, the
 permitted asynchronous work, the crash and recovery behavior, the
-public-surface test, and what is unsupported. It documents the reference
-implementation at this revision. Each behavioral statement cites a function or
+public-surface test, and what is unsupported. Section 5 does the same for
+the runtime overlay of the AS-native payments target: the obligations its PEP
+and PDP meet when they consume what this AS issued and committed. It documents
+the reference implementation at this revision. Each behavioral statement cites a function or
 an exact test (`describe > it`). A statement with no witnessing test says
 "no test yet". A statement taken from reading code alone says "code reading".
 
@@ -29,12 +31,17 @@ references are to version 9.10.0 under `lib/`. Tests are in
   Topology, claims and the evidence index are in
   [issuance-only-deployment.md](issuance-only-deployment.md). Its §4 hook
   inventory is the starting point here.
+- **The runtime overlay.** The AS-native payments target (#253, D284) adds the
+  `mcp-payments` PEP and the reference PDP to this path. Its deployment
+  contract is [initial-runtime-deployment.md](initial-runtime-deployment.md);
+  §5 maps its obligations.
 - **Not covered.** Delegation families, Child Missions, expansion, deferred
   tokens, templates and cross-domain paths share some hooks. They are not part
   of this path and appear only where a shared hook behaves differently for
   them.
 
-Five stores take part. No transaction spans two of them.
+Five stores take part. No transaction spans two of them. The runtime overlay
+adds its own stores (the deployment contract's §7).
 
 | Store | Holds | Persistence |
 |---|---|---|
@@ -312,7 +319,7 @@ the store.
      `missionBoundGrants.record`. Two writes on two handles, in no shared
      transaction.
   4. For an Intent-only request, `details.save()` of the marked
-     `authorization_details` (§6).
+     `authorization_details` (§7).
   5. `interactionFinished`: a 303 to the resume URL (`lib/provider.js`
      L229-233). oidc-provider issues the authorization code on that later
      request.
@@ -362,7 +369,7 @@ the store.
 
 - **Hook.** oidc-provider's `authorization_code` grant consumes the code
   (`lib/actions/grants/authorization_code.js` L89) and then calls `at.save()`
-  (L127). Inside `save()` (§6), `extraTokenClaims` runs
+  (L127). Inside `save()` (§7), `extraTokenClaims` runs
   `projectMissionBoundScope` and then `kernel.gateDerivation`, and returns the
   `mission` claim. `formats.customizers.jwt` applies the projected `scope`.
   oidc-provider signs the token and emits `access_token.issued`, whose
@@ -556,7 +563,7 @@ the store.
     `invalid_target` for a Mission-bound token the projection did not decide,
     and for an `act`-bearing token to an audience the mapping does not
     classify Mission-aware.
-  - Recording: `issueRefreshToken` and the response-`scope` middleware (§6).
+  - Recording: `issueRefreshToken` and the response-`scope` middleware (§7).
 - **Boundary.** In request, read-only against the mapping loaded at boot
   (`SCOPE_PROJECTION`, `loadScopeProjection`). The token-endpoint call runs
   before `gateDerivation`, so a refusal there counts nothing. The refresh
@@ -785,7 +792,282 @@ The state gate after rotation (§3.6) is partly fixed by the refresh pre-check
 (#914). What remains, a state change between the pre-check and the save-time
 gate, is the pre-check-to-commit window of #250's cross-step atomic domain.
 
-## 5. Unsupported and residual
+## 5. Runtime overlay: the AS-native payments target
+
+The AS-native payments target adds a runtime overlay to this path. The
+`mcp-payments` PEP and the reference PDP decide each mediated action on a
+token this AS issued. The deployment contract,
+[initial-runtime-deployment.md](initial-runtime-deployment.md), holds the
+operation allowlist, the per-class bounds and the fail-closed table (its §4),
+the store and restart table (§7) and the acceptance vectors (§10). This
+section maps each overlay obligation to its hook, read at origin/main
+`01874fd5`.
+
+In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
+`evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
+`services/pdp/src/`, and `stack.ts` is `demo/src/stack.ts`. Everything runs in
+one process. The PDP is a direct call by default, with no PEP
+authentication (`services/pdp/src/decision-channel.ts:56-61`).
+`MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret
+that is never configured, so it cannot cross processes as shipped (`:64-66`).
+The tests cited here drive the PEP (`enforce`), the in-process
+`mcp-payments` server methods or the PDP directly; none of them goes over the
+MCP transport. Tests marked
+[FGA] are skipped without a live OpenFGA. No test yet drives an AS-issued
+Mission-bound token through the assembled path (#1105).
+
+| Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
+|---|---|---|---|---|---|---|---|
+| Credential validation | Yes. Credential authority at the PDP is not met: acceptance gate (#825) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport and PEP-level (§5.1) | The PDP neither receives nor evaluates the credential authority (#825 PRs 2a, 2b; D312); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
+| Independent Resource policy | Yes, not met: acceptance gate (#828) | The PDP's OpenFGA check and action-to-relation map (§5.2) | In the decision | None | Nothing durable; the tuple is injected per check | PDP-level, [FGA] (§5.2) | The shipped model cannot deny independently of Mission authority (§5.2) |
+| Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
+| Target and parameter binding | Yes | `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read and write paths write nothing before the effect; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level, [FGA] (§5.4) | A single-record read re-derives no digest at use; the Operation Profile's intake rules are not implemented (#1106) (§5.4) |
+| Permit redemption | Transaction tier and keyed writes | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction | None; settlement is awaited | Claim and reservation files survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | `hold_transfer` has no permit control (#1080); one redemption per operation key per process (§5.5) |
+| Evidence | Yes | The PDP's emitter; `recordRefusal`, `suppressExecution`; the executor's `completed` write (§5.6) | Synchronous in the request; Decision Evidence is verified before release | None | Retention is in memory and lost at restart | PEP-level (§5.6) | A failed `completed` write after a connector commit is silent (#1104); no Execution Evidence on a successful call outside the transaction tier (§5.6) |
+| Recovery and reconciliation | Declared by the Enforcement Scope Statement | `reconcileClaims`, `reconcile`, the reservation `sweep()` (§5.7) | None runs | Reconciliation would be the overlay's only asynchronous work | A prior process's claim closes `indeterminate` and its key stays refused (§5.7) | PEP-level restart witness (§5.7); the PDP crash boundary (§5.5) | No production caller and no alert (#1103) |
+
+### 5.1 Credential validation
+
+- **Hook.** Two entry points reach the same claim checks, and only one proves
+  possession.
+  - **HTTP transport** (`services/mcp-payments/src/mcp-http-transport.ts:226`):
+    `validateCredential` with the request's DPoP presentation calls
+    `validateToken`, which runs `verifyDpopBoundToken` (`server.ts:478-495`):
+    signature, issuer, audience, `cnf.jkt` and the DPoP proof over this
+    request. A MAS-governed route calls `validateGatewayCredential` instead;
+    that route is excluded from this target (#1105).
+  - **In-process mediated channel** (`services/mcp-payments/src/mcp-transport.ts:121`,
+    `:147`): `validateCredential` with no proof calls `validateMissionToken`
+    (`server.ts:640-653`): signature, issuer and audience. It carries
+    `cnf.jkt` into the token facts but verifies no proof of possession,
+    because the channel has no HTTP request to bind one to. It refuses a
+    transaction token (`txn_pop_required`), so a challenged retry goes over
+    HTTP. The demo agent (`pnpm agent`, through `createMediatedHarness`) uses
+    this channel with AS-issued Mission-bound tokens.
+
+  Both then apply `missionBoundFactsFrom` (`server.ts:506-539`) and
+  `readMissionAccessClaims`
+  (`services/mcp-payments/src/token-verifier.ts:108-120`): `typ` `at+jwt`, the
+  RFC 9068 claims, a `mission` claim with `id` and `issuer`, and the token's
+  own `authorization_details`, read as the credential's authority. A token
+  that fails the profile is refused, never demoted to the ordinary class.
+  Before the PDP is asked, the PEP refuses `out_of_authority` for an action
+  outside that authority, one whole entry at a time (`pep.ts:1307-1341`).
+- **Boundary.** In request, before any claim reaches a decision.
+- **Asynchronous work.** None.
+- **Crash and recovery.** The DPoP replay cache is in memory. Signing keys are
+  generated per boot (D25), so a pre-restart token fails signature
+  validation. The PEP fetches the AS JWKS once at assembly (`stack.ts:373`);
+  refresh is #831's.
+- **Tests:**
+  - `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
+  - `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4b: DISCRIMINATING mismatched-key (DPoP proof signed by a DIFFERENT key than cnf.jkt) is rejected BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
+  - `the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation) > a token whose audience does not name this resource is refused, before any of its claims reach a decision (@spec runtime#token-validation, audience)` (PEP-level)
+  - `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > admits a conforming at+jwt over HTTP and the mediated channel, carrying its own authority` (both entry points)
+  - `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route` (PEP-level)
+  - `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > refuses vendor lookup under an invoice-only token, and lets a broad token reach the PDP, on the same broad Mission` (PEP-level)
+  - [FGA] `M5 transaction-assurance tier > refuses a transaction credential on the transport that cannot prove possession (@spec txn-authorization#offline-verification)` (mediated channel)
+- **Required, not met.** The PDP neither receives nor evaluates the
+  credential authority: it matches the kernel's current Authority Set
+  (`evaluate.ts:1070-1077`). D312 splits the rest of #825 into three PRs: 2a
+  pins each signing key to its token role; 2b adds the
+  `context.credential.authority` carrier, PDP enforcement independent of the
+  PEP, the PEP pre-check redesign and `context.credential.expires_at`
+  validation; 2c audits the issuance paths. Today credential expiry is checked
+  at validation only, and the PDP records `context.credential.expires_at`
+  without denying on it.
+- **Residual.** On the in-process mediated channel every action, the
+  high-consequence classes included, runs on a token whose possession is not
+  proven. D240 requires a current proof of possession for a credential used
+  on a high-consequence action (`runtime.custody.high-consequence-credential-sender-constrained`,
+  `todo`), so this target's high-consequence claims hold on the HTTP entry
+  point only. #825 records the limitation; a shared verifier never claims a
+  proof it did not receive.
+
+### 5.2 Independent Resource policy
+
+- **Hook.** After the Mission-authority gates, the PDP asks OpenFGA for the
+  relation `policy.ts:19-31` maps the action to (`fga.ts:20-47`).
+- **Boundary.** In the decision.
+- **Asynchronous work.** None.
+- **Crash and recovery.** Nothing durable. The tuple is injected per check.
+- **Tests:**
+  - [FGA] `PDP decisions against OpenFGA (@spec authzen) > out-of-authority action -> deny out_of_authority` (PDP-level)
+  - `finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result` (PEP-level, stubbed policy)
+  - `runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority and the Resource-policy/FGA check both permit` (PDP-level)
+- **Required, not met.** The relations admit only `mission` subjects, and the
+  injected tuple mirrors the triple being checked, so the shipped model cannot
+  deny independently. A stubbed denial is `out_of_authority`,
+  indistinguishable from a Mission-authority denial. #828.
+
+### 5.3 Protected state and lifecycle
+
+- **Hook.** `loadView` (`stack.ts:665-672`) reads the kernel's committed state
+  and version for each decision, with `mode: "fresh"` and `freshness_at` set
+  to now. Under PEP placement the PEP forwards that observation at
+  `context.mission_state_observation`, and the PDP's own view wins on
+  disagreement. D293 accepts this read as the co-located target's declared
+  local source; it is not a Mission Status wire call.
+- **Boundary.** Per decision, inside the request. A commit phase takes a fresh
+  decision. An admitted high-consequence action is not re-checked after
+  `enforce`: it runs to completion inside its permit and lease (the contract's
+  §4).
+- **Asynchronous work.** None.
+- **Crash and recovery.** The read goes to the floor's kernel (§4.5); there is
+  no cache to recover.
+- **Tests:**
+  - `the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, carries the loader's observation at context.mission_state_observation, with state, mode and freshness_at, and no context.freshness` (PEP-level)
+  - `AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own revoked view against a PEP-supplied active state denies mission_inactive: the PDP's view wins` (PDP-level)
+  - `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare` (server-level)
+- **Residual.** A PEP or PDP separated from the AS has no demonstrated source;
+  #1101 owns the authenticated Status or introspection adapter. A Mission the
+  loader does not find has no test on the Mission-bound path. The
+  run-to-completion interval has no test.
+
+### 5.4 Target and parameter binding
+
+- **Hook.** `buildEffectiveParams`
+  (`services/mcp-payments/src/effective-params.ts:27-44`) builds the effective
+  parameters from the payments store, never from tool arguments, and
+  `parameterDigest` (`:83`) commits them into the decision request. Three
+  separate PEP checks run at use:
+  - `verifyPermitAtUse` (`pep.ts:1943`) runs the permit-use table
+    (`pep.ts:416-456`): the permit's bound phase against the crossing's phase
+    (`phase_mismatch`), then `valid_until` (`permit_expired`). It compares no
+    digest.
+  - `reverifyCapability` (`pep.ts:2064`) re-checks the capability snapshot
+    (`capability_source_unresolvable`).
+  - `reverify` (`pep.ts:1975`, a single-record operation) and `reverifyList`
+    (`pep.ts:2015`, a list read) re-derive the effective parameters and
+    compare the digest (`parameter_mismatch`; a target that no longer resolves
+    is also `parameter_mismatch`).
+- **Order and boundary, by dispatch path** (`dispatchPathFor`, called from
+  both transports):
+  - Read (`callReadTool`, `server.ts:952`): the permit-use table, the
+    capability check, `reverifyList` for a list read, the permit-use table
+    again, then the read. A single-record read re-derives no digest at use.
+    Nothing is written.
+  - Write (`callWriteTool`, `server.ts:1041`): the permit-use table, the
+    capability check, `reverify`, the permit-use table again, then the
+    effect. For a keyed reversible write, the effect is the reservation
+    transaction (§5.5). Nothing is written before it.
+  - Transaction tier (`callTransactionTool`, `server.ts:1298`): the
+    permit-use table at admission (`:1366`); single-use redemption (`:1408`),
+    which writes the engine's operation state; then the capability check
+    (`:1439`), the execution lease (`:1457`), `reverify` (`:1463`) and the
+    permit-use table again (`:1475`); then the `txn` consumption, where a
+    transaction token is presented, and the connector commit (`:1528-1539`).
+    A refusal after redemption marks the operation `abandoned` and records
+    suppressed Execution Evidence, which settles the PDP claim `failed`
+    because the attempt is redeemed (`pep.ts:1871-1874`). The permit is spent;
+    a retry needs a fresh decision (code reading).
+- **Asynchronous work.** None.
+- **Crash and recovery.** The payments store is in memory and reseeded per
+  boot. A crash after redemption and before the connector commit leaves a
+  `permit_issued` claim, which closes `indeterminate` (§5.7).
+- **Tests (server-level):**
+  - [FGA] `M4 core enforcement tier > scenario 3: TOCTOU -- invoice mutated between decision and execute -> parameter_mismatch refusal` (write path, digest)
+  - [FGA] `M5 transaction-assurance tier > TOCTOU in the decision->commit window refuses before the connector commits` (transaction tier, digest after redemption, zero connector effects)
+  - `GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > a Mission-authority change landing in the decision->execute window is caught by reverification, never executed on the stale normalized scope (TOCTOU)` (list read)
+  - `compound-action phases (@spec runtime#compound-actions) > compares the bound phase before any effect on all three dispatch paths` (phase)
+  - `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting prepare's permit, zero connector effects` (phase)
+- **Residual.** A single-record read re-derives no digest at use; its fresh
+  decision is the binding. A transaction-tier refusal after redemption spends
+  the permit, and no test asserts the spent state. The payments Operation
+  Profile promises NFC normalization and refusal of unknown or authoritative
+  members at intake; neither is implemented, and its schema list differs from
+  the served catalog (#1106, pending a ruling).
+
+### 5.5 Permit redemption
+
+- **Hook.**
+  - Transaction tier: the PDP claims (idempotency scope, `idempotency_key`)
+    with the operation identity before issuing the permit
+    (`idempotency-claims.ts`). `callTransactionTool` (`server.ts:1298`)
+    redeems the permit once (`TransactionEngine.redeemPermit`,
+    `server.ts:1408`) under an execution lease, commits the connector effect,
+    emits Execution Evidence and settles the claim (`settleClaim`,
+    `server.ts:1598`).
+  - Keyed reversible writes: the PEP reserves the key in its own SQLite store
+    and commits the effect, the reservation and the result in one local
+    transaction (`server.ts:1261`;
+    `services/mcp-payments/src/write-reservations.ts:228`).
+  - Other paths redeem nothing; each crossing takes a fresh decision.
+- **Boundary.** The claim insert is one transaction in the PDP's store.
+  Redemption, effect, evidence and settlement follow as separate writes, in
+  that order. A keyed write is one local transaction.
+- **Asynchronous work.** None. `settleClaim` is awaited.
+- **Crash and recovery.** The claim and reservation files survive a restart.
+  The engine's redemption records do not, and every process reuses the epoch
+  `demo-epoch` (`stack.ts:704`), so single use across a restart rests on the
+  persisted claim and reservations (the contract's §7). Surviving is not
+recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
+- **Tests:**
+  - [FGA] `M5 transaction-assurance tier > the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands` (server-level)
+  - [FGA] `M5 transaction-assurance tier > a FRESH permit for an already-claimed operation is refused as operation_already_claimed and does not double-execute` (server-level)
+  - `PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a persisted permit is unknown after restart: suppressed, never returned, never fresh` (PDP-level)
+  - `the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the persisted store reopens with the record > a key scheduled before the store closed resolves against its record from a new server on the same file` (server-level)
+- **Residual.** `hold_transfer`, the prepare phase, carries no permit-lifetime
+  or idempotency control (#1080). The operation key omits `idempotency_key`:
+  one redemption is allowed per Mission, action, phase and digest per process,
+  so a repeat is refused, never executed twice (a stated bound).
+
+### 5.6 Evidence
+
+- **Hook.** The PDP emits Decision Evidence for every decision. The PEP
+  verifies it (byte equality, signature, emitter-bound key, role, audience)
+  before release, refusing `decision_evidence_unverifiable` otherwise
+  (`pep.ts:1534-1546`). The PEP emits Refusal Records (`pep.ts:2079-2140`) and
+  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1839-1882`). The
+  executor emits `completed` Execution Evidence after a connector commit
+  (`server.ts:1568-1599`). The record table is the contract's §6.
+- **Boundary.** Synchronous, inside the request.
+- **Asynchronous work.** None.
+- **Crash and recovery.** `EvidenceRetentionStore` is in memory as shipped
+  (`stack.ts:566-568`). Retained records are lost at restart.
+- **Tests (PEP-level):**
+  - `a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence`
+  - `retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart` (on a file-backed store, not the shipped one)
+- **Residual.** The `completed` write after a connector commit has no error
+  handling: if it fails, the effect stands, no Execution Evidence exists and
+  the claim is not settled. The other three emission failures fail closed
+  with no test. Both are #1104's. A successful call outside the transaction
+  tier emits no Execution Evidence.
+
+### 5.7 Recovery and reconciliation
+
+- **Hook.** The Enforcement Scope Statement declares `outcome_reconciliation`
+  (`config/enforcement-scope.json:81-85`): a PT15M window, `mcp-payments-pep`
+  as the responsible component, and an operator alert for every claim that
+  closes `indeterminate`. `reconcileClaims`
+  (`services/mcp-payments/src/claim-reconciliation.ts:47`) and `reconcile`
+  (`services/mcp-payments/src/reconcile.ts:21`) implement it, and the
+  reservation store has `sweep()` (`write-reservations.ts:364`).
+- **Boundary.** None of them runs: no production code calls them.
+- **Asynchronous work.** Reconciliation would be the overlay's only
+  asynchronous work.
+- **Crash and recovery.** A restarted PEP draws a new claim-requester epoch
+  (`services/mcp-payments/src/redemption-status.ts:67`), so it cannot list or
+  reconcile a prior process's claim (`idempotency-claims.ts:647`, `:682`). A
+  retry against that claim is suppressed (`:444-455`). The claim moves to
+  `unresolved` once its lease elapses and closes `indeterminate` when the
+  window closes (`:723-735`); its key stays refused.
+- **Tests:**
+  - `the PDP idempotency claim through the executing PEP (@spec runtime#idempotency, #917) > refuses the retry when the redemption store cannot answer, or answers for another epoch` (PEP-level)
+- **Residual.** No production caller and no alert (#1103). Recovery tests must
+  distinguish a refusal before any effect from missing evidence after an
+  effect, and show that no retry or reconciliation repeats the effect (#1103,
+  #1104).
+
+## 6. Unsupported and residual
+
+**Required, not met (runtime overlay).** These block the AS-native payments
+target's acceptance. Neither is unsupported, and neither can become an
+exclusion.
+
+- The credential authority at the PDP: key-role pinning, carriage, PDP
+  evaluation and PDP-side witnesses (#825 PRs 2a and 2b, D312). §5.1.
+- Independently administered Resource policy (#828). §5.2.
 
 **Unsupported.** Each is refused or visibly absent; none is partial support.
 
@@ -802,6 +1084,16 @@ gate, is the pre-check-to-commit window of #250's cross-step atomic domain.
    and the grant index do not survive a restart, so every refresh after a
    restart is refused. A file-backed kernel alone establishes no durability
    for them. §4.5.
+
+Runtime overlay:
+
+7. A state source for a PEP or PDP separated from the AS (#1101). This target
+   uses the declared local read (D293). §5.3.
+8. A permit-lifetime or idempotency control for `hold_transfer` (#1080). §5.5.
+9. Running the declared outcome reconciliation, its alert, and recovery of a
+   prior process's claims (#1103). §5.7.
+10. An assembled deployment of exactly this topology: the shipped stack also
+    mounts the MAS join route on the payments resource (#1105).
 
 **Residual.**
 
@@ -829,6 +1121,17 @@ gate, is the pre-check-to-commit window of #250's cross-step atomic domain.
   own expiry, with no `mission_error` (§3.5).
 - The JWT-only `plain-rs` accepts a token until `exp` plus its clock
   tolerance (§3.6).
+- Runtime overlay: the in-process mediated channel verifies no proof of
+  possession, so high-consequence claims hold on the HTTP entry point only
+  (§5.1); a single-record read re-derives no digest at use, and a
+  transaction-tier refusal after redemption spends the permit (§5.4); an
+  admitted high-consequence action runs to completion inside its permit and
+  lease after a revocation (§5.3); the operation key
+  omits `idempotency_key`, so a repeat for an unchanged invoice is refused
+  (§5.5); a failed `completed` write after a connector commit leaves the
+  effect without Execution Evidence (§5.6; #1104); a successful call outside
+  the transaction tier has no Execution Evidence (§5.6); the Operation
+  Profile's intake rules are not implemented (§5.4; #1106).
 
 **No test yet.**
 
@@ -845,8 +1148,15 @@ gate, is the pre-check-to-commit window of #250's cross-step atomic domain.
 - Introspection: a signed token with no issuance record (§3.8).
 - Replay: authorization-code reuse (§4.4).
 - Recovery: an assembled AS restarted on a file-backed kernel (§4.5).
+- Runtime overlay: a Mission the loader does not find on the Mission-bound
+  path, and the run-to-completion interval (§5.3); the PDP emitter throwing,
+  a Refusal Record emission throwing, both `suppressExecution` gaps and the
+  failed `completed` write, each distinguishing a refusal before any effect
+  from missing evidence after one (§5.6; #1104); reconciliation across a
+  restart (§5.7; #1103); an AS-issued token through the assembled path
+  (#1105).
 
-## 6. Provider-specific notes (oidc-provider 9.10)
+## 7. Provider-specific notes (oidc-provider 9.10)
 
 These are honest workarounds and ordering facts, not protocol requirements.
 
@@ -902,9 +1212,11 @@ These are honest workarounds and ordering facts, not protocol requirements.
   `grant.error` listener in `buildProvider` adds `mission_error` to the
   rendered `invalid_grant` body.
 
-## 7. Status
+## 8. Status
 
 Documentation of the current reference implementation. It is not an
 owner-accepted conformance class, makes no production-readiness claim, and
 adds no normative text. An unsupported obligation listed here constrains what
-the issuance-only deployment may claim; it is not partial support.
+the issuance-only deployment, or for §5 the AS-native payments target, may
+claim; it is not partial support. A required obligation that is not met (§6)
+blocks that target's acceptance and is never an exclusion.
