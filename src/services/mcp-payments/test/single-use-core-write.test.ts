@@ -199,10 +199,25 @@ describe("single-use permits on the core write path (@spec runtime#single-use-id
     const permit = h.lastDecision();
     expect(conditionsOf(permit)?.use_limit).toBe(1);
 
-    // Back inside the window, the same unconsumed Decision presented twice at once.
+    // Back inside the window, the same unconsumed Decision presented twice at
+    // once: both are admitted and wait at the awaited reverification until
+    // both are there, so neither has redeemed when the other proceeds.
     h.advance(-301_000);
     h.replay(permit);
-    const results = await Promise.all([hold(h), hold(h)]);
+    let arrived = 0;
+    let release: () => void = () => {};
+    const barrier = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const atReverification = async () => {
+      arrived += 1;
+      if (arrived === 2) release();
+      await barrier;
+    };
+    const present = () =>
+      h.server.callWriteTool("hold_transfer", { invoice_id: "inv-1" }, TOKEN, undefined, undefined, { atReverification });
+    const results = await Promise.all([present(), present()]);
+    expect(arrived).toBe(2);
     expect(results.filter((r) => r.ok)).toEqual([{ ok: true, result: HELD }]);
     expect(results.filter((r) => !r.ok)).toEqual([{ ok: false, refusal_reason: "permit_consumed" }]);
     expect(h.executions().map((e) => e.content.error)).toEqual(["permit_expired", "permit_consumed"]);

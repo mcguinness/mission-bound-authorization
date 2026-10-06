@@ -254,7 +254,9 @@ export const REVERSIBLE_WRITE_REFUSAL_ERRORS: Readonly<Record<string, string>> =
  * reverification, where concurrent in-process attempts interleave after each
  * found the pair free; inside the one local transaction (a throw rolls the
  * effect and the reservation back together); and after its commit but before
- * the response.
+ * the response. The core write path (#1080) honors `atReverification` alone,
+ * where concurrent presentations of one single-use permit interleave after
+ * admission and before its redemption.
  */
 export interface ReversibleWriteFailpoints {
   atReverification?: () => Promise<void>;
@@ -1095,6 +1097,7 @@ export class McpPaymentsServer {
     const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
     beforeReverify?.();
+    await failpoints?.atReverification?.();
     // A moved catalog snapshot is its own error, not a parameter mismatch:
     // check it first so the caller-visible reason matches the record.
     const capability = await this.deps.pep.reverifyCapability(
