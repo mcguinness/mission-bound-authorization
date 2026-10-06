@@ -2213,6 +2213,12 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- Attenuation Rules: a Resource Server enforces a child
+  token's carried `authorization_details`; the child `authority_hash`
+  commits the child Authority Set on the child's Mission record, and
+  checking carried authority against the complete set is
+  Approved-Set Verification (#1086). No requirement changed.
+
 - Mission Record Requirements: the delegation event creates the Child
   Mission record the issuance profile and this section require; human
   accountability is inherited from the parent only where policy
