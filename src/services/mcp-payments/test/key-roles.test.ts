@@ -7,7 +7,7 @@
  * refused exactly as an untrusted key is, before any claim is used.
  */
 
-import { randomUUID } from "node:crypto";
+import { createPublicKey, randomUUID } from "node:crypto";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -255,6 +255,54 @@ describe("one key material serves one role, whatever kids it is published under 
         { jwks: { keys: [access.jwk, rotationAlias] } },
       ),
     ).not.toThrow();
+  });
+
+  // The verifier accepts equivalent encodings of one public key, so the
+  // cross-role comparison must see through them: each alias below imports as
+  // exactly the same key as its canonical form, yet hashes differently as
+  // written.
+  const sameKey = (a: Record<string, unknown>, b: Record<string, unknown>) =>
+    expect(createPublicKey({ key: a as JsonWebKey, format: "jwk" }).export({ format: "jwk" })).toEqual(
+      createPublicKey({ key: b as JsonWebKey, format: "jwk" }).export({ format: "jwk" }),
+    );
+
+  it("refuses an EC key whose access-role alias pads x with '=' (#1123 re-review)", () => {
+    const padded = { ...txn.jwk, kid: "as-token", x: `${txn.jwk.x as string}=` };
+    sameKey(padded, txn.jwk);
+    expect(() =>
+      roleKeyResolvers(
+        { accessToken: ["as-token"], attenuationRoot: [], transactionToken: ["as-txn"] },
+        { jwks: { keys: [padded] }, txnTokenJwks: { keys: [txn.jwk] } },
+      ),
+    ).toThrow(/transactionToken kid as-txn is the same key as accessToken kid as-token/);
+  });
+
+  it("refuses an RSA key whose access-role alias prepends a zero byte to the modulus (#1123 re-review)", async () => {
+    const kp = await generateKeyPair("RS256", { extractable: true });
+    const rsa = { ...(await exportJWK(kp.publicKey)), kid: "as-txn", alg: "RS256" };
+    const n = Buffer.concat([Buffer.from([0]), Buffer.from(rsa.n as string, "base64url")]).toString("base64url");
+    const zeroLed = { ...rsa, kid: "as-token", n };
+    sameKey(zeroLed, rsa);
+    expect(() =>
+      roleKeyResolvers(
+        { accessToken: ["as-token"], attenuationRoot: [], transactionToken: ["as-txn"] },
+        { jwks: { keys: [zeroLed] }, txnTokenJwks: { keys: [rsa] } },
+      ),
+    ).toThrow(/transactionToken kid as-txn is the same key as accessToken kid as-token/);
+  });
+
+  it("refuses an RSA key whose access-role alias zero-pads the exponent", async () => {
+    const kp = await generateKeyPair("RS256", { extractable: true });
+    const rsa = { ...(await exportJWK(kp.publicKey)), kid: "as-txn", alg: "RS256" };
+    const e = Buffer.concat([Buffer.from([0]), Buffer.from(rsa.e as string, "base64url")]).toString("base64url");
+    const zeroLed = { ...rsa, kid: "as-token", e };
+    sameKey(zeroLed, rsa);
+    expect(() =>
+      roleKeyResolvers(
+        { accessToken: ["as-token"], attenuationRoot: [], transactionToken: ["as-txn"] },
+        { jwks: { keys: [zeroLed] }, txnTokenJwks: { keys: [rsa] } },
+      ),
+    ).toThrow(/is the same key as/);
   });
 
   it("refuses a pinned key that is not a public EC, OKP or RSA key", () => {

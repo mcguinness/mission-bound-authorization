@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createPublicKey, type JsonWebKey as NodeJwk } from "node:crypto";
 import { createLocalJWKSet, type JWTHeaderParameters } from "jose";
 
 /**
@@ -39,13 +39,28 @@ const THUMBPRINT_MEMBERS: Record<string, readonly string[]> = {
  * RFC 7638 SHA-256 thumbprint of a public key: the key material itself,
  * whatever `kid` it is published under. Computed synchronously, since the
  * pin is checked when the resource server is constructed.
+ *
+ * The thumbprint is taken over the key's canonical encoding, not the JWK as
+ * written. The verifier imports equivalent encodings of one key (base64url
+ * with `=` padding, an RSA modulus or exponent with leading zero bytes), and
+ * those hash differently as written; importing and re-exporting the public
+ * key collapses them to one form.
  */
 function keyThumbprint(jwk: Record<string, unknown>, role: KeyRole, kid: string): string {
-  const members = typeof jwk.kty === "string" ? THUMBPRINT_MEMBERS[jwk.kty] : undefined;
-  if (!members || members.some((m) => typeof jwk[m] !== "string")) {
-    throw new Error(`key role pin: ${role} kid ${kid} is not a public EC, OKP or RSA key`);
+  const notPublic = () => new Error(`key role pin: ${role} kid ${kid} is not a public EC, OKP or RSA key`);
+  if (typeof jwk.kty !== "string" || !THUMBPRINT_MEMBERS[jwk.kty]) throw notPublic();
+  let exported: Record<string, unknown>;
+  try {
+    exported = createPublicKey({ key: jwk as NodeJwk, format: "jwk" }).export({ format: "jwk" }) as Record<
+      string,
+      unknown
+    >;
+  } catch {
+    throw notPublic();
   }
-  const canonical = JSON.stringify(Object.fromEntries(members.map((m) => [m, jwk[m]])));
+  const members = typeof exported.kty === "string" ? THUMBPRINT_MEMBERS[exported.kty] : undefined;
+  if (!members || members.some((m) => typeof exported[m] !== "string")) throw notPublic();
+  const canonical = JSON.stringify(Object.fromEntries(members.map((m) => [m, exported[m]])));
   return createHash("sha256").update(canonical).digest("base64url");
 }
 
