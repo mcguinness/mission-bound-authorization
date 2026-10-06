@@ -5881,6 +5881,18 @@ Cross-Domain:
 
 -01
 
+- Security Considerations: duplicated security prose removed from a
+  classified list reviewed on #877 (D330). Each removal restated a body
+  rule (Mission Approval, Approval Comprehension, Revocation,
+  Introspection, Resource Server Enforcement, Delegation Constraints,
+  Mission-Bound Access Tokens, Integrity Anchors) or generic agent
+  threats now pointed to the Mission Security Model, added as an
+  informative reference. Operative statements, the local limits
+  (issuance is not runtime enforcement, commitments are not subset
+  proofs, approved authority can still be misused) and every cited
+  anchor are kept; no BCP 14 keyword changed. Information Propagation
+  says "the approved Authority Set", and Token Theft says
+  "sender-constrained where ... require it" (#877).
 - Implementation Map and Mapping Assessment, Cross-Domain: the
   Mission reference is `mission.id` and `mission.issuer`;
   `authority_hash` is the value the projection carries, not part of
