@@ -801,7 +801,9 @@ token this AS issued. The deployment contract,
 operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
-`01874fd5`.
+`01874fd5`. A statement that names a later merged issue (such as #1104)
+describes that issue's behavior; later merges can move `file:line`
+citations.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -823,7 +825,7 @@ Mission-bound token through the assembled path (#1105).
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read and write paths write nothing before the effect; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level, [FGA] (§5.4) | A single-record read re-derives no digest at use; the Operation Profile's intake rules are not implemented (#1106) (§5.4) |
 | Permit redemption | Transaction tier and keyed writes | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction | None; settlement is awaited | Claim and reservation files survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | `hold_transfer` has no permit control (#1080); one redemption per operation key per process (§5.5) |
-| Evidence | Yes | The PDP's emitter; `recordRefusal`, `suppressExecution`; the executor's `completed` write (§5.6) | Synchronous in the request; Decision Evidence is verified before release | None | Retention is in memory and lost at restart | PEP-level (§5.6) | A failed `completed` write after a connector commit is silent (#1104); no Execution Evidence on a successful call outside the transaction tier (§5.6) |
+| Evidence | Yes | The PDP's emitter; `recordRefusal`, `suppressExecution`; the executor's `completed` write (§5.6) | Synchronous in the request; Decision Evidence is verified before release | None | Retention is in memory and lost at restart | PEP-level (§5.6) | A `completed` write that fails twice after a connector commit is reported (`gap: "emission_failed"`) and awaits reconciliation (#1103); no Execution Evidence on a successful call outside the transaction tier (§5.6) |
 | Recovery and reconciliation | Declared by the Enforcement Scope Statement | `reconcileClaims`, `reconcile`, the reservation `sweep()` (§5.7) | None runs | Reconciliation would be the overlay's only asynchronous work | A prior process's claim closes `indeterminate` and its key stays refused (§5.7) | PEP-level restart witness (§5.7); the PDP crash boundary (§5.5) | No production caller and no alert (#1103) |
 
 ### 5.1 Credential validation
@@ -1066,8 +1068,8 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
   - `the PDP idempotency claim through the executing PEP (@spec runtime#idempotency, #917) > refuses the retry when the redemption store cannot answer, or answers for another epoch` (PEP-level)
 - **Residual.** No production caller and no alert (#1103). Recovery tests must
   distinguish a refusal before any effect from missing evidence after an
-  effect, and show that no retry or reconciliation repeats the effect (#1103,
-  #1104).
+  effect, and show that no retry or reconciliation repeats the effect
+  (#1103; the emission paths are witnessed in §5.6).
 
 ## 6. Unsupported and residual
 
@@ -1139,7 +1141,7 @@ Runtime overlay:
   lease after a revocation (§5.3); the operation key
   omits `idempotency_key`, so a repeat for an unchanged invoice is refused
   (§5.5); a failed `completed` write after a connector commit leaves the
-  effect without Execution Evidence (§5.6; #1104); a successful call outside
+  effect without Execution Evidence until reconciliation (§5.6; #1103); a successful call outside
   the transaction tier has no Execution Evidence (§5.6); the Operation
   Profile's intake rules are not implemented (§5.4; #1106).
 
