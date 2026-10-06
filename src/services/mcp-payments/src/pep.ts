@@ -35,6 +35,7 @@ import {
   type Decision,
   type EntitlementResolver,
   evaluate,
+  type EvaluateOptions,
   isDecisionChannelRefusal,
   type EvaluationRequest,
   type Fga,
@@ -650,9 +651,9 @@ export interface PepDeps {
    * component can ask for a decision and verify what comes back, and holds no
    * capability to have a record signed under the decision point's identity.
    *
-   * Absent, the co-resident `evaluate` runs with no emission path configured:
-   * the decision carries no Decision Evidence and this PEP refuses to release
-   * a permitted action rather than executing an unevidenced decision.
+   * Absent, the co-resident `evaluate` runs with no emission path and no
+   * Resource policy bound (#828), so it refuses to decide and this PEP
+   * records `pdp_unreachable`: nothing executes on an unbound decision.
    */
   decide?: DecisionFn;
   /**
@@ -1490,7 +1491,9 @@ export class Pep {
     // and the operator timeline keeps the Refusal Record.
     let decision: Decision;
     try {
-      decision = await (this.deps.decide ?? evaluate)(req, decisionOptions);
+      // With no decision point, `evaluate` runs with no Resource policy bound
+      // (this PEP holds none, #828), so it refuses to decide: `pdp_unreachable`.
+      decision = await (this.deps.decide ?? ((r: EvaluationRequest, o: DecisionOptions) => evaluate(r, o as EvaluateOptions)))(req, decisionOptions);
     } catch {
       return this.refuse(token, "pdp_unreachable", mapping.action, view, undefined, { evaluationRequest: req, resource: req.resource });
     }

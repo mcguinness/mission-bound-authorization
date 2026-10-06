@@ -50,7 +50,7 @@ function parseArgs(argv: string[]): { live: boolean; fixturePath?: string } {
 async function main() {
   const { live, fixturePath } = parseArgs(process.argv.slice(2));
   const ca = process.env.OPENFGA_CA_CERT;
-  const { fga, modelId } = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, ...(ca ? { caCertPath: ca } : {}) });
+  const { fga, modelId } = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, ...(ca ? { caCertPath: ca } : {}) });
   const view: MissionView = {
     id: "msn_eval",
     issuer: "https://as.test",
