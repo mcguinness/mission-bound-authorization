@@ -286,6 +286,25 @@ describe("baseline MAS Join: rule 8, bound 1 (acting credential authority)", () 
     expect(res.refusal_reason).toBe("out_of_authority");
   });
 
+  it("carries the ordinary credential's own authority to the PDP as context.credential.authority, so a remote PDP enforces it too (@spec authzen#context-credential, #825 PR 2b)", async () => {
+    const sent: EvaluationRequest[] = [];
+    const pep = build({
+      decide: async (req, opts) => {
+        sent.push(req);
+        return EVIDENCE_KEYS.decide(req, opts);
+      },
+      masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY },
+    });
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res.permitted, JSON.stringify(res)).toBe(true);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.context.credential?.authority).toEqual([
+      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [READ] },
+    ]);
+  });
+
   it("intersects the acting credential's own authority with the joined Mission authority: an action outside the credential's own authority is refused out_of_authority", async () => {
     const pep = build({
       masJoin: {

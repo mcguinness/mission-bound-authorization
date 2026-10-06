@@ -27,7 +27,7 @@ import {
   createDecisionEvidenceEmitter,
   DECISION_EVIDENCE_MEDIA_TYPE,
   type DecisionEvidenceObject,
-  evaluate,
+  evaluate as evaluateRequest,
   type EvaluateOptions,
   type EvaluationRequest,
   type MissionView,
@@ -37,6 +37,12 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { withCredential } from "./with-credential.js";
+
+// Every decision carries the credential's own authority (#825 PR 2b); the
+// fixture adds a neutral one where a test does not name it.
+const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
+  evaluateRequest(withCredential(req), opts);
 
 const RESOURCE = "http://localhost:4403/mcp";
 const EMITTER = "http://localhost:4403/mcp";
@@ -193,15 +199,18 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   ...over,
 });
 
-const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
-  subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
-  action: { name: "payments:invoice.read" },
-  context: {
-    mission: { id: "msn_evd_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
-  },
-  ...over,
-});
+// The fixture runs in the builder, so a digest taken of a built request is of
+// exactly the body the PDP receives.
+const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest =>
+  withCredential({
+    subject: { id: "alice" },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+    action: { name: "payments:invoice.read" },
+    context: {
+      mission: { id: "msn_evd_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
+    },
+    ...over,
+  });
 
 /** The canonical-object digest of a request's JSON bytes, taken before the PDP sees it. */
 const submittedDigest = (request: EvaluationRequest): string => canonicalDigest(JSON.parse(JSON.stringify(request)));

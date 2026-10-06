@@ -18,8 +18,14 @@
 
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
-import { evaluate, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
+import { evaluate as evaluateRequest, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { withCredential } from "./with-credential.js";
+
+// Every decision carries the credential's own authority (#825 PR 2b); the
+// fixture adds a neutral one where a test does not name it.
+const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
+  evaluateRequest(withCredential(req), opts);
 
 // @spec runtime#idempotency (#917): every high-consequence permit is claimed;
 // a fixture domain that also mediates privileged administration.

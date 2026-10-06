@@ -277,30 +277,31 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
     refusedBeforePdp(await attempt(bound, "lookup_vendor", { vendor_id: "initech" }), { type: "server", id: CANONICAL_RESOURCE });
   });
 
-  it("honors an approval requirement only with a verified transaction credential's approval, whatever the local approval callback says", async () => {
+  it("forwards a credential's approval requirement to the PDP, which decides it (D312)", async () => {
+    // D302 refused this entry before the PDP unless a transaction credential
+    // established the approval. Under D312 the PEP refuses only what it can
+    // establish (resource, action, vendors, amount); an approval requirement
+    // turns on approvals the PDP holds, so the entry reaches the PDP intact in
+    // `context.credential.authority`, and the PDP requires the approval there.
     const facts = await overHttp(
       await mint({ authorization_details: [entry(["payments:invoice.read"], { requires_action_approval: true })] }),
     );
-    // The callback would make a co-resident PDP require approval; a remote
-    // PDP never receives it, so it establishes nothing at this PEP.
-    const local = { requiresActionApproval: () => true };
     const now = Math.floor(Date.now() / 1000);
     const txn = { txn: "txn_825", jti: "jti_825", iatS: now, expS: now + 60, parameterDigest: "sha-256:op" };
     const approval = { id: "apr_825", approved_at: new Date().toISOString(), parameter_digest: "sha-256:op" };
-
     for (const [presented, approvalInput] of [
       [facts, undefined],
       [facts, approval],
-      [{ ...facts, txn }, undefined],
+      [{ ...facts, txn }, approval],
     ] as const) {
-      const x = pepRecording(local);
-      const result = await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, presented as TokenFacts, approvalInput);
-      expect(result).toMatchObject({ permitted: false, denial_reason: "out_of_authority" });
-      expect(x.decided).toHaveLength(0);
+      const x = pepRecording();
+      await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, presented as TokenFacts, approvalInput);
+      expect(x.decided).toHaveLength(1);
+      const sent = x.decided[0] as { context: { credential?: { authority?: unknown } } };
+      expect(sent.context.credential?.authority).toEqual([
+        entry(["payments:invoice.read"], { requires_action_approval: true }),
+      ]);
     }
-    const x = pepRecording(local);
-    await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, { ...facts, txn } as TokenFacts, approval);
-    expect(x.decided).toHaveLength(1);
   });
 
   it("applies the same bound to a token validated over the mediated channel", async () => {
