@@ -250,6 +250,12 @@ unsupported obligation is refused or its claim excluded.
 | Transaction tier (`execute_wire_transfer`, `send_remittance_email`) | single-use permit, execution lease, PDP-held Exact claim, digest and phase binding, Execution Evidence; action-bound approval for remittance | restart recovery beyond the claim store; reconciliation run; transaction-grade resource witnesses; a failed commit predicate that retains the permit | #1103, #1104, #250, #817 |
 | Every path | per-action limits only | any aggregate cap; compromise containment; unattended prohibited-class exception | excluded by D284; #825 and #828 are required, not excluded (§1) |
 
+**High-consequence claims hold on the HTTP entry point only.** The HTTP
+transport verifies a DPoP proof of possession; the in-process mediated
+channel, which the demo agent uses, validates the token without one
+([provider-integration-port.md](provider-integration-port.md) §5.1). A
+high-consequence action on that channel runs on an unproven token.
+
 **The aggregate-cap exclusion is enforced by refusal.** The issuer refuses an
 Intent carrying a member it does not implement, such as `max_budget`, under
 the closed-top-level rule (`validateMissionIntent`,
