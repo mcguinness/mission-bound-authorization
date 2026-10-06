@@ -12202,9 +12202,33 @@
      "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/key-roles.test.ts",
+     "name": "each token class verifies only under its own role's keys (@spec runtime-oauth#token-validation, #825, D312) > refuses an access token signed by %s, on both transports",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/key-roles.test.ts",
+     "name": "each token class verifies only under its own role's keys (@spec runtime-oauth#token-validation, #825, D312) > refuses an attenuation root signed by the access-token key, and verifies the root key's signature",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/key-roles.test.ts",
+     "name": "each token class verifies only under its own role's keys (@spec runtime-oauth#token-validation, #825, D312) > refuses a transaction token signed by the access-token key, though that key is in the transaction key set",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/key-roles.test.ts",
+     "name": "each token class verifies only under its own role's keys (@spec runtime-oauth#token-validation, #825, D312) > refuses a token whose header names no kid, even with one key in the role",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class."
+   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class. Validity includes the signing key's role (#825 PR 2a, D312): each token class verifies only under the kids locally pinned to it, so a token signed by a key this resource trusts for another class (or naming no kid) is refused like an untrusted key, before any claim is used; key-roles.test.ts proves it for access tokens on both transports, attenuation roots and transaction tokens."
   },
   {
    "id": "runtime.token-validation.audience-and-pop",
