@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          5 October 2026
-Expires: 8 April 2027
+Intended status: Standards Track                          6 October 2026
+Expires: 9 April 2027
 
 
                      Mission Substrate Requirements
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -1471,7 +1471,13 @@ Appendix B.  Mission-Bound Authorization Family Use
     +------------+----------------------------------------------------+
     | Actor      | the authenticated acting client or agent           |
     +------------+----------------------------------------------------+
-    | Approver   | Approver                                           |
+    | Approver   | for a direct approval, the Approver                |
+    |            | (consent_principal); under a standing-consent      |
+    |            | basis, see below                                   |
+    +------------+----------------------------------------------------+
+    | Approval   | approval event: the atomic, adjudicated creation   |
+    | event      | of a Mission under its approval_basis, for every   |
+    |            | basis                                              |
     +------------+----------------------------------------------------+
     | Approved   | the Mission Intent, the recorded authority         |
     | Context    | proposal where one was submitted, and the derived  |
@@ -1494,6 +1500,25 @@ Appendix B.  Mission-Bound Authorization Family Use
    source ceiling is that role's assertion staying within the named
    source's authority.
 
+   The kernel's Approver is whoever makes the approval decision through
+   the binding's native ceremony, which can be a policy authority.  The
+   family separates three roles that this one term can combine
+   ([I-D.draft-mcguinness-oauth-mission], Section "Role Mapping"):
+   consent_principal, the accountable human recorded as approver;
+   activation_actor, who triggered the instance; and adjudication, the
+   mechanism that decided it.  For a direct approval, the kernel's
+   Approver is consent_principal.  Under a standing-consent basis,
+   consent_principal is the accountable owner whose earlier approval of
+   the standing consent roots the instance; the authorized policy
+   ceremony supplies the instance's decision, and adjudication, where
+   present, names that mechanism, whose activation policy commitment
+   makes the decision reproducible
+   ([I-D.draft-mcguinness-oauth-mission], Section "Standing-Consent
+   Bases").  A family document never relabels a deciding policy or model
+   as the family's human Approver.  This correspondence relaxes no
+   requirement of Section 3.5 and adds no conformance claim for the
+   OAuth binding.
+
    Precedence is scoped, not global.  For the OAuth-native binding, the
    OAuth binding's definitions govern that mapping; this document
    governs the kernel and capability vocabulary.  Neither document takes
@@ -1512,6 +1537,12 @@ Appendix B.  Mission-Bound Authorization Family Use
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Family Use maps the kernel's Approver to the family's accountable
+      owner (consent_principal) and, under a standing-consent basis, to
+      the policy ceremony that decides an instance (adjudication), and
+      maps the approval event to the creation of a Mission under any
+      approval basis (#1078).
 
    *  Removed the normative dependency on the OAuth binding (#708): the
       OAuth Binding Mapping Assessment moved to the OAuth binding's own

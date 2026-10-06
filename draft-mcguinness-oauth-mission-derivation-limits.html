@@ -1059,7 +1059,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 April 2027</td>
+<td class="center">Expires 9 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1072,12 +1072,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-derivation-limits-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-05" class="published">5 October 2026</time>
+<time datetime="2026-10-06" class="published">6 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-08">8 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1132,7 +1132,7 @@ bound on the authority a token carries or on how that token is used.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1670,8 +1670,9 @@ granted the <code>derivations_remaining</code> disclosure privilege:<a href="#se
       <h2 id="name-approval-rendering">
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-approval-rendering" class="section-name selfRef">Approval Rendering</a>
       </h2>
-<p id="section-7-1">Where an effective <code>derivation_limit</code> is established, the AS <span class="bcp14">MUST</span>
-render it for consent at the approval event, as context beside the
+<p id="section-7-1">Where an effective <code>derivation_limit</code> is established at a human
+approval event, the AS <span class="bcp14">MUST</span> render it for consent at that event, as
+context beside the
 derived Authority Set, in the rendering step of the OAuth binding's
 approval sequence (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
 "Mission Approval"). The rendering shows the established value, not
@@ -2014,30 +2015,35 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 <p id="appendix-B-2">-00<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-3.1">
-          <p id="appendix-B-3.1.1">What Counts states that a child-creation token exchange is not
-counted against the Parent Mission's limit, and that the child's
-redemption of its initial grant counts against the child's own
-limit.<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.1.1">Approval Rendering applies where the limit is established at a
+human approval event; a policy-adjudicated instance has no consent
+rendering (#1078).<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.2">
-          <p id="appendix-B-3.2.1">Composition Across Missions states that the example's 12
-descendants and 120 derivations count Missions live at once, not a
-lifetime total.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.2.1">What Counts states that a child-creation token exchange is not
+counted against the Parent Mission's limit, and that the child's
+redemption of its initial grant counts against the child's own
+limit.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.3">
-          <p id="appendix-B-3.3.1">Initial version. Carries the derivation limit of Mission-Bound
+          <p id="appendix-B-3.3.1">Composition Across Missions states that the example's 12
+descendants and 120 derivations count Missions live at once, not a
+lifetime total.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.4">
+          <p id="appendix-B-3.4.1">Initial version. Carries the derivation limit of Mission-Bound
 Authorization for OAuth 2.0 with its wire names and rules unchanged:
 the <code>requested_derivation_limit</code> Intent member, the
 <code>derivation_limit</code> record member, counting and refusal at issuance,
 the <code>derivations_exhausted</code> diagnostic, the <code>derivations_remaining</code>
-introspection member, and approval rendering.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+introspection member, and approval rendering.<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.4">
-          <p id="appendix-B-3.4.1">Under the Mission Issuance Grant profile, the Mission Authority
+        <li class="normal" id="appendix-B-3.5">
+          <p id="appendix-B-3.5.1">Under the Mission Issuance Grant profile, the Mission Authority
 Server's committed grant minting is a counted derivation; redemption
 and refresh at a consuming Authorization Server are not, and the
 limit does not cap the tokens they issue; the approval rendering
-states that bound (#963).<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
+states that bound (#963).<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

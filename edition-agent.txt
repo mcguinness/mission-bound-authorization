@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-05T23:35:34Z
-Source repository commit: 01874fd54cc96c21a4b624dc49c64e785ba4fa23
+Generated: 2026-10-06T00:26:27Z
+Source repository commit: 51ae8d3e317eac8a31a18c7c7931773cd3fbdf6d
 Member count: 9
 
 Reading order:
@@ -30,8 +30,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            5 October 2026
-Expires: 8 April 2027
+Intended status: Informational                            6 October 2026
+Expires: 9 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -84,7 +84,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -2090,12 +2090,13 @@ Table of Contents
 
 9.3.  Approval Fidelity
 
-   For the portable-authority bindings, the approval event authenticates
-   the Approver, establishes the Subject, derives and renders the
-   Authority Set for consent, and computes the anchors over the
-   consented set, the approved Intent, and, where one was submitted, the
-   authority proposal.  That approval event creates the record in active
-   atomically with the decision.
+   For the portable-authority bindings, a direct approval event
+   authenticates the Approver, establishes the Subject, derives and
+   renders the Authority Set for consent, and computes the anchors over
+   the consented set, the approved Intent, and, where one was submitted,
+   the authority proposal.  Every approval event, including one decided
+   under a standing consent, creates the record in active atomically
+   with the decision.
 
    AAuth approval has different fidelity: the native propose, clarify,
    and approve interaction authenticates the parties, returns the
@@ -2824,8 +2825,9 @@ Table of Contents
      |                  | profile's, where adopted                  |
      +------------------+-------------------------------------------+
      | Governed Agent   | Unattended operation and delegation, with |
-     |                  | Consent Evidence binding each approval    |
-     |                  | event                                     |
+     |                  | Consent Evidence binding each human       |
+     |                  | approval, including the standing consent  |
+     |                  | unattended instances run under            |
      +------------------+-------------------------------------------+
      | High-Assurance   | The high-consequence classes              |
      | Agent            | ([I-D.draft-mcguinness-mission-runtime]), |
@@ -5387,6 +5389,11 @@ Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Approval Fidelity and the level table distinguish the direct
+      approval event from creation under a standing consent: every
+      approval event creates the record, and Consent Evidence binds each
+      human approval (#1078).
+
    *  Corrections from the fourth outside review.  The Validity Model
       sums the residual across an exchange that mints without a fresh
       state check, and Project, The Four Levels, Assurance Claims,
@@ -5646,8 +5653,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          5 October 2026
-Expires: 8 April 2027
+Intended status: Standards Track                          6 October 2026
+Expires: 9 April 2027
 
 
                      Mission Substrate Requirements
@@ -5705,7 +5712,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -7113,7 +7120,13 @@ Appendix B.  Mission-Bound Authorization Family Use
     +------------+----------------------------------------------------+
     | Actor      | the authenticated acting client or agent           |
     +------------+----------------------------------------------------+
-    | Approver   | Approver                                           |
+    | Approver   | for a direct approval, the Approver                |
+    |            | (consent_principal); under a standing-consent      |
+    |            | basis, see below                                   |
+    +------------+----------------------------------------------------+
+    | Approval   | approval event: the atomic, adjudicated creation   |
+    | event      | of a Mission under its approval_basis, for every   |
+    |            | basis                                              |
     +------------+----------------------------------------------------+
     | Approved   | the Mission Intent, the recorded authority         |
     | Context    | proposal where one was submitted, and the derived  |
@@ -7136,6 +7149,25 @@ Appendix B.  Mission-Bound Authorization Family Use
    source ceiling is that role's assertion staying within the named
    source's authority.
 
+   The kernel's Approver is whoever makes the approval decision through
+   the binding's native ceremony, which can be a policy authority.  The
+   family separates three roles that this one term can combine
+   ([I-D.draft-mcguinness-oauth-mission], Section "Role Mapping"):
+   consent_principal, the accountable human recorded as approver;
+   activation_actor, who triggered the instance; and adjudication, the
+   mechanism that decided it.  For a direct approval, the kernel's
+   Approver is consent_principal.  Under a standing-consent basis,
+   consent_principal is the accountable owner whose earlier approval of
+   the standing consent roots the instance; the authorized policy
+   ceremony supplies the instance's decision, and adjudication, where
+   present, names that mechanism, whose activation policy commitment
+   makes the decision reproducible
+   ([I-D.draft-mcguinness-oauth-mission], Section "Standing-Consent
+   Bases").  A family document never relabels a deciding policy or model
+   as the family's human Approver.  This correspondence relaxes no
+   requirement of Section 3.5 and adds no conformance claim for the
+   OAuth binding.
+
    Precedence is scoped, not global.  For the OAuth-native binding, the
    OAuth binding's definitions govern that mapping; this document
    governs the kernel and capability vocabulary.  Neither document takes
@@ -7154,6 +7186,12 @@ Appendix B.  Mission-Bound Authorization Family Use
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Family Use maps the kernel's Approver to the family's accountable
+      owner (consent_principal) and, under a standing-consent basis, to
+      the policy ceremony that decides an instance (adjudication), and
+      maps the approval event to the creation of a Mission under any
+      approval basis (#1078).
 
    *  Removed the normative dependency on the OAuth binding (#708): the
       OAuth Binding Mapping Assessment moved to the OAuth binding's own
@@ -7182,8 +7220,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          5 October 2026
-Expires: 8 April 2027
+Intended status: Standards Track                          6 October 2026
+Expires: 9 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -7242,7 +7280,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -7590,12 +7628,13 @@ Table of Contents
       behalf the Mission is approved (Section 6.2), identified by an
       (iss, sub) pair and carried in derived tokens' sub claim.
 
-   Approver:  The single accountable principal who approves the Mission
-      at the approval event.  Equal to the Subject for self-approval;
-      different for administrator or delegated approval.  This document
-      records one accountable Approver; multi-party approval and the
-      provenance of delegated approval authority are deferred
-      (Section 6.5).
+   Approver:  The single accountable principal who approves the Mission:
+      at its direct approval event or, under a standing-consent basis,
+      through the earlier standing consent (Section 7.1).  Equal to the
+      Subject for self-approval; different for administrator or
+      delegated approval.  This document records one accountable
+      Approver; multi-party approval and the provenance of delegated
+      approval authority are deferred (Section 6.5).
 
    Mission Issuer (Authorization Server):  The OAuth AS that validates a
       Mission Intent, runs the approval event, records the Mission, and
@@ -8476,23 +8515,33 @@ Table of Contents
 
 6.  Mission Approval
 
-   The approval event is the atomic transition at which the Approver
-   consents and the AS creates the Mission.  It runs as an OAuth 2.0
-   [RFC6749] authorization-code flow initiated from the PAR-issued
-   request_uri (Section 4.1).  Because the authorization code is the
-   artifact the Mission grant binds to (Section 6.4) and it passes
-   through the front channel, the AS MUST bind the code to the
-   requesting client with PKCE ([RFC7636], S256 challenge method) or,
-   equivalently, issue a DPoP-bound authorization code ([RFC9449]).
-   Redemption is then verified as Section 4.6 of [RFC7636] or Section 10
-   of [RFC9449] specifies.  This prevents authorization-code injection
-   from yielding the Mission grant.
+   The approval event is the atomic, adjudicated transition that creates
+   a Mission under its approval basis (approval_basis, Section 7).
+   Every Mission is created at its own approval event, which the
+   record's approval_event_id identifies.  A direct approval event
+   includes the Approver's contemporaneous consent: it is a human
+   approval event.  Under a standing-consent basis (Section 7.1), the
+   instance is decided under an accountable human's earlier approval,
+   with no fresh human approval.  The approval basis and its
+   adjudication semantics, not the event alone, establish whether a
+   human decided at that instant.
+
+   The direct realization runs as an OAuth 2.0 [RFC6749] authorization-
+   code flow initiated from the PAR-issued request_uri (Section 4.1).
+   Because the authorization code is the artifact the Mission grant
+   binds to (Section 6.4) and it passes through the front channel, the
+   AS MUST bind the code to the requesting client with PKCE ([RFC7636],
+   S256 challenge method) or, equivalently, issue a DPoP-bound
+   authorization code ([RFC9449]).  Redemption is then verified as
+   Section 4.6 of [RFC7636] or Section 10 of [RFC9449] specifies.  This
+   prevents authorization-code injection from yielding the Mission
+   grant.
 
    The AS SHOULD include the iss authorization-response parameter
    ([RFC9207]) on the authorization response, so the client can detect a
    mix-up attack on the consent-bearing redirect leg ([RFC9700]).
 
-   At the approval event the AS MUST, in order:
+   At a direct approval event the AS MUST, in order:
 
    1.  Authenticate the Approver, subject to the approval-authentication
        floor and any client-requested strength (Section 6.3).  The AS
@@ -8590,9 +8639,19 @@ Table of Contents
    cryptographic digest, exactly the authority the Approver approved.
 
    Every Mission is rooted in an approved authorization basis
-   (approval_basis, Section 7); the steps above define the direct basis,
-   and Section 7 states the rules for it and for a standing-consent
-   basis a companion profile defines.
+   (approval_basis, Section 7).  The steps above define the direct
+   basis; a companion profile that relocates a direct approval keeps
+   them unchanged (Section 15).  Under a standing-consent basis
+   (Section 7.1), the standing consent and the instance's adjudication
+   supply the human decision: the Approver's authentication (step 1),
+   the Approver's authorization for the Subject and the authority source
+   (steps 2 and 3), and the consent rendering (step 5).  The other
+   creation rules still bind the instance's approval event wherever they
+   apply: the Subject is never taken from unauthenticated client input
+   and is mapped injectively (step 2), the authority source and its
+   ceiling (Section 6.2), the effective expiry and its creation-commit
+   check (steps 4 and 7), the integrity anchors (step 6), and atomic
+   creation deduplicated on approval_event_id (Section 7).
 
    Refusals follow Section 12.  A token-endpoint resource value outside
    the Authority Set is an invalid resource value in the sense of
@@ -8688,11 +8747,11 @@ Table of Contents
    (*organizational*).  The source names whose authority the approval
    draws on, recorded immutably as the Mission's authority_source;
    approval_basis records how drawing on it was activated (Section 7),
-   and the two compose: any source may activate through a direct
-   approval event or through a standing-consent basis a companion
-   defines.  Approval activates authority the source already holds and
-   manufactures none: the AS establishes the source and verifies the
-   derived Authority Set against it before approval (Section 6).
+   and the two compose: any source may activate under the direct basis
+   or a standing-consent basis a companion defines.  Approval activates
+   authority the source already holds and manufactures none: the AS
+   establishes the source and verifies the derived Authority Set against
+   it before approval (Section 6).
 
    The subject-representation discipline is the same in every source:
 
@@ -8795,15 +8854,15 @@ Table of Contents
    alone establishes and resolves a binding; a client never supplies or
    negotiates one.
 
-   At the approval event the AS binds the Mission to the authorization
-   code it issues.  The binding is server-side and is what "the
-   referenced Mission" in Section 9 refers to.  The code itself carries
-   no refresh-token family: only a successful redemption produces one,
-   and where it does, the resulting refresh-token family inherits the
-   code's binding atomically with its issuance, extending the same
-   Mission grant binding rather than starting a second one.  At each
-   subsequent derivation the AS resolves the Mission from the grant the
-   client presents:
+   At a direct approval event the AS binds the Mission to the
+   authorization code it issues.  The binding is server-side and is what
+   "the referenced Mission" in Section 9 refers to.  The code itself
+   carries no refresh-token family: only a successful redemption
+   produces one, and where it does, the resulting refresh-token family
+   inherits the code's binding atomically with its issuance, extending
+   the same Mission grant binding rather than starting a second one.  At
+   each subsequent derivation the AS resolves the Mission from the grant
+   the client presents:
 
    *  the authorization code at the token endpoint;
 
@@ -9174,7 +9233,8 @@ Table of Contents
    A companion profile can generalize approval to a named standing-
    consent basis, under which a template or policy activates Mission
    instances against an accountable human's earlier approval, with no
-   fresh approval event per instance.  The type values template
+   fresh human approval per instance; each instance is still created at
+   its own approval event (Section 6).  The type values template
    ([I-D.draft-mcguinness-oauth-mission-template]), policy_drawdown
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]), and
    ceiling_drawdown ([I-D.draft-mcguinness-oauth-mission-progressive])
@@ -9194,12 +9254,12 @@ Table of Contents
 
    A companion profile defining a standing-consent type MUST make its
    consent_principal and root_commitment trace to an accountable human's
-   approval of the named standing consent, with no fresh approval event
+   approval of the named standing consent, with no fresh human approval
    per instance, MUST carry that approval's instant as approved_at, and
    MUST state what the record's approval_event_id carries for an
-   instance it activates.  That value identifies the activation event,
-   never the standing approval, so a retried activation deduplicates and
-   each distinct activation creates its own Mission.
+   instance it activates.  That value identifies this instance's
+   approval event, never the standing approval, so a retried activation
+   deduplicates and each distinct activation creates its own Mission.
 
    approved_at:  REQUIRED for every standing-consent type.  An RFC 3339
       date-time: the instant the accountable human approved the exact
@@ -13480,10 +13540,13 @@ Appendix F.  OAuth Binding Mapping Assessment
        obtains a new approval through an expansion successor.
 
    5.  The approval ceremony is this document's approval event
-       (Section 6): authenticated Approver, established Subject and
-       authority source, rendering of the derived Authority Set and the
-       effective expiry, and atomic record commit, with deferred,
-       interactive, and dispatch realizations.
+       (Section 6).  Its direct realization, interactive or deferred,
+       authenticates the Approver, establishes the Subject and authority
+       source, renders the derived Authority Set and the effective
+       expiry, and commits the record atomically.  Under a standing-
+       consent basis, such as a dispatch, the authorized policy ceremony
+       decides the instance, and consent_principal remains the
+       accountable owner (Section 7.1).
 
    6.  The active predicate is stored state equal to active with the
        decision time strictly before the record's effective expires_at,
@@ -13644,6 +13707,18 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Mission Approval: the approval event is the atomic, adjudicated
+      transition that creates a Mission under its approval basis, for
+      every basis.  The authorization-code flow and its steps are the
+      direct realization; a standing-consent basis supplies the human
+      decision from the standing consent and the instance's
+      adjudication, and the other creation rules still bind its approval
+      event.  Standing-Consent Bases says no fresh human approval per
+      instance, and an instance's approval_event_id identifies this
+      instance's approval event.  The Mapping Assessment's approval-
+      ceremony item separates the direct realization from a standing-
+      consent basis (#1078).
 
    *  Standing-Consent Bases: a companion profile defining a standing-
       consent type states what the record's approval_event_id carries
@@ -14258,8 +14333,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          5 October 2026
-Expires: 8 April 2027
+Intended status: Standards Track                          6 October 2026
+Expires: 9 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -14311,7 +14386,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -16403,8 +16478,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          5 October 2026
-Expires: 8 April 2027
+Intended status: Standards Track                          6 October 2026
+Expires: 9 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -16463,7 +16538,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -20970,8 +21045,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          5 October 2026
-Expires: 8 April 2027
+Intended status: Standards Track                          6 October 2026
+Expires: 9 April 2027
 
 
                         Mission Runtime Evidence
@@ -21021,7 +21096,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -23609,8 +23684,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          5 October 2026
-Expires: 8 April 2027
+Intended status: Standards Track                          6 October 2026
+Expires: 9 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -23666,7 +23741,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -26748,8 +26823,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          5 October 2026
-Expires: 8 April 2027
+Intended status: Standards Track                          6 October 2026
+Expires: 9 April 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -26801,7 +26876,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -28712,8 +28787,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          5 October 2026
-Expires: 8 April 2027
+Intended status: Standards Track                          6 October 2026
+Expires: 9 April 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -28768,7 +28843,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -29806,7 +29881,8 @@ Table of Contents
 
 8.  Binding to Mission Approval
 
-   At an approval event, a Consent-Evidence-capable Mission Issuer MUST:
+   At a human approval event ([I-D.draft-mcguinness-oauth-mission]), a
+   Consent-Evidence-capable Mission Issuer MUST:
 
    1.  derive the Authority Set and compute intent_hash, authority_hash,
        and, where an authority proposal was submitted, proposal_hash
@@ -29937,7 +30013,8 @@ Table of Contents
    A conforming Consent-Evidence-capable Mission Issuer MUST:
 
    *  construct a Consent Disclosure object, with the required members
-      of Section 4, for each approval event;
+      of Section 4, for each human approval, including one whose
+      consented object is not a Mission;
 
    *  render within the translation floor (Section 4.3);
 
@@ -30592,6 +30669,10 @@ Appendix B.  Worked Disclosure and Test Vector
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Binding to Mission Approval and the conformance floor apply at
+      each human approval: a Mission instance activated by policy under
+      a standing consent has no disclosure of its own (#1078).
 
    *  Defined and registered the mission_shaping_evidence_hash request
       parameter, which carries a client-supplied shaping_evidence_hash

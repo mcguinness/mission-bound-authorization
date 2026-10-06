@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 April 2027</td>
+<td class="center">Expires 9 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-metering-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-05" class="published">5 October 2026</time>
+<time datetime="2026-10-06" class="published">6 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-08">8 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ refuse rather than silently ignore it.<a href="#section-abstract-1" class="pilcr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2645,7 +2645,8 @@ exchange of <a href="#settlement-exchange" class="auto internal xref">Section 12
       </ul>
 <p id="section-13-3">A Mission Issuer in a deployment claiming this profile <span class="bcp14">MUST</span> carry the
 consented bounds on the Mission record committed by <code>intent_hash</code>. It
-<span class="bcp14">MUST</span> render them at the approval event per <a href="#consent" class="auto internal xref">Section 6.1</a>, and <span class="bcp14">MUST</span> apply
+<span class="bcp14">MUST</span> render them at each human approval, including a standing consent
+such as a Mission Template's consent, per <a href="#consent" class="auto internal xref">Section 6.1</a>, and <span class="bcp14">MUST</span> apply
 the child-creation, successor, and template rules of
 <a href="#capacity-across-missions" class="auto internal xref">Section 9</a>.<a href="#section-13-3" class="pilcrow">¶</a></p>
 </section>
@@ -2857,7 +2858,12 @@ this registry.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Exclusivity Across Missions (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>): an
+          <p id="appendix-A-2.1.1">Conformance: the consented bounds are rendered at each human
+approval, including a standing consent such as a Mission Template's
+consent (#1078).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Exclusivity Across Missions (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>): an
 exclusivity group is one shared latch across the delegation (children,
 descendants, successors, carryover replacements), established
 atomically before a derived Mission issues usable authority, retained
@@ -2865,10 +2871,10 @@ while derived authority remains usable, and relaxed only by an
 explicit, scoped, disclosed approval that keeps the historical latch.
 Settlement releases a latch only when every participating action is
 affirmatively not executed. Template instances are scoped per
-instance, with that limit disclosed.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+instance, with that limit disclosed.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
 Mission is charged to every ancestor's bound or holds an escrowed
 allocation whose remainder returns only after the allocation is
 closed, a successor or carryover replacement continues its
@@ -2878,10 +2884,10 @@ per-instance bound with <code>max_active</code> and <code>dispatch_rate</code>. 
 expiry no longer releases an unsettled reservation for an
 idempotent or reversible action class (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>), and a
 metered high-consequence idempotency horizon reaches the Mission's
-<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
 <code>max_duration</code>, <code>max_egress_volume</code>, and <code>exclusive</code> move from
 <code>controls.&lt;name&gt;</code> to named top-level Mission Intent members, since
 the issuance profile retires the <code>controls</code> bucket entirely
@@ -2895,16 +2901,16 @@ of <code>exclusive</code> against <a href="#promotion-criteria" class="auto inte
 gate NOT MET (issue #117): it remains EXPERIMENTAL and unpromoted,
 now explicitly marked as such at its own definition (<a href="#bounds" class="auto internal xref">Section 6</a>).
 <code>max_derivations</code> renamed to <code>derivation_limit</code> in cross-references
-to the issuance profile.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+to the issuance profile.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">One informative cross-reference in Settlement by Evidence State
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">One informative cross-reference in Settlement by Evidence State
 (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>): a containment overlay's contain transition
 is not settlement evidence. An open reservation or duration lease
 still settles unchanged under the existing evidence-state rules, and
 contain narrows only forward draw, a new reservation or a lease
 renewal, through the ordinary permit check against the narrowed
-Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

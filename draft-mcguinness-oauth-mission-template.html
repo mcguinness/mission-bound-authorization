@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 April 2027</td>
+<td class="center">Expires 9 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1076,12 +1076,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-template-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-05" class="published">5 October 2026</time>
+<time datetime="2026-10-06" class="published">6 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-08">8 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1139,7 +1139,7 @@ it deterministically.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1258,8 +1258,8 @@ it deterministically.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 <p id="section-1-1">An agent that runs a recurring task dispatches it many times: once per
 ticket, per document, per scheduled window. Mission-Bound Authorization
 for OAuth 2.0 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance
-profile") commits a Mission's authority at a single human approval
-event. Requiring that event at every dispatch does not scale to machine
+profile") commits a Mission's authority at a human approval event. A
+fresh human approval at every dispatch does not scale to machine
 speed, and the alternative, a single standing Mission broad enough to
 cover every dispatch, over-provisions: the agent holds the full breadth
 the whole time, and a fresh approval per run is what the deployment was
@@ -1629,9 +1629,12 @@ Mission's outstanding tokens.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
       <h2 id="name-template-consent">
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-template-consent" class="section-name selfRef">Template Consent</a>
       </h2>
-<p id="section-5-1">Creating a Mission Template is itself a human approval event under the
-issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Its consent
-object is the Mission Template: the human consents to the ceiling, the
+<p id="section-5-1">Creating a Mission Template is itself a human approval under the
+issuance profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It creates
+no Mission, so it is not an approval event: it is the standing consent
+under which each dispatched instance's approval event is decided. Its
+consent object is the Mission Template: the human consents to the
+ceiling, the
 dispatch policy, the allowed dispatchers and recipients, and the
 bounds, and the approval commits them under <code>template_hash</code>
 (<a href="#template-hash" class="auto internal xref">Section 4.1</a>), the anchor over the object consented to.<a href="#section-5-1" class="pilcrow">¶</a></p>
@@ -2330,8 +2333,9 @@ conforming issuance-profile Mission Issuer
           <p id="section-13-2.1.1">record a consented Mission Template with the required members and
 commit it under <code>template_hash</code> with <code>typ</code> <code>mission-template</code>
 (<a href="#the-mission-template" class="auto internal xref">Section 4</a>, <a href="#template-hash" class="auto internal xref">Section 4.1</a>), and treat template
-creation as a human approval event whose disclosure renders the
-ceiling, the no-per-instance-approval fact, and the prohibited-class
+creation as a human approval under the issuance profile whose
+disclosure renders the ceiling, the no-per-instance-approval fact,
+and the prohibited-class
 reservation (<a href="#template-consent" class="auto internal xref">Section 5</a>);<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.2">
@@ -2581,47 +2585,53 @@ object by that value.<a href="#section-14-8.4.1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Dispatch: a dispatched instance's <code>approval_event_id</code> identifies the
+          <p id="appendix-A-2.1.1">Template Consent: creating a Mission Template is a human approval
+that creates no Mission, so it is the standing consent each
+dispatched instance's approval event is decided under, not an
+approval event itself (#1078).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Dispatch: a dispatched instance's <code>approval_event_id</code> identifies the
 Dispatch, never the template's approval: a unique value allocated
 with the Dispatch's reservation and retained with the instance, so a
 retry recovers it and reuse of the key after its tombstone expires
-receives a new one (#1017).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+receives a new one (#1017).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">The Mission Issuer selects a dispatched instance's Agent from
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">The Mission Issuer selects a dispatched instance's Agent from
 <code>allowed_recipients</code> <code>agents</code> under the Dispatch Policy, never from
 Dispatcher input: one listed Agent is selected directly, and several
 need the Dispatch Policy's selection rule. The selection is recorded
 at commit, kept on retries, and separate from Dispatcher
-authentication and the token's presenter binding (#970).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+authentication and the token's presenter binding (#970).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1"><code>dispatch_policy</code> is an activation policy reference (<code>id</code>,
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1"><code>dispatch_policy</code> is an activation policy reference (<code>id</code>,
 <code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
 Bases, replacing the <span class="bcp14">SHOULD</span> to commit the policy body. Dispatch
 verifies it as a new step 3 and refuses a mismatch with the new
 <code>dispatch_policy_changed</code> reason; the <code>template</code> lineage member and
-each Dispatch record carry the digest.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">The consumption-bound rationale under Prohibited Classes states
-that dispatch multiplies an instance's bound by <code>max_active</code> and
-<code>dispatch_rate</code>, and that the template consent renders that product
-under the metering profile.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+each Dispatch record carry the digest.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1"><code>allowed_dispatchers</code> lists <code>client_id</code> strings, and
-<code>allowed_recipients</code> is an object of <code>subjects</code> (<code>iss</code> and <code>sub</code>)
-and <code>agents</code> (<code>client_id</code>), each checked separately at Dispatch, so
-any listed Agent may serve any listed Subject.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.5.1">The consumption-bound rationale under Prohibited Classes states
+that dispatch multiplies an instance's bound by <code>max_active</code> and
+<code>dispatch_rate</code>, and that the template consent renders that product
+under the metering profile.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">The dispatch bounds have stated encodings. <code>instance_lifetime</code> and
+          <p id="appendix-A-2.6.1"><code>allowed_dispatchers</code> lists <code>client_id</code> strings, and
+<code>allowed_recipients</code> is an object of <code>subjects</code> (<code>iss</code> and <code>sub</code>)
+and <code>agents</code> (<code>client_id</code>), each checked separately at Dispatch, so
+any listed Agent may serve any listed Subject.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">The dispatch bounds have stated encodings. <code>instance_lifetime</code> and
 <code>review_cadence</code> are positive integer seconds, the latter measured
 from the approval's <code>approved_at</code>; <code>max_active</code> is a positive
 integer; <code>dispatch_rate</code> is a <code>limit</code> of committed instantiations per
 trailing <code>window</code> of seconds, counting neither refused Dispatches nor
-recovered retries; and <code>expires_at</code> is an RFC 3339 date-time.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+recovered retries; and <code>expires_at</code> is an RFC 3339 date-time.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

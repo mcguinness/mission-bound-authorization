@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             5 October 2026
-Expires: 8 April 2027
+Intended status: Experimental                             6 October 2026
+Expires: 9 April 2027
 
 
                      Mission Template for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -105,12 +105,12 @@ Table of Contents
    An agent that runs a recurring task dispatches it many times: once
    per ticket, per document, per scheduled window.  Mission-Bound
    Authorization for OAuth 2.0 [I-D.draft-mcguinness-oauth-mission] (the
-   "issuance profile") commits a Mission's authority at a single human
-   approval event.  Requiring that event at every dispatch does not
-   scale to machine speed, and the alternative, a single standing
-   Mission broad enough to cover every dispatch, over-provisions: the
-   agent holds the full breadth the whole time, and a fresh approval per
-   run is what the deployment was trying to avoid.
+   "issuance profile") commits a Mission's authority at a human approval
+   event.  A fresh human approval at every dispatch does not scale to
+   machine speed, and the alternative, a single standing Mission broad
+   enough to cover every dispatch, over-provisions: the agent holds the
+   full breadth the whole time, and a fresh approval per run is what the
+   deployment was trying to avoid.
 
    This document defines an experimental third option: the Mission
    Template.  A human consents once to a template, which fixes a ceiling
@@ -387,12 +387,14 @@ Table of Contents
 
 5.  Template Consent
 
-   Creating a Mission Template is itself a human approval event under
-   the issuance profile ([I-D.draft-mcguinness-oauth-mission]).  Its
-   consent object is the Mission Template: the human consents to the
-   ceiling, the dispatch policy, the allowed dispatchers and recipients,
-   and the bounds, and the approval commits them under template_hash
-   (Section 4.1), the anchor over the object consented to.
+   Creating a Mission Template is itself a human approval under the
+   issuance profile ([I-D.draft-mcguinness-oauth-mission]).  It creates
+   no Mission, so it is not an approval event: it is the standing
+   consent under which each dispatched instance's approval event is
+   decided.  Its consent object is the Mission Template: the human
+   consents to the ceiling, the dispatch policy, the allowed dispatchers
+   and recipients, and the bounds, and the approval commits them under
+   template_hash (Section 4.1), the anchor over the object consented to.
 
    Where Consent Evidence is claimed, the template-creation approval's
    disclosure is committed as that profile commits any disclosure
@@ -964,9 +966,9 @@ Table of Contents
    *  record a consented Mission Template with the required members and
       commit it under template_hash with typ mission-template
       (Section 4, Section 4.1), and treat template creation as a human
-      approval event whose disclosure renders the ceiling, the no-per-
-      instance-approval fact, and the prohibited-class reservation
-      (Section 5);
+      approval under the issuance profile whose disclosure renders the
+      ceiling, the no-per-instance-approval fact, and the prohibited-
+      class reservation (Section 5);
 
    *  adjudicate a Dispatch in the order of Section 6: authenticate and
       authorize the Dispatcher, derive the instance Authority Set,
@@ -1174,6 +1176,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Template Consent: creating a Mission Template is a human approval
+      that creates no Mission, so it is the standing consent each
+      dispatched instance's approval event is decided under, not an
+      approval event itself (#1078).
 
    *  Dispatch: a dispatched instance's approval_event_id identifies the
       Dispatch, never the template's approval: a unique value allocated

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          5 October 2026
-Expires: 8 April 2027
+Intended status: Standards Track                          6 October 2026
+Expires: 9 April 2027
 
 
                 Mission Derivation Limits for OAuth 2.0
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -425,19 +425,20 @@ Table of Contents
 
 7.  Approval Rendering
 
-   Where an effective derivation_limit is established, the AS MUST
-   render it for consent at the approval event, as context beside the
-   derived Authority Set, in the rendering step of the OAuth binding's
-   approval sequence ([I-D.draft-mcguinness-oauth-mission],
-   Section "Mission Approval").  The rendering shows the established
-   value, not only the requested one.  Where the AS supports the
-   Continuation profile's async delegation transport, the rendering MUST
-   also state that the refreshes of an async delegation family are not
-   counted against the limit (Section 4.3).  Where the Mission Issuer is
-   a Mission Authority Server issuing grants under the Mission Issuance
-   Grant profile, the rendering MUST also state that the limit bounds
-   the grants it issues, not the tokens consuming Authorization Servers
-   issue from them (Section 4.5).
+   Where an effective derivation_limit is established at a human
+   approval event, the AS MUST render it for consent at that event, as
+   context beside the derived Authority Set, in the rendering step of
+   the OAuth binding's approval sequence
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission Approval").
+   The rendering shows the established value, not only the requested
+   one.  Where the AS supports the Continuation profile's async
+   delegation transport, the rendering MUST also state that the
+   refreshes of an async delegation family are not counted against the
+   limit (Section 4.3).  Where the Mission Issuer is a Mission Authority
+   Server issuing grants under the Mission Issuance Grant profile, the
+   rendering MUST also state that the limit bounds the grants it issues,
+   not the tokens consuming Authorization Servers issue from them
+   (Section 4.5).
 
    The rendered limit is one Mission's local bound (Section 9.4).  Where
    a deployment runs child delegation, that profile states what an
@@ -695,6 +696,10 @@ Appendix B.  Document History
    [[ To be removed from the final specification ]]
 
    -00
+
+   *  Approval Rendering applies where the limit is established at a
+      human approval event; a policy-adjudicated instance has no consent
+      rendering (#1078).
 
    *  What Counts states that a child-creation token exchange is not
       counted against the Parent Mission's limit, and that the child's

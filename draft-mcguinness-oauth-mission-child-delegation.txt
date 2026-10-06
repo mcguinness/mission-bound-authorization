@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          5 October 2026
-Expires: 8 April 2027
+Intended status: Standards Track                          6 October 2026
+Expires: 9 April 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -608,7 +608,7 @@ Table of Contents
            |                        | ----- access token -->|
 
    The completion in step 2 is deployment-specific (Section 5.4).  A
-   deployment MAY require a fresh approval event for Child Mission
+   deployment MAY require a fresh human approval for Child Mission
    creation, completing via the deferred token response or the
    interactive approval, or MAY allow policy to approve child creation
    synchronously when the parent Mission's Authority Set explicitly
@@ -2377,6 +2377,10 @@ Appendix A.  Experimental Consumer-Verified Cascade Modes
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Completion: a deployment can require a fresh human approval for
+      child creation; every child creation, human or policy-adjudicated,
+      is the Child Mission's approval event (#1078).
 
    *  Mission Record Requirements: under policy_drawdown the record's
       approval_event_id is the creation's activation_event_id, never the

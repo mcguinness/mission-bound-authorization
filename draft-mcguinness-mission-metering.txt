@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             5 October 2026
-Expires: 8 April 2027
+Intended status: Experimental                             6 October 2026
+Expires: 9 April 2027
 
 
                       Mission Consumption Metering
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 April 2027.
+   This Internet-Draft will expire on 9 April 2027.
 
 Copyright Notice
 
@@ -1209,8 +1209,9 @@ Table of Contents
 
    A Mission Issuer in a deployment claiming this profile MUST carry the
    consented bounds on the Mission record committed by intent_hash.  It
-   MUST render them at the approval event per Section 6.1, and MUST
-   apply the child-creation, successor, and template rules of Section 9.
+   MUST render them at each human approval, including a standing consent
+   such as a Mission Template's consent, per Section 6.1, and MUST apply
+   the child-creation, successor, and template rules of Section 9.
 
 14.  Security Considerations
 
@@ -1395,6 +1396,10 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Conformance: the consented bounds are rendered at each human
+      approval, including a standing consent such as a Mission
+      Template's consent (#1078).
 
    *  Exclusivity Across Missions (Section 8.1): an exclusivity group is
       one shared latch across the delegation (children, descendants,
