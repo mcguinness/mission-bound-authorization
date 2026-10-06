@@ -1169,7 +1169,7 @@ scope, exactly as a companion-registered extension operation such as
 `discharge` does
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
-## Authorization
+## Authorization {#lifecycle-authorization}
 
 This section governs `revoke`, `suspend`, `resume`, and `complete`; a
 companion-registered extension operation such as `discharge` has its
@@ -1222,6 +1222,19 @@ the containment a `suspend` established, a deployment SHOULD require a
 distinct or elevated authorization for `resume`, mirroring the
 treatment of bulk `resume` in Mission Management
 ({{I-D.draft-mcguinness-oauth-mission-management}}).
+
+A `suspend` whose `on_expiry` is `resume` schedules a later `resume`.
+The AS MUST authorize it against both the caller's authorization for
+`suspend` and the authorization the deployment requires for a direct
+`resume` of that Mission, including when it sets or replaces the
+schedule of a Mission already `suspended`, whoever suspended it. The
+AS checks both before any change and refuses a caller lacking either
+as an unauthorized lifecycle request (below), leaving the Mission's
+state and schedule unchanged. A `suspend` whose `on_expiry` is
+`revoke` needs only the authorization for `suspend`.
+
+The AS MUST record with each committed schedule the acting party that
+committed it; an authorized replacement records its own.
 
 The AS MUST refuse an unauthorized lifecycle request with the
 not-found response shape of {{mission-status-errors}}, so the endpoint
