@@ -16,11 +16,16 @@ import {
   MissionKernel,
 } from "@mission/authorization-server";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
-import { type EvaluationRequest, evaluate as evaluateRequest, type Fga, type MissionView } from "@mission/pdp";
+import {
+  type EvaluationRequest,
+  evaluate as evaluateRequest,
+  type Fga,
+  type MissionView,
+} from "@mission/pdp";
 import { exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
-import { MissionSignalEmitter, MissionSignalReceiver, signLifecycleEvent } from "../src/index.js";
 import { withCredential } from "../../../services/pdp/test/with-credential.js";
+import { MissionSignalEmitter, MissionSignalReceiver, signLifecycleEvent } from "../src/index.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.

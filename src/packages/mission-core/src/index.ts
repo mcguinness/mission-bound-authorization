@@ -104,9 +104,9 @@ export {
   type CredentialTarget,
   coveringCredentialEntries,
   credentialAuthorityPermits,
-  entryCoversFacts,
   credentialEntriesFromAatTools,
   credentialEntriesFromAuthority,
+  entryCoversFacts,
   parseCredentialAuthority,
 } from "./credential-authority.js";
 export {
