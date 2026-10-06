@@ -216,8 +216,13 @@ export class Fga {
       throw new FgaAttachError(`cannot read model ${cfg.authorizationModelId} in store ${cfg.storeId}: ${e instanceof Error ? e.message : String(e)}`);
     }
     if (!model) throw new FgaAttachError(`model ${cfg.authorizationModelId} not found in store ${cfg.storeId}`);
-    if (modelFingerprint(model) !== modelFingerprint(DOMAIN_MODEL)) {
-      throw new FgaAttachError(`model ${cfg.authorizationModelId} is not the expected domain model`);
+    const observed = modelFingerprint(model);
+    const expected = modelFingerprint(DOMAIN_MODEL);
+    if (observed !== expected) {
+      // Both fingerprints, so a mismatch is diagnosable from a log line.
+      throw new FgaAttachError(
+        `model ${cfg.authorizationModelId} is not the expected domain model (expected ${expected.slice(0, 2000)}, observed ${observed.slice(0, 2000)})`,
+      );
     }
     return new Fga(client, cfg.authorizationModelId, cfg.storeId);
   }

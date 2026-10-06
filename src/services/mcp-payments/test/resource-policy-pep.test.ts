@@ -236,7 +236,8 @@ d("the deployment's OpenFGA Resource policy at the resource (@spec runtime#input
         expect(x.records().filter((e) => e.kind === "decision").at(-1)?.content, mode).toMatchObject({ decision: "deny", denial_reason: "resource_policy" });
         await admin.grant([entitlement]);
         expect((await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN)).ok, mode).toBe(true);
-        expect(x.records().filter((e) => e.kind === "execution"), mode).toHaveLength(2);
+        expect(x.records().filter((e) => e.kind === "decision").map((e) => (e.content as { decision: string }).decision), mode)
+          .toEqual(["permit", "deny", "permit"]);
       } finally {
         await x.channel.close();
         x.payments.db.close();
