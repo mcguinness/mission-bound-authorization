@@ -4415,12 +4415,10 @@ the `act` chain ({{delegation}}) or the Mission's originally-approved
 agent, which is recorded in the Mission Record ({{mission-record}}), not
 in `client_id`.
 
-{{rs-enforcement}} forbids a Resource Server to infer the approved agent
-from `client_id`, and forbids routing a delegated token to a component
-that authorizes or logs on `client_id` without processing the `act`
-chain. An existing component that authorizes or logs solely from
-`client_id` needs review for this gap before it receives delegated
-Mission-bound tokens.
+An existing component that authorizes or logs solely from `client_id`
+needs review for this gap before it receives delegated Mission-bound
+tokens; {{rs-enforcement}} states what a Resource Server may not infer
+or route on `client_id`.
 
 ### Signing and Key Rotation {#key-rotation}
 
