@@ -4308,24 +4308,11 @@ individual runtime actions. In particular, it does not:
 - re-evaluate at execution time to close the approval-to-execution
   (time-of-check to time-of-use) gap.
 
-Run alone, this document bounds authority at issuance ({{subset}},
-{{scope-projection}}, {{issuance-gating}}). A Resource Server need not
-be Mission-aware unless it receives delegated tokens
-({{rs-enforcement}}). Which party enforces each Mission-carried bound
-is summarized in the enforcement table ({{rs-enforcement}}).
-
 Within a token's lifetime, an agent exercises the token's authority
 without a check of each action against the Mission, so an active Mission
 can become ambient authority for individual consequential actions. Short
 token lifetimes and narrow authority bound this exposure but do not
 eliminate it.
-
-On the stateless path, an outstanding token also stays usable until it
-expires after its Mission leaves `active`. Introspection
-({{introspection}}) shortens that cutoff without a runtime layer: its
-composite result is `active: false` once the Mission is no longer
-`active` ({{composite-active}}), so a Resource Server that introspects
-per request stops honoring the token at its next request.
 
 A runtime layer ({{I-D.draft-mcguinness-mission-runtime}}),
 outside the scope of this document, evaluates each consequential action
