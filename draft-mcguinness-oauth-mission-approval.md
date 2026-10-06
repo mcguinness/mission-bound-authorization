@@ -256,13 +256,16 @@ profile's unredeemed-code rule, when the client never polls and the
 The issuance profile runs the approval event as the OAuth
 authorization-code flow initiated from the PAR-issued `request_uri`,
 in ordered steps: authenticate the Approver, establish the Subject,
-render the derived Authority Set for consent, compute the integrity
-anchors, and create the Mission record atomically with issuance of the
-authorization code ({{I-D.draft-mcguinness-oauth-mission}}). Under
+establish the authority source, establish the effective expiry, render
+the derived Authority Set for consent, compute the integrity anchors,
+and create the Mission record atomically with issuance of the
+authorization code, rechecking the effective expiry at that commit
+({{I-D.draft-mcguinness-oauth-mission}}). Under
 deferral those steps divide between the front channel and the review
 surface:
 
-- Authenticating the Approver, establishing the Subject, rendering for
+- Authenticating the Approver, establishing the Subject and the
+  authority source, establishing the effective expiry, rendering for
   consent, and computing the integrity anchors all move to the
   asynchronous review surface and execute at the approval event
   ({{deferred-sequencing}}).
@@ -280,8 +283,8 @@ surface:
   channel; the AS MUST NOT take the Subject from unauthenticated client
   input ({{I-D.draft-mcguinness-oauth-mission}}).
 - Creating the Mission record, the final step, executes atomically with
-  the approval decision rather than with the code
-  ({{deferred-sequencing}}).
+  the approval decision rather than with the code, with its
+  effective-expiry recheck ({{deferred-sequencing}}).
 
 ## Deferred Approval State Machine {#state-machine}
 
