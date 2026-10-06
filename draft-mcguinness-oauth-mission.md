@@ -4266,8 +4266,9 @@ this document does not define.
 ### Authority Does Not Propagate With Information {#information-propagation}
 
 Issuance gating bounds escalation by token acquisition ({{lifecycle}},
-{{subset}}): an agent cannot exceed the approved task by acquiring
-additional tokens. The same bound holds for information: an agent can
+{{subset}}): an agent cannot exceed the approved Authority Set by
+acquiring additional tokens. The same bound holds for information: an
+agent can
 inherit another agent's knowledge, but not its authority.
 
 A work product produced under one Mission, such as a file, message,
