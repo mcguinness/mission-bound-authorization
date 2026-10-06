@@ -1425,15 +1425,30 @@ dispatched Template instance's
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>), and an Expansion
 successor's (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>),
 exactly as at direct approval. An established <code>derivation_limit</code> is
-never inherited unchanged from a parent, a template, or a predecessor
-Mission, with one exception: a Child Delegation carryover replacement
-preserves the old child's <code>derivation_limit</code> and derivation count, so
-carryover cannot replenish a derivation budget
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section "No
-State, Authority, Expiry, or Budget Reset"). Otherwise each Mission
-Record's ceiling comes only from its own Intent's
-<code>requested_derivation_limit</code>, clamped by the deployment's policy for
-that Mission.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+never inherited from a parent, a template, or a predecessor Mission,
+with two exceptions, each defined by the profile that creates the
+Mission, so that neither can replenish a derivation budget:<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.2-4.1">
+            <p id="section-3.2-4.1.1">a Child Delegation carryover replacement preserves the old child's
+<code>derivation_limit</code> and derivation count
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section
+"No State, Authority, Expiry, or Budget Reset"); and<a href="#section-3.2-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-4.2">
+            <p id="section-3.2-4.2.1">a policy-adjudicated ceiling-drawdown successor carries forward its
+predecessor's committed derivation count, and its
+<code>derivation_limit</code> never exceeds the predecessor's: a stricter
+policy or requested ceiling narrows it further, and a predecessor
+with no <code>derivation_limit</code> passes on no finite limit
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>, Section
+"In-ceiling expansion").<a href="#section-3.2-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.2-5">Otherwise each Mission Record's ceiling comes only from its own
+Intent's <code>requested_derivation_limit</code>, clamped by the deployment's
+policy for that Mission. A successor created by a fresh human
+approval and each distinct Template dispatch establish theirs afresh.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="record-member">
@@ -1492,7 +1507,10 @@ including one refused for exceeding the bound, <span class="bcp14">MUST NOT</spa
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) is not
 counted against the Parent Mission's limit. The Child Mission's first
 issuance, its redemption of the child's initial grant, is counted
-against the child's own <code>derivation_limit</code>.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+against the child's own <code>derivation_limit</code>. The successor access token
+a ceiling-drawdown response returns is one derivation, counted against
+the successor, never the predecessor
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-4.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="concurrency">
@@ -1953,6 +1971,10 @@ document requests no further registration.<a href="#section-11-4" class="pilcrow
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-template">[I-D.draft-mcguinness-oauth-mission-template]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Template for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html</a>&gt;</span>. </dd>
@@ -2015,35 +2037,41 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 <p id="appendix-B-2">-00<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-3.1">
-          <p id="appendix-B-3.1.1">Approval Rendering applies where the limit is established at a
-human approval event; a policy-adjudicated instance has no consent
-rendering (#1078).<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.1.1">Effective Limit and What Counts: a ceiling-drawdown successor
+carries forward its predecessor's committed derivation count and
+never exceeds its limit, alongside the carryover exception; its
+successor access token counts once, against the successor (#1079).<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.2">
-          <p id="appendix-B-3.2.1">What Counts states that a child-creation token exchange is not
-counted against the Parent Mission's limit, and that the child's
-redemption of its initial grant counts against the child's own
-limit.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.2.1">Approval Rendering applies where the limit is established at a
+human approval event; a policy-adjudicated instance has no consent
+rendering (#1078).<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.3">
-          <p id="appendix-B-3.3.1">Composition Across Missions states that the example's 12
-descendants and 120 derivations count Missions live at once, not a
-lifetime total.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.3.1">What Counts states that a child-creation token exchange is not
+counted against the Parent Mission's limit, and that the child's
+redemption of its initial grant counts against the child's own
+limit.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.4">
-          <p id="appendix-B-3.4.1">Initial version. Carries the derivation limit of Mission-Bound
+          <p id="appendix-B-3.4.1">Composition Across Missions states that the example's 12
+descendants and 120 derivations count Missions live at once, not a
+lifetime total.<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.5">
+          <p id="appendix-B-3.5.1">Initial version. Carries the derivation limit of Mission-Bound
 Authorization for OAuth 2.0 with its wire names and rules unchanged:
 the <code>requested_derivation_limit</code> Intent member, the
 <code>derivation_limit</code> record member, counting and refusal at issuance,
 the <code>derivations_exhausted</code> diagnostic, the <code>derivations_remaining</code>
-introspection member, and approval rendering.<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
+introspection member, and approval rendering.<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.5">
-          <p id="appendix-B-3.5.1">Under the Mission Issuance Grant profile, the Mission Authority
+        <li class="normal" id="appendix-B-3.6">
+          <p id="appendix-B-3.6.1">Under the Mission Issuance Grant profile, the Mission Authority
 Server's committed grant minting is a counted derivation; redemption
 and refresh at a consuming Authorization Server are not, and the
 limit does not cap the tokens they issue; the approval rendering
-states that bound (#963).<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
+states that bound (#963).<a href="#appendix-B-3.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
