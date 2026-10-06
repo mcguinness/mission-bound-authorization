@@ -57,13 +57,18 @@ const VIEW: MissionView = {
 };
 
 let signKey: CryptoKey;
+let rootSignKey: CryptoKey;
 let asJwk: Record<string, unknown>;
 let holder: DpopKeys;
 let holderJkt: string;
 let server: McpPaymentsServer;
 
 /** A signed Mission access token; `header`/`claims` override the conforming defaults, `undefined` removes a claim. */
-async function mint(claims: Record<string, unknown> = {}, header: Record<string, unknown> = {}): Promise<string> {
+async function mint(
+  claims: Record<string, unknown> = {},
+  header: Record<string, unknown> = {},
+  key: CryptoKey = signKey,
+): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const payload: Record<string, unknown> = {
     iss: ISSUER,
@@ -81,7 +86,7 @@ async function mint(claims: Record<string, unknown> = {}, header: Record<string,
   for (const [k, v] of Object.entries(payload)) if (v === undefined) delete payload[k];
   const protectedHeader: Record<string, unknown> = { alg: "ES256", kid: "as-token", typ: "at+jwt", ...header };
   for (const [k, v] of Object.entries(protectedHeader)) if (v === undefined) delete protectedHeader[k];
-  return new SignJWT(payload).setProtectedHeader(protectedHeader as never).sign(signKey);
+  return new SignJWT(payload).setProtectedHeader(protectedHeader as never).sign(key);
 }
 
 async function overHttp(token: string): Promise<TokenFacts> {
@@ -131,13 +136,17 @@ beforeAll(async () => {
   const kp = await generateKeyPair("ES256", { extractable: true });
   signKey = kp.privateKey;
   asJwk = { ...(await exportJWK(kp.publicKey)), kid: "as-token", alg: "ES256" };
+  const root = await generateKeyPair("ES256", { extractable: true });
+  rootSignKey = root.privateKey;
+  const rootJwk = { ...(await exportJWK(root.publicKey)), kid: "as-attenuation", alg: "ES256" };
   holder = await generateKeyPair("ES256", { extractable: true });
   holderJkt = await calculateJwkThumbprint(await exportJWK(holder.publicKey));
   server = new McpPaymentsServer({
     pep: undefined as never, // token validation alone never reaches the PEP
     payments: new PaymentsStore(),
     loadView: () => undefined,
-    jwks: { keys: [asJwk as never] },
+    jwks: { keys: [asJwk as never, rootJwk as never] },
+    keyRoles: { accessToken: ["as-token"], attenuationRoot: ["as-attenuation"], transactionToken: [] },
     issuer: ISSUER,
   });
 });
@@ -189,7 +198,8 @@ describe("the Mission access-token profile is met before any claim is trusted (@
   });
 
   it("refuses an at+jwt presented as an attenuation root", async () => {
-    const token = await mint();
+    // Signed under the root role's key, so the profile's type check is what refuses it.
+    const token = await mint({}, { kid: "as-attenuation" }, rootSignKey);
     await expect(
       server.validateAttenuationChain([token], await dpopProofFor(holder, HTU, HTM, token), HTU, HTM),
     ).rejects.toThrow(/typ must be aat\+jwt/);

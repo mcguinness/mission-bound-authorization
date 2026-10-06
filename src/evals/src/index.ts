@@ -125,6 +125,7 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
     payments,
     loadView: (ref) => loadHarnessView(deps.view, ref),
     jwks: { keys: [] },
+    keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     issuer: "https://as.test",
     transaction: { engine, connectors, evidence },
     writeReservations,

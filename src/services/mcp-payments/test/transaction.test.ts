@@ -194,6 +194,16 @@ function build(
     payments,
     loadView,
     jwks: opts.jwks ?? { keys: [] },
+    // Each class verifies only under its own role's keys (D312): the
+    // transaction key, wherever else it is published, is never an
+    // access-token key.
+    keyRoles: {
+      accessToken: (opts.jwks?.keys ?? [])
+        .map((k) => String(k.kid))
+        .filter((kid) => !(opts.txnTokenJwks?.keys ?? []).some((t) => t.kid === kid)),
+      attenuationRoot: [],
+      transactionToken: (opts.txnTokenJwks?.keys ?? []).map((k) => String(k.kid)),
+    },
     issuer: "https://as.test",
     transaction: { engine, connectors, evidence },
     ...(opts.txnTokenJwks ? { txnTokenJwks: opts.txnTokenJwks } : {}),
@@ -970,11 +980,14 @@ d("M5 transaction-assurance tier", () => {
     const { generateKeyPair, exportJWK, SignJWT } = await import("jose");
     const asTxn = await generateKeyPair("ES256", { extractable: true });
     const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
-    // The resource's ORDINARY credential JWKS is this AS's: a transaction
-    // token's issuer, audience, `cnf` and `mission` claim would all satisfy
-    // ordinary token validation, so its `typ` is the only thing keeping it out.
+    const asToken = await generateKeyPair("ES256", { extractable: true });
+    const asTokenPub = { ...(await exportJWK(asToken.publicKey)), kid: "as-token", alg: "ES256" };
+    // The resource's ORDINARY credential JWKS is this AS's, transaction key
+    // included: a transaction token's issuer, audience, `cnf` and `mission`
+    // claim would all satisfy ordinary token validation. Its `typ` refuses it,
+    // and its key is pinned to the transaction role only (D312).
     const { server, payments } = build({
-      jwks: { keys: [asTxnPub] },
+      jwks: { keys: [asTokenPub, asTxnPub] },
       txnTokenJwks: { keys: [asTxnPub] },
       asIssuer: AS_ISSUER,
       gateRemittance: true,
@@ -992,23 +1005,31 @@ d("M5 transaction-assurance tier", () => {
     // general tool call can be derived from it at all.
     await expect(server.validateMissionToken(txnToken)).rejects.toThrow(/not a Mission-bound access token/);
 
-    // The same claims under an ordinary access token's typ do validate, so the
-    // refusal above is the token's class and nothing incidental.
-    const ordinary = await new SignJWT({
-      sub: "alice",
-      client_id: "ap-agent",
-      cnf: { jkt: TOKEN.cnfJkt },
-      mission: TOKEN.missionClaim,
-      authorization_details: [...ALL_ACTIONS_CREDENTIAL],
-    })
-      .setProtectedHeader({ alg: "ES256", kid: "as-txn", typ: "at+jwt" })
-      .setIssuer(AS_ISSUER)
-      .setAudience(CANONICAL_RESOURCE)
-      .setIssuedAt()
-      .setJti(crypto.randomUUID())
-      .setExpirationTime("5m")
-      .sign(asTxn.privateKey);
-    expect((await server.validateMissionToken(ordinary)).mission.id).toBe("msn_m5");
+    // The same claims as an ordinary access token under the access-token key
+    // do validate, so the refusal above is the token's class and nothing
+    // incidental. Under the transaction key they refuse: that key is trusted
+    // for transaction tokens only (D312).
+    const ordinaryUnder = (kid: string, key: typeof asTxn.privateKey) =>
+      new SignJWT({
+        sub: "alice",
+        client_id: "ap-agent",
+        cnf: { jkt: TOKEN.cnfJkt },
+        mission: TOKEN.missionClaim,
+        authorization_details: [...ALL_ACTIONS_CREDENTIAL],
+      })
+        .setProtectedHeader({ alg: "ES256", kid, typ: "at+jwt" })
+        .setIssuer(AS_ISSUER)
+        .setAudience(CANONICAL_RESOURCE)
+        .setIssuedAt()
+        .setJti(crypto.randomUUID())
+        .setExpirationTime("5m")
+        .sign(key);
+    expect((await server.validateMissionToken(await ordinaryUnder("as-token", asToken.privateKey))).mission.id).toBe(
+      "msn_m5",
+    );
+    await expect(server.validateMissionToken(await ordinaryUnder("as-txn", asTxn.privateKey))).rejects.toThrow(
+      /no applicable key/,
+    );
   });
 
   it("executes once across two replicas sharing a consumption domain, whatever token jti carries the txn", async () => {

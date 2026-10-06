@@ -146,6 +146,7 @@ function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withD
     payments,
     loadView,
     jwks,
+    keyRoles: { accessToken: jwks.keys.map((k) => String(k.kid)), attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
   });
   return { server, evidence };
