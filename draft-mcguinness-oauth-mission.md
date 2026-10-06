@@ -404,7 +404,7 @@ classes whose consequence needs one.
 
 ## Implementation Map {#implementation-map}
 
-The core establishes six properties; {{conformance}} states the
+This document establishes six properties; {{conformance}} states the
 requirements that realize them:
 
 1. The task is disclosed: the approval rendering shows the Intent's
