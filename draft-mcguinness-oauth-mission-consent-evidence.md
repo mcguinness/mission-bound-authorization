@@ -1124,7 +1124,8 @@ than accepted without verification.
 
 # Binding to Mission Approval {#binding-to-mission}
 
-At an approval event, a Consent-Evidence-capable Mission Issuer MUST:
+At a human approval event ({{I-D.draft-mcguinness-oauth-mission}}), a
+Consent-Evidence-capable Mission Issuer MUST:
 
 1. derive the Authority Set and compute `intent_hash`,
    `authority_hash`, and, where an authority proposal was submitted,
@@ -1242,7 +1243,8 @@ reconstructible. A conforming Consent-Evidence-capable Mission Issuer
 MUST:
 
 - construct a Consent Disclosure object, with the required members of
-  {{consent-disclosure}}, for each approval event;
+  {{consent-disclosure}}, for each human approval, including one whose
+  consented object is not a Mission;
 - render within the translation floor ({{intent-translation}});
 - compute `consent_rendering_hash` ({{consent-rendering-hash}});
 - record Consent Evidence for approval and decline decisions, and for
@@ -1708,6 +1710,10 @@ encoding difference to resolve before interoperating.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Binding to Mission Approval and the conformance floor apply at each
+  human approval: a Mission instance activated by policy under a
+  standing consent has no disclosure of its own (#1078).
 
 - Defined and registered the `mission_shaping_evidence_hash` request
   parameter, which carries a client-supplied `shaping_evidence_hash`

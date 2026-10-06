@@ -518,8 +518,10 @@ Subject:
   (`iss`, `sub`) pair and carried in derived tokens' `sub` claim.
 
 Approver:
-: The single accountable principal who approves the Mission at the
-  approval event. Equal to the Subject for self-approval; different
+: The single accountable principal who approves the Mission: at its
+  direct approval event or, under a standing-consent basis, through
+  the earlier standing consent ({{standing-consent-bases}}). Equal to
+  the Subject for self-approval; different
   for administrator or delegated approval. This document records one
   accountable Approver; multi-party approval and the provenance of
   delegated approval authority are deferred ({{multi-party-approval}}).
@@ -1430,10 +1432,20 @@ mapping is specified in
 
 # Mission Approval {#approval-event}
 
-The approval event is the atomic transition at which the Approver
-consents and the AS creates the Mission. It runs as an OAuth 2.0
-{{RFC6749}} authorization-code flow initiated from the PAR-issued
-`request_uri` ({{submission-via-par}}). Because the authorization code
+The approval event is the atomic, adjudicated transition that creates
+a Mission under its approval basis (`approval_basis`,
+{{mission-record}}). Every Mission is created at its own approval
+event, which the record's `approval_event_id` identifies. A `direct`
+approval event includes the Approver's contemporaneous consent: it is
+a human approval event. Under a standing-consent basis
+({{standing-consent-bases}}), the instance is decided under an
+accountable human's earlier approval, with no fresh human approval.
+The approval basis and its adjudication semantics, not the event
+alone, establish whether a human decided at that instant.
+
+The direct realization runs as an OAuth 2.0 {{RFC6749}}
+authorization-code flow initiated from the PAR-issued `request_uri`
+({{submission-via-par}}). Because the authorization code
 is the artifact the Mission grant binds to ({{grant-binding}}) and it
 passes through the front channel, the AS MUST bind the code to the
 requesting client with PKCE ({{RFC7636}}, `S256` challenge method)
@@ -1446,7 +1458,7 @@ The AS SHOULD include the `iss` authorization-response parameter
 ({{RFC9207}}) on the authorization response, so the client can detect
 a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
 
-At the approval event the AS MUST, in order:
+At a direct approval event the AS MUST, in order:
 
 1. Authenticate the Approver, subject to the approval-authentication
    floor and any client-requested strength
@@ -1533,9 +1545,20 @@ The `authority_hash` is the **authority commitment**: it commits, by
 cryptographic digest, exactly the authority the Approver approved.
 
 Every Mission is rooted in an approved authorization basis
-(`approval_basis`, {{mission-record}}); the steps above define the
-`direct` basis, and {{mission-record}} states the rules for it and
-for a standing-consent basis a companion profile defines.
+(`approval_basis`, {{mission-record}}). The steps above define the
+`direct` basis; a companion profile that relocates a direct approval
+keeps them unchanged ({{extensibility}}). Under a standing-consent
+basis ({{standing-consent-bases}}), the standing consent and the
+instance's adjudication supply the human decision: the Approver's
+authentication (step 1), the Approver's authorization for the Subject
+and the authority source (steps 2 and 3), and the consent rendering
+(step 5). The other creation rules still bind the instance's approval
+event wherever they apply: the Subject is never taken from
+unauthenticated client input and is mapped injectively (step 2), the
+authority source and its ceiling ({{authority-sources}}), the
+effective expiry and its creation-commit check (steps 4 and 7), the
+integrity anchors (step 6), and atomic creation deduplicated on
+`approval_event_id` ({{mission-record}}).
 
 Refusals follow {{error-mapping}}. A token-endpoint `resource` value
 outside the Authority Set is an invalid `resource` value in the sense
@@ -1626,8 +1649,8 @@ organizational policy with a named accountable owner
 draws on, recorded immutably as the Mission's `authority_source`;
 `approval_basis` records how drawing on it was activated
 ({{mission-record}}), and the two compose: any source may activate
-through a `direct` approval event or through a standing-consent basis
-a companion defines. Approval activates authority the source already
+under the `direct` basis or a standing-consent basis a companion
+defines. Approval activates authority the source already
 holds and manufactures none: the AS establishes the source and
 verifies the derived Authority Set against it before approval
 ({{approval-event}}).
@@ -1733,9 +1756,9 @@ Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}}). The
 AS alone establishes and resolves a binding; a client never supplies
 or negotiates one.
 
-At the approval event the AS binds the Mission to the authorization
-code it issues. The binding is server-side and is what "the
-referenced Mission" in {{lifecycle}} refers to. The code itself
+At a direct approval event the AS binds the Mission to the
+authorization code it issues. The binding is server-side and is what
+"the referenced Mission" in {{lifecycle}} refers to. The code itself
 carries no refresh-token family: only a successful redemption
 produces one, and where it does, the resulting refresh-token family
 inherits the code's binding atomically with its issuance, extending
@@ -2138,8 +2161,9 @@ plus a declared post-expiry period. A deployment retains a terminal
 
 A companion profile can generalize approval to a named standing-consent
 basis, under which a template or policy activates Mission instances
-against an accountable human's earlier approval, with no fresh approval
-event per instance. The `type` values `template`
+against an accountable human's earlier approval, with no fresh human
+approval per instance; each instance is still created at its own
+approval event ({{approval-event}}). The `type` values `template`
 ({{I-D.draft-mcguinness-oauth-mission-template}}), `policy_drawdown`
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and
 `ceiling_drawdown` ({{I-D.draft-mcguinness-oauth-mission-progressive}})
@@ -2160,12 +2184,13 @@ deactivate the Mission.
 
 A companion profile defining a standing-consent `type` MUST make its
 `consent_principal` and `root_commitment` trace to an accountable
-human's approval of the named standing consent, with no fresh approval
-event per instance, MUST carry that approval's instant as
+human's approval of the named standing consent, with no fresh human
+approval per instance, MUST carry that approval's instant as
 `approved_at`, and MUST state what the record's `approval_event_id`
-carries for an instance it activates. That value identifies the
-activation event, never the standing approval, so a retried activation
-deduplicates and each distinct activation creates its own Mission.
+carries for an instance it activates. That value identifies this
+instance's approval event, never the standing approval, so a retried
+activation deduplicates and each distinct activation creates its own
+Mission.
 
 `approved_at`:
 : REQUIRED for every standing-consent `type`. An RFC 3339 date-time: the
@@ -5752,7 +5777,7 @@ resolve before interoperating.
 
 # OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-substrate-digest: dbcbb50fd1a96f25 -->
+<!-- assessed-substrate-digest: 5488bd571ad351f0 -->
 
 This appendix is informative. It is this document's Mapping
 Assessment of itself against the kernel and capabilities of the
@@ -5794,10 +5819,13 @@ For the kernel:
    (`intent_hash`, `proposal_hash`, `authority_hash`); a material
    change obtains a new approval through an expansion successor.
 5. The approval ceremony is this document's approval event
-   ({{approval-event}}): authenticated Approver, established Subject
-   and authority source, rendering of the derived Authority Set and
-   the effective expiry, and atomic record commit, with deferred,
-   interactive, and dispatch realizations.
+   ({{approval-event}}). Its direct realization, interactive or
+   deferred, authenticates the Approver, establishes the Subject and
+   authority source, renders the derived Authority Set and the
+   effective expiry, and commits the record atomically. Under a
+   standing-consent basis, such as a dispatch, the authorized policy
+   ceremony decides the instance, and `consent_principal` remains the
+   accountable owner ({{standing-consent-bases}}).
 6. The active predicate is stored `state` equal to `active` with
    the decision time strictly before the record's effective
    `expires_at`, the issuer materializing the resulting `expired`
@@ -5887,6 +5915,18 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Mission Approval: the approval event is the atomic, adjudicated
+  transition that creates a Mission under its approval basis, for
+  every basis. The authorization-code flow and its steps are the
+  direct realization; a standing-consent basis supplies the human
+  decision from the standing consent and the instance's adjudication,
+  and the other creation rules still bind its approval event.
+  Standing-Consent Bases says no fresh human approval per instance,
+  and an instance's `approval_event_id` identifies this instance's
+  approval event. The Mapping Assessment's approval-ceremony item
+  separates the direct realization from a standing-consent basis
+  (#1078).
 
 - Standing-Consent Bases: a companion profile defining a
   standing-consent type states what the record's `approval_event_id`

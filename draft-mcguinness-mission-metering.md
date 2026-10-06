@@ -1189,7 +1189,8 @@ A runtime deployment that claims this profile MUST:
 
 A Mission Issuer in a deployment claiming this profile MUST carry the
 consented bounds on the Mission record committed by `intent_hash`. It
-MUST render them at the approval event per {{consent}}, and MUST apply
+MUST render them at each human approval, including a standing consent
+such as a Mission Template's consent, per {{consent}}, and MUST apply
 the child-creation, successor, and template rules of
 {{capacity-across-missions}}.
 
@@ -1280,6 +1281,10 @@ this registry.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Conformance: the consented bounds are rendered at each human
+  approval, including a standing consent such as a Mission Template's
+  consent (#1078).
 
 - Exclusivity Across Missions ({{exclusivity-across-missions}}): an
   exclusivity group is one shared latch across the delegation (children,
