@@ -725,10 +725,13 @@ Table of Contents
    or any other record of Mission authority, for authority.  A condition
    on that entry that the PDP cannot establish from its own state does
    not permit, and an action-approval requirement on it applies as one
-   on the matched Mission entry does (Section 6.11).  An action outside
-   authority is denied out_of_authority.  A request whose authority is
-   absent, or carries an entry the PDP cannot evaluate in full, is
-   denied credential_invalid: the PDP MUST NOT fall back to the
+   on the matched Mission entry does (Section 6.11).  An action that no
+   entry of authority names by resource and action is denied
+   out_of_authority.  An action that entries name, but whose parameters
+   violate a constraint on each of them, is denied parameter_violation,
+   as on the matched Mission entry (Section 7.5).  A request whose
+   authority is absent, or carries an entry the PDP cannot evaluate in
+   full, is denied credential_invalid: the PDP MUST NOT fall back to the
    Mission's authority.
 
 6.5.  Action Parameters and Parameter Digest
@@ -2293,12 +2296,21 @@ Table of Contents
    |cannot evaluate in   |           |                                 |
    |full                 |           |                                 |
    +---------------------+-----------+---------------------------------+
-   |Action outside the   |PDP denial |out_of_authority                 |
+   |No entry of the      |PDP denial |out_of_authority                 |
    |presented            |           |                                 |
    |credential's own     |           |                                 |
-   |authority,           |           |                                 |
-   |established by the   |           |                                 |
-   |PDP                  |           |                                 |
+   |authority names the  |           |                                 |
+   |action's resource and|           |                                 |
+   |action, established  |           |                                 |
+   |by the PDP           |           |                                 |
+   +---------------------+-----------+---------------------------------+
+   |Entries of the       |PDP denial |parameter_violation              |
+   |presented            |           |                                 |
+   |credential's own     |           |                                 |
+   |authority name the   |           |                                 |
+   |action, but its      |           |                                 |
+   |parameters violate a |           |                                 |
+   |constraint on each   |           |                                 |
    +---------------------+-----------+---------------------------------+
    |Parameter constraint |PDP denial |parameter_violation              |
    |violated, PDP digest |           |                                 |
@@ -3161,7 +3173,9 @@ Appendix A.  Document History
       own authorization_details, on every decision; the PDP enforces it
       as the credential authority bound, independently of the matched
       Mission entry, and denies credential_invalid when it is absent or
-      not evaluable (#825).
+      not evaluable (#825).  An action no credential entry names is
+      out_of_authority; one whose parameters violate a constraint on
+      every entry that names it is parameter_violation.
 
    *  The RAR remediation grain cites the working-group successor draft-
       ietf-oauth-rar-metadata-remediation and defers its routing to the
