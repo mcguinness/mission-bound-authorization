@@ -803,11 +803,15 @@ narrowed `scope`. It has the following members:
 : OPTIONAL. A string. A URI identifying the purpose of the
   task, recorded for disclosure and audit. Its semantics are
   deployment- or registry-defined and opaque to this document. It is
-  an opaque lookup key: a configured mapping can key on it
-  ({{authorization-derivation}}), and the derived set stays bounded
-  by the Intent and by policy like any derivation. Other than as that
-  lookup key, `purpose` MUST NOT affect the derived Authority Set or
-  any issuance decision; once the Mission is approved it is inert.
+  an opaque lookup key: a configured mapping can key on it to select
+  candidate entries, which the Intent, policy, and the approval event
+  bound like any derivation ({{authorization-derivation}}); the key
+  alone grants no authority. In any other decision, `purpose` MAY
+  contribute only to a refusal or to stricter treatment: its value,
+  its absence, or a substituted value MUST NOT supply, widen, relax,
+  or refresh authority, or replace a check that applies independently
+  of it. After approval, the `purpose` consulted is the approved
+  Mission's, or a validated projection of it.
 
 `expires_at`:
 : REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time: the
@@ -4247,9 +4251,10 @@ resources the approved task needs, and per-task Missions
 
 Against the untrusted-content leg, it contributes one thing:
 `success_criteria` is inert, granting, widening, and gating no
-authority, `purpose` shapes authority only as a lookup key of the
-pre-approval derivation whose result the Approver reads and consents to,
-and `goal` bounds it only through that disclosure
+authority, `purpose` supplies candidate authority only as a lookup key
+of the pre-approval derivation whose result the Approver reads and
+consents to and otherwise can only refuse or tighten, and `goal`
+bounds it only through that disclosure
 ({{mission-intent}}, {{authorization-derivation}}). Authority is fixed
 at the approval event, so injected text cannot expand an approved
 Mission.
@@ -5922,6 +5927,15 @@ Cross-Domain:
   the reference (#1086). The Implementation Map says "this
   document" rather than "the core" (#1089). No requirement
   changed.
+
+- Mission Intent: `purpose` stays the configured-mapping lookup key,
+  whose candidates the Intent, policy, and the approval event bound;
+  in any other decision it can contribute only to a refusal or to
+  stricter treatment, never supplying, widening, relaxing, or
+  refreshing authority or replacing an independent check, and
+  after approval the approved Mission's value is the one consulted.
+  This replaces the rule that `purpose` affects no other issuance
+  decision and is inert after approval (#1102).
 
 - Mission Approval: the approval event is the atomic, adjudicated
   transition that creates a Mission under its approval basis, for
