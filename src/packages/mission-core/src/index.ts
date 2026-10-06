@@ -100,8 +100,11 @@ export {
 export {
   type CredentialAuthorityEntry,
   CredentialAuthorityError,
+  type CredentialFacts,
   type CredentialTarget,
+  coveringCredentialEntries,
   credentialAuthorityPermits,
+  entryCoversFacts,
   credentialEntriesFromAatTools,
   credentialEntriesFromAuthority,
   parseCredentialAuthority,

@@ -233,23 +233,52 @@ export interface CredentialTarget {
   approvalEnforced: boolean;
 }
 
-function entryPermits(entry: CredentialAuthorityEntry, target: CredentialTarget): boolean {
-  if (entry.resource !== target.resource || !entry.actions.includes(target.action)) return false;
+/** The facts about an action an enforcement point establishes by itself. */
+export type CredentialFacts = Omit<CredentialTarget, "approvalEnforced">;
+
+/**
+ * Whether an entry covers the action on the facts an enforcement point
+ * establishes by itself: resource, action, every vendor reached and the
+ * amount. The entry's discharge condition and approval requirement are not
+ * judged here: they turn on Mission state and approvals the PDP holds, so a
+ * PEP refuses only what these facts already rule out and the PDP decides the
+ * rest (@spec runtime#input-authority, D312).
+ */
+export function entryCoversFacts(entry: CredentialAuthorityEntry, facts: CredentialFacts): boolean {
+  if (entry.resource !== facts.resource || !entry.actions.includes(facts.action)) return false;
   const c = entry.constraints;
   if (!c) return true;
-  // A discharge condition is evaluated against Mission state this credential
-  // check does not hold, so an entry carrying one cannot be shown undischarged.
-  if (c.terminal_when !== undefined && c.terminal_when.length > 0) return false;
-  if (c.requires_action_approval === true && !target.approvalEnforced) return false;
   if (c.vendors !== undefined) {
-    if (target.vendorIds.length === 0) return false;
-    if (!target.vendorIds.every((v) => c.vendors?.includes(v))) return false;
+    if (facts.vendorIds.length === 0) return false;
+    if (!facts.vendorIds.every((v) => c.vendors?.includes(v))) return false;
   }
   if (c.max_amount !== undefined) {
-    const amt = target.amount;
+    const amt = facts.amount;
     if (!amt || amt.currency !== c.max_amount.currency || !isValidAmount(amt.amount)) return false;
     if (compareAmounts(amt.amount, c.max_amount.amount) > 0) return false;
   }
+  return true;
+}
+
+/**
+ * The credential entries that cover the action on establishable facts, in
+ * order. Each is a whole-entry candidate; the PDP applies the discharge and
+ * approval conditions of the one it relies on.
+ */
+export function coveringCredentialEntries(
+  entries: readonly CredentialAuthorityEntry[],
+  facts: CredentialFacts,
+): readonly CredentialAuthorityEntry[] {
+  return entries.filter((entry) => entryCoversFacts(entry, facts));
+}
+
+function entryPermits(entry: CredentialAuthorityEntry, target: CredentialTarget): boolean {
+  if (!entryCoversFacts(entry, target)) return false;
+  const c = entry.constraints;
+  // A discharge condition is evaluated against Mission state this check does
+  // not hold, so an entry carrying one cannot be shown undischarged here.
+  if (c?.terminal_when !== undefined && c.terminal_when.length > 0) return false;
+  if (c?.requires_action_approval === true && !target.approvalEnforced) return false;
   return true;
 }
 
