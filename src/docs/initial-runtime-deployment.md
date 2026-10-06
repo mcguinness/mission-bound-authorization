@@ -61,7 +61,7 @@ keeps its own ruling; #820 and #424 stay parked.
 Required, not excluded: token authority (#825) and independently
 administered Resource policy (#828) belong to the adopted policy conjunction.
 Neither is met (§5): token authority is enforced at the PEP but not yet at
-the PDP, and Resource policy is not implemented. Under D284 ruling 4 they are acceptance prerequisites,
+the PDP, and the PDP enforces Resource policy but #828's acceptance is still open. Under D284 ruling 4 they are acceptance prerequisites,
 so this target cannot pass acceptance while either is missing.
 
 ## 2. Dimension contract
@@ -72,7 +72,7 @@ so this target cannot pass acceptance while either is missing.
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude the MAS route on this target: #1105 (#818 owns MAS; #956 Q2 its declaration in the shared demo) |
 | Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1095`) | Partial | `hold_transfer` permit control: #1080. Profile drift (§3): #1106 |
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:665-672`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
-| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP only: an action outside the verified token's own `authorization_details` is refused before the PDP, which does not evaluate it. Independent Resource policy is not implemented (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR 1 merged as #1062; PRs 2a to 2c remain, D312). Resource policy: #828 |
+| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP only: an action outside the verified token's own `authorization_details` is refused before the PDP, which does not evaluate it. Independent Resource policy is enforced by the PDP over stored OpenFGA entitlements; its acceptance is open (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR 1 merged as #1062; PRs 2a to 2c remain, D312). Resource policy: #828 |
 | Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | Emission failures: #1104 |
 | Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain and the PEP write reservations are durable files; every other store is in memory (§7). The declared reconciler is not run | Partial | Reconciliation never runs: #1103. #250, #831 |
 | Claims | Per-action limits only; execution and transaction handling for applicable operations; no aggregate cap, compromise containment or unattended prohibited-class exception | §8 | Partial | §8 |
@@ -185,12 +185,28 @@ PDP-side witness. D312 adopts that carrier and splits the work: 2a key-role
 pinning, 2b the carrier with PDP enforcement and the PEP pre-check redesign,
 2c the issuance audit.
 
-**Independently administered Resource policy:** not implemented. The OpenFGA
-relations admit only `mission` subjects (`services/pdp/src/fga.ts:20-47`) and
-the tuple injected per check mirrors the triple being checked, so the shipped
-model cannot deny independently. A denial, when a stub produces one, is
-`out_of_authority`, indistinguishable from a Mission-authority denial. Owner:
-#828.
+**Independently administered Resource policy:** partial; #828. The decision
+point binds a `ResourcePolicy` that `evaluate()` requires (it throws without
+one, and `createDecisionPoint` refuses construction) and asks after every
+Mission-authority gate, with the verified subject and its issuer, the
+authenticated client, the action and every target, and nothing derived from
+the Mission (step 6b, `services/pdp/src/evaluate.ts`). A refusal denies
+`resource_policy` with Decision Evidence; a policy that cannot answer yields
+no decision, and the PEP refuses `pdp_unreachable`:
+`independent Resource policy in the decision (@spec runtime#input-resource-policy, #828) > truth table: permits only when both Mission authority and Resource policy permit; either refusing denies` and
+`the resource enforces an independent Resource-policy refusal (@spec runtime#input-resource-policy, #828) > a policy refusal of a keyed write leaves no effect: no schedule, no reservation, no ledger entry, no Execution Evidence`.
+The policy is stored OpenFGA entitlements (`authorized_reader`,
+`authorized_payer`) disjoint from the Mission-context relations, read with no
+contextual tuples at `HIGHER_CONSISTENCY` for principals authenticated under
+the stack's issuer ([fga-hygiene.md](fga-hygiene.md)). Its owner is the
+deployment's OpenFGA administrator (`FgaDomainAdmin`). `composeStack` attaches
+to a configured store and model, or, as a development operation, bootstraps
+one and provisions `config/seed/resource-policy.json`:
+[FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > a stored entitlement permits; an external revocation of only that entitlement denies resource_policy on the next decision with signed evidence; restoring it permits`.
+Remaining under #828: the live witnesses run only in CI; no policy requires
+a client; `lookup_vendor` and an unconstrained `list_invoices` name no
+enumerable target, so the policy refuses them; the payments Operation Profile
+and the Enforcement Scope Statement do not yet declare the policy.
 
 Deployment-administered gates that do exist: the action-bound approval for
 `payments:remittance.send` (§3), the action-to-relation map (`out_of_authority`,
@@ -340,7 +356,7 @@ The pack cannot pass while #825 or #828 is unmet (§1).
 |---|---|---|
 | Valid request | [FGA] `M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded` | not on the assembled path |
 | Narrowed token | at the PEP only: `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > narrows by vendor independently of the Mission` | no PDP-side witness and not on the assembled path; #825 PR 2b; required, blocks acceptance |
-| Independent policy revocation | a stubbed policy only: `finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result` | #828; required, blocks acceptance |
+| Independent policy revocation | [FGA] `the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > revoking only the stored entitlement refuses the next read resource_policy with no result; restoring it permits, the same over both channels` | not on the assembled path; #828; required, blocks acceptance |
 | Stale or non-active Mission at admission and at each fresh commit-phase decision | the §4 refusal table; `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare` | not on the assembled path |
 | Run to completion after an earlier valid permit | none | no test yet that an admitted action completes only inside its permit and lease bounds and that the next decision refuses; no instantaneous revocation is implied (§4) |
 | Parameter digest mismatch | [FGA] `M4 core enforcement tier > scenario 3: TOCTOU -- invoice mutated between decision and execute -> parameter_mismatch refusal` | |

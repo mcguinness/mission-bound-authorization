@@ -819,7 +819,7 @@ Mission-bound token through the assembled path (#1105).
 | Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
 | Credential validation | Yes. Credential authority at the PDP is not met: acceptance gate (#825) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport and PEP-level (§5.1) | The PDP neither receives nor evaluates the credential authority (#825 PRs 2a, 2b; D312); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
-| Independent Resource policy | Yes, not met: acceptance gate (#828) | The PDP's OpenFGA check and action-to-relation map (§5.2) | In the decision | None | Nothing durable; the tuple is injected per check | PDP-level, [FGA] (§5.2) | The shipped model cannot deny independently of Mission authority (§5.2) |
+| Independent Resource policy | Yes, not met: acceptance gate (#828) | The decision point's bound `ResourcePolicy`, OpenFGA stored entitlements in `stack.ts` (§5.2) | In the decision | None | Entitlements are stored in OpenFGA; startup attaches or bootstraps a development store (§5.2) | PDP- and PEP-level, [FGA] (§5.2) | Live witnesses CI-only; no client policy; two operations name no enumerable target; not yet declared in the profile or statement (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read and write paths write nothing before the effect; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level, [FGA] (§5.4) | A single-record read re-derives no digest at use; the Operation Profile's intake rules are not implemented (#1106) (§5.4) |
 | Permit redemption | Transaction tier and keyed writes | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction | None; settlement is awaited | Claim and reservation files survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | `hold_transfer` has no permit control (#1080); one redemption per operation key per process (§5.5) |
@@ -886,19 +886,40 @@ Mission-bound token through the assembled path (#1105).
 
 ### 5.2 Independent Resource policy
 
-- **Hook.** After the Mission-authority gates, the PDP asks OpenFGA for the
-  relation `policy.ts:19-31` maps the action to (`fga.ts:20-47`).
-- **Boundary.** In the decision.
+- **Hook.** The decision point's bound `ResourcePolicy`, which `evaluate()`
+  requires and asks at step 6b, after every Mission-authority gate and before
+  the parameter, approval and claim steps. The query is the verified subject
+  and its issuer, the authenticated client, the action and every target, with
+  nothing derived from the Mission. `stack.ts` binds `fgaResourcePolicy`:
+  stored `authorized_reader` and `authorized_payer` entitlements on vendors
+  and invoices, for principals authenticated under the stack's issuer,
+  checked with no contextual tuples at `HIGHER_CONSISTENCY`
+  ([fga-hygiene.md](fga-hygiene.md)). The PEP supplies no policy; the decision
+  point strips one a caller names.
+- **Boundary.** In the decision. A refusal denies `resource_policy`
+  (`next_action: none`) with Decision Evidence. A policy that cannot answer
+  yields no decision (remote: 503), so the PEP refuses `pdp_unreachable`.
 - **Asynchronous work.** None.
-- **Crash and recovery.** Nothing durable. The tuple is injected per check.
+- **Crash and recovery.** Entitlements are stored in OpenFGA, administered
+  through `FgaDomainAdmin`. `composeStack` attaches to a configured store and
+  model, verifying the model and creating nothing, or bootstraps a
+  development store seeded from `config/seed/resource-policy.json`. With the
+  development memory engine, tuples survive a stack restart only while the
+  OpenFGA container runs.
 - **Tests:**
-  - [FGA] `PDP decisions against OpenFGA (@spec authzen) > out-of-authority action -> deny out_of_authority` (PDP-level)
-  - `finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result` (PEP-level, stubbed policy)
-  - `runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority and the Resource-policy/FGA check both permit` (PDP-level)
-- **Required, not met.** The relations admit only `mission` subjects, and the
-  injected tuple mirrors the triple being checked, so the shipped model cannot
-  deny independently. A stubbed denial is `out_of_authority`,
-  indistinguishable from a Mission-authority denial. #828.
+  - `independent Resource policy in the decision (@spec runtime#input-resource-policy, #828) > truth table: permits only when both Mission authority and Resource policy permit; either refusing denies` (PDP-level, named fixtures)
+  - `the resource enforces an independent Resource-policy refusal (@spec runtime#input-resource-policy, #828) > a policy refusal of a keyed write leaves no effect: no schedule, no reservation, no ledger entry, no Execution Evidence` (PEP-level, co-resident and remote)
+  - `the resource enforces an independent Resource-policy refusal (@spec runtime#input-resource-policy, #828) > an unavailable policy refuses pdp_unreachable with no PDP decision attributed and nothing executed, the same over both channels` (PEP-level)
+  - `Fga.attach verifies the configured model and never creates a store (@spec runtime#input-resource-policy, #828) > sends the stored entitlement check with no contextual tuples, pinned to the attached model at higher consistency` (PDP-level, fake OpenFGA endpoint)
+  - [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > a stored entitlement permits; an external revocation of only that entitlement denies resource_policy on the next decision with signed evidence; restoring it permits` (PDP-level)
+  - [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > Mission-context tuples cannot satisfy a stored entitlement: the same tuples that satisfy the Mission relation leave the entitlement unsatisfied, and the model refuses a Mission subject on it` (PDP-level)
+  - [FGA] `the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > revoking only the stored entitlement refuses the next read resource_policy with no result; restoring it permits, the same over both channels` (PEP-level)
+- **Required, not met.** #828 stays an acceptance gate. Its live witnesses
+  run only where OpenFGA does (CI). No policy requires a client.
+  `lookup_vendor` and an unconstrained `list_invoices` name no enumerable
+  target, so the policy refuses them rather than checking the vendors they
+  touch. The payments Operation Profile and the Enforcement Scope Statement
+  do not yet declare the policy, its owner or its freshness.
 
 ### 5.3 Protected state and lifecycle
 
