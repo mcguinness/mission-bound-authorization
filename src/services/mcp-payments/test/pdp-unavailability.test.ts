@@ -25,7 +25,7 @@ async function build(mode: "co-resident" | "remote", override?: DecisionFn) {
   const observe = vi.fn();
   const pep = new Pep({ payments, evidence, fga, modelId: "test", loadView, instanceEpoch: "epoch", decide: override ?? channel.decide, observe });
   const statement = loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: channel.remoteDecisionChannels });
-  const server = new McpPaymentsServer({ pep, payments, loadView, issuer: view.issuer, jwks: { keys: [] }, enforcementScopeStatement: statement });
+  const server = new McpPaymentsServer({ pep, payments, loadView, issuer: view.issuer, jwks: { keys: [] }, keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] }, enforcementScopeStatement: statement });
   const token: TokenFacts = { sub: "alice", clientId: "agent", cnfJkt: "jkt", mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash }, credentialAuthority: ALL_ACTIONS_CREDENTIAL };
   return { point, channel, server, pep, payments, evidence, token, view, observe, getOptions };
 }

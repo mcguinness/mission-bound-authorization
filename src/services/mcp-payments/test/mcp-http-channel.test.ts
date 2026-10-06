@@ -184,6 +184,7 @@ async function build(): Promise<{
     payments,
     loadView,
     jwks: { keys: [pubJwk] },
+    keyRoles: { accessToken: ["mission-key"], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
     transaction: { engine, connectors, evidence },
   });
@@ -573,6 +574,7 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
       payments,
       loadView,
       jwks: { keys: [pubJwk] },
+      keyRoles: { accessToken: ["mission-key"], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
     });
     const channel = await createHttpMcpChannel(server, { masGoverned: true });

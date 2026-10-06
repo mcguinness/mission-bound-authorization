@@ -48,6 +48,7 @@ beforeAll(async () => {
     payments: new PaymentsStore(),
     loadView: () => undefined,
     jwks: { keys: [pubJwk as never] },
+    keyRoles: { accessToken: ["as-key"], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
   });
 });

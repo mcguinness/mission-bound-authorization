@@ -175,6 +175,7 @@ async function harness(o: HarnessOptions = {}) {
     payments,
     loadView,
     jwks: { keys: [] },
+    keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     issuer: "https://as.test",
     transaction: { engine, connectors, evidence },
   });

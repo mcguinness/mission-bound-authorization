@@ -196,6 +196,7 @@ function harness(
     payments,
     loadView,
     jwks: { keys: [] },
+    keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     issuer: "https://as.test",
     transaction: { engine, connectors, evidence },
     writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),

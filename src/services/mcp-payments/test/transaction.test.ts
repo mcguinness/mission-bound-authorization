@@ -194,6 +194,16 @@ function build(
     payments,
     loadView,
     jwks: opts.jwks ?? { keys: [] },
+    // Each class verifies only under its own role's keys (D312): the
+    // transaction key, wherever else it is published, is never an
+    // access-token key.
+    keyRoles: {
+      accessToken: (opts.jwks?.keys ?? [])
+        .map((k) => String(k.kid))
+        .filter((kid) => !(opts.txnTokenJwks?.keys ?? []).some((t) => t.kid === kid)),
+      attenuationRoot: [],
+      transactionToken: (opts.txnTokenJwks?.keys ?? []).map((k) => String(k.kid)),
+    },
     issuer: "https://as.test",
     transaction: { engine, connectors, evidence },
     ...(opts.txnTokenJwks ? { txnTokenJwks: opts.txnTokenJwks } : {}),
@@ -972,7 +982,8 @@ d("M5 transaction-assurance tier", () => {
     const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
     // The resource's ORDINARY credential JWKS is this AS's: a transaction
     // token's issuer, audience, `cnf` and `mission` claim would all satisfy
-    // ordinary token validation, so its `typ` is the only thing keeping it out.
+    // ordinary token validation. Its key is pinned to the transaction role
+    // only (D312), and its `typ` refuses it besides.
     const { server, payments } = build({
       jwks: { keys: [asTxnPub] },
       txnTokenJwks: { keys: [asTxnPub] },
