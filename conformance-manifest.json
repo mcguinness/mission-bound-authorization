@@ -13810,7 +13810,7 @@
     "normative": "a reversible consequential write's permit carries either a single-use decision identifier or a short validity window plus an idempotency key"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
@@ -13835,9 +13835,21 @@
      "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the permit never outlives its reservation's retention (@spec runtime#permit-binding, #1028 review) > with a 30 s permit maximum and a 60 s retention, the original permit replayed after the record expired is refused permit_expired and nothing executes",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "a reversible write that elects no key control defaults to single use (@spec runtime#permit-binding, #1080) > the prepare-phase hold (payments:payment.execute, no key control) is permitted with use_limit: 1, with or without a key, and no claim; a keyed write carries none; a class-wide key control removes the default",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > at the resource operation, the hold_transfer permit carries use_limit: 1, and the keyed writes keep the key control with no use_limit",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Partial (#918). Witnessed for the reversible writes the statement declares under the idempotency-key control (schedule_payment, cancel_scheduled_payment): the PDP refuses a request carrying no well-formed idempotency_key parameter_violation, and permits a keyed one with the short validity window and no use_limit, making no claim; the window is the operation's published permit_validity_max_seconds, which caps valid_until (30 s under a 30 s maximum, 300 s as shipped; #1028 review), so a permit replayed after its reservation's shorter-than-retention record expired is refused permit_expired and executes nothing; the PEP reserves the key (runtime.idempotency.reversible-write-pep-reserve-and-retain). Not witnessed: hold_transfer, the prepare phase of payments:payment.execute, is a consequential_write since #1015 and its permit carries neither control (no use_limit and no key), so the row's observation does not hold for every reversible consequential write the deployment serves. The cited tests are unit-level PDP tests; no endpoint-level mapping at the resource operation is cited."
+   "notes": "Tested (#918, #1080). Every reversible consequential write the deployment serves is witnessed at the resource operation: hold_transfer, the prepare phase of payments:payment.execute, elects no key control and its permit carries use_limit: 1, the PDP's single-use default for a consequential_write that no key-control declaration covers (D317); schedule_payment and cancel_scheduled_payment elect the idempotency-key control, a keyless request is refused parameter_violation, and a keyed one is permitted under the short validity window (at most the published permit_validity_max_seconds, 300 s as shipped, 30 s under a 30 s maximum; #1028 review) with no use_limit and no claim. The PDP-level tests show the default follows the declaration, not the action name: a class-wide key control removes it. The PEP redeems the single-use identifier on the unkeyed write path and reserves the key on the keyed path (runtime.idempotency.reversible-write-pep-reserve-and-retain). Outside this row: the Enforcement Scope Statement does not yet publish the single-use default (#1080)."
   },
   {
    "id": "runtime.single-use.record-and-refuse-second-presentation",
