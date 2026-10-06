@@ -818,7 +818,7 @@ Mission-bound token through the assembled path (#1105).
 
 | Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
-| Credential validation | Yes. Credential authority at the PDP is not met: acceptance gate (#825) | `verifyDpopBoundToken`, `missionBoundFactsFrom`, `readMissionAccessClaims`; the PEP's credential-authority check (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | PEP-level (§5.1) | The PDP neither receives nor evaluates the credential authority (#825 PR 2); no key-role separation (§5.1) |
+| Credential validation | Yes. Credential authority at the PDP is not met: acceptance gate (#825) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport and PEP-level (§5.1) | The PDP neither receives nor evaluates the credential authority (#825 PR 2); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
 | Independent Resource policy | Yes, not met: acceptance gate (#828) | The PDP's OpenFGA check and action-to-relation map (§5.2) | In the decision | None | Nothing durable; the tuple is injected per check | PDP-level, [FGA] (§5.2) | The shipped model cannot deny independently of Mission authority (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `buildEffectiveParams`, `parameterDigest`; `verifyPermitAtUse` (§5.4) | Digest at the decision; re-derived and compared at admission and before release | None | The payments store is reseeded per boot | Server-level, [FGA] (§5.4) | The Operation Profile's intake rules are not implemented (#1106) |
@@ -828,32 +828,58 @@ Mission-bound token through the assembled path (#1105).
 
 ### 5.1 Credential validation
 
-- **Hook.** `verifyDpopBoundToken` (`server.ts:478-495`) checks the
-  signature, issuer, audience, `cnf` and DPoP proof before any claim is used.
-  `missionBoundFactsFrom` (`server.ts:506-539`) and `readMissionAccessClaims`
-  (`services/mcp-payments/src/token-verifier.ts:108-120`) then require the
-  Mission access-token profile: `typ` `at+jwt`, the RFC 9068 claims, a
-  `mission` claim with `id` and `issuer`, and the token's own
-  `authorization_details`, read as the credential's authority. A token that
-  fails the profile is refused, never demoted to the ordinary class. Before
-  the PDP is asked, the PEP refuses `out_of_authority` for an action outside
-  that authority, one whole entry at a time (`pep.ts:1307-1341`).
+- **Hook.** Two entry points reach the same claim checks, and only one proves
+  possession.
+  - **HTTP transport** (`services/mcp-payments/src/mcp-http-transport.ts:226`):
+    `validateCredential` with the request's DPoP presentation calls
+    `validateToken`, which runs `verifyDpopBoundToken` (`server.ts:478-495`):
+    signature, issuer, audience, `cnf.jkt` and the DPoP proof over this
+    request. A MAS-governed route calls `validateGatewayCredential` instead;
+    that route is excluded from this target (#1105).
+  - **In-process mediated channel** (`services/mcp-payments/src/mcp-transport.ts:121`,
+    `:147`): `validateCredential` with no proof calls `validateMissionToken`
+    (`server.ts:640-653`): signature, issuer and audience. It carries
+    `cnf.jkt` into the token facts but verifies no proof of possession,
+    because the channel has no HTTP request to bind one to. It refuses a
+    transaction token (`txn_pop_required`), so a challenged retry goes over
+    HTTP. The demo agent (`pnpm agent`, through `createMediatedHarness`) uses
+    this channel with AS-issued Mission-bound tokens.
+
+  Both then apply `missionBoundFactsFrom` (`server.ts:506-539`) and
+  `readMissionAccessClaims`
+  (`services/mcp-payments/src/token-verifier.ts:108-120`): `typ` `at+jwt`, the
+  RFC 9068 claims, a `mission` claim with `id` and `issuer`, and the token's
+  own `authorization_details`, read as the credential's authority. A token
+  that fails the profile is refused, never demoted to the ordinary class.
+  Before the PDP is asked, the PEP refuses `out_of_authority` for an action
+  outside that authority, one whole entry at a time (`pep.ts:1307-1341`).
 - **Boundary.** In request, before any claim reaches a decision.
 - **Asynchronous work.** None.
 - **Crash and recovery.** The DPoP replay cache is in memory. Signing keys are
   generated per boot (D25), so a pre-restart token fails signature
   validation. The PEP fetches the AS JWKS once at assembly (`stack.ts:373`);
   refresh is #831's.
-- **Tests (PEP-level):**
-  - `the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation) > a token whose audience does not name this resource is refused, before any of its claims reach a decision (@spec runtime#token-validation, audience)`
-  - `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route`
-  - `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > refuses vendor lookup under an invoice-only token, and lets a broad token reach the PDP, on the same broad Mission`
+- **Tests:**
+  - `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
+  - `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4b: DISCRIMINATING mismatched-key (DPoP proof signed by a DIFFERENT key than cnf.jkt) is rejected BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
+  - `the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation) > a token whose audience does not name this resource is refused, before any of its claims reach a decision (@spec runtime#token-validation, audience)` (PEP-level)
+  - `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > admits a conforming at+jwt over HTTP and the mediated channel, carrying its own authority` (both entry points)
+  - `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route` (PEP-level)
+  - `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > refuses vendor lookup under an invoice-only token, and lets a broad token reach the PDP, on the same broad Mission` (PEP-level)
+  - [FGA] `M5 transaction-assurance tier > refuses a transaction credential on the transport that cannot prove possession (@spec txn-authorization#offline-verification)` (mediated channel)
 - **Required, not met.** The PDP neither receives nor evaluates the
   credential authority: it matches the kernel's current Authority Set
   (`evaluate.ts:1070-1077`). #825 PR 2 owns the `context.credential.authority`
   carrier, the PDP-side witnesses, whether the PEP check stays, and key-role
   separation. Credential expiry is checked at validation only; the PDP records
   `context.credential.expires_at` without denying on it.
+- **Residual.** On the in-process mediated channel every action, the
+  high-consequence classes included, runs on a token whose possession is not
+  proven. D240 requires a current proof of possession for a credential used
+  on a high-consequence action (`runtime.custody.high-consequence-credential-sender-constrained`,
+  `todo`), so this target's high-consequence claims hold on the HTTP entry
+  point only. #825 records the limitation; a shared verifier never claims a
+  proof it did not receive.
 
 ### 5.2 Independent Resource policy
 
@@ -1060,8 +1086,10 @@ Runtime overlay:
   own expiry, with no `mission_error` (§3.5).
 - The JWT-only `plain-rs` accepts a token until `exp` plus its clock
   tolerance (§3.6).
-- Runtime overlay: an admitted high-consequence action runs to completion
-  inside its permit and lease after a revocation (§5.3); the operation key
+- Runtime overlay: the in-process mediated channel verifies no proof of
+  possession, so high-consequence claims hold on the HTTP entry point only
+  (§5.1); an admitted high-consequence action runs to completion inside its
+  permit and lease after a revocation (§5.3); the operation key
   omits `idempotency_key`, so a repeat for an unchanged invoice is refused
   (§5.5); a failed `completed` write after a connector commit leaves the
   effect without Execution Evidence (§5.6; #1104); a successful call outside
