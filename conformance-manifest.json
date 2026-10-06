@@ -54,6 +54,10 @@
     "revision": "60552344e0c4184a6dca034ace9d424bbb6b4965",
     "content_sha256": "262319038b786c962e4decbb1d68102cd09c6242378bcf8f85541204d0b3c37b"
    },
+   "draft-mcguinness-oauth-mission-management.md": {
+    "revision": "f7878accd25bdef0793316223b1c88cd9d853f45",
+    "content_sha256": "55fbaf0a0f3e820763f7d3760bddbc738071dea8dacb0f2eae73002e0fc2fdf9"
+   },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "6f2300ed1ac42c92c63b46f41915b500cc3901ce",
     "content_sha256": "3f8b638b51f87739e7a93eb1948fe57eb70b0fe2288a295cda20276c50d0ad50"
@@ -8395,6 +8399,353 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The reference AS authenticates Status and Lifecycle callers with a deployment service token, not mTLS or private_key_jwt, so it has no direct-client-authentication path to test. Todo (#972 item 18, #1099 review)."
+  },
+  {
+   "id": "status.lifecycle.scheduled-resume-authorization",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS MUST authorize it against both the caller's authorization for `suspend` and the authorization the deployment requires for a direct `resume` of that Mission, including when it sets or replaces the schedule of a Mission already `suspended`, whoever suspended it.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a suspend carrying on_expiry=resume is refused to a caller holding the authorization for suspend but not the deployment's direct-resume authorization for that Mission, both when it would arm a schedule on an active Mission and when it would set or replace the schedule of a Mission another party already suspended; a caller holding both succeeds"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint with a suspend-only caller and a suspend-plus-resume caller, each sending suspend with suspend_until and on_expiry=resume against an active Mission and against a Mission a different party suspended (with and without a recorded schedule)."
+  },
+  {
+   "id": "status.lifecycle.scheduled-resume-refusal-no-change",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS checks both before any change and refuses a caller lacking either as an unauthorized lifecycle request (below), leaving the Mission's state and schedule unchanged.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the refused scheduled-resume request leaves the Mission's state, its recorded suspend_until and on_expiry, and that schedule's committing party unchanged, and is answered with the not-found response shape of an unauthorized lifecycle request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the refusal cases of status.lifecycle.scheduled-resume-authorization, asserting state, version, recorded schedule and committing party before and after, and the not_found response body."
+  },
+  {
+   "id": "status.lifecycle.schedule-committing-party-recorded",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS MUST record with each committed schedule its committing party, the acting party of the request that committed it; an authorized replacement records its own.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each committed schedule is recorded with the acting party of the request that committed it, and an authorized replacement records the replacing request's acting party in place of the earlier one"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the AS's schedule and audit record read after arming a schedule and after an authorized replacement by a different acting party; no wire member carries the committing party."
+  },
+  {
+   "id": "status.lifecycle.schedule-applied-at-deadline",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "When the `suspend_until` of a current schedule passes, the AS MUST apply `on_expiry` (transition to `active` for `resume`, or to `revoked` for `revoke`) and emit the corresponding transition, without a further request.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "once a current schedule's suspend_until passes before expires_at, the Mission is reported active (on_expiry resume) or revoked (on_expiry revoke) with the corresponding transition emitted, without any further lifecycle request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: a controllable clock driving a suspended Mission past suspend_until for each on_expiry value, observed through the Mission Status endpoint."
+  },
+  {
+   "id": "status.lifecycle.schedule-grant-loss-not-cancel",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "a later expiry or withdrawal of the committing party's grant does not by itself cancel it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a resume schedule whose committing party's resume authorization is withdrawn or expires after the commit still applies at its deadline; the deadline performs no grant re-check"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, withdraw the committing caller's lifecycle grant, advance the clock past suspend_until, and observe the Mission active."
+  },
+  {
+   "id": "status.lifecycle.schedule-superseded-never-fires",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "The AS MUST NOT apply a schedule that is no longer current, so an earlier deadline never acts on a later suspension.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after a scheduled resume is superseded, by a direct resume followed by a new suspend or by an authorized replacement, its original deadline passing leaves the Mission suspended with its current schedule, if any, and that schedule's committing party unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, then (a) resume and suspend again with no schedule or a later one, and (b) replace it with a later or revoke schedule; advance the clock past the original suspend_until and observe state, schedule and committing party."
+  },
+  {
+   "id": "status.lifecycle.schedule-no-terminal-change",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "A deadline applies only a transition legal from the Mission's current state",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a deadline passing for a Mission that has reached a terminal state changes nothing: a resume schedule never makes a revoked, completed, expired or companion-terminal Mission active"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, revoke or complete the Mission, advance the clock past suspend_until, and observe the terminal state unchanged with no transition emitted."
+  },
+  {
+   "id": "status.lifecycle.schedule-expiry-governs",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "legal-transitions",
+   "text": "When a schedule's `suspend_until` is at or after the Mission's `expires_at`, expiry governs: the Mission becomes `expired` at `expires_at`, and the AS MUST NOT apply that schedule's `on_expiry`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with suspend_until equal to or later than expires_at, the Mission reaches expired at expires_at and is never observed active from the scheduled resume (nor revoked from a revoke schedule)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: a controllable clock with suspend_until equal to expires_at and later than expires_at, for both on_expiry values, observing every Status read across the boundary."
+  },
+  {
+   "id": "status.lifecycle.schedule-replacement",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "the AS MUST update the recorded values and their committing party, emitting the corresponding transition-metadata change and reporting the updated values in the response",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorized suspend against a suspended Mission carrying a valid suspend_until and on_expiry pair that differs from the recorded schedule, or arming one where none is recorded, updates the recorded pair and its committing party, emits the metadata change, and reports the new values in the signed response"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint: suspend, then suspend again with a different valid pair from a different authorized caller; assert the response values, the incremented version, the emitted change and the recorded committing party."
+  },
+  {
+   "id": "status.lifecycle.schedule-omission-preserves",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "A `suspend` that omits both members leaves the recorded schedule, if any, and its committing party unchanged: omission never clears a deadline.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a suspend omitting both suspend_until and on_expiry against a suspended Mission leaves the recorded pair and its committing party unchanged, whoever sends it, and the deadline still applies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint: arm a schedule, send a plain suspend from another authorized caller, and assert the reported pair, version and committing party unchanged."
+  },
+  {
+   "id": "status.lifecycle.schedule-incomplete-pair-invalid",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "A `suspend` carrying only one of the two remains invalid",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a suspend carrying suspend_until without on_expiry, or on_expiry without suspend_until, is refused as malformed and changes neither state nor any recorded schedule"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint against an active and a suspended Mission, each incomplete pair, asserting refusal and unchanged state and schedule."
+  },
+  {
+   "id": "management.bulk.scheduled-resume-grant-dry-run",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "dry-run",
+   "text": "Before evaluating the filter for a `suspend` whose `on_expiry` is `resume`, the AS MUST verify that the caller holds the `resume` grant of {{blast-radius}}, and MUST refuse a caller that lacks it with `forbidden` ({{management-errors}}), issuing no bulk token.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a dry run of a bulk suspend with on_expiry=resume from a Management Client lacking the distinct or elevated resume grant is refused forbidden with no bulk token issued and no membership evaluated, while the same dry run with on_expiry=revoke, or from a caller holding the grant, succeeds"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint, dry run of a bulk suspend with each on_expiry value from callers with and without the resume grant."
+  },
+  {
+   "id": "management.bulk.scheduled-resume-grant-execute",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "For a `suspend` whose `on_expiry` is `resume`, the AS MUST verify again that the caller holds the `resume` grant of {{blast-radius}}, and MUST refuse a caller that no longer holds it with `forbidden`, executing nothing; the bulk token never substitutes for this check.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an execute of a bulk suspend with on_expiry=resume, presenting a bulk token from a dry run the caller passed while holding the resume grant, is refused forbidden when the grant has since been withdrawn, and no member's state or schedule changes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run with the resume grant, withdraw the grant, execute with the valid bulk token, and assert the refusal and every pinned member unchanged."
+  },
+  {
+   "id": "management.bulk.schedule-values-bound",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "An execute whose `operation`, `filter`, `suspend_until`, or `on_expiry` differs from what the token pins MUST be refused with `invalid_bulk_token`, executing nothing.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an execute of a bulk suspend whose suspend_until or on_expiry differs from the values its bulk token pins (including omitting them, or changing revoke to resume) is refused invalid_bulk_token and changes no member"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run a bulk suspend with a schedule, then execute with a changed suspend_until, a changed on_expiry, and both omitted."
+  },
+  {
+   "id": "management.bulk.schedule-committing-party",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "The caller is the committing party of every schedule a bulk `suspend` commits.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every schedule a bulk suspend commits, armed on an active member or replacing an already-suspended member's schedule, is recorded with the executing Management Client as its committing party"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: bulk suspend with a schedule over active and already-suspended members, then read each member's schedule record."
+  },
+  {
+   "id": "management.bulk.schedule-omission-preserves",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "on a member already `suspended`, a request that omits `suspend_until` and `on_expiry` leaves the member's recorded schedule and its committing party unchanged",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a bulk suspend without suspend_until and on_expiry leaves each already-suspended member's recorded schedule and committing party unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: arm schedules on some members through the lifecycle endpoint, then bulk suspend the set without schedule members and read each member's schedule and committing party."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
