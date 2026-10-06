@@ -3785,8 +3785,8 @@ worked example shows the concrete record
   projection, never a value the request asserts. The semantic
   intent-alignment signal's bound cites the issuance profile's
   treatment of `purpose` as restrictive outside its configured-mapping
-  lookup rather than as inert. The signal's requirement is unchanged
-  (#1102).
+  lookup rather than as inert. The rule 2 statement adds a
+  requirement; the signal's requirement is unchanged (#1102).
 
 - The `rendering_independence` assurance row names the action-bound
   approval it is evaluated per; "approval event" is reserved for the
