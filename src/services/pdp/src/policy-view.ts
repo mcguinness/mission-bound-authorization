@@ -7,7 +7,12 @@
  */
 
 import { createHash } from "node:crypto";
-import { canonicalize, type CapabilitySourceBinding, type JsonValue } from "@mission/core";
+import {
+  canonicalize,
+  type CapabilitySourceBinding,
+  type JsonValue,
+  type TerminalWhenCondition,
+} from "@mission/core";
 import type { TupleKey } from "@openfga/sdk";
 
 /**
@@ -47,6 +52,12 @@ export interface AuthorityEntry {
      * action-bound approval. The PDP reads it beside the deployment predicate.
      */
     requires_action_approval?: boolean;
+    /**
+     * @spec discharge#terminal-when — the entry's completion conditions, as the
+     * kernel committed them. The discharge overlay matches the whole entry by
+     * digest; the credential bound reads the conditions (#825, D312).
+     */
+    terminal_when?: TerminalWhenCondition[];
   };
   /**
    * @spec authority-server#mission-join rule 5 (#557) — this entry's

@@ -17,6 +17,9 @@ import {
   AUTHORITY_ENTRY_TYP,
   compareAmounts,
   computeAnchor,
+  type CredentialAuthorityEntry,
+  coveringCredentialEntries,
+  parseCredentialAuthority,
   type EntitlementObservation,
   entitlementPermits,
   type EntitlementResolver,
@@ -178,8 +181,15 @@ export interface EvaluationRequest {
       subject?: OriginPrincipal;
     };
     actor?: ContextActor;
-    /** Already verified by the authenticated PEP; never populated from tool arguments. */
-    credential?: RuntimeCredentialRef;
+    /**
+     * Already verified by the authenticated PEP; never populated from tool
+     * arguments. @spec authzen#context-credential (#825, D312): `authority` is
+     * the verified credential's own authority entries, REQUIRED on every
+     * decision. It is untrusted input to the PDP, typed `unknown` and read
+     * through `parseCredentialAuthority`; it is request-only and never enters
+     * Decision Evidence (`runtimeCredentialOf` keeps issuer and expiry).
+     */
+    credential?: RuntimeCredentialRef & { authority?: unknown };
     capability_source?: RuntimeCapabilitySource;
     /**
      * @spec authzen#context-audience-freshness: CONDITIONAL, present where
@@ -266,6 +276,13 @@ export type DenialReason =
   | "view_inconsistent"
   | "mission_inactive"
   | "actor_invalid"
+  /**
+   * @spec authzen#pdp-request rule 6, authzen#context-credential (#825, D312) —
+   * the PEP-supplied credential facts are expired, inconsistent, or otherwise
+   * not usable: a passed or unreadable `expires_at`, or a credential authority
+   * that is missing or cannot be read in full.
+   */
+  | "credential_invalid"
   | "parameter_violation"
   | "action_approval_required"
   | "unsupported_authorization_type"
@@ -760,6 +777,23 @@ async function evaluateInner(
     return deny("view_inconsistent");
   }
 
+  // 1a. Credential facts (@spec authzen#pdp-request rule 6, authzen#context-
+  // credential; #825, D312). An expiry that has passed or cannot be read, and
+  // a credential authority that is missing or cannot be read in full, leave
+  // the PEP-supplied credential facts unusable for a runtime decision:
+  // `credential_invalid`, never a fall back to the Mission's authority.
+  const credentialExpiresAt = req.context.credential?.expires_at;
+  if (credentialExpiresAt !== undefined) {
+    const expiresMs = Date.parse(credentialExpiresAt);
+    if (!Number.isFinite(expiresMs) || expiresMs <= now().getTime()) return deny("credential_invalid");
+  }
+  let credentialAuthority: readonly CredentialAuthorityEntry[];
+  try {
+    credentialAuthority = parseCredentialAuthority(req.context.credential?.authority);
+  } catch {
+    return deny("credential_invalid");
+  }
+
   // 2. Mission state (@spec: mission_inactive).
   if (view.state !== "active") return deny("mission_inactive");
 
@@ -1147,6 +1181,42 @@ async function evaluateInner(
     }
   }
 
+  // 5c. Credential authority (@spec runtime#input-authority, runtime-oauth#
+  //     authorization-details-mapping; #825, D312): the action must also fall
+  //     within the credential's own authority, matched independently of the
+  //     Mission entry above and never substituted by it. One credential entry
+  //     must cover the action whole, on the same facts the Mission bound
+  //     reads: resource, action, every vendor reached, and the amount. Its
+  //     discharge condition is honored only where the Mission entry matched in
+  //     step 5 carries every one of its conditions, so 5b already governs it;
+  //     its approval requirement joins step 8's. A failure is `out_of_authority`
+  //     (no new wire value), recorded with the credential entry's constraint keys.
+  const credentialVendorIds: readonly string[] =
+    req.resource.properties?.vendor_ids ??
+    (req.resource.properties?.vendor_id ? [req.resource.properties.vendor_id] : []);
+  const missionDischarge = entry.constraints?.terminal_when ?? [];
+  const credentialCandidates = coveringCredentialEntries(credentialAuthority, {
+    resource: audience ?? "",
+    action: req.action.name,
+    vendorIds: credentialVendorIds,
+    ...(req.context.amount ? { amount: req.context.amount } : {}),
+  }).filter((c) =>
+    (c.constraints?.terminal_when ?? []).every((cond) =>
+      missionDischarge.some(
+        (m) => m.event_type === cond.event_type && m.discharge_authority === cond.discharge_authority,
+      ),
+    ),
+  );
+  for (const c of credentialAuthority) {
+    if (c.resource !== audience || !c.actions.includes(req.action.name)) continue;
+    contributions.add(c.type);
+    for (const key of Object.keys(c.constraints ?? {})) contributions.add(key);
+  }
+  if (credentialCandidates.length === 0) return deny("out_of_authority");
+  const credentialRequiresApproval = credentialCandidates.every(
+    (c) => c.constraints?.requires_action_approval === true,
+  );
+
   // @spec capability-binding#capability-verification — applicability comes
   // ONLY from recorded policy for this action. A presented member cannot opt
   // out, substitute another action's binding, or create applicability.
@@ -1287,7 +1357,11 @@ async function evaluateInner(
   // where deployment policy alone would not gate the action.
   const entryRequiresApproval = entry.constraints?.requires_action_approval;
   if (entryRequiresApproval !== undefined) contributions.add("requires_action_approval");
-  if (opts.requiresActionApproval?.(req.action.name, actionClass) || entryRequiresApproval === true) {
+  if (
+    opts.requiresActionApproval?.(req.action.name, actionClass) ||
+    entryRequiresApproval === true ||
+    credentialRequiresApproval
+  ) {
     const appr = req.context.action_approval;
     const maxAge = (opts.maxApprovalAgeSeconds ?? 300) * 1000;
     const valid =
