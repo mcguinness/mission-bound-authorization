@@ -51,6 +51,7 @@ import {
   validateAuthoritySourceCatalog,
   validateMissionIntent,
 } from "../src/index.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const ISS = "https://as.test";
 
@@ -134,6 +135,7 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
         now: () => new Date("2026-07-22T12:00:00Z"),
         stalenessBound,
         relationForAction,
+        resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       },
     );
     expect(decision.decision).toBe(true);
@@ -160,6 +162,7 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
         now: () => new Date("2026-07-22T12:00:00Z"),
         stalenessBound,
         relationForAction,
+        resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       },
     );
     expect(decision.decision).toBe(false);

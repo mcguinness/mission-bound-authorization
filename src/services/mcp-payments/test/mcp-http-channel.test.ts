@@ -41,6 +41,7 @@ import {
   TransactionEngine,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -48,7 +49,7 @@ const idem = (): string => `idem_${randomUUID()}`;
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
 // decision point's entry point, which closes over the PDP's emission path.
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -208,7 +209,7 @@ function toolsCallBody(tool: string, args: Record<string, unknown>): string {
 
 d("HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP)", () => {
   beforeAll(async () => {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
     const kp = await generateKeyPair("ES256", { extractable: true });
@@ -392,7 +393,7 @@ d("HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTT
 // mission_reference_conflict, and a matching reference changes nothing.
 d("Mission-Reference propagation (gateway PEP)", () => {
   beforeAll(async () => {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
     const kp = await generateKeyPair("ES256", { extractable: true });
@@ -452,7 +453,7 @@ d("Mission-Reference propagation (gateway PEP)", () => {
 // anchors on services/mcp-payments/test/mas-join.test.ts, which always runs.
 d("MAS-governed HTTP MCP channel (baseline Join)", () => {
   beforeAll(async () => {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
     const kp = await generateKeyPair("ES256", { extractable: true });

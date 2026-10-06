@@ -16,6 +16,7 @@ import { describe, expect, it } from "vitest";
 import type { ContextActor } from "@mission/actor-chain";
 import type { Fga } from "../src/fga.js";
 import { evaluate, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
@@ -55,6 +56,7 @@ const optsWith = (fga: Fga, v: MissionView = view()) => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
 });
 
 describe("the FGA dependency call denying fails the action closed (not a Resource-policy test)", () => {

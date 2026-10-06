@@ -31,6 +31,7 @@ import { describe, expect, it } from "vitest";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const ISSUER = "https://as.test";
@@ -86,6 +87,7 @@ const opts = (v: MissionView) => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
 });
 
 describe("discharged entries are excluded from the PDP's authority input", () => {

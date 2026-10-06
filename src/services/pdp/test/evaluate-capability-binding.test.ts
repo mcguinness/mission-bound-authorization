@@ -4,6 +4,7 @@ import { evaluate, type EvaluationRequest, type EvaluateOptions } from "../src/e
 import type { Fga } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const resource = "https://payments.test/mcp", action = "payments:invoice.read";
 const binding: CapabilitySourceBinding = { action, tool_id: "mcp://payments.test/tools/get_invoice", source_uri: "https://payments.test/.well-known/mcp", source_digest: capabilitySourceDigest({ name: "get_invoice" }), operation_ref: "get_invoice" };
@@ -15,7 +16,7 @@ const makeRequest = (): EvaluationRequest => ({ subject: { id: "alice" }, resour
   mission: { id: "msn_cap", issuer: "https://as.test", authority_hash: "sha-256:test" }, capability_source: { ...presented },
 } });
 function options(view = makeView()): EvaluateOptions {
-  return { view, fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test", now: () => new Date("2026-09-04T12:00:00Z"), relationForAction, stalenessBound };
+  return { view, fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test", now: () => new Date("2026-09-04T12:00:00Z"), relationForAction, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, stalenessBound };
 }
 
 describe("recorded per-action capability verification", () => {

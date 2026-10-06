@@ -48,6 +48,7 @@ import {
 import { exportJWK, generateKeyPair } from "jose";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const PORT = 14498;
 const ISSUER = `http://localhost:${PORT}`;
@@ -135,7 +136,7 @@ const evalAction = async (missionId: string, action: string) => {
         amount: { amount: "100.00", currency: "USD" },
       },
     },
-    { view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction },
+    { view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE },
   );
 };
 
@@ -147,7 +148,7 @@ d("work products: information may propagate, authority may not", () => {
       actorProfiles: aiAgents("agent-B1"),
     });
     server = as.provider.listen(PORT);
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
   });

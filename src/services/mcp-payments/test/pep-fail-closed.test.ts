@@ -35,6 +35,7 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 // @spec authzen#evaluation-request-digest-input: a fixture digest of a submitted
 // request (the AuthZEN profile's worked value), for emitter inputs that model one.
@@ -45,7 +46,7 @@ const FIXTURE_REQUEST_DIGEST = "sha-256:v_QKMU8dffVDdoAnQkBenjWgtp5U_ffH5ORwT39i
 // verifies what it emits. `PDP.emitter` is the PDP-side seam this file uses to
 // mint the record a real decision would have carried; the PEP built below
 // receives `decide` and the store's resolver, and nothing that can emit.
-const PDP = createEphemeralDecisionPoint({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
+const PDP = createEphemeralDecisionPoint({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ decisionPoint: PDP });
 
 // Pass-through by default: every GAP 1 case below exercises the REAL PDP
@@ -101,7 +102,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     server: McpPaymentsServer;
     evidence: EvidenceStore;
   }> {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     const view: MissionView = {
       id: missionId,
       issuer: ISSUER,
@@ -273,7 +274,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
   });
 
   it("a Mission-authority change landing in the decision->execute window is caught by reverification, never executed on the stale normalized scope (TOCTOU)", async () => {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     let current: MissionView = {
       id: missionId,
       issuer: ISSUER,

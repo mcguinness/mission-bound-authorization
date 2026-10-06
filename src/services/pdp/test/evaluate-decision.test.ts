@@ -27,6 +27,7 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
@@ -74,6 +75,7 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       now: () => NOW,
       stalenessBound,
       relationForAction,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       // Even a deployment policy that ALWAYS requires approval, satisfied by
       // a fresh, correctly-bound approval, must not rescue a missing entry.
       requiresActionApproval: () => true,
@@ -126,6 +128,7 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       now: () => NOW,
       stalenessBound,
       relationForAction,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       maxApprovalAgeSeconds: 300,
     };
     const approval: ActionApproval = { id: "apr_1", approved_at: NOW.toISOString(), parameter_digest: "sha-256:pd" };
@@ -172,7 +175,7 @@ describe("runtime decision gates are independently necessary (@spec runtime#deci
           mission_state_observation: { state: "active", mode: "fresh", freshness_at: "2026-07-22T11:58:00Z" }, // 120s stale
         },
       }),
-      { view: view(), fga: alwaysAllowFga, modelId: "unit-test-model", now: () => NOW, stalenessBound, relationForAction },
+      { view: view(), fga: alwaysAllowFga, modelId: "unit-test-model", now: () => NOW, stalenessBound, relationForAction, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE },
     );
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("stale_state");
@@ -206,7 +209,7 @@ describe("a genuine Resource-policy/FGA denial on an unconstrained entry still d
     const denyAll = { checkWithContext: async () => false } as unknown as Fga;
     const dec = await evaluate(
       req(),
-      { view: view(), fga: denyAll, modelId: "unit-test-model", now: () => NOW, stalenessBound, relationForAction },
+      { view: view(), fga: denyAll, modelId: "unit-test-model", now: () => NOW, stalenessBound, relationForAction, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE },
     );
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("out_of_authority");
@@ -261,6 +264,7 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
     now: () => NOW,
     stalenessBound,
     relationForAction,
+    resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   });
 
   it("Mission authority includes two vendors; Resource policy denies one: the whole read denies out_of_authority, never a silently narrowed permit", async () => {
@@ -328,6 +332,7 @@ describe("a permit expires no later than the state view it was decided against (
     now: () => now,
     stalenessBound,
     relationForAction,
+    resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     stateSourcePlacement: "pep" as const,
     // @spec runtime#idempotency (#917): the irreversible-action permit is claimed first.
     claims: openTestClaims({ now: () => now }),
@@ -389,6 +394,7 @@ describe("compound-action phase carriers on the decision (@spec authzen#context-
     now: () => NOW,
     stalenessBound,
     relationForAction,
+    resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   });
 
   it("echoes the validated request phase as the permit's conditions.action_phase", async () => {

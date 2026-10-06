@@ -17,6 +17,7 @@ import {
 } from "@mission/authorization-server";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 import { type EvaluationRequest, evaluate, type Fga, type MissionView } from "@mission/pdp";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import { MissionSignalEmitter, MissionSignalReceiver, signLifecycleEvent } from "../src/index.js";
@@ -147,6 +148,7 @@ async function bootstrap() {
       now: () => NOW,
       stalenessBound,
       relationForAction,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     });
   };
 

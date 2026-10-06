@@ -32,6 +32,7 @@ import {
   RUNTIME_POSTURE,
   type RuntimePosture,
 } from "../src/runtime-posture.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-10-02T12:00:00Z");
@@ -85,6 +86,7 @@ const opts = {
   now: () => NOW,
   stalenessBound,
   relationForAction,
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   stateSourcePlacement: "pep" as const,
   claims: unreachableClaims as never,
 };

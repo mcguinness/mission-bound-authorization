@@ -12,6 +12,7 @@ import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
 import { type MissionView, policyViewId } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -96,13 +97,14 @@ const opts = (v: MissionView) => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   stateSourcePlacement: "pep" as const,
   claims: CLAIMS,
 });
 
 d("PDP decisions against OpenFGA (@spec authzen)", () => {
   beforeAll(async () => {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
   });
@@ -418,7 +420,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
 
 d("entry-driven action approval (@spec txn-authorization#applicability)", () => {
   beforeAll(async () => {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
   });
@@ -489,6 +491,7 @@ describe("basic gate: active predicate, non-active outcome, unrecognized-fails-c
     now: () => NOW,
     stalenessBound,
     relationForAction,
+    resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     // The placement the base request's observation is supplied under.
     stateSourcePlacement: "pep" as const,
   });

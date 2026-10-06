@@ -23,12 +23,13 @@ import {
   Pep,
   type TokenFacts,
 } from "../src/index.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const ISSUER = "https://as.test";
 const HTU = CANONICAL_RESOURCE;
 const HTM = "POST";
 const MISSION = { id: "msn_825", issuer: ISSUER };
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 
 const entry = (actions: string[], constraints?: Record<string, unknown>) => ({
   type: "mission_resource_access",

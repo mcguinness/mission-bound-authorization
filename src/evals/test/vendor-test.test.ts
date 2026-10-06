@@ -52,7 +52,7 @@ const seedStore = () => {
 
 d("M14 vendor-test demonstration", () => {
   beforeAll(async () => {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
   });

@@ -32,6 +32,7 @@ import type { Fga } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { createPdpHttpServer, type PdpHttpServerHandle } from "../src/server.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
@@ -96,6 +97,7 @@ async function startServer(
       stateSourcePlacement: "pep" as const,
     }),
     evaluateFn: countingEvaluate,
+    resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     replayWindowSeconds: 30,
     ...overrides,
   });
@@ -402,6 +404,7 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
       now: () => NOW,
       stalenessBound,
       relationForAction,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       stateSourcePlacement: "pep" as const,
     });
     expect(dec.decision).toBe(true);
@@ -439,6 +442,7 @@ describe("the remote channel binds the claim requester (@spec runtime#idempotenc
         stateSourcePlacement: "pep" as const,
       }),
       claims,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       consumptionStatus: (pepId) => (pepId === PEP_ID ? () => "unconsumed" : undefined),
     });
     return handle;

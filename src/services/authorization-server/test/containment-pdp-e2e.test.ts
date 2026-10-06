@@ -23,6 +23,7 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer, createExpansion, validateMissionIntent } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const PORT = 14495;
 const ISSUER = `http://localhost:${PORT}`;
@@ -113,7 +114,7 @@ const evalAction = async (missionId: string, action: string) => {
         amount: { amount: "100.00", currency: "USD" },
       },
     },
-    { view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction },
+    { view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE },
   );
 };
 
@@ -121,7 +122,7 @@ d("containment end-to-end: taint -> contain -> authority_contained -> expansion 
   beforeAll(async () => {
     as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
     server = as.provider.listen(PORT);
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
   });

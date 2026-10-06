@@ -37,6 +37,7 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const EMITTER = "http://localhost:4403/mcp";
@@ -227,6 +228,7 @@ function opts(over: Partial<EvaluateOptions> = {}): EvaluateOptions {
     now: () => NOW,
     stalenessBound,
     relationForAction,
+    resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     ...over,
   } as EvaluateOptions;
 }

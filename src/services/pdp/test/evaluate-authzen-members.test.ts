@@ -15,6 +15,7 @@ import type { Fga } from "../src/fga.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView, policyViewId } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const OTHER_RESOURCE = "http://localhost:4499/mcp";
@@ -48,6 +49,7 @@ const options = (over: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   claims: CLAIMS,
   ...over,
 });

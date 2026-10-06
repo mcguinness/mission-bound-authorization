@@ -52,6 +52,7 @@ import {
   TransactionEngine,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const BASE_MS = Date.parse("2026-10-02T12:00:00.000Z");
 /** irreversible_action: the 30 s staleness bound caps the permit; the published lease is 30 s more. */
@@ -115,7 +116,7 @@ async function harness(o: HarnessOptions = {}) {
     now,
     settlementKeys: (params) => pepKeys?.(params),
   });
-  const point = createEphemeralDecisionPoint({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE, claims });
+  const point = createEphemeralDecisionPoint({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE, claims });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
   pepKeys = keys.resolver;
 
