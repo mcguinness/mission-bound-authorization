@@ -4147,20 +4147,12 @@ exact Authority Set the Approver consented to, recorded on the Mission
 that set and signing every token accordingly, and on the Resource Server
 verifying the AS's token signature and enforcing the carried authority,
 not on every token carrying the commitment itself ({{mission-claim}}).
-The hash alone, where a token or a profile carries it, does not prove
-containment of a narrowed token's authority.
-
-The approval event ({{approval-event}}) upholds the commitment: the AS
-computes `authority_hash` over the same Authority Set it rendered for
-consent, and re-renders and re-consents if that set changes.
-
-`authority_hash` commits the full Authority Set, while a derived token
-can carry a narrowed subset, so a Resource Server cannot in general
-recompute it from the token alone. A Resource Server that does not
-verify against the complete set relies on the signed token as the AS's
-assertion that the carried authority was correctly projected from the
-approved set ({{rs-enforcement}}); `authority_hash` by itself supplies
-no subset proof.
+A derived token can carry a narrowed subset, so a Resource Server
+cannot in general recompute `authority_hash` from the token: the hash
+commits the approved set but supplies no subset proof, and a Resource
+Server that does not verify against the complete set relies on the
+signed token as the AS's assertion that the carried authority was
+correctly projected from the approved set ({{rs-enforcement}}).
 
 A deployment that needs assurance independent of the token signature
 verifies the carried authority against the complete approved set. What
@@ -4181,33 +4173,24 @@ alteration of the recorded task. The two are committed separately.
 cross-domain projection carries, so it is computed over the Authority
 Set alone ({{integrity-anchors}}) and can be checked without the Intent;
 `intent_hash` stays tamper-evident audit material even where the
-authority is projected without the Intent. The anchors are
-domain-separated ({{integrity-anchors}}), and none substitutes for
+authority is projected without the Intent. No anchor substitutes for
 another.
-
-Neither anchor proves the Approver understood the rendered task, nor
-that the AS rendered it faithfully; they commit what the AS recorded,
-and make post-hoc tampering of those records detectable.
 
 This document commits the task (`intent_hash`) and the authority
 (`authority_hash`) the Approver consented to, but not the **rendered
 consent disclosure** itself: no anchor here binds the locale,
-disclosure-template version, or material notices the Approver was shown.
-Because of this gap, a buggy or malicious rendering layer could mislead
-the Approver, showing a narrower or different task than the Authority
-Set actually committed, without leaving any committed trace. A
-deployment whose Missions carry high-risk authority can record
-presentation-level audit evidence, for example a hash over the exact
-consent disclosure rendered to the Approver, retained so the disclosure
-shown can be reconstructed and audited after the fact.
-
-Mission Consent Evidence
-{{I-D.draft-mcguinness-oauth-mission-consent-evidence}} binds this on
-the wire, as a `consent_rendering_hash` over a structured
-consent-disclosure object; an AS that does not implement it can record
-equivalent evidence out of band. Such a commitment binds the structured
-disclosure the AS records, not the presentation itself; it narrows this
-gap for audit but does not close it.
+disclosure-template version, or material notices the Approver was
+shown, so a buggy or malicious rendering layer could show a narrower or
+different task than the Authority Set committed without leaving any
+committed trace. A deployment whose Missions carry high-risk authority
+can record presentation-level audit evidence, retained so the
+disclosure shown can be reconstructed and audited: Mission Consent
+Evidence {{I-D.draft-mcguinness-oauth-mission-consent-evidence}} binds
+a `consent_rendering_hash` over a structured consent-disclosure object
+on the wire, and an AS that does not implement it can record equivalent
+evidence out of band. Such a commitment binds the structured disclosure
+the AS records, not the presentation itself; it narrows this gap for
+audit but does not close it.
 
 ### Downgrade by Omission {#downgrade-by-omission}
 
