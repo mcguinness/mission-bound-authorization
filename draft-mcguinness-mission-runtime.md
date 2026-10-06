@@ -1629,7 +1629,10 @@ by its predicate is not a basis to leave the invocation ungated.
    **privileged administration** classes MUST be treated as
    consequential and gated.
 2. A Mission's `purpose`, or deployment policy, MAY raise an action
-   to a stricter class.
+   to a stricter class. The `purpose` consulted is the approved
+   Mission's, from its Mission state or a validated projection of it
+   ({{I-D.draft-mcguinness-oauth-mission}}), never a value the request
+   asserts.
 3. A Mission's `purpose` or deployment policy MUST NOT lower an
    action below any minimum classification the Resource policy
    ({{decision}}) sets for it, including a floor the resource owner
@@ -3476,8 +3479,9 @@ A semantic intent-alignment signal, for example a judgment that a
 requested tool fits the task extracted from the conversation, MAY be
 supplied to the PDP as advisory decision input. Such a signal MAY
 contribute to a denial; it MUST NOT widen, grant, or refresh authority,
-consistent with the inert treatment of `goal` and `purpose` in the
-issuance profile ({{I-D.draft-mcguinness-oauth-mission}}). Gating
+consistent with the issuance profile's treatment of `goal` as inert and
+of `purpose` as restrictive outside its configured-mapping lookup
+({{I-D.draft-mcguinness-oauth-mission}}). Gating
 authority on intent inference is out of scope: verifying an agent's
 declared reasoning against the task is an attestation problem outside
 both layers, and intent inference is not reliable enough to be
@@ -3775,6 +3779,14 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Action Classification: the `purpose` that may raise a class is the
+  approved Mission's, from its Mission state or a validated
+  projection, never a value the request asserts. The semantic
+  intent-alignment signal's bound cites the issuance profile's
+  treatment of `purpose` as restrictive outside its configured-mapping
+  lookup rather than as inert. The rule 2 statement adds a
+  requirement; the signal's requirement is unchanged (#1102).
 
 - The `rendering_independence` assurance row names the action-bound
   approval it is evaluated per; "approval event" is reserved for the
