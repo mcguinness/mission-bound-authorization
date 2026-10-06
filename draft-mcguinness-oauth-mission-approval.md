@@ -233,12 +233,12 @@ passed; it is diagnostic only, and a client acts on the error code.
 `expired_token` remains the outcome of the pending request's own
 lifetime elapsing ({{pending-staleness}}), a different case.
 
-This relocation relies on a core extensibility seam for approval
-sequencing, under discussion upstream. The issuance profile specifies the approval
-event and authorization-code issuance as one atomic step, so a
-deployment claims conformance to this profile's relocated sequencing
-rather than unqualified conformance to that original step; what the
-approval commits is unchanged.
+This relocation uses the issuance profile's approval-event sequencing
+seam ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Extensibility"), which lets a companion profile relocate the approval
+event relative to code issuance provided the steps and their
+atomicity hold unchanged, and names this profile as such a companion.
+What the approval commits is unchanged.
 
 Deferral changes only the timing of the approval event. The Authority
 Set the token is issued against, its `authority_hash`, and the recorded
