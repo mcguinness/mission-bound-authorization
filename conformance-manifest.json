@@ -15754,7 +15754,7 @@
    "id": "runtime.inspection-controls.advisory-signal-no-widen",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "inspection-controls",
-   "text": "Such a signal MAY contribute to a denial; it MUST NOT widen, grant, or refresh authority, consistent with the inert treatment of `goal` and `purpose` in the issuance profile",
+   "text": "Such a signal MAY contribute to a denial; it MUST NOT widen, grant, or refresh authority, consistent with the issuance profile's treatment of `goal` as inert and of `purpose` as restrictive outside its configured-mapping lookup",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
