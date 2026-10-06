@@ -195,8 +195,7 @@ response, `access_denied`, or `expired_token`.
 
 The issuance profile's direct realization treats the approval event
 as immediate: the Approver consents and the Mission record is created
-atomically with
-issuance of the authorization code
+atomically with issuance of the authorization code
 ({{I-D.draft-mcguinness-oauth-mission}}). For a deferred approval this
 profile relocates that approval event without weakening it, moving it
 to the asynchronous review surface:
@@ -219,6 +218,20 @@ to the asynchronous review surface:
    the moved point.
 5. Issuance then completes per the deferred substrate: the next poll
    resolves to a Mission-bound token response.
+
+The creation commit of step 4 inherits the issuance profile's
+effective-expiry recheck ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission Approval"). Where the effective expiry is at or
+before the creation instant, as when the requested `intent.expires_at`
+ceiling passed while the approval was pending, the Mission Issuer MUST
+refuse creation atomically: no Mission exists, and the deferred
+approval resolves to `denied` ({{state-machine}}). The next
+authenticated poll returns `access_denied`, the deferred substrate's
+outcome for a request that could not be granted. Its
+`error_description` SHOULD say that the requested Mission expiry
+passed; it is diagnostic only, and a client acts on the error code.
+`expired_token` remains the outcome of the pending request's own
+lifetime elapsing ({{pending-staleness}}), a different case.
 
 This relocation relies on a core extensibility seam for approval
 sequencing, under discussion upstream. The issuance profile specifies the approval
@@ -275,7 +288,10 @@ surface:
 A deferred approval is in one of these states: `pending`, `approved`,
 `denied`, `expired`, or `cancelled`. The Mission Issuer starts a
 deferred approval in `pending` and MAY move it to `approved` or
-`denied`. The pending lifetime elapsing moves it to `expired`
+`denied`. A decision to approve whose creation commit fails the
+effective-expiry recheck moves it to `denied`, never `approved`
+({{deferred-sequencing}}). The pending lifetime elapsing moves it to
+`expired`
 ({{pending-staleness}}), and client cancellation under the deferred
 substrate moves it to `cancelled`
 ({{I-D.draft-gerber-oauth-deferred-token-response}}). `approved`,
@@ -289,7 +305,7 @@ substrate moves it to `cancelled`
            | pending |  lifetime elapsed --> expired    (terminal)
            +---------+  client cancels   --> cancelled  (terminal)
              |
-   approve   |
+   approve   |  (commit fails the expiry recheck --> denied)
              v
           approved  (terminal; Mission created active)
 ~~~
@@ -305,7 +321,10 @@ Intent via PAR {{RFC9126}}.
 
 A deferred approval MUST carry a deployment-set maximum pending
 lifetime, after which it resolves to `expired_token` per the deferred
-substrate. Staleness of the proposal itself needs no separate rule:
+substrate. That lifetime is the pending request's own, distinct from
+the Mission expiry ceiling the creation commit rechecks
+({{deferred-sequencing}}). Staleness of the proposal itself needs no
+separate rule:
 derivation is mechanical and happens once, at the approval event,
 over the policy and capability catalog then in force
 ({{I-D.draft-mcguinness-oauth-mission}}), so the reviewer always
