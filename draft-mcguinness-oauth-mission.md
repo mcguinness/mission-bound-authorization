@@ -194,6 +194,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-security-model:
+    title: "Mission Security Model"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -4224,8 +4232,10 @@ An agent that reads attacker-influenceable content can be
 prompt-injected; this document assumes that and does not try to make the
 agent immune. Injection is dangerous when one agent combines access to
 private data, exposure to untrusted content, and the ability to
-communicate externally; the robust defense is architectural,
-constraining one of those, not making the model resistant.
+communicate externally; the Mission Security Model
+({{I-D.draft-mcguinness-mission-security-model}}) analyzes that
+combination and its architectural defenses. This document's
+contribution to each leg follows.
 
 This document constrains the data-access leg: a Mission narrows
 authority from everything the agent's standing credentials allow to the
@@ -4246,14 +4256,12 @@ This document does not constrain the external-communication leg and
 provides no information-flow control. It models authority over resources
 and actions, not how an agent uses authority it holds: within an
 approved Authority Set, an injected agent can read what the Mission
-permits and write to a sink the Mission permits, and the flat subset and
-constraint model cannot express "may read secrets, may write documents,
-but not write secrets into documents." Constraining exfiltration by a
-compromised agent is the runtime layer's role
+permits and write to a sink the Mission permits. Constraining
+exfiltration by a compromised agent is the runtime layer's role
 ({{runtime-boundary}}), and even there it is bounded, not closed
-({{I-D.draft-mcguinness-mission-runtime}}). Preventing misuse of data
-within the authorized scope needs a separate taint or information-flow
-layer, which this document does not define.
+({{I-D.draft-mcguinness-mission-runtime}}); preventing misuse of data
+within the authorized scope needs a taint or information-flow layer
+this document does not define.
 
 ### Authority Does Not Propagate With Information {#information-propagation}
 
