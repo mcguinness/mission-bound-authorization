@@ -586,14 +586,24 @@ executes the issuance profile's approval steps:
    previously issued), never from the Mission Intent claim token or
    other unauthenticated client input.
 3. Derive the Authority Set from the Intent, and from the authority
-   proposal where one was pushed ({{mission-intent}}),
-   and render it for consent on the owner surface under the
-   issuance profile's rendering rules ({{security-rendering}}).
-4. Compute the integrity anchors with the authorization server's
+   proposal where one was pushed ({{mission-intent}}).
+4. Establish the authority source under the issuance profile's rules:
+   from trusted configuration or authenticated governance state,
+   never from client assertion, with the Approver authorized to
+   activate it and the derived Authority Set within it.
+5. Establish the effective Mission expiry: the requested
+   `intent.expires_at` ceiling narrowed by applicable policy, under
+   the issuance profile's bounds.
+6. Render the Authority Set for consent on the owner surface under
+   the issuance profile's rendering rules ({{security-rendering}}).
+7. Compute the integrity anchors with the authorization server's
    issuer identifier as the envelope `iss`.
-5. Create the Mission record in the `active` state atomically with
-   the approval decision. The token endpoint MUST NOT complete a
-   ticket exchange under the Mission before the record is `active`.
+8. Create the Mission record in the `active` state atomically with
+   the approval decision, rechecking at that commit that the
+   effective expiry is strictly later than the creation instant;
+   where it is not, no Mission is created. The token endpoint
+   MUST NOT complete a ticket exchange under the Mission before the
+   record is `active`.
 
 Both native assessment outcomes realize the approval event:
 
@@ -963,9 +973,11 @@ The contextual-governance kernel maps as follows:
    mechanism, not a substrate-kernel requirement
    ({{mission-record}}).
 5. **Approval ceremony**: UMA authorization assessment performs the
-   five approval steps in either the deferred owner-decision or
-   pre-registered-policy mode and creates the record `active`
-   atomically with approval ({{approval}}).
+   issuance profile's approval steps (Approver, Subject, derivation,
+   authority source, effective expiry, rendering, anchors) in either
+   the deferred owner-decision or pre-registered-policy mode and
+   creates the record `active` atomically with approval, rechecking
+   the effective expiry at that commit ({{approval}}).
 6. **Governance gate**: only the issuance profile's `active` state is
    active. Every other or unrecognized value fails closed at the token
    endpoint and introspection projection. The Subject, Approver, and
