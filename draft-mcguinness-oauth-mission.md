@@ -4357,10 +4357,10 @@ confirms to the presenting party that the authority exists and only
 the Subject's authentication is weak or stale, while
 `mission_denial: insufficient_authority` denies the authority's
 existence outright. Introspection guards the same class of fact behind
-caller authorization ({{caller-authorization-and-minimization}}); a
-Resource Server applies the same care here, including the attribute only
-for a token holder that its deployment accepts learning the distinction
-({{rs-enforcement}}). Of the two values, `insufficient_authority`
+caller authorization ({{caller-authorization-and-minimization}}), and
+{{rs-enforcement}} limits the attribute to a token holder that the
+deployment accepts learning the distinction. Of the two values,
+`insufficient_authority`
 reveals least, and omitting the attribute reveals nothing.
 
 ## Credentials and Delegation {#sec-credentials}
