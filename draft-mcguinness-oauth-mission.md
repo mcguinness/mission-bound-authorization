@@ -1111,6 +1111,11 @@ Processing is governed by the following rules:
   decides whether the verified claims are acceptable for this
   request.
 
+Supporting an evidence type is optional. An AS that supports none
+refuses every presented entry under these rules, never ignoring one,
+and conforms as a Mission Issuer without implementing the evidence
+framework ({{conformance}}).
+
 Mission Intent Submission Evidence for OAuth 2.0
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}})
 specifies the entry convention, required-evidence resolution, the
