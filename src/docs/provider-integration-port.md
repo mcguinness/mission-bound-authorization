@@ -817,6 +817,9 @@ Tests marked
 acceptance pack are HTTP MCP with verified DPoP (D315): they reach the PEP
 only through the endpoint `composeStack({ target: "as-native" })` serves at
 the declared resource audience, and exclude the in-process mediated channel.
+The target's AS runs the issuance profile plus exactly `lifecycle-revoke`
+and `transaction-authorization` (D332; the contract's §2); ordinary-token
+minting is a test-only composition option.
 [FGA]
 `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > carries the AS-issued Mission-bound token with a valid DPoP proof through mcp-payments and the PDP to one permitted read`
 drives an AS-issued Mission-bound token through that assembled path.
@@ -841,7 +844,11 @@ drives an AS-issued Mission-bound token through that assembled path.
     signature, issuer, audience, `cnf.jkt` and the DPoP proof over this
     request. The target serves this entry point at the declared resource
     audience. A MAS-governed route calls `validateGatewayCredential` instead;
-    the target mounts none (D315).
+    the target mounts none (D315). Each MCP session belongs to the holder
+    whose credential opened it (`cnf.jkt`, subject and client): every request
+    is authenticated before its session is resolved, and another holder's
+    request on the session is answered 404 `Session not found`
+    (`createHttpMcpChannel`).
   - **In-process mediated channel** (`services/mcp-payments/src/mcp-transport.ts:121`,
     `:147`): `validateCredential` with no proof calls `validateMissionToken`
     (`server.ts:640-653`): signature, issuer and audience. It carries
@@ -874,7 +881,8 @@ drives an AS-issued Mission-bound token through that assembled path.
   - `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route` (PEP-level)
   - `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > refuses vendor lookup under an invoice-only token, and lets a broad token reach the PDP, on the same broad Mission` (PEP-level)
   - [FGA] `M5 transaction-assurance tier > refuses a transaction credential on the transport that cannot prove possession (@spec txn-authorization#offline-verification)` (mediated channel)
-  - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision`, `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision` and `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it` (HTTP transport, assembled path)
+  - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision`, `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision` and `the as-native target with the test-only ordinary-token minting fixture, OpenFGA client stubbed (D315, D332) > refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it` (HTTP transport, assembled path)
+  - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > binds a session to the holder that opened it: every request on it is authenticated, and another holder's credential carrying its id is answered 404 Session not found before the PEP` (HTTP transport, assembled path) and `MCP sessions on the HTTP channel (D315, #1105) > dispatches a request on a session only for its holder: another key, subject or client is answered 404 Session not found and reaches no handler, and a refused credential is answered 401` (HTTP transport, stubbed payments server)
 - **Required, not met.** The PDP neither receives nor evaluates the
   credential authority: it matches the kernel's current Authority Set
   (`evaluate.ts:1070-1077`). D312 splits the rest of #825 into three PRs: 2a
@@ -1101,9 +1109,11 @@ Runtime overlay:
 9. Running the declared outcome reconciliation, its alert, and recovery of a
    prior process's claims (#1103). §5.7.
 10. An assembled deployment of exactly the contract's components:
-    `pnpm as-native` mounts no MAS join route, but it runs the full reference
-    AS capability set rather than the floor's, and builds the cross-domain
-    objects in process (#1105).
+    `pnpm as-native` runs the D332 AS capability set (the issuance profile
+    plus exactly `lifecycle-revoke` and `transaction-authorization`, with
+    `dev-token` and dev ordinary issuance off) and mounts no MAS join route,
+    but it builds the cross-domain RAS and SaaS objects in process, with no
+    listener (#1105).
 
 **Residual.**
 
