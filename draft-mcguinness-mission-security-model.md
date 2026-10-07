@@ -1522,6 +1522,11 @@ model and pipeline layers, and saying so is the point:
 
 \[\[ To be removed from the final specification ]]
 
+- Prose-member references follow the OAuth binding, which removed
+  `success_criteria`: the inert-input assumption names `task_bounds`,
+  and the prompt-injection entry names `goal` and `task_bounds`
+  (replacing the retired `constraints`).
+
 - The inert-input assumption separates `purpose` from inert material:
   it selects candidate authority only as a configured-mapping lookup
   key, and any other use can only refuse or apply stricter treatment,
