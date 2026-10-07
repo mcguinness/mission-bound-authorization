@@ -4263,11 +4263,10 @@ resources the approved task needs, and per-task Missions
 ({{applicability}}) further limit the effect of a compromise.
 
 Against the untrusted-content leg, it contributes one thing:
-`success_criteria` is inert, granting, widening, and gating no
-authority, `purpose` supplies candidate authority only as a lookup key
-of the pre-approval derivation whose result the Approver reads and
-consents to and otherwise can only refuse or tighten, and `goal`
-bounds it only through that disclosure
+`purpose` supplies candidate authority only as a lookup key of the
+pre-approval derivation whose result the Approver reads and consents
+to and otherwise can only refuse or tighten, and `goal` and
+`task_bounds` bound it only through that disclosure
 ({{mission-intent}}, {{authorization-derivation}}). Authority is fixed
 at the approval event, so injected text cannot expand an approved
 Mission.
@@ -4633,8 +4632,7 @@ independently under its current disclosure policy.
 Third-party personal data can enter through any Intent, proposal,
 authority, or recorded-evidence member:
 
-- the prose members (`goal`, `task_bounds`, `success_criteria`) and
-  `purpose`;
+- the prose members (`goal`, `task_bounds`) and `purpose`;
 - `target_resources` and any explicit member a companion profile defines
   (for example, the metering companion's consumption bounds,
   {{I-D.draft-mcguinness-mission-metering}});
@@ -4676,8 +4674,8 @@ Record and its audit-horizon retention floor untouched.
 
 # Internationalization Considerations {#i18n}
 
-Mission Intent prose (`goal`, `task_bounds`, `success_criteria`) is
-human-readable disclosure. `goal_lang` ({{mission-intent}}) declares the
+Mission Intent prose (`goal`, `task_bounds`) is human-readable
+disclosure. `goal_lang` ({{mission-intent}}) declares the
 language of that prose as a BCP 47 language tag {{RFC5646}}, so an
 approval surface can render, translate, or route it without guessing the
 language.
