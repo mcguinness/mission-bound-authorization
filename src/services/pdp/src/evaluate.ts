@@ -1386,8 +1386,10 @@ async function evaluateInner(
   const highConsequence = HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass ?? "");
   // @spec runtime#permit-binding (#1080, D317): a reversible consequential
   // write takes "either a single-use decision identifier or a short validity
-  // window combined with an idempotency key". One that elects no key control
-  // (no declaration, so no published window) defaults to single use, so no
+  // window combined with an idempotency key". One whose selected declaration
+  // is not the key control (no published window) takes single use: the
+  // statement publishes `single_use_decision_identifier` as the class default
+  // (D333), and an undeclared operation gets the same, so no
   // `consequential_write` permit leaves here carrying neither control.
   const singleUseDefault = actionClass === "consequential_write" && reversibleWriteMaxSeconds === undefined;
 

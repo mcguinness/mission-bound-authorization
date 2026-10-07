@@ -112,13 +112,16 @@ class HeldEvidenceStore extends EvidenceStore {
 /**
  * The shipped statement with a 30 s permit maximum and a 60 s retention for
  * both keyed writes: a valid configuration (retention longer than the
- * permit), the one the #1028 review reproduced against.
+ * permit), the one the #1028 review reproduced against. The single-use class
+ * default (D333) has neither member and is left as shipped.
  */
 function shortWindowStatement(): RuntimePosture {
   const statement = structuredClone(RUNTIME_POSTURE) as unknown as {
     extensions: { reversible_write_idempotency: Array<Record<string, unknown>> };
   };
-  for (const d of statement.extensions.reversible_write_idempotency) {
+  for (const d of statement.extensions.reversible_write_idempotency.filter(
+    (x) => x.permit_lifetime_control === "validity_window_plus_idempotency_key",
+  )) {
     d.permit_validity_max_seconds = 30;
     d.retention_horizon = "PT60S";
   }

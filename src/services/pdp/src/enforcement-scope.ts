@@ -144,13 +144,52 @@ export interface ReversibleWriteIdempotencyDeclaration {
   retention_horizon?: string;
 }
 
+/**
+ * @spec runtime#permit-binding, runtime#single-use-identifiers (#1080, D333):
+ * one reversible consequential write that elects the "single-use decision
+ * identifier" permit-lifetime control: the permit carries `use_limit: 1` and
+ * the enforcing PEP named by `consumed_identifier_owner` records its
+ * `evaluation_id` consumed in `consumed_identifier_domain` and refuses a
+ * re-presentation.
+ *
+ * `retention_posture` is `permit_acceptance_window`: a consumed identifier is
+ * kept at least until the end of the window in which the owner still accepts
+ * the permit, its `valid_until` plus any clock skew the owner permits on
+ * acceptance. The window follows each permit, so the declaration names no
+ * fixed horizon; the owner realizes it (the payments PEP accepts no skew and
+ * keeps each record until `valid_until` plus a 30 s margin). The key
+ * variant's reservation, key-scope, key-window and fixed-horizon members
+ * (`reservation_domain`, `reservation_owner`, `idempotency_scope`,
+ * `permit_validity_max_seconds`, `retention_horizon`) are refused on it.
+ *
+ * A reference-statement representation of the control, not a Runtime wire
+ * member.
+ */
+export interface SingleUseDecisionIdentifierDeclaration {
+  mediated_class_or_scope: string;
+  permit_lifetime_control: "single_use_decision_identifier";
+  consumed_identifier_domain: string;
+  /** The `mediated_scope.pep_locations` entry that holds the consumed identifiers. */
+  consumed_identifier_owner: string;
+  retention_posture: "permit_acceptance_window";
+}
+
+/**
+ * One `reversible_write_idempotency` entry, discriminated on
+ * `permit_lifetime_control` (D333): the two controls {{permit-binding}} offers
+ * a reversible consequential write.
+ */
+export type ReversibleWriteControlDeclaration =
+  | ReversibleWriteIdempotencyDeclaration
+  | SingleUseDecisionIdentifierDeclaration;
+
 /** The one reversible-write class that may elect the idempotency-key control. */
 export const REVERSIBLE_WRITE_CLASS = "consequential_write";
 
 export interface EnforcementExtensionDeclarations {
   custody?: ReadonlyArray<{ mediated_class: string; custody_mode: string }>;
   transaction_assurance?: ReadonlyArray<TransactionAssuranceDeclaration>;
-  reversible_write_idempotency?: ReadonlyArray<ReversibleWriteIdempotencyDeclaration>;
+  reversible_write_idempotency?: ReadonlyArray<ReversibleWriteControlDeclaration>;
   evidence?: {
     mechanism: string;
     retention_window: string;
@@ -451,15 +490,34 @@ export function validateEnforcementScopeStatement(
   return findings;
 }
 
+/** The key variant's members, refused on a single-use declaration (D333). */
+const KEY_CONTROL_MEMBERS = [
+  "reservation_domain",
+  "reservation_owner",
+  "idempotency_scope",
+  "permit_validity_max_seconds",
+  "retention_horizon",
+] as const;
+/** The single-use variant's own members, refused on a key declaration as ambiguous. */
+const SINGLE_USE_MEMBERS = ["consumed_identifier_domain", "consumed_identifier_owner"] as const;
+
 /**
  * @spec runtime#permit-binding, runtime#idempotency (#918): the
  * `reversible_write_idempotency` declarations, shape-checked wherever they
  * appear, like `transaction_assurance`. The class (or the action's class) is
- * a declared mediated class; the owner is a declared PEP location; the scope
- * names only fixed-member dimensions and no volatile member; and the
- * retention horizon resolves to a fixed number of seconds longer than the
- * permit window, so a duplicate arriving after the permit expired still
- * finds the record.
+ * a declared mediated class, and no class or operation is declared twice.
+ *
+ * Each entry is one variant of `permit_lifetime_control` (D333), and carries
+ * no member of the other, so it is never ambiguous:
+ *
+ * - `validity_window_plus_idempotency_key`: the owner is a declared PEP
+ *   location; the scope names only fixed-member dimensions and no volatile
+ *   member; and the retention horizon resolves to a fixed number of seconds
+ *   longer than the permit window, so a duplicate arriving after the permit
+ *   expired still finds the record.
+ * - `single_use_decision_identifier`: the consumed-identifier owner is a
+ *   declared PEP location, the domain is named, and the retention posture is
+ *   `permit_acceptance_window`.
  */
 function reversibleWriteFindings(
   stmt: Record<string, unknown>,
@@ -499,8 +557,35 @@ function reversibleWriteFindings(
     } else if (covered.has(target)) {
       push(member, `mediated_class_or_scope "${target}" is declared twice`);
     } else covered.add(target);
+    if (decl.permit_lifetime_control === "single_use_decision_identifier") {
+      for (const name of KEY_CONTROL_MEMBERS) {
+        if (Object.hasOwn(decl, name)) push(member, `a single_use_decision_identifier declaration names no ${name}`);
+      }
+      if (!isNonEmptyString(decl.consumed_identifier_domain)) {
+        push(member, "missing the consumed-identifier domain and the component that holds it");
+      }
+      if (!isNonEmptyString(decl.consumed_identifier_owner)) {
+        push(member, "missing the consumed_identifier_owner that holds the consumed identifiers");
+      } else if (!peps.includes(decl.consumed_identifier_owner)) {
+        push(
+          member,
+          `consumed_identifier_owner "${decl.consumed_identifier_owner}" is not a declared mediated_scope.pep_locations entry`,
+        );
+      }
+      if (decl.retention_posture !== "permit_acceptance_window") {
+        push(member, "a single_use_decision_identifier declaration's retention_posture must be permit_acceptance_window");
+      }
+      return;
+    }
     if (decl.permit_lifetime_control !== "validity_window_plus_idempotency_key") {
-      push(member, "permit_lifetime_control must be validity_window_plus_idempotency_key");
+      push(
+        member,
+        "permit_lifetime_control must be validity_window_plus_idempotency_key or single_use_decision_identifier",
+      );
+      return;
+    }
+    for (const name of SINGLE_USE_MEMBERS) {
+      if (Object.hasOwn(decl, name)) push(member, `a validity_window_plus_idempotency_key declaration names no ${name}`);
     }
     const permitWindow = decl.permit_validity_max_seconds;
     const permitOk = typeof permitWindow === "number" && Number.isSafeInteger(permitWindow) && permitWindow > 0;
@@ -542,23 +627,40 @@ function reversibleWriteFindings(
 }
 
 /**
- * @spec runtime#permit-binding, runtime#idempotency (#918): the declaration
- * that covers one request, when it elects the idempotency-key control: an
- * entry naming its action identifier, else one naming its class. Only a
- * `consequential_write` request is ever covered; the high-consequence
- * classes carry the PDP's claim instead.
+ * @spec runtime#permit-binding (#918, D333): the permit-lifetime control
+ * declaration that covers one request, of either variant: the entry naming
+ * its action identifier, else the one naming its class. The most specific
+ * entry is selected before any variant is considered, so an operation's own
+ * declaration always governs it. Only a `consequential_write` request is ever
+ * covered; the high-consequence classes carry the PDP's claim instead.
  */
-export function reversibleWriteDeclarationFor(
+export function reversibleWriteControlFor(
   stmt: EnforcementScopeStatement,
   actionClass: string | undefined,
   action: string,
-): ReversibleWriteIdempotencyDeclaration | undefined {
+): ReversibleWriteControlDeclaration | undefined {
   if (actionClass !== REVERSIBLE_WRITE_CLASS) return undefined;
   const declared = stmt.extensions?.reversible_write_idempotency ?? [];
   return (
     declared.find((d) => d.mediated_class_or_scope === action) ??
     declared.find((d) => d.mediated_class_or_scope === REVERSIBLE_WRITE_CLASS)
   );
+}
+
+/**
+ * @spec runtime#permit-binding, runtime#idempotency (#918, D333): the
+ * declaration that covers one request when the control selected for it
+ * ({@link reversibleWriteControlFor}) is the idempotency-key control, else
+ * `undefined`. Selection comes first: an operation that elects single use is
+ * never covered by a class-wide key declaration.
+ */
+export function reversibleWriteDeclarationFor(
+  stmt: EnforcementScopeStatement,
+  actionClass: string | undefined,
+  action: string,
+): ReversibleWriteIdempotencyDeclaration | undefined {
+  const selected = reversibleWriteControlFor(stmt, actionClass, action);
+  return selected?.permit_lifetime_control === "validity_window_plus_idempotency_key" ? selected : undefined;
 }
 
 /**

@@ -116,6 +116,7 @@ export {
   resourceDispositions,
   retentionWindowSeconds,
   REVERSIBLE_WRITE_CLASS,
+  reversibleWriteControlFor,
   reversibleWriteDeclarationFor,
   reversibleWriteRetentionSeconds,
   validateEnforcementScopeStatement,
@@ -131,7 +132,9 @@ export {
   type EnforcementScopeBaseline,
   type EnforcementScopeFinding,
   type EnforcementScopeStatement,
+  type ReversibleWriteControlDeclaration,
   type ReversibleWriteIdempotencyDeclaration,
+  type SingleUseDecisionIdentifierDeclaration,
   type TransactionAssuranceDeclaration,
 } from "./enforcement-scope.js";
 export {
