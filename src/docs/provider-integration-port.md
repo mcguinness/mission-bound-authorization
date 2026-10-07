@@ -931,8 +931,10 @@ Mission-bound token through the assembled path (#1105).
   validates them against the tool's served input schema, which is closed
   (`admitArguments`, `services/mcp-payments/src/intake.ts:80-96`). A
   violation is refused `invalid_request` with no PDP call and one Refusal
-  Record. Target lookup, the effective parameters and the effect use the
-  normalized arguments.
+  Record carrying `request_invalid` (D334). An unknown tool is refused
+  `unknown_tool` (`request_unsupported`), and a schema intake cannot read is
+  refused `capability_source_unresolvable`. Target lookup, the effective
+  parameters and the effect use the normalized arguments.
 - **Hook.** `buildEffectiveParams`
   (`services/mcp-payments/src/effective-params.ts:27-44`) builds the effective
   parameters from the payments store, never from tool arguments, and
@@ -982,6 +984,7 @@ Mission-bound token through the assembled path (#1105).
   - `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > an argument member the served schema does not declare is refused invalid_request with no PDP call and one Refusal Record` (unknown member)
   - `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > an authoritative member (D34) is refused invalid_request with no PDP call and one Refusal Record` (authoritative member)
   - `intake NFC-normalizes strings before target lookup, effective parameters and execution (@spec operation-profile-payments-v1, D316) > NFC and NFD forms of one invoice_id resolve the same target, yield the same effective parameters, and execute with the normalized value` (normalization)
+  - `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > the signed Refusal Record names request_invalid for arguments outside the schema, request_unsupported for an unknown tool and capability_source_unresolvable for an unreadable schema, each with no PDP call and no effect` (the three signed values)
 - **Residual.** A single-record read re-derives no digest at use; its fresh
   decision is the binding. A transaction-tier refusal after redemption spends
   the permit, and no test asserts the spent state.

@@ -77,7 +77,9 @@ closed (`additionalProperties: false`), before any authorization work. An
 unknown member, an authoritative member (below), a missing required
 member, a non-string value or a malformed `idempotency_key` is refused
 `invalid_request`, with no decision request and a Refusal Record whose
-`denial_reason` is `request_unsupported`. Target lookup, effective
+`denial_reason` is `request_invalid`. An unknown tool is refused
+`unknown_tool` (`request_unsupported`), and a schema intake cannot read is
+refused `capability_source_unresolvable`. Target lookup, effective
 parameters and execution use the normalized values.
 
 - `list_invoices`: `{ vendor_id?: string }`
