@@ -5,7 +5,8 @@
  *
  * Every request is validated against its tool's served input schema, read as
  * a closed schema, before any authorization work; a violation is refused
- * `invalid_request` with one Refusal Record and no PDP call. Strings are
+ * `invalid_request` with no PDP call and one Refusal Record, whose signed
+ * `denial_reason` is `request_invalid` (D334). Strings are
  * NFC-normalized first, and target lookup, effective parameters and the
  * effect all use the normalized value.
  *
@@ -29,8 +30,10 @@ import {
   PaymentsStore,
   PaymentsToolCatalog,
   Pep,
+  REFUSAL_RECORD_MEDIA_TYPE,
   type RefusalRecord,
   TransactionEngine,
+  verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { admitArguments } from "../src/intake.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
@@ -130,8 +133,9 @@ function expectIntakeRefusal(h: Built, res: unknown, action: string, label: stri
   expect(records.map((r) => r.kind), label).toEqual(["refusal"]);
   const refusal = (records[0] as RefusalRecord).content;
   // The caller-visible diagnostic maps to the enumerated value the signed
-  // record carries (`PRE_DECISION_DENIAL_REASON`).
-  expect(refusal.denial_reason, label).toBe("request_unsupported");
+  // record carries (`PRE_DECISION_DENIAL_REASON`): the action is
+  // established and its arguments fail the schema (D334).
+  expect(refusal.denial_reason, label).toBe("request_invalid");
   expect(refusal.action.name, label).toBe(action);
   expect(h.connectors.ledgerEntries(), label).toHaveLength(0);
 }
@@ -204,6 +208,53 @@ describe("intake refuses a request outside the tool's served schema before any P
     expect(h.evidence.all().map((r) => [r.kind, (r.content as { denial_reason?: string }).denial_reason])).toEqual([
       ["refusal", "capability_source_unresolvable"],
     ]);
+  });
+
+  // D334: the three pre-decision refusals a tool call can meet before any
+  // decision work stay distinct on the signed record. Arguments that fail an
+  // established action's schema are not an action the surface lacks, and
+  // neither is a definition it cannot read.
+  it("the signed Refusal Record names request_invalid for arguments outside the schema, request_unsupported for an unknown tool and capability_source_unresolvable for an unreadable schema, each with no PDP call and no effect", async () => {
+    const text = TRUSTED_TOOL_CATALOGS.find((c) => c.service_id === "payments")?.text ?? "";
+    let reads = 0;
+    const legs: Array<[string, Built, string, Record<string, unknown>, string, string]> = [
+      [
+        "arguments outside the schema",
+        await build(),
+        "execute_wire_transfer",
+        { invoice_id: "inv-1", idempotency_key: "has spaces in it, not allowed" },
+        "invalid_request",
+        "request_invalid",
+      ],
+      ["unknown tool", await build(), "void_all_invoices", { invoice_id: "inv-1" }, "unknown_tool", "request_unsupported"],
+      [
+        "unreadable schema",
+        // Only intake's read fails; a later read would succeed.
+        await build(() => {
+          reads += 1;
+          if (reads === 1) throw new Error("catalog offline");
+          return text;
+        }),
+        "execute_wire_transfer",
+        { invoice_id: "inv-1", idempotency_key: idem() },
+        "capability_source_unresolvable",
+        "capability_source_unresolvable",
+      ],
+    ];
+    const signed: string[] = [];
+    for (const [label, h, tool, args, diagnostic, denialReason] of legs) {
+      expect(await h.client.callTool(tool, args, h.jwt), label).toEqual({ ok: false, refusal_reason: diagnostic });
+      expect(h.pdpCalls, label).toHaveLength(0);
+      expect(h.connectors.ledgerEntries(), label).toHaveLength(0);
+      const records = h.evidence.all();
+      expect(records.map((r) => r.kind), label).toEqual(["refusal"]);
+      const refusal = (records[0] as RefusalRecord).content;
+      expect(refusal.denial_reason, label).toBe(denialReason);
+      // The value is the signed one: the envelope's payload carries it.
+      expect(await verifyEvidenceEnvelope(refusal, REFUSAL_RECORD_MEDIA_TYPE, EVIDENCE_KEYS.resolver), label).toEqual({ valid: true });
+      signed.push(refusal.denial_reason);
+    }
+    expect(new Set(signed).size).toBe(3);
   });
 
   it("a schema keyword intake does not implement is a configuration fault, never a constraint silently left unenforced", () => {

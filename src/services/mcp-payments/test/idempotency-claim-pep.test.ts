@@ -516,8 +516,8 @@ describe("the Operation Profile defines an idempotency key for every non-idempot
     }
     expect(h.lastDecision()).toBeUndefined();
     expect(h.evidence.all().map((e) => [e.kind, (e.content as { denial_reason?: string }).denial_reason])).toEqual([
-      ["refusal", "request_unsupported"],
-      ["refusal", "request_unsupported"],
+      ["refusal", "request_invalid"],
+      ["refusal", "request_invalid"],
     ]);
     expect(h.connectors.ledgerEntries()).toHaveLength(0);
     await h.close();

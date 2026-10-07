@@ -927,12 +927,13 @@ export type ReverifyOutcome =
 export const PRE_DECISION_DENIAL_REASON: Readonly<Record<string, string>> = Object.freeze({
   // No such action at this enforcement surface.
   unknown_tool: "request_unsupported",
-  // Intake (operation-profile-payments-v1, D316): arguments outside the
-  // tool's served input schema. That schema is part of the exact capability
-  // definition this surface publishes, so a request outside it names an
-  // operation the surface does not implement. No other value in the closed
-  // set names a malformed request.
-  invalid_request: "request_unsupported",
+  // Intake (operation-profile-payments-v1, D316, D334): the PEP established
+  // the action, and the supplied arguments fail its served input schema (an
+  // unknown or authoritative member, a missing required member, a wrong type,
+  // a pattern miss). Never `request_unsupported`, which names an action this
+  // surface does not implement; no PDP evaluated the request, so it is not
+  // the PDP's `parameter_violation` either.
+  invalid_request: "request_invalid",
   // The Mission the request names cannot be established from local state.
   unknown_mission: "state_unavailable",
   // The named target object does not resolve here.
@@ -1068,10 +1069,12 @@ export class Pep {
    * any decision work. NFC-normalizes the arguments and validates them against
    * the tool's served input schema as a closed schema; the caller uses the
    * returned `args`, never the raw ones, for enforcement and execution. A
-   * violation is refused `invalid_request` with one Refusal Record and no PDP
-   * call. An unknown tool passes through to {@link enforce}, which refuses it
-   * `unknown_tool`; a schema that cannot be read is refused
-   * `capability_source_unresolvable`, never admitted unvalidated.
+   * violation is refused `invalid_request` with one Refusal Record carrying
+   * `request_invalid` (@spec runtime-evidence#pre-decision-refusal, D334) and
+   * no PDP call. An unknown tool passes through to {@link enforce}, which
+   * refuses it `unknown_tool` (`request_unsupported`); a schema that cannot be
+   * read is refused `capability_source_unresolvable`, never admitted
+   * unvalidated.
    */
   async intake(
     tool: string,
