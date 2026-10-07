@@ -13358,9 +13358,21 @@
      "name": "discharged entries are excluded from the PDP's authority input > denies out_of_authority when the view is materialized from the effective set",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > keys discharge by the committed entry, though the loader adds join_delegation (#1133 re-review P1)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/committed-entry-identity.test.ts",
+     "name": "the canonical Mission loader preserves the committed entry identity (D335) > reproduces the committed authority_hash and each entry's issuer digest, though it adds join_delegation",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "MissionView gains a `discharged` DELTA (the discharged entries' commitments) and evaluateInner denies the new `authority_discharged` reason at step 5b, after the entry match and the containment overlay, keyed by the same `entry_digest` a permit already carries. The delta shape mirrors containment's for the same reason: it tells approved-then-completed from never-approved. Both materialization paths are tested: the delta path (authority_discharged) and the effective-set path, where the entry is absent because Mission Status and the introspection projection omit it (@spec status#visibility) and the action denies out_of_authority. The AS side exposes `MissionKernel.dischargedEntryDigests(record)` for a view builder; the demo stack's own loadView is not rewired, so no deployed PEP in this repo populates the delta yet."
+   "notes": "MissionView gains a `discharged` DELTA (the discharged entries' commitments) and evaluateInner denies the new `authority_discharged` reason at step 5b, after the entry match and the containment overlay, keyed by the same `entry_digest` a permit already carries. The delta shape mirrors containment's for the same reason: it tells approved-then-completed from never-approved. Both materialization paths are tested: the delta path (authority_discharged) and the effective-set path, where the entry is absent because Mission Status and the introspection projection omit it (@spec status#visibility) and the action denies out_of_authority. The AS side exposes `MissionKernel.dischargedEntryDigests(record)` for a view builder; the demo stack's own loadView is not rewired, so no deployed PEP in this repo populates the delta yet. The PDP keys the delta by the committed entry digest, the materialized entry without its PDP-local members (the canonical loader adds join_delegation); the demo test proves the loader's view reproduces the issuer's digests and authority_hash (D335). The demo loader does not yet supply the delta itself (#1144)."
   },
   {
    "id": "runtime.decision-inputs.containment-excludes-authority",
@@ -17317,7 +17329,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a credential entry's terminal_when is read through the Mission entries it can derive from (no broader than the entry, carrying exactly its conditions by canonical identity), whose discharge state the PDP holds by entry digest; with no such entry the condition refuses out_of_authority, and if any such entry is discharged it refuses authority_discharged, whatever the entry order"
+    "normative": "a credential entry's terminal_when is read through the Mission entries it can derive from (no broader than the entry, carrying exactly its conditions by canonical identity), whose discharge state the PDP holds by committed entry digest, and only on a view that proves it holds the full committed Authority Set (authority_hash recomputed over the committed entries); an effective-set view, or no such entry, refuses out_of_authority, and any such entry discharged refuses authority_discharged, whatever the entry order"
    },
    "level": "unit",
    "coverage": "tested",
@@ -17339,9 +17351,15 @@
      "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > never borrows another Mission entry's live state: any discharged source refuses, whatever the entry order (#1133 review P1)",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > refuses a credential discharge condition unless the view proves it holds the committed Authority Set (#1133 re-review P1)",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Discharge state is kept per Mission entry digest, never per condition, so two entries carrying one condition can differ in state; the credential entry is therefore resolved to every entry it could derive from, and one discharged among them refuses even when another is live, since the PDP cannot tell which one the credential derives from (#1133 review P1)."
+   "notes": "Discharge state is kept per Mission entry digest, never per condition, so two entries carrying one condition can differ in state; the credential entry is therefore resolved to every entry it could derive from, and one discharged among them refuses even when another is live, since the PDP cannot tell which one the credential derives from (#1133 review P1). A view built from an effective set (Status and introspection omit discharged entries) need not hold every entry the credential could derive from, so it cannot establish the condition; a PDP fed such a view refuses every discharge-conditioned credential entry, the fail-closed reading (#1133 re-review, D335). The proof covers the set, not the discharge delta, whose completeness stays the loader's obligation (#1144)."
   },
   {
    "id": "authzen.context-credential.authority-no-fallback",
@@ -21697,6 +21715,18 @@
      "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > refuses an inconsistent binding or unbounded high-consequence permit before signing",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > honors a discharge condition its source Mission entry carries, so that entry's discharge state governs it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/committed-entry-identity.test.ts",
+     "name": "the canonical Mission loader preserves the committed entry identity (D335) > reproduces the committed authority_hash and each entry's issuer digest, though it adds join_delegation",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
    "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
