@@ -61,6 +61,7 @@ import {
   EvidenceStore,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   publishedEvidenceJwk,
@@ -142,6 +143,7 @@ function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withD
     instanceEpoch: "epoch-1",
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,

@@ -33,6 +33,7 @@ import {
   executionLeaseMs,
   loadRuntimePosture,
   REVERSIBLE_WRITE_CLASS,
+  reversibleWriteControlFor,
   reversibleWriteDeclarationFor,
   reversibleWriteRetentionSeconds,
   RUNTIME_POSTURE,
@@ -266,6 +267,45 @@ const REVERSIBLE_WRITE_EFFECTS: Record<
 export const REVERSIBLE_WRITE_TOOLS: readonly string[] = Object.keys(REVERSIBLE_WRITE_EFFECTS);
 
 /**
+ * @spec runtime#permit-binding, runtime#idempotency, runtime#single-use-identifiers
+ * (#918, #1080, D333): every `consequential_write` this server serves is
+ * covered by a permit-lifetime control the statement selects for it
+ * ({@link reversibleWriteControlFor}), a control this server enforces on the
+ * tool's own write path, with the enforcing store configured and owned by the
+ * declared owner. Anything else is an unsafe topology, refused at startup
+ * rather than discovered at the first duplicate or replay:
+ *
+ * | Selected control | Supported where | Owner the store must have |
+ * |---|---|---|
+ * | `validity_window_plus_idempotency_key` | a keyed tool with a declared reversible effect | `reservation_owner` |
+ * | `single_use_decision_identifier` | an unkeyed tool | `consumed_identifier_owner` |
+ */
+function assertPermitLifetimeCoverage(statement: RuntimePosture, store: WriteReservationStore | undefined): void {
+  for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
+    if (mapping.actionClass !== REVERSIBLE_WRITE_CLASS) continue;
+    const control = reversibleWriteControlFor(statement, mapping.actionClass, mapping.action);
+    if (!control) throw new Error(`no permit-lifetime control declaration covers ${tool}`);
+    const keyed = mapping.idempotencyKey === true;
+    if (keyed !== (control.permit_lifetime_control === "validity_window_plus_idempotency_key")) {
+      throw new Error(
+        `${tool} is served on the ${keyed ? "keyed" : "unkeyed"} write path, which does not enforce ${control.permit_lifetime_control}`,
+      );
+    }
+    if (!store) throw new Error(`${tool}'s ${control.permit_lifetime_control} control has no configured enforcing store`);
+    if (control.permit_lifetime_control === "validity_window_plus_idempotency_key") {
+      if (control.reservation_owner !== store.owner) {
+        throw new Error(`${tool}'s reservation domain is owned by ${control.reservation_owner}, not ${store.owner}`);
+      }
+      if (!REVERSIBLE_WRITE_EFFECTS[tool]) throw new Error(`no reversible effect is declared for tool ${tool}`);
+    } else if (control.consumed_identifier_owner !== store.owner) {
+      throw new Error(
+        `${tool}'s consumed-identifier domain is owned by ${control.consumed_identifier_owner}, not ${store.owner}`,
+      );
+    }
+  }
+}
+
+/**
  * @spec runtime-evidence#execution-evidence-object `error`: deployment-
  * defined values for the refusals a keyed reversible write makes before any
  * effect: the two its effect makes before it changes anything, and
@@ -386,12 +426,12 @@ export interface McpServerDeps {
   /**
    * @spec runtime#idempotency (#918): this PEP's reservation and retention
    * store for keyed reversible writes, a durable single-writer file named in
-   * configuration. Never defaulted: absent, every keyed reversible write is
-   * refused `consumption_unavailable` and executes nothing, since without the
-   * store exactly-once cannot be established. @spec
-   * runtime#single-use-identifiers (#1080): the same file records the
-   * consumed identifiers of single-use permits on the unkeyed write path, and
-   * absent, such a permit is refused the same way.
+   * configuration. @spec runtime#single-use-identifiers (#1080): the same
+   * file records the consumed identifiers of single-use permits. Never
+   * defaulted, and REQUIRED (D333): the server does not start without it,
+   * since every served `consequential_write` needs its control's enforcing
+   * store ({@link assertPermitLifetimeCoverage}). A store that later cannot be
+   * written refuses `consumption_unavailable` and executes nothing.
    */
   writeReservations?: WriteReservationStore;
 }
@@ -453,24 +493,7 @@ export class McpPaymentsServer {
     this.txnPending = stores.pending;
     this.txnConsumption = stores.consumption;
     this.dpopReplay = deps.dpopReplay ?? newDpopProofReplay();
-    // @spec runtime#idempotency (#918): a reservation store this statement
-    // does not publish as the domain of every keyed reversible write it
-    // serves is an unsafe topology, refused at startup rather than discovered
-    // at the first duplicate.
-    if (deps.writeReservations) {
-      const statement = deps.enforcementScopeStatement ?? RUNTIME_POSTURE;
-      for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
-        if (!mapping.idempotencyKey || mapping.actionClass !== REVERSIBLE_WRITE_CLASS) continue;
-        const declared = reversibleWriteDeclarationFor(statement, mapping.actionClass, mapping.action);
-        if (!declared) throw new Error(`no reversible-write idempotency declaration covers ${tool}`);
-        if (declared.reservation_owner !== deps.writeReservations.owner) {
-          throw new Error(
-            `${tool}'s reservation domain is owned by ${declared.reservation_owner}, not ${deps.writeReservations.owner}`,
-          );
-        }
-        if (!REVERSIBLE_WRITE_EFFECTS[tool]) throw new Error(`no reversible effect is declared for tool ${tool}`);
-      }
-    }
+    assertPermitLifetimeCoverage(deps.enforcementScopeStatement ?? RUNTIME_POSTURE, deps.writeReservations);
   }
 
   /**

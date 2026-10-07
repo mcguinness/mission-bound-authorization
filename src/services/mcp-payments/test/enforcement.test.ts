@@ -303,6 +303,7 @@ d("M4 core enforcement tier", () => {
       instanceEpoch: "epoch-1",
     });
     const containedServer = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
       pep,
       payments,
       loadView: loadViewFor(containedView),

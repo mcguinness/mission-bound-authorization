@@ -41,6 +41,7 @@ import {
   createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   operationKey,
   PaymentsStore,
   Pep,
@@ -171,6 +172,7 @@ async function harness(o: HarnessOptions = {}) {
     now,
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,

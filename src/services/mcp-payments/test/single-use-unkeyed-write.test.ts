@@ -244,17 +244,16 @@ describe("single-use permits on the unkeyed write path (@spec runtime#single-use
     after.store?.close();
   });
 
-  it("a consumed-identifier store that cannot be written, or none configured, refuses consumption_unavailable with no hold", async () => {
+  it("a consumed-identifier store that cannot be written refuses consumption_unavailable with no hold, and a server with no store configured does not start", async () => {
     const broken = harness();
     broken.store?.close();
     const failed = await hold(broken);
     expect(failed).toEqual({ ok: false, refusal_reason: "consumption_unavailable" });
     expect(broken.executions().map((e) => [e.content.outcome, e.content.error])).toEqual([["suppressed", "consumption_unavailable"]]);
 
-    const absent = harness({ store: "none" });
-    const unconfigured = await hold(absent);
-    expect(unconfigured).toEqual({ ok: false, refusal_reason: "consumption_unavailable" });
-    expect(absent.executions().map((e) => e.content.error)).toEqual(["consumption_unavailable"]);
+    // @spec runtime#permit-binding (D333): no served consequential_write runs
+    // without its control's enforcing store.
+    expect(() => harness({ store: "none" })).toThrow(/has no configured enforcing store/);
   });
 
   it("a use_limit other than 1, which this PEP cannot meter, is refused condition_unrecognized with no hold and no consumed record", async () => {

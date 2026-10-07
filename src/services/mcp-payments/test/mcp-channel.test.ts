@@ -29,6 +29,7 @@ import {
   type ExecutionEvidence,
   type MediatedClient,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   signedDenialReason,
@@ -173,6 +174,7 @@ async function build(): Promise<{
     instanceEpoch: "epoch-1",
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,
