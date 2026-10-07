@@ -5881,6 +5881,11 @@ Cross-Domain:
 
 -01
 
+- Editorial, family-wide (#876, D337): generic role nouns are
+  lowercase ("authorization server", "resource server") in prose; the
+  defined Mission-aware Resource Server, Mission Issuer, Mission Client
+  and Resource AS keep their capitals. No requirement changes.
+
 - Security Considerations: duplicated security prose removed from a
   classified list reviewed on #877 (D330). Each removal restated a body
   rule (Mission Approval, Approval Comprehension, Revocation,
