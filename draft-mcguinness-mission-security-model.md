@@ -739,12 +739,16 @@ Four assumptions hold across the whole model:
   method ({{I-D.draft-mcguinness-oauth-id-assertion-framework}},
   {{I-D.draft-mcguinness-oauth-domain-authorized-issuer}}) are
   concrete publication and evaluation mechanisms for such policy.
-- **Authority does not move on inert input.** `purpose`,
-  `success_criteria`, and disclosure-only audit material are inert
-  and cannot derive, widen, or gate authority; `goal` shapes
-  authority only through the pre-approval derivation whose result the
-  Approver reads and consents to, and is inert once the Mission is
-  approved ({{I-D.draft-mcguinness-oauth-mission}}).
+- **Authority does not move on inert input.** `success_criteria`
+  and disclosure-only audit material are inert and cannot derive,
+  widen, or gate authority; `goal` shapes authority only through the
+  pre-approval derivation whose result the Approver reads and
+  consents to, and is inert once the Mission is approved. `purpose`
+  selects candidate authority only as a configured-mapping lookup
+  key, bounded by the Intent, policy, and approval; any other use can
+  only refuse or apply stricter treatment, never supply, widen,
+  relax, or refresh authority or replace an independently required
+  check ({{I-D.draft-mcguinness-oauth-mission}}).
 
 ## Failure Taxonomy Crosswalk (Informative) {#failure-crosswalk}
 
@@ -1517,6 +1521,11 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The inert-input assumption separates `purpose` from inert material:
+  it selects candidate authority only as a configured-mapping lookup
+  key, and any other use can only refuse or apply stricter treatment,
+  as the OAuth binding states (#1102).
 
 - Revocation-to-Action Latency states that revoking a Mission does not
   prohibit equivalent authority under a separately approved Mission,
