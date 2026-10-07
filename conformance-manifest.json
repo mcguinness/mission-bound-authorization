@@ -19,8 +19,8 @@
     "content_sha256": "ea9be2ae2bb1b15bd13e30d8a9bdf328bfcbb89f15621f6cf31bf75eb400fca3"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "f483680b18f8f7734f96cf6bb521e65941174247",
-    "content_sha256": "313d2b0165ed4727b18fb0ee0227aa65ff6dea7ec9dc97475333472805e9d568"
+    "revision": "d3394d7fae8dc8fd13b9948c603ade53b8dc883c",
+    "content_sha256": "d80b100ff35170088f1edf3f532186d32ebb0eca691ff01a942751936e36f0e6"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "2b422bf1c54a64ae5cdf4440f041a0d27f2a0e05",
@@ -51,8 +51,12 @@
     "content_sha256": "544fd9439ba95abcfb530d84a834dd1532c136bce3ec5c32ea61bc152250cbcb"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "60552344e0c4184a6dca034ace9d424bbb6b4965",
-    "content_sha256": "262319038b786c962e4decbb1d68102cd09c6242378bcf8f85541204d0b3c37b"
+    "revision": "d4833ce6562069d46441ea505acc531cd7c2d482",
+    "content_sha256": "c7248870526a9d2686f50b19c7a00ab5aa3ad15a3f240f612cdfba6318f88184"
+   },
+   "draft-mcguinness-oauth-mission-management.md": {
+    "revision": "d4833ce6562069d46441ea505acc531cd7c2d482",
+    "content_sha256": "8d725d011cee0c723f9456e188756d0460dc4854153bfb51c385fbcfc28c7ff1"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "6f2300ed1ac42c92c63b46f41915b500cc3901ce",
@@ -63,8 +67,8 @@
     "content_sha256": "76ae8710dc0faf41220e947e05a4dc4a79440c0039746089a4b24e486c1d06de"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "5d16ac66488253e626adf6504c37892c25ca054d",
-    "content_sha256": "028d9bd108bcf795eaa01bd2a15f987f2a2c8cc6c5e5eebf9afb6d30332c56a1"
+    "revision": "d02d103e71a1070f0c5b781db3b0e9a8f794b9d9",
+    "content_sha256": "39b28b16a5c47627767e1a062ce1049d02a19ad7fdb1f715d1227aa461265942"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -99,8 +103,8 @@
     "content_sha256": "41d16c43d4e29769a790ea33393bfc300f8b96875a99c614d6039c689cc3fadb"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "7ce943ddb2de8310bc08d5013f9d0e7d5b034748",
-    "content_sha256": "36563869bb2742ec212697fcb5da7dc3d6bb6fa15108adfe6db866a8ef53b79b"
+    "revision": "ef894230a00a5feddb008d5d9fa0ccaaf08e8919",
+    "content_sha256": "54c35b410f112788f3fa8c838959cfd71020af5700a2b0eba3d670b474d39a14"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "2b93b1b39b6868c93caf475887d31bf21891b1cc",
@@ -4529,6 +4533,54 @@
    "notes": "Both refusal arms (unparseable and already-past) are invalid_request at submission acceptance, judged against the kernel clock. The requested value is never rewritten forward. Row replaces the pre-#525 invalid_authorization_details behavior."
   },
   {
+   "id": "core.intent.purpose-restrictive-use",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-intent",
+   "text": "In any other decision, `purpose` MAY contribute only to a refusal or to stricter treatment",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "outside the configured-mapping lookup, an AS may refuse, or apply stricter treatment to, a submission on its purpose, and that is the only effect purpose has on the decision; a runner never fails an AS for refusing or tightening on purpose"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No purpose decision path in the reference AS: kernel/intent.ts only validates purpose as a string, and deriveAuthoritySet (kernel/derive.ts) keys configured-mapping mode on target_resources and never reads purpose. Planned surface: derivation (deriveAuthoritySet) and the authorization decision, once deployment policy can refuse or tighten on purpose."
+  },
+  {
+   "id": "core.intent.purpose-never-widens",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-intent",
+   "text": "its value, its absence, or a substituted value MUST NOT supply, widen, relax, or refresh authority, or replace a check that applies independently of it",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "outside the configured-mapping lookup, submissions that differ only in purpose (a value, a different value, or none) receive no wider Authority Set, no relaxed or refreshed authority, and no skipped check; any difference purpose makes is a refusal or stricter treatment"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "A prohibition every AS meets; the reference AS meets it trivially. No purpose decision path in the reference AS: kernel/intent.ts only validates purpose as a string, and deriveAuthoritySet (kernel/derive.ts) keys configured-mapping mode on target_resources and never reads purpose. Planned test surface: derivation, an output-bound invariance test over deriveAuthoritySet (kernel.test.ts) with Intents differing only in purpose, once a purpose path exists. Runtime decision points are covered by the runtime.classification purpose rows."
+  },
+  {
    "id": "core.record.effective-not-later-than-requested",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
@@ -8397,6 +8449,353 @@
    "notes": "The reference AS authenticates Status and Lifecycle callers with a deployment service token, not mTLS or private_key_jwt, so it has no direct-client-authentication path to test. Todo (#972 item 18, #1099 review)."
   },
   {
+   "id": "status.lifecycle.scheduled-resume-authorization",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS MUST authorize it against both the caller's authorization for `suspend` and the authorization the deployment requires for a direct `resume` of that Mission, including when it sets or replaces the schedule of a Mission already `suspended`, whoever suspended it.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a suspend carrying on_expiry=resume is refused to a caller holding the authorization for suspend but not the deployment's direct-resume authorization for that Mission, both when it would arm a schedule on an active Mission and when it would set or replace the schedule of a Mission another party already suspended; a caller holding both succeeds"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint with a suspend-only caller and a suspend-plus-resume caller, each sending suspend with suspend_until and on_expiry=resume against an active Mission and against a Mission a different party suspended (with and without a recorded schedule)."
+  },
+  {
+   "id": "status.lifecycle.scheduled-resume-refusal-no-change",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS checks both before any change and refuses a caller lacking either as an unauthorized lifecycle request (below), leaving the Mission's state and schedule unchanged.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the refused scheduled-resume request leaves the Mission's state, its recorded suspend_until and on_expiry, and that schedule's committing party unchanged, and is answered with the not-found response shape of an unauthorized lifecycle request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the refusal cases of status.lifecycle.scheduled-resume-authorization, asserting state, version, recorded schedule and committing party before and after, and the not_found response body."
+  },
+  {
+   "id": "status.lifecycle.schedule-committing-party-recorded",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS MUST record with each committed schedule its committing party, the acting party of the request that committed it; an authorized replacement records its own.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each committed schedule is recorded with the acting party of the request that committed it, and an authorized replacement records the replacing request's acting party in place of the earlier one"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the AS's schedule and audit record read after arming a schedule and after an authorized replacement by a different acting party; no wire member carries the committing party."
+  },
+  {
+   "id": "status.lifecycle.schedule-applied-at-deadline",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "When the `suspend_until` of a current schedule passes, the AS MUST apply `on_expiry` (transition to `active` for `resume`, or to `revoked` for `revoke`) and emit the corresponding transition, without a further request.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "once a current schedule's suspend_until passes before expires_at, the Mission is reported active (on_expiry resume) or revoked (on_expiry revoke) with the corresponding transition emitted, without any further lifecycle request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: a controllable clock driving a suspended Mission past suspend_until for each on_expiry value, observed through the Mission Status endpoint."
+  },
+  {
+   "id": "status.lifecycle.schedule-grant-loss-not-cancel",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "a later expiry or withdrawal of the committing party's grant does not by itself cancel it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a resume schedule whose committing party's resume authorization is withdrawn or expires after the commit still applies at its deadline; the deadline performs no grant re-check"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, withdraw the committing caller's lifecycle grant, advance the clock past suspend_until, and observe the Mission active."
+  },
+  {
+   "id": "status.lifecycle.schedule-superseded-never-fires",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "The AS MUST NOT apply a schedule that is no longer current, so an earlier deadline never acts on a later suspension.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after a scheduled resume is superseded, by a direct resume followed by a new suspend or by an authorized replacement, its original deadline passing leaves the Mission suspended with its current schedule, if any, and that schedule's committing party unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, then (a) resume and suspend again with no schedule or a later one, and (b) replace it with a later or revoke schedule; advance the clock past the original suspend_until and observe state, schedule and committing party."
+  },
+  {
+   "id": "status.lifecycle.schedule-no-terminal-change",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "A deadline applies only a transition legal from the Mission's current state",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a deadline passing for a Mission that has reached a terminal state changes nothing: a resume schedule never makes a revoked, completed, expired or companion-terminal Mission active"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, revoke or complete the Mission, advance the clock past suspend_until, and observe the terminal state unchanged with no transition emitted."
+  },
+  {
+   "id": "status.lifecycle.schedule-expiry-governs",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "legal-transitions",
+   "text": "When a schedule's `suspend_until` is at or after the Mission's `expires_at`, expiry governs: the Mission becomes `expired` at `expires_at`, and the AS MUST NOT apply that schedule's `on_expiry`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with suspend_until equal to or later than expires_at, the Mission reaches expired at expires_at and is never observed active from the scheduled resume (nor revoked from a revoke schedule)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: a controllable clock with suspend_until equal to expires_at and later than expires_at, for both on_expiry values, observing every Status read across the boundary."
+  },
+  {
+   "id": "status.lifecycle.schedule-replacement",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "the AS MUST update the recorded values and their committing party, emitting the corresponding transition-metadata change and reporting the updated values in the response",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorized suspend against a suspended Mission carrying a valid suspend_until and on_expiry pair that differs from the recorded schedule, or arming one where none is recorded, updates the recorded pair and its committing party, emits the metadata change, and reports the new values in the signed response"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint: suspend, then suspend again with a different valid pair from a different authorized caller; assert the response values, the incremented version, the emitted change and the recorded committing party."
+  },
+  {
+   "id": "status.lifecycle.schedule-omission-preserves",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "A `suspend` that omits both members leaves the recorded schedule, if any, and its committing party unchanged: omission never clears a deadline.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a suspend omitting both suspend_until and on_expiry against a suspended Mission leaves the recorded pair and its committing party unchanged, whoever sends it, and the deadline still applies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint: arm a schedule, send a plain suspend from another authorized caller, and assert the reported pair, version and committing party unchanged."
+  },
+  {
+   "id": "status.lifecycle.schedule-incomplete-pair-invalid",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "A `suspend` carrying only one of the two remains invalid",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a suspend carrying suspend_until without on_expiry, or on_expiry without suspend_until, is refused as malformed and changes neither state nor any recorded schedule"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint against an active and a suspended Mission, each incomplete pair, asserting refusal and unchanged state and schedule."
+  },
+  {
+   "id": "management.bulk.scheduled-resume-grant-dry-run",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "dry-run",
+   "text": "Before evaluating the filter for a `suspend` whose `on_expiry` is `resume`, the AS MUST verify that the caller holds the `resume` grant of {{blast-radius}}, and MUST refuse a caller that lacks it with `forbidden` ({{management-errors}}), issuing no bulk token.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a dry run of a bulk suspend with on_expiry=resume from a Management Client lacking the distinct or elevated resume grant is refused forbidden with no bulk token issued and no membership evaluated, while the same dry run with on_expiry=revoke, or from a caller holding the grant, succeeds"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint, dry run of a bulk suspend with each on_expiry value from callers with and without the resume grant."
+  },
+  {
+   "id": "management.bulk.scheduled-resume-grant-execute",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "For a `suspend` whose `on_expiry` is `resume`, the AS MUST verify again that the caller holds the `resume` grant of {{blast-radius}}, and MUST refuse a caller that no longer holds it with `forbidden`, executing nothing; the bulk token never substitutes for this check.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an execute of a bulk suspend with on_expiry=resume, presenting a bulk token from a dry run the caller passed while holding the resume grant, is refused forbidden when the grant has since been withdrawn, and no member's state or schedule changes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run with the resume grant, withdraw the grant, execute with the valid bulk token, and assert the refusal and every pinned member unchanged."
+  },
+  {
+   "id": "management.bulk.schedule-values-bound",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "An execute whose `operation`, `filter`, `suspend_until`, or `on_expiry` differs from what the token pins MUST be refused with `invalid_bulk_token`, executing nothing.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an execute of a bulk suspend whose suspend_until or on_expiry differs from the values its bulk token pins (including omitting them, or changing revoke to resume) is refused invalid_bulk_token and changes no member"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run a bulk suspend with a schedule, then execute with a changed suspend_until, a changed on_expiry, and both omitted."
+  },
+  {
+   "id": "management.bulk.schedule-committing-party",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "The caller is the committing party of every schedule a bulk `suspend` commits.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every schedule a bulk suspend commits, armed on an active member or replacing an already-suspended member's schedule, is recorded with the executing Management Client as its committing party"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: bulk suspend with a schedule over active and already-suspended members, then read each member's schedule record."
+  },
+  {
+   "id": "management.bulk.schedule-omission-preserves",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "on a member already `suspended`, a request that omits `suspend_until` and `on_expiry` leaves the member's recorded schedule and its committing party unchanged",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a bulk suspend without suspend_until and on_expiry leaves each already-suspended member's recorded schedule and committing party unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: arm schedules on some members through the lifecycle endpoint, then bulk suspend the set without schedule members and read each member's schedule and committing party."
+  },
+  {
    "id": "signals.discharge.authority-changed-rematerialize",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "consumer-behavior",
@@ -11315,6 +11714,52 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Misfit for a PDP-only unit test: classification assignment (whether purpose or deployment policy lowers an action's class) happens in the PEP's static action-to-class map (mcp-payments/src/pep.ts), never inside evaluate(), which receives action_class as an already-decided opaque label and has no classifier or floor table of its own. No lowering mechanism exists in evaluate.ts to exercise."
+  },
+  {
+   "id": "runtime.classification.purpose-may-raise",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "A Mission's `purpose`, or deployment policy, MAY raise an action to a stricter class.",
+   "role": "PDP",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP whose policy raises an action's class on the Mission's purpose applies the stricter class's gating to that action; raising is the only classification effect purpose has"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No purpose path: the PEP's static action-to-class map (mcp-payments/src/pep.ts) and evaluate() (services/pdp) never read purpose, and the PDP's Mission view carries no purpose member. Planned surface: decision-request, a PDP classification test once policy can key a class raise on the approved Mission's purpose."
+  },
+  {
+   "id": "runtime.classification.purpose-from-approved-mission",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "The `purpose` consulted is the approved Mission's, from its Mission state or a validated projection of it ({{I-D.draft-mcguinness-oauth-mission}}), never a value the request asserts.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the purpose a PDP's classification consults is the approved Mission's; a decision request that carries a different purpose, or none, gets the same classification, and no class falls below the floor"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No purpose path: the PEP's static action-to-class map (mcp-payments/src/pep.ts) and evaluate() (services/pdp) never read purpose, and the PDP's Mission view carries no purpose member. Planned surface: decision-request, a PDP test that a request-asserted purpose differing from the Mission's changes no classification, once the PDP reads the Mission's purpose."
   },
   {
    "id": "runtime.classification.no-evasion-and-write-floor",
@@ -15779,7 +16224,7 @@
    "id": "runtime.inspection-controls.advisory-signal-no-widen",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "inspection-controls",
-   "text": "Such a signal MAY contribute to a denial; it MUST NOT widen, grant, or refresh authority, consistent with the inert treatment of `goal` and `purpose` in the issuance profile",
+   "text": "Such a signal MAY contribute to a denial; it MUST NOT widen, grant, or refresh authority, consistent with the issuance profile's treatment of `goal` as inert and of `purpose` as restrictive outside its configured-mapping lookup",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
