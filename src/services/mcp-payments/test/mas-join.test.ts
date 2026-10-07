@@ -469,6 +469,52 @@ describe("baseline MAS Join: the Mission-bound path is unaffected (@spec authori
   });
 });
 
+describe("baseline MAS Join: the PDP decides over the Mission's own view, never one filtered by the credential (D340)", () => {
+  const INVOICE_READ = "payments:invoice.read";
+  // A Mission entry broader than the acting credential: it carries both reads,
+  // the credential only the vendor read.
+  const broadView: MissionView = {
+    ...view,
+    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [READ, INVOICE_READ] }],
+  };
+  const NARROW_CREDENTIAL: () => AuthorityEntry[] = () => [
+    { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [READ] },
+  ];
+
+  it("permits the action a narrower ordinary credential covers under a broader Mission entry, deciding over the whole entry", async () => {
+    const views: MissionView[] = [];
+    const pep = build(
+      {
+        decide: async (req, opts) => {
+          views.push(opts.view);
+          return EVIDENCE_KEYS.decide(req, opts);
+        },
+        masJoin: { resolveOrdinaryAuthority: NARROW_CREDENTIAL },
+      },
+      broadView,
+    );
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res.permitted, JSON.stringify(res)).toBe(true);
+    expect(views).toHaveLength(1);
+    expect(views[0]?.authority_set).toEqual(broadView.authority_set);
+  });
+
+  it("still refuses an action the Mission entry covers but the narrower credential does not, before the PDP", async () => {
+    const narrowToInvoice: () => AuthorityEntry[] = () => [
+      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [INVOICE_READ] },
+    ];
+    const capture = capturingDecide();
+    const pep = build({ decide: capture.decide, masJoin: { resolveOrdinaryAuthority: narrowToInvoice } }, broadView);
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res).toMatchObject({ permitted: false, refusal_reason: "out_of_authority" });
+    expect(capture.requests).toHaveLength(0);
+  });
+});
+
 // @spec authority-server#join-authzen (#972 item 2): the PEP's decision
 // request is captured here, not inferred from the PDP's verdict, so the
 // assertions below are about the member itself.
