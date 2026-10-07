@@ -11,12 +11,12 @@
     "content_sha256": "ebcea1b67c1c23cd2b22614cbd969b6ce9122b39e5dd04ad3893a0e786e26b89"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "9a355d750e21cebe6f16a1a32ef26efa671eb1b5",
-    "content_sha256": "9a4c11a5159c757dbd4deae1a4d063caaf0e676603653006e839f43c4fcac35c"
+    "revision": "b2c423ba8238c550efd63fecc21e75419768a6b3",
+    "content_sha256": "cc4c2275dd9b5d1e505161a8fad421509baf92fedeae0e3f4faf28e4510099e4"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "40705c1d1bab1ee18d0a5345f3071aaaa30d2031",
-    "content_sha256": "ea9be2ae2bb1b15bd13e30d8a9bdf328bfcbb89f15621f6cf31bf75eb400fca3"
+    "revision": "b2c423ba8238c550efd63fecc21e75419768a6b3",
+    "content_sha256": "258282fe72f40fe8a05faca5e3bc3d8b91fc829e620ba7f1ce1b867450702111"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "d3394d7fae8dc8fd13b9948c603ade53b8dc883c",
@@ -17283,6 +17283,83 @@
     }
    ],
    "notes": "D324 extends #801's split to the credential bound: reordering it after the Mission's own checks alone was declined, since a narrower credential's identical constraint failure would still be classified differently. Discharge and approval keep their dedicated handling (unestablished-condition, context-approval)."
+  },
+  {
+   "id": "authzen.evidence.authority-bound-required",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "evidence",
+   "text": "It is REQUIRED on an `out_of_authority` or `parameter_violation` deny that one of those two bounds decided, and absent on every other decision, including a permit and a deny by Resource policy",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an out_of_authority or parameter_violation deny records authority_bound naming the bound that decided it (credential where the credential's own authority refused, mission where the Mission's own entry did), and no other decision carries it: a permit, a Resource-policy (FGA) deny, a missing relation mapping, a request fault, a lifecycle deny; the emitter refuses the member on a permit, on any other reason, or outside the two values"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > names the credential bound where it refused: no entry names the action, its constraint fails, its discharge condition cannot be established",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > names the Mission bound where the Mission's own entry refused: no entry names the action, its vendors, a collection member, its amount cap",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > names no bound on any other decision: Resource policy, a missing relation mapping, a request fault, a lifecycle deny, a permit",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > refuses to sign authority_bound on a permit, on another denial reason, or with a value outside the two bounds",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "D322 kept D312's evidence requirement and moved it here (2b-ii); D324 extended it to parameter_violation; D340 ported #1134's authority_bound. A Resource-policy deny is out_of_authority on main and carries no bound; #1135 gives it its own reason, resource_policy."
+  },
+  {
+   "id": "authzen.evidence.authority-bound-evaluation-order",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "evidence",
+   "text": "When both bounds exclude the action, the PDP records the one it evaluated first",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a credential mirroring the Mission entry's vendor constraint fails at the credential bound first, so its deny records authority_bound credential"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > names the bound evaluated first when both exclude the action: a mirrored credential's constraint is the credential's",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
   },
   {
    "id": "authzen.context-credential.authority-no-substitute",
