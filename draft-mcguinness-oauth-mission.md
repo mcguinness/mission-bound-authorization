@@ -1549,8 +1549,7 @@ At a direct approval event the AS MUST, in order:
      agent may do, not the `goal` or Mission Intent: derivation is
      local policy, and nothing commits that the derived authority
      reflects the goal the Approver read. An approval surface that
-     renders only the `goal`, `success_criteria`, or Mission Intent
-     does not conform.
+     renders only the `goal` or Mission Intent does not conform.
    - When the Approver is not the Subject, the rendering MUST
      identify the Subject the authority is granted for.
    - The rendering MUST identify the authority source and, for
@@ -1600,9 +1599,8 @@ of {{RFC8707}}.
 
 The consent rendering is hardened against client text:
 
-- Client-supplied strings (`goal`, `task_bounds`,
-  `success_criteria`) MUST be rendered as inert text and MUST NOT be
-  interpreted as markup.
+- Client-supplied strings (`goal`, `task_bounds`) MUST be rendered as
+  inert text and MUST NOT be interpreted as markup.
 - The AS SHOULD mitigate Unicode direction-override and
   confusable-character presentation in them.
 - The rendering MUST visually distinguish the AS-derived Authority
