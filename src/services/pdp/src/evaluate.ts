@@ -61,12 +61,14 @@ import { type DelegatePolicy, resolveBaselineJoin } from "./mas-join.js";
 import { decisionCacheKey, idempotencyScopeOf, operationIdentity } from "./projections.js";
 import {
   type AuthorityEntry,
+  committedEntryDigest,
   deriveContextualTuples,
   joinViewId,
   MISSION_RESOURCE_ACCESS_TYPE,
   type MissionView,
   policyViewId,
   vendorConstraintSatisfied,
+  viewHoldsCommittedSet,
 } from "./policy-view.js";
 import { permitDeadline } from "./permit-deadline.js";
 import {
@@ -1172,7 +1174,7 @@ async function evaluateInner(
   //     "approved, trust lost", `authority_discharged` is "approved, work done".
   const dischargedDigests = view.discharged?.entry_digests;
   if (dischargedDigests?.length) {
-    const digest = computeAnchor(AUTHORITY_ENTRY_TYP, view.issuer, entry as never);
+    const digest = committedEntryDigest(view.issuer, entry);
     if (dischargedDigests.includes(digest)) {
       return {
         decision: false,
@@ -1202,24 +1204,34 @@ async function evaluateInner(
   //     Its discharge condition is read through the Mission entries it can
   //     derive from, because discharge state is kept per Mission entry digest
   //     (5b), never per condition: two entries can carry one condition and
-  //     differ in state. A source is a recognized entry of the set step 5
-  //     searched that the credential entry is no broader than (@spec mission#
-  //     subset; discharge#subset-extension) and that carries exactly its
-  //     conditions by canonical identity, so the PDP holds state for each one.
-  //     With no source the condition cannot be established and does not permit
-  //     (`out_of_authority`). If ANY source is discharged the entry does not
-  //     permit either, deliberately, even when another source is live: the PDP
-  //     cannot tell which one the credential derives from, and it refuses that
-  //     ambiguity. That refusal is 5b's `authority_discharged`, naming the
-  //     discharged source, so the answer does not depend on entry order.
+  //     differ in state. A source is a recognized entry of the view's set that
+  //     the credential entry is no broader than (@spec mission#subset;
+  //     discharge#subset-extension) and that carries exactly its conditions by
+  //     canonical identity, so the PDP holds state for each one. The search is
+  //     sound only over every entry the credential could derive from, so it
+  //     runs only when the view proves it holds the full committed set
+  //     (`authority_hash` recomputed over the committed entries; D335): an
+  //     effective-set view omits discharged entries, and a surviving
+  //     overlapping entry cannot establish which one issued the credential.
+  //     Without that proof, or with no source, the condition cannot be
+  //     established and does not permit (`out_of_authority`). If ANY source is
+  //     discharged the entry does not permit either, deliberately, even when
+  //     another source is live: the PDP cannot tell which one the credential
+  //     derives from, and it refuses that ambiguity. That refusal is 5b's
+  //     `authority_discharged`, naming the discharged source, so the answer
+  //     does not depend on entry order. The proof covers the set, not the
+  //     discharge delta, whose completeness stays the loader's obligation.
   const credentialVendorIds: readonly string[] =
     req.resource.properties?.vendor_ids ??
     (req.resource.properties?.vendor_id ? [req.resource.properties.vendor_id] : []);
+  let viewHoldsFullSet: boolean | undefined;
   const credentialDischarge = (
     c: CredentialAuthorityEntry,
   ): { state: "live" | "unestablished" } | { state: "discharged"; digest: string } => {
     const conditions = c.constraints?.terminal_when;
     if (!conditions?.length) return { state: "live" };
+    viewHoldsFullSet ??= viewHoldsCommittedSet(view);
+    if (!viewHoldsFullSet) return { state: "unestablished" };
     const asEntry: CoreAuthorityEntry = {
       type: c.type,
       resource: c.resource,
@@ -1227,7 +1239,7 @@ async function evaluateInner(
       ...(c.constraints ? { constraints: c.constraints } : {}),
     };
     let sources = 0;
-    for (const m of candidateAuthoritySet) {
+    for (const m of view.authority_set) {
       if (m.type !== MISSION_RESOURCE_ACCESS_TYPE) continue;
       const source: CoreAuthorityEntry = {
         type: m.type,
@@ -1238,7 +1250,7 @@ async function evaluateInner(
       if (!isSubsetEntry(asEntry, source)) continue;
       if (!conditionsNoBroader(m.constraints?.terminal_when, conditions)) continue;
       sources++;
-      const digest = computeAnchor(AUTHORITY_ENTRY_TYP, view.issuer, m as never);
+      const digest = committedEntryDigest(view.issuer, m);
       if (dischargedDigests?.includes(digest)) return { state: "discharged", digest };
     }
     return { state: sources > 0 ? "live" : "unestablished" };
@@ -1606,7 +1618,7 @@ async function evaluateInner(
   return {
     decision: true,
     context: base({
-      entry_digest: computeAnchor(AUTHORITY_ENTRY_TYP, view.issuer, entry as never),
+      entry_digest: committedEntryDigest(view.issuer, entry),
       conditions: {
         valid_until: validUntil,
         ...(highConsequence ? { use_limit: 1 } : {}),
