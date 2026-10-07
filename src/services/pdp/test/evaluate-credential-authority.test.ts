@@ -214,9 +214,12 @@ describe("the credential's discharge and approval conditions are decided at the 
   it("keys discharge by the committed entry, though the loader adds join_delegation (#1133 re-review P1)", async () => {
     // The committed view refuses; adding the loader's PDP-local member leaves the delta's key unchanged.
     const credential = { authority: [closeEntry] };
+    // A credential with no discharge condition leaves step 5b alone to refuse.
+    const unconditioned = { authority: [entry(["payments:invoice.read"])] };
     for (const local of [() => ({}), delegable]) {
       const v = committedView([closeEntry], local, { discharged: { entry_digests: [issuerDigest(closeEntry)] } });
       expect(reason(await evaluate(req(credential, on(v)), opts(v)))).toBe("authority_discharged");
+      expect(reason(await evaluate(req(unconditioned, on(v)), opts(v)))).toBe("authority_discharged");
     }
   });
 
