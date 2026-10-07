@@ -1283,6 +1283,12 @@ entry carrying a `terminal_when` constraint it does not understand
 
 \[\[ To be removed from the final specification ]]
 
+- The Mission Intent no longer carries `success_criteria`, following
+  the OAuth binding. `terminal_when` is described as the enforceable
+  statement of one entry's completion, not of the task's success, and
+  the Introduction says the Intent's prose stays inert. No requirement
+  changed.
+
 - Discharge Commit ({{discharge-commit}}): a committed discharge places
   a restriction on the Mission's expansion chain, retained across later
   successors and cleared only for the authority a fresh human approval
