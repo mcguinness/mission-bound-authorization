@@ -1172,14 +1172,14 @@ export class Pep {
       const loaded = this.deps.loadView({ id: propagated.id, issuer: propagated.issuer });
       if (!loaded) return await this.refuse(token, "unknown_mission", mapping.action, undefined, propagated.id);
 
-      // Rule 8, bound 1: the acting credential's OWN authority (a PEP-side
-      // deployment hook over TokenFacts, not a PDP concern -- @spec
-      // authority-server#mission-join rule 8 note; #557 review point 1
-      // moves rules 3-6, the subject/client/delegate join proper, into the
-      // PDP below, but rule 8's credential-authority bound stays exactly
-      // where it was). No evaluator configured -> fail closed (see
-      // PepDeps.masJoin doc): a working Join with no usable permit, never a
-      // silently unbounded one.
+      // Rule 8, bound 1: the acting credential's OWN authority, resolved by a
+      // PEP-side deployment hook over TokenFacts (@spec
+      // authority-server#mission-join rule 8 note; #557 review point 1 moves
+      // rules 3-6, the subject/client/delegate join proper, into the PDP
+      // below). The PEP carries it to the PDP as context.credential.authority,
+      // which enforces it as its own bound (D312, D340). No evaluator
+      // configured -> fail closed (see PepDeps.masJoin doc): a working Join
+      // with no usable permit, never a silently unbounded one.
       const ordinaryAuthority = this.deps.masJoin.resolveOrdinaryAuthority?.(token);
       if (!ordinaryAuthority) return await this.refuse(token, "out_of_authority", mapping.action, loaded.view);
       // The same entries reach the PDP as the credential bound, so a remote
@@ -1190,18 +1190,18 @@ export class Pep {
       } catch {
         return await this.refuse(token, "out_of_authority", mapping.action, loaded.view);
       }
-      const boundAuthority = loaded.view.authority_set.filter((e) =>
-        ordinaryAuthority.some((o) => o.resource === e.resource && e.actions.every((a) => o.actions.includes(a))),
-      );
-      if (boundAuthority.length === 0) return await this.refuse(token, "out_of_authority", mapping.action, loaded.view);
 
       // Rules 3, 4, 5, 6 (subject/client join, delegate narrowing, uniform
       // mission_binding_failed with no fallback) are NOT resolved here anymore:
       // `context.mission_join` below tells the PDP to resolve them itself,
-      // against this (rule-8-narrowed) view -- the PDP is the party that
-      // can verify the credential inputs and tell whether the join actually
-      // ran (#557 review point 1).
-      view = { ...loaded.view, authority_set: boundAuthority };
+      // against the Mission's own view -- the PDP is the party that can
+      // verify the credential inputs and tell whether the join actually ran
+      // (#557 review point 1). The view is never filtered by the credential
+      // (D340): a filter would drop a Mission entry broader than the
+      // credential (refusing an action the credential covers), and the PDP's
+      // full-set proof (D335) needs the committed set. The credential's own
+      // bound rides the request as context.credential.authority instead.
+      view = loaded.view;
       observation = loaded.observation;
       missionAnchor = { id: propagated.id, issuer: propagated.issuer };
       isBaselineJoin = true;
@@ -1333,34 +1333,38 @@ export class Pep {
     // whole entry at a time, before the PDP evaluates the Mission bound. A
     // broader Mission or an allowing resource policy never repairs a narrower
     // credential, and a Mission-bound credential that carries no authority
-    // never falls back to the Mission's. The ordinary-token (MAS Join) path
-    // keeps its own authority resolver.
-    if (token.mission !== undefined) {
-      const vendorIds: readonly string[] = effective
+    // never falls back to the Mission's. On the ordinary-token (MAS Join)
+    // path the same check applies to the resolver's entries (rule 8, bound 1).
+    //
+    // Only what this PEP can establish refuses here: resource, action, every
+    // vendor reached and the amount. An entry's discharge condition and
+    // approval requirement turn on Mission state and approvals the PDP holds,
+    // so they reach the PDP with the credential's authority and the PDP
+    // decides them (D312).
+    const establishedFacts = {
+      resource: CANONICAL_RESOURCE,
+      action: mapping.action,
+      vendorIds: (effective
         ? [effective.vendor_id]
         : targetVendorId !== undefined
           ? [targetVendorId]
           : resourceObj.type === "vendor" && resourceObj.id !== UNSCOPED_VENDOR_OBJECT
           ? ((resourceObj.properties?.vendor_ids as readonly string[] | undefined) ?? [resourceObj.id])
-          : [];
-      // Only what this PEP can establish refuses here: resource, action, every
-      // vendor reached and the amount. An entry's discharge condition and
-      // approval requirement turn on Mission state and approvals the PDP
-      // holds, so they reach the PDP with the credential's authority and the
-      // PDP decides them (D312).
+          : []) as readonly string[],
+      ...(amount ? { amount } : {}),
+    };
+    if (token.mission !== undefined) {
       const covered =
         Array.isArray(token.credentialAuthority) &&
-        coveringCredentialEntries(token.credentialAuthority, {
-          resource: CANONICAL_RESOURCE,
-          action: mapping.action,
-          vendorIds,
-          ...(amount ? { amount } : {}),
-        }).length > 0;
+        coveringCredentialEntries(token.credentialAuthority, establishedFacts).length > 0;
       carriedAuthority = token.credentialAuthority;
       if (!covered) {
         await this.recordRefusal(token, "out_of_authority", mapping.action, view, undefined, { resource: resourceObj });
         return { permitted: false, denial_reason: "out_of_authority" };
       }
+    } else if (carriedAuthority !== undefined && coveringCredentialEntries(carriedAuthority, establishedFacts).length === 0) {
+      // The Mission's view itself is never filtered by the credential (D340).
+      return await this.refuse(token, "out_of_authority", mapping.action, view);
     }
 
     // Actor facts and capability presentation originate at the enforcement surface.
