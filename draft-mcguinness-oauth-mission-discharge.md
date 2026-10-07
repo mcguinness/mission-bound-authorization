@@ -194,9 +194,9 @@ the member definitions in the surrounding text are authoritative.
 Without entry discharge, a Mission granted authority to release a
 record "for this enrollment" keeps deriving that authority after the
 enrollment closes, until a clock or a revoke stops it. The Intent's
-`success_criteria` describe when the task is complete, but the
-issuance profile keeps them inert: they are rendered and committed,
-and carry no machine effect ({{I-D.draft-mcguinness-oauth-mission}}).
+prose can say when the task is complete, but the issuance profile
+keeps it inert: it is rendered and committed, and carries no machine
+effect ({{I-D.draft-mcguinness-oauth-mission}}).
 
 Three properties make discharge safe inside the Mission model, and
 this section requires all three:
@@ -226,8 +226,7 @@ and on its Mission Resource Access Profile
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), and is not
 implementable alone. It reuses, without restating, the issuance
 profile's Mission, Authority Set, subset rule, integrity anchors,
-lifecycle states, and issuance gating, and the inert `success_criteria`
-member of the Mission Intent; and the Mission Resource Access
+lifecycle states, and issuance gating; and the Mission Resource Access
 Profile's `mission_resource_access` entry and Common Constraints
 registry. It uses Mission, Mission Issuer, Authority Set, and
 derivation as the issuance profile defines them, and the
@@ -286,10 +285,11 @@ of the single condition object, in the issuance profile's encoded
 form: the same canonical form the registration's no-duplicate rule
 above already fixes as condition identity ({{iana-terminal-when}}).
 
-`terminal_when` is the enforceable counterpart of the inert
-`success_criteria` ({{I-D.draft-mcguinness-oauth-mission}}), which
-remains inert: `success_criteria` describe completion for the Approver,
-`terminal_when` acts on it. It is distinct from a cumulative
+`terminal_when` is the enforceable statement of when one entry is
+complete. It says nothing about whether the task as a whole
+succeeded, and the Intent's prose stays inert
+({{I-D.draft-mcguinness-oauth-mission}}). It is distinct from a
+cumulative
 consumption bound, which meters volume;
 a `terminal_when` condition is a single external event.
 
