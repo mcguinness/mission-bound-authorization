@@ -11,7 +11,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { createEphemeralDecisionPoint } from "../src/decision-point.js";
 import type { DecisionEvidenceObject } from "../src/decision-evidence.js";
 import { evaluate, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
-import { Fga, FgaAttachError, FgaDomainAdmin } from "../src/fga.js";
+import { DOMAIN_MODEL, Fga, FgaAttachError, FgaDomainAdmin } from "../src/fga.js";
 import { type AuthorityEntry, deriveContextualTuples, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { fgaResourcePolicy, issuerLocalPrincipals, principalObject, type ResourcePolicy } from "../src/resource-policy.js";
@@ -202,6 +202,32 @@ d("independent Resource policy against OpenFGA (@spec runtime#input-resource-pol
       ],
     } as never);
     await expect(Fga.attach({ ...CONNECTION, storeId, authorizationModelId: other.authorization_model_id as string })).rejects.toBeInstanceOf(FgaAttachError);
+  });
+
+  it("a conditional model refuses attach: the domain model with one condition declared and one entitlement conditional on it, both named", async () => {
+    const conditional = structuredClone(DOMAIN_MODEL) as unknown as {
+      type_definitions: Array<{ type: string; metadata?: { relations: Record<string, { directly_related_user_types: Array<Record<string, unknown>> }> } }>;
+      conditions?: Record<string, unknown>;
+    };
+    conditional.conditions = {
+      within_limit: {
+        name: "within_limit",
+        expression: "amount <= limit",
+        parameters: { amount: { type_name: "TYPE_NAME_INT" }, limit: { type_name: "TYPE_NAME_INT" } },
+      },
+    };
+    const payer = conditional.type_definitions.find((t) => t.type === "invoice")?.metadata?.relations.authorized_payer;
+    if (!payer) throw new Error("the domain model has no invoice#authorized_payer");
+    payer.directly_related_user_types = [{ type: "user", condition: "within_limit" }];
+    const written = await fga.client.writeAuthorizationModel(conditional as never);
+    const refusal = await Fga.attach({ ...CONNECTION, storeId, authorizationModelId: written.authorization_model_id as string }).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect(refusal).toBeInstanceOf(FgaAttachError);
+    expect((refusal as Error).message).toContain("uses conditions");
+    expect((refusal as Error).message).toContain("condition within_limit");
+    expect((refusal as Error).message).toContain("invoice#authorized_payer admits user with condition within_limit");
   });
 
   it("the same subject under another issuer, an invoice moved to an unentitled vendor, and a collection with one unentitled member each deny resource_policy", async () => {

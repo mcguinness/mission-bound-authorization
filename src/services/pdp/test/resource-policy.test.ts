@@ -16,7 +16,7 @@ import { evaluateRemote, isDecisionChannelRefusal } from "../src/client.js";
 import { createDecisionPoint, createEphemeralDecisionPoint } from "../src/decision-point.js";
 import type { DecisionEvidenceObject } from "../src/decision-evidence.js";
 import { evaluate, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
-import { assertDomainTuple, DomainTupleError, DOMAIN_MODEL, Fga, FgaAttachError, FgaDomainAdmin } from "../src/fga.js";
+import { assertDomainTuple, DomainTupleError, DOMAIN_MODEL, Fga, FgaAttachError, FgaDomainAdmin, modelFingerprint } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import {
@@ -382,6 +382,46 @@ async function fakeOpenFga(options: {
   };
 }
 
+/** An authorization model as the API returns it, loosely typed so a test can change any member. */
+type LooseModel = {
+  schema_version: string;
+  type_definitions: Array<{
+    type: string;
+    relations?: Record<string, Record<string, unknown>>;
+    metadata?: { relations?: Record<string, { directly_related_user_types: Array<Record<string, unknown>> }> } | null;
+  }>;
+  conditions?: Record<string, unknown>;
+};
+
+/** A copy of {@link DOMAIN_MODEL} with one edit applied. */
+function domainModel(edit: (m: LooseModel) => void): LooseModel {
+  const m = structuredClone(DOMAIN_MODEL) as unknown as LooseModel;
+  edit(m);
+  return m;
+}
+
+function typeDefinition(m: LooseModel, type: string) {
+  const t = m.type_definitions.find((d) => d.type === type);
+  if (!t) throw new Error(`no type ${type}`);
+  return t;
+}
+const relations = (m: LooseModel, type: string) => typeDefinition(m, type).relations as Record<string, Record<string, unknown>>;
+const metaRelations = (m: LooseModel, type: string) =>
+  typeDefinition(m, type).metadata?.relations as Record<string, { directly_related_user_types: Array<Record<string, unknown>> }>;
+const ref = (m: LooseModel, type: string, relation: string, i: number) =>
+  metaRelations(m, type)[relation]?.directly_related_user_types[i] as Record<string, unknown>;
+/** The vendor-inherited branch of an invoice entitlement's union. */
+const inherited = (m: LooseModel, relation: string) =>
+  ((relations(m, "invoice")[relation] as { union: { child: unknown[] } }).union.child[1] as {
+    tupleToUserset: { tupleset: { object: string }; computedUserset: { object: string } };
+  }).tupleToUserset;
+
+const WITHIN_LIMIT = {
+  name: "within_limit",
+  expression: "amount <= limit",
+  parameters: { amount: { type_name: "TYPE_NAME_INT" }, limit: { type_name: "TYPE_NAME_INT" } },
+};
+
 describe("Fga.attach verifies the configured model and never creates a store (@spec runtime#input-resource-policy, #828)", () => {
   let fake: FakeFga | undefined;
   afterEach(async () => {
@@ -412,6 +452,92 @@ describe("Fga.attach verifies the configured model and never creates a store (@s
     await fake.close();
     fake = undefined;
     await expect(attach(deadUrl)).rejects.toBeInstanceOf(FgaAttachError);
+  });
+
+  it("refuses a model whose only difference is a conditional entitlement, naming the relation and the condition", async () => {
+    const conditional = domainModel((m) => {
+      ref(m, "invoice", "authorized_payer", 0).condition = "within_limit";
+    });
+    fake = await fakeOpenFga({ model: conditional });
+    await expect(attach(fake.url)).rejects.toMatchObject({
+      name: "FgaAttachError",
+      message: expect.stringMatching(/uses conditions.*: invoice#authorized_payer admits user with condition within_limit$/),
+    });
+  });
+
+  it("refuses a model that declares a condition no relation uses, naming the condition", async () => {
+    fake = await fakeOpenFga({ model: domainModel((m) => { m.conditions = { within_limit: WITHIN_LIMIT }; }) });
+    await expect(attach(fake.url)).rejects.toMatchObject({
+      name: "FgaAttachError",
+      message: expect.stringMatching(/uses conditions.*: condition within_limit$/),
+    });
+  });
+
+  it("attaches to the domain model whether a server emits or omits its empty members: empty conditions, null metadata, absent object relation objects", async () => {
+    const emitted = domainModel((m) => {
+      m.conditions = {};
+      for (const t of m.type_definitions) {
+        t.relations ??= {};
+        t.metadata ??= null;
+        for (const meta of Object.values(t.metadata?.relations ?? {})) for (const u of meta.directly_related_user_types) u.condition = "";
+      }
+      for (const relation of ["authorized_reader", "authorized_payer"]) {
+        const ttu = inherited(m, relation) as { tupleset: { object?: string }; computedUserset: { object?: string } };
+        delete ttu.tupleset.object;
+        delete ttu.computedUserset.object;
+      }
+    });
+    fake = await fakeOpenFga({ model: emitted });
+    expect((await attach(fake.url)).modelId).toBe(MODEL_ID);
+  });
+
+  it("refuses a model that differs from the domain model in any other fingerprinted semantic, reporting the mismatch", async () => {
+    const variants: Array<[string, (m: LooseModel) => void]> = [
+      ["schema version", (m) => { m.schema_version = "1.2"; }],
+      ["wildcard on a directly related type", (m) => { ref(m, "vendor", "authorized_reader", 0).wildcard = {}; }],
+      ["userset relation on a directly related type", (m) => { ref(m, "invoice", "vendor", 0).relation = "authorized_payer"; }],
+      ["a relation named only in metadata", (m) => { metaRelations(m, "vendor").owner = { directly_related_user_types: [{ type: "user" }] }; }],
+      ["the object of a tupleset", (m) => { inherited(m, "authorized_reader").tupleset.object = "vendor:acme"; }],
+      ["the object of a computed userset", (m) => { inherited(m, "authorized_reader").computedUserset.object = "vendor:acme"; }],
+      ["a userset with two members", (m) => { relations(m, "invoice").payer = { this: {}, computedUserset: { object: "", relation: "reader" } }; }],
+    ];
+    const outcomes: Array<[string, string]> = [];
+    for (const [label, edit] of variants) {
+      fake = await fakeOpenFga({ model: domainModel(edit) });
+      const refusal = await attach(fake.url).then(() => undefined, (e: unknown) => e);
+      const mismatch = refusal instanceof FgaAttachError && refusal.message.includes("is not the expected domain model");
+      outcomes.push([label, mismatch ? "refused as a mismatch" : `not refused as a mismatch: ${String(refusal)}`]);
+      await fake.close();
+      fake = undefined;
+    }
+    expect(outcomes).toEqual(variants.map(([label]) => [label, "refused as a mismatch"]));
+  });
+
+  it("the model fingerprint compares conditions: a condition on a directly related type and a condition's key, name, expression and parameters each change it; condition metadata does not", () => {
+    const base = modelFingerprint(DOMAIN_MODEL);
+    expect(modelFingerprint(domainModel((m) => { ref(m, "invoice", "authorized_payer", 0).condition = "within_limit"; })), "reference condition").not.toBe(base);
+    expect(modelFingerprint(domainModel((m) => { m.conditions = { within_limit: WITHIN_LIMIT }; })), "declared condition").not.toBe(base);
+    expect(modelFingerprint(domainModel((m) => { m.conditions = { within_cap: WITHIN_LIMIT }; })), "condition key").not.toBe(
+      modelFingerprint(domainModel((m) => { m.conditions = { within_limit: WITHIN_LIMIT }; })),
+    );
+
+    const conditional = (condition: Record<string, unknown>, referenced = "within_limit") =>
+      modelFingerprint(
+        domainModel((m) => {
+          m.conditions = { within_limit: condition, under_cap: { ...WITHIN_LIMIT, name: "under_cap" } };
+          ref(m, "invoice", "authorized_payer", 0).condition = referenced;
+        }),
+      );
+    const reference = conditional(WITHIN_LIMIT);
+    expect(conditional(WITHIN_LIMIT, "under_cap"), "referenced condition name").not.toBe(reference);
+    expect(conditional({ ...WITHIN_LIMIT, name: "within_cap" }), "condition name").not.toBe(reference);
+    expect(conditional({ ...WITHIN_LIMIT, expression: "amount < limit" }), "expression").not.toBe(reference);
+    expect(conditional({ ...WITHIN_LIMIT, parameters: { amount: WITHIN_LIMIT.parameters.amount, cap: WITHIN_LIMIT.parameters.limit } }), "parameter name").not.toBe(reference);
+    expect(conditional({ ...WITHIN_LIMIT, parameters: { ...WITHIN_LIMIT.parameters, limit: { type_name: "TYPE_NAME_DOUBLE" } } }), "parameter type").not.toBe(reference);
+    expect(conditional({ ...WITHIN_LIMIT, parameters: { ...WITHIN_LIMIT.parameters, tags: { type_name: "TYPE_NAME_LIST", generic_types: [{ type_name: "TYPE_NAME_STRING" }] } } }), "parameter generic type").not.toBe(
+      conditional({ ...WITHIN_LIMIT, parameters: { ...WITHIN_LIMIT.parameters, tags: { type_name: "TYPE_NAME_LIST", generic_types: [{ type_name: "TYPE_NAME_INT" }] } } }),
+    );
+    expect(conditional({ ...WITHIN_LIMIT, metadata: { module: "payments", source_info: { file: "payments.fga" } } }), "condition metadata").toBe(reference);
   });
 
   it("sends the stored entitlement check with no contextual tuples, pinned to the attached model at higher consistency", async () => {
