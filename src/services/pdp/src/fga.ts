@@ -105,25 +105,82 @@ export class FgaAttachError extends Error {
 
 type Rewrite = Record<string, unknown> | undefined;
 
-function relationRef(r: unknown): string | undefined {
-  return typeof r === "object" && r !== null ? ((r as { relation?: string }).relation ?? undefined) : undefined;
+/** An authorization model as the API returns it; only the members verification reads. */
+type ModelJson = {
+  schema_version?: string;
+  type_definitions?: readonly unknown[];
+  conditions?: Readonly<Record<string, unknown>> | null;
+};
+
+type TypeDefinitionJson = {
+  type: string;
+  relations?: Record<string, Rewrite> | null;
+  metadata?: { relations?: Record<string, { directly_related_user_types?: unknown[] | null } | null> | null } | null;
+};
+
+type RelationReferenceJson = { type?: unknown; relation?: unknown; wildcard?: unknown; condition?: unknown };
+
+/**
+ * A string member as the model states it. `""` and `null` are the proto3
+ * forms a server emits for an unset member, so they read as absent.
+ */
+function stated(v: unknown): JsonValue {
+  return v === undefined || v === null || v === "" ? null : (v as JsonValue);
 }
+
+/** Both members of an `ObjectRelation` (a computed userset or a tupleset). */
+function objectRelation(r: unknown): JsonValue {
+  if (typeof r !== "object" || r === null) return null;
+  const { object, relation } = r as { object?: unknown; relation?: unknown };
+  return { object: stated(object), relation: stated(relation) };
+}
+
+/** Every member of one directly related user type: type, userset relation, wildcard and condition. */
+function relationReference(u: unknown): string {
+  const ref = (u ?? {}) as RelationReferenceJson;
+  return canonicalize({
+    type: stated(ref.type),
+    relation: stated(ref.relation),
+    wildcard: ref.wildcard !== undefined && ref.wildcard !== null,
+    condition: stated(ref.condition),
+  });
+}
+
+/** The relation names a type defines, in its rewrites or only in its metadata. */
+function relationNames(t: TypeDefinitionJson): string[] {
+  return [...new Set([...Object.keys(t.relations ?? {}), ...Object.keys(t.metadata?.relations ?? {})])].sort();
+}
+
+const USERSET_MEMBERS = new Set([
+  "this",
+  "computedUserset",
+  "computed_userset",
+  "tupleToUserset",
+  "tuple_to_userset",
+  "union",
+  "intersection",
+  "difference",
+]);
 
 /**
  * The semantic content of one relation rewrite, ignoring server-added
  * metadata. Reads both the JSON names the API documents (`computedUserset`)
- * and the proto field names (`computed_userset`).
+ * and the proto field names (`computed_userset`). A userset is a proto
+ * oneof: one with no member, several, or one this function does not know is
+ * compared verbatim, never read as its first recognized member.
  */
 function rewriteShape(r: Rewrite): JsonValue {
   if (!r) return null;
+  const members = Object.keys(r).filter((k) => r[k] !== undefined && r[k] !== null);
+  if (members.length !== 1 || !USERSET_MEMBERS.has(members[0] as string)) return { unknown: canonicalize(r as JsonValue) };
   if (r.this !== undefined && r.this !== null) return "this";
   const computed = r.computedUserset ?? r.computed_userset;
-  if (computed) return { computed: relationRef(computed) ?? null };
+  if (computed) return { computed: objectRelation(computed) };
   const ttu = (r.tupleToUserset ?? r.tuple_to_userset) as
     | { tupleset?: unknown; computedUserset?: unknown; computed_userset?: unknown }
     | undefined;
   if (ttu) {
-    return { ttu: [relationRef(ttu.tupleset) ?? null, relationRef(ttu.computedUserset ?? ttu.computed_userset) ?? null] };
+    return { ttu: [objectRelation(ttu.tupleset), objectRelation(ttu.computedUserset ?? ttu.computed_userset)] };
   }
   for (const op of ["union", "intersection"] as const) {
     const children = (r[op] as { child?: Rewrite[] } | undefined)?.child;
@@ -136,27 +193,79 @@ function rewriteShape(r: Rewrite): JsonValue {
   return { unknown: canonicalize(r as JsonValue) };
 }
 
+/** A condition parameter's type, generics included. */
+function parameterType(raw: unknown): JsonValue {
+  const p = (raw ?? {}) as { type_name?: unknown; generic_types?: unknown[] | null };
+  return { type_name: stated(p.type_name), generic_types: (p.generic_types ?? []).map(parameterType) };
+}
+
+/** A model's condition definitions: key, name, expression and typed parameters, without metadata. */
+function conditionsShape(conditions: ModelJson["conditions"]): JsonValue {
+  if (conditions === undefined || conditions === null) return [];
+  if (typeof conditions !== "object" || Array.isArray(conditions)) return { unknown: canonicalize(conditions as JsonValue) };
+  return Object.keys(conditions)
+    .sort()
+    .map((key) => {
+      const c = (conditions[key] ?? {}) as { name?: unknown; expression?: unknown; parameters?: Record<string, unknown> | null };
+      const parameters = c.parameters ?? {};
+      return {
+        key,
+        name: stated(c.name),
+        expression: stated(c.expression),
+        parameters: Object.keys(parameters)
+          .sort()
+          .map((name) => ({ name, type: parameterType(parameters[name]) })),
+      };
+    });
+}
+
 /**
- * A canonical fingerprint of a model's semantics: each type's relations,
- * their rewrites and their directly related types. Server-added members
- * (ids, module, source info) and member order do not change it.
+ * A canonical fingerprint of a model's semantics: the schema version; each
+ * type's relations (named in a rewrite or only in metadata), their rewrites
+ * with both members of every object relation, and their directly related
+ * types with relation, wildcard and condition; and the model's condition
+ * definitions. Server-added members (ids, module, source info), proto3
+ * empty forms and the order of types, relations, directly related types and
+ * conditions do not change it.
  */
-export function modelFingerprint(model: { schema_version?: string; type_definitions?: readonly unknown[] }): string {
+export function modelFingerprint(model: ModelJson): string {
   const types = [...(model.type_definitions ?? [])].map((raw) => {
-    const t = raw as { type: string; relations?: Record<string, Rewrite>; metadata?: { relations?: Record<string, { directly_related_user_types?: unknown[] }> | null } | null };
-    const relations = Object.keys(t.relations ?? {}).sort().map((name) => {
-      const direct = (t.metadata?.relations?.[name]?.directly_related_user_types ?? [])
-        .map((u) => {
-          const ref = u as { type: string; relation?: string; wildcard?: unknown };
-          return `${ref.type}${ref.relation ? `#${ref.relation}` : ""}${ref.wildcard ? ":*" : ""}`;
-        })
-        .sort();
-      return { name, rewrite: rewriteShape(t.relations?.[name]), direct };
+    const t = raw as TypeDefinitionJson;
+    const relations = relationNames(t).map((name) => {
+      const direct = (t.metadata?.relations?.[name]?.directly_related_user_types ?? []).map(relationReference).sort();
+      return { name, rewrite: rewriteShape(t.relations?.[name] ?? undefined), direct };
     });
     return { type: t.type, relations };
   });
   types.sort((a, b) => (a.type < b.type ? -1 : a.type > b.type ? 1 : 0));
-  return canonicalize({ schema_version: model.schema_version ?? null, types } as unknown as JsonValue);
+  return canonicalize({ schema_version: model.schema_version ?? null, types, conditions: conditionsShape(model.conditions) } as unknown as JsonValue);
+}
+
+/**
+ * Every condition a model declares and every directly related user type
+ * that names one. {@link DOMAIN_MODEL} declares none, and no check sends
+ * condition context, so attach refuses a model with any.
+ */
+function conditionsIn(model: ModelJson): string[] {
+  const found: string[] = [];
+  const declared = model.conditions;
+  if (declared !== undefined && declared !== null) {
+    if (typeof declared !== "object" || Array.isArray(declared)) found.push("a conditions member that is not a map");
+    else for (const key of Object.keys(declared).sort()) found.push(`condition ${key}`);
+  }
+  for (const raw of model.type_definitions ?? []) {
+    const t = raw as TypeDefinitionJson;
+    for (const name of Object.keys(t.metadata?.relations ?? {}).sort()) {
+      for (const u of t.metadata?.relations?.[name]?.directly_related_user_types ?? []) {
+        const ref = (u ?? {}) as RelationReferenceJson;
+        const condition = stated(ref.condition);
+        if (condition === null) continue;
+        const subject = `${String(ref.type)}${stated(ref.relation) !== null ? `#${String(ref.relation)}` : ""}${ref.wildcard !== undefined && ref.wildcard !== null ? ":*" : ""}`;
+        found.push(`${t.type}#${name} admits ${subject} with condition ${typeof condition === "string" ? condition : canonicalize(condition)}`);
+      }
+    }
+  }
+  return found;
 }
 
 function clientFor(cfg: { apiUrl: string; presharedKey: string; caCertPath?: string; requestTimeoutMs?: number }, storeId?: string): OpenFgaClient {
@@ -202,12 +311,13 @@ export class Fga {
    * Normal startup: attach to the configured store and model, read the model
    * back and verify it is {@link DOMAIN_MODEL}. Never creates a store or
    * writes a model; a store, model or schema that does not match refuses
-   * with {@link FgaAttachError}. Tuples already in the store, a revocation
-   * included, are exactly what the next check reads.
+   * with {@link FgaAttachError}, and so does a model that declares or uses
+   * any condition, named in the refusal. Tuples already in the store, a
+   * revocation included, are exactly what the next check reads.
    */
   static async attach(cfg: FgaConfig): Promise<Fga> {
     let client: OpenFgaClient;
-    let model: { schema_version?: string; type_definitions?: readonly unknown[] } | undefined;
+    let model: ModelJson | undefined;
     try {
       client = clientFor(cfg, cfg.storeId);
       const read = await client.readAuthorizationModel({ authorizationModelId: cfg.authorizationModelId });
@@ -216,6 +326,13 @@ export class Fga {
       throw new FgaAttachError(`cannot read model ${cfg.authorizationModelId} in store ${cfg.storeId}: ${e instanceof Error ? e.message : String(e)}`);
     }
     if (!model) throw new FgaAttachError(`model ${cfg.authorizationModelId} not found in store ${cfg.storeId}`);
+    // Named before the fingerprint, so the refusal says which conditions.
+    const conditions = conditionsIn(model);
+    if (conditions.length > 0) {
+      throw new FgaAttachError(
+        `model ${cfg.authorizationModelId} uses conditions, which the domain model does not declare and no check supplies context for: ${conditions.join("; ")}`,
+      );
+    }
     const observed = modelFingerprint(model);
     const expected = modelFingerprint(DOMAIN_MODEL);
     if (observed !== expected) {
