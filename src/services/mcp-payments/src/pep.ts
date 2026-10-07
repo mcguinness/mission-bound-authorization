@@ -29,6 +29,7 @@ import { getTracer } from "@mission/telemetry";
 import {
   type AuthorityEntry,
   type ClaimChannel,
+  committedEntry,
   type DecisionEvidenceObject,
   type DecisionFn,
   type DecisionOptions,
@@ -1603,15 +1604,16 @@ export class Pep {
         // Exactly one operation-scoped entry: the active Mission's entry for
         // this resource+action narrowed to the single gated action (keeping the
         // entry's constraints), so the approval and the transaction token are
-        // scoped to the operation being approved, not the whole entry. The
-        // PDP view's own `join_delegation` (#557) is not a member of the
-        // Mission's entry, so it never rides the challenge either.
+        // scoped to the operation being approved, not the whole entry. It is
+        // the entry as the Mission Issuer committed it (`committedEntry`, D335:
+        // no PDP-local member such as the loader's `join_delegation`), less
+        // its issuer provenance.
         const requested = view.authority_set
           .filter((e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action))
-          .map(({ capability_sources: _issuerProvenance, join_delegation: _viewOnly, ...e }) => ({
-            ...e,
-            actions: [mapping.action],
-          })) as unknown as JsonValue[];
+          .map((e) => {
+            const { capability_sources: _issuerProvenance, ...committed } = committedEntry(e);
+            return { ...committed, actions: [mapping.action] };
+          }) as unknown as JsonValue[];
         const digest = parameterDigest(effective);
         const signed = await signChallenge(
           {
