@@ -1233,11 +1233,11 @@ what the AS can derive mechanically, its prose members bound through
 disclosure (the Approver refuses authority the words do not
 support), and none widens.
 
-The `goal`, `task_bounds`, and `success_criteria` members are
-human-readable disclosure and audit context. The AS MUST derive the
-same Authority Set, under the same policy, for two submissions that
-differ only in `goal`, `goal_lang`, `task_bounds`, or
-`success_criteria`, and MUST NOT gate issuance on those members,
+The `goal` and `task_bounds` members are human-readable disclosure
+and audit context. The AS MUST derive the same Authority Set, under
+the same policy, for two submissions that differ only in `goal`,
+`goal_lang`, or `task_bounds`, and MUST NOT gate issuance on those
+members,
 whether in derivation, in an adjudicating policy, or through a model
 input to either; translating a user's words into structure is the
 shaper's job, before admission and outside the trust boundary
