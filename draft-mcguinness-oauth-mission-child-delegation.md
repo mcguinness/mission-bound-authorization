@@ -108,6 +108,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-approved-set-verification:
+    title: "Mission Approved-Set Verification for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-containment:
     title: "Mission Containment for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
@@ -1173,7 +1181,11 @@ A Child Mission MUST be bounded by the Parent Mission:
 The Mission Issuer MUST compute the Child Mission's `authority_hash`
 over the child Authority Set, not over the parent Authority Set. A
 Resource Server enforces child tokens exactly as Mission-bound tokens:
-the child `authority_hash` is the immediate authority commitment.
+it enforces the carried `authorization_details`. The child
+`authority_hash` commits the child Authority Set on the child's
+Mission record; a Resource Server that must check carried authority
+against the complete set adopts Approved-Set Verification
+({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}}).
 
 Child Mission tokens MUST be sender-constrained to the child actor's
 own key, matching the issuance profile's delegated-token posture
@@ -2200,6 +2212,12 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Attenuation Rules: a Resource Server enforces a child
+  token's carried `authorization_details`; the child `authority_hash`
+  commits the child Authority Set on the child's Mission record, and
+  checking carried authority against the complete set is
+  Approved-Set Verification (#1086). No requirement changed.
 
 - Mission Record Requirements: the delegation event creates the Child
   Mission record the issuance profile and this section require; human
