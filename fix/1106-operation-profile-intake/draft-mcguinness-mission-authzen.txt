@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          6 October 2026
-Expires: 9 April 2027
+Intended status: Standards Track                          7 October 2026
+Expires: 10 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -61,7 +61,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 10 April 2027.
 
 Copyright Notice
 
@@ -2153,6 +2153,11 @@ Table of Contents
    |implements no such   |Record     |                                 |
    |action               |           |                                 |
    +---------------------+-----------+---------------------------------+
+   |Supplied arguments   |Refusal    |request_invalid                  |
+   |fail the PEP-        |Record     |                                 |
+   |established action's |           |                                 |
+   |required input schema|           |                                 |
+   +---------------------+-----------+---------------------------------+
    |Named target object  |Refusal    |target_unresolvable              |
    |not resolvable at the|Record     |                                 |
    |enforcement surface  |           |                                 |
@@ -3100,6 +3105,10 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The failure-condition table maps supplied arguments that fail the
+      PEP-established action's required input schema to the Refusal
+      Record's request_invalid (#1106).
 
    *  The RAR remediation grain cites the working-group successor draft-
       ietf-oauth-rar-metadata-remediation and defers its routing to the

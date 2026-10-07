@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            6 October 2026
-Expires: 9 April 2027
+Intended status: Informational                            7 October 2026
+Expires: 10 April 2027
 
 
                          Mission Security Model
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 10 April 2027.
 
 Copyright Notice
 
@@ -518,12 +518,16 @@ Table of Contents
       [I-D.draft-mcguinness-oauth-domain-authorized-issuer]) are
       concrete publication and evaluation mechanisms for such policy.
 
-   *  *Authority does not move on inert input.* purpose,
-      success_criteria, and disclosure-only audit material are inert and
-      cannot derive, widen, or gate authority; goal shapes authority
-      only through the pre-approval derivation whose result the Approver
-      reads and consents to, and is inert once the Mission is approved
-      ([I-D.draft-mcguinness-oauth-mission]).
+   *  *Authority does not move on inert input.* success_criteria and
+      disclosure-only audit material are inert and cannot derive, widen,
+      or gate authority; goal shapes authority only through the pre-
+      approval derivation whose result the Approver reads and consents
+      to, and is inert once the Mission is approved. purpose selects
+      candidate authority only as a configured-mapping lookup key,
+      bounded by the Intent, policy, and approval; any other use can
+      only refuse or apply stricter treatment, never supply, widen,
+      relax, or refresh authority or replace an independently required
+      check ([I-D.draft-mcguinness-oauth-mission]).
 
 7.1.  Failure Taxonomy Crosswalk (Informative)
 
@@ -1759,6 +1763,11 @@ Appendix A.  OWASP Agentic Threat Coverage
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The inert-input assumption separates purpose from inert material:
+      it selects candidate authority only as a configured-mapping lookup
+      key, and any other use can only refuse or apply stricter
+      treatment, as the OAuth binding states (#1102).
 
    *  Revocation-to-Action Latency states that revoking a Mission does
       not prohibit equivalent authority under a separately approved
