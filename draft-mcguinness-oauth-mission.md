@@ -5913,6 +5913,15 @@ Cross-Domain:
 
 -01
 
+- Mission Intent: an informative summary table gives each member,
+  whether it is required, and what the AS does with it, after a
+  paragraph on who writes the members, how the prose members bound
+  authority, and where the smallest Intent is shown (#910).
+  `success_criteria` can be rendered to the Approver as context;
+  step 5 of Mission Approval remains the rendering rule. Intent
+  Submission Evidence states that an AS supporting no evidence type
+  refuses every presented entry and conforms. No BCP 14 keyword
+  changed.
 - Security Considerations: duplicated security prose removed from a
   classified list reviewed on #877 (D330). Each removal restated a body
   rule (Mission Approval, Approval Comprehension, Revocation,
