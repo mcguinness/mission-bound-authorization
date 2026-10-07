@@ -354,8 +354,9 @@ The request is an HTTPS POST with an
 `audience`:
 : CONDITIONAL. A string. The audience identifier of the
   requesting consumer, or of another audience the Mission Issuer
-  authorizes that consumer to request (below). An authorized non-RS
-  consumer (for example an auditor or a cross-domain Resource AS) that
+  authorizes that consumer to request (below). An authorized consumer
+  that is not a resource
+  server (for example an auditor or a cross-domain Resource AS) that
   needs only Mission state,
   not audience-scoped authority, MAY omit `audience`; the response is
   then state-only and carries no `authorization_details`

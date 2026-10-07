@@ -983,7 +983,8 @@ registry.
   (definition and IANA registration) from the issuance profile, which
   had continued to interpret this type's members directly in its
   generic resource server contract. Split the Conformance section by
-  role (authorization server vs. resource server) so an RS is not
+  role (authorization server vs. resource server) so a resource server
+  is not
   measured against issuer-only duties (subset/intersection, delegate
   eligibility, Transformation Capabilities declaration) it has no
   reason to implement. Adds this document's conformance-manifest

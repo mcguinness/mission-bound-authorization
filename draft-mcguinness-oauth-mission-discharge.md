@@ -1113,7 +1113,8 @@ The completion capability ({{completion}}) adds the following:
   This is not a fail-closed property: a deployment requiring
   cannot-determine-means-no-issuance runs a synchronous status or
   policy check outside this baseline.
-- RS enforcement honesty. A stateless resource server cannot evaluate
+- Resource server enforcement honesty. A stateless resource server
+  cannot evaluate
   issuer-held discharge state from the token alone; it honors the
   issued token until expiry. Prompt cutoff on a discharged entry
   requires the Status profile's Mission Status operation or

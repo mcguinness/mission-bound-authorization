@@ -6206,7 +6206,8 @@ Cross-Domain:
   no-match refusal and the unrecognized-`target_resources` refusal)
   are replaced by `access_denied`, since no `authorization_details`
   object exists for that code to describe
-  ({{authorization-derivation}}); the RS `mission_denial` attribute
+  ({{authorization-derivation}}); the resource server's `mission_denial`
+  attribute
   drops `step_up_required` in favor of the standard RFC 9470
   `insufficient_user_authentication` challenge for weak or stale
   token-associated user authentication, with sender-constraint/key-binding

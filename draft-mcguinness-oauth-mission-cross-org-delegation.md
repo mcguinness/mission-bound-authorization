@@ -413,7 +413,8 @@ administrative policy that maps:
 * actor-identity attestation sources: the anchors that bind an
   issuer-qualified (`act.iss`, `act.sub`) to a workload key
   ({{actor-identity}});
-* resource identifiers to the Resource AS or RS authorized to consume
+* resource identifiers to the Resource AS or resource server authorized
+  to consume
   them;
 * authorization-details types and constraint registries to supported
   versions; and
@@ -558,7 +559,8 @@ A deployment claims one or both consumption classes:
 
 * **Chain-verifying**: the relying party receives and verifies the
   complete Chain per {{verification}}.
-* **AS-mediated**: an RS trusts its Resource AS's locally issued
+* **AS-mediated**: a resource server trusts its Resource AS's locally
+  issued
   token and does not claim independent verification of the Chain;
   provenance uses {{provenance-bridge}}.
 
