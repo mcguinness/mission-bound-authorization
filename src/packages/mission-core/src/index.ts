@@ -100,10 +100,16 @@ export {
 export {
   type CredentialAuthorityEntry,
   CredentialAuthorityError,
+  type CredentialConstraintTrace,
+  type CredentialFacts,
   type CredentialTarget,
+  coveringCredentialEntries,
   credentialAuthorityPermits,
+  credentialConstraintGates,
   credentialEntriesFromAatTools,
   credentialEntriesFromAuthority,
+  entryCoversFacts,
+  entryMatchesAction,
   parseCredentialAuthority,
 } from "./credential-authority.js";
 export {

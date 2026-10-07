@@ -10,11 +10,17 @@
 
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
-import { evaluate, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
+import { evaluate as evaluateRequest, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView, policyViewId } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { withCredential } from "./with-credential.js";
+
+// Every decision carries the credential's own authority (#825 PR 2b); the
+// fixture adds a neutral one where a test does not name it.
+const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
+  evaluateRequest(withCredential(req), opts);
 
 const RESOURCE = "http://localhost:4403/mcp";
 const OTHER_RESOURCE = "http://localhost:4499/mcp";

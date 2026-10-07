@@ -19,7 +19,7 @@
 
 import { generateKeyPairSync } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { canonicalDigest, capabilitySourceDigest, type CapabilitySourceBinding } from "@mission/core";
+import { authorityHash, canonicalDigest, capabilitySourceDigest, type CapabilitySourceBinding } from "@mission/core";
 import { runtimeCapabilitySourceOf, type RuntimeCapabilitySource } from "../src/decision-evidence.js";
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
@@ -27,7 +27,7 @@ import {
   createDecisionEvidenceEmitter,
   DECISION_EVIDENCE_MEDIA_TYPE,
   type DecisionEvidenceObject,
-  evaluate,
+  evaluate as evaluateRequest,
   type EvaluateOptions,
   type EvaluationRequest,
   type MissionView,
@@ -37,6 +37,12 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { withCredential } from "./with-credential.js";
+
+// Every decision carries the credential's own authority (#825 PR 2b); the
+// fixture adds a neutral one where a test does not name it.
+const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
+  evaluateRequest(withCredential(req), opts);
 
 const RESOURCE = "http://localhost:4403/mcp";
 const EMITTER = "http://localhost:4403/mcp";
@@ -99,6 +105,129 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     const unsupported = await recorded(req(), v);
     expect(unsupported.record.denial_reason).toBe("unsupported_authorization_type");
     expect(unsupported.record.contributing_constraints).toEqual(["future-entry"]);
+  });
+
+  it("a credential-bound deny lists the credential entry's type and constraint keys (@spec runtime-evidence#decision-evidence-object, #825 PR 2b)", async () => {
+    // The Mission entry carries no constraint; only the credential's own
+    // vendors constraint can have failed, and the record names it.
+    const r = req();
+    r.context.credential = {
+      authority: [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read"],
+          constraints: { vendors: ["globex"] },
+        },
+      ],
+    };
+    const { record, decision } = await recorded(r, view());
+    expect(decision.decision).toBe(false);
+    expect(record.denial_reason).toBe("parameter_violation");
+    expect(record.contributing_constraints).toEqual(["mission_resource_access", "vendors"]);
+  });
+
+  it("records a credential entry's discharge and approval keys only where those checks run (D324)", async () => {
+    const close = { event_type: "accounting-period-closed", discharge_authority: "close-2026-q3" };
+    const v = view();
+    v.authority_set[0]!.constraints = { terminal_when: [close] } as never;
+    // The view proves it holds the committed set, so a credential discharge
+    // condition can be established (D335).
+    v.authority_hash = authorityHash(v.issuer, v.authority_set as never);
+    const bind = (r: EvaluationRequest) => {
+      r.context.mission = { ...r.context.mission, authority_hash: v.authority_hash };
+      return r;
+    };
+    const credential = (constraints: Record<string, unknown>) => ({
+      authority: [{ type: "mission_resource_access" as const, resource: RESOURCE, actions: ["payments:invoice.read"], constraints }],
+    });
+    // Discharge is resolved and step 8 reads the approval flag: both are listed.
+    const reached = req();
+    reached.context.credential = credential({ terminal_when: [close], requires_action_approval: false }) as never;
+    const permitted = await recorded(bind(reached), v);
+    expect(permitted.decision.decision).toBe(true);
+    expect(permitted.record.contributing_constraints).toEqual(["mission_resource_access", "terminal_when", "requires_action_approval"]);
+    // A vendor failure stops before discharge and approval: neither is listed.
+    const stopped = req();
+    stopped.context.credential = credential({ vendors: ["globex"], terminal_when: [close], requires_action_approval: true }) as never;
+    const denied = await recorded(bind(stopped), v);
+    expect(denied.record.denial_reason).toBe("parameter_violation");
+    expect(denied.record.contributing_constraints).toEqual(["mission_resource_access", "vendors"]);
+  });
+
+  describe("a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324)", () => {
+    type Constraints = Record<string, unknown>;
+    const credentialEntry = (constraints?: Constraints, actions = ["payments:invoice.read"]) => ({
+      type: "mission_resource_access" as const,
+      resource: RESOURCE,
+      actions,
+      ...(constraints ? { constraints } : {}),
+    });
+    /** A request for `vendors` (one object, or a collection) with an optional amount, carrying `credential` (neutral if omitted). */
+    const ask = (o: { vendors?: string[]; amount?: [string, string]; credential?: unknown[] } = {}): EvaluationRequest => {
+      const r = req();
+      const vendors = o.vendors ?? ["acme"];
+      r.resource.properties = {
+        ...r.resource.properties,
+        vendor_id: vendors[0] as string,
+        ...(vendors.length > 1 ? { vendor_ids: vendors } : {}),
+      };
+      if (o.amount) r.context.amount = { amount: o.amount[0], currency: o.amount[1] };
+      if (o.credential) r.context.credential = { authority: o.credential as never };
+      return r;
+    };
+    const missionWith = (constraints: Constraints) => {
+      const v = view();
+      v.authority_set[0]!.constraints = constraints as never;
+      return v;
+    };
+    /** The reason in the response and in the signed record, and the keys the record lists. */
+    const outcome = async (r: EvaluationRequest, v: MissionView) => {
+      const { record, decision } = await recorded(r, v);
+      expect(record.denial_reason).toBe(decision.decision ? undefined : decision.context.denial_reason);
+      return { reason: decision.decision ? "permit" : decision.context.denial_reason, keys: record.contributing_constraints };
+    };
+
+    it("answers out_of_authority when no credential entry names the resource and action, recording no credential gate", async () => {
+      const r = ask({ credential: [credentialEntry({ vendors: ["acme"] }, ["payments:vendor.read"])] });
+      expect(await outcome(r, view())).toEqual({ reason: "out_of_authority", keys: ["mission_resource_access"] });
+    });
+
+    it.each<[string, Constraints, { vendors?: string[]; amount?: [string, string] }, string[]]>([
+      ["a vendor outside the entry's vendors", { vendors: ["globex"] }, {}, ["mission_resource_access", "vendors"]],
+      ["an amount over the cap", { max_amount: { amount: "100.00", currency: "USD" } }, { amount: ["150.00", "USD"] }, ["mission_resource_access", "max_amount"]],
+      ["an amount in another currency", { max_amount: { amount: "100.00", currency: "USD" } }, { amount: ["50.00", "EUR"] }, ["mission_resource_access", "max_amount"]],
+      ["a collection member outside the entry's vendors", { vendors: ["acme"] }, { vendors: ["acme", "globex"] }, ["mission_resource_access", "vendors"]],
+    ])("answers a mirrored credential's failure with %s as the Mission's own constraint does: parameter_violation", async (_label, constraints, target, keys) => {
+      const missionOnly = await outcome(ask(target), missionWith(constraints));
+      const mirrored = await outcome(ask({ ...target, credential: [credentialEntry(constraints)] }), missionWith(constraints));
+      expect(missionOnly).toEqual({ reason: "parameter_violation", keys });
+      expect(mirrored).toEqual(missionOnly);
+    });
+
+    it.each<[string, Constraints, { vendors?: string[]; amount?: [string, string] }, string[]]>([
+      ["a vendor outside its vendors, never reaching its cap", { vendors: ["globex"], max_amount: { amount: "500.00", currency: "USD" } }, { amount: ["20.00", "USD"] }, ["mission_resource_access", "vendors"]],
+      ["an amount over its cap", { vendors: ["acme"], max_amount: { amount: "100.00", currency: "USD" } }, { amount: ["150.00", "USD"] }, ["mission_resource_access", "vendors", "max_amount"]],
+      ["an amount in another currency", { vendors: ["acme"], max_amount: { amount: "100.00", currency: "USD" } }, { amount: ["50.00", "EUR"] }, ["mission_resource_access", "vendors", "max_amount"]],
+      ["no amount for its cap", { max_amount: { amount: "100.00", currency: "USD" } }, {}, ["mission_resource_access", "max_amount"]],
+      ["a collection member outside its vendors", { vendors: ["acme"] }, { vendors: ["acme", "globex"] }, ["mission_resource_access", "vendors"]],
+    ])("answers an independently narrower credential's failure with %s as parameter_violation, listing only the gates reached", async (_label, constraints, target, keys) => {
+      // The Mission entry carries no constraint: only the credential's can fail.
+      expect(await outcome(ask({ ...target, credential: [credentialEntry(constraints)] }), view())).toEqual({ reason: "parameter_violation", keys });
+    });
+
+    it("never combines constraints from two entries: each failing one gate is parameter_violation, one satisfying both permits", async () => {
+      const halves = [
+        credentialEntry({ vendors: ["acme"], max_amount: { amount: "10.00", currency: "USD" } }),
+        credentialEntry({ vendors: ["globex"], max_amount: { amount: "500.00", currency: "USD" } }),
+      ];
+      expect(await outcome(ask({ amount: ["20.00", "USD"], credential: halves }), view())).toEqual({
+        reason: "parameter_violation",
+        keys: ["mission_resource_access", "vendors", "max_amount"],
+      });
+      const whole = credentialEntry({ vendors: ["acme"], max_amount: { amount: "500.00", currency: "USD" } });
+      expect((await outcome(ask({ amount: ["20.00", "USD"], credential: [...halves, whole] }), view())).reason).toBe("permit");
+    });
   });
 
   it("a delegate narrowing failure records the loaded entry types without inventing checks of their constraints", async () => {
@@ -193,15 +322,18 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   ...over,
 });
 
-const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
-  subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
-  action: { name: "payments:invoice.read" },
-  context: {
-    mission: { id: "msn_evd_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
-  },
-  ...over,
-});
+// The fixture runs in the builder, so a digest taken of a built request is of
+// exactly the body the PDP receives.
+const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest =>
+  withCredential({
+    subject: { id: "alice" },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+    action: { name: "payments:invoice.read" },
+    context: {
+      mission: { id: "msn_evd_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
+    },
+    ...over,
+  });
 
 /** The canonical-object digest of a request's JSON bytes, taken before the PDP sees it. */
 const submittedDigest = (request: EvaluationRequest): string => canonicalDigest(JSON.parse(JSON.stringify(request)));
