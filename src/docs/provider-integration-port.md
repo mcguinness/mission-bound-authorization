@@ -822,7 +822,7 @@ Mission-bound token through the assembled path (#1105).
 | Independent Resource policy | Yes, not met: acceptance gate (#828) | The PDP's OpenFGA check and action-to-relation map (§5.2) | In the decision | None | Nothing durable; the tuple is injected per check | PDP-level, [FGA] (§5.2) | The shipped model cannot deny independently of Mission authority (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level, [FGA] (§5.4) | A single-record read re-derives no digest at use; the Operation Profile's intake rules are not implemented (#1106) (§5.4) |
-| Permit redemption | Transaction tier, keyed writes, and single-use permits on the unkeyed write path | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation; `takeSingleUse` (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction. An unkeyed-write redemption is one insert, immediately before the effect | None; settlement is awaited | Claim, reservation and consumed-identifier records survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | The statement does not publish the single-use default (#1080); one redemption per operation key per process (§5.5) |
+| Permit redemption | Transaction tier, keyed writes, and single-use permits on the unkeyed write path | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation; `takeSingleUse` (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction. An unkeyed-write redemption is one insert, immediately before the effect | None; settlement is awaited | Claim, reservation and consumed-identifier records survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | One redemption per operation key per process (§5.5) |
 | Evidence | Yes | The PDP's emitter; `recordRefusal`, `suppressExecution`; the executor's `completed` write (§5.6) | Synchronous in the request; Decision Evidence is verified before release | None | Retention is in memory and lost at restart | PEP-level (§5.6) | A failed `completed` write after a connector commit is silent (#1104); no Execution Evidence on a successful call outside the transaction tier (§5.6) |
 | Recovery and reconciliation | Declared by the Enforcement Scope Statement | `reconcileClaims`, `reconcile`, the reservation `sweep()` (§5.7) | None runs | Reconciliation would be the overlay's only asynchronous work | A prior process's claim closes `indeterminate` and its key stays refused (§5.7) | PEP-level restart witness (§5.7); the PDP crash boundary (§5.5) | No production caller and no alert (#1103) |
 
@@ -952,7 +952,8 @@ Mission-bound token through the assembled path (#1105).
     capability check, `reverify`, the permit-use table again, then, for a
     permit carrying `use_limit`, its single-use redemption (§5.5), then the
     effect. For a keyed reversible write, the effect is the reservation
-    transaction (§5.5). Nothing else is written before the effect.
+    transaction, which also redeems a carried `use_limit` (§5.5). Nothing
+    else is written before the effect.
   - Transaction tier (`callTransactionTool`, `server.ts:1298`): the
     permit-use table at admission (`:1366`); single-use redemption (`:1408`),
     which writes the engine's operation state; then the capability check
@@ -994,8 +995,10 @@ Mission-bound token through the assembled path (#1105).
     and commits the effect, the reservation and the result in one local
     transaction (`server.ts:1261`;
     `services/mcp-payments/src/write-reservations.ts:228`).
-  - Single-use permits on the unkeyed write path: the PDP sets `use_limit: 1` on
-    every `consequential_write` permit that no key control covers, which is
+  - Single-use permits on the unkeyed write path: the statement publishes
+    `single_use_decision_identifier` as the `consequential_write` class
+    default (D333), and the PDP sets `use_limit: 1` on every
+    `consequential_write` permit that no key control covers, which is
     `hold_transfer` alone. `callWriteTool` redeems a permit carrying
     `use_limit` after the last permit-use check, with no await before the
     effect (`takeSingleUse`): one insert keyed on `evaluation_id` into the
@@ -1005,13 +1008,27 @@ Mission-bound token through the assembled path (#1105).
     refuses `condition_unrecognized`. Each record is kept until the permit's
     `valid_until` plus 30 s (`CONSUMED_PERMIT_RETENTION_MARGIN_MS`): the PEP
     accepts a permit only until `valid_until` on its own clock, and the
-    margin covers a backward clock step. `sweepConsumedPermits()` has no
-    production caller.
+    margin covers a backward clock step; this realizes the published
+    `permit_acceptance_window` retention posture. `sweepConsumedPermits()`
+    has no production caller.
+  - A `use_limit` on a keyed write's permit: the PDP issues none, but
+    `admitReversibleWrite` meters one it receives. `use_limit: 1` is checked
+    and recorded in `consumed_permits` inside the reservation's transaction
+    (`WriteReservationStore.reserve`), so a consumed identifier is refused
+    `permit_consumed` under any key and an effect that refuses consumes
+    nothing; retrieval of a retained result consumes nothing but refuses a
+    consumed identifier; any other `use_limit` is refused
+    `condition_unrecognized`.
+  - Startup: the server does not start unless every served
+    `consequential_write` is covered by a control its write path enforces,
+    with the store configured and owned by the declared owner
+    (`assertPermitLifetimeCoverage`).
   - Read paths redeem nothing; each crossing takes a fresh decision.
 - **Boundary.** The claim insert is one transaction in the PDP's store.
   Redemption, effect, evidence and settlement follow as separate writes, in
-  that order. A keyed write is one local transaction. An unkeyed write's
-  redemption is one insert; the effect follows it synchronously.
+  that order. A keyed write is one local transaction, including the
+  redemption of any `use_limit` it carries. An unkeyed write's redemption is
+  one insert; the effect follows it synchronously.
 - **Asynchronous work.** None. `settleClaim` is awaited.
 - **Crash and recovery.** The claim and reservation files survive a restart,
   and with them the consumed identifiers.
@@ -1029,11 +1046,15 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
   - `single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > a second presentation of one hold_transfer Decision is refused permit_consumed, releases no second hold, and records the suppression against the same evaluation_id` (server-level)
   - `single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > a presentation refused before redemption burns nothing, and two concurrent presentations of that Decision release at most one hold` (server-level)
   - `single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > the consumed record survives a store reopen: a new server on the same file refuses the replay permit_consumed with no hold` (server-level)
-  - `single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > a consumed-identifier store that cannot be written, or none configured, refuses consumption_unavailable with no hold` (server-level)
+  - `single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > a consumed-identifier store that cannot be written refuses consumption_unavailable with no hold, and a server with no store configured does not start` (server-level)
   - `single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > retains each consumed identifier through the permit's whole acceptance window: until valid_until plus the margin, and a sweep at valid_until keeps it` (server-level)
-- **Residual.** The Enforcement Scope Statement has no member for the
-  single-use default, so `hold_transfer`'s control is enforced but not
-  published (#1080). A single-use permit bounds one permit, not the action:
+  - `a use_limit a keyed write's permit carries is metered, never ignored (@spec runtime#single-use-identifiers, #1136 review, D317) > the review's probe: scheduled under a use_limit: 1 permit, cancelled under a fresh Decision, the original permit replayed under another key is refused permit_consumed and schedules nothing` (server-level)
+  - `a use_limit a keyed write's permit carries is metered, never ignored (@spec runtime#single-use-identifiers, #1136 review, D317) > the consumed permit replayed under its own key is refused permit_consumed before the retained result is disclosed; a keyed effect that refuses consumes nothing; a use_limit other than 1 is refused condition_unrecognized` (server-level)
+  - `the statement's permit-lifetime controls, discriminated on permit_lifetime_control (@spec runtime#permit-binding, runtime#single-use-identifiers, #1080, D333) > publishes single_use_decision_identifier as the consequential_write class default, with its consumed-identifier owner, domain and permit_acceptance_window posture and no key member, while the schedule and cancel entries keep the key control` (PDP-level)
+  - `the statement's permit-lifetime controls, discriminated on permit_lifetime_control (@spec runtime#permit-binding, runtime#single-use-identifiers, #1080, D333) > selects the most specific declaration before the class default, and returns a key declaration only when that selection is the key control: a less-specific key default never covers an operation that elects single use` (PDP-level)
+  - `the statement's permit-lifetime controls, discriminated on permit_lifetime_control (@spec runtime#permit-binding, runtime#single-use-identifiers, #1080, D333) > refuses an invalid or ambiguous declaration: a key member on a single-use entry, a single-use member on a key entry, a missing single-use member, the other variant's retention posture, an owner outside the PEP locations, an unknown control, and a class or operation declared twice` (PDP-level)
+  - `runtime posture publication on the resource metadata surface > publishes single_use_decision_identifier as the consequential_write class default the unkeyed hold resolves to, and refuses to start unless every served consequential_write has a supported control, a configured enforcing store and that store's declared owner` (server-level)
+- **Residual.** A single-use permit bounds one permit, not the action:
   two separately authorized holds each place a hold, and the hold stores
   nothing. The operation key omits `idempotency_key`:
   one redemption is allowed per Mission, action, phase and digest per process,
@@ -1116,12 +1137,10 @@ Runtime overlay:
 
 7. A state source for a PEP or PDP separated from the AS (#1101). This target
    uses the declared local read (D293). §5.3.
-8. Publication of the single-use default for a reversible write with no key
-   control in the Enforcement Scope Statement (#1080). §5.5.
-9. Running the declared outcome reconciliation, its alert, and recovery of a
+8. Running the declared outcome reconciliation, its alert, and recovery of a
    prior process's claims (#1103). §5.7.
-10. An assembled deployment of exactly this topology: the shipped stack also
-    mounts the MAS join route on the payments resource (#1105).
+9. An assembled deployment of exactly this topology: the shipped stack also
+   mounts the MAS join route on the payments resource (#1105).
 
 **Residual.**
 
