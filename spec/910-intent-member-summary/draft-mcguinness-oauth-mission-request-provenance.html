@@ -1,0 +1,2248 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Mission Request Provenance for OAuth 2.0</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       Mission-Bound Authorization for OAuth 2.0 commits the Mission Intent a
+client submits, but that commitment says nothing about where the
+request behind the Intent came from. This document defines an
+optional Intent Submission Evidence type,  mission-request-provenance :
+a signed assertion from a trusted request intake that captured a
+person's instruction before it was shaped into a Mission Intent. The
+assertion binds who originated the instruction, through which
+authenticated channel, and when, to one authorization server, one
+exact Intent, and one presenter, and carries only a secret-keyed
+digest of the instruction. It authenticates the request's origin. It
+does not prove the Intent faithfully interprets the request, and it
+is never approval or authority. 
+    " name="description">
+<meta content="xml2rfc 3.34.1" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="mission" name="keyword">
+<meta content="agent" name="keyword">
+<meta content="provenance" name="keyword">
+<meta content="evidence" name="keyword">
+<meta content="draft-mcguinness-oauth-mission-request-provenance-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.1
+    Python 3.14.8
+    ConfigArgParse 1.8.0
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.12.2
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.9.1
+-->
+<link href="draft-mcguinness-oauth-mission-request-provenance.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth Mission Request Provenance</td>
+<td class="right">October 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 10 April 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Web Authorization Protocol</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-mission-request-provenance-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-10-07" class="published">7 October 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-04-10">10 April 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Mission Request Provenance for OAuth 2.0</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 commits the Mission Intent a
+client submits, but that commitment says nothing about where the
+request behind the Intent came from. This document defines an
+optional Intent Submission Evidence type, <code>mission-request-provenance</code>:
+a signed assertion from a trusted request intake that captured a
+person's instruction before it was shaped into a Mission Intent. The
+assertion binds who originated the instruction, through which
+authenticated channel, and when, to one authorization server, one
+exact Intent, and one presenter, and carries only a secret-keyed
+digest of the instruction. It authenticates the request's origin. It
+does not prove the Intent faithfully interprets the request, and it
+is never approval or authority.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-request-provenance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-request-provenance.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-request-provenance/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-request-provenance/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/mcguinness/mission-bound-authorization">https://github.com/mcguinness/mission-bound-authorization</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 10 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-trust-configuration" class="internal xref">Trust Configuration</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-intake-isolation" class="internal xref">Intake Isolation</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-the-evidence-entry" class="internal xref">The Evidence Entry</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-the-provenance-assertion" class="internal xref">The Provenance Assertion</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-capture-and-signing" class="internal xref">Capture and Signing</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-capture" class="internal xref">Capture</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-signing" class="internal xref">Signing</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-the-request-digest" class="internal xref">The Request Digest</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-verification" class="internal xref">Verification</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-replay-and-recovery" class="internal xref">Replay and Recovery</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-recorded-facts" class="internal xref">Recorded Facts</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-what-verification-establish" class="internal xref">What Verification Establishes</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-audit-and-retention" class="internal xref">Audit and Retention</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#section-13" class="auto internal xref">13</a>. <a href="#name-conformance" class="internal xref">Conformance</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-signer-scope" class="internal xref">Signer Scope</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-shaper-influence" class="internal xref">Shaper Influence</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
+                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-replay-and-presenter-substi" class="internal xref">Replay and Presenter Substitution</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4">
+                <p id="section-toc.1-1.14.2.4.1"><a href="#section-14.4" class="auto internal xref">14.4</a>.  <a href="#name-evidence-is-not-authority" class="internal xref">Evidence Is Not Authority</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
+            <p id="section-toc.1-1.17.1"><a href="#section-17" class="auto internal xref">17</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.1">
+                <p id="section-toc.1-1.17.2.1.1"><a href="#section-17.1" class="auto internal xref">17.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17.2.2">
+                <p id="section-toc.1-1.17.2.2.1"><a href="#section-17.2" class="auto internal xref">17.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-example" class="internal xref">Example</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-request-digest-test-vectors" class="internal xref">Request Digest Test Vectors</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.20">
+            <p id="section-toc.1-1.20.1"><a href="#appendix-C" class="auto internal xref">Appendix C</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.21">
+            <p id="section-toc.1-1.21.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">The OAuth binding <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> commits the
+submitted Mission Intent as <code>intent_hash</code>, and Mission Intent Shaping
+<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span> records how a client turned a
+request into that Intent. Neither authenticates the request itself:
+who asked, through which authenticated channel, and when. A
+deployment that requires that fact before derivation needs evidence
+from a party that captured the request, not from the shaper that
+interpreted it.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This document defines that evidence as an Intent Submission Evidence
+type under the framework of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>. A trusted
+request intake captures the instruction and its authenticated origin
+before shaping. Once the candidate Intent exists, the intake signs an
+assertion binding the captured origin to the authorization server
+(AS), the exact provisional <code>intent_hash</code>, and the presenter. The
+assertion carries an HMAC <span>[<a href="#RFC2104" class="cite xref">RFC2104</a>]</span> digest of the instruction under
+a per-request secret that never leaves the intake, so a holder of the
+assertion cannot test guesses against that digest. The assertion's
+<code>intent_hash</code> remains the OAuth binding's unsalted commitment to the
+Intent (<a href="#privacy-considerations" class="auto internal xref">Section 15</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The AS verifies the signer, its authorization for the claimed
+originator and channel, and the bindings. It does not recompute the
+digest, does not learn the instruction, and does not judge whether
+the Intent says what the person meant. A verified assertion is
+authenticated input to admission and derivation policy; the approval
+event remains the only activation of authority
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Intent Submission
+Evidence").<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">The Mission Evidence Envelope's Intent Admission Assertion
+<span>[<a href="#I-D.draft-mcguinness-mission-evidence-envelope" class="cite xref">I-D.draft-mcguinness-mission-evidence-envelope</a>]</span> asserts an
+admission decision for an Intent. This document asserts the capture
+of the request behind it; the two are distinct and neither depends on
+the other.<a href="#section-1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions">
+<section id="section-2">
+      <h2 id="name-conventions-and-terminology">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">This document uses the terms Mission Intent, Submission envelope,
+Intent Submission Evidence, Mission Record, approval event, Mission
+Subject, Approver, and <code>intent_hash</code> from
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, and evidence type and
+presenter from
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-3">
+        <dt id="section-2-3.1">Request intake:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.2">
+          <p id="section-2-3.2.1">The component that authenticates a person, receives their
+instruction, and signs the provenance assertion. It runs before the
+shaper and outside the shaper's control (<a href="#intake-isolation" class="auto internal xref">Section 3.1</a>).<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.3">Originator:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.4">
+          <p id="section-2-3.4.1">The authenticated principal who submitted the instruction, as an
+issuer-qualified identifier. The originator is distinct from the
+assertion's signer, the presenter, the Mission Subject, and the
+Approver; equality or delegation between any of them holds only
+where the AS verifies an explicit mapping.<a href="#section-2-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.5">Capture record:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.6">
+          <p id="section-2-3.6.1">The intake's retained record of one captured instruction
+(<a href="#capture" class="auto internal xref">Section 6.1</a>).<a href="#section-2-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.7">Request digest:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.8">
+          <p id="section-2-3.8.1">The HMAC-SHA-256 digest of one captured instruction under that
+capture's secret (<a href="#request-digest" class="auto internal xref">Section 7</a>).<a href="#section-2-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="trust-configuration">
+<section id="section-3">
+      <h2 id="name-trust-configuration">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-trust-configuration" class="section-name selfRef">Trust Configuration</a>
+      </h2>
+<p id="section-3-1">The AS accepts this evidence only from signers its own configuration
+authorizes. For each authorized signer, the configuration states:<a href="#section-3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-2.1">
+          <p id="section-3-2.1.1">the signer identifier, which the assertion's <code>iss</code> carries;<a href="#section-3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-2.2">
+          <p id="section-3-2.2.1">the signer's verification keys, each of which the configuration
+itself maps to this evidence type. A key's <code>use</code> or <code>key_ops</code>
+values, such as <code>sig</code> or <code>verify</code> <span>[<a href="#RFC7517" class="cite xref">RFC7517</a>]</span>, name cryptographic
+operations, not authority to sign provenance, and never establish
+that mapping alone;<a href="#section-3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-2.3">
+          <p id="section-3-2.3.1">the originators the signer may attest for: one or more originator
+issuers and, where the deployment narrows further, the principals
+or principal classes within them; and<a href="#section-3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-3-2.4">
+          <p id="section-3-2.4.1">the channel types the signer may attest (<a href="#assertion" class="auto internal xref">Section 5</a>).<a href="#section-3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-3-3">A user-device signer is a key the AS has bound to one originator in
+its own records, such as through enrollment. Its scope is that
+originator alone, and the AS validates the binding from those
+records. A self-declared device key, a key the agent holds, and a
+shaper's signing key are not authorized signers.<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4">Trust never comes from the assertion. The AS <span class="bcp14">MUST NOT</span> resolve or
+accept a key from the assertion's <code>jku</code>, <code>x5u</code>, <code>jwk</code>, or <code>x5c</code>
+header parameters, and refuses an assertion that carries any of them
+(<a href="#verification" class="auto internal xref">Section 8</a>). This document defines no signer discovery or key
+distribution endpoint.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<div id="intake-isolation">
+<section id="section-3.1">
+        <h3 id="name-intake-isolation">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-intake-isolation" class="section-name selfRef">Intake Isolation</a>
+        </h3>
+<p id="section-3.1-1">The intake may run in the same deployment as the client or the
+shaper only if the shaper can neither create or alter capture records
+nor ask the intake to sign for a request the intake did not capture
+itself. A deployment that cannot provide that isolation does not
+satisfy this document: a signature over shaper-chosen facts would
+authenticate nothing about the request.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="entry">
+<section id="section-4">
+      <h2 id="name-the-evidence-entry">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-the-evidence-entry" class="section-name selfRef">The Evidence Entry</a>
+      </h2>
+<p id="section-4-1">The entry's <code>type</code> is <code>mission-request-provenance</code>. The entry is
+closed to exactly two members:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-2">
+        <dt id="section-4-2.1">
+<code>type</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.2">
+          <p id="section-4-2.2.1"><span class="bcp14">REQUIRED</span>. The string <code>mission-request-provenance</code>.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-2.3">
+<code>assertion</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-2.4">
+          <p id="section-4-2.4.1"><span class="bcp14">REQUIRED</span>. A string: the provenance assertion as a JSON Web Token
+<span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> in JWS Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>.<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="assertion">
+<section id="section-5">
+      <h2 id="name-the-provenance-assertion">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-the-provenance-assertion" class="section-name selfRef">The Provenance Assertion</a>
+      </h2>
+<p id="section-5-1">The assertion's protected header <span class="bcp14">MUST</span> carry:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5-2.1">
+          <p id="section-5-2.1.1"><code>typ</code> with the value <code>mission-request-provenance+jwt</code>;<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.2">
+          <p id="section-5-2.2.1"><code>alg</code>: <code>ES256</code> <span>[<a href="#RFC7518" class="cite xref">RFC7518</a>]</span> is mandatory to implement, and an
+implementation <span class="bcp14">MAY</span> support other JWS algorithms; and<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-5-2.3">
+          <p id="section-5-2.3.1"><code>kid</code>, identifying a key the AS configuration maps to this signer
+and this evidence type (<a href="#trust-configuration" class="auto internal xref">Section 3</a>).<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-5-3">The header <span class="bcp14">MUST NOT</span> carry <code>jku</code>, <code>x5u</code>, <code>jwk</code>, or <code>x5c</code>.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">The assertion's claims are:<a href="#section-5-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-5">
+        <dt id="section-5-5.1">
+<code>iss</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-5.2">
+          <p id="section-5-5.2.1"><span class="bcp14">REQUIRED</span>. A string. The signer identifier.<a href="#section-5-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-5.3">
+<code>aud</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-5.4">
+          <p id="section-5-5.4.1"><span class="bcp14">REQUIRED</span>. A string, not an array: the issuer identifier of the AS
+the Intent is submitted to.<a href="#section-5-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-5.5">
+<code>iat</code>, <code>exp</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-5.6">
+          <p id="section-5-5.6.1"><span class="bcp14">REQUIRED</span>. NumericDate values <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>: when the assertion was
+issued and when it expires.<a href="#section-5-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-5.7">
+<code>jti</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-5.8">
+          <p id="section-5-5.8.1"><span class="bcp14">REQUIRED</span>. A string unique among the signer's assertions.<a href="#section-5-5.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-5.9">
+<code>intent_hash</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-5.10">
+          <p id="section-5-5.10.1"><span class="bcp14">REQUIRED</span>. A string. The exact provisional <code>intent_hash</code> of the
+candidate Mission Intent (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Integrity Anchors").<a href="#section-5-5.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-5.11">
+<code>presenter</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-5.12">
+          <p id="section-5-5.12.1"><span class="bcp14">REQUIRED</span>. An object with <code>client_id</code> (<span class="bcp14">REQUIRED</span>, a string) and <code>cnf</code>
+(a confirmation-method object <span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>, <span class="bcp14">REQUIRED</span> where the
+presenter uses proof of possession): the presenter of the
+workflow in which the instruction was captured.<a href="#section-5-5.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-5.13">
+<code>originator</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-5.14">
+          <p id="section-5-5.14.1"><span class="bcp14">REQUIRED</span>. An object with <code>iss</code> and <code>sub</code>, both strings: the
+originator.<a href="#section-5-5.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-5.15">
+<code>channel</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-5.16">
+          <p id="section-5-5.16.1"><span class="bcp14">REQUIRED</span>. An object describing how the intake authenticated the
+originator: <code>type</code> (<span class="bcp14">REQUIRED</span>, a string naming the channel, using a
+collision-resistant name), and, where known, <code>acr</code> (a string),
+<code>amr</code> (an array of strings), and <code>auth_time</code> (a NumericDate), with
+the meanings OpenID Connect gives them <span>[<a href="#OpenID.Core" class="cite xref">OpenID.Core</a>]</span>.<a href="#section-5-5.16.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-5.17">
+<code>captured_at</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-5.18">
+          <p id="section-5-5.18.1"><span class="bcp14">REQUIRED</span>. A NumericDate: when the intake captured the instruction.<a href="#section-5-5.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-5.19">
+<code>request_digest</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-5.20">
+          <p id="section-5-5.20.1"><span class="bcp14">REQUIRED</span>. A string: the request digest (<a href="#request-digest" class="auto internal xref">Section 7</a>).<a href="#section-5-5.20.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-5.21">
+<code>capture_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-5.22">
+          <p id="section-5-5.22.1"><span class="bcp14">OPTIONAL</span>. A string: an identifier the intake generates for the
+capture record so an authorized audit can retrieve it (<a href="#audit" class="auto internal xref">Section 12</a>).
+It <span class="bcp14">MUST</span> be generated from at least 128 bits of output of a
+cryptographically secure random source <span>[<a href="#RFC4086" class="cite xref">RFC4086</a>]</span> and <span class="bcp14">MUST NOT</span> be
+derived from the instruction or any other request content.<a href="#section-5-5.22.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-5-6">A producer <span class="bcp14">MUST NOT</span> emit any other claim that carries or commits,
+directly or through a hash, to request content: the instruction, its
+media type, the capture secret, Shaping Evidence, or any artifact
+that commits one of them (<a href="#privacy-considerations" class="auto internal xref">Section 15</a>). A verifier
+ignores claims this document does not define, as <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>
+requires, and records no fact from them.<a href="#section-5-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="capture-and-signing">
+<section id="section-6">
+      <h2 id="name-capture-and-signing">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-capture-and-signing" class="section-name selfRef">Capture and Signing</a>
+      </h2>
+<div id="capture">
+<section id="section-6.1">
+        <h3 id="name-capture">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-capture" class="section-name selfRef">Capture</a>
+        </h3>
+<p id="section-6.1-1">Before any shaping, the intake authenticates the originator through
+the channel, receives the instruction, and creates a capture record
+holding:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.1-2.1">
+            <p id="section-6.1-2.1.1">the exact instruction bytes and their media type, as received, with
+no normalization or exclusion of instruction content;<a href="#section-6.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.2">
+            <p id="section-6.1-2.2.1">the originator and the channel facts;<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.3">
+            <p id="section-6.1-2.3.1"><code>captured_at</code>;<a href="#section-6.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.4">
+            <p id="section-6.1-2.4.1">a fresh 256-bit secret from a cryptographically secure random source
+<span>[<a href="#RFC4086" class="cite xref">RFC4086</a>]</span>, generated for this capture alone and separate from any
+signing key;<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.5">
+            <p id="section-6.1-2.5.1">the request digest computed with that secret; and<a href="#section-6.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-2.6">
+            <p id="section-6.1-2.6.1">the <code>capture_id</code>, if one is used, and the identifiers of assertions
+issued from this capture.<a href="#section-6.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.1-3">The capture record stays with the intake. Neither the secret nor the
+instruction leaves it in any assertion or recorded fact.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="signing">
+<section id="section-6.2">
+        <h3 id="name-signing">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-signing" class="section-name selfRef">Signing</a>
+        </h3>
+<p id="section-6.2-1">Once a candidate Intent exists, the intake issues an assertion from a
+capture record it created in the same authenticated workflow that
+received the instruction. The intake computes <code>intent_hash</code> itself
+over the candidate Intent, for the AS that <code>aud</code> names; it does not
+accept an <code>intent_hash</code>, a digest, an originator, or channel facts
+from the shaper. It <span class="bcp14">MUST NOT</span> sign for a capture record from another
+workflow or for a request it did not capture.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2-2">Signing binds the captured request to the submitted proposal. It
+does not certify that the Intent interprets the request faithfully,
+that consent is sufficient, or that admission should succeed.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.2-3">Each assertion is bound to one exact Intent. When shaping or approval
+revision changes <code>intent_hash</code>, the intake issues a fresh assertion
+with a fresh <code>jti</code>; this document defines no evidence-lineage
+exception
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"Evidence Binds One Exact Intent"). The capture's request digest <span class="bcp14">MAY</span>
+be reused in assertions for the same capture, only within the
+workflow authorized to submit and revise that request.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="request-digest">
+<section id="section-7">
+      <h2 id="name-the-request-digest">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-the-request-digest" class="section-name selfRef">The Request Digest</a>
+      </h2>
+<p id="section-7-1">The request digest is HMAC-SHA-256 (<span>[<a href="#RFC2104" class="cite xref">RFC2104</a>]</span>, <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span>) under the
+capture's secret, over this exact input:<a href="#section-7-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-7-2">
+<li id="section-7-2.1">
+          <p id="section-7-2.1.1">the US-ASCII bytes of <code>mission-request-provenance/v1</code>, then one
+zero byte;<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-2.2">
+          <p id="section-7-2.2.1">the length of the media type, as a 4-byte unsigned big-endian
+integer, then the media type's US-ASCII bytes exactly as the
+intake recorded them, with no case folding or parameter
+reordering; and<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-2.3">
+          <p id="section-7-2.3.1">the length of the instruction, as an 8-byte unsigned big-endian
+integer, then the instruction's exact bytes.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-7-3">The <code>request_digest</code> value is <code>hmac-sha-256:</code> followed by the base64url
+encoding without padding (<span><a href="https://rfc-editor.org/rfc/rfc4648#section-5" class="relref">Section 5</a> of [<a href="#RFC4648" class="cite xref">RFC4648</a>]</span>) of the 32-byte
+HMAC output. The <code>hmac-sha-256:</code> prefix names this construction only;
+the value is not an integrity anchor of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and does not use its
+<code>sha-256:</code> prefix.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4"><a href="#vectors" class="auto internal xref">Appendix B</a> gives test vectors.<a href="#section-7-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="verification">
+<section id="section-8">
+      <h2 id="name-verification">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-verification" class="section-name selfRef">Verification</a>
+      </h2>
+<p id="section-8-1">The AS processes an entry of this type under the framework
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>) and the
+OAuth binding's dispatch rules. It refuses the submission with
+<code>invalid_mission_intent_evidence</code> on any failure below, and counts
+the signature verification against the framework's verification-cost
+bound:<a href="#section-8-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-8-2">
+<li id="section-8-2.1">
+          <p id="section-8-2.1.1">Confirm the entry carries exactly <code>type</code> and <code>assertion</code>, and that
+<code>assertion</code> is a string.<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.2">
+          <p id="section-8-2.2.1">Decode the JWS. Confirm the protected <code>typ</code> is exactly
+<code>mission-request-provenance+jwt</code>, <code>alg</code> is not <code>none</code>, <code>kid</code> is
+present, and none of <code>jku</code>, <code>x5u</code>, <code>jwk</code>, or <code>x5c</code> is present.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.3">
+          <p id="section-8-2.3.1">Look up the signer by the <code>iss</code> claim and <code>kid</code> in the AS's
+configuration (<a href="#trust-configuration" class="auto internal xref">Section 3</a>); refuse an unknown signer
+or a key the configuration does not map to this evidence type.
+Confirm <code>alg</code> is permitted for that key.<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.4">
+          <p id="section-8-2.4.1">Verify the signature, following <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span>.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.5">
+          <p id="section-8-2.5.1">Confirm every required claim is present with its defined type.<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.6">
+          <p id="section-8-2.6.1">Confirm <code>aud</code> equals this AS's issuer identifier.<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.7">
+          <p id="section-8-2.7.1">Within the deployment's clock-skew allowance, confirm <code>iat</code> is not
+in the future, <code>exp</code> has not passed, <code>exp</code> minus <code>iat</code> does not
+exceed the deployment's maximum assertion lifetime, <code>captured_at</code>
+is not later than <code>iat</code>, and <code>iat</code> minus <code>captured_at</code> does not
+exceed the deployment's maximum capture age.<a href="#section-8-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.8">
+          <p id="section-8-2.8.1">Confirm the configuration authorizes this signer for <code>originator</code>
+and for <code>channel.type</code>; for a user-device signer, confirm the AS's
+own binding of the key to that originator.<a href="#section-8-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.9">
+          <p id="section-8-2.9.1">Confirm <code>intent_hash</code> equals the provisional <code>intent_hash</code> of the
+submitted Intent, and <code>presenter</code> agrees with the presenter the
+containing exchange established
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>).<a href="#section-8-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-8-2.10">
+          <p id="section-8-2.10.1">Reserve the pair (<code>iss</code>, <code>jti</code>) (<a href="#replay" class="auto internal xref">Section 9</a>).<a href="#section-8-2.10.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-8-3">The deployment declares its maximum assertion lifetime, maximum
+capture age, and clock-skew allowance, and keeps each bounded.<a href="#section-8-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="replay">
+<section id="section-9">
+      <h2 id="name-replay-and-recovery">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-replay-and-recovery" class="section-name selfRef">Replay and Recovery</a>
+      </h2>
+<p id="section-9-1">The AS keeps a store of (<code>iss</code>, <code>jti</code>) pairs and changes it
+atomically, with single-writer-wins semantics:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-2.1">
+          <p id="section-9-2.1.1"><strong>Reserve.</strong> Step 10 of <a href="#verification" class="auto internal xref">Section 8</a> reserves the pair, and
+succeeds only if no other submission has reserved or committed it.
+A submission that loses the race is refused as replay and does not
+verify the assertion again in parallel.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.2">
+          <p id="section-9-2.2.1"><strong>Commit.</strong> When the AS accepts the containing submission (for a
+Pushed Authorization Request <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>, when it returns the
+<code>request_uri</code>; for a token-endpoint carriage, when that request
+succeeds or returns a pending continuation), it commits the
+reservation. A committed pair is retained
+at least until <code>exp</code> plus the clock-skew allowance.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.3">
+          <p id="section-9-2.3.1"><strong>Release.</strong> When the AS refuses the containing submission for any
+reason, including another evidence entry failing, it releases the
+reservation. A reservation never outlives <code>exp</code> plus the clock-skew
+allowance.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-9-3">On a surface that carries a Mission-creation idempotency
+fingerprint, presented evidence is a member of that fingerprint
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"Evidence on Idempotent Creation Surfaces"). A client retrying an
+operation on such a surface after a lost response <span class="bcp14">MUST</span> re-present the
+original evidence entry unchanged, including the original assertion:
+a fresh assertion changes the fingerprint, and the AS refuses the
+retry with <code>invalid_request</code> as a different operation. The AS
+resolves an exact retry by its fingerprint and returns the recorded
+outcome or continuation without verifying the assertion again, so
+the committed <code>jti</code> does not refuse it. Any submission other than an
+exact retry follows <a href="#verification" class="auto internal xref">Section 8</a> in full, including the replay
+check.<a href="#section-9-3" class="pilcrow">¶</a></p>
+<p id="section-9-4">On any other surface, such as PAR, a client that retries after losing
+the response to an accepted submission presents a fresh assertion:
+the committed <code>jti</code> is refused as replay. The intake issues the fresh
+assertion from the same capture record (<a href="#signing" class="auto internal xref">Section 6.2</a>).<a href="#section-9-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="recorded-facts">
+<section id="section-10">
+      <h2 id="name-recorded-facts">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-recorded-facts" class="section-name selfRef">Recorded Facts</a>
+      </h2>
+<p id="section-10-1">On acceptance, the AS records the entry as a <code>submission_evidence</code>
+element (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Record") whose <code>facts</code> are exactly:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-2">
+        <dt id="section-10-2.1">
+<code>signer</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.2">
+          <p id="section-10-2.2.1">An object with the assertion's <code>iss</code> and the protected <code>kid</code>.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.3">
+<code>originator</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.4">
+          <p id="section-10-2.4.1">The assertion's <code>originator</code>.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.5">
+<code>channel</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.6">
+          <p id="section-10-2.6.1">The assertion's <code>channel</code>.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.7">
+<code>captured_at</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.8">
+          <p id="section-10-2.8.1">The assertion's <code>captured_at</code>, as an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-10-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.9">
+<code>request_digest</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.10">
+          <p id="section-10-2.10.1">The assertion's <code>request_digest</code>.<a href="#section-10-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.11">
+<code>assertion_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.12">
+          <p id="section-10-2.12.1">The assertion's <code>jti</code>.<a href="#section-10-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-10-2.13">
+<code>capture_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-10-2.14">
+          <p id="section-10-2.14.1">The assertion's <code>capture_id</code>, when present.<a href="#section-10-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-10-3">These facts are material verified provenance, rendered for approval
+under the OAuth binding's submission steps
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Submission
+Processing Order"). They carry no instruction text and no secret.<a href="#section-10-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="verification-scope">
+<section id="section-11">
+      <h2 id="name-what-verification-establish">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-what-verification-establish" class="section-name selfRef">What Verification Establishes</a>
+      </h2>
+<p id="section-11-1">Accepting an assertion establishes that a signer the AS authorizes
+attested the stated originator, channel, and capture time for a
+request whose digest it holds, bound to this AS, this exact Intent,
+and this presenter. It does not establish:<a href="#section-11-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11-2.1">
+          <p id="section-11-2.1.1">what the instruction said: the AS holds neither the instruction nor
+the secret and does not recompute the digest;<a href="#section-11-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.2">
+          <p id="section-11-2.2.1">that the Intent faithfully interprets the instruction, or that the
+shaper consumed the captured instruction rather than another; or<a href="#section-11-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-11-2.3">
+          <p id="section-11-2.3.1">approval, consent, or authority.<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-11-3">AS policy decides whether verified provenance is acceptable for the
+request. A policy <span class="bcp14">MAY</span> require this evidence before derivation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"Required Evidence Is Resolved Before Derivation").<a href="#section-11-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="audit">
+<section id="section-12">
+      <h2 id="name-audit-and-retention">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-audit-and-retention" class="section-name selfRef">Audit and Retention</a>
+      </h2>
+<p id="section-12-1">An authorized audit can recompute a request digest from a capture
+record, which holds the instruction, its media type, and the secret.
+The intake restricts access to capture records to authorized audit
+roles and declares how long it retains them. Deleting a capture's
+secret or instruction ends the ability to recompute its digest; it
+does not alter a Mission Record's recorded facts. This document
+defines no audit-retrieval endpoint.<a href="#section-12-1" class="pilcrow">¶</a></p>
+<p id="section-12-2">Where a deployment associates an assertion with the Shaping Evidence
+of the same request, it keeps that association in access-controlled
+audit storage, never in the assertion. The capture record may list
+the assertions issued from it; no assertion commits to its capture
+record.<a href="#section-12-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conformance">
+<section id="section-13">
+      <h2 id="name-conformance">
+<a href="#section-13" class="section-number selfRef">13. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
+      </h2>
+<p id="section-13-1">A request intake conforming to this document:<a href="#section-13-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13-2.1">
+          <p id="section-13-2.1.1">captures before shaping and keeps the capture record as <a href="#capture" class="auto internal xref">Section 6.1</a>
+describes;<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.2">
+          <p id="section-13-2.2.1">computes the request digest exactly as <a href="#request-digest" class="auto internal xref">Section 7</a> specifies,
+with a fresh secret per capture;<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.3">
+          <p id="section-13-2.3.1">signs only from its own capture record in the same authenticated
+workflow, computing <code>intent_hash</code> itself (<a href="#signing" class="auto internal xref">Section 6.2</a>);<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.4">
+          <p id="section-13-2.4.1">emits the claims of <a href="#assertion" class="auto internal xref">Section 5</a> and no claim that commits to
+request content; and<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.5">
+          <p id="section-13-2.5.1">issues a fresh assertion for each changed Intent and for each
+retry that is not an exact retry on a creation idempotency surface
+(<a href="#replay" class="auto internal xref">Section 9</a>).<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-13-3">An AS conforming to this document conforms to
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, holds the
+trust configuration of <a href="#trust-configuration" class="auto internal xref">Section 3</a>, and implements
+<a href="#verification" class="auto internal xref">Section 8</a>, <a href="#replay" class="auto internal xref">Section 9</a>, and <a href="#recorded-facts" class="auto internal xref">Section 10</a>.<a href="#section-13-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-14">
+      <h2 id="name-security-considerations">
+<a href="#section-14" class="section-number selfRef">14. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="sec-signer-scope">
+<section id="section-14.1">
+        <h3 id="name-signer-scope">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-signer-scope" class="section-name selfRef">Signer Scope</a>
+        </h3>
+<p id="section-14.1-1">A compromised signer can attest any originator and channel within its
+configured scope. Narrow scopes, keys mapped to this evidence type
+alone, and prompt removal of a signer from the AS configuration limit
+that exposure. A signer key is never accepted from the assertion
+(<a href="#trust-configuration" class="auto internal xref">Section 3</a>).<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-shaper">
+<section id="section-14.2">
+        <h3 id="name-shaper-influence">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-shaper-influence" class="section-name selfRef">Shaper Influence</a>
+        </h3>
+<p id="section-14.2-1">The shaper is outside the trust boundary
+(<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>). Intake isolation
+(<a href="#intake-isolation" class="auto internal xref">Section 3.1</a>) keeps it from fabricating capture records or
+obtaining signatures over claimed requests; without that isolation,
+the evidence authenticates only what the shaper chose to present.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-replay">
+<section id="section-14.3">
+        <h3 id="name-replay-and-presenter-substi">
+<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-replay-and-presenter-substi" class="section-name selfRef">Replay and Presenter Substitution</a>
+        </h3>
+<p id="section-14.3-1">Reservation of (<code>iss</code>, <code>jti</code>) refuses reuse of one assertion outside
+an exact creation retry (<a href="#replay" class="auto internal xref">Section 9</a>), and the presenter binding
+refuses another client presenting it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"The Exchange Establishes the Presenter"). The capture-age bound
+limits how long a captured instruction can back new assertions.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-not-authority">
+<section id="section-14.4">
+        <h3 id="name-evidence-is-not-authority">
+<a href="#section-14.4" class="section-number selfRef">14.4. </a><a href="#name-evidence-is-not-authority" class="section-name selfRef">Evidence Is Not Authority</a>
+        </h3>
+<p id="section-14.4-1">Verified provenance is policy input. It never substitutes for the
+approval event, and its absence or presence never widens authority.<a href="#section-14.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-15">
+      <h2 id="name-privacy-considerations">
+<a href="#section-15" class="section-number selfRef">15. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-15-1">Instructions are often short and predictable. Any deterministic
+commitment to one that a holder can compute without a secret, such as
+an unsalted hash or a hash with a disclosed salt, lets the holder test
+guessed wordings until one matches. The request digest resists that
+only because its secret never leaves the intake. This document's
+privacy claim is correspondingly limited, and covers <code>request_digest</code>
+alone: an assertion holder who lacks the secret cannot test guesses
+against the digest. The intake, an authorized auditor holding the
+secret, and any service that answers digest queries can.<a href="#section-15-1" class="pilcrow">¶</a></p>
+<p id="section-15-2">The same exposure arises indirectly. A hash over any artifact that
+contains an unsalted digest of the instruction, such as Shaping
+Evidence, whose <code>input_digest</code> is unsalted, is as testable as that
+digest when the artifact's other content is predictable. This is why
+the assertion carries no such hash (<a href="#assertion" class="auto internal xref">Section 5</a>) and why any
+association with Shaping Evidence stays in access-controlled audit
+storage (<a href="#audit" class="auto internal xref">Section 12</a>).<a href="#section-15-2" class="pilcrow">¶</a></p>
+<p id="section-15-3"><code>intent_hash</code> is outside the claim. The assertion carries it to bind
+one exact Intent, and it is the OAuth binding's unsalted commitment
+to that Intent (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Intent Retention and Anchor Disclosure"). Where shaping copies the
+instruction's wording into the Intent, for example into <code>goal</code>, and
+the Intent's other members are predictable, an assertion holder can
+test guessed wordings against <code>intent_hash</code> without the secret. A
+deployment that needs the wording kept from assertion holders keeps
+it out of the Intent; the request digest does not protect it there.<a href="#section-15-3" class="pilcrow">¶</a></p>
+<p id="section-15-4">A JWS authenticates its payload without encrypting it. The originator
+identifier, channel facts, and capture time are personal data visible
+to every holder of the assertion and recorded on the Mission Record;
+an intake includes only what AS policy needs, and channel facts stay
+coarse. Retention and deletion of capture records follow <a href="#audit" class="auto internal xref">Section 12</a>.<a href="#section-15-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-16">
+      <h2 id="name-iana-considerations">
+<a href="#section-16" class="section-number selfRef">16. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-16-1">This document has no IANA actions. The value
+<code>mission-request-provenance+jwt</code> identifies the JOSE object type and
+is not registered as a media type, and the claims of <a href="#assertion" class="auto internal xref">Section 5</a>
+are meaningful only in an assertion carrying that type.<a href="#section-16-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-17">
+      <h2 id="name-references">
+<a href="#section-17" class="section-number selfRef">17. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-17.1">
+        <h3 id="name-normative-references">
+<a href="#section-17.1" class="section-number selfRef">17.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-submission-evidence">[I-D.draft-mcguinness-oauth-mission-submission-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Submission Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2104">[RFC2104]</dt>
+        <dd>
+<span class="refAuthor">Krawczyk, H.</span>, <span class="refAuthor">Bellare, M.</span>, and <span class="refAuthor">R. Canetti</span>, <span class="refTitle">"HMAC: Keyed-Hashing for Message Authentication"</span>, <span class="seriesInfo">RFC 2104</span>, <span class="seriesInfo">DOI 10.17487/RFC2104</span>, <time datetime="1997-02" class="refDate">February 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2104">https://www.rfc-editor.org/rfc/rfc2104</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC4648">[RFC4648]</dt>
+        <dd>
+<span class="refAuthor">Josefsson, S.</span>, <span class="refTitle">"The Base16, Base32, and Base64 Data Encodings"</span>, <span class="seriesInfo">RFC 4648</span>, <span class="seriesInfo">DOI 10.17487/RFC4648</span>, <time datetime="2006-10" class="refDate">October 2006</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc4648">https://www.rfc-editor.org/rfc/rfc4648</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6234">[RFC6234]</dt>
+        <dd>
+<span class="refAuthor">Eastlake 3rd, D.</span> and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"US Secure Hash Algorithms (SHA and SHA-based HMAC and HKDF)"</span>, <span class="seriesInfo">RFC 6234</span>, <span class="seriesInfo">DOI 10.17487/RFC6234</span>, <time datetime="2011-05" class="refDate">May 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6234">https://www.rfc-editor.org/rfc/rfc6234</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7515">[RFC7515]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Signature (JWS)"</span>, <span class="seriesInfo">RFC 7515</span>, <span class="seriesInfo">DOI 10.17487/RFC7515</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7515">https://www.rfc-editor.org/rfc/rfc7515</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7518">[RFC7518]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refTitle">"JSON Web Algorithms (JWA)"</span>, <span class="seriesInfo">RFC 7518</span>, <span class="seriesInfo">DOI 10.17487/RFC7518</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7518">https://www.rfc-editor.org/rfc/rfc7518</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7800">[RFC7800]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"Proof-of-Possession Key Semantics for JSON Web Tokens (JWTs)"</span>, <span class="seriesInfo">RFC 7800</span>, <span class="seriesInfo">DOI 10.17487/RFC7800</span>, <time datetime="2016-04" class="refDate">April 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7800">https://www.rfc-editor.org/rfc/rfc7800</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8725">[RFC8725]</dt>
+      <dd>
+<span class="refAuthor">Sheffer, Y.</span>, <span class="refAuthor">Hardt, D.</span>, and <span class="refAuthor">M. Jones</span>, <span class="refTitle">"JSON Web Token Best Current Practices"</span>, <span class="seriesInfo">BCP 225</span>, <span class="seriesInfo">RFC 8725</span>, <span class="seriesInfo">DOI 10.17487/RFC8725</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8725">https://www.rfc-editor.org/rfc/rfc8725</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-17.2">
+        <h3 id="name-informative-references">
+<a href="#section-17.2" class="section-number selfRef">17.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.draft-mcguinness-mission-evidence-envelope">[I-D.draft-mcguinness-mission-evidence-envelope]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Evidence Envelope"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-evidence-envelope.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-evidence-envelope.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-shaping">[I-D.draft-mcguinness-mission-shaping]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Shaping"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="OpenID.Core">[OpenID.Core]</dt>
+        <dd>
+<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID Connect Core 1.0 incorporating errata set 2"</span>, <time datetime="2023" class="refDate">2023</time>, <span>&lt;<a href="https://openid.net/specs/openid-connect-core-1_0.html">https://openid.net/specs/openid-connect-core-1_0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC4086">[RFC4086]</dt>
+        <dd>
+<span class="refAuthor">Eastlake 3rd, D.</span>, <span class="refAuthor">Schiller, J.</span>, and <span class="refAuthor">S. Crocker</span>, <span class="refTitle">"Randomness Requirements for Security"</span>, <span class="seriesInfo">BCP 106</span>, <span class="seriesInfo">RFC 4086</span>, <span class="seriesInfo">DOI 10.17487/RFC4086</span>, <time datetime="2005-06" class="refDate">June 2005</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc4086">https://www.rfc-editor.org/rfc/rfc4086</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7517">[RFC7517]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refTitle">"JSON Web Key (JWK)"</span>, <span class="seriesInfo">RFC 7517</span>, <span class="seriesInfo">DOI 10.17487/RFC7517</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7517">https://www.rfc-editor.org/rfc/rfc7517</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9126">[RFC9126]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9126">https://www.rfc-editor.org/rfc/rfc9126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="example">
+<section id="appendix-A">
+      <h2 id="name-example">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-example" class="section-name selfRef">Example</a>
+      </h2>
+<p id="appendix-A-1">An entry, with the assertion abbreviated:<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A-2">
+<pre>
+{
+  "type": "mission-request-provenance",
+  "assertion": "eyJhbGciOiJFUzI1NiIsImtpZCI6...&lt;signature&gt;"
+}
+</pre><a href="#appendix-A-2" class="pilcrow">¶</a>
+</div>
+<p id="appendix-A-3">The assertion's protected header and claims (line breaks for display
+only):<a href="#appendix-A-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A-4">
+<pre>
+{
+  "typ": "mission-request-provenance+jwt",
+  "alg": "ES256",
+  "kid": "intake-2026-10"
+}
+</pre><a href="#appendix-A-4" class="pilcrow">¶</a>
+</div>
+<div class="lang-json sourcecode" id="appendix-A-5">
+<pre>
+{
+  "iss": "https://intake.example.com",
+  "aud": "https://as.example.com",
+  "iat": 1791016200,
+  "exp": 1791016500,
+  "jti": "rp_4bW3n9Zq1vT8cK2xHs6Lgd",
+  "intent_hash":
+    "sha-256:2ZWl5Kk8c8yQm3x1v0Q0oZ8p7e4mR1sN3tY6uB9dCfE",
+  "presenter": {
+    "client_id": "ap-agent",
+    "cnf": {
+      "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I"
+    }
+  },
+  "originator": {
+    "iss": "https://idp.example.com",
+    "sub": "248289761001"
+  },
+  "channel": {
+    "type": "https://intake.example.com/ch/web",
+    "acr": "phr",
+    "auth_time": 1791016100
+  },
+  "captured_at": 1791016140,
+  "request_digest":
+    "hmac-sha-256:-xVlEjxrMKqRGHbUOS2YvZhW7uN-RpRrfV-BsTIUDu0"
+}
+</pre><a href="#appendix-A-5" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="vectors">
+<section id="appendix-B">
+      <h2 id="name-request-digest-test-vectors">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-request-digest-test-vectors" class="section-name selfRef">Request Digest Test Vectors</a>
+      </h2>
+<p id="appendix-B-1">These vectors use a fixed secret for testing only; an intake <span class="bcp14">MUST NOT</span>
+use it. The secret is the 32 bytes <code>00</code> through <code>1f</code>:<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="appendix-B-2">
+<pre>
+000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+</pre><a href="#appendix-B-2" class="pilcrow">¶</a>
+</div>
+<p id="appendix-B-3">Media type <code>text/plain;charset=utf-8</code> and the UTF-8 instruction
+<code>Pay this week's Acme invoices.</code> give this 96-byte HMAC input, in
+hexadecimal:<a href="#appendix-B-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="appendix-B-4">
+<pre>
+6d697373696f6e2d726571756573742d70726f76656e616e63652f7631000000
+0018746578742f706c61696e3b636861727365743d7574662d38000000000000
+001e5061792074686973207765656b27732041636d6520696e766f696365732e
+</pre><a href="#appendix-B-4" class="pilcrow">¶</a>
+</div>
+<p id="appendix-B-5">and this request digest:<a href="#appendix-B-5" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="appendix-B-6">
+<pre>
+hmac-sha-256:-xVlEjxrMKqRGHbUOS2YvZhW7uN-RpRrfV-BsTIUDu0
+</pre><a href="#appendix-B-6" class="pilcrow">¶</a>
+</div>
+<p id="appendix-B-7">Changing one input changes the digest. With the instruction
+<code>Pay this week's Acme invoice.</code> (one character removed):<a href="#appendix-B-7" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="appendix-B-8">
+<pre>
+hmac-sha-256:DXLpPDrfm1W53Z-nniGK1j2NdqvUjPCL-ha82mt5pms
+</pre><a href="#appendix-B-8" class="pilcrow">¶</a>
+</div>
+<p id="appendix-B-9">With the media type <code>text/markdown;charset=utf-8</code>:<a href="#appendix-B-9" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="appendix-B-10">
+<pre>
+hmac-sha-256:VTGuqTNNdu6Q780TwU9cVUVlMbJlzDa_M-iWMteLoi8
+</pre><a href="#appendix-B-10" class="pilcrow">¶</a>
+</div>
+<p id="appendix-B-11">With the secret bytes <code>01</code> through <code>20</code>:<a href="#appendix-B-11" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="appendix-B-12">
+<pre>
+hmac-sha-256:NGW2Oglh0SHnmQJaPUBHXG0LTjHwBoY67TokgLxS_g8
+</pre><a href="#appendix-B-12" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="document-history">
+<section id="appendix-C">
+      <h2 id="name-document-history">
+<a href="#appendix-C" class="section-number selfRef">Appendix C. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
+<p id="appendix-C-2">-00<a href="#appendix-C-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-C-3.1">
+          <p id="appendix-C-3.1.1">Initial version. Defines the <code>mission-request-provenance</code> Intent
+Submission Evidence type: the trust configuration and intake
+isolation, the closed entry and signed assertion, capture before
+shaping and signing from the same workflow's capture record, the
+secret-keyed request digest with test vectors, verification, replay
+reservation with commit on acceptance, recorded facts, the limits of
+what verification establishes, audit and retention, and the privacy
+treatment of direct and indirect commitments to the instruction.<a href="#appendix-C-3.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-D">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
