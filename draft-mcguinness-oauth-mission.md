@@ -769,8 +769,8 @@ The client writes every member; how it produces them, for example
 through a Mission Shaper working from a natural-language
 instruction, is out of scope
 ({{the-mission-the-plan-and-execution}}). The prose members (`goal`,
-`task_bounds`, `success_criteria`) bound authority only through
-disclosure: the Approver refuses authority the words do not support
+`task_bounds`) bound authority only through disclosure: the Approver
+refuses authority the words do not support
 ({{authorization-derivation}}). An AS that makes no use of an
 optional member still accepts it and records it with the Intent
 ({{submission-processing}}). The smallest Intent carries only the
@@ -784,7 +784,6 @@ member definitions after it are authoritative.
 | `goal_lang` | no | Checks the language tag and uses it when rendering |
 | `target_resources` | yes | Bounds the resources a derived entry can name; can key a configured mapping |
 | `task_bounds` | no | Records it and renders it to the Approver as inert text; never interprets it |
-| `success_criteria` | no | Records it and renders it to the Approver as inert text; never interprets it |
 | `purpose` | no | Records it; can key a configured mapping; in any other decision can only lead to a refusal or stricter treatment |
 | `expires_at` | yes | Caps the Mission's effective expiry; refuses a malformed or past value |
 {: title="Mission Intent members at a glance"}
@@ -793,14 +792,17 @@ The Mission Intent members are:
 
 `goal`:
 : REQUIRED. A string. A human-readable statement of the task,
-  for rendering to the Approver. Maximum 4096 characters. Prose
+  for rendering to the Approver. It can describe the outcomes that
+  show the task is complete; like the rest of the prose, that
+  description carries no machine semantics
+  ({{authorization-derivation}}). Maximum 4096 characters. Prose
   here persists on the record and can carry personal data about
   third parties ({{third-party-data-subjects}}).
 
 `goal_lang`:
 : OPTIONAL. A string. A BCP 47 language tag {{RFC5646}} declaring
   the language of the Intent's human-readable members (`goal`,
-  `task_bounds`, `success_criteria`). It is disclosure metadata for
+  `task_bounds`). It is disclosure metadata for
   rendering, committed by `intent_hash` like every Intent member, and
   carries no machine semantics ({{authorization-derivation}}). At
   submission acceptance, the AS MUST refuse a `goal_lang` that is not
@@ -825,13 +827,6 @@ The Mission Intent members are:
   Authority Set ({{approval-event}}), and carry no machine semantics
   ({{authorization-derivation}}); a machine-enforceable bound enters
   as structure instead.
-
-`success_criteria`:
-: OPTIONAL. An array of strings. Human-readable observable outcomes
-  that indicate the task is complete. These are disclosure and audit
-  material only: they are rendered to the Approver and committed by
-  `intent_hash` ({{integrity-anchors}}) and carry no machine
-  semantics ({{authorization-derivation}}).
 
 `purpose`:
 : OPTIONAL. A string. A URI identifying the purpose of the
@@ -882,10 +877,6 @@ The following is an example of a Mission Intent:
   "task_bounds": [
     "Read only invoices issued in 2026-Q3.",
     "Post journal entries under $500."
-  ],
-  "success_criteria": [
-    "All Q3 invoices reconciled.",
-    "Each posted adjustment references a source invoice."
   ],
   "purpose": "urn:example:purpose:reconcile",
   "expires_at": "2026-12-31T23:59:59Z"
