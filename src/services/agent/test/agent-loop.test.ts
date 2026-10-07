@@ -152,6 +152,7 @@ async function build(): Promise<{ server: McpPaymentsServer; connectors: Connect
     payments,
     loadView,
     jwks: { keys: [pubJwk] },
+    keyRoles: { accessToken: ["mission-key"], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
     transaction: { engine, connectors, evidence },
   });

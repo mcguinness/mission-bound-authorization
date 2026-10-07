@@ -1629,7 +1629,10 @@ by its predicate is not a basis to leave the invocation ungated.
    **privileged administration** classes MUST be treated as
    consequential and gated.
 2. A Mission's `purpose`, or deployment policy, MAY raise an action
-   to a stricter class.
+   to a stricter class. The `purpose` consulted is the approved
+   Mission's, from its Mission state or a validated projection of it
+   ({{I-D.draft-mcguinness-oauth-mission}}), never a value the request
+   asserts.
 3. A Mission's `purpose` or deployment policy MUST NOT lower an
    action below any minimum classification the Resource policy
    ({{decision}}) sets for it, including a floor the resource owner
@@ -2866,7 +2869,7 @@ the evidence is missing.
 | `isolation_boundary`: the execution environment separates the agent component from the mediating PEP, approval service, and rendering component, and credential material stays out of the agent ({{compromise-resistant}}, {{trifecta-containment}}, {{custody}}) | EAT ({{RFC9711}}) | The boundary between the agent component and each isolated component | The relying party, against the attester identity and appraisal policy the statement selects for this row | The freshness rule the statement selects for this row, current at the session the claim covers | Absent, stale, or unverifiable evidence, or a missing selection this row requires, makes the claim unavailable |
 | `workload_measurement`: the attested component runs the software the Enforcement Scope Statement declares ({{compromise-resistant}}, {{runtime-conformance}}) | EAT ({{RFC9711}}) | Each component the statement names as isolated or mediating | The relying party, against the attester identity, appraisal policy, and reference values the statement selects for this row | The freshness rule the statement selects for this row, current at attestation time | Absent, stale, or unverifiable evidence, or a missing selection this row requires, makes the claim unavailable |
 | `approval_policy`: each action in the claimed classes requires action-bound approval ({{compromise-resistant}}, {{action-approval}}) | Signed configuration, or independent service evidence from the approval service | The approval service's enforcement over the classes claimed | The auditor reading the configuration, against the approval service's operator key | Current with the approval service's active policy version | Unknown or unverifiable configuration makes the claim unavailable |
-| `rendering_independence`: the disclosure is derived from the bound normalized parameters, never composed by the agent ({{compromise-resistant}}, {{action-approval}}) | Independent service evidence, the committed Consent Evidence where available | The rendering component's output for the approval event claimed | The party evaluating the evidence, against the rendering component's or Consent Evidence signer's key | Per approval event | An approval event lacking this evidence cannot be counted toward the claim; a class with no such event verified does not carry the claim |
+| `rendering_independence`: the disclosure is derived from the bound normalized parameters, never composed by the agent ({{compromise-resistant}}, {{action-approval}}) | Independent service evidence, the committed Consent Evidence where available | The rendering component's output for the action-bound approval claimed | The party evaluating the evidence, against the rendering component's or Consent Evidence signer's key | Per action-bound approval | An action-bound approval lacking this evidence cannot be counted toward the claim; a class with no such approval verified does not carry the claim |
 | `freshness_sourcing`: the Mission state source is an active freshness mechanism, not token-lifetime expiry ({{compromise-resistant}}, {{state-freshness}}) | Signed configuration naming the state source and its staleness bound ({{I-D.draft-mcguinness-mission-architecture}}), or independent evidence from the state source | The state source used for the classes claimed | The auditor reading the Deployment Profile, against the state source's operator key | The published staleness bound | A stale or unverifiable state source makes the claim unavailable |
 | `path_completeness`: no unmediated path reaches the mediated classes or a fresh usable credential for them ({{compromise-resistant}}) | Negative tests ({{negative-conformance}}) and organizational topology audit | Every path to the classes claimed, deployment-wide | The auditor who ran or reviewed the tests and audit, an organizational anchor | Per the deployment's stated audit cadence | Untested, stale, or a found unmediated path makes the claim unavailable |
 | `least_exposure`: the context surfaced to the agent (prompts, retrieved documents, memory, tool catalogs, schemas, and downstream responses) is scoped to the active Mission ({{trifecta-containment}}, {{least-exposure}}) | Signed configuration naming the exposure-scoping rule for the classes claimed, and negative tests demonstrating out-of-Mission context is withheld | The exposure-scoping rule's coverage over the classes claimed | The auditor reading the configuration, against the deployment's operator key | Current with the deployment's active exposure-scoping configuration version | Unknown, stale, or unverifiable configuration, or a found unscoped exposure, makes the claim unavailable |
@@ -3476,8 +3479,9 @@ A semantic intent-alignment signal, for example a judgment that a
 requested tool fits the task extracted from the conversation, MAY be
 supplied to the PDP as advisory decision input. Such a signal MAY
 contribute to a denial; it MUST NOT widen, grant, or refresh authority,
-consistent with the inert treatment of `goal` and `purpose` in the
-issuance profile ({{I-D.draft-mcguinness-oauth-mission}}). Gating
+consistent with the issuance profile's treatment of `goal` as inert and
+of `purpose` as restrictive outside its configured-mapping lookup
+({{I-D.draft-mcguinness-oauth-mission}}). Gating
 authority on intent inference is out of scope: verifying an agent's
 declared reasoning against the task is an attestation problem outside
 both layers, and intent inference is not reliable enough to be
@@ -3775,6 +3779,18 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Action Classification: the `purpose` that may raise a class is the
+  approved Mission's, from its Mission state or a validated
+  projection, never a value the request asserts. The semantic
+  intent-alignment signal's bound cites the issuance profile's
+  treatment of `purpose` as restrictive outside its configured-mapping
+  lookup rather than as inert. The rule 2 statement adds a
+  requirement; the signal's requirement is unchanged (#1102).
+
+- The `rendering_independence` assurance row names the action-bound
+  approval it is evaluated per; "approval event" is reserved for the
+  Mission's creation (#1120).
 
 - Mission State and Freshness states credential expiry and the
   state-gated refresh cycle as one Credential-lifetime freshness

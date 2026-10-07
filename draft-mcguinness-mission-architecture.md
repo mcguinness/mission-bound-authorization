@@ -2735,11 +2735,12 @@ realization. A peer binding realizes the levels per its own document,
 and peer standing does not imply identical levels or capabilities. The
 family manifest records each stack's exact membership.
 
-- **Protocol core** (Baseline Issuance): the OAuth binding alone, the
-  standardizable primitive of approved, anchored, state-gated
-  Missions, meeting the Mission Context requirements ({{requirements}}).
+- **OAuth issuance binding** (Baseline Issuance): the OAuth binding
+  alone, the standardizable primitive of approved, anchored,
+  state-gated Missions, meeting the Mission Context requirements
+  ({{requirements}}).
 - **Reference security architecture** (Runtime-Enforced): the
-  protocol core plus runtime enforcement, its AuthZEN profile,
+  OAuth issuance binding plus runtime enforcement, its AuthZEN profile,
   runtime evidence (the decision and execution objects AuthZEN
   consumes), and a freshness source (Status is the reference choice).
   Adoption closure brings in the substrate contract, the normative

@@ -773,9 +773,9 @@ routes each pending submission to its approval surface (a review
 application, queue, or policy engine) and resolves it when the
 decision is made.
 
-The approval event executes steps 1 through 4 of the OAuth
-binding's approval event unchanged
-({{I-D.draft-mcguinness-oauth-mission}}):
+The approval event executes the OAuth binding's direct approval steps
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Approval"),
+named here by content, with the MAS differences each states:
 
 1. Authenticate the Approver; this authentication MUST satisfy the
    deployment's published approval-authentication floor
@@ -788,18 +788,29 @@ binding's approval event unchanged
 2. Establish the Subject under the OAuth binding's rules: the MAS
    MUST itself establish the Subject's (`iss`, `sub`) and MUST NOT
    take it from unauthenticated client input.
-3. Render the derived Authority Set for consent with the OAuth
+3. Establish the authority source under the OAuth binding's rules:
+   from trusted configuration or authenticated governance state,
+   never from client assertion, with the Approver authorized to
+   activate it and the derived Authority Set within it.
+4. Establish the effective Mission expiry: the requested
+   `intent.expires_at` ceiling narrowed by applicable policy, under
+   the OAuth binding's bounds.
+5. Render the derived Authority Set for consent with the OAuth
    binding's rendering rules applied unchanged: client-supplied
    strings inert, direction-override and confusable presentation
    mitigated, derived authority visually distinguished from client
    text.
-4. Compute the integrity anchors (`authority_hash`, `intent_hash`,
+6. Compute the integrity anchors (`authority_hash`, `intent_hash`,
    and, where an authority proposal was submitted, `proposal_hash`)
    using the OAuth binding's envelope, with the MAS's issuer URL as
    `iss`.
 
-Step 5 becomes: create the Mission record in the `active` state
-atomically with the approval decision. The record is the OAuth
+The final step, creating the record, is atomic with the approval
+decision rather than with code issuance: the MAS creates the Mission
+record in the `active` state atomically with the decision, rechecking
+at that commit that the effective expiry is strictly later than the
+creation instant; where it is not, no Mission is created and the
+submission resolves to `denied`. The record is the OAuth
 binding's Mission Record, member for member. Its `issuer` is the
 MAS's issuer URL, and its `approval_event_id` is the approval
 idempotency key. There is no authorization code to bind, so the
@@ -2624,10 +2635,11 @@ The contextual-governance kernel maps as follows:
    `proposal_hash` where a proposal was submitted; they are not
    substrate-kernel requirements.
 5. **Approval ceremony**: the asynchronous MAS approval surface
-   authenticates the Approver, establishes the Subject and Actor,
-   renders the derived authority, computes the commitments, and
-   creates the record `active` atomically with approval
-   ({{mission-approval}}).
+   authenticates the Approver, establishes the Subject and Actor, the
+   authority source, and the effective expiry, renders the derived
+   authority, computes the commitments, and creates the record
+   `active` atomically with approval, rechecking the effective expiry
+   at that commit ({{mission-approval}}).
 6. **Governance gate**: only `active` permits a positive MAS decision;
    every other or unrecognized state fails closed. The lifecycle
    endpoint supplies authenticated transitions, including revocation
@@ -3239,6 +3251,12 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission Approval and the Substrate Statement name the OAuth
+  binding's approval steps by content instead of by number, adding
+  the authority-source and effective-expiry steps and the
+  creation-commit expiry recheck, which resolves a failed commit to
+  `denied` (#1116).
 
 - Join evidence and the join-failure value (#972 items 27a, 27b,
   D289). The PDP records `join_view_id` as a top-level member of the

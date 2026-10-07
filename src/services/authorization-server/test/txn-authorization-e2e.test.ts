@@ -350,6 +350,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       payments,
       loadView,
       jwks: asJwks,
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: ["as-txn"] },
       issuer: ISSUER,
       transaction: { engine: new TransactionEngine("e2e-epoch"), connectors: new Connectors(), evidence },
       // The resource trusts the TAS's token-signing key through pre-established

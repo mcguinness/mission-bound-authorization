@@ -93,6 +93,7 @@ function build(): { pep: Pep; server: McpPaymentsServer } {
     payments,
     loadView: nonconformingLoadView,
     jwks: { keys: [] },
+    keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     issuer: "https://as.test",
   });
   return { pep, server };

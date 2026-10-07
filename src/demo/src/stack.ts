@@ -53,6 +53,7 @@ import {
   EvidenceRetentionStore,
   EvidenceStore,
   type HttpMcpChannel,
+  type KeyRoles,
   type LoadedView,
   McpPaymentsServer,
   type MediatedToolResult,
@@ -294,6 +295,9 @@ export async function composeStack(opts: {
   let kernel: MissionKernel;
   let issuer: string;
   let serverJwks: { keys: Record<string, unknown>[] };
+  // @spec runtime-oauth#token-validation (#825, D312): the kids this
+  // resource trusts for each token class, from the shipped topology.
+  let rsKeyRoles: KeyRoles;
   let authServer: AuthServerExtras | undefined;
   // Issuer-side evidence store; present only on the auth-server path (the real
   // provider retains ingestion + Containment Evidence there). Exposed so the
@@ -413,6 +417,14 @@ export async function composeStack(opts: {
     };
     txnTokenJwks = serverJwks;
     rsAsIssuer = asUrl;
+    // Access tokens verify only under the AS token key and transaction
+    // tokens only under its txn key, though both come from one JWKS. The
+    // AS issues no attenuation roots, so that class is refused here.
+    rsKeyRoles = {
+      accessToken: [TOPOLOGY.keys.asToken.kid],
+      attenuationRoot: [],
+      transactionToken: [TOPOLOGY.keys.asTxn.kid],
+    };
 
     // Cross-domain (M9): a dedicated ES256 grant key the RAS trusts under the AS
     // issuer (the AS's own token key is RS256 and not exposed; this mirrors the
@@ -520,6 +532,8 @@ export async function composeStack(opts: {
     kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, containmentPolicy: CONTAINMENT_POLICY as never, authoritySourceCatalog: AUTHORITY_SOURCES as never, statusKey: asKeys.privateKey, statusKid: TOPOLOGY.keys.asStatus.kid });
     issuer = ISS;
     serverJwks = { keys: [] };
+    // No AS, so no AS-signed token is verified on this path.
+    rsKeyRoles = { accessToken: [], attenuationRoot: [], transactionToken: [] };
   }
 
   const payments = new PaymentsStore();
@@ -806,6 +820,7 @@ export async function composeStack(opts: {
     payments,
     loadView,
     jwks: serverJwks,
+    keyRoles: rsKeyRoles,
     issuer,
     transaction: { engine, connectors, evidence },
     writeReservations,

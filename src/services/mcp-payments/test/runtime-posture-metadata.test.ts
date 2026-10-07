@@ -8,7 +8,7 @@ import { startResourceMetadataServer, PROTECTED_RESOURCE_METADATA_PATH } from ".
 
 describe("runtime posture publication on the resource metadata surface", () => {
   it("publishes the exact validated declaration used by the PDP", async () => {
-    const server = new McpPaymentsServer({ issuer: "https://as.test", jwks: { keys: [] } } as never);
+    const server = new McpPaymentsServer({ issuer: "https://as.test", jwks: { keys: [] }, keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] } } as never);
     const metadata = server.protectedResourceMetadata();
     expect(metadata.enforcement_scope_statement).toBe(RUNTIME_POSTURE);
     expect(JSON.parse(JSON.stringify(metadata)).enforcement_scope_statement.state_source.per_class.irreversible_action.max_staleness_seconds).toEqual((stalenessBound("irreversible_action") as { seconds: number }).seconds);
@@ -26,7 +26,7 @@ describe("runtime posture publication on the resource metadata surface", () => {
   // Enforcement Scope Statement, not as an enumeration of individual dynamic
   // claims", and "MUST publish the scope".
   it("publishes the Exact claim domain per high-consequence class, its scope and horizon, and the reconciliation window", async () => {
-    const server = new McpPaymentsServer({ issuer: "https://as.test", jwks: { keys: [] } } as never);
+    const server = new McpPaymentsServer({ issuer: "https://as.test", jwks: { keys: [] }, keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] } } as never);
     const listener = await startResourceMetadataServer(() => server);
     try {
       const response = await fetch(`${listener.origin}${PROTECTED_RESOURCE_METADATA_PATH}`);
@@ -60,7 +60,7 @@ describe("runtime posture publication on the resource metadata surface", () => {
   // which posture applies", and the enforcing PEP retains the record "for at
   // least the retention posture the deployment publishes above".
   it("publishes the reservation domain, its owner and the retention posture for every keyed write outside the high-consequence classes", async () => {
-    const server = new McpPaymentsServer({ issuer: "https://as.test", jwks: { keys: [] } } as never);
+    const server = new McpPaymentsServer({ issuer: "https://as.test", jwks: { keys: [] }, keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] } } as never);
     const listener = await startResourceMetadataServer(() => server);
     try {
       const response = await fetch(`${listener.origin}${PROTECTED_RESOURCE_METADATA_PATH}`);
@@ -84,7 +84,7 @@ describe("runtime posture publication on the resource metadata surface", () => {
       // The PEP runs exactly what is published: a store owned by the
       // published owner is accepted as the domain, and another owner's is not.
       const store = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
-      expect(() => new McpPaymentsServer({ issuer: "https://as.test", jwks: { keys: [] }, writeReservations: store } as never)).not.toThrow();
+      expect(() => new McpPaymentsServer({ issuer: "https://as.test", jwks: { keys: [] }, keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] }, writeReservations: store } as never)).not.toThrow();
       store.close();
     } finally { await listener.close(); }
   });

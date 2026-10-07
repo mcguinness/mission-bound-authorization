@@ -177,6 +177,7 @@ async function build(): Promise<{
     payments,
     loadView,
     jwks: { keys: [pubJwk] },
+    keyRoles: { accessToken: ["mission-key"], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
     transaction: { engine, connectors, evidence },
   });

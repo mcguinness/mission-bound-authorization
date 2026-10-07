@@ -108,6 +108,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-approved-set-verification:
+    title: "Mission Approved-Set Verification for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-containment:
     title: "Mission Containment for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
@@ -1066,14 +1074,16 @@ approval event. It MUST commit the issuance profile's integrity anchors
 ({{I-D.draft-mcguinness-oauth-mission}}): `authority_hash` over the
 child Authority Set, `intent_hash` over the child Mission Intent, and,
 where the exchange carried an authority proposal, `proposal_hash` over
-it, and
-it MUST produce record the issuance profile's approval.
+it. It MUST create the Child Mission record required by the issuance
+profile and this section.
 
 A Child Mission is created under a parent grant rather than a
-first-party approval ({{issuance-relationship}}), so its human
-accountability is inherited from the Parent Mission's own approval.
-The Child Mission's `approval_basis` (the issuance profile's Mission
-Record member, {{I-D.draft-mcguinness-oauth-mission}}) records how.
+first-party approval ({{issuance-relationship}}). Where policy
+adjudicates its creation, its human accountability is inherited from
+the Parent Mission's own approval; where a human approves its
+creation, that human is accountable. The Child Mission's
+`approval_basis` (the issuance profile's Mission Record member,
+{{I-D.draft-mcguinness-oauth-mission}}) records which.
 
 Where the deployment requires a human approval event for child
 creation ({{child-creation}}), that event meets the issuance
@@ -1171,7 +1181,11 @@ A Child Mission MUST be bounded by the Parent Mission:
 The Mission Issuer MUST compute the Child Mission's `authority_hash`
 over the child Authority Set, not over the parent Authority Set. A
 Resource Server enforces child tokens exactly as Mission-bound tokens:
-the child `authority_hash` is the immediate authority commitment.
+it enforces the carried `authorization_details`. The child
+`authority_hash` commits the child Authority Set on the child's
+Mission record; a Resource Server that must check carried authority
+against the complete set adopts Approved-Set Verification
+({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}}).
 
 Child Mission tokens MUST be sender-constrained to the child actor's
 own key, matching the issuance profile's delegated-token posture
@@ -1951,9 +1965,10 @@ A conforming Child-Mission-capable Mission Issuer MUST:
 - enforce delegation and fan-out controls;
 - record the `parent` member on child Mission records and tokens;
 - record the Child Mission's `approval_basis` ({{record-requirements}}):
-  `direct` for a human-approved child, `policy_drawdown` for one
-  policy adjudicates, with `consent_principal` always the Parent
-  Mission's human `approver`;
+  `direct` for a human-approved child, with the child's human Approver
+  as `consent_principal`, and `policy_drawdown` for one policy
+  adjudicates, with the Parent Mission's human `approver` as
+  `consent_principal`;
 - implement cascade revocation; and
 - record child delegation evidence.
 
@@ -2197,6 +2212,17 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Attenuation Rules: a Resource Server enforces a child
+  token's carried `authorization_details`; the child `authority_hash`
+  commits the child Authority Set on the child's Mission record, and
+  checking carried authority against the complete set is
+  Approved-Set Verification (#1086). No requirement changed.
+
+- Mission Record Requirements: the delegation event creates the Child
+  Mission record the issuance profile and this section require; human
+  accountability is inherited from the parent only where policy
+  adjudicates; Conformance names `consent_principal` per basis (#1121).
 
 - Completion: a deployment can require a fresh human approval for
   child creation; every child creation, human or policy-adjudicated,
