@@ -4943,10 +4943,6 @@ evidence, and proposing concrete authority alongside it on the
       "Read only invoices issued in 2026-Q3.",
       "Post journal entries under $500."
     ],
-    "success_criteria": [
-      "All Q3 invoices reconciled.",
-      "Each posted adjustment references a source invoice."
-    ],
     "purpose": "urn:example:purpose:reconcile",
     "expires_at": "2026-12-31T23:59:59Z"
   }
