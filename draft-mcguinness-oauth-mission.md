@@ -829,10 +829,9 @@ The Mission Intent members are:
 `success_criteria`:
 : OPTIONAL. An array of strings. Human-readable observable outcomes
   that indicate the task is complete. These are disclosure and audit
-  material only: they are committed by `intent_hash`
-  ({{integrity-anchors}}), can be rendered to the Approver as context
-  ({{approval-event}}), and carry no machine semantics
-  ({{authorization-derivation}}).
+  material only: they are rendered to the Approver and committed by
+  `intent_hash` ({{integrity-anchors}}) and carry no machine
+  semantics ({{authorization-derivation}}).
 
 `purpose`:
 : OPTIONAL. A string. A URI identifying the purpose of the
