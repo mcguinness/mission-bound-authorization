@@ -1384,6 +1384,13 @@ guessing ({{clarifications}}).
 
 \[\[ To be removed from the final specification ]]
 
+- The Mission Intent no longer carries `success_criteria`, following
+  the OAuth binding. The shaper writes completion outcomes, where
+  useful, into `goal`; the default-deny posture and the
+  delegation-bound description name `task_bounds` only, and the
+  recommendation against encoding authority in `success_criteria`
+  goes with the member.
+
 - Model Output Is Not Authority points to the OAuth binding's
   issuer-side counterpart: a model enters adjudication only as a
   recorded input to a deterministic policy, without changing any
