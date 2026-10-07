@@ -4188,6 +4188,9 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
+- The prose members are `goal` and `task_bounds`, following the OAuth
+  binding's removal of `success_criteria`.
+
 - Revocation is possession-independent points at the Security Model's
   statement that revocation does not prohibit equivalent authority
   under a separately approved Mission. No profile's requirements
