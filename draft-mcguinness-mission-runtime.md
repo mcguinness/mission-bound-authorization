@@ -1733,7 +1733,7 @@ per-action moment, and both compose here rather than compete. The
 transaction authorization challenge
 ({{I-D.draft-rosomakho-oauth-txn-challenge}}) has the protected
 resource return a signed challenge that the client presents to the
-AS, which obtains approval and issues a token whose
+authorization server, which obtains approval and issues a token whose
 `authorization_details` describe the approved operation; under a
 Mission, the approval event is the policy behind that challenge, the
 Authority Set bounds what any challenge can be approved into, and

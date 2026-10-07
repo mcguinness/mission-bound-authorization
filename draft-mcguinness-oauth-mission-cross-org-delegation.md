@@ -534,7 +534,8 @@ one of:
   lineage, and `principal_mapping` of {{projection}}).
 
 Issuer-signed hop receipts belong to the issuer-mediated lane: a
-destination AS MUST NOT manufacture receipts for holder-created hops.
+destination authorization server (AS) MUST NOT manufacture receipts for
+holder-created hops.
 A signed chain-verification attestation, an AS statement that it
 verified a Chain and survives the local token's expiry, is deferred
 to a companion until a consumer demonstrates that these two modes are

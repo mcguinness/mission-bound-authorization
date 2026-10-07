@@ -121,7 +121,8 @@ Verifying party:
 
 This optional capability lets a verifying party check a token's carried
 authority against the Mission's complete approved Authority Set,
-rather than relying on the token signature and the AS's subset
+rather than relying on the token signature and the authorization
+server's subset
 assertion alone ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Resource Server Enforcement"). A deployment adopts it when a
 resource server, a policy decision point, or an auditor needs that

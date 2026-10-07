@@ -380,7 +380,7 @@ A Consent Disclosure object has these members:
   against the committed Authority Set. When the client submitted an
   authority proposal, the issuance profile requires the rendering to
   distinguish the entries the client proposed from any narrowing or
-  restructuring the AS applied
+  restructuring the authorization server (AS) applied
   ({{I-D.draft-mcguinness-oauth-mission}}); a disclosure for such a
   Mission carries that distinction in its rendered elements. A
   disclosure that renders

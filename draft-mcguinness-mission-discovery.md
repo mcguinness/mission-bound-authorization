@@ -385,7 +385,8 @@ established and recorded:
    ({{I-D.draft-mcguinness-oauth-domain-authorized-issuer}}). Where
    it cannot, the encounter routes to a human and never binds by
    policy. Origin pinning ({{RFC9728}}) authenticates domain control,
-   not the operator's trustworthiness or the resource-to-AS
+   not the operator's trustworthiness or the
+   resource-to-authorization-server
    authorization: a party that controls a domain can publish metadata
    naming any issuer, so domain control alone is not authorization.
 3. **Self-declaration.** Where the resource publishes a

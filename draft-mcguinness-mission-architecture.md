@@ -671,7 +671,8 @@ runs submit, approve, poll, join, permit:
    |<---------------------------------------------------|
 ~~~
 
-The token in step 7 is an ordinary OAuth token from the unchanged AS;
+The token in step 7 is an ordinary OAuth token from the unchanged
+authorization server (AS);
 steps 8 through 10 are the Mission Join and the runtime decision (the
 MAS's Mission Join section), and the MAS's staged walkthrough of the
 same flow is its end-to-end appendix

@@ -550,7 +550,8 @@ AAuth Person Server (AAuth binding):
 : When the AAuth binding is used, the AAuth Person Server implements
   the Mission Issuer role for that protocol's native missions, and it
   also issues or gates every AAuth auth token, so issuance gating
-  holds at the PS as it does at the AS in the OAuth binding. Its
+  holds at the PS as it does at the authorization server (AS) in the
+  OAuth binding. Its
   compromise is Mission Issuer compromise plus token-issuer
   compromise: forged approvals, altered records, false state, and
   freely minted or ungated auth tokens

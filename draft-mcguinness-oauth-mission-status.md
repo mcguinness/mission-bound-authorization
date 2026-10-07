@@ -330,7 +330,8 @@ the issuance profile defers. Unlike token introspection
 token's authorization still good," the Mission Status operation answers
 "what is the state of this Mission" keyed by the `mission_id` alone. Any
 consumer holding a `mission_id` (including an auditor or a
-cross-domain Resource AS) resolves it without holding a token the AS
+cross-domain Resource AS) resolves it without holding a token the
+authorization server (AS)
 issued.
 
 The Mission Issuer publishes its Mission Status endpoint URL in

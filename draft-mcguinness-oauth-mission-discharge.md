@@ -263,7 +263,8 @@ Access Profile's naming convention ({{iana}}).
   `discharge_authority`:
   : OPTIONAL. A string, `1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )`
     {{RFC5234}}, opaque. It names the authority approved to assert
-    this condition, which the AS resolves to its discharge-authority
+    this condition, which the authorization server (AS) resolves to its
+    discharge-authority
     mapping ({{discharge-authority}}).
 
 The `terminal_when` array is part of the entry's `constraints` and so of

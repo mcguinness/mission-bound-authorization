@@ -25896,7 +25896,7 @@
    "id": "progressive.drawdown-derivation.limit-never-raised",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Where the predecessor has a `derivation_limit`, the successor's `derivation_limit` MUST NOT exceed it: a stricter AS-policy ceiling or `requested_derivation_limit` narrows it further, and omitting or raising the request neither removes nor raises it",
+   "text": "Where the predecessor has a `derivation_limit`, the successor's `derivation_limit` MUST NOT exceed it: a stricter authorization-server policy ceiling or `requested_derivation_limit` narrows it further, and omitting or raising the request neither removes nor raises it",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {

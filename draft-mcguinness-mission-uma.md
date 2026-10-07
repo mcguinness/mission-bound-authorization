@@ -351,7 +351,8 @@ assembled per deployment.
 
 This is the fourth binding of the Mission model: the issuance
 profile binds it to the OAuth authorization server, the Mission
-Authority Server to a standalone service beside an unchanged AS
+Authority Server to a standalone service beside an unchanged
+authorization server
 ({{I-D.draft-mcguinness-mission-authority-server}}), the AAuth
 binding to the AAuth Person Server
 ({{I-D.draft-mcguinness-mission-aauth}}), and this document to the

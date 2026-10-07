@@ -145,7 +145,8 @@ verification procedure, and the verified output facts that
 verification yields.
 
 This document defines no generic member other than `type`, and no
-evidence types; an AS that supports no evidence type refuses every
+evidence types; an authorization server (AS) that supports no evidence
+type refuses every
 presented entry under the OAuth binding's dispatch rule
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Intent Submission
 Evidence").

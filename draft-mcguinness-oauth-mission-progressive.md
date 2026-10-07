@@ -427,7 +427,8 @@ replenish the predecessor's allowance of counted derivations:
 - The successor MUST carry forward the predecessor's committed
   derivation count. Where the predecessor has a `derivation_limit`,
   the successor's `derivation_limit` MUST NOT exceed it: a stricter
-  AS-policy ceiling or `requested_derivation_limit` narrows it
+  authorization-server policy ceiling or `requested_derivation_limit`
+  narrows it
   further, and omitting or raising the request neither removes nor
   raises it. A predecessor without a `derivation_limit` has no finite
   limit to pass on, and the successor's is established as Mission

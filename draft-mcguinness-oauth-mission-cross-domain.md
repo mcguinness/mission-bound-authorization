@@ -191,7 +191,8 @@ The issuance profile {{I-D.draft-mcguinness-oauth-mission}} makes a
 Mission a durable, human-approved, integrity-bound OAuth authorization
 artifact: one authorization server, the Mission Issuer, approves it,
 records it, and derives every token under it. That profile is
-deliberately single-domain: the AS that holds the Mission is the AS
+deliberately single-domain: the authorization server (AS) that holds the
+Mission is the AS
 that issues for it.
 
 Real tasks cross trust domains. An agent reconciling invoices may need

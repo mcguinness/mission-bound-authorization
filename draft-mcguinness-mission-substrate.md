@@ -1216,7 +1216,7 @@ contract was generalized from.  The terms correspond as follows:
 | --- | --- |
 | Mission Context | Mission |
 | Mission Reference | Mission Identifier |
-| Controller | Mission Issuer, where the binding issues; natively the AS, MAS, UMA authorization server, or AAuth PS |
+| Controller | Mission Issuer, where the binding issues; natively the OAuth authorization server, MAS, UMA authorization server, or AAuth PS |
 | Actor | the authenticated acting client or agent |
 | Approver | for a direct approval, the Approver (`consent_principal`); under a standing-consent basis, see below |
 | Approval event | approval event: the atomic, adjudicated creation of a Mission under its `approval_basis`, for every basis |

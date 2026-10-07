@@ -129,7 +129,8 @@ Mission-Bound Authorization for OAuth 2.0
 derivation under a Mission on its lifecycle state, its Authority Set,
 and its expiry. It does not bound how many derivations the issuer
 performs. This document adds that bound: a derivation limit on the
-number of derivations the issuer AS performs under a Mission. The limit
+number of derivations the issuer authorization server (AS) performs
+under a Mission. The limit
 is an issuer-side operational control. It bounds counted issuance
 operations at the token endpoint, or at the Mission Authority
 Server's grant endpoint under the Mission Issuance Grant profile

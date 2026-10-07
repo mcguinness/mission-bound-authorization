@@ -86,8 +86,8 @@ deployment uses to compare and narrow two entries. It also defines this
 type's scope-projection safety conditions and its declaration under the
 issuance profile's machine-readable transformation-capability map. This
 document is a profile of the issuance profile; a deployment can support
-`mission_resource_access`, another AS-supported `authorization_details`
-type, or both.
+`mission_resource_access`, another `authorization_details` type its
+authorization server supports, or both.
 
 --- middle
 
@@ -96,7 +96,8 @@ type, or both.
 Mission-Bound Authorization for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}}
 (the "issuance profile") commits a Mission's Authority Set as one or more
 {{RFC9396}} `authorization_details` entries, of whatever `authorization_details`
-type or types the authorization server supports. The issuance profile is
+type or types the authorization server (AS) supports. The issuance
+profile is
 type-agnostic: it derives, commits, and gates entries of any AS-supported
 type the same way, and leaves each type's own comparison and
 transformation semantics to the specification that defines the type,

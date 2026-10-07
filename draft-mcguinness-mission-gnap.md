@@ -341,7 +341,8 @@ here the parallel is the substrate itself.
 
 This is the fifth binding of the Mission model: the issuance profile
 binds it to the OAuth authorization server, the Mission Authority
-Server to a standalone service beside an unchanged AS, the AAuth
+Server to a standalone service beside an unchanged authorization server
+(AS), the AAuth
 binding to the AAuth Person Server
 ({{I-D.draft-mcguinness-mission-aauth}}), the UMA binding to the UMA
 2.0 authorization server ({{I-D.draft-mcguinness-mission-uma}}), and

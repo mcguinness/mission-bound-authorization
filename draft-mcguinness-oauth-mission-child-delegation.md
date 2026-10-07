@@ -491,7 +491,8 @@ The child-creation token exchange carries:
 
   A `child_actor` MAY be identified at instance granularity where the
   deployment authenticates client instances
-  ({{I-D.draft-mcguinness-oauth-client-instance-id}}): the AS
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}): the authorization
+  server (AS)
   establishes that actor's identity, and its association with the
   authenticated instance, separately from the instance evidence
   ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 5), and

@@ -263,7 +263,8 @@ metadata for them.
 
 ## Idempotency {#idempotency}
 
-The `nonce` is the idempotency key. The AS MUST deduplicate
+The `nonce` is the idempotency key. The authorization server (AS) MUST
+deduplicate
 management requests by (client, `nonce`) for a bounded window, at
 least the validity span of the signed response it would replay, as
 the status profile's lifecycle endpoint requires
