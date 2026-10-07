@@ -437,7 +437,15 @@ describe("the record survives the remote decision channel byte-identically (@spe
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1", properties: { audience: CANONICAL_RESOURCE, vendor_id: "acme" } },
       action: { name: "payments:invoice.read" },
-      context: { mission: { id: "msn_ret", issuer: ISSUER } },
+      context: {
+        mission: { id: "msn_ret", issuer: ISSUER },
+        // The credential's own authority rides every decision (#825 PR 2b).
+        credential: {
+          authority: [
+            { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
+          ],
+        },
+      },
     };
     const decision = await evaluateRemote(request, { url: handle.url, pepId: PEP_ID, secret: SECRET });
     expect(decision.decision, JSON.stringify(decision.context)).toBe(true);

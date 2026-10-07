@@ -232,8 +232,8 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
 
   it("refuses vendor lookup under an invoice-only token, and lets a broad token reach the PDP, on the same broad Mission", async () => {
     refusedBeforePdp(await attempt([entry(["payments:invoice.read"])], "lookup_vendor", { vendor_id: "acme" }), {
-      type: "server",
-      id: CANONICAL_RESOURCE,
+      type: "vendor",
+      id: "acme",
     });
     expect((await attempt(BROAD, "lookup_vendor", { vendor_id: "acme" })).decided).toHaveLength(1);
   });
@@ -272,37 +272,38 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
     // The credential also names `initech`, which this resource does not hold.
     const bound = [entry(["payments:vendor.read"], { vendors: ["acme", "initech"] })];
     expect((await attempt(bound, "lookup_vendor", { vendor_id: "acme" })).decided).toHaveLength(1);
-    refusedBeforePdp(await attempt(bound, "lookup_vendor", { vendor_id: "globex" }), { type: "server", id: CANONICAL_RESOURCE });
+    refusedBeforePdp(await attempt(bound, "lookup_vendor", { vendor_id: "globex" }), { type: "vendor", id: "globex" });
     // The target comes from store state, never the argument: a vendor id the
     // store does not hold resolves to no vendor, which a vendor-bound
     // credential never covers, even one that lists that id.
     refusedBeforePdp(await attempt(bound, "lookup_vendor", { vendor_id: "initech" }), { type: "server", id: CANONICAL_RESOURCE });
   });
 
-  it("honors an approval requirement only with a verified transaction credential's approval, whatever the local approval callback says", async () => {
+  it("forwards a credential's approval requirement to the PDP, which decides it (D312)", async () => {
+    // D302 refused this entry before the PDP unless a transaction credential
+    // established the approval. Under D312 the PEP refuses only what it can
+    // establish (resource, action, vendors, amount); an approval requirement
+    // turns on approvals the PDP holds, so the entry reaches the PDP intact in
+    // `context.credential.authority`, and the PDP requires the approval there.
     const facts = await overHttp(
       await mint({ authorization_details: [entry(["payments:invoice.read"], { requires_action_approval: true })] }),
     );
-    // The callback would make a co-resident PDP require approval; a remote
-    // PDP never receives it, so it establishes nothing at this PEP.
-    const local = { requiresActionApproval: () => true };
     const now = Math.floor(Date.now() / 1000);
     const txn = { txn: "txn_825", jti: "jti_825", iatS: now, expS: now + 60, parameterDigest: "sha-256:op" };
     const approval = { id: "apr_825", approved_at: new Date().toISOString(), parameter_digest: "sha-256:op" };
-
     for (const [presented, approvalInput] of [
       [facts, undefined],
       [facts, approval],
-      [{ ...facts, txn }, undefined],
+      [{ ...facts, txn }, approval],
     ] as const) {
-      const x = pepRecording(local);
-      const result = await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, presented as TokenFacts, approvalInput);
-      expect(result).toMatchObject({ permitted: false, denial_reason: "out_of_authority" });
-      expect(x.decided).toHaveLength(0);
+      const x = pepRecording();
+      await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, presented as TokenFacts, approvalInput);
+      expect(x.decided).toHaveLength(1);
+      const sent = x.decided[0] as { context: { credential?: { authority?: unknown } } };
+      expect(sent.context.credential?.authority).toEqual([
+        entry(["payments:invoice.read"], { requires_action_approval: true }),
+      ]);
     }
-    const x = pepRecording(local);
-    await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, { ...facts, txn } as TokenFacts, approval);
-    expect(x.decided).toHaveLength(1);
   });
 
   it("applies the same bound to a token validated over the mediated channel", async () => {
@@ -321,5 +322,62 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
       expect(result).toMatchObject({ permitted: false, denial_reason: "out_of_authority" });
       expect(x.decided).toHaveLength(0);
     }
+  });
+});
+
+describe("a vendor lookup carries the store-resolved vendor, so both bounds evaluate it (@spec authzen#context-credential, authzen#runtime-denial-classification, D324)", () => {
+  const allowingFga = { checkWithContext: async () => true } as unknown as Fga;
+  /** A Mission scoped to `vendors` for vendor reads, under the same reference the token carries. */
+  const missionScopedTo = (vendors: string[]): MissionView => ({
+    ...VIEW,
+    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"], constraints: { vendors } }],
+  });
+  /** Look up `vendorId` under a credential scoped to `credentialVendors`, decided by the embedded signing PDP. */
+  async function lookUp(vendorId: string, credentialVendors: string[], view: MissionView) {
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
+    const pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
+      payments: payments(),
+      evidence,
+      fga: allowingFga,
+      modelId: "m",
+      loadView: (ref) =>
+        ref.id === view.id && ref.issuer === view.issuer
+          ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+          : undefined,
+      instanceEpoch: "epoch-825-lookup",
+    });
+    const facts = await overHttp(await mint({ authorization_details: [entry(["payments:vendor.read"], { vendors: credentialVendors })] }));
+    const result = await pep.enforce("lookup_vendor", { vendor_id: vendorId }, facts);
+    return { result, evidence };
+  }
+
+  it("sends the PDP the vendor the store resolved, as the vendor object the read targets", async () => {
+    const x = pepRecording();
+    await x.pep.enforce("lookup_vendor", { vendor_id: "acme" }, await overHttp(await mint()));
+    expect(x.decided).toHaveLength(1);
+    expect((x.decided[0] as { resource: unknown }).resource).toEqual({
+      type: "vendor",
+      id: "acme",
+      properties: { vendor_id: "acme", audience: CANONICAL_RESOURCE },
+    });
+  });
+
+  it("permits a vendor both the constrained credential and the Mission allow", async () => {
+    const { result } = await lookUp("acme", ["acme"], missionScopedTo(["acme"]));
+    expect(result.permitted, JSON.stringify(result)).toBe(true);
+  });
+
+  it("refuses a vendor the credential excludes, before the PDP", async () => {
+    const { result, evidence } = await lookUp("globex", ["acme"], missionScopedTo(["acme", "globex"]));
+    expect(result).toMatchObject({ permitted: false, denial_reason: "out_of_authority" });
+    expect(evidence.all().some((e) => e.kind === "refusal")).toBe(true);
+  });
+
+  it("refuses a vendor the Mission excludes though the credential allows it: parameter_violation, in the response and the signed record", async () => {
+    const { result, evidence } = await lookUp("globex", ["acme", "globex"], missionScopedTo(["acme"]));
+    expect(result).toMatchObject({ permitted: false, denial_reason: "parameter_violation" });
+    const decision = evidence.all().find((e) => e.kind === "decision");
+    expect(decision?.content).toMatchObject({ denial_reason: "parameter_violation", resource: { type: "vendor", id: "globex" } });
   });
 });

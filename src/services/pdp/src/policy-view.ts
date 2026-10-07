@@ -7,7 +7,15 @@
  */
 
 import { createHash } from "node:crypto";
-import { canonicalize, type CapabilitySourceBinding, type JsonValue } from "@mission/core";
+import {
+  AUTHORITY_ENTRY_TYP,
+  authorityHash,
+  canonicalize,
+  type CapabilitySourceBinding,
+  computeAnchor,
+  type JsonValue,
+  type TerminalWhenCondition,
+} from "@mission/core";
 import type { TupleKey } from "@openfga/sdk";
 
 /**
@@ -47,6 +55,12 @@ export interface AuthorityEntry {
      * action-bound approval. The PDP reads it beside the deployment predicate.
      */
     requires_action_approval?: boolean;
+    /**
+     * @spec discharge#terminal-when — the entry's completion conditions, as the
+     * kernel committed them. The discharge overlay matches the whole entry by
+     * digest; the credential bound reads the conditions (#825, D312).
+     */
+    terminal_when?: TerminalWhenCondition[];
   };
   /**
    * @spec authority-server#mission-join rule 5 (#557) — this entry's
@@ -69,6 +83,36 @@ export interface AuthorityEntry {
    * outside that pinned commitment.
    */
   join_delegation?: { max_depth?: number; allowed_delegates?: string[] };
+}
+
+/**
+ * @spec discharge#discharge-operation, runtime-evidence#decision-evidence-object
+ * (D335) — an entry in the form the Mission Issuer committed it. A loader
+ * materializes a view entry by copying the committed entry and MAY only add
+ * PDP-local members (today `join_delegation`), never rename or drop a
+ * committed one, so removing those members restores the committed bytes.
+ * Every digest the PDP compares with an issuer-side one (the discharge delta,
+ * a permit's `entry_digest`) and the set proof below are taken over this form.
+ */
+export function committedEntry(entry: AuthorityEntry): Omit<AuthorityEntry, "join_delegation"> {
+  const { join_delegation: _pdpLocal, ...committed } = entry;
+  return committed;
+}
+
+/** The entry commitment the issuer keys discharge by and a permit carries as `entry_digest`. */
+export function committedEntryDigest(issuer: string, entry: AuthorityEntry): string {
+  return computeAnchor(AUTHORITY_ENTRY_TYP, issuer, committedEntry(entry) as unknown as JsonValue);
+}
+
+/**
+ * Whether the view holds the full committed Authority Set: its
+ * `authority_hash` recomputes over the view's entries in committed form. A
+ * view built from an effective set (Status and introspection omit discharged
+ * entries) does not, so the PDP cannot tell from it every entry a credential
+ * could derive from (D335). It proves the set, not the discharge delta.
+ */
+export function viewHoldsCommittedSet(view: MissionView): boolean {
+  return authorityHash(view.issuer, view.authority_set.map(committedEntry) as unknown as JsonValue[]) === view.authority_hash;
 }
 
 /** The subset of the Mission Record the PDP evaluates against. */

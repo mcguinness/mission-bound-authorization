@@ -31,7 +31,7 @@ import {
   validateEnforcementScopeStatement,
 } from "../src/enforcement-scope.js";
 import type { Fga } from "../src/fga.js";
-import { evaluate, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
+import { evaluate as evaluateRequest, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 import {
   loadRuntimePosture,
   PostureConfigError,
@@ -39,6 +39,12 @@ import {
   RUNTIME_POSTURE,
   type RuntimePosture,
 } from "../src/runtime-posture.js";
+import { withCredential } from "./with-credential.js";
+
+// Every decision carries the credential's own authority (#825 PR 2b); the
+// fixture adds a neutral one where a test does not name it.
+const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
+  evaluateRequest(withCredential(req), opts);
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-10-02T12:00:00Z");

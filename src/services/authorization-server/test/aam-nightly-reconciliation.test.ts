@@ -49,7 +49,8 @@ import {
   credentialAuthorityFrom
 } from "@mission/mcp-payments";
 import {
-  evaluate,
+  evaluate as evaluateRequest,
+  type EvaluationRequest,
   Fga,
   type MissionView,
   relationForAction,
@@ -72,6 +73,12 @@ import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapt
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
+import { withCredential } from "../../pdp/test/with-credential.js";
+
+// Every decision carries the credential's own authority (#825 PR 2b); the
+// fixture adds a neutral one where a test does not name it.
+const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
+  evaluateRequest(withCredential(req), opts);
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
