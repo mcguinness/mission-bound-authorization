@@ -15,8 +15,15 @@
 import { type ContextActor, validateContextActor } from "@mission/actor-chain";
 import {
   AUTHORITY_ENTRY_TYP,
+  type AuthorityEntry as CoreAuthorityEntry,
   compareAmounts,
   computeAnchor,
+  conditionsNoBroader,
+  type CredentialAuthorityEntry,
+  credentialConstraintGates,
+  entryMatchesAction,
+  isSubsetEntry,
+  parseCredentialAuthority,
   type EntitlementObservation,
   entitlementPermits,
   type EntitlementResolver,
@@ -54,12 +61,14 @@ import { type DelegatePolicy, resolveBaselineJoin } from "./mas-join.js";
 import { decisionCacheKey, idempotencyScopeOf, operationIdentity } from "./projections.js";
 import {
   type AuthorityEntry,
+  committedEntryDigest,
   deriveContextualTuples,
   joinViewId,
   MISSION_RESOURCE_ACCESS_TYPE,
   type MissionView,
   policyViewId,
   vendorConstraintSatisfied,
+  viewHoldsCommittedSet,
 } from "./policy-view.js";
 import { permitDeadline } from "./permit-deadline.js";
 import {
@@ -178,8 +187,15 @@ export interface EvaluationRequest {
       subject?: OriginPrincipal;
     };
     actor?: ContextActor;
-    /** Already verified by the authenticated PEP; never populated from tool arguments. */
-    credential?: RuntimeCredentialRef;
+    /**
+     * Already verified by the authenticated PEP; never populated from tool
+     * arguments. @spec authzen#context-credential (#825, D312): `authority` is
+     * the verified credential's own authority entries, REQUIRED on every
+     * decision. It is untrusted input to the PDP, typed `unknown` and read
+     * through `parseCredentialAuthority`; it is request-only and never enters
+     * Decision Evidence (`runtimeCredentialOf` keeps issuer and expiry).
+     */
+    credential?: RuntimeCredentialRef & { authority?: unknown };
     capability_source?: RuntimeCapabilitySource;
     /**
      * @spec authzen#context-audience-freshness: CONDITIONAL, present where
@@ -266,6 +282,13 @@ export type DenialReason =
   | "view_inconsistent"
   | "mission_inactive"
   | "actor_invalid"
+  /**
+   * @spec authzen#pdp-request rule 6, authzen#context-credential (#825, D312) —
+   * the PEP-supplied credential facts are expired, inconsistent, or otherwise
+   * not usable: a passed or unreadable `expires_at`, or a credential authority
+   * that is missing or cannot be read in full.
+   */
+  | "credential_invalid"
   | "parameter_violation"
   | "action_approval_required"
   | "unsupported_authorization_type"
@@ -760,6 +783,23 @@ async function evaluateInner(
     return deny("view_inconsistent");
   }
 
+  // 1a. Credential facts (@spec authzen#pdp-request rule 6, authzen#context-
+  // credential; #825, D312). An expiry that has passed or cannot be read, and
+  // a credential authority that is missing or cannot be read in full, leave
+  // the PEP-supplied credential facts unusable for a runtime decision:
+  // `credential_invalid`, never a fall back to the Mission's authority.
+  const credentialExpiresAt = req.context.credential?.expires_at;
+  if (credentialExpiresAt !== undefined) {
+    const expiresMs = Date.parse(credentialExpiresAt);
+    if (!Number.isFinite(expiresMs) || expiresMs <= now().getTime()) return deny("credential_invalid");
+  }
+  let credentialAuthority: readonly CredentialAuthorityEntry[];
+  try {
+    credentialAuthority = parseCredentialAuthority(req.context.credential?.authority);
+  } catch {
+    return deny("credential_invalid");
+  }
+
   // 2. Mission state (@spec: mission_inactive).
   if (view.state !== "active") return deny("mission_inactive");
 
@@ -1134,7 +1174,7 @@ async function evaluateInner(
   //     "approved, trust lost", `authority_discharged` is "approved, work done".
   const dischargedDigests = view.discharged?.entry_digests;
   if (dischargedDigests?.length) {
-    const digest = computeAnchor(AUTHORITY_ENTRY_TYP, view.issuer, entry as never);
+    const digest = committedEntryDigest(view.issuer, entry);
     if (dischargedDigests.includes(digest)) {
       return {
         decision: false,
@@ -1146,6 +1186,114 @@ async function evaluateInner(
       };
     }
   }
+
+  // 5c. Credential authority (@spec runtime#input-authority, runtime-oauth#
+  //     authorization-details-mapping; #825, D312): the action must also fall
+  //     within the credential's own authority, matched independently of the
+  //     Mission entry above and never substituted by it. One credential entry
+  //     must cover the action whole, on the same facts the Mission bound
+  //     reads: resource, action, every vendor reached, and the amount. A
+  //     failure is classified as the Mission bound's is (@spec authzen#
+  //     runtime-denial-classification, #801; D324): no entry naming the
+  //     resource and action is `out_of_authority`; entries that name them but
+  //     none of which satisfies its vendor and amount constraints is
+  //     `parameter_violation`. Each gate records its key where it runs, so a
+  //     check never reached is never listed. Its approval requirement joins
+  //     step 8's.
+  //
+  //     Its discharge condition is read through the Mission entries it can
+  //     derive from, because discharge state is kept per Mission entry digest
+  //     (5b), never per condition: two entries can carry one condition and
+  //     differ in state. A source is a recognized entry of the view's set that
+  //     the credential entry is no broader than (@spec mission#subset;
+  //     discharge#subset-extension) and that carries exactly its conditions by
+  //     canonical identity, so the PDP holds state for each one. The search is
+  //     sound only over every entry the credential could derive from, so it
+  //     runs only when the view proves it holds the full committed set
+  //     (`authority_hash` recomputed over the committed entries; D335): an
+  //     effective-set view omits discharged entries, and a surviving
+  //     overlapping entry cannot establish which one issued the credential.
+  //     Without that proof, or with no source, the condition cannot be
+  //     established and does not permit (`out_of_authority`). If ANY source is
+  //     discharged the entry does not permit either, deliberately, even when
+  //     another source is live: the PDP cannot tell which one the credential
+  //     derives from, and it refuses that ambiguity. That refusal is 5b's
+  //     `authority_discharged`, naming the discharged source, so the answer
+  //     does not depend on entry order. The proof covers the set, not the
+  //     discharge delta, whose completeness stays the loader's obligation.
+  const credentialVendorIds: readonly string[] =
+    req.resource.properties?.vendor_ids ??
+    (req.resource.properties?.vendor_id ? [req.resource.properties.vendor_id] : []);
+  let viewHoldsFullSet: boolean | undefined;
+  const credentialDischarge = (
+    c: CredentialAuthorityEntry,
+  ): { state: "live" | "unestablished" } | { state: "discharged"; digest: string } => {
+    const conditions = c.constraints?.terminal_when;
+    if (!conditions?.length) return { state: "live" };
+    viewHoldsFullSet ??= viewHoldsCommittedSet(view);
+    if (!viewHoldsFullSet) return { state: "unestablished" };
+    const asEntry: CoreAuthorityEntry = {
+      type: c.type,
+      resource: c.resource,
+      actions: c.actions,
+      ...(c.constraints ? { constraints: c.constraints } : {}),
+    };
+    let sources = 0;
+    for (const m of view.authority_set) {
+      if (m.type !== MISSION_RESOURCE_ACCESS_TYPE) continue;
+      const source: CoreAuthorityEntry = {
+        type: m.type,
+        resource: m.resource,
+        actions: m.actions,
+        ...(m.constraints ? { constraints: m.constraints } : {}),
+      };
+      if (!isSubsetEntry(asEntry, source)) continue;
+      if (!conditionsNoBroader(m.constraints?.terminal_when, conditions)) continue;
+      sources++;
+      const digest = committedEntryDigest(view.issuer, m);
+      if (dischargedDigests?.includes(digest)) return { state: "discharged", digest };
+    }
+    return { state: sources > 0 ? "live" : "unestablished" };
+  };
+  const credentialFacts = {
+    resource: audience ?? "",
+    action: req.action.name,
+    vendorIds: credentialVendorIds,
+    ...(req.context.amount ? { amount: req.context.amount } : {}),
+  };
+  const credentialMatches = credentialAuthority.filter((c) => entryMatchesAction(c, credentialFacts));
+  if (credentialMatches.length === 0) return deny("out_of_authority");
+  const credentialSatisfying: CredentialAuthorityEntry[] = [];
+  for (const c of credentialMatches) {
+    contributions.add(c.type);
+    const gates = credentialConstraintGates(c, credentialFacts);
+    for (const key of gates.evaluated) contributions.add(key);
+    if (gates.satisfied) credentialSatisfying.push(c);
+  }
+  if (credentialSatisfying.length === 0) return deny("parameter_violation");
+  let dischargedSource: string | undefined;
+  const credentialCandidates = credentialSatisfying.filter((c) => {
+    if (c.constraints?.terminal_when?.length) contributions.add("terminal_when");
+    const discharge = credentialDischarge(c);
+    if (discharge.state === "discharged") dischargedSource ??= discharge.digest;
+    return discharge.state === "live";
+  });
+  if (credentialCandidates.length === 0) {
+    if (dischargedSource !== undefined) {
+      return {
+        decision: false,
+        context: base({
+          denial_reason: "authority_discharged",
+          reason: "authority_discharged",
+          entry_digest: dischargedSource,
+        }),
+      };
+    }
+    return deny("out_of_authority");
+  }
+  const credentialRequiresApproval = credentialCandidates.every(
+    (c) => c.constraints?.requires_action_approval === true,
+  );
 
   // @spec capability-binding#capability-verification — applicability comes
   // ONLY from recorded policy for this action. A presented member cannot opt
@@ -1286,8 +1434,17 @@ async function evaluateInner(
   // delegated leaf carrying `requires_action_approval: true` is gated even
   // where deployment policy alone would not gate the action.
   const entryRequiresApproval = entry.constraints?.requires_action_approval;
-  if (entryRequiresApproval !== undefined) contributions.add("requires_action_approval");
-  if (opts.requiresActionApproval?.(req.action.name, actionClass) || entryRequiresApproval === true) {
+  if (
+    entryRequiresApproval !== undefined ||
+    credentialCandidates.some((c) => c.constraints?.requires_action_approval !== undefined)
+  ) {
+    contributions.add("requires_action_approval");
+  }
+  if (
+    opts.requiresActionApproval?.(req.action.name, actionClass) ||
+    entryRequiresApproval === true ||
+    credentialRequiresApproval
+  ) {
     const appr = req.context.action_approval;
     const maxAge = (opts.maxApprovalAgeSeconds ?? 300) * 1000;
     const valid =
@@ -1461,7 +1618,7 @@ async function evaluateInner(
   return {
     decision: true,
     context: base({
-      entry_digest: computeAnchor(AUTHORITY_ENTRY_TYP, view.issuer, entry as never),
+      entry_digest: committedEntryDigest(view.issuer, entry),
       conditions: {
         valid_until: validUntil,
         ...(highConsequence ? { use_limit: 1 } : {}),
