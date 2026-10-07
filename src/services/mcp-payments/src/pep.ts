@@ -1573,10 +1573,15 @@ export class Pep {
         // Exactly one operation-scoped entry: the active Mission's entry for
         // this resource+action narrowed to the single gated action (keeping the
         // entry's constraints), so the approval and the transaction token are
-        // scoped to the operation being approved, not the whole entry.
+        // scoped to the operation being approved, not the whole entry. The
+        // PDP view's own `join_delegation` (#557) is not a member of the
+        // Mission's entry, so it never rides the challenge either.
         const requested = view.authority_set
           .filter((e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action))
-          .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: [mapping.action] })) as unknown as JsonValue[];
+          .map(({ capability_sources: _issuerProvenance, join_delegation: _viewOnly, ...e }) => ({
+            ...e,
+            actions: [mapping.action],
+          })) as unknown as JsonValue[];
         const digest = parameterDigest(effective);
         const signed = await signChallenge(
           {
