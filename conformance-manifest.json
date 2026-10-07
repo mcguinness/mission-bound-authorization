@@ -47,8 +47,8 @@
     "content_sha256": "e06bc60196934a5b5475d51884dd5627bf263cce0fa18973fd49a63f529b77f8"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "5421debe04e26cdce67553b40da55a824f2c8e0e",
-    "content_sha256": "544fd9439ba95abcfb530d84a834dd1532c136bce3ec5c32ea61bc152250cbcb"
+    "revision": "9f94b04ef8a4df945d10fe7ca98abd574d234107",
+    "content_sha256": "29927ed568f4d9857419c26316bb27ba522dad2d0cb4a901d052b0fc7c96fb2d"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "d4833ce6562069d46441ea505acc531cd7c2d482",
@@ -67,8 +67,8 @@
     "content_sha256": "76ae8710dc0faf41220e947e05a4dc4a79440c0039746089a4b24e486c1d06de"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "dc7c11d682cc84dff903439816dec5cb4431843f",
-    "content_sha256": "698f38ebe10f92c843bfef9e0fa904278c1f24dedc5ffcc49fe9675fecaebdb8"
+    "revision": "5b65655ba10a4633d744c392ac9790051c1d2fd0",
+    "content_sha256": "bcfc8798f8dbfb401c673f3df8551456d2917fdcdb144abcf6163e9a8a601c38"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -2855,6 +2855,43 @@
    "tests": []
   },
   {
+   "id": "core.submission.closed-top-levels",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "The AS MUST reject a submission with the `invalid_request` error code if the Submission envelope contains a top-level member other than `intent` and `evidence`, or if the `intent` contains a top-level member that neither this document nor a companion profile the AS implements defines",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Submission envelope member other than intent and evidence is refused invalid_request; an Intent top-level member that neither the binding nor an implemented companion defines (the retired success_criteria) is refused invalid_request, while the otherwise identical Intent is accepted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Submission envelope parse (@spec mission#submission-via-par) > closed envelope top level: an unknown submission member is refused",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Submission envelope parse (@spec mission#submission-via-par) > the retired success_criteria member fails the inner closed top level with invalid_request (@spec mission#mission-intent)",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "Both clauses are asserted on the registered invalid_request code. The Intent clause uses the retired success_criteria member with an accepted control; re-adding the member to the TOP_LEVEL allowlist fails the test. Acceptance of companion-defined members is not claimed by this row."
+  },
+  {
    "id": "core.commitment.duplicate-members",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "commitment-mechanisms",
@@ -4862,7 +4899,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "two submissions that differ only in goal, goal_lang, task_bounds, or success_criteria receive the same issuance outcome, refused or issued, under derivation and under any adjudicating policy, including one that takes a model's output as an input"
+    "normative": "two submissions that differ only in goal, goal_lang, or task_bounds receive the same issuance outcome, refused or issued, under derivation and under any adjudicating policy, including one that takes a model's output as an input"
    },
    "level": "unit",
    "coverage": "todo",
