@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-07T22:25:15Z
-Source repository commit: a2f03ce334889b87a3b3907e78e978d45daf1644
+Generated: 2026-10-07T23:41:52Z
+Source repository commit: 49dacf4cea411b801b2e783143e44f3e57352c53
 Member count: 7
 
 Reading order:
@@ -7874,8 +7874,54 @@ Table of Contents
 
    A Mission Intent is a JSON object describing the task.  The client
    submits it as the intent member of the Submission envelope
-   (Section 4.1), in place of scope or alongside a narrowed scope.  It
-   has the following members:
+   (Section 4.1), in place of scope or alongside a narrowed scope.
+
+   The client writes every member; how it produces them, for example
+   through a Mission Shaper working from a natural-language instruction,
+   is out of scope (Appendix B.3).  The prose members (goal,
+   task_bounds, success_criteria) bound authority only through
+   disclosure: the Approver refuses authority the words do not support
+   (Section 5).  An AS that makes no use of an optional member still
+   accepts it and records it with the Intent (Section 4.4).  The
+   smallest Intent carries only the three required members, as in the
+   Submission envelope example (Section 4.1).  The following summary is
+   informative; the member definitions after it are authoritative.
+
+     +==================+==========+=================================+
+     | Member           | Required | What the AS does with it        |
+     +==================+==========+=================================+
+     | goal             | yes      | Records it and renders it to    |
+     |                  |          | the Approver as inert text;     |
+     |                  |          | never interprets it             |
+     +------------------+----------+---------------------------------+
+     | goal_lang        | no       | Checks the language tag and     |
+     |                  |          | uses it when rendering          |
+     +------------------+----------+---------------------------------+
+     | target_resources | yes      | Bounds the resources a derived  |
+     |                  |          | entry can name; can key a       |
+     |                  |          | configured mapping              |
+     +------------------+----------+---------------------------------+
+     | task_bounds      | no       | Records it and renders it to    |
+     |                  |          | the Approver as inert text;     |
+     |                  |          | never interprets it             |
+     +------------------+----------+---------------------------------+
+     | success_criteria | no       | Records it and renders it to    |
+     |                  |          | the Approver as inert text;     |
+     |                  |          | never interprets it             |
+     +------------------+----------+---------------------------------+
+     | purpose          | no       | Records it; can key a           |
+     |                  |          | configured mapping; in any      |
+     |                  |          | other decision can only lead to |
+     |                  |          | a refusal or stricter treatment |
+     +------------------+----------+---------------------------------+
+     | expires_at       | yes      | Caps the Mission's effective    |
+     |                  |          | expiry; refuses a malformed or  |
+     |                  |          | past value                      |
+     +------------------+----------+---------------------------------+
+
+                Table 2: Mission Intent members at a glance
+
+   The Mission Intent members are:
 
    goal:  REQUIRED.  A string.  A human-readable statement of the task,
       for rendering to the Approver.  Maximum 4096 characters.  Prose
@@ -8176,6 +8222,11 @@ Table of Contents
       authenticated input to admission and derivation policy; AS policy
       decides whether the verified claims are acceptable for this
       request.
+
+   Supporting an evidence type is optional.  An AS that supports none
+   refuses every presented entry under these rules, never ignoring one,
+   and conforms as a Mission Issuer without implementing the evidence
+   framework (Section 18).
 
    Mission Intent Submission Evidence for OAuth 2.0
    ([I-D.draft-mcguinness-oauth-mission-submission-evidence]) specifies
@@ -9706,7 +9757,7 @@ Table of Contents
                  | active | expires_at reached | expired |
                  +--------+--------------------+---------+
 
-                                  Table 2
+                                  Table 3
 
    The Mission Lifecycle States registry (Section 22.7) holds these
    states.  A companion profile MAY register an additional state for a
@@ -10344,7 +10395,7 @@ Table of Contents
    |           |                                                      |10.1)        |
    +-----------+------------------------------------------------------+-------------+
 
-                                  Table 3
+                                  Table 4
 
 11.1.  Remediation Grains
 
@@ -10369,7 +10420,7 @@ Table of Contents
    |                          |request               |                                               |
    +--------------------------+----------------------+-----------------------------------------------+
 
-                   Table 4: The three remediation grains
+                   Table 5: The three remediation grains
 
    A Resource Server can also return the insufficient_authorization
    error code with authorization_remediation
@@ -10499,7 +10550,7 @@ Table of Contents
    |                                                          |                                                |minimized        |
    +----------------------------------------------------------+------------------------------------------------+-----------------+
 
-        Table 5: Endpoint x parameter x failure-stage error mapping
+        Table 6: Endpoint x parameter x failure-stage error mapping
 
    An AS performing an applicable check early, at PAR, returns the same
    error class the check would yield at the authorization or token
@@ -12089,7 +12140,7 @@ Table of Contents
    |         |          | passed.            |            | Section 9 |
    +---------+----------+--------------------+------------+-----------+
 
-                                 Table 6
+                                 Table 7
 
    Each further document that defines a lifecycle state requests that
    state's registration in its own IANA considerations.
@@ -12166,7 +12217,7 @@ Table of Contents
     |                |      |                    |          |Section 4|
     +----------------+------+--------------------+----------+---------+
 
-                Table 7: Core-defined Mission Intent members
+                Table 8: Core-defined Mission Intent members
 
    Each further document that defines a Mission Intent member requests
    that member's registration in its own IANA considerations.
@@ -13139,7 +13190,7 @@ Appendix C.  Role Mapping
    |                                                       |                   |                  |principal         |
    +-------------------------------------------------------+-------------------+------------------+------------------+
 
-                                  Table 8
+                                  Table 9
 
    Direct approval is the degenerate case where one human fills every
    role.  Where a profile or deployment does not populate adjudication
@@ -13299,7 +13350,7 @@ D.5.  Ownership and Operational Signals
     |                     | issuer policy |                          |
     +---------------------+---------------+--------------------------+
 
-                                 Table 9
+                                 Table 10
 
    Templates amortize authoring across Missions and do not bypass the
    ceilings.  The unmapped-resource rate, template-hit rate, and rule-
@@ -13639,7 +13690,7 @@ Appendix F.  OAuth Binding Mapping Assessment
    |             |        |active        |                                                     |issuer-local|
    +-------------+--------+--------------+-----------------------------------------------------+------------+
 
-              Table 10: OAuth Mission binding capability table
+              Table 11: OAuth Mission binding capability table
 
    Temporal elements: every issued credential's exp is capped by the
    record's effective expires_at; state observations carry their
@@ -13689,6 +13740,14 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Mission Intent: an informative summary table gives each member,
+      whether it is required, and what the AS does with it, after a
+      paragraph on who writes the members, how the prose members bound
+      authority, and where the smallest Intent is shown (#910).  Intent
+      Submission Evidence states that an AS supporting no evidence type
+      refuses every presented entry and conforms.  No BCP 14 keyword
+      changed.
 
    *  Security Considerations: duplicated security prose removed from a
       classified list reviewed on #877 (D330).  Each removal restated a
@@ -24443,7 +24502,8 @@ Table of Contents
 
    The credential member carries credential-derived facts the PEP has
    already validated and that the PDP needs to enforce the runtime
-   decision's time, issuer, and sender-constraint checks:
+   decision's time, issuer, sender-constraint, and credential authority
+   checks:
 
    issuer:  REQUIRED when known.  A string containing a URI.  The
       credential issuer.
@@ -24458,7 +24518,31 @@ Table of Contents
       the PEP has verified the proof-of-possession check for the
       presented credential.
 
+   authority:  REQUIRED.  An array of authorization_details entries: the
+      authority the verified credential itself carries, the credential
+      authority of [I-D.draft-mcguinness-mission-runtime].  For a
+      Mission-bound token it is the token's own entries; for an ordinary
+      token joined to a Mission it is the authority that token carries
+      as issued, as the join profile establishes it
+      ([I-D.draft-mcguinness-mission-runtime-oauth]).
+
    The PEP MUST NOT include unverified credential claims in this member.
+
+   The PDP evaluates the action against authority independently of the
+   Mission entry it matches.  The action MUST fall within one entry of
+   authority as a whole: its resource, its actions, and every constraint
+   it carries.  The PDP MUST NOT substitute the Mission's Authority Set,
+   or any other record of Mission authority, for authority.  A condition
+   on that entry that the PDP cannot establish from its own state does
+   not permit, and an action-approval requirement on it applies as one
+   on the matched Mission entry does (Section 6.11).  An action that no
+   entry of authority names by resource and action is denied
+   out_of_authority.  An action that entries name, but whose parameters
+   violate a constraint on each of them, is denied parameter_violation,
+   as on the matched Mission entry (Section 7.5).  A request whose
+   authority is absent, or carries an entry the PDP cannot evaluate in
+   full, is denied credential_invalid: the PDP MUST NOT fall back to the
+   Mission's authority.
 
 6.5.  Action Parameters and Parameter Digest
 
@@ -24884,7 +24968,14 @@ Table of Contents
        },
        "credential": {
          "issuer": "https://as.example.com",
-         "expires_at": "2026-11-02T09:14:00Z"
+         "expires_at": "2026-11-02T09:14:00Z",
+         "authority": [
+           {
+             "type": "mission_resource_access",
+             "resource": "https://erp.example.com",
+             "actions": ["journal-entries.write"]
+           }
+         ]
        }
      }
    }
@@ -25106,7 +25197,14 @@ Table of Contents
            "actor": { "client_id": "s6BhdRkqt3" },
            "credential": {
              "issuer": "https://as.example.com",
-             "expires_at": "2026-11-02T09:14:00Z"
+             "expires_at": "2026-11-02T09:14:00Z",
+             "authority": [
+               {
+                 "type": "mission_resource_access",
+                 "resource": "https://erp.example.com",
+                 "actions": ["journal-entries.write"]
+               }
+             ]
            }
          }
        },
@@ -25142,7 +25240,14 @@ Table of Contents
            "actor": { "client_id": "s6BhdRkqt3" },
            "credential": {
              "issuer": "https://as.example.com",
-             "expires_at": "2026-11-02T09:14:00Z"
+             "expires_at": "2026-11-02T09:14:00Z",
+             "authority": [
+               {
+                 "type": "mission_resource_access",
+                 "resource": "https://erp.example.com",
+                 "actions": ["journal-entries.write"]
+               }
+             ]
            }
          }
        }
@@ -25994,6 +26099,28 @@ Table of Contents
    |Credential facts     |PDP denial |credential_invalid               |
    |expired or           |           |                                 |
    |inconsistent         |           |                                 |
+   +---------------------+-----------+---------------------------------+
+   |Credential authority |PDP denial |credential_invalid               |
+   |absent, or carrying  |           |                                 |
+   |an entry the PDP     |           |                                 |
+   |cannot evaluate in   |           |                                 |
+   |full                 |           |                                 |
+   +---------------------+-----------+---------------------------------+
+   |No entry of the      |PDP denial |out_of_authority                 |
+   |presented            |           |                                 |
+   |credential's own     |           |                                 |
+   |authority names the  |           |                                 |
+   |action's resource and|           |                                 |
+   |action, established  |           |                                 |
+   |by the PDP           |           |                                 |
+   +---------------------+-----------+---------------------------------+
+   |Entries of the       |PDP denial |parameter_violation              |
+   |presented            |           |                                 |
+   |credential's own     |           |                                 |
+   |authority name the   |           |                                 |
+   |action, but its      |           |                                 |
+   |parameters violate a |           |                                 |
+   |constraint on each   |           |                                 |
    +---------------------+-----------+---------------------------------+
    |Parameter constraint |PDP denial |parameter_violation              |
    |violated, PDP digest |           |                                 |
@@ -26851,6 +26978,14 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  context.credential carries authority, the verified credential's
+      own authorization_details, on every decision; the PDP enforces it
+      as the credential authority bound, independently of the matched
+      Mission entry, and denies credential_invalid when it is absent or
+      not evaluable (#825).  An action no credential entry names is
+      out_of_authority; one whose parameters violate a constraint on
+      every entry that names it is parameter_violation.
 
    *  The RAR remediation grain cites the working-group successor draft-
       ietf-oauth-rar-metadata-remediation and defers its routing to the
