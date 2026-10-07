@@ -9,7 +9,7 @@
  * (no live OpenFGA needed).
  */
 
-import { AUTHORITY_ENTRY_TYP, computeAnchor, type JsonValue } from "@mission/core";
+import { AUTHORITY_ENTRY_TYP, authorityHash, computeAnchor, type JsonValue } from "@mission/core";
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import {
@@ -140,64 +140,100 @@ describe("the PDP enforces the credential bound independently (@spec runtime#inp
 });
 
 describe("the credential's discharge and approval conditions are decided at the PDP (D312)", () => {
-  const missionWithClose = view({
-    authority_set: [
-      {
-        type: "mission_resource_access",
-        resource: RESOURCE,
-        actions: ["payments:invoice.read"],
-        constraints: { terminal_when: [CLOSE] },
-      },
-    ],
-  });
+  /** An entry as the Mission Issuer committed it, before any PDP-local member. */
+  const committed = (actions: string[], constraints?: Record<string, unknown>) => entry(actions, constraints);
+  /** The issuer's digest of a committed entry: what its discharge is keyed by. */
+  const issuerDigest = (e: unknown) => computeAnchor(AUTHORITY_ENTRY_TYP, ISSUER, e as JsonValue);
+  /**
+   * A view holding exactly `set`, its `authority_hash` the issuer's over the
+   * committed entries; `local` adds PDP-local members as the canonical loader
+   * does (`join_delegation`), outside the commitment.
+   */
+  const committedView = (set: unknown[], local: (i: number) => Record<string, unknown> = () => ({}), over: Partial<MissionView> = {}) =>
+    view({
+      authority_set: set.map((e, i) => ({ ...(e as object), ...local(i) })) as unknown as MissionView["authority_set"],
+      authority_hash: authorityHash(ISSUER, set as JsonValue[]),
+      ...over,
+    });
+  /** The request's Mission reference, bound to `v`. */
+  const on = (v: MissionView) => ({ extra: { mission: { id: v.id, issuer: v.issuer, authority_hash: v.authority_hash } } });
+  const delegable = () => ({ join_delegation: { max_depth: 2, allowed_delegates: [] } });
+
+  const closeEntry = committed(["payments:invoice.read"], { terminal_when: [CLOSE] });
+  const missionWithClose = committedView([closeEntry], delegable);
 
   it("honors a discharge condition its source Mission entry carries, so that entry's discharge state governs it", async () => {
     const credential = { authority: [entry(["payments:invoice.read"], { terminal_when: [CLOSE] })] };
-    expect(reason(await evaluate(req(credential), opts(missionWithClose)))).toBe("permit");
-    const missionEntry = missionWithClose.authority_set[0];
-    const discharged = view({
-      ...missionWithClose,
-      version: 2,
-      discharged: {
-        entry_digests: [computeAnchor(AUTHORITY_ENTRY_TYP, ISSUER, missionEntry as unknown as JsonValue)],
-      },
-    });
-    expect(reason(await evaluate(req(credential), opts(discharged)))).toBe("authority_discharged");
+    const permitted = await evaluate(req(credential, on(missionWithClose)), opts(missionWithClose));
+    expect(reason(permitted)).toBe("permit");
+    // The permit names the issuer's entry commitment, not the materialized entry's bytes.
+    expect(permitted.context.entry_digest).toBe(issuerDigest(closeEntry));
+    const discharged = committedView([closeEntry], delegable, { version: 2, discharged: { entry_digests: [issuerDigest(closeEntry)] } });
+    expect(reason(await evaluate(req(credential, on(discharged)), opts(discharged)))).toBe("authority_discharged");
   });
 
   it("refuses a discharge condition no Mission entry it derives from carries: the PDP holds no state for it", async () => {
     const credential = {
       authority: [entry(["payments:invoice.read"], { terminal_when: [{ event_type: "other-event" }] })],
     };
-    expect(reason(await evaluate(req(credential), opts(missionWithClose)))).toBe("out_of_authority");
+    expect(reason(await evaluate(req(credential, on(missionWithClose)), opts(missionWithClose)))).toBe("out_of_authority");
     expect(reason(await evaluate(req(credential), opts()))).toBe("out_of_authority");
     // A further condition the source lacks, and one that differs from the
     // source's only in discharge_authority, are no more established.
     const added = { authority: [entry(["payments:invoice.read"], { terminal_when: [CLOSE, { event_type: "other-event" }] })] };
-    expect(reason(await evaluate(req(added), opts(missionWithClose)))).toBe("out_of_authority");
+    expect(reason(await evaluate(req(added, on(missionWithClose)), opts(missionWithClose)))).toBe("out_of_authority");
     const unpinned = { authority: [entry(["payments:invoice.read"], { terminal_when: [{ event_type: CLOSE.event_type }] })] };
-    expect(reason(await evaluate(req(unpinned), opts(missionWithClose)))).toBe("out_of_authority");
+    expect(reason(await evaluate(req(unpinned, on(missionWithClose)), opts(missionWithClose)))).toBe("out_of_authority");
   });
 
+  const live = committed(["payments:invoice.read", "payments:vendor.read"], { terminal_when: [CLOSE] });
+  const done = committed(["payments:invoice.read"], { terminal_when: [CLOSE] });
+  const doneDigest = issuerDigest(done);
+
   it("never borrows another Mission entry's live state: any discharged source refuses, whatever the entry order (#1133 review P1)", async () => {
-    const live = entry(["payments:invoice.read", "payments:vendor.read"], { terminal_when: [CLOSE] });
-    const done = entry(["payments:invoice.read"], { terminal_when: [CLOSE] });
-    const doneDigest = computeAnchor(AUTHORITY_ENTRY_TYP, ISSUER, done as unknown as JsonValue);
+    // The discharged entry carries the loader's join_delegation in both orders.
     const mission = (set: unknown[]) =>
-      view({ authority_set: set as MissionView["authority_set"], discharged: { entry_digests: [doneDigest] } });
+      committedView(set, (i) => (set[i] === done ? delegable() : {}), { discharged: { entry_digests: [doneDigest] } });
     const credential = { authority: [done] };
     for (const set of [[live, done], [done, live]]) {
-      const decision = await evaluate(req(credential), opts(mission(set)));
+      const v = mission(set);
+      const decision = await evaluate(req(credential, on(v)), opts(v));
       expect(reason(decision)).toBe("authority_discharged");
       expect(decision.context.entry_digest).toBe(doneDigest);
     }
     // The live entry's own credential, and one narrowed from it to vendor
     // reads, derive from no discharged entry and permit.
-    expect(reason(await evaluate(req({ authority: [live] }), opts(mission([live, done]))))).toBe("permit");
+    const both = mission([live, done]);
+    expect(reason(await evaluate(req({ authority: [live] }, on(both)), opts(both)))).toBe("permit");
     const vendorOnly = { authority: [entry(["payments:vendor.read"], { terminal_when: [CLOSE] })] };
     expect(
-      reason(await evaluate(req(vendorOnly, { action: "payments:vendor.read" }), opts(mission([live, done])))),
+      reason(await evaluate(req(vendorOnly, { action: "payments:vendor.read", ...on(both) }), opts(both))),
     ).toBe("permit");
+  });
+
+  it("keys discharge by the committed entry, though the loader adds join_delegation (#1133 re-review P1)", async () => {
+    // The committed view refuses; adding the loader's PDP-local member leaves the delta's key unchanged.
+    const credential = { authority: [closeEntry] };
+    for (const local of [() => ({}), delegable]) {
+      const v = committedView([closeEntry], local, { discharged: { entry_digests: [issuerDigest(closeEntry)] } });
+      expect(reason(await evaluate(req(credential, on(v)), opts(v)))).toBe("authority_discharged");
+    }
+  });
+
+  it("refuses a credential discharge condition unless the view proves it holds the committed Authority Set (#1133 re-review P1)", async () => {
+    // The committed set is [live, done] with done discharged. An effective-set
+    // view, as Status or introspection supplies, omits done: with or without the
+    // delta, the surviving overlapping entry cannot show which one issued the
+    // credential, so a discharge-conditioned credential entry is refused.
+    const committedHash = authorityHash(ISSUER, [live, done] as JsonValue[]);
+    const effective = (over: Partial<MissionView>) => view({ authority_set: [live] as MissionView["authority_set"], authority_hash: committedHash, ...over });
+    for (const v of [effective({ discharged: { entry_digests: [doneDigest] } }), effective({})]) {
+      expect(reason(await evaluate(req({ authority: [done] }, on(v)), opts(v)))).toBe("out_of_authority");
+      // Fail-closed: the live entry's own credential cannot be established either.
+      expect(reason(await evaluate(req({ authority: [live] }, on(v)), opts(v)))).toBe("out_of_authority");
+      // A credential entry without a discharge condition, and the Mission bound, are unaffected.
+      expect(reason(await evaluate(req({ authority: [entry(["payments:invoice.read"])] }, on(v)), opts(v)))).toBe("permit");
+    }
   });
 
   it("requires the action-bound approval a credential entry demands, though neither the Mission nor the deployment does", async () => {
@@ -253,12 +289,12 @@ describe("credential facts the PDP cannot use refuse credential_invalid (@spec a
   });
 
   it("refuses a discharge condition carrying a member the profile does not define, though the Mission entry carries it without one (#1133 review P2)", async () => {
-    const mission = view({ authority_set: [entry(["payments:invoice.read"], { terminal_when: [CLOSE] })] as MissionView["authority_set"] });
+    const set = [entry(["payments:invoice.read"], { terminal_when: [CLOSE] })];
+    const mission = view({ authority_set: set as MissionView["authority_set"], authority_hash: authorityHash(ISSUER, set as JsonValue[]) });
+    const bound = { extra: { mission: { id: mission.id, issuer: ISSUER, authority_hash: mission.authority_hash } } };
     const extended = { authority: [entry(["payments:invoice.read"], { terminal_when: [{ ...CLOSE, scope: "q3" }] })] };
-    expect(reason(await evaluate(req({ authority: [entry(["payments:invoice.read"], { terminal_when: [CLOSE] })] }), opts(mission)))).toBe(
-      "permit",
-    );
-    expect(reason(await evaluate(req(extended), opts(mission)))).toBe("credential_invalid");
+    expect(reason(await evaluate(req({ authority: set }, bound), opts(mission)))).toBe("permit");
+    expect(reason(await evaluate(req(extended, bound), opts(mission)))).toBe("credential_invalid");
   });
 
   it("refuses a credential whose expiry has passed or cannot be read", async () => {

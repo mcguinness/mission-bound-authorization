@@ -19,7 +19,7 @@
 
 import { generateKeyPairSync } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { canonicalDigest, capabilitySourceDigest, type CapabilitySourceBinding } from "@mission/core";
+import { authorityHash, canonicalDigest, capabilitySourceDigest, type CapabilitySourceBinding } from "@mission/core";
 import { runtimeCapabilitySourceOf, type RuntimeCapabilitySource } from "../src/decision-evidence.js";
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
@@ -131,19 +131,26 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     const close = { event_type: "accounting-period-closed", discharge_authority: "close-2026-q3" };
     const v = view();
     v.authority_set[0]!.constraints = { terminal_when: [close] } as never;
+    // The view proves it holds the committed set, so a credential discharge
+    // condition can be established (D335).
+    v.authority_hash = authorityHash(v.issuer, v.authority_set as never);
+    const bind = (r: EvaluationRequest) => {
+      r.context.mission = { ...r.context.mission, authority_hash: v.authority_hash };
+      return r;
+    };
     const credential = (constraints: Record<string, unknown>) => ({
       authority: [{ type: "mission_resource_access" as const, resource: RESOURCE, actions: ["payments:invoice.read"], constraints }],
     });
     // Discharge is resolved and step 8 reads the approval flag: both are listed.
     const reached = req();
     reached.context.credential = credential({ terminal_when: [close], requires_action_approval: false }) as never;
-    const permitted = await recorded(reached, v);
+    const permitted = await recorded(bind(reached), v);
     expect(permitted.decision.decision).toBe(true);
     expect(permitted.record.contributing_constraints).toEqual(["mission_resource_access", "terminal_when", "requires_action_approval"]);
     // A vendor failure stops before discharge and approval: neither is listed.
     const stopped = req();
     stopped.context.credential = credential({ vendors: ["globex"], terminal_when: [close], requires_action_approval: true }) as never;
-    const denied = await recorded(stopped, v);
+    const denied = await recorded(bind(stopped), v);
     expect(denied.record.denial_reason).toBe("parameter_violation");
     expect(denied.record.contributing_constraints).toEqual(["mission_resource_access", "vendors"]);
   });
