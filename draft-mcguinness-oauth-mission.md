@@ -784,7 +784,7 @@ member definitions after it are authoritative.
 | `goal_lang` | no | Checks the language tag and uses it when rendering |
 | `target_resources` | yes | Bounds the resources a derived entry can name; can key a configured mapping |
 | `task_bounds` | no | Records it and renders it to the Approver as inert text; never interprets it |
-| `success_criteria` | no | Records it as disclosure and audit material; never interprets it |
+| `success_criteria` | no | Records it and renders it to the Approver as inert text; never interprets it |
 | `purpose` | no | Records it; can key a configured mapping; in any other decision can only lead to a refusal or stricter treatment |
 | `expires_at` | yes | Caps the Mission's effective expiry; refuses a malformed or past value |
 {: title="Mission Intent members at a glance"}
@@ -5915,9 +5915,7 @@ Cross-Domain:
 - Mission Intent: an informative summary table gives each member,
   whether it is required, and what the AS does with it, after a
   paragraph on who writes the members, how the prose members bound
-  authority, and where the smallest Intent is shown (#910).
-  `success_criteria` can be rendered to the Approver as context;
-  step 5 of Mission Approval remains the rendering rule. Intent
+  authority, and where the smallest Intent is shown (#910). Intent
   Submission Evidence states that an AS supporting no evidence type
   refuses every presented entry and conforms. No BCP 14 keyword
   changed.
