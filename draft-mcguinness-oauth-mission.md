@@ -5895,6 +5895,16 @@ Cross-Domain:
 
 -01
 
+- Mission Intent: `success_criteria` is removed. It carried no
+  machine authorization semantics; `goal` can describe the outcomes
+  that show the task is complete, as human-readable and unenforced
+  prose, and Entry Discharge's `terminal_when` is the typed
+  per-entry completion condition. A submission whose Intent carries
+  `success_criteria` is refused under the closed top level. A
+  Mission created earlier keeps its recorded Intent and
+  `intent_hash` unchanged. The prose-invariance rule, the inert-text
+  rendering rule and the approval-surface conformance sentence keep
+  their force over the remaining prose members.
 - Mission Intent: an informative summary table gives each member,
   whether it is required, and what the AS does with it, after a
   paragraph on who writes the members, how the prose members bound
