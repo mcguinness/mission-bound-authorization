@@ -2079,8 +2079,8 @@ binding's rules ({{I-D.draft-mcguinness-oauth-mission}}, Section
 Derivation is mechanical: the Mission Issuer narrows a submitted
 authority proposal to policy, or looks up candidate entries in a
 configured mapping keyed on structured Intent members and narrows
-those. The prose members (`goal`, `task_bounds`, `success_criteria`)
-never change what is derived; they bound authority through disclosure,
+those. The prose members (`goal`, `task_bounds`) never change what is
+derived; they bound authority through disclosure,
 since the Approver refuses authority the words do not support.
 Translating a user's words into structure is the shaper's job, before
 admission and outside the trust boundary
