@@ -763,7 +763,33 @@ over the derived Authority Set ({{authorization-derivation}}).
 A Mission Intent is a JSON object describing the task. The client
 submits it as the `intent` member of the Submission envelope
 ({{submission-via-par}}), in place of `scope` or alongside a
-narrowed `scope`. It has the following members:
+narrowed `scope`.
+
+The client writes every member; how it produces them, for example
+through a Mission Shaper working from a natural-language
+instruction, is out of scope
+({{the-mission-the-plan-and-execution}}). The prose members (`goal`,
+`task_bounds`, `success_criteria`) bound authority only through
+disclosure: the Approver refuses authority the words do not support
+({{authorization-derivation}}). An AS that makes no use of an
+optional member still accepts it and records it with the Intent
+({{submission-processing}}). The smallest Intent carries only the
+three required members, as in the Submission envelope example
+({{submission-via-par}}). The following summary is informative; the
+member definitions after it are authoritative.
+
+| Member | Required | What the AS does with it |
+| --- | --- | --- |
+| `goal` | yes | Records it and renders it to the Approver as inert text; never interprets it |
+| `goal_lang` | no | Checks the language tag and uses it when rendering |
+| `target_resources` | yes | Bounds the resources a derived entry can name; can key a configured mapping |
+| `task_bounds` | no | Records it and renders it to the Approver as inert text; never interprets it |
+| `success_criteria` | no | Records it and renders it to the Approver as inert text; never interprets it |
+| `purpose` | no | Records it; can key a configured mapping; in any other decision can only lead to a refusal or stricter treatment |
+| `expires_at` | yes | Caps the Mission's effective expiry; refuses a malformed or past value |
+{: title="Mission Intent members at a glance"}
+
+The Mission Intent members are:
 
 `goal`:
 : REQUIRED. A string. A human-readable statement of the task,
@@ -1083,6 +1109,11 @@ Processing is governed by the following rules:
   authenticated input to admission and derivation policy; AS policy
   decides whether the verified claims are acceptable for this
   request.
+
+Supporting an evidence type is optional. An AS that supports none
+refuses every presented entry under these rules, never ignoring one,
+and conforms as a Mission Issuer without implementing the evidence
+framework ({{conformance}}).
 
 Mission Intent Submission Evidence for OAuth 2.0
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}})
@@ -5885,6 +5916,14 @@ Cross-Domain:
   lowercase ("authorization server", "resource server") in prose; the
   defined Mission-aware Resource Server, Mission Issuer, Mission Client
   and Resource AS keep their capitals. No requirement changes.
+
+- Mission Intent: an informative summary table gives each member,
+  whether it is required, and what the AS does with it, after a
+  paragraph on who writes the members, how the prose members bound
+  authority, and where the smallest Intent is shown (#910). Intent
+  Submission Evidence states that an AS supporting no evidence type
+  refuses every presented entry and conforms. No BCP 14 keyword
+  changed.
 
 - Security Considerations: duplicated security prose removed from a
   classified list reviewed on #877 (D330). Each removal restated a body
