@@ -19,7 +19,9 @@
  * a `consequential_write` that elects no key control. Its own table, keyed on
  * the permit's `evaluation_id` and taken by one atomic insert
  * ({@link WriteReservationStore.consumePermit}), so it survives a restart
- * with the rest of the file.
+ * with the rest of the file. A keyed write whose permit carries `use_limit`
+ * is metered in the same table, inside its reservation's transaction
+ * ({@link WriteReservationStore.reserve}).
  *
  * The reversible effect itself, a payment schedule, lives in the same file,
  * so the effect and its completed reservation and result commit in ONE local
@@ -134,6 +136,13 @@ export interface WriteReservationRequest {
   executionId: string;
   /** The published retention for this operation, in milliseconds. */
   retentionMs: number;
+  /**
+   * @spec runtime#single-use-identifiers (#1136 review, D317, D333): present
+   * when the permit carries `use_limit: 1`. Its `evaluationId` is metered in
+   * the same transaction as the effect, and its consumed record is kept until
+   * `retainUntilMs`.
+   */
+  singleUse?: { retainUntilMs: number };
 }
 
 /**
@@ -148,7 +157,9 @@ export type ReserveOutcome =
   /** The pair was already held, by an earlier attempt or a concurrent winner: no effect. */
   | { kind: "existing"; reservation: WriteReservation }
   /** The effect refused (no such schedule, one already active): nothing committed. */
-  | { kind: "refused"; refusal: string };
+  | { kind: "refused"; refusal: string }
+  /** The permit carries `use_limit: 1` and its identifier is already consumed: no effect. */
+  | { kind: "consumed" };
 
 export interface PaymentSchedule {
   schedule_id: string;
@@ -257,6 +268,13 @@ export class WriteReservationStore {
    * effect, and the rest read its completed record. `inside` is a failpoint
    * for tests: a throw from it rolls the effect and the reservation back
    * together.
+   *
+   * @spec runtime#single-use-identifiers (#1136 review, D317): a permit
+   * carrying `use_limit: 1` is metered here, in the same transaction. A free
+   * pair whose permit identifier is already consumed reads `consumed` and runs
+   * no effect; otherwise the identifier is recorded consumed only with an
+   * effect that ran, so the consumed record, the effect and the completed
+   * reservation commit together, and an effect that refuses burns nothing.
    */
   reserve(
     request: WriteReservationRequest,
@@ -277,8 +295,21 @@ export class WriteReservationStore {
         .prepare("SELECT * FROM write_reservations WHERE scope_digest = ? AND idempotency_key = ?")
         .get(request.scopeDigest, request.idempotencyKey) as ReservationRow | undefined;
       if (prior) return { kind: "existing", reservation: fromRow(prior) };
+      if (request.singleUse && this.permitConsumed(request.evaluationId)) return { kind: "consumed" };
       const outcome = effect(nowMs);
       if (!outcome.ok) return { kind: "refused", refusal: outcome.refusal };
+      if (
+        request.singleUse &&
+        !this.consumePermit({
+          evaluationId: request.evaluationId,
+          action: request.action,
+          executionId: request.executionId,
+          retainUntilMs: request.singleUse.retainUntilMs,
+        })
+      ) {
+        // Unreachable under the single writer: read free above, in this transaction.
+        throw new Error("the permit identifier was consumed inside its own transaction");
+      }
       this.db
         .prepare(
           `INSERT INTO write_reservations (scope_digest, idempotency_key, scope_json, action, operation_identity,
@@ -420,6 +451,14 @@ export class WriteReservationStore {
         .run(input.evaluationId, input.action, input.executionId, this.now().getTime(), input.retainUntilMs).changes ===
       1
     );
+  }
+
+  /**
+   * Whether a permit's single use is already taken: read-only, and like
+   * {@link consumePermit} not time-conditional.
+   */
+  permitConsumed(evaluationId: string): boolean {
+    return this.db.prepare("SELECT 1 FROM consumed_permits WHERE evaluation_id = ?").get(evaluationId) !== undefined;
   }
 
   /** Every consumed single-use identifier, oldest first. */

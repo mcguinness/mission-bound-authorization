@@ -115,6 +115,39 @@ function permitConditions(decision: Decision | undefined): Record<string, unknow
   return decision?.context.conditions as Record<string, unknown> | undefined;
 }
 
+/**
+ * @spec runtime#single-use-identifiers, authzen#response-context `use_limit`
+ * (#1080, #1136 review, D317): what a permit's `use_limit` asks of the write
+ * path, resolved once for the unkeyed and the keyed write alike, so neither
+ * can ignore a limit it receives. `undefined` when the permit carries none;
+ * `error` names the Execution Evidence `error` that refuses it; otherwise the
+ * single use is metered and its consumed record kept until `retainUntilMs`.
+ *
+ * | Case | Result |
+ * |---|---|
+ * | no `use_limit` | `undefined` |
+ * | `use_limit` other than 1 (this PEP meters single use only) | `condition_unrecognized` |
+ * | `use_limit: 1` with no resolvable `valid_until` | `permit_expired` |
+ * | `use_limit: 1` | `valid_until` plus {@link CONSUMED_PERMIT_RETENTION_MARGIN_MS} |
+ */
+function singleUseCondition(
+  attempt: ExecutionAttempt,
+  decision: Decision | undefined,
+): { error: string } | { retainUntilMs: number } | undefined {
+  const useLimit = permitConditions(decision)?.use_limit;
+  if (useLimit === undefined) return undefined;
+  if (useLimit !== 1) return { error: "condition_unrecognized" };
+  const validUntilMs =
+    typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : Number.NaN;
+  if (!Number.isFinite(validUntilMs)) return { error: "permit_expired" };
+  return { retainUntilMs: validUntilMs + CONSUMED_PERMIT_RETENTION_MARGIN_MS };
+}
+
+/** The caller-visible reason for a single-use refusal's Execution Evidence `error`. */
+function singleUseRefusalReason(error: string): string {
+  return error === "condition_unrecognized" ? "unrecognized_condition" : error;
+}
+
 export interface ToolDef {
   name: string;
   description: string;
@@ -1119,13 +1152,7 @@ export class McpPaymentsServer {
     // refusal never burns it; redemption and release are synchronous, with no
     // await between them.
     const singleUse = this.takeSingleUse(attempt, res.decision);
-    if (singleUse !== undefined) {
-      await this.deps.pep.suppressExecution(attempt, singleUse);
-      return {
-        ok: false,
-        refusal_reason: singleUse === "condition_unrecognized" ? "unrecognized_condition" : singleUse,
-      };
-    }
+    if (singleUse !== undefined) return this.refuseSingleUse(attempt, singleUse);
     return { ok: true, result: this.execute(tool, args) };
   }
 
@@ -1148,20 +1175,17 @@ export class McpPaymentsServer {
    * releases the effect with no await after the redemption.
    */
   private takeSingleUse(attempt: ExecutionAttempt, decision: Decision): string | undefined {
-    const useLimit = permitConditions(decision)?.use_limit;
-    if (useLimit === undefined) return undefined;
-    if (useLimit !== 1) return "condition_unrecognized";
+    const condition = singleUseCondition(attempt, decision);
+    if (condition === undefined) return undefined;
+    if ("error" in condition) return condition.error;
     const store = this.deps.writeReservations;
     if (!store) return "consumption_unavailable";
-    const validUntilMs =
-      typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : Number.NaN;
-    if (!Number.isFinite(validUntilMs)) return "permit_expired";
     try {
       const first = store.consumePermit({
         evaluationId: attempt.evaluationId,
         action: attempt.action,
         executionId: attempt.executionId,
-        retainUntilMs: validUntilMs + CONSUMED_PERMIT_RETENTION_MARGIN_MS,
+        retainUntilMs: condition.retainUntilMs,
       });
       return first ? undefined : "permit_consumed";
     } catch {
@@ -1169,11 +1193,20 @@ export class McpPaymentsServer {
     }
   }
 
+  /** A single-use refusal, through the one post-permit writer: nothing executes. */
+  private async refuseSingleUse(attempt: ExecutionAttempt, error: string): Promise<WriteToolResult> {
+    await this.deps.pep.suppressExecution(attempt, error);
+    return { ok: false, refusal_reason: singleUseRefusalReason(error) };
+  }
+
   /**
    * @spec runtime#idempotency (#918, D223): a keyed reversible write after
    * its Decision. Retrieval first, read-only: a retained record of the
    * (scope, key) pair is resolved by {@link releaseRetained} and admits
    * nothing. With none, the attempt goes to admission and the effect.
+   *
+   * @spec runtime#single-use-identifiers (#1136 review, D317): a permit
+   * carrying a `use_limit` this PEP cannot meter is refused before either.
    */
   private async callKeyedReversibleWrite(
     tool: string,
@@ -1184,6 +1217,8 @@ export class McpPaymentsServer {
   ): Promise<WriteToolResult> {
     const attempt = res.attempt;
     if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
+    const singleUse = singleUseCondition(attempt, res.decision);
+    if (singleUse && "error" in singleUse) return this.refuseSingleUse(attempt, singleUse.error);
     if (res.writeReservationUnkeyable) return this.actorUnkeyable(attempt);
     const pair = this.reservationPair(res);
     if (!pair) return this.reservationUnavailable(attempt);
@@ -1193,7 +1228,7 @@ export class McpPaymentsServer {
     } catch {
       return this.reservationUnavailable(attempt);
     }
-    if (found) return this.releaseRetained(attempt, pair.scope, found);
+    if (found) return this.releaseRetained(attempt, pair.scope, found, singleUse ? pair.store : undefined);
     return this.admitReversibleWrite(tool, token, res, beforeReverify, failpoints);
   }
 
@@ -1273,14 +1308,30 @@ export class McpPaymentsServer {
    * nothing, not the retained result and not which kind of record the key
    * holds. Its one disposition is already recorded, so that last comparison
    * records nothing further.
+   *
+   * @spec runtime#single-use-identifiers (#1136 review, D317): a permit
+   * carrying `use_limit: 1` names the store its single use is metered in,
+   * `singleUseIn`. Retrieval runs no effect, so it consumes nothing, but a
+   * permit whose identifier is already consumed is a re-presentation and is
+   * refused `permit_consumed` before anything is disclosed.
    */
   private async releaseRetained(
     attempt: ExecutionAttempt,
     scope: WriteReservationScope,
     retained: WriteReservation,
+    singleUseIn?: WriteReservationStore,
   ): Promise<WriteToolResult> {
     const current = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!current.ok) return { ok: false, refusal_reason: current.error };
+    if (singleUseIn) {
+      let consumed: boolean;
+      try {
+        consumed = singleUseIn.permitConsumed(attempt.evaluationId);
+      } catch {
+        return this.reservationUnavailable(attempt);
+      }
+      if (consumed) return this.refuseSingleUse(attempt, "permit_consumed");
+    }
     const conflict = retained.operationIdentity !== scope.operationIdentity;
     await this.deps.pep.suppressExecution(attempt, conflict ? "operation_identity_conflict" : "operation_already_claimed");
     const atRelease = this.deps.pep.permitUseFailure(attempt);
@@ -1305,6 +1356,13 @@ export class McpPaymentsServer {
    *
    * Public as the effect step's own seam: it is what an attempt replayed past
    * its Decision reaches, and it re-checks everything that attempt needs.
+   *
+   * @spec runtime#single-use-identifiers (#1136 review, D317): a `use_limit`
+   * the permit carries is metered here, never ignored. One this PEP cannot
+   * meter is refused first; `use_limit: 1` is taken inside the reservation's
+   * transaction, as the last check before the effect
+   * ({@link WriteReservationStore.reserve}), so a consumed identifier, under
+   * any idempotency key, is refused `permit_consumed` and runs no effect.
    */
   async admitReversibleWrite(
     tool: string,
@@ -1319,6 +1377,8 @@ export class McpPaymentsServer {
     if (!effect) throw new Error(`no reversible effect is declared for tool ${tool}`);
     const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
+    const singleUse = singleUseCondition(attempt, res.decision);
+    if (singleUse && "error" in singleUse) return this.refuseSingleUse(attempt, singleUse.error);
     if (res.writeReservationUnkeyable) return this.actorUnkeyable(attempt);
     const pair = this.reservationPair(res);
     if (!pair) return this.reservationUnavailable(attempt);
@@ -1353,6 +1413,7 @@ export class McpPaymentsServer {
           evaluationId: attempt.evaluationId,
           executionId: attempt.executionId,
           retentionMs: pair.retentionMs,
+          ...(singleUse ? { singleUse } : {}),
         },
         (nowMs) =>
           effect({ store: pair.store, attempt, token, effective, invoiceVersion, parameterDigest: digest, nowMs }),
@@ -1361,7 +1422,10 @@ export class McpPaymentsServer {
     } catch {
       return this.reservationUnavailable(attempt);
     }
-    if (outcome.kind === "existing") return this.releaseRetained(attempt, pair.scope, outcome.reservation);
+    if (outcome.kind === "existing") {
+      return this.releaseRetained(attempt, pair.scope, outcome.reservation, singleUse ? pair.store : undefined);
+    }
+    if (outcome.kind === "consumed") return this.refuseSingleUse(attempt, "permit_consumed");
     if (outcome.kind === "refused") {
       await this.deps.pep.suppressExecution(
         attempt,
