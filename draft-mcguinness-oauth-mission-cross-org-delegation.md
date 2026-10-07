@@ -131,8 +131,8 @@ organizational trust domains: the attenuation chain is the portable
 authority proof, each hop carries its own actor under an explicit
 identity-binding rule, the originally approved agent and the
 on-behalf-of principal travel with the chain, and Cross-Domain
-Projection remains the adapter by which a destination Authorization
-Server validates the chain, applies local policy, and issues a local
+Projection remains the adapter by which a destination authorization
+server validates the chain, applies local policy, and issues a local
 token.  Projection and delegation stay distinct verbs; the profile
 composes them and never merges them.
 
@@ -198,7 +198,7 @@ Chain-verifying consumer:
 : a relying party that receives and verifies the complete Chain.
 
 AS-mediated consumer:
-: a Resource Server that trusts a local token its Resource
+: a resource server that trusts a local token its Resource
   Authorization Server minted after verifying a Chain, and does not
   claim to have independently verified the Chain.
 
@@ -236,8 +236,8 @@ exchange ({{projection-exchange}}) with `subject_token_type`
 `urn:ietf:params:oauth:token-type:mission-delegation-chain`; for
 retention and evidence its media type is
 `application/mission-delegation-chain+json` ({{iana}}).  Direct
-presentation of a Chain to a Resource Server is not defined in this
-version: a chain-verifying Resource Server obtains the Presentation
+presentation of a Chain to a resource server is not defined in this
+version: a chain-verifying resource server obtains the Presentation
 through a deployment-defined channel and applies {{verification}}
 unchanged.
 
@@ -289,7 +289,7 @@ verification ({{verification}}), and a consumer MUST reject a Chain
 presenting conflicting or duplicated actor representations.  A
 materialized nested `act` projection ({{RFC8693}}) is constructed
 from the validated Chain at a consuming boundary, a PDP, an
-introspection responder, or a destination Authorization Server; it is
+introspection responder, or a destination authorization server; it is
 not carried on the artifacts
 ({{I-D.draft-mcguinness-oauth-mission-attenuation}}, Section "Actor
 Attribution on the Chain").
@@ -431,7 +431,7 @@ instantaneous revocation.
 
 # Destination Verification {#verification}
 
-A Resource AS or chain-verifying Resource Server MUST perform the
+A Resource AS or chain-verifying resource server MUST perform the
 following, in order:
 
 1. resolve the origin Mission Issuer to an accepted trust domain and
@@ -714,7 +714,7 @@ parameters: N/A; Optional parameters: N/A; Encoding considerations:
 binary (UTF-8 JSON); Security considerations: see this document;
 Interoperability considerations: N/A; Published specification: this
 document; Applications that use this media type: Mission-aware
-Authorization Servers, Resource Servers, and audit systems; Change
+authorization servers, resource servers, and audit systems; Change
 controller: IESG.
 
 --- back

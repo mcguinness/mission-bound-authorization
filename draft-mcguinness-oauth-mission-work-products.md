@@ -440,7 +440,7 @@ kid:
   within the deployment's published key set. A relying party resolves it
   by the mediator's `role`, reusing the family's existing role-keyed
   resolution path ({{I-D.draft-mcguinness-mission-audit}}): the Mission
-  Issuer key through the Authorization Server metadata `jwks_uri` when
+  Issuer key through the authorization server metadata `jwks_uri` when
   `role` is `issuer`, and the harness signing key published in the
   deployment key set when `role` is `harness`. This document defines no
   new key-resolution path.

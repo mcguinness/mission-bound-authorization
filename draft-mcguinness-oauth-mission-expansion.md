@@ -1697,7 +1697,7 @@ A conforming **expansion-capable Mission Issuer** MUST:
 
 An expansion-capable Mission Issuer is also a conforming issuance-profile
 Mission Issuer ({{I-D.draft-mcguinness-oauth-mission}}); this document
-adds the expansion surface to that role. A Resource Server requires no
+adds the expansion surface to that role. A resource server requires no
 new behavior: it enforces a successor's tokens exactly as it enforces
 any Mission-bound token, and treats the `predecessor` member, if it
 reads it at all, as audit context it MUST NOT use to grant authority
@@ -1961,7 +1961,7 @@ Track document; a Specification Required reference that a Designated
 Expert can review against these criteria suffices.
 
 The registry covers values of the `mission_denial_reason` parameter
-only ({{denial-reasons}}); the Resource Server `WWW-Authenticate`
+only ({{denial-reasons}}); the resource server `WWW-Authenticate`
 `mission_denial` attribute
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server
 Enforcement") and AuthZEN decision-context denial reasons

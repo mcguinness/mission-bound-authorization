@@ -97,7 +97,7 @@ Mission Deferred Approval for OAuth 2.0 defers a Mission approval and
 lets a client poll for the decision. A reviewer commonly approves a
 narrowed subset of a proposed Mission rather than an all-or-nothing
 outcome. This document defines an experimental revisable approval mode
-on top of the deferred approval profile: when the Authorization Server
+on top of the deferred approval profile: when the authorization server
 can grant only a narrowed version of the proposed Mission, it invites
 the client to push a narrowing revision and continue the same deferred
 approval rather than abandon it and start over. A revision can only

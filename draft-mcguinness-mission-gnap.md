@@ -340,7 +340,7 @@ continuation ({{I-D.draft-mcguinness-mission-authority-server}});
 here the parallel is the substrate itself.
 
 This is the fifth binding of the Mission model: the issuance profile
-binds it to the OAuth Authorization Server, the Mission Authority
+binds it to the OAuth authorization server, the Mission Authority
 Server to a standalone service beside an unchanged AS, the AAuth
 binding to the AAuth Person Server
 ({{I-D.draft-mcguinness-mission-aauth}}), the UMA binding to the UMA
@@ -445,7 +445,7 @@ Mission-Bound GNAP Client Instance:
 | Client instance | Agent: the Actor, identified by its instance identifier or a stable key-derived identifier; its requests are key-proved ({{mission-record}}) |
 | Resource owner | Candidate Approver, and authority source where the assessment consumes its standing authority |
 | End user | The interacting operator; no Mission role follows automatically |
-| Resource server | Resource Server: {{RFC9767}} participant or structured-token validator, no Mission awareness required |
+| Resource server | Resource server: {{RFC9767}} participant or structured-token validator, no Mission awareness required |
 
 The Subject is not a wire role. It is the issuer-qualified principal
 on whose behalf the Mission runs, established by the authorization

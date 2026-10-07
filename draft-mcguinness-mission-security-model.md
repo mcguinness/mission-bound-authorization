@@ -300,7 +300,7 @@ informative:
 
 Mission-Bound Authorization for OAuth 2.0 and its companion profiles
 spread enforcement across several components: a Mission Issuer, in one
-of three bindings (OAuth Authorization Server, standalone Mission
+of three bindings (OAuth authorization server, standalone Mission
 Authority Server, AAuth Person Server), derives authority and, where
 it also issues tokens, gates issuance; a Policy Enforcement Point and
 Policy Decision Point evaluate each action; a harness establishes a
@@ -309,7 +309,7 @@ authority to an Approver; an orchestrator unwinds in-flight work; and
 optional services report Mission state, adjudicate requested
 authority, meter consumption, manage the Mission fleet, log evidence,
 and report completion events. In cross-domain use, a resource-side
-Authorization Server joins this base. Each profile states its own security
+authorization server joins this base. Each profile states its own security
 considerations, but no single document says which components must be
 trusted, what each assumes of the others, and how the compromise of
 each degrades the guarantees. This document provides that consolidated
@@ -329,7 +329,7 @@ to bound what such an agent can do, not to make it trustworthy
 ({{I-D.draft-mcguinness-mission-runtime}}). Bounding the agent
 means relying on other components: the Mission Issuer that derives
 authority and, where it also issues tokens, gates issuance (an
-Authorization Server, a standalone Mission Authority Server, or an
+authorization server, a standalone Mission Authority Server, or an
 AAuth Person Server), the enforcement
 points that evaluate each action,
 the harness that removes unmediated paths, and a set of optional
@@ -360,7 +360,7 @@ requirement of its own.
 
 # Conventions and Terminology {#conventions}
 
-This document uses Mission, Mission Issuer (the Authorization Server
+This document uses Mission, Mission Issuer (the authorization server
 in the OAuth binding; the Mission Authority Server in the standalone
 binding; the AAuth Person Server in the AAuth binding,
 {{I-D.draft-mcguinness-mission-aauth}}), Policy
@@ -500,7 +500,7 @@ it must achieve, what it assumes of the others, and how its compromise
 degrades the guarantees. The authoritative security considerations are in
 the cited profile.
 
-Authorization Server (Mission Issuer):
+Authorization server (Mission Issuer):
 : The root of trust. It derives the Authority Set, runs the approval
   event, commits the integrity anchors, and gates issuance on Mission
   state. It must derive faithfully and gate correctly; it assumes the
@@ -514,7 +514,7 @@ Authorization Server (Mission Issuer):
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 Resource Authorization Server (cross-domain):
-: When cross-domain access is used, a resource-side Authorization Server
+: When cross-domain access is used, a resource-side authorization server
   mints local Mission-bound tokens that the Mission's issuer cannot
   observe. It must mint only within the audience and lifetime the
   cross-domain grant scopes. Its compromise mints arbitrary authority
@@ -525,7 +525,7 @@ Resource Authorization Server (cross-domain):
 
 Mission Authority Server (standalone binding):
 : When the standalone Mission Authority Server binding is used, a
-  service outside the OAuth Authorization Server implements the
+  service outside the OAuth authorization server implements the
   Mission Issuer role, while the deployment's tokens remain ordinary
   and carry no Mission binding. It must run the approval ceremony
   faithfully, keep the Mission record and its anchors intact, and
@@ -538,7 +538,7 @@ Mission Authority Server (standalone binding):
   authority to any credential the join accepts. Where Mission Join
   Assertions are used, the PDP's join
   trust concentrates in one MAS signature, and the MAS may hold
-  introspection credentials at the Authorization Server, a
+  introspection credentials at the authorization server, a
   cross-component channel whose compromise forges joins
   ({{I-D.draft-mcguinness-mission-authority-server}}). Where
   consuming Authorization Servers redeem its issuance grants
@@ -683,7 +683,7 @@ Event source:
 : When completion or trigger-based discharge is used, it reports whether
   a completion event has occurred. It must report accurately and be
   authenticated. A compromised event source can keep a discharged entry
-  derivable or falsely discharge one; the Authorization Server fails
+  derivable or falsely discharge one; the authorization server fails
   closed when it cannot determine the event status
   ({{I-D.draft-mcguinness-oauth-mission-discharge}}, Section
   "Mission Entry Discharge").
@@ -1207,12 +1207,12 @@ limits most likely to matter and most often overstated away elsewhere:
   policy fact (a recommendation, auditable via `policy_version`), not
   something any of the hashes proves. And `authority_hash` commits the full
   consented set, which a per-Resource-Server token, carrying a
-  narrowed subset, does not contain: at such a Resource Server the
+  narrowed subset, does not contain: at such a resource server the
   anchor is an audit correlator, not an enforcement input, and the
   subset relationship it stands for is trust in the issuer's
   signature, not a per-token cryptographic proof. Enforcement value
   from the anchor accrues only to a full-set holder (an auditor, a
-  Mandate verifier, a full-set Resource Server).
+  Mandate verifier, a full-set resource server).
 - **Standalone-join ceiling.** Under the standalone binding, an
   uncompromised join still has an assurance ceiling: the PDP's join
   proves the acting credential belongs to the subject and client the
@@ -1303,8 +1303,8 @@ runs. The following non-normative table names the governing parameter at
 each layer; the end-to-end worst case for an action class is the tightest
 layer the deployment enforces for that class. The tables in this
 section read on the credential-issuing bindings (the OAuth
-Authorization Server and the AAuth Person Server); under the
-standalone MAS binding the unchanged Authorization Server keeps
+authorization server and the AAuth Person Server); under the
+standalone MAS binding the unchanged authorization server keeps
 issuing valid tokens after revocation, and the cutoff for every
 column is the runtime layer's state re-check. Where the issuance
 join is deployed
@@ -1420,7 +1420,7 @@ the profile governs.
 
 # Privacy Considerations {#privacy-considerations}
 
-The trusted components see Mission data: the Authorization Server and PDP
+The trusted components see Mission data: the authorization server and PDP
 see the Authority Set, the consent rendering layer and Approver see the
 disclosed authority, and the Transparency Service and state sources see
 the Mission Identifier and its activity over time. The single canonical
@@ -1579,7 +1579,7 @@ model and pipeline layers, and saying so is the point:
   Transparency Service entry of {{trusted-base}} kept as the one
   full statement of the single-service-equivocation point, with the
   Ten Residuals restatement compressed to a pointer at it; the
-  Documenting section's echo of the Authorization Server entry's
+  Documenting section's echo of the authorization server entry's
   "strongest trust assumption" phrasing dropped in favor of its
   existing {{trusted-base}} cross-reference, and that entry given an
   explicit citation to the Mission Mandate document it shares the

@@ -329,7 +329,7 @@ An encounter is classified before it is adjudicated:
   each capability thereafter binds and drifts at the PDP under the
   capability-source rules
   ({{I-D.draft-mcguinness-mission-capability-binding}}).
-- **A foreign trust domain**: a resource whose Authorization Server
+- **A foreign trust domain**: a resource whose authorization server
   the deployment's trust does not cover. This profile does not bind
   it; cross-domain projection exists for domains with established
   trust ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), and
@@ -376,7 +376,7 @@ established and recorded:
    Mission Issuer's own connection at encounter, not as the agent
    reports it.
 2. **Authorization chain.** Where the resource names an
-   Authorization Server, the Mission Issuer MUST retrieve the OAuth
+   authorization server, the Mission Issuer MUST retrieve the OAuth
    2.0 Protected Resource Metadata {{RFC9728}} server-side and digest
    the exact bytes it retrieved into the evidence. It MUST NOT reuse
    an agent-supplied digest. The Mission Issuer MUST verify that the
@@ -423,8 +423,8 @@ used for adjudication are the Mission Issuer's own verified values
   retrieved bytes.
 
 `issuer`:
-: CONDITIONAL. REQUIRED when the metadata names an Authorization
-  Server: the issuer identifier it names.
+: CONDITIONAL. REQUIRED when the metadata names an authorization
+  server: the issuer identifier it names.
 
 In an AAuth deployment, the Person Server performs the equivalent
 pinning with native material: the Access Server association and,

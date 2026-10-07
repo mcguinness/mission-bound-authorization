@@ -433,9 +433,9 @@ The OAuth binding's caller authorization and minimization rules apply
 to it ({{I-D.draft-mcguinness-oauth-mission}}, Section "Caller
 Authorization and Minimization"), and its disclosure is member-scoped.
 `derivations_remaining` serves issuance-budget consumers, not
-Resource Server enforcement, and the AS MUST disclose it only to a
+resource server enforcement, and the AS MUST disclose it only to a
 caller the deployment has granted that member's disclosure privilege.
-By default, an audience-authorized Resource Server receives the
+By default, an audience-authorized resource server receives the
 audience-filtered enforcement projection without it.
 
 An AS MUST NOT include `derivations_remaining` in an introspection
@@ -494,7 +494,7 @@ An AS conforming to this document MUST implement:
 - where it supports token introspection for Mission-bound tokens, the
   rules for `derivations_remaining` ({{introspection}}).
 
-A Resource Server does not need to understand this document to enforce
+A resource server does not need to understand this document to enforce
 Mission-bound tokens; `derivations_remaining` is not an enforcement
 input ({{introspection}}).
 
@@ -510,7 +510,7 @@ issuer performs; the refreshes of an async delegation family, and
 redemption and refresh at a Mission Issuance Grant consuming
 Authorization Server, are not counted ({{sec-async-family}},
 {{issuance-grant-counting}}). It does not narrow the Authority Set,
-shorten a token's lifetime, or bound the requests a Resource Server
+shorten a token's lifetime, or bound the requests a resource server
 honors under a token already issued: a derived token remains usable
 until its `exp`. A deployment that needs to bound use, rather than
 issuance, adopts a runtime control such as metering

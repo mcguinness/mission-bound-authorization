@@ -67,11 +67,11 @@ informative:
 
 Mission-Bound Authorization for OAuth 2.0 commits a Mission's approved
 Authority Set as an integrity anchor, while a token derived under the
-Mission can carry a narrowed subset of that set. A Resource Server
+Mission can carry a narrowed subset of that set. A resource server
 under that specification relies on the signed token as the
 authorization server's assertion that the carried authority is a
 subset of the approved set. This document defines Local Approved-Set
-Verification, an optional capability under which a Resource Server or
+Verification, an optional capability under which a resource server or
 policy decision point independently checks that a token's carried
 authority is a subset of the Mission's complete committed Authority
 Set. It defines authenticated retrieval of the complete set at two
@@ -97,7 +97,7 @@ the subset rule ({{I-D.draft-mcguinness-oauth-mission}}, Section
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Caller Authorization
 and Minimization").
 
-A Resource Server that does not implement this document enforces
+A resource server that does not implement this document enforces
 under the OAuth binding alone
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server
 Enforcement").
@@ -113,7 +113,7 @@ Authority Set, Mission-bound token, and `authority_hash` from
 from {{RFC9396}}.
 
 Verifying party:
-: A Resource Server or policy decision point that checks a token's
+: A resource server or policy decision point that checks a token's
   carried authority against the Mission's complete approved Authority
   Set under this document.
 
@@ -124,7 +124,7 @@ authority against the Mission's complete approved Authority Set,
 rather than relying on the token signature and the AS's subset
 assertion alone ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Resource Server Enforcement"). A deployment adopts it when a
-Resource Server, a policy decision point, or an auditor needs that
+resource server, a policy decision point, or an auditor needs that
 independent check.
 
 For example, take the two-entry Authority Set of the OAuth binding's
@@ -200,7 +200,7 @@ substitution ({{I-D.draft-mcguinness-oauth-mission}}, Section
 
 - a **retention point**: which party retains the expected
   `authority_hash` and where, independent of the retrieval channel
-  (for example, a Resource Server's own durable copy of the value
+  (for example, a resource server's own durable copy of the value
   disclosed to it under the `authority_hash` disclosure privilege
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Caller
   Authorization and Minimization") when it first received the
@@ -272,14 +272,14 @@ It states which tier it supports, Tier 1 alone or Tier 1 with Tier 2.
 A Mission Issuer that serves a claiming party provisions a retrieval
 surface that meets {{retrieval-surface}}.
 
-Local Approved-Set Verification is a capability of a Resource Server
-or policy decision point, not of the Authorization Server, and has no
+Local Approved-Set Verification is a capability of a resource server
+or policy decision point, not of the authorization server, and has no
 OAuth metadata signal: its activation, tier, and retrieval surface
 are established out of band between the claiming party and the
 Mission Issuer ({{retrieval-surface}}).
 
 Conformance to the OAuth binding does not require this document, and
-a Resource Server that does not claim this capability enforces
+a resource server that does not claim this capability enforces
 Mission-bound tokens under the OAuth binding alone.
 
 In the terms of the Mission Substrate contract
@@ -342,7 +342,7 @@ a state surface ({{retention}}).
 
 A complete-set response discloses every audience's entries: the
 resources, actions, and constraints the Mission authorizes at other
-Resource Servers. Introspection minimizes its response to one
+resource servers. Introspection minimizes its response to one
 audience at a time ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Caller Authorization and Minimization"). The retrieval surface
 instead requires the disclosure privilege for every audience the

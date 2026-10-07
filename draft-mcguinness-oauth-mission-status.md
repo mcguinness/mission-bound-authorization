@@ -219,7 +219,7 @@ an agent derives. It is, by design, a minimum-viable issuance layer.
 It gates derivation on Mission state, carries the `mission` claim on
 every derived token, and offers only OPTIONAL token introspection
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission State via
-Token Introspection") as a way for a Resource Server to observe
+Token Introspection") as a way for a resource server to observe
 Mission state. It names this profile for the canonical Mission Status
 surface (keyed by `mission_id`) and its signed status evidence, and
 defers a standardized management endpoint for lifecycle transitions to
@@ -247,7 +247,7 @@ that build on the issuance profile. The capabilities are:
   ({{revocation-enforcement-classes}}): a `mission_max_stale_seconds`
   bound and how to size token lifetimes to the propagation mechanisms
   in use.
-- **Authorization Server metadata** members
+- **authorization server metadata** members
   ({{as-metadata}}) advertising the endpoints above.
 
 Each capability is independently optional. An implementation states
@@ -272,7 +272,7 @@ referenced, not re-specified, here.
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}}, in particular Mission,
 Mission Issuer (the Mission `issuer`: in this document's OAuth binding
-the Authorization Server; a standalone Mission Issuer, the Mission
+the authorization server; a standalone Mission Issuer, the Mission
 Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
 serves these surfaces with the same semantics; the AAuth Person
 Server plays the same role for its native missions through its own
@@ -334,7 +334,7 @@ cross-domain Resource AS) resolves it without holding a token the AS
 issued.
 
 The Mission Issuer publishes its Mission Status endpoint URL in
-Authorization Server metadata ({{as-metadata}}) as
+authorization server metadata ({{as-metadata}}) as
 `mission_status_endpoint`, which a consumer resolves from a
 credential's `mission.issuer`. The endpoint MUST be served over TLS
 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of
@@ -358,7 +358,7 @@ The request is an HTTPS POST with an
   needs only Mission state,
   not audience-scoped authority, MAY omit `audience`; the response is
   then state-only and carries no `authorization_details`
-  ({{mission-status-response}}). A Resource Server resolving authority
+  ({{mission-status-response}}). A resource server resolving authority
   for a specific audience MUST send it.
 
 `nonce`:
@@ -937,8 +937,8 @@ the richer `suspend`, `resume`, and `complete` operations
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation"). This
 section standardizes that management surface.
 
-The AS publishes its Mission Lifecycle endpoint URL in Authorization
-Server metadata ({{as-metadata}}) as `mission_lifecycle_endpoint`,
+The AS publishes its Mission Lifecycle endpoint URL in authorization
+server metadata ({{as-metadata}}) as `mission_lifecycle_endpoint`,
 distinct from {{RFC7009}} token revocation. The endpoint MUST be
 served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
 recommendations of {{RFC9325}}.
@@ -1492,7 +1492,7 @@ separate posture list:
   before the token expires, discovered from `introspection_endpoint`
   and `introspection_signing_alg_values_supported`;
 - the Mission Status operation ({{mission-status}}) for per-request
-  state checks by high-assurance Resource Servers, discovered from
+  state checks by high-assurance resource servers, discovered from
   `mission_status_endpoint`; and
 - event-driven propagation of state changes over a Shared Signals
   stream ({{I-D.draft-mcguinness-oauth-mission-signals}}), discovered
@@ -1566,7 +1566,7 @@ member, availability target, or replication protocol is defined here.
 
 This section is OPTIONAL and applies only to a deployment that adopts
 one or more of the extensions above. An AS advertises the surfaces it
-supports through the following members of its Authorization Server
+supports through the following members of its authorization server
 metadata document {{RFC8414}}, in addition to the issuance profile's
 `mission_bound_authorization_supported`
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization Server

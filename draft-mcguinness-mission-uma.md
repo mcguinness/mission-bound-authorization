@@ -350,7 +350,7 @@ is the protection API, standardized by {{UMA-FEDAUTHZ}} rather than
 assembled per deployment.
 
 This is the fourth binding of the Mission model: the issuance
-profile binds it to the OAuth Authorization Server, the Mission
+profile binds it to the OAuth authorization server, the Mission
 Authority Server to a standalone service beside an unchanged AS
 ({{I-D.draft-mcguinness-mission-authority-server}}), the AAuth
 binding to the AAuth Person Server
@@ -445,7 +445,7 @@ Mission-Bound UMA Client:
 | Resource owner | Approver: sets policy and decides submitted requests |
 | Requesting party | Subject: the party on whose behalf the client acts |
 | Client | Agent: its OAuth client identifier is the Mission's `client_id` |
-| Resource server | Resource Server: protection API participant, no Mission awareness required |
+| Resource server | Resource server: protection API participant, no Mission awareness required |
 
 Two properties of this mapping are structural in UMA rather than
 profile rules. First, the proposer is never the approver on the

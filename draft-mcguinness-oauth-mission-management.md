@@ -180,7 +180,7 @@ This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} and the status profile
 {{I-D.draft-mcguinness-oauth-mission-status}}, in particular Mission,
 Mission Issuer (the Mission `issuer`: in this document's OAuth binding
-the Authorization Server; a standalone Mission Issuer, the Mission
+the authorization server; a standalone Mission Issuer, the Mission
 Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
 serves this surface with the same semantics), `mission_id`, the
 Mission record, and the Mission lifecycle states and operations. It
@@ -201,7 +201,7 @@ the wire the JWS Compact Serialization {{RFC7515}} applies.
 # Mission Management Endpoint {#management-endpoint}
 
 The Mission Issuer publishes its Mission Management endpoint URL in
-Authorization Server metadata ({{as-metadata}}) as
+authorization server metadata ({{as-metadata}}) as
 `mission_management_endpoint`. The endpoint MUST be served over TLS
 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of
 {{RFC9325}}.
@@ -855,7 +855,7 @@ Issuers, is not defined here; a Management Client queries each
 # Authorization Server Metadata {#as-metadata}
 
 An AS that serves the Mission Management endpoint advertises it in its
-Authorization Server metadata {{RFC8414}}:
+authorization server metadata {{RFC8414}}:
 
 `mission_management_endpoint`:
 : OPTIONAL. A string containing a URL. The URL of the Mission
