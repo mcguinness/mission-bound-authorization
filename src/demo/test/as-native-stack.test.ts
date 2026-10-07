@@ -537,68 +537,101 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
   };
 }
 
-/** The target's own assertions, on a composition with the launcher's options. */
-function targetSuite(fixture: ReturnType<typeof targetFixture>): void {
-  beforeAll(fixture.setup, 60_000);
-  afterAll(fixture.teardown);
+// Every composition binds the declared audience's port, and vitest runs a
+// file's describe blocks one after another, each closing before the next.
+const stubbed = targetFixture({ live: false, asPort: 14105 });
+describe("the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315)", () => {
+  beforeAll(stubbed.setup, 60_000);
+  afterAll(stubbed.teardown);
   it("mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience", () => {
-    fixture.topology();
+    stubbed.topology();
   });
   it("runs exactly the D332 AS capability set, the issuance profile plus lifecycle-revoke and transaction-authorization, and advertises only that surface", async () => {
-    await fixture.capabilitySet();
+    await stubbed.capabilitySet();
   });
   it("refuses a disabled optional surface with its standard error (token exchange, lifecycle suspend) while lifecycle revoke is served", async () => {
-    await fixture.disabledSurfaces();
+    await stubbed.disabledSurfaces();
   });
   it("serves no dev ordinary-token route: it answers 501 temporarily_unavailable and mints nothing", async () => {
-    await fixture.devRouteAbsent();
+    await stubbed.devRouteAbsent();
   });
   it("refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision", async () => {
-    await fixture.noProof();
+    await stubbed.noProof();
   });
   it("refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision", async () => {
-    await fixture.otherKey();
+    await stubbed.otherKey();
   });
   it("carries the AS-issued Mission-bound token with a valid DPoP proof through mcp-payments and the PDP to one permitted read", async () => {
-    await fixture.permittedRead();
+    await stubbed.permittedRead();
   });
   it("gives each successive and each concurrent client its own MCP session, each with a permitted read", async () => {
-    await fixture.successiveSessions();
+    await stubbed.successiveSessions();
   });
   it("binds a session to the holder that opened it: every request on it is authenticated, and another holder's credential carrying its id is answered 404 Session not found before the PEP", async () => {
-    await fixture.sessionBinding();
+    await stubbed.sessionBinding();
   });
   it("denies send_remittance_email with a transaction challenge, redeems the approval at the AS transaction endpoint, and executes the retry under the transaction token exactly once", async () => {
-    await fixture.remittanceApproval();
+    await stubbed.remittanceApproval();
   });
-}
+});
 
 /**
  * The baseline-Join refusal, on a composition with the test-only
  * ordinary-token minting fixture on (D332). The fixture exists only to mint
  * the credential this negative presents; it proves nothing about the
- * target's enabled capabilities, which `targetSuite` asserts on a
- * composition without it.
+ * target's enabled capabilities, which the suites without it assert.
  */
-function joinSuite(fixture: ReturnType<typeof targetFixture>): void {
-  beforeAll(fixture.setup, 60_000);
-  afterAll(fixture.teardown);
-  it("refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it", async () => {
-    await fixture.baselineJoin();
-  });
-}
-
-describe("the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315)", () => {
-  targetSuite(targetFixture({ live: false, asPort: 14105 }));
-});
+const stubbedJoin = targetFixture({ live: false, asPort: 14107, ordinaryTokenMinting: true });
 describe("the as-native target with the test-only ordinary-token minting fixture, OpenFGA client stubbed (D315, D332)", () => {
-  joinSuite(targetFixture({ live: false, asPort: 14107, ordinaryTokenMinting: true }));
+  beforeAll(stubbedJoin.setup, 60_000);
+  afterAll(stubbedJoin.teardown);
+  it("refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it", async () => {
+    await stubbedJoin.baselineJoin();
+  });
 });
 
 const dLive = up ? describe : describe.skip;
+const live = targetFixture({ live: true, asPort: 14106 });
 dLive("the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315)", () => {
-  targetSuite(targetFixture({ live: true, asPort: 14106 }));
+  beforeAll(live.setup, 60_000);
+  afterAll(live.teardown);
+  it("mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience", () => {
+    live.topology();
+  });
+  it("runs exactly the D332 AS capability set, the issuance profile plus lifecycle-revoke and transaction-authorization, and advertises only that surface", async () => {
+    await live.capabilitySet();
+  });
+  it("refuses a disabled optional surface with its standard error (token exchange, lifecycle suspend) while lifecycle revoke is served", async () => {
+    await live.disabledSurfaces();
+  });
+  it("serves no dev ordinary-token route: it answers 501 temporarily_unavailable and mints nothing", async () => {
+    await live.devRouteAbsent();
+  });
+  it("refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision", async () => {
+    await live.noProof();
+  });
+  it("refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision", async () => {
+    await live.otherKey();
+  });
+  it("carries the AS-issued Mission-bound token with a valid DPoP proof through mcp-payments and the PDP to one permitted read", async () => {
+    await live.permittedRead();
+  });
+  it("gives each successive and each concurrent client its own MCP session, each with a permitted read", async () => {
+    await live.successiveSessions();
+  });
+  it("binds a session to the holder that opened it: every request on it is authenticated, and another holder's credential carrying its id is answered 404 Session not found before the PEP", async () => {
+    await live.sessionBinding();
+  });
+  it("denies send_remittance_email with a transaction challenge, redeems the approval at the AS transaction endpoint, and executes the retry under the transaction token exactly once", async () => {
+    await live.remittanceApproval();
+  });
 });
+
+const liveJoin = targetFixture({ live: true, asPort: 14108, ordinaryTokenMinting: true });
 dLive("the as-native target with the test-only ordinary-token minting fixture against a live OpenFGA (D315, D332)", () => {
-  joinSuite(targetFixture({ live: true, asPort: 14108, ordinaryTokenMinting: true }));
+  beforeAll(liveJoin.setup, 60_000);
+  afterAll(liveJoin.teardown);
+  it("refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it", async () => {
+    await liveJoin.baselineJoin();
+  });
 });
