@@ -20,6 +20,7 @@ import {
   MissionKernel,
   missionResourceAccessProfile,
   OperationProfileRegistry,
+  type ProviderCapability,
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
@@ -81,6 +82,19 @@ export const ISS = TOPOLOGY.issuers.as;
 /** The second trust domain (LedgerCloud) for the cross-domain leg (M9). */
 export const RAS_ISS = TOPOLOGY.issuers.ras;
 
+/**
+ * D332: the AS capabilities the as-native target enables beyond the always-on
+ * issuance profile: exactly the issuance-only floor's `lifecycle-revoke`
+ * (#873) and `transaction-authorization`, where the remittance action-bound
+ * approval redeems its challenge. Every other optional capability is off, and
+ * so are the dev ordinary-token route (`dev-token`) and dev ordinary issuance.
+ * `src/docs/initial-runtime-deployment.md` §2 and §9 state the set.
+ */
+export const AS_NATIVE_CAPABILITIES: ReadonlySet<ProviderCapability> = new Set<ProviderCapability>([
+  "lifecycle-revoke",
+  "transaction-authorization",
+]);
+
 /** The cross-domain / real-issuance extras, present only with withAuthServer. */
 export interface AuthServerExtras {
   /** Base URL of the running AS provider (all OAuth endpoints derive from it). */
@@ -110,6 +124,12 @@ export interface AuthServerExtras {
   ) => Promise<{ grant: string; jti: string; audienceScoped: AuthorityEntry[] }>;
   /** Stop the AS HTTP listener (the exhibit calls this before exit). */
   closeAuthServer: () => void;
+  /**
+   * The capability set the AS was built with: {@link AS_NATIVE_CAPABILITIES}
+   * under the `as-native` target. Absent: the full reference assembly, every
+   * capability on.
+   */
+  capabilities?: ReadonlySet<ProviderCapability>;
 }
 
 export interface DemoStack {
@@ -227,11 +247,21 @@ export async function composeStack(opts: {
   writeReservationsFile?: string;
   /**
    * D284, D315: `as-native` assembles #253's first runtime target. It implies
-   * `withAuthServer`, mounts no MAS join route on the payments resource, and
-   * serves the HTTP MCP transport at the declared resource audience with DPoP
-   * verified on every request. Absent: the shared demo composition, unchanged.
+   * `withAuthServer`, builds the AS with exactly {@link AS_NATIVE_CAPABILITIES}
+   * (D332), mounts no MAS join route on the payments resource, and serves the
+   * HTTP MCP transport at the declared resource audience with DPoP verified on
+   * every request. Absent: the shared demo composition, unchanged.
    */
   target?: "as-native";
+  /**
+   * TEST FIXTURE ONLY (D332); `pnpm as-native` never sets it. Under the
+   * `as-native` target, also enable `dev-token` and dev ordinary issuance, so
+   * a negative test can mint the ordinary credential a baseline Join would
+   * present. A composition with this on is not the target's capability set,
+   * and nothing it shows bears on the target's enabled capabilities. The
+   * shared demo composition serves that route regardless.
+   */
+  testOrdinaryTokenMinting?: boolean;
   /**
    * @spec authority-server#mission-join (#557): the resources this deployment's
    * MAS join governs. Defaults to `config/mas-join.json` `governed_resources`,
@@ -338,6 +368,15 @@ export async function composeStack(opts: {
       ],
     ]);
     const approverServiceToken = crypto.randomUUID();
+    // D332: the as-native target's AS runs exactly AS_NATIVE_CAPABILITIES,
+    // plus `dev-token` only under the test fixture. The shared demo passes no
+    // set, which is the full reference assembly.
+    const ordinaryMinting = !asNative || opts.testOrdinaryTokenMinting === true;
+    const capabilities: ReadonlySet<ProviderCapability> | undefined = asNative
+      ? ordinaryMinting
+        ? new Set<ProviderCapability>([...AS_NATIVE_CAPABILITIES, "dev-token"])
+        : AS_NATIVE_CAPABILITIES
+      : undefined;
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
@@ -345,11 +384,13 @@ export async function composeStack(opts: {
         [approverServiceToken]: { principal_id: "svc:approver-console", scopes: [MISSION_APPROVAL_SCOPE],
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
       },
+      ...(capabilities ? { capabilities } : {}),
       // @spec authority-server#mission-join (#557) — the demo's MAS-governed
       // route acts under an ORDINARY OAuth credential, and no other path in
       // this deployment mints one. The AS itself is unchanged by the Join;
-      // this only gives the demo a plain token to present.
-      devOrdinaryIssuance: true,
+      // this only gives the demo a plain token to present. The as-native
+      // target mounts no such route and mints none (D332).
+      devOrdinaryIssuance: ordinaryMinting,
       transactionAuthorization: {
         challengeIssuers,
         ars,
@@ -523,6 +564,7 @@ export async function composeStack(opts: {
         asServer.close();
         void metadataServer?.close();
       },
+      ...(capabilities ? { capabilities } : {}),
     };
   } else {
     const asKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
