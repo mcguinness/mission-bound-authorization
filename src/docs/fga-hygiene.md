@@ -23,6 +23,23 @@ Decisions D26/D39, #828. How the PDP uses OpenFGA correctly.
   and model ids, reads the model back, verifies it is the domain model, and
   never creates or writes anything. The demo entrypoints attach when
   `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID` are set.
+- **Attach verification.** `Fga.attach` compares `modelFingerprint` of the
+  model read back with that of `DOMAIN_MODEL`. The fingerprint covers the
+  schema version; every relation, whether a rewrite or only metadata names
+  it; every rewrite, with both members of each object relation; each
+  directly related type's type, userset relation, wildcard and condition;
+  and the model's condition definitions (name, expression, typed
+  parameters). Ids, module and source information, and the empty forms a
+  server emits for unset members, do not change it. The domain model
+  declares no condition and no check sends condition context, so attach
+  refuses a model that declares a condition or makes a directly related
+  type conditional, and names each one:
+  - `Fga.attach verifies the configured model and never creates a store (@spec runtime#input-resource-policy, #828) > refuses a model whose only difference is a conditional entitlement, naming the relation and the condition`
+  - `Fga.attach verifies the configured model and never creates a store (@spec runtime#input-resource-policy, #828) > refuses a model that declares a condition no relation uses, naming the condition`
+  - `Fga.attach verifies the configured model and never creates a store (@spec runtime#input-resource-policy, #828) > refuses a model that differs from the domain model in any other fingerprinted semantic, reporting the mismatch`
+  - `Fga.attach verifies the configured model and never creates a store (@spec runtime#input-resource-policy, #828) > attaches to the domain model whether a server emits or omits its empty members: empty conditions, null metadata, absent object relation objects`
+  - `Fga.attach verifies the configured model and never creates a store (@spec runtime#input-resource-policy, #828) > the model fingerprint compares conditions: a condition on a directly related type and a condition's key, name, expression and parameters each change it; condition metadata does not`
+  - [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > a conditional model refuses attach: the domain model with one condition declared and one entitlement conditional on it, both named`
 - **Administration.** `FgaDomainAdmin` grants and revokes stored
   entitlements and moves an invoice between vendors. It refuses any tuple
   that is not a `user` entitlement on a vendor or invoice, or an invoice's
@@ -46,9 +63,10 @@ Decisions D26/D39, #828. How the PDP uses OpenFGA correctly.
 - **Authn/transport.** Pre-shared key + TLS (self-signed dev CA) per the
   channel matrix; the PDP validates the dev CA explicitly rather than
   disabling verification.
-- **Failure posture.** At startup, an unreadable store or model, or a model
-  that is not the domain model, refuses attach (`FgaAttachError`); nothing
-  falls back to creating a store or to an unpinned model. At decision time,
+- **Failure posture.** At startup, an unreadable store or model, a model
+  that uses a condition, or a model that is not the domain model refuses
+  attach (`FgaAttachError`); nothing falls back to creating a store or to
+  an unpinned model. At decision time,
   an unreachable OpenFGA, a timeout or a malformed answer is no answer: the
   Resource policy throws `ResourcePolicyUnavailableError`, the PDP issues no
   decision (co-resident, the call throws; remote, 503), and the PEP records
