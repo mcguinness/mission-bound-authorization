@@ -763,7 +763,33 @@ over the derived Authority Set ({{authorization-derivation}}).
 A Mission Intent is a JSON object describing the task. The client
 submits it as the `intent` member of the Submission envelope
 ({{submission-via-par}}), in place of `scope` or alongside a
-narrowed `scope`. It has the following members:
+narrowed `scope`.
+
+The client writes every member; how it produces them, for example
+through a Mission Shaper working from a natural-language
+instruction, is out of scope
+({{the-mission-the-plan-and-execution}}). The prose members (`goal`,
+`task_bounds`, `success_criteria`) bound authority only through
+disclosure: the Approver refuses authority the words do not support
+({{authorization-derivation}}). An AS that makes no use of an
+optional member still accepts it and records it with the Intent
+({{submission-processing}}). The smallest Intent carries only the
+three required members, as in the Submission envelope example
+({{submission-via-par}}). The following summary is informative; the
+member definitions after it are authoritative.
+
+| Member | Required | What the AS does with it |
+| --- | --- | --- |
+| `goal` | yes | Records it and renders it to the Approver as inert text; never interprets it |
+| `goal_lang` | no | Checks the language tag and uses it when rendering |
+| `target_resources` | yes | Bounds the resources a derived entry can name; can key a configured mapping |
+| `task_bounds` | no | Records it and renders it to the Approver as inert text; never interprets it |
+| `success_criteria` | no | Records it as disclosure and audit material; never interprets it |
+| `purpose` | no | Records it; can key a configured mapping; in any other decision can only lead to a refusal or stricter treatment |
+| `expires_at` | yes | Caps the Mission's effective expiry; refuses a malformed or past value |
+{: title="Mission Intent members at a glance"}
+
+The Mission Intent members are:
 
 `goal`:
 : REQUIRED. A string. A human-readable statement of the task,
