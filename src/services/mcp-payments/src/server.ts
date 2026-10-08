@@ -329,10 +329,12 @@ export const REVERSIBLE_WRITE_REFUSAL_ERRORS: Readonly<Record<string, string>> =
  * effect and the reservation back together); and after its commit but before
  * the response. The unkeyed write path (#1080) honors `atReverification` alone,
  * where concurrent presentations of one single-use permit interleave after
- * admission and before its redemption.
+ * admission and before its redemption. `atRetrieval` (D342) holds a retrieval
+ * after its permit-use check and before it consumes a single-use permit.
  */
 export interface ReversibleWriteFailpoints {
   atReverification?: () => Promise<void>;
+  atRetrieval?: () => Promise<void>;
   insideTransaction?: () => void;
   afterCommit?: () => void;
 }
@@ -1228,8 +1230,10 @@ export class McpPaymentsServer {
    * (scope, key) pair is resolved by {@link releaseRetained} and admits
    * nothing. With none, the attempt goes to admission and the effect.
    *
-   * @spec runtime#single-use-identifiers (#1136 review, D317): a permit
-   * carrying a `use_limit` this PEP cannot meter is refused before either.
+   * @spec runtime#single-use-identifiers (#1136 review, D317, D342): a permit
+   * carrying a `use_limit` this PEP cannot meter is refused before either;
+   * `use_limit: 1` is consumed by whichever of retrieval or admission the
+   * attempt reaches.
    */
   private async callKeyedReversibleWrite(
     tool: string,
@@ -1251,7 +1255,15 @@ export class McpPaymentsServer {
     } catch {
       return this.reservationUnavailable(attempt);
     }
-    if (found) return this.releaseRetained(attempt, pair.scope, found, singleUse ? pair.store : undefined);
+    if (found) {
+      return this.releaseRetained(
+        attempt,
+        pair.scope,
+        found,
+        singleUse ? { store: pair.store, retainUntilMs: singleUse.retainUntilMs } : undefined,
+        failpoints,
+      );
+    }
     return this.admitReversibleWrite(tool, token, res, beforeReverify, failpoints);
   }
 
@@ -1332,28 +1344,40 @@ export class McpPaymentsServer {
    * holds. Its one disposition is already recorded, so that last comparison
    * records nothing further.
    *
-   * @spec runtime#single-use-identifiers (#1136 review, D317): a permit
-   * carrying `use_limit: 1` names the store its single use is metered in,
-   * `singleUseIn`. Retrieval runs no effect, so it consumes nothing, but a
-   * permit whose identifier is already consumed is a re-presentation and is
-   * refused `permit_consumed` before anything is disclosed.
+   * @spec runtime#single-use-identifiers (#1080, D342): retrieval is a use of
+   * a single-use permit. A permit carrying `use_limit: 1` names, in
+   * `singleUse`, the store admission meters it in and the retention of its
+   * record. After the permit-use check and before the disposition or
+   * anything else is disclosed, its identifier is consumed there in one
+   * atomic insert: one already consumed, by an effect or by an earlier
+   * retrieval, is refused `permit_consumed`, and a store that cannot be
+   * written refuses `consumption_unavailable`; neither discloses the record.
+   * A later retrieval takes a fresh Decision. Retrieval still admits no
+   * operation and runs no effect.
    */
   private async releaseRetained(
     attempt: ExecutionAttempt,
     scope: WriteReservationScope,
     retained: WriteReservation,
-    singleUseIn?: WriteReservationStore,
+    singleUse: { store: WriteReservationStore; retainUntilMs: number } | undefined,
+    failpoints: ReversibleWriteFailpoints | undefined,
   ): Promise<WriteToolResult> {
     const current = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!current.ok) return { ok: false, refusal_reason: current.error };
-    if (singleUseIn) {
-      let consumed: boolean;
+    if (failpoints?.atRetrieval) await failpoints.atRetrieval();
+    if (singleUse) {
+      let first: boolean;
       try {
-        consumed = singleUseIn.permitConsumed(attempt.evaluationId);
+        first = singleUse.store.consumePermit({
+          evaluationId: attempt.evaluationId,
+          action: attempt.action,
+          executionId: attempt.executionId,
+          retainUntilMs: singleUse.retainUntilMs,
+        });
       } catch {
         return this.reservationUnavailable(attempt);
       }
-      if (consumed) return this.refuseSingleUse(attempt, "permit_consumed");
+      if (!first) return this.refuseSingleUse(attempt, "permit_consumed");
     }
     const conflict = retained.operationIdentity !== scope.operationIdentity;
     await this.deps.pep.suppressExecution(attempt, conflict ? "operation_identity_conflict" : "operation_already_claimed");
@@ -1446,7 +1470,16 @@ export class McpPaymentsServer {
       return this.reservationUnavailable(attempt);
     }
     if (outcome.kind === "existing") {
-      return this.releaseRetained(attempt, pair.scope, outcome.reservation, singleUse ? pair.store : undefined);
+      // @spec runtime#single-use-identifiers (D342): the concurrent-existing
+      // fallback consumes the permit too; the reservation read above it in the
+      // transaction consumed nothing.
+      return this.releaseRetained(
+        attempt,
+        pair.scope,
+        outcome.reservation,
+        singleUse ? { store: pair.store, retainUntilMs: singleUse.retainUntilMs } : undefined,
+        failpoints,
+      );
     }
     if (outcome.kind === "consumed") return this.refuseSingleUse(attempt, "permit_consumed");
     if (outcome.kind === "refused") {

@@ -12,7 +12,9 @@
  * releases nothing, also after a restart on the same file. The keyed writes
  * keep their idempotency-key control and carry no use limit; a `use_limit`
  * injected onto a keyed write's permit (#1136 review) is metered in the same
- * store, inside the reservation's transaction, never ignored.
+ * store, inside the reservation's transaction, never ignored. Releasing a
+ * retained result is a use too (D342): the retrieval consumes the permit
+ * before it discloses anything.
  *
  * A re-presentation is built by replaying a captured Decision in place of a
  * fresh one, the way a PEP that re-presents a Decision would. Every store is
@@ -372,5 +374,258 @@ describe("a use_limit a keyed write's permit carries is metered, never ignored (
     expect(h.store?.schedules().map((s) => s.state)).toEqual(["scheduled"]);
     expect(h.store?.reservations()).toHaveLength(1);
     h.store?.close();
+  });
+
+  it("a keyed presentation refused before admission's transaction burns nothing, and two concurrent presentations of that use_limit: 1 Decision under different keys schedule once", async () => {
+    const h = harness();
+    h.mutateDecision(withUseLimit(1));
+    // Refused at the final permit-use check (the permit expired during the
+    // awaited reads), which runs before the reservation's transaction.
+    const refused = await h.server.callWriteTool(
+      "schedule_payment",
+      { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+      TOKEN,
+      () => h.advance(301_000),
+    );
+    expect(refused).toEqual({ ok: false, refusal_reason: "permit_expired" });
+    expect(h.store?.consumedPermits()).toEqual([]);
+    const permit = h.lastDecision();
+    expect(conditionsOf(permit)?.use_limit).toBe(1);
+
+    // Back inside the window, the same unconsumed Decision presented twice at
+    // once under two keys, both held at the reverification barrier.
+    h.advance(-301_000);
+    h.mutateDecision(undefined);
+    h.replay(permit);
+    const atReverification = barrier(2);
+    const present = (key: string) =>
+      h.server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: key }, TOKEN, undefined, undefined, {
+        atReverification: atReverification.wait,
+      });
+    const results = await Promise.all([present(`idem_${randomUUID()}`), present(`idem_${randomUUID()}`)]);
+    expect(atReverification.arrived()).toBe(2);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.filter((r) => !r.ok)).toEqual([{ ok: false, refusal_reason: "permit_consumed" }]);
+    expect(h.store?.schedules().map((s) => s.state)).toEqual(["scheduled"]);
+    expect(h.store?.consumedPermits().map((c) => c.evaluationId)).toEqual([permit?.context.decision_id]);
+    h.store?.close();
+  });
+});
+
+/** A barrier that releases every waiter once `n` have arrived. */
+function barrier(n: number): { wait: () => Promise<void>; arrived: () => number } {
+  let count = 0;
+  let release: () => void = () => {};
+  const open = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return {
+    wait: async () => {
+      count += 1;
+      if (count === n) release();
+      await open;
+    },
+    arrived: () => count,
+  };
+}
+
+/**
+ * A harness whose PDP issues one schedule under a key with no use limit, the
+ * retained record later retrievals resolve against: the original result and
+ * the key it is retained under.
+ */
+async function scheduledUnderKey(h: Harness): Promise<{ key: string; result: unknown }> {
+  const key = `idem_${randomUUID()}`;
+  const original = await keyed(h, "schedule_payment", key);
+  expect(original.ok, JSON.stringify(original)).toBe(true);
+  expect(conditionsOf(h.lastDecision())?.use_limit).toBeUndefined();
+  return { key, result: original.result };
+}
+
+/** A fresh `use_limit: 1` Decision for `schedule_payment`, taken unconsumed: refused at admission before its transaction. */
+async function unconsumedSingleUsePermit(h: Harness): Promise<Decision | undefined> {
+  h.mutateDecision(withUseLimit(1));
+  const refused = await h.server.callWriteTool(
+    "schedule_payment",
+    { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+    TOKEN,
+    () => h.advance(301_000),
+  );
+  expect(refused).toEqual({ ok: false, refusal_reason: "permit_expired" });
+  h.advance(-301_000);
+  h.mutateDecision(undefined);
+  const permit = h.lastDecision();
+  expect(conditionsOf(permit)?.use_limit).toBe(1);
+  expect(h.store?.consumedPermits()).toEqual([]);
+  return permit;
+}
+
+/** The dispositions recorded against one evaluation identifier, in order. */
+const dispositionsOf = (h: Harness, d: Decision | undefined) =>
+  h
+    .executions()
+    .filter((e) => e.content.evaluation_id === d?.context.decision_id)
+    .map((e) => [e.content.outcome, e.content.error]);
+
+describe("retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342)", () => {
+  it("two retrievals under one identifier: the first releases the retained result and consumes the permit, the second is refused permit_consumed and discloses nothing", async () => {
+    const h = harness();
+    const original = await scheduledUnderKey(h);
+    h.mutateDecision(withUseLimit(1));
+    const first = await keyed(h, "schedule_payment", original.key);
+    expect(first).toEqual({ ok: true, deduped: true, result: original.result });
+    const permit = h.lastDecision();
+    expect(h.store?.consumedPermits().map((c) => c.evaluationId)).toEqual([permit?.context.decision_id]);
+
+    h.mutateDecision(undefined);
+    h.replay(permit);
+    const second = await keyed(h, "schedule_payment", original.key);
+    expect(second).toEqual({ ok: false, refusal_reason: "permit_consumed" });
+    expect(dispositionsOf(h, permit)).toEqual([
+      ["suppressed", "operation_already_claimed"],
+      ["suppressed", "permit_consumed"],
+    ]);
+    expect(h.store?.schedules()).toHaveLength(1);
+    h.store?.close();
+  });
+
+  it("a retrieval followed by admission under another key: the permit the retrieval consumed is refused permit_consumed and schedules nothing, even after a separately authorized cancellation", async () => {
+    const h = harness();
+    const original = await scheduledUnderKey(h);
+    h.mutateDecision(withUseLimit(1));
+    expect(await keyed(h, "schedule_payment", original.key)).toEqual({ ok: true, deduped: true, result: original.result });
+    const permit = h.lastDecision();
+
+    h.mutateDecision(undefined);
+    const cancelKey = `idem_${randomUUID()}`;
+    expect((await keyed(h, "cancel_scheduled_payment", cancelKey)).ok).toBe(true);
+    h.replay(permit);
+    const admitted = await keyed(h, "schedule_payment", `idem_${randomUUID()}`);
+    expect(admitted).toEqual({ ok: false, refusal_reason: "permit_consumed" });
+    expect(h.store?.schedules().map((s) => s.state)).toEqual(["cancelled"]);
+    expect(h.store?.reservations().map((r) => r.idempotencyKey)).toEqual([original.key, cancelKey]);
+    h.store?.close();
+  });
+
+  it("two concurrent retrievals of one unconsumed single-use Decision, held after their permit-use checks, release the retained result once", async () => {
+    const h = harness();
+    const original = await scheduledUnderKey(h);
+    const permit = await unconsumedSingleUsePermit(h);
+    h.replay(permit);
+    const atRetrieval = barrier(2);
+    const retrieve = () =>
+      h.server.callWriteTool(
+        "schedule_payment",
+        { invoice_id: "inv-1", idempotency_key: original.key },
+        TOKEN,
+        undefined,
+        undefined,
+        { atRetrieval: atRetrieval.wait },
+      );
+    const results = await Promise.all([retrieve(), retrieve()]);
+    expect(atRetrieval.arrived()).toBe(2);
+    expect(results.filter((r) => r.ok)).toEqual([{ ok: true, deduped: true, result: original.result }]);
+    expect(results.filter((r) => !r.ok)).toEqual([{ ok: false, refusal_reason: "permit_consumed" }]);
+    expect(h.store?.consumedPermits().map((c) => c.evaluationId)).toEqual([permit?.context.decision_id]);
+    expect(h.store?.schedules()).toHaveLength(1);
+    h.store?.close();
+  });
+
+  it("the concurrent-existing fallback consumes the losing permit: two single-use Decisions under one new key, both admitted, schedule once, and the loser's permit, though it only retrieved, is refused permit_consumed under another key", async () => {
+    const h = harness();
+    const issued: Decision[] = [];
+    h.mutateDecision((d) => {
+      const single = withUseLimit(1)(d);
+      issued.push(single);
+      return single;
+    });
+    const key = `idem_${randomUUID()}`;
+    const atReverification = barrier(2);
+    const present = () =>
+      h.server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: key }, TOKEN, undefined, undefined, {
+        atReverification: atReverification.wait,
+      });
+    const results = await Promise.all([present(), present()]);
+    expect(atReverification.arrived()).toBe(2);
+    const winner = results.find((r) => r.ok && !r.deduped);
+    expect(winner?.ok).toBe(true);
+    expect(results.filter((r) => r.deduped)).toEqual([{ ok: true, deduped: true, result: winner?.result }]);
+    expect(issued).toHaveLength(2);
+    const ids = issued.map((d) => d.context.decision_id);
+    expect(h.store?.consumedPermits().map((c) => c.evaluationId).sort()).toEqual([...ids].sort());
+
+    // The loser retrieved through the fallback; its permit is spent.
+    const loser = issued.find((d) => dispositionsOf(h, d).some(([, e]) => e === "operation_already_claimed"));
+    expect(loser).toBeDefined();
+    h.mutateDecision(undefined);
+    expect((await keyed(h, "cancel_scheduled_payment", `idem_${randomUUID()}`)).ok).toBe(true);
+    h.replay(loser);
+    expect(await keyed(h, "schedule_payment", `idem_${randomUUID()}`)).toEqual({ ok: false, refusal_reason: "permit_consumed" });
+    expect(h.store?.schedules().map((s) => s.state)).toEqual(["cancelled"]);
+    h.store?.close();
+  });
+
+  it("replay after a store reopen: a permit a retrieval consumed is refused permit_consumed by a new server on the same file, under its own key and under another", async () => {
+    const file = tempFile();
+    const before = harness({ file });
+    const original = await scheduledUnderKey(before);
+    before.mutateDecision(withUseLimit(1));
+    expect(await keyed(before, "schedule_payment", original.key)).toEqual({ ok: true, deduped: true, result: original.result });
+    const permit = before.lastDecision();
+    before.store?.close();
+
+    const after = harness({ file });
+    after.replay(permit);
+    expect(await keyed(after, "schedule_payment", original.key)).toEqual({ ok: false, refusal_reason: "permit_consumed" });
+    expect(await keyed(after, "schedule_payment", `idem_${randomUUID()}`)).toEqual({ ok: false, refusal_reason: "permit_consumed" });
+    expect(dispositionsOf(after, permit)).toEqual([
+      ["suppressed", "permit_consumed"],
+      ["suppressed", "permit_consumed"],
+    ]);
+    after.store?.close();
+  });
+
+  it("a fresh Decision still retrieves the original result and repeats no effect: a fresh single-use one after the first is consumed, and one with no use limit keeps the key control and consumes nothing", async () => {
+    const h = harness();
+    const original = await scheduledUnderKey(h);
+    h.mutateDecision(withUseLimit(1));
+    const spent = await keyed(h, "schedule_payment", original.key);
+    const spentPermit = h.lastDecision();
+    const fresh = await keyed(h, "schedule_payment", original.key);
+    const freshPermit = h.lastDecision();
+    expect(freshPermit?.context.decision_id).not.toBe(spentPermit?.context.decision_id);
+    expect([spent, fresh]).toEqual([
+      { ok: true, deduped: true, result: original.result },
+      { ok: true, deduped: true, result: original.result },
+    ]);
+    expect(h.store?.consumedPermits().map((c) => c.evaluationId)).toEqual([
+      spentPermit?.context.decision_id,
+      freshPermit?.context.decision_id,
+    ]);
+
+    // No use limit: the same Decision retrieves again, and nothing is consumed.
+    h.mutateDecision(undefined);
+    const unlimited = await keyed(h, "schedule_payment", original.key);
+    expect(unlimited).toEqual({ ok: true, deduped: true, result: original.result });
+    h.replay(h.lastDecision());
+    expect(await keyed(h, "schedule_payment", original.key)).toEqual({ ok: true, deduped: true, result: original.result });
+    expect(h.store?.consumedPermits()).toHaveLength(2);
+    expect(h.store?.schedules()).toHaveLength(1);
+    h.store?.close();
+  });
+
+  it("a consumed-identifier store that cannot be written refuses the retrieval consumption_unavailable and discloses nothing: no retained result and no retained-record disposition", async () => {
+    const h = harness();
+    const original = await scheduledUnderKey(h);
+    const store = h.store as WriteReservationStore;
+    store.consumePermit = () => {
+      throw new Error("the consumed-identifier table cannot be written");
+    };
+    h.mutateDecision(withUseLimit(1));
+    const refused = await keyed(h, "schedule_payment", original.key);
+    expect(refused).toEqual({ ok: false, refusal_reason: "consumption_unavailable" });
+    expect(dispositionsOf(h, h.lastDecision())).toEqual([["suppressed", "consumption_unavailable"]]);
+    expect(store.consumedPermits()).toEqual([]);
+    store.close();
   });
 });
