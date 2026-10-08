@@ -789,6 +789,19 @@ revocation of the mission (Section 11.12.4 of
 operation at the `mission_control_endpoint`, which AAuth Mission
 Management {{I-D.draft-mcguinness-mission-aauth-management}} defines.
 
+An accepted `update` can narrow or broaden the work under the same
+reference ({{reference}}).  The PS MUST NOT accept an update that
+broadens the work without the Supervisor's acceptance.  The Supervisor
+is the Person unless a deciding supervision server is configured for
+the agent ({{roles}}).  Under a deciding supervision server, the
+server's `allow` accepts the update and its `ask` requires the
+person's response (Section 10.3 of
+{{I-D.draft-hardt-aauth-supervision}}); the PS does not classify
+broadening itself to decide whether to consult the server, so a
+configured server can authorize broadening without a fresh human
+decision.  The Supervisor's acceptance is the approval of the new
+version ({{reference}}).
+
 Every mission approved under this binding MUST carry AAuth's
 `expires_at` member, and the PS MUST enforce it on every decision path
 as AAuth requires.  A proposal can request an expiry under AAuth
