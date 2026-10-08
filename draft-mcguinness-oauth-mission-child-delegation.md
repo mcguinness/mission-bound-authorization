@@ -319,9 +319,9 @@ design: the same sub-agent takes a delegated token when invoked
 inline and a Child Mission when parked on a queue. Audience is a
 second test: a delegated token reaches only a Mission-aware Resource
 Server ({{I-D.draft-mcguinness-oauth-mission}}), so a sub-agent that
-calls a Resource Server that is not Mission-aware runs under a Child
+calls a resource server that is not Mission-aware runs under a Child
 Mission even when invoked inline, where child creation is authorized
-({{fanout}}) and that Resource Server can enforce the authority
+({{fanout}}) and that resource server can enforce the authority
 projected to it; creating the child establishes neither condition.
 
 ## Relationship to In-Mission Delegation {#child-vs-act}
@@ -491,7 +491,8 @@ The child-creation token exchange carries:
 
   A `child_actor` MAY be identified at instance granularity where the
   deployment authenticates client instances
-  ({{I-D.draft-mcguinness-oauth-client-instance-id}}): the AS
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}): the authorization
+  server (AS)
   establishes that actor's identity, and its association with the
   authenticated instance, separately from the instance evidence
   ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 5), and
@@ -1180,10 +1181,10 @@ A Child Mission MUST be bounded by the Parent Mission:
 
 The Mission Issuer MUST compute the Child Mission's `authority_hash`
 over the child Authority Set, not over the parent Authority Set. A
-Resource Server enforces child tokens exactly as Mission-bound tokens:
+resource server enforces child tokens exactly as Mission-bound tokens:
 it enforces the carried `authorization_details`. The child
 `authority_hash` commits the child Authority Set on the child's
-Mission record; a Resource Server that must check carried authority
+Mission record; a resource server that must check carried authority
 against the complete set adopts Approved-Set Verification
 ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}}).
 
@@ -1972,8 +1973,8 @@ A conforming Child-Mission-capable Mission Issuer MUST:
 - implement cascade revocation; and
 - record child delegation evidence.
 
-A Resource Server does not need to understand this profile to enforce
-child tokens as Mission-bound tokens. A Resource Server MUST NOT apply
+A resource server does not need to understand this profile to enforce
+child tokens as Mission-bound tokens. A resource server MUST NOT apply
 lineage-sensitive policy from the `parent` member unless it implements
 the semantics of the parent-member ({{parent-member}}) and cascade
 ({{cascade}}) sections.
@@ -2213,7 +2214,7 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
-- Attenuation Rules: a Resource Server enforces a child
+- Attenuation Rules: a resource server enforces a child
   token's carried `authorization_details`; the child `authority_hash`
   commits the child Authority Set on the child's Mission record, and
   checking carried authority against the complete set is
@@ -2259,9 +2260,9 @@ apply unchanged.
   Authorization Server's issuer identifier. No wire change.
 
 - The delegated-token versus Child Mission test adds audience: a
-  sub-agent that calls a Resource Server that is not Mission-aware
+  sub-agent that calls a resource server that is not Mission-aware
   runs under a Child Mission, where child creation is authorized and
-  that Resource Server can enforce the projected authority.
+  that resource server can enforce the projected authority.
 
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by

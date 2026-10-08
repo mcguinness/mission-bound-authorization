@@ -168,7 +168,7 @@ these as abstract roles, so a non-OAuth binding can implement it
 without importing OAuth semantics. Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile")
 defines the Mission-bound access token: its claims, its issuance and
-delegation, and the validation a Resource Server applies to it.
+delegation, and the validation a resource server applies to it.
 
 Neither says which validated token values supply which runtime
 inputs, which OAuth mechanisms observe Mission state, or how a
@@ -179,7 +179,7 @@ work:
 
 | Specification | Owns |
 |---|---|
-| Issuance profile {{I-D.draft-mcguinness-oauth-mission}} | Token claims, issuance, delegation, and baseline Resource Server validation |
+| Issuance profile {{I-D.draft-mcguinness-oauth-mission}} | Token claims, issuance, delegation, and baseline resource server validation |
 | Runtime core {{I-D.draft-mcguinness-mission-runtime}} | Decision inputs, enforcement, freshness requirements, permits, and evidence obligations |
 | This document | The mapping between them, OAuth state-source integration, and classification metadata |
 
@@ -201,8 +201,8 @@ credential profile and uses the runtime core unchanged
 
 {::boilerplate bcp14-tagged}
 
-This specification uses the terms "access token", "Authorization
-Server", "client", "protected resource", "resource owner", and
+This specification uses the terms "access token", "authorization
+server", "client", "protected resource", "resource owner", and
 "Resource Server" from OAuth 2.0 {{RFC6749}} through the terminology
 incorporated by {{I-D.draft-mcguinness-oauth-mission}}. It uses Policy
 Enforcement Point (PEP), Policy Decision Point (PDP), established
@@ -244,12 +244,12 @@ The issuance profile defines that validation for both of its token
 forms; this document adds no validation step of its own:
 
 - A JWT access token is validated under the issuance profile's
-  Resource Server rules, which apply {{RFC9068}} and verify any
+  resource server rules, which apply {{RFC9068}} and verify any
   sender-constraint binding ({{I-D.draft-mcguinness-oauth-mission}},
   Section "Resource Server Enforcement").
 - An opaque access token is resolved under the issuance profile's
   introspected token consumption mode: introspection before each use,
-  an `active` response, the Resource Server's own identity in `aud`,
+  an `active` response, the resource server's own identity in `aud`,
   and a sender-constraint binding verified locally
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Introspected Token
   Consumption").
@@ -295,7 +295,7 @@ Token Consumption").
 
 A PEP MUST NOT ask a PDP to authorize an action from unverified token
 claims. If token validation fails, the PEP MUST refuse before runtime
-Mission evaluation. When the PEP is an OAuth Resource Server, it uses
+Mission evaluation. When the PEP is an OAuth resource server, it uses
 the normal OAuth error behavior for the protected resource (for
 example, Bearer token errors under {{RFC6750}}); this document defines
 no new OAuth error code.
@@ -446,7 +446,7 @@ bounds are:
   to a Mission under an externally established reference
   ({{token-validation}}), the authority that token carries as issued,
   established and enforced as the join profile defines (the Mission
-  Authority Server enforces it at the Resource Server or gateway,
+  Authority Server enforces it at the resource server or gateway,
   {{I-D.draft-mcguinness-mission-authority-server}}); and
 - the current effective authority: the approved Authority Set,
   narrowed by any narrowing mechanism the deployment runs. For a
@@ -460,7 +460,7 @@ A token narrowed below its Mission's approved Authority Set is
 therefore evaluated at its own narrower entry.
 
 Each entry is enforced under its type's own specification, as the
-issuance profile requires of a Resource Server
+issuance profile requires of a resource server
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server
 Enforcement"). For an entry of type `mission_resource_access`, the
 action's `resource` and invoked action or tool identity MUST be within
