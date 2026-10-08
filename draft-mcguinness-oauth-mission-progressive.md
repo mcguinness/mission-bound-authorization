@@ -455,6 +455,13 @@ replenish the predecessor's allowance of counted derivations:
   "Recovery is delivery"), counted against and gated by the
   successor's `derivation_limit`.
 
+The ceiling consent's disclosure ({{progressive-authorization}}) MUST
+state this inheritance, as Mission Derivation Limits' Approval
+Rendering section requires of a standing consent: policy-adjudicated
+successors carry forward the Mission's derivation count and never
+exceed its rendered `derivation_limit`, or, where the Mission has
+none, no finite limit is guaranteed for them.
+
 A successor created by a fresh human approval establishes its limit
 afresh, as Mission Derivation Limits states. This bounds counted
 derivations through the drawdown succession only, not a Mission's
@@ -845,6 +852,11 @@ convention, none of which require registration.
 
 -01
 
+- In-ceiling expansion: where Mission Derivation Limits is also
+  adopted, the ceiling consent's disclosure states that
+  policy-adjudicated successors carry the Mission's derivation count
+  and limit forward, or that no finite limit is guaranteed where the
+  Mission has none (#1119).
 - In-ceiling expansion: where Mission Derivation Limits is also
   adopted, a policy drawdown carries its predecessor's committed
   derivation count and limit forward (a stricter ceiling can narrow
