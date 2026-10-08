@@ -17559,7 +17559,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an out_of_authority or parameter_violation deny records authority_bound naming the bound that decided it (credential where the credential's own authority refused, mission where the Mission's own entry did), and no other decision carries it: a permit, a Resource-policy (FGA) deny, a missing relation mapping, a request fault, a lifecycle deny; the emitter refuses the member on a permit, on any other reason, or outside the two values"
+    "normative": "an out_of_authority or parameter_violation deny records authority_bound naming the bound that decided it (credential where the credential's own authority refused, mission where the Mission's own entry did), and no other decision carries it: a permit, a Resource-policy deny (resource_policy), a missing relation mapping, a request fault, a lifecycle deny; the emitter refuses the member on a permit, on any other reason, or outside the two values"
    },
    "level": "unit",
    "coverage": "tested",
@@ -17589,7 +17589,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "D322 kept D312's evidence requirement and moved it here (2b-ii); D324 extended it to parameter_violation; D340 ported #1134's authority_bound. A Resource-policy deny is out_of_authority on main and carries no bound; #1135 gives it its own reason, resource_policy."
+   "notes": "D322 kept D312's evidence requirement and moved it here (2b-ii); D324 extended it to parameter_violation; D340 ported #1134's authority_bound. #828 (#1135): a Resource-policy deny is resource_policy and carries no bound, witnessed in the no-bound test with the refusing Resource-policy fixture. The Mission's contextual FGA check refusing (fga.checkWithContext), which #828 files under bound 2, is out_of_authority and still names no bound, as before #828; whether it names mission is an open owner question."
   },
   {
    "id": "authzen.evidence.authority-bound-evaluation-order",

@@ -37,7 +37,7 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, RESOURCE_POLICY_REFUSES_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -210,6 +210,15 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     });
 
     it("names no bound on any other decision: Resource policy, a missing relation mapping, a request fault, a lifecycle deny, a permit", async () => {
+      // @spec authzen#evidence: absent on "a deny by Resource policy" (#828):
+      // the independently administered policy refusing, both authority bounds
+      // satisfied, is resource_policy and names no bound.
+      expect(await named(req(), view(), { resourcePolicy: RESOURCE_POLICY_REFUSES_ALL_FIXTURE })).toEqual({
+        reason: "resource_policy",
+        bound: undefined,
+      });
+      // The Mission's contextual FGA check refusing (#828 files it under the
+      // Mission's bound, bound 2) names no bound either, as before #828.
       const refusing = { fga: { checkWithContext: async () => false } as unknown as Fga };
       expect(await named(req(), view(), refusing)).toEqual({ reason: "out_of_authority", bound: undefined });
       const unmapped = view();
