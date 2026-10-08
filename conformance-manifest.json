@@ -123,12 +123,12 @@
     "content_sha256": "b0fcb6a467d70b0348ba62d7ec2a567cf49101c94e5e39ad4f5c8490258f521e"
    },
    "draft-mcguinness-mission-aauth-management.md": {
-    "revision": "82b9a7f5fee0fa1fc0620f6334896068c2c09d72",
-    "content_sha256": "53de224158cb22357ee0ead41a4fd40e378e7fcb8ef635ece641872291f2c6e9"
+    "revision": "d0a37139531a3af5c415ac2c28698fc367216114",
+    "content_sha256": "bc5fb10598d2164b5681a2738b6c37939f6a6c388d61338bd77c295493ce14e1"
    },
    "draft-mcguinness-mission-aauth.md": {
-    "revision": "dc8aa2e7218b4284dc76ae5c9c09862624a5f41b",
-    "content_sha256": "c705294f243633f57355be7fda4ef2d81c73620b000246bb8ddcc5083d2a985f"
+    "revision": "91554a9c972d9d22b9696e0d2d541514f9301e38",
+    "content_sha256": "a42a52957bd5853eb72e507ff5dc3e6138b9a9359d6c967d375c0f65c6157048"
    }
   }
  },
@@ -261,7 +261,8 @@
    "expansion.interactive-completion",
    "aauth.supervision-server",
    "aauth.supervision-proof",
-   "aauth-management.update-position"
+   "aauth-management.update-position",
+   "aauth-management.delegation-tree"
   ]
  },
  "profiles": [
@@ -32206,6 +32207,94 @@
    "notes": "#965 (D356). The examples are validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
   },
   {
+   "id": "aauth-management.delegation-tree.call-chain-edge",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "delegation-tree",
+   "text": "It contains `upstream_token` and `person_token`, each an object with the `iss` and `jti` of, respectively, the upstream token the intermediary presented and the Person Token the PS issued on it, and it does not contain `parent_agent`.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.delegation-tree"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each `call_chain` node names the intermediary as `agent` and, when token references are returned, carries the upstream token's and the issued Person Token's `(iss, jti)` as the PS recorded them, and never `parent_agent`; two hops on one upstream token appear as two nodes with distinct `person_token` values"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). The example is validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.delegation-tree.sub-agent-parent",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "delegation-tree",
+   "text": "A `sub_agent` node contains `parent_agent`.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.delegation-tree"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every `sub_agent` node carries `parent_agent`, the parent agent the PS verified for that sub-agent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). The example is validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.delegation-tree.token-refs-owning-agent",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "delegation-tree",
+   "text": "`tokens`, `upstream_token`, and `person_token` MAY be returned to a Person or authorized administrator and SHOULD be omitted from a response to an admitted Owning Agent unless required for that Agent's own revocation accounting",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.delegation-tree"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a delegation-tree response to an admitted Owning Agent omits `tokens`, `upstream_token`, and `person_token` unless they are required for that Agent's own revocation accounting"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). The example is validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.delegation-tree.token-refs-together",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "delegation-tree",
+   "text": "`upstream_token` and `person_token` are returned together or omitted together.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.delegation-tree"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a `call_chain` node carries both `upstream_token` and `person_token` or neither"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). The example is validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
    "id": "aauth.mission-log.supervision-decider",
    "spec": "draft-mcguinness-mission-aauth.md",
    "anchor": "mission-log",
@@ -32423,6 +32512,48 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
+  },
+  {
+   "id": "aauth.statement.chained-holder-identity",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "mission-substrate",
+   "text": "The holder of a chained person token is the intermediary, a separate actor whose agent identity the PS establishes from the intermediary's authenticated agent token and its own records",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a person token issued on an `upstream_token`, the PS's records name as holder the intermediary authenticated by its own agent token on the request, and keep the Mission's `agent` as the root actor; a `cnf` key match alone never establishes the intermediary's agent identity"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). Native AAuth tests are scoped to the #836 pilot's chained slice; no reference implementation of call chaining exists."
+  },
+  {
+   "id": "aauth.ref-propagation.chained-copy",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "When that upstream token carries `mission_s256`, the PS evaluates the request against that mission and copies `mission_s256` into the person token it issues",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a person token the PS issues on an `upstream_token` carrying `mission_s256` carries exactly that value, and the PS evaluated the request against that mission before issuing it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). Native AAuth tests are scoped to the #836 pilot's chained slice; no reference implementation of call chaining exists."
   }
  ]
 }
