@@ -41,7 +41,7 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
-import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE } from "../src/adapters/continuation-grant.js";
+import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE, presentedTokenAuthority } from "../src/adapters/continuation-grant.js";
 import { buildAuthorizationServer, type BuiltAs, SourceUnavailableError } from "../src/index.js";
 
 const PORT = 14480;
@@ -547,6 +547,78 @@ describe("the presented token's own authority bounds the family (@spec mission#s
     const body = (await res.json()) as { authorization_details?: unknown };
     expect(res.status, JSON.stringify(body)).toBe(200);
     expect(body.authorization_details).toEqual(narrow.authority);
+  });
+});
+
+describe("a retry recovers a recorded family only within the presented token (@spec mission#self-exchange rule 2, #1153 review, D353)", () => {
+  /** A broad family under one creation_request_id, plus a narrower and an equivalent token for the same Mission. */
+  async function broadFamily(crashed: boolean) {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const narrow = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() })).json()) as { access_token: string };
+    const equivalent = (await (await asyncDelegate(baseAccessToken)).json()) as { access_token: string };
+    const creationRequestId = crypto.randomUUID();
+    const res = await asyncDelegate(baseAccessToken, { creationRequestId }); // authorization_details omitted
+    const broad = (await res.json()) as { access_token: string; authorization_details: unknown };
+    expect(res.status, JSON.stringify(broad)).toBe(200);
+    if (crashed) {
+      // The crash window: the family exists and was counted, but no response was delivered.
+      const grants = as.delegationFamilyStore.familiesForMission(missionId);
+      const grantId = grants[grants.length - 1];
+      as.kernel.db
+        .prepare("UPDATE creation_idempotency SET state = 'reserved', mission_id = NULL, completed_at = NULL, delivery_json = ? WHERE creation_request_id = ?")
+        .run(JSON.stringify({ grant_id: grantId, target: RESOURCE }), creationRequestId);
+    }
+    return { narrow: narrow.access_token, equivalent: equivalent.access_token, creationRequestId, broad };
+  }
+
+  for (const crashed of [false, true]) {
+    const state = crashed ? "created before a crash" : "completed";
+    it(`refuses a narrower token recovering a broader family ${state}, with authorization_details omitted`, async () => {
+      const f = await broadFamily(crashed);
+      const retry = await asyncDelegate(f.narrow, { creationRequestId: f.creationRequestId });
+      const body = (await retry.json()) as { error?: string; error_description?: string };
+      expect(retry.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toContain("presented token");
+    });
+
+    it(`recovers a family ${state} with an equivalent replacement token`, async () => {
+      const f = await broadFamily(crashed);
+      const retry = await asyncDelegate(f.equivalent, { creationRequestId: f.creationRequestId });
+      const body = (await retry.json()) as { access_token?: string; authorization_details?: unknown };
+      expect(retry.status, JSON.stringify(body)).toBe(200);
+      expect(body.authorization_details).toEqual(f.broad.authorization_details);
+      if (!crashed) expect(body.access_token).toBe(f.broad.access_token);
+    });
+  }
+});
+
+describe("a no-actor exchange is open only to the Mission's approved agent (@spec mission#self-exchange rule 1, #1153 review, D353)", () => {
+  it("refuses invalid_request when the authenticated client is not the Mission Record's client_id, though the token names it", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    // The AS never issues such a token; the Mission Record is changed under it.
+    as.kernel.db.prepare("UPDATE missions SET client_id = ? WHERE id = ?").run("another-approved-agent", missionId);
+    const res = await asyncDelegate(baseAccessToken);
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("approved agent");
+  });
+});
+
+describe("presentedTokenAuthority reads a token's authority in full or not at all (@spec mission#self-exchange rule 2, #1153 review, D353)", () => {
+  const entry = { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] };
+  it("returns the entries of a well-formed authorization_details", () => {
+    expect(presentedTokenAuthority({ authorization_details: [entry] })).toEqual([entry]);
+  });
+  it.each([
+    ["absent", {}],
+    ["empty", { authorization_details: [] }],
+    ["not an array", { authorization_details: entry }],
+    ["an entry without its resource", { authorization_details: [{ type: entry.type, actions: entry.actions }] }],
+    ["an entry with a non-string action", { authorization_details: [{ ...entry, actions: [1] }] }],
+  ])("returns nothing for authorization_details that is %s", (_label, claims) => {
+    expect(presentedTokenAuthority(claims as Record<string, unknown>)).toBeUndefined();
   });
 });
 
