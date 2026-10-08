@@ -87,6 +87,15 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-hardt-aauth-supervision:
+    title: "AAuth Supervision"
+    target: https://github.com/dickhardt/AAuth/blob/70d67375deb0bb002af7da0711fc58f6e8926e7e/draft-hardt-aauth-supervision.md
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026-10-03
+    refcontent: "Work in Progress, editor's copy at commit 70d67375, not submitted as an Internet-Draft"
 
 --- abstract
 
@@ -385,9 +394,19 @@ The AAuth roles map to the Mission Context model as follows:
 |---|---|
 | Agent | Proposes work, verifies and stores the approved blob, names the mission at person-token issuance, supplies justifications, and records actions as AAuth requires. |
 | Person Server | Acts as controlling authority, conducts approval and clarification, stores state and the mission log, and governs requests on PS endpoints. |
-| Person | Reviews, clarifies, approves, and accepts completion through the PS. |
+| Person | Reviews, clarifies, and approves through the PS when the Person is the Supervisor or a supervision server asks, and accepts completion through the PS. |
+| Supervisor | Performs supervision (Section 4.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}): the Person by default, or the deciding supervision server the PS consults for the agent ({{I-D.draft-hardt-aauth-supervision}}). |
 | Resource | Defines and enforces its resource authorization; copies `mission_s256` unchanged from the presented token into each resource token it issues, as AAuth requires. |
 | Access Server | Evaluates resource policy and issues auth tokens in federated access; it does not evaluate the private mission blob. |
+
+For supervision decisions within this binding's scope, a PS with a
+configured deciding supervision server obtains that server's decision
+(Section 6 of {{I-D.draft-hardt-aauth-supervision}}).  The PS retains
+responsibility for verification, enforcement, issuance, and recording.
+Management authorization, revocation, and the person's acceptance of
+completion ({{lifecycle}}) are unchanged; AAuth Supervision excludes the
+first two from supervision (Section 1.3 of
+{{I-D.draft-hardt-aauth-supervision}}).
 
 No AAuth party becomes an OAuth client, authorization server, or resource
 server merely by implementing this binding.
