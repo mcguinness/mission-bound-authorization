@@ -1089,8 +1089,12 @@ The contextual-governance kernel maps as follows:
    `client_id` ({{blob}}, {{roles}}).
 4. **Approved Context**: the private approved mission blob, delivered
    as the approval envelope's base64url `mission` member and immutable
-   under the exact-byte `s256` commitment over its decoded bytes; it is
-   never disclosed to Resources or Access Servers.  Both governance
+   under the exact-byte `s256` commitment over its decoded bytes, and
+   each later version an accepted update approves: the blob plus the
+   accepted updates through it, immutable and identified by the
+   Mission Reference and its position in the accepted-update sequence,
+   by the kernel's new-version route ({{reference}}, {{lifecycle}}).
+   None of it is disclosed to Resources or Access Servers.  Both governance
    parties retain the decoded blob, satisfying the kernel's
    maintained-value branch; `s256` is verification material for
    holders, and AAuth fixes its algorithm at SHA-256 with no migration
@@ -1134,7 +1138,7 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 | Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, person-token issuance under a named or upstream-inherited mission, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and intentionally missionless requests, admitted by policy with no required or inherited association, are outside the claim; a failed required association is rejected, never treated as missionless ({{ref-propagation}}); the post-transition residual is bounded by person-token and auth-token lifetime and `expires_at` |
 | State-Observable | supplied | the AAuth Mission Management status operation active ({{I-D.draft-mcguinness-mission-aauth-management}}) | Authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable | The base binding exposes no consumer-facing state source; token acceptance is not observation |
 | Structured Authority | not supplied | -- | -- | The mission description is private prose and `approved_tools` is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary |
-| Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary |
+| Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary; an accepted update can broaden the work under the same reference with the Supervisor's acceptance ({{lifecycle}}), so the binding offers no containment guarantee |
 | Credential-Bound | supplied | PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering, and the PS's delivery check rejects one that omits or alters the claim ({{ref-propagation}}) |
 | Authorized Context Correlation | not supplied | -- | -- | The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined |
 | Independently Verifiable | not supplied | -- | -- | `s256` proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties |
