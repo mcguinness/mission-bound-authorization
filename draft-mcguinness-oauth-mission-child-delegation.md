@@ -795,7 +795,8 @@ order, refusing on the first failure:
    ({{strict-subset}}), and apply fan-out controls.
 9. Determine subset derivation versus fresh approval and complete per
    {{completion}}: synchronous, deferred, or interactive.
-10. At the creation commit, re-verify parent state ({{creation-race}}),
+10. At the creation commit, re-verify parent state ({{creation-race}})
+    and the inherited authority source ({{record-requirements}}),
     create the Child Mission record with `parent` and the completed
     `(client, creation_request_id)` reservation atomically
     ({{creation-idempotency}}), and record Child Evidence.
@@ -1146,6 +1147,29 @@ and re-approves the referenced policy's content as a standing
 consent of its own, `approved_at` is that policy version's
 human-approval instant, verified from the deployment's retained
 governance record.
+
+The child's `subject` follows its basis:
+
+- Under `policy_drawdown`, it MUST equal the Parent Mission's
+  `subject`.
+- Under `direct`, it is the Parent Mission's `subject` unless the
+  human approval event establishes another Subject through the
+  issuance profile's Subject and authority-source establishment in
+  full ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+  Approval"): never from client input, with the Approver authorized
+  to approve for that Subject and to activate the child's authority
+  source. This document defines no request parameter that names a
+  Subject, and {{attenuation}} bounds the child either way.
+
+A Child Mission's `authority_source` MUST equal the Parent Mission's,
+including an `organizational` source's `policy` reference; a carryover
+replacement's follows {{carryover-records}} instead. Copying the
+source establishes no authority: at the creation commit, the Mission
+Issuer MUST verify that the source applies to the child's `subject`
+and that the child Authority Set lies within the source's ceiling as
+it stands at that commit, as well as within the parent's
+({{strict-subset}}), and MUST refuse the creation otherwise. The same
+commit rechecks the effective expiry ({{attenuation}}).
 
 # Attenuation Rules {#attenuation}
 
@@ -1970,6 +1994,9 @@ A conforming Child-Mission-capable Mission Issuer MUST:
   as `consent_principal`, and `policy_drawdown` for one policy
   adjudicates, with the Parent Mission's human `approver` as
   `consent_principal`;
+- record each child's `subject` per its basis and the parent's
+  `authority_source`, verifying that source at the creation commit
+  ({{record-requirements}});
 - implement cascade revocation; and
 - record child delegation evidence.
 
@@ -2213,6 +2240,15 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission Record Requirements: a `policy_drawdown` child has the
+  Parent Mission's `subject`; a `direct` child defaults to it and
+  names another Subject only through the issuance profile's full
+  Subject and authority-source establishment. Every ordinary child
+  carries the parent's `authority_source`, and its creation commit
+  verifies that the source applies to the child's Subject and that the
+  child Authority Set lies within the source's current ceiling and the
+  parent's; carryover keeps its own source rules (#1118).
 
 - Attenuation Rules: a resource server enforces a child
   token's carried `authorization_details`; the child `authority_hash`
