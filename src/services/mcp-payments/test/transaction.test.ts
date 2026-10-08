@@ -18,6 +18,7 @@ import {
   EvidenceStore,
   type ExecutionEvidence,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   parameterDigest,
   PaymentsStore,
   Pep,
@@ -190,6 +191,7 @@ function build(
     ...(opts.challengeSigner ? { challengeSigner: opts.challengeSigner } : {}),
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,

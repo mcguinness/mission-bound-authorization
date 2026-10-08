@@ -19,6 +19,7 @@ import {
   dpopProofFor,
   EvidenceStore,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   type TokenFacts,
@@ -142,6 +143,7 @@ beforeAll(async () => {
   holder = await generateKeyPair("ES256", { extractable: true });
   holderJkt = await calculateJwkThumbprint(await exportJWK(holder.publicKey));
   server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep: undefined as never, // token validation alone never reaches the PEP
     payments: new PaymentsStore(),
     loadView: () => undefined,

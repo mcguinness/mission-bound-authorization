@@ -1558,6 +1558,14 @@ async function evaluateInner(
   // send_remittance_email (external_commitment) permit never carried a use
   // limit at all: a genuine value-level bug this migration also fixes.
   const highConsequence = HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass ?? "");
+  // @spec runtime#permit-binding (#1080, D317): a reversible consequential
+  // write takes "either a single-use decision identifier or a short validity
+  // window combined with an idempotency key". One whose selected declaration
+  // is not the key control (no published window) takes single use: the
+  // statement publishes `single_use_decision_identifier` as the class default
+  // (D333), and an undeclared operation gets the same, so no
+  // `consequential_write` permit leaves here carrying neither control.
+  const singleUseDefault = actionClass === "consequential_write" && reversibleWriteMaxSeconds === undefined;
 
   // 8b. Reversible-write key control (@spec runtime#permit-binding, #918):
   // "a short validity window combined with an idempotency key that prevents
@@ -1638,7 +1646,7 @@ async function evaluateInner(
       entry_digest: committedEntryDigest(view.issuer, entry),
       conditions: {
         valid_until: validUntil,
-        ...(highConsequence ? { use_limit: 1 } : {}),
+        ...(highConsequence || singleUseDefault ? { use_limit: 1 } : {}),
         ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
         // @spec authzen#response-context `action_phase` — the LIVE permit
         // binding: the validated request phase, echoed so the executing PEP

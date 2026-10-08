@@ -324,6 +324,7 @@ describe("the PEP establishes token validity before using any of its claims as d
       instanceEpoch: "epoch-1",
     });
     const server = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
       pep,
       payments,
       loadView: () => undefined,

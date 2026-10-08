@@ -19,6 +19,7 @@ import {
   createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   parameterDigest,
   PaymentsStore,
   Pep,
@@ -89,6 +90,7 @@ function build(): { pep: Pep; server: McpPaymentsServer } {
     instanceEpoch: "epoch-1",
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView: nonconformingLoadView,

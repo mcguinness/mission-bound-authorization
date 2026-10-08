@@ -27,6 +27,7 @@ import {
   type DecisionEvidence,
   EvidenceStore,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   PaymentsToolCatalog,
   Pep,
@@ -97,6 +98,7 @@ async function build(catalogSource?: () => string) {
   });
   const kp = await generateKeyPair("ES256", { extractable: true });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,

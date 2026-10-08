@@ -27,6 +27,7 @@ import {
   EvidenceStore,
   type HttpMcpChannel,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   TransactionEngine,
@@ -346,6 +347,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
     });
     const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: Record<string, unknown>[] };
     rs = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
       pep,
       payments,
       loadView,

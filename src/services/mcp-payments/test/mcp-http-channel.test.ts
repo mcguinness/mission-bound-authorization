@@ -35,6 +35,7 @@ import {
   EvidenceStore,
   type HttpMediatedClient,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   type TokenFacts,
@@ -180,6 +181,7 @@ async function build(): Promise<{
     instanceEpoch: "epoch-1",
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,
@@ -572,6 +574,7 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
       },
     });
     const server = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
       pep,
       payments,
       loadView,
