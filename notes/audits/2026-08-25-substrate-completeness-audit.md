@@ -417,3 +417,20 @@ inventory in (a) is unaffected and no fresh audit is warranted.
 `candidate-gate.json` now attests these bytes: `report.document_sha256`
 records them and `audited_by` names `0ddf5037`, where the substrate has
 them.
+
+## (i) Re-review, 2026-10-07
+
+The substrate's bytes changed again, to sha256
+`4674e17b5206d3eb54dba9c939b61208d9bb985b4955289ab2c53279a9e3a255`
+(commit `9bbb9ad7`, #876's family-wide role-noun pass, D337). The
+complete diff from the bytes (h) attests is editorial: four generic
+role nouns lowercased ("authorization server") and, in the Family Use
+vocabulary table, "the AS" spelled out as "the OAuth authorization
+server".
+
+No BCP 14 keyword line changed: the ordered keyword sequence is
+identical (105 to 105), with no anchor lost or added. The clause-level
+inventory in (a) is unaffected and no fresh audit is warranted.
+`candidate-gate.json` now attests these bytes: `report.document_sha256`
+records them and `audited_by` names `9bbb9ad7`, where the substrate has
+them.

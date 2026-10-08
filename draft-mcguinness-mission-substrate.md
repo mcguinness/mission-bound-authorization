@@ -196,7 +196,7 @@ language, evidence format, or identifier syntax.
 
 In particular, the kernel does not require:
 
-* an OAuth `client_id`, Authorization Server, or OAuth issuer
+* an OAuth `client_id`, authorization server, or OAuth issuer
   identifier;
 * JSON, JWT, or a member named `mission`;
 * `authorization_details` or any other particular structured
@@ -1145,7 +1145,7 @@ which a new substrate can locate itself.
 ## OAuth-Native Mapping: The Broad-Claims Pole
 
 The OAuth binding can intentionally claim a broad set of capabilities.
-Its Authorization Server can act as Controller, OAuth identifiers can
+Its authorization server can act as Controller, OAuth identifiers can
 instantiate Actor and subject mappings, and protected access-token
 fields can supply Credential-Bound.  Registered authorization-detail
 types can supply Structured Authority: each type's semantics owner
@@ -1165,7 +1165,7 @@ follow from a Mission identifier or hash alone.
 ## Standalone MAS Mapping: The Separation-and-Join Pole
 
 The MAS separates Mission governance from an otherwise unchanged
-Authorization Server.  It can satisfy the kernel and can provide
+authorization server.  It can satisfy the kernel and can provide
 Structured Authority and Monotonic Derivation for operations it owns.
 It does not, by itself, prove that an OAuth access token was issued
 under a Mission.
@@ -1174,7 +1174,7 @@ A verified join can establish correlation, and a
 cooperating credential issuer can add stronger lifecycle and
 credential-binding properties.  The MAS Statement needs to describe
 those with their activation conditions and preserve the boundary
-between MAS assertions and Authorization Server behavior.
+between MAS assertions and authorization server behavior.
 
 ## AAuth-Native Mapping: The Private-Context Pole
 
@@ -1216,7 +1216,7 @@ contract was generalized from.  The terms correspond as follows:
 | --- | --- |
 | Mission Context | Mission |
 | Mission Reference | Mission Identifier |
-| Controller | Mission Issuer, where the binding issues; natively the AS, MAS, UMA authorization server, or AAuth PS |
+| Controller | Mission Issuer, where the binding issues; natively the OAuth authorization server, MAS, UMA authorization server, or AAuth PS |
 | Actor | the authenticated acting client or agent |
 | Approver | for a direct approval, the Approver (`consent_principal`); under a standing-consent basis, see below |
 | Approval event | approval event: the atomic, adjudicated creation of a Mission under its `approval_basis`, for every basis |
