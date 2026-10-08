@@ -21,7 +21,9 @@
  * ({@link WriteReservationStore.consumePermit}), so it survives a restart
  * with the rest of the file. A keyed write whose permit carries `use_limit`
  * is metered in the same table, inside its reservation's transaction
- * ({@link WriteReservationStore.reserve}).
+ * ({@link WriteReservationStore.reserve}), and a retrieval of a retained
+ * result takes that permit's single use with one `consumePermit` insert
+ * before anything is disclosed (D342).
  *
  * The reversible effect itself, a payment schedule, lives in the same file,
  * so the effect and its completed reservation and result commit in ONE local

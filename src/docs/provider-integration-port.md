@@ -994,7 +994,7 @@ Mission-bound token through the assembled path (#1105).
   - Keyed reversible writes: the PEP reserves the key in its own SQLite store
     and commits the effect, the reservation and the result in one local
     transaction (`server.ts:1453`;
-    `services/mcp-payments/src/write-reservations.ts:279`).
+    `services/mcp-payments/src/write-reservations.ts:281`).
   - Single-use permits on the unkeyed write path: the statement publishes
     `single_use_decision_identifier` as the `consequential_write` class
     default (D333), and the PDP sets `use_limit: 1` on every
@@ -1106,7 +1106,7 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
   closes `indeterminate`. `reconcileClaims`
   (`services/mcp-payments/src/claim-reconciliation.ts:47`) and `reconcile`
   (`services/mcp-payments/src/reconcile.ts:21`) implement it, and the
-  reservation store has `sweep()` (`write-reservations.ts:428`).
+  reservation store has `sweep()` (`write-reservations.ts:430`).
 - **Boundary.** None of them runs: no production code calls them.
 - **Asynchronous work.** Reconciliation would be the overlay's only
   asynchronous work.
