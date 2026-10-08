@@ -80,6 +80,15 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-hardt-aauth-supervision:
+    title: "AAuth Supervision"
+    target: https://github.com/dickhardt/AAuth/blob/70d67375deb0bb002af7da0711fc58f6e8926e7e/draft-hardt-aauth-supervision.md
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026-10-03
+    refcontent: "Work in Progress, editor's copy at commit 70d67375, not submitted as an Internet-Draft"
 
 --- abstract
 
@@ -478,6 +487,14 @@ channel, and MUST NOT apply the service's administrative privilege.
 How the service conveys the human's identity is a deployment trust
 relationship this document does not define, and the PS relies on it
 only for a service it registers for that purpose.
+
+A supervision server ({{I-D.draft-hardt-aauth-supervision}}) is not a
+Management Principal by virtue of supervising: it only answers the PS
+(Section 7.1 of {{I-D.draft-hardt-aauth-supervision}}).  The PS MAY
+register the server's operator as a management service under this
+section; the registered metadata then needs the `jwks_uri` that AAuth
+Supervision leaves optional (Section 5 of
+{{I-D.draft-hardt-aauth-supervision}}).
 
 ## Owning Agent
 
@@ -1244,6 +1261,11 @@ native choices.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A supervision server is not a Management Principal by virtue of
+  supervising; the PS may register its operator as a management
+  service, whose metadata then needs the `jwks_uri` AAuth Supervision
+  leaves optional (#967).
 
 - Person Tokens are Tracked Credentials: the PS retains them, counts
   them in `token_residual`, revokes them at the Resource in `aud` and at
