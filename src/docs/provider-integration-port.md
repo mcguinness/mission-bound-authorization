@@ -889,7 +889,7 @@ drives an AS-issued Mission-bound token through that assembled path.
   - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > binds a session to the holder that opened it: every request on it is authenticated, and another holder's credential carrying its id is answered 404 Session not found before the PEP` (HTTP transport, assembled path) and `MCP sessions on the HTTP channel (D315, #1105) > dispatches a request on a session only for its holder: another key, subject or client is answered 404 Session not found and reaches no handler, and a refused credential is answered 401` (HTTP transport, stubbed payments server)
 - **Required, not met.** The PDP neither receives nor evaluates the
   credential authority: it matches the kernel's current Authority Set
-  (`evaluate.ts:1110-1117`). D312 splits the rest of #825 into three PRs: 2a
+  (`evaluate.ts:1127-1134`). D312 splits the rest of #825 into three PRs: 2a
   pins each signing key to its token role; 2b adds the
   `context.credential.authority` carrier, PDP enforcement independent of the
   PEP, the PEP pre-check redesign and `context.credential.expires_at`
