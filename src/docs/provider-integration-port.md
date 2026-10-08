@@ -802,7 +802,7 @@ operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) are true at
-`7ed2505b`, and every `file:line` citation is read there.
+`001183f5`, and every `file:line` citation is read there.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -870,7 +870,7 @@ drives an AS-issued Mission-bound token through that assembled path.
   own `authorization_details`, read as the credential's authority. A token
   that fails the profile is refused, never demoted to the ordinary class.
   Before the PDP is asked, the PEP refuses `out_of_authority` for an action
-  outside that authority, one whole entry at a time (`pep.ts:1331-1365`).
+  outside that authority, one whole entry at a time (`pep.ts:1372-1406`).
 - **Boundary.** In request, before any claim reaches a decision.
 - **Asynchronous work.** None.
 - **Crash and recovery.** The DPoP replay cache is in memory. Signing keys are
@@ -960,14 +960,14 @@ drives an AS-issued Mission-bound token through that assembled path.
   parameters from the payments store, never from tool arguments, and
   `parameterDigest` (`:83`) commits them into the decision request. Three
   separate PEP checks run at use:
-  - `verifyPermitAtUse` (`pep.ts:1980`) runs the permit-use table
-    (`pep.ts:418-458`): the permit's bound phase against the crossing's phase
+  - `verifyPermitAtUse` (`pep.ts:2021`) runs the permit-use table
+    (`pep.ts:419-459`): the permit's bound phase against the crossing's phase
     (`phase_mismatch`), then `valid_until` (`permit_expired`). It compares no
     digest.
-  - `reverifyCapability` (`pep.ts:2101`) re-checks the capability snapshot
+  - `reverifyCapability` (`pep.ts:2142`) re-checks the capability snapshot
     (`capability_source_unresolvable`).
-  - `reverify` (`pep.ts:2012`, a single-record operation) and `reverifyList`
-    (`pep.ts:2052`, a list read) re-derive the effective parameters and
+  - `reverify` (`pep.ts:2053`, a single-record operation) and `reverifyList`
+    (`pep.ts:2093`, a list read) re-derive the effective parameters and
     compare the digest (`parameter_mismatch`; a target that no longer resolves
     is also `parameter_mismatch`).
 - **Order and boundary, by dispatch path** (`dispatchPathFor`, called from
@@ -976,19 +976,19 @@ drives an AS-issued Mission-bound token through that assembled path.
     capability check, `reverifyList` for a list read, the permit-use table
     again, then the read. A single-record read re-derives no digest at use.
     Nothing is written.
-  - Write (`callWriteTool`, `server.ts:1059`): the permit-use table, the
+  - Write (`callWriteTool`, `server.ts:1064`): the permit-use table, the
     capability check, `reverify`, the permit-use table again, then the
     effect. For a keyed reversible write, the effect is the reservation
     transaction (§5.5). Nothing is written before it.
-  - Transaction tier (`callTransactionTool`, `server.ts:1316`): the
-    permit-use table at admission (`:1384`); single-use redemption (`:1426`),
+  - Transaction tier (`callTransactionTool`, `server.ts:1325`): the
+    permit-use table at admission (`:1400`); single-use redemption (`:1442`),
     which writes the engine's operation state; then the capability check
-    (`:1457`), the execution lease (`:1475`), `reverify` (`:1481`) and the
-    permit-use table again (`:1493`); then the `txn` consumption, where a
-    transaction token is presented, and the connector commit (`:1546-1557`).
+    (`:1473`), the execution lease (`:1491`), `reverify` (`:1497`) and the
+    permit-use table again (`:1509`); then the `txn` consumption, where a
+    transaction token is presented, and the connector commit (`:1562-1573`).
     A refusal after redemption marks the operation `abandoned` and records
     suppressed Execution Evidence, which settles the PDP claim `failed`
-    because the attempt is redeemed (`pep.ts:1908-1911`). The permit is spent;
+    because the attempt is redeemed (`pep.ts:1949-1952`). The permit is spent;
     a retry needs a fresh decision (code reading).
 - **Asynchronous work.** None.
 - **Crash and recovery.** The payments store is in memory and reseeded per
@@ -1014,14 +1014,14 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Hook.**
   - Transaction tier: the PDP claims (idempotency scope, `idempotency_key`)
     with the operation identity before issuing the permit
-    (`idempotency-claims.ts`). `callTransactionTool` (`server.ts:1316`)
+    (`idempotency-claims.ts`). `callTransactionTool` (`server.ts:1325`)
     redeems the permit once (`TransactionEngine.redeemPermit`,
-    `server.ts:1426`) under an execution lease, commits the connector effect,
+    `server.ts:1442`) under an execution lease, commits the connector effect,
     emits Execution Evidence and settles the claim (`settleClaim`,
-    `server.ts:1616`).
+    `server.ts:1632`).
   - Keyed reversible writes: the PEP reserves the key in its own SQLite store
     and commits the effect, the reservation and the result in one local
-    transaction (`server.ts:1279`;
+    transaction (`server.ts:1288`;
     `services/mcp-payments/src/write-reservations.ts:228`).
   - Other paths redeem nothing; each crossing takes a fresh decision.
 - **Boundary.** The claim insert is one transaction in the PDP's store.
@@ -1048,10 +1048,10 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Hook.** The PDP emits Decision Evidence for every decision. The PEP
   verifies it (byte equality, signature, emitter-bound key, role, audience)
   before release, refusing `decision_evidence_unverifiable` otherwise
-  (`pep.ts:1565-1577`). The PEP emits Refusal Records (`pep.ts:2116-2177`) and
-  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1876-1919`). The
+  (`pep.ts:1606-1618`). The PEP emits Refusal Records (`pep.ts:2157-2218`) and
+  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1917-1960`). The
   executor emits `completed` Execution Evidence after a connector commit
-  (`server.ts:1586-1617`). The record table is the contract's §6.
+  (`server.ts:1602-1633`). The record table is the contract's §6.
 - **Boundary.** Synchronous, inside the request.
 - **Asynchronous work.** None.
 - **Crash and recovery.** `EvidenceRetentionStore` is in memory as shipped
