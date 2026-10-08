@@ -901,7 +901,7 @@ A client tells three cases apart:
 - **Stop.** While the Mission stays out of the `active` state,
   neither a retry nor a fresh grant cures the refusal. The AS SHOULD
   include the issuance profile's `mission_error` member
-  (`mission_revoked`, `mission_expired`, or `mission_superseded`;
+  (`revoked`, `expired`, or `superseded`;
   {{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating").
   A client that requests a fresh grant is refused at the MAS with
   `mission_not_active` ({{minting-errors}}), the authoritative signal
