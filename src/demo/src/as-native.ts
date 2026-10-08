@@ -61,8 +61,8 @@ export interface AsNativeLaunch {
 /**
  * Start the as-native target from `options`. Refuses any composition but the
  * target itself: another target, or the test-only ordinary-token minting
- * fixture, which the launcher never enables (D332). A failed startup has
- * released what it opened before the error reaches the caller.
+ * fixture, which the launcher never enables (D332). A taken AS or audience
+ * port refuses with all it opened released; the launcher exits on others.
  */
 export async function launchAsNative(options: ComposeStackOptions): Promise<AsNativeLaunch> {
   if (options.target !== "as-native") {
