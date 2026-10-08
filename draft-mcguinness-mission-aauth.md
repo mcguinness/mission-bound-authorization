@@ -1181,6 +1181,16 @@ incremental deployment remain distinct concerns.
 
 \[\[ To be removed from the final specification ]]
 
+- An accepted update approves a new immutable version of the Approved
+  Context, identified by the Mission Reference and its position in the
+  accepted-update sequence; `mission_s256` commits to the original
+  blob only, and a pending or rejected update is part of no version.
+  The PS must not accept a broadening update without the Supervisor's
+  acceptance; under a deciding supervision server, its `allow` accepts
+  and its `ask` requires the person, so a configured server can
+  authorize broadening without a fresh human decision. The Statement
+  names the versions and disclaims any containment guarantee (#965).
+
 - Maps AAuth's Supervisor role and defines an agent's deciding
   supervision server. A PS with one obtains that server's decision for
   supervision decisions and keeps verification, enforcement, issuance,
