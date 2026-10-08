@@ -17,8 +17,8 @@ production-readiness or interoperability claim (D284 ruling 1).
 Every behavioral statement is true of the reference implementation read at
 origin/main `e9001b2f`, and each statement about the as-native target and its
 launcher (#1105), or naming a later merged issue (such as #1104), at
-`001183f5`. Each cites the function (`file:line`, read at
-`001183f5`, paths relative to `src/`) or the exact test (`describe > it`)
+`2bdebaaf`. Each cites the function (`file:line`, read at
+`2bdebaaf`, paths relative to `src/`) or the exact test (`describe > it`)
 that shows it. A path with no
 witnessing test says "no test yet". Tests marked [FGA] are skipped without a
 live OpenFGA, so a local run can pass where CI with OpenFGA fails, or the
@@ -71,7 +71,7 @@ so this target cannot pass acceptance while either is missing.
 
 ## 2. Dimension contract
 
-| Dimension | Adopted (D284, D293) | Reference at `e9001b2f` (citations read at `001183f5`) | Status | Gap owner |
+| Dimension | Adopted (D284, D293) | Reference at `e9001b2f` (citations read at `2bdebaaf`) | Status | Gap owner |
 |---|---|---|---|---|
 | Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `pnpm as-native` (§11) runs `composeStack({ target: "as-native" })` (`demo/src/stack.ts:232`): the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:350-352`) with the D332 capability set below, the PEP `mcp-payments-pep` (`stack.ts:822-824`) served over HTTP MCP at the resource audience `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:72`), the PDP (`stack.ts:655`), OpenFGA, and the in-process approval service: `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience`. The AS JWKS is fetched once at assembly (`stack.ts:472`) | Partial | JWKS reload: #831 |
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation over HTTP MCP, with a DPoP proof verified on every request, and the AuthZEN request (§4, §5). The in-process mediated channel is outside this target (D315). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, and the shared demo mounts a MAS join route there; the target mounts none, and a configuration that would mount one fails startup: `the as-native target excludes the MAS join route at startup (D315) > fails startup, before connecting to anything, when the payments resource is configured governed` | HTTP entry point only (D315) | #818 owns MAS; #956 Q2 its declaration in the shared demo |
@@ -177,7 +177,7 @@ Residuals:
 - **Per-class bounds** (`config/enforcement-scope.json:15-26`): 300 s for `consequential_read`, `consequential_write` and `non_consequential`; 30 s for `irreversible_action` and `privileged_administration`; 60 s for `external_commitment`; none for `audit_only`; beyond the bound, deny; issuer ceiling 300 s. The loader refuses any other mode: `published runtime posture (@spec runtime#runtime-operational, status#status-operational) > refuses unsupported modes, malformed or missing bounds, and bounds exceeding the issuer ceiling`.
 - **Clock skew.** An observation up to 5 s in the future is accepted (`evaluate.ts:104`), and clamped to the decision instant for the permit cap: `permit deadline (@spec runtime#state-freshness) > clamps a skew-tolerated future observation to the decision instant, so skew cannot lengthen a permit`.
 - **Permit lifetime.** 120 s for `irreversible_action`, 300 s otherwise (`evaluate.ts:1513`), capped by the observation plus the class bound, a reported expiry, a signed `fresh_until`, and 300 s for the two keyed writes (`evaluate.ts:1531-1551`). The high-consequence classes get `use_limit` 1: `a permit expires no later than the state view it was decided against (@spec runtime#state-freshness) > caps valid_until at the state observation plus the class staleness bound`.
-- **Execution lease.** 30 s for both high-consequence classes, capped by `valid_until`; validity and phase are checked at admission and again just before commit (`server.ts:1588`, `:1697`): [FGA] `M5 transaction-assurance tier > derives the execution lease from the published transaction_assurance maximum, capped by the permit's validity`.
+- **Execution lease.** 30 s for both high-consequence classes, capped by `valid_until`; validity and phase are checked at admission and again just before commit (`server.ts:1596`, `:1705`): [FGA] `M5 transaction-assurance tier > derives the execution lease from the published transaction_assurance maximum, capped by the permit's validity`.
 
 Unavailable or stale state fails closed:
 
@@ -195,7 +195,7 @@ instantaneous revocation is claimed: an admitted high-consequence action runs
 to completion inside its permit window (about 30 s or 60 s) under the runtime
 profile's run-to-completion rule;
 `callTransactionTool` does not re-read Mission state after `enforce`
-(`server.ts:1513-1828`). No test yet. The next call decides afresh:
+(`server.ts:1521-1852`). No test yet. The next call decides afresh:
 `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare`.
 
 ## 5. Policy conjunction
@@ -217,13 +217,13 @@ The gates are independently necessary:
 
 **Token authority:** partial; #825 PR 1 merged as #1062 (D302). The PEP
 validates the token's signature, issuer, audience, `cnf` and DPoP
-(`verifyDpopBoundToken`, `server.ts:563-580`):
+(`verifyDpopBoundToken`, `server.ts:571-588`):
 `the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation) > a token whose audience does not name this resource is refused, before any of its claims reach a decision (@spec runtime#token-validation, audience)`.
 It then checks the Mission access-token profile: `typ` `at+jwt`, the RFC 9068
 claims with their types, a `mission` claim with `id` and `issuer`, and the
 token's own `authorization_details`, read in full as the credential's
 authority. A token that fails the profile is refused, never demoted to the
-ordinary class (`missionBoundFactsFrom`, `server.ts:591-624`;
+ordinary class (`missionBoundFactsFrom`, `server.ts:599-632`;
 `readMissionAccessClaims`, `services/mcp-payments/src/token-verifier.ts:108-120`):
 `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route`.
 Before the PDP is asked, the PEP refuses `out_of_authority` for an action the
@@ -261,11 +261,11 @@ Deployment-administered gates that do exist: the action-bound approval for
 | Decision Evidence | PDP, role `pdp`, kid `pdp-decision-evidence`, key generated per boot (`stack.ts:636`) | every decision, permit or deny; a retransmission returns the stored record (`evaluate.ts:575-579`) |
 | Refusal Record | PEP, role `pep` | every refusal before a PDP decision (`pep.ts:2157-2218`) |
 | Execution Evidence, `suppressed` | PEP, role `pep` | every post-permit failure (`suppressExecution`, `pep.ts:1917-1960`), and a keyed write whose retry returns the stored result (`operation_already_claimed`) |
-| Execution Evidence, `completed` | role `executor` | the transaction tier after the connector commits (`server.ts:1790-1814`), and reconciliation from the connector ledger |
+| Execution Evidence, `completed` | role `executor` | the transaction tier after the connector commits (`server.ts:1799-1832`), and reconciliation from the connector ledger |
 
 - **Verification.** The PEP verifies Decision Evidence (byte equality, signature, emitter-bound kid, role, audience) and retains it verbatim; a permit whose record fails is refused `decision_evidence_unverifiable` (`pep.ts:1606-1618`): `a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence`.
 - **Outcomes** are `completed`, `failed` and `suppressed` (`services/mcp-payments/src/evidence.ts:213`). Nothing emits `failed`. An unknown outcome is not an Execution Evidence outcome; it is the PDP claim state `indeterminate`.
-- **Coverage gap.** A successful call outside the transaction tier emits no Execution Evidence (`server.ts:1117`, `:1191`, `:1503`); only its Decision Evidence exists. No test asserts the absence.
+- **Coverage gap.** A successful call outside the transaction tier emits no Execution Evidence (`server.ts:1125`, `:1199`, `:1511`); only its Decision Evidence exists. No test asserts the absence.
 - **Retention.** `EvidenceRetentionStore` is built without a file, so it is in memory (`stack.ts:682-684`), with a 31,536,000 s window from the `policy.json` audit horizon and no capacity limit. Restart recovery is shown only on a test file: `retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart`.
 - **Emission failure.** Each failure is either a refusal before any effect, which leaves no effect, or missing evidence after an effect, which is reported and never settled as if nothing happened. A PDP whose emitter throws releases the claim, and the PEP refuses `pdp_unreachable`: `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > the PDP's Decision Evidence emitter throws: the claim is released, the PEP refuses pdp_unreachable, and nothing executes`. A Refusal Record emission that throws rejects `enforce`, and nothing is recorded or executed: `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a Refusal Record emission throws: the call rejects, nothing is recorded, and nothing executes`. `suppressExecution` returns `gap: "effective_parameter_digest_unobservable"` without emitting when the permit's target no longer resolves, and `gap: "emission_failed"` after one retry on the same execution identity: `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > suppressExecution returns effective_parameter_digest_unobservable when the permit's target no longer resolves, and retains nothing` and `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > suppressExecution retries once on the same execution identity, returns emission_failed after a second failure, and never retains a disposition twice`. The `completed` write after a connector commit (`callTransactionTool`) retries once on the same execution identity. A second failure returns `ok: false` with `gap: "emission_failed"` and the committed `result`, never a `refusal_reason`, and leaves the operation `connector_committed` and the claim unsettled; the effect stands once, and neither a retry nor reconciliation repeats it: `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a completed write that fails once is retried on the same execution identity: one record, the claim settles completed, one effect` and `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a completed write that fails twice reports the gap: the effect stands once, the claim is not settled completed, and neither a retry nor reconciliation repeats the effect`. Reconciliation does not run in production (#1103).
 
