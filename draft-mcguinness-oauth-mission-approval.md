@@ -247,7 +247,8 @@ between the approval decision and the resolving poll yields no token:
 issuance gating derives only from an `active` Mission
 ({{I-D.draft-mcguinness-oauth-mission}}). Carrying the issuance
 profile's unredeemed-code rule, when the client never polls and the
-`deferral_code` is never redeemed, the AS SHOULD revoke the orphaned
+`deferral_code` is never redeemed, the authorization server (AS) SHOULD
+revoke the orphaned
 `active` Mission or allow it to expire
 ({{I-D.draft-mcguinness-oauth-mission}}).
 

@@ -231,7 +231,7 @@ MUST define:
 - evidence retention.
 
 The orchestration profile is deployment documentation. It is not an
-OAuth Authorization Server metadata extension and does not alter token
+OAuth authorization server metadata extension and does not alter token
 format.
 
 # Mission Substrate {#mission-substrate}

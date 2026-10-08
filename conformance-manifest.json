@@ -3,92 +3,92 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-control-plane.md": {
-    "revision": "909a3ee7371452ad969554d57c4ae9941a4caf36",
-    "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "60d31c12bd9e5f725b3030b1fd04517aea7957d0ab167599f940b7471d20c093"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "0114c1964644d81ed66175cfbe62d10e6301ed7a",
-    "content_sha256": "ebcea1b67c1c23cd2b22614cbd969b6ce9122b39e5dd04ad3893a0e786e26b89"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "62ca5c493b76ebf99ebcf9b04bba2ce501396cc29bc74a28c41f20e0a51bad52"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "b2c423ba8238c550efd63fecc21e75419768a6b3",
-    "content_sha256": "cc4c2275dd9b5d1e505161a8fad421509baf92fedeae0e3f4faf28e4510099e4"
+    "revision": "678167584984ad8d791da70956947e7fd13895b0",
+    "content_sha256": "1141e52de1a2e7c0a1933c3f9e7e36d849587bde5b0be467773e317f9877f09d"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "b2c423ba8238c550efd63fecc21e75419768a6b3",
-    "content_sha256": "258282fe72f40fe8a05faca5e3bc3d8b91fc829e620ba7f1ce1b867450702111"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "3503f180fdecc4901d3aebec899a33b8926b4f5810ec380444e63ffa7d7e09ce"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "d3394d7fae8dc8fd13b9948c603ade53b8dc883c",
-    "content_sha256": "d80b100ff35170088f1edf3f532186d32ebb0eca691ff01a942751936e36f0e6"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "8ab87ab396665ac745402777e8a4783ee99acadf1169505f7e06719ac22cdfa1"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "2b422bf1c54a64ae5cdf4440f041a0d27f2a0e05",
-    "content_sha256": "dc736dd837d52eb258039dfaa393dedfb3c41852f1c171fcb776af3f72196aec"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "86d7115e923c7b860dee2f9d035e84e6a03e995066587690d069abe2af4bf863"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "0ddf5037f33a71d77b4ccbf1a8ba5c210074d931",
-    "content_sha256": "5488bd571ad351f0e17675a52a18200b6fed96bd503d4029e84bb0a8f964578c"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "4674e17b5206d3eb54dba9c939b61208d9bb985b4955289ab2c53279a9e3a255"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "72e61f7bcca5c697221bdeb738d1880c5dfa88d1",
-    "content_sha256": "815cbcde45ab0b9fe6e5391596f158d4b282b390b40aa1299e9a8431614bcbae"
+    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
+    "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "02014aa318f3548918be53c3faa41137b9331b81",
-    "content_sha256": "3207f14f575336e0fd1b4b3ab4eee30d143dab3fd4f44be8b5c69f3db290d0a4"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "aef325527519d5b315b8b41a9a9f4c132ad90eee5c16358d18b25af1d8ba0f81"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "0a93cdc3a8c5598bf85b1b693c5985a477929131",
-    "content_sha256": "3d4ebfad6d323a7e4626bab4caf52d474647cdc0e6b74fc6179b9e800ff636e6"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "567d56a9a8d82ae5a4495e3c0147ae4570470a6931b6a2cf4ca72c3eace6d961"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
-    "content_sha256": "e06bc60196934a5b5475d51884dd5627bf263cce0fa18973fd49a63f529b77f8"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "69f0dedae0b7fbce2eff956e069fc6f519a6d185eda9923f2310098a15ad79f3"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "5421debe04e26cdce67553b40da55a824f2c8e0e",
-    "content_sha256": "544fd9439ba95abcfb530d84a834dd1532c136bce3ec5c32ea61bc152250cbcb"
+    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
+    "content_sha256": "08be43cf03f1d199ed4376ac8cd3d876a18982726152ab82f202853429aa164e"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "d4833ce6562069d46441ea505acc531cd7c2d482",
-    "content_sha256": "c7248870526a9d2686f50b19c7a00ab5aa3ad15a3f240f612cdfba6318f88184"
+    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
+    "content_sha256": "6c20b08bbe97595d0223d7c3c4e082cf4e9c8b3081196a942214b4e6dea7113e"
    },
    "draft-mcguinness-oauth-mission-management.md": {
-    "revision": "d4833ce6562069d46441ea505acc531cd7c2d482",
-    "content_sha256": "8d725d011cee0c723f9456e188756d0460dc4854153bfb51c385fbcfc28c7ff1"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "9201cdc83aa8e79a1a2615bf25f69c9ff8fac11424be6336c8f5052ba1f24b5b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "6f2300ed1ac42c92c63b46f41915b500cc3901ce",
-    "content_sha256": "3f8b638b51f87739e7a93eb1948fe57eb70b0fe2288a295cda20276c50d0ad50"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "0e0301309a14578771b9aef0379dbd2eb0b3f2fc9ec0e626303faf2808f75075"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "091f1ffd5e6b77d47f8f189797bfdb0cf64ea328",
-    "content_sha256": "76ae8710dc0faf41220e947e05a4dc4a79440c0039746089a4b24e486c1d06de"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "dc7c11d682cc84dff903439816dec5cb4431843f",
-    "content_sha256": "698f38ebe10f92c843bfef9e0fa904278c1f24dedc5ffcc49fe9675fecaebdb8"
+    "revision": "a8d96a80eae8d0bd6fab8b66e09be10f42858997",
+    "content_sha256": "608da9293f88c847b39029f7ca6bbb7d4bde874c6b82394829d638e6da86b187"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
-    "content_sha256": "bf4b09b73adfdbf647f9740ef2451862b87212aaa7424496aa865b99d2a2a46d"
+    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
+    "content_sha256": "1929eef4d3128482f7ce4ed5cff9f79b63eef818262e15f8ecb3d155d3dc64b7"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "c969e70ad8aaeaf376730d9d98b23f4181b3819f",
-    "content_sha256": "799c3addb5bf932850706473c3b49491f91c551762041b5770f2f155d5543e96"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "72d16463993b55af9238d7374a0a39764b6a8086935515180fa4841344510119"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "6a648aadc87ebdb72235d9afb707898a356d6d5b",
-    "content_sha256": "b8e8c0e073d7ad6fcd57faa536c3baea9fc701ec065e408629333c79d1d602cc"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "fb51475dad98490aaf30ee980baa6941e8a5ca483bea75cf00a158566ed400a9"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "bc498b14258afa19a5f311310f5710722b5ae67c778d9ddbd299123d054246ad"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "2d348d6ca191d1122ae288d6ddc455b10f78ec267a5ad228c4af52a10b619015"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
-    "revision": "175c6252b65d8fdca0347d3f214dd0282d6615fc",
-    "content_sha256": "0ca8901a662c12afc19ed590685652dfe3604d0907364ccfe819a88d584499f9"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "9d17b521502210144da5a492ef3109138621627cc495b474b4db771775a0daf8"
    },
    "draft-mcguinness-mission-approval-governance.md": {
     "revision": "367e69e46a32d3ae652feea03036d2e4bfea394c",
@@ -99,24 +99,24 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "aec5ef67087d7cebce0787dd3ea83b6dcbba193e",
-    "content_sha256": "41d16c43d4e29769a790ea33393bfc300f8b96875a99c614d6039c689cc3fadb"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "cffd2db65c200bc44cf354d90f15c855af8c082ac497d8b539406398ea903375"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "ef894230a00a5feddb008d5d9fa0ccaaf08e8919",
-    "content_sha256": "54c35b410f112788f3fa8c838959cfd71020af5700a2b0eba3d670b474d39a14"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "1c4868141e7f09b14adbc053a048706e258b7e62f2541e94ab55d5caac00a830"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "2b93b1b39b6868c93caf475887d31bf21891b1cc",
-    "content_sha256": "741b7d7273317b93feaae9e2142e7fabaa1dd33bd98dc00eb0ae3461b693f064"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "4f46dda7206399ad63f6e59303fc673a8668ab9a12c0120b328ea99135d7d909"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
-    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
-    "content_sha256": "7098f04b5cc6e3a633f0eb3003a112af720ba414d9f45f45ce9dbbcc166f9200"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "ee397db8cc220f7cfd6995e4d701cf05235a63744f58954173723cdbaeb54132"
    },
    "draft-mcguinness-oauth-mission-submission-evidence.md": {
-    "revision": "dd16dd544da103729cc5380bb11e860796a95643",
-    "content_sha256": "78fa453b80921a5898aa47c2453be8c86cf81d74a5a5a87e95ed0c2a4a06637e"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "5fbf37a2efff433ecf5edea08be32bba1e17357ddc2ef32cfcece02ddef78f59"
    },
    "draft-mcguinness-oauth-mission-request-provenance.md": {
     "revision": "77aa582c9ac6588eaa2bcf0ab6f1d298308f3f3b",
@@ -6043,7 +6043,7 @@
    "id": "core.introspection.caller-authorization",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "caller-authorization-and-minimization",
-   "text": "MUST return Mission data only to a caller authorized to receive it, in particular a Resource Server that is an audience of the token",
+   "text": "MUST return Mission data only to a caller authorized to receive it, in particular a resource server that is an audience of the token",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -9699,7 +9699,7 @@
    "id": "mas.join.claim-isolation",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "enterprise-profile",
-   "text": "The Enterprise claim is made per covered Authorization Server, resource, and action path; a mixed estate's weaker paths never inherit it from the deployment's name.",
+   "text": "The Enterprise claim is made per covered authorization server, resource, and action path; a mixed estate's weaker paths never inherit it from the deployment's name.",
    "role": "Controller",
    "strength": "stated",
    "applicability": {
@@ -10225,7 +10225,7 @@
    "id": "mas.baseline-join.three-bound-intersection",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A permit under a join never exceeds any of three independently evaluated bounds: the authority the acting credential itself carries (the token as issued, enforced at the Resource Server or gateway), the Mission's approved authority, and current Resource policy.",
+   "text": "A permit under a join never exceeds any of three independently evaluated bounds: the authority the acting credential itself carries (the token as issued, enforced at the resource server or gateway), the Mission's approved authority, and current Resource policy.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -12516,7 +12516,7 @@
    "id": "runtime.rs-profile.must-publish",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "rs-runtime-profile",
-   "text": "A Resource Server that claims conformance to this runtime profile MUST publish or otherwise make available a Resource Server runtime profile for the protected resources and operations in scope.",
+   "text": "A resource server that claims conformance to this runtime profile MUST publish or otherwise make available a Resource Server runtime profile for the protected resources and operations in scope.",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -12560,7 +12560,7 @@
    "id": "runtime.rs-profile.no-claim-without-pep",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "rs-runtime-profile",
-   "text": "A Resource Server MUST NOT claim this runtime profile for an operation unless the operation's consequential effects pass through a PEP that can refuse the operation after credential validation and before execution.",
+   "text": "A resource server MUST NOT claim this runtime profile for an operation unless the operation's consequential effects pass through a PEP that can refuse the operation after credential validation and before execution.",
    "role": "RS",
    "strength": "MUST NOT",
    "applicability": {
@@ -18828,7 +18828,7 @@
    "id": "authzen.decision-id-propagation.no-treat-as-permit",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "decision-id-propagation",
-   "text": "a Resource Server MUST NOT treat it as a permit; the permit-binding rules above govern.",
+   "text": "a resource server MUST NOT treat it as a permit; the permit-binding rules above govern.",
    "role": "RS",
    "strength": "MUST NOT",
    "applicability": {
@@ -26479,7 +26479,7 @@
    "id": "progressive.drawdown-derivation.limit-never-raised",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Where the predecessor has a `derivation_limit`, the successor's `derivation_limit` MUST NOT exceed it: a stricter AS-policy ceiling or `requested_derivation_limit` narrows it further, and omitting or raising the request neither removes nor raises it",
+   "text": "Where the predecessor has a `derivation_limit`, the successor's `derivation_limit` MUST NOT exceed it: a stricter authorization-server policy ceiling or `requested_derivation_limit` narrows it further, and omitting or raising the request neither removes nor raises it",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {

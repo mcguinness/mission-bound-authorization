@@ -226,7 +226,7 @@ This document defines:
 - conformance for a Mission-aware harness ({{conformance}}).
 
 This document does not define a new OAuth token, a new agent protocol,
-or a replacement for Resource Server enforcement. A harness check does
+or a replacement for resource server enforcement. A harness check does
 not replace a PEP at the last controllable boundary under
 {{I-D.draft-mcguinness-mission-runtime}}.
 
@@ -1264,7 +1264,7 @@ from the claim.
 
 Harness Evidence complements runtime enforcement evidence
 ({{I-D.draft-mcguinness-mission-runtime}}). It records
-execution-continuity decisions, not Resource Server authorization.
+execution-continuity decisions, not resource server authorization.
 
 Harness Evidence records are subject to the record integrity and
 retention requirements of the runtime profile

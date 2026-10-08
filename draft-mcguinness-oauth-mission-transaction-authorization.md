@@ -309,12 +309,12 @@ companion defines it
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
 Transaction Authorization Server (TAS):
-: The OAuth Authorization Server acting in the role
+: The OAuth authorization server acting in the role
   {{I-D.draft-rosomakho-oauth-txn-challenge}} defines for the
   transaction authorization endpoint: it validates the challenge,
   applies the Mission validation and fresh-decision rules of this
   profile, and mints the transaction token. A TAS instance MAY be the
-  Mission Issuer itself or an Authorization Server deployed separately
+  Mission Issuer itself or an authorization server deployed separately
   from it; this profile does not require either arrangement.
 
 Challenge-Issuing Resource:
@@ -548,7 +548,7 @@ completion, before {{challenge-redemption}} step 7's fresh decision.
 
 A TAS MAY restrict which `subject_token` issuers and subject
 namespaces it accepts. Whether an accepted issuer shares this
-Authorization Server's subject namespace is configured trust policy,
+authorization server's subject namespace is configured trust policy,
 never inferred from request data. For a same-namespace issuer the
 verified `sub` is the destination-local subject, unchanged.
 
@@ -590,9 +590,9 @@ Resource publishes its challenge-signing keys at
 `txn_challenge_jwks_uri` with
 `txn_challenge_signing_alg_values_supported`, and the TAS resolves a
 challenge issuer's keys there and nowhere else; a client discovers
-the TAS through `transaction_authorization_endpoint` in Authorization
-Server metadata. A TAS MAY
-be the Mission Issuer itself or an Authorization Server deployed
+the TAS through `transaction_authorization_endpoint` in authorization
+server metadata. A TAS MAY
+be the Mission Issuer itself or an authorization server deployed
 separately from it; a resource trusts a TAS's token-signing key and
 policy role through pre-established federation metadata, not through
 anything the request asserts about itself.
@@ -605,7 +605,7 @@ validation of that protected `typ` value, together with mutually
 exclusive validation rules for the artifact profiles, implements the
 substitution defense of {{RFC8725}}, Sections 3.11 and 3.12. This is its own
 JWT access-token profile with the complete validation semantics below;
-it does not conform to {{RFC9068}}, and a Resource Server that
+it does not conform to {{RFC9068}}, and a resource server that
 recognizes only `at+jwt` correctly rejects it as unknown. A deployment
 wanting RFC 9068 interoperability instead relies on the upstream `txn`
 claim carried by an ordinary JWT access token
@@ -973,7 +973,7 @@ second challenge media type; the challenge keeps the upstream `typ`
 - Change controller: IETF
 
 The transaction token's registered semantics are sender-constrained,
-single-audience, and single-use. A Resource Server that recognizes
+single-audience, and single-use. A resource server that recognizes
 `typ` `mission-txn-token+jwt` enforces exactly those properties regardless
 of any member on the token; this document defines no `single_use`
 member anywhere, because single use is semantic to the type itself.
