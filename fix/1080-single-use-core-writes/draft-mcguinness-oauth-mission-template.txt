@@ -431,6 +431,17 @@ Table of Contents
    obtained by omission.  A template the human did not knowingly consent
    to is not a Mission Template under this document.
 
+   This paragraph binds only a deployment that also adopts Mission
+   Derivation Limits
+   ([I-D.draft-mcguinness-oauth-mission-derivation-limits]).  The
+   Dispatch Policy states the rule that establishes each instance's
+   derivation_limit and its maximum, if any, so template_hash commits
+   them.  The consent disclosure MUST render them as that document's
+   Approval Rendering section requires, beside max_active and
+   dispatch_rate: each instance establishes and counts its own limit, so
+   one consent admits up to max_active such limits at once and more over
+   time.
+
    A Mission Template's consent is standing consent, and standing
    consent decays.  The Mission Issuer MUST NOT dispatch from a template
    whose most recent human approval is older than the published
@@ -575,7 +586,12 @@ Table of Contents
           consent lifetime records it in instance_lifetime or the
           template's expires_at under a newly consented
           template_version, rather than applying an undisclosed fourth
-          clamp; and
+          clamp;
+
+       *  derivation_limit, where the deployment also adopts Mission
+          Derivation Limits, is established afresh for this instance as
+          that document's Effective Limit section states, never above
+          the Dispatch Policy's maximum (Section 5); and
 
        *  template lineage member is set (Section 6.1).
 
@@ -994,8 +1010,9 @@ Table of Contents
       commit it under template_hash with typ mission-template
       (Section 4, Section 4.1), and treat template creation as a human
       approval under the issuance profile whose disclosure renders the
-      ceiling, the no-per-instance-approval fact, and the prohibited-
-      class reservation (Section 5);
+      ceiling, the no-per-instance-approval fact, the prohibited-class
+      reservation, and, where Mission Derivation Limits is adopted, the
+      per-instance derivation-limit rule (Section 5);
 
    *  adjudicate a Dispatch in the order of Section 6: authenticate and
       authorize the Dispatcher, derive the instance Authority Set,
@@ -1127,6 +1144,12 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-consent-
               evidence.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-derivation-limits]
+              McGuinness, K., "Mission Derivation Limits for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-derivation-
+              limits.html>.
+
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -1209,6 +1232,13 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Template Consent, Dispatch and Conformance: where Mission
+      Derivation Limits is adopted, the Dispatch Policy states the rule
+      that establishes each instance's derivation_limit and its maximum,
+      committed under template_hash; the template consent renders them
+      beside max_active and dispatch_rate, and each instance establishes
+      its own limit afresh, never above that maximum (#1119).
 
    *  Template Consent and Dispatch: template consent establishes the
       authority source its instances draw on, retained with the consent

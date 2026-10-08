@@ -2748,7 +2748,19 @@ subtree is enforced. One is enforced only where a lineage-keyed
 budget is deployed (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>);
 otherwise the rendering states that no finite lifetime aggregate is
 enforced.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
-<p id="section-7.2-7">Bounding the aggregate
+<p id="section-7.2-7">For a <code>policy_drawdown</code> entry, the rendered per-child derivation
+limit is the standing-consent maximum of Mission Derivation Limits
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>, Sections
+"Effective Limit" and "Approval Rendering"), taken from the policy
+state the Parent Mission's approval committed: the entry's
+<code>child_creation_policy</code> snapshot where it carries one, otherwise the
+policy that the Parent Mission's <code>policy_version</code> identifies. Each
+child created under the entry establishes and counts its own limit,
+never above a finite rendered figure, and a figure rendered as
+unlimited guarantees no finite maximum. A stricter policy at creation
+narrows a child's limit; no later policy change raises or removes the
+figure.<a href="#section-7.2-7" class="pilcrow">¶</a></p>
+<p id="section-7.2-8">Bounding the aggregate
 across a subtree is the role of consumption metering, not this
 profile's attenuation rules
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). An exclusivity group, by
@@ -2760,7 +2772,7 @@ counts derivations within a single Mission's own continued grants,
 where a delegated refresh-token family's successive refreshes are one
 derivation, not one per refresh
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>, Section
-"Authorization Continuity and the Mission").<a href="#section-7.2-7" class="pilcrow">¶</a></p>
+"Authorization Continuity and the Mission").<a href="#section-7.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4209,77 +4221,84 @@ apply unchanged.<a href="#appendix-A-7" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Mission Record Requirements: a <code>policy_drawdown</code> child has the
+          <p id="appendix-B-2.1.1">Derivation Budget Is Not Inherited: for a <code>policy_drawdown</code> entry,
+the rendered per-child derivation limit is Mission Derivation
+Limits' standing-consent maximum, taken from the policy state the
+Parent Mission's approval committed; each child's limit stays
+within it, and no later policy change raises or removes it (#1119).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Mission Record Requirements: a <code>policy_drawdown</code> child has the
 Parent Mission's <code>subject</code>; a <code>direct</code> child defaults to it and
 names another Subject only through the issuance profile's full
 Subject and authority-source establishment. Every ordinary child
 carries the parent's <code>authority_source</code>, and its creation commit
 verifies that the source applies to the child's Subject and that the
 child Authority Set lies within the source's current ceiling and the
-parent's; carryover keeps its own source rules (#1118).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+parent's; carryover keeps its own source rules (#1118).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Attenuation Rules: a resource server enforces a child
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">Attenuation Rules: a resource server enforces a child
 token's carried <code>authorization_details</code>; the child <code>authority_hash</code>
 commits the child Authority Set on the child's Mission record, and
 checking carried authority against the complete set is
-Approved-Set Verification (#1086). No requirement changed.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Mission Record Requirements: the delegation event creates the Child
-Mission record the issuance profile and this section require; human
-accountability is inherited from the parent only where policy
-adjudicates; Conformance names <code>consent_principal</code> per basis (#1121).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+Approved-Set Verification (#1086). No requirement changed.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Completion: a deployment can require a fresh human approval for
-child creation; every child creation, human or policy-adjudicated,
-is the Child Mission's approval event (#1078).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.4.1">Mission Record Requirements: the delegation event creates the Child
+Mission record the issuance profile and this section require; human
+accountability is inherited from the parent only where policy
+adjudicates; Conformance names <code>consent_principal</code> per basis (#1121).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Mission Record Requirements: under <code>policy_drawdown</code> the record's
-<code>approval_event_id</code> is the creation's <code>activation_event_id</code>, never
-the Parent Mission's approval event (#1017).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.5.1">Completion: a deployment can require a fresh human approval for
+child creation; every child creation, human or policy-adjudicated,
+is the Child Mission's approval event (#1078).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">The completion comparison names the progressive authorization
-companion's synchronous drawdown as the one synchronous expansion.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.6.1">Mission Record Requirements: under <code>policy_drawdown</code> the record's
+<code>approval_event_id</code> is the creation's <code>activation_event_id</code>, never
+the Parent Mission's approval event (#1017).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">Child Missions and carryover replacements share their ancestors'
-exclusivity latches under the metering profile.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.7.1">The completion comparison names the progressive authorization
+companion's synchronous drawdown as the one synchronous expansion.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1"><code>child_creation_policy</code> is an activation policy reference (<code>id</code>,
+          <p id="appendix-B-2.8.1">Child Missions and carryover replacements share their ancestors'
+exclusivity latches under the metering profile.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.9">
+          <p id="appendix-B-2.9.1"><code>child_creation_policy</code> is an activation policy reference (<code>id</code>,
 <code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
 Bases; <code>root_commitment</code> is its <code>digest</code>, <code>activation</code> carries it as
 <code>policy_id</code>, <code>policy_version</code>, and <code>policy_digest</code>, and a mismatched
 snapshot denies child creation with <code>policy_denied</code>. Creation against
 the delegation entry itself, with no <code>child_creation_policy</code>, is
-unchanged.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+unchanged.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.9">
-          <p id="appendix-B-2.9.1">Approval rendering of child creation shows <code>max_children</code> as a
+        <li class="normal" id="appendix-B-2.10">
+          <p id="appendix-B-2.10.1">Approval rendering of child creation shows <code>max_children</code> as a
 concurrency limit, <code>max_child_depth</code>, and the per-child derivation
 limit as distinct figures, never one composed total, and states
 whether a finite aggregate is enforced. The Parent Mission's
 approval renders them where child creation can be adjudicated by
-policy.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.10">
-          <p id="appendix-B-2.10.1">The child's initial grant states how it differs from the Mission
-Issuance Grant: its audience is the Mission Issuer's own token
-endpoint, since that issuer mints and redeems it, not a consuming
-Authorization Server's issuer identifier. No wire change.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+policy.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.11">
-          <p id="appendix-B-2.11.1">The delegated-token versus Child Mission test adds audience: a
-sub-agent that calls a resource server that is not Mission-aware
-runs under a Child Mission, where child creation is authorized and
-that resource server can enforce the projected authority.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.11.1">The child's initial grant states how it differs from the Mission
+Issuance Grant: its audience is the Mission Issuer's own token
+endpoint, since that issuer mints and redeems it, not a consuming
+Authorization Server's issuer identifier. No wire change.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.12">
-          <p id="appendix-B-2.12.1">Client-instance references follow their successors:
+          <p id="appendix-B-2.12.1">The delegated-token versus Child Mission test adds audience: a
+sub-agent that calls a resource server that is not Mission-aware
+runs under a Child Mission, where child creation is authorized and
+that resource server can enforce the projected authority.<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.13">
+          <p id="appendix-B-2.13.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -4287,13 +4306,13 @@ cited. An instance-granular
 <code>child_actor</code> no longer carries the instance identifier in <code>sub</code>:
 the successor forbids setting <code>sub</code> or an actor from instance
 evidence alone (Section 5), and <code>client_instance</code> was a value only
-the deprecated draft defined.<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
+the deprecated draft defined.<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.13">
-          <p id="appendix-B-2.13.1">Added the capability-gated Child Mission Carryover foundation, including
+        <li class="normal" id="appendix-B-2.14">
+          <p id="appendix-B-2.14.1">Added the capability-gated Child Mission Carryover foundation, including
 full snapshot and budget checks, committed exclusion semantics, fresh
 direct approvals, and durable observation and recovery. Carryover
-preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
+preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.14.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
