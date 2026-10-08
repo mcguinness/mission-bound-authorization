@@ -618,8 +618,9 @@ canonicalization, and integrity envelope a deployment emits.
 A Decision Evidence Object is closed to uncoordinated extension; see
 {{evidence-extensions}} for the extension rule and the coordinated
 extension members a deployment following the AuthZEN profile
-commonly carries (`taint`, `mission_history`, `capability_source`,
-`hop_reference`, `principal_mapping`, `join_view_id`).
+commonly carries (`taint`, `mission_history`, `authority_bound`,
+`capability_source`, `hop_reference`, `principal_mapping`,
+`join_view_id`).
 
 ## Refusal Record {#pre-decision-refusal}
 
@@ -1902,6 +1903,14 @@ a common wire carrier.
   member. Registered and owned by the AuthZEN profile
   ({{I-D.draft-mcguinness-mission-authzen}}).
 
+`authority_bound`:
+: OPTIONAL. A string, recorded at the top level of Decision Evidence:
+  which authority bound, `credential` or `mission`, decided an
+  `out_of_authority` or `parameter_violation` deny. Registered and
+  owned by the AuthZEN profile
+  ({{I-D.draft-mcguinness-mission-authzen}}), which defines when it is
+  REQUIRED.
+
 `capability_source`:
 : OPTIONAL. An object, recorded on Decision Evidence: the
   catalog-source binding the PDP evaluated for a catalog-sourced
@@ -2385,6 +2394,11 @@ evidence representation their shared envelope carries (using the
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- `authority_bound` is a coordinated Decision Evidence extension
+  member, registered and owned by the AuthZEN profile: the authority
+  bound that decided an `out_of_authority` or `parameter_violation`
+  deny (#825).
 
 - The Refusal Record's PEP `denial_reason` set adds `request_invalid`:
   the PEP established the action, and the supplied arguments fail its
