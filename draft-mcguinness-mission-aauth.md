@@ -62,6 +62,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission:
+    title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-status:
+    title: "Mission Status and Lifecycle for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-hardt-aauth-r3:
     title: "AAuth Rich Resource Requests (R3)"
     author:
@@ -773,6 +789,25 @@ revocation of the mission (Section 11.12.4 of
 operation at the `mission_control_endpoint`, which AAuth Mission
 Management {{I-D.draft-mcguinness-mission-aauth-management}} defines.
 
+AAuth carries the reason and time as the flat `termination_reason` and
+`terminated_at` members.  The OAuth binding nests them in a
+`termination` object whose `reason` is a value of its Mission
+Termination Reasons registry ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission Termination Reasons Registry").  The two reason sets
+correspond as follows; on either side, a mission that is `terminated`
+is non-active whatever its reason:
+
+| Family reason | AAuth `termination_reason` | Correspondence |
+| --- | --- | --- |
+| `revoked` | `revoked` | Same value. |
+| `expired` | `expired` | Same value. |
+| `completed` | `completed` | Same value.  AAuth records it only when the person accepts the agent's completion proposal; the family records it through the Mission Status `complete` operation. |
+| `superseded` | `superseded` | Same value.  Each side names the replacement in its own member: the family in `termination.successor`, a Mission `id`; AAuth Mission Management in `replacement_s256`. |
+| `parent_terminated` | none | The family records it for a Child Mission whose parent terminated.  AAuth defines no such reason and creates no child missions. |
+| none | `administrative` | AAuth records it when an authorized administrator ends the mission under local policy.  The family registers no such reason. |
+| unrecognized | unrecognized | A family reader treats the Mission as terminated: it stops governed work, follows no absent reference, and infers no cause-specific action.  An AAuth Mission Management recipient retains `terminated` and treats the reason as an opaque audit value. |
+{: title="Termination reason correspondence"}
+
 Every mission approved under this binding MUST carry AAuth's
 `expires_at` member, and the PS MUST enforce it on every decision path
 as AAuth requires.  A proposal can request an expiry under AAuth
@@ -799,8 +834,10 @@ termination prevents new governed issuance; an outstanding person
 token or auth token remains usable until revocation or its own expiry,
 inside that bound.
 
-There is no suspended state in this binding.  A short wait uses AAuth's
-deferred-response mechanism.  A long or materially changed pause is
+There is no suspended state in this binding, unlike the OAuth binding
+with Mission Status, which adds a reversible `suspended` state
+({{I-D.draft-mcguinness-oauth-mission-status}}).  A short wait uses
+AAuth's deferred-response mechanism.  A long or materially changed pause is
 handled by terminating the old mission and approving a new, appropriately
 scoped mission while retaining the old log for audit.
 
@@ -1147,6 +1184,12 @@ incremental deployment remain distinct concerns.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Lifecycle maps AAuth's `termination_reason` to the family's Mission
+  Termination Reasons, including AAuth's `administrative`, the
+  family's `parent_terminated`, and an unrecognized reason on either
+  side, and notes that Mission Status's `suspended` state has no AAuth
+  counterpart.  AAuth's states and members are unchanged (#705).
 
 - Maps AAuth's Supervisor role and defines an agent's deciding
   supervision server. A PS with one obtains that server's decision for

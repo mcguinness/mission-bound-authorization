@@ -678,16 +678,15 @@ unrecognized states fail-safe non-active.
 | Family state | UMA surface |
 |---|---|
 | `active` | token endpoint serves ticket exchanges and upgrades; introspection reports the RPT active |
-| `completed` | token endpoint refuses (`request_denied`); introspection reports inactive |
-| `revoked` | token endpoint refuses (`request_denied`); introspection reports inactive |
-| `expired` | token endpoint refuses (`request_denied`); introspection reports inactive |
+| `terminated` (reason `revoked`, `expired`, `completed`, or any other) | token endpoint refuses (`request_denied`); introspection reports inactive, with `mission.termination` giving the reason |
 | `suspended` | token endpoint defers (`request_submitted`); introspection reports inactive |
 
 The projection is fail-safe: every non-`active` state projects to a
 non-permitting native signal. The family surfaces report the
 distinct state, and the introspection response's `mission.state`
-member carries it verbatim ({{mission-claim}}). This binding adds to
-UMA's model:
+member carries it verbatim, with `mission.termination` for a
+terminated Mission ({{mission-claim}}). This binding adds to UMA's
+model:
 
 - **Revocation.** The authorization server MUST provide an
   authenticated means for the Subject, the Approver, or an
@@ -698,11 +697,11 @@ UMA's model:
   deployment that validates RPTs without introspection needs the
   state surfaces below.
 - **Expiry.** When the record's `expires_at` passes, the Mission
-  transitions to `expired` without a request.
-- **Completion.** The authorization server commits the Mission to
-  `completed` with the semantics of the status profile's `complete`
-  operation. UMA has no native completion wire, so the operation is
-  a family surface.
+  is `terminated` with reason `expired` without a request.
+- **Completion.** The authorization server terminates the Mission
+  with reason `completed`, with the semantics of the status profile's
+  `complete` operation. UMA has no native completion wire, so the
+  operation is a family surface.
 - **Suspension.** A deployment that adopts the status profile's
   `suspended` state defers rather than denies: the token endpoint
   returns `request_submitted`, so the client waits under UMA's own
@@ -825,9 +824,10 @@ one of two carriage surfaces:
 - **Introspection-carried**: a deployment issuing opaque RPTs
   carries the same object in the `mission` member of the
   introspection response, the member the issuance profile registers
-  for {{RFC7662}}, with the `state` member per that profile's
-  introspection section. FedAuthz's extended introspection object
-  carries it beside `permissions` unchanged.
+  for {{RFC7662}}, with the `state` member, and `termination` for a
+  terminated Mission, per that profile's introspection section.
+  FedAuthz's extended introspection object carries it beside
+  `permissions` unchanged.
 
 Both surfaces satisfy the credential primitive; they differ in who
 verifies what. A token-carried claim verifies offline under the
