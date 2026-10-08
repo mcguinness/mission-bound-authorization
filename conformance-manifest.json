@@ -3450,7 +3450,7 @@
    "id": "core.authority-sources.accountable-principal-not-from-sub",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-sources",
-   "text": "The accountable principal is the record's `approver`, equal to `approval_basis.consent_principal`, in every source; it is never inferred from the token `sub`.",
+   "text": "The accountable principal is the record's `approval_basis.consent_principal` in every source; it is never inferred from the token `sub`.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -3462,7 +3462,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every recorded Mission, in every authority source, carries `approver` equal to `approval_basis.consent_principal`; the token `sub` never supplies it"
+    "normative": "every recorded Mission, in every authority source, carries its accountable principal as `approval_basis.consent_principal` and no `approver` member; the token `sub` never supplies it"
    },
    "level": "unit",
    "coverage": "tested",
@@ -4160,7 +4160,7 @@
    "id": "core.mission-record.authority-source-immutable",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
-   "text": "and immutable thereafter, like `approver` and `approval_basis`",
+   "text": "and immutable thereafter, like `approval_basis`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -4600,7 +4600,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "lifecycle refusals carry mission_error with one of mission_revoked, mission_expired, mission_superseded, derivations_exhausted, or a value a companion defines for a state it adds (Mission Status's mission_suspended and mission_completed)",
+    "normative": "lifecycle refusals carry mission_error with one of revoked, expired, superseded, derivations_exhausted, or a value a companion defines (Mission Status's suspended and completed, Child Delegation's parent_terminated)",
     "local": "fixed (#636/#706 cut): oidc-provider 9.10's InvalidGrant/err_out.js copy only error/error_description/scope/state from a thrown error, so mission_error never reached the client before this change; MissionGrantError plus a grant.error listener now splice it into the body wherever gateDerivation/gateActive refuses a still-valid grant. Proven positively at the wire with a real, non-undefined value for derivations_exhausted (a Mission capped at requested_derivation_limit 1, second derivation refused). This demo's own /lifecycle route additionally destroys the underlying OAuth Grant on a terminal transition (documented in provider.ts), so a revoked or expired-via-that-route Mission fails through oidc-provider's own grant lookup instead, never reaching this mechanism; mission_revoked and mission_expired are therefore reachable in deployments that gate purely on Mission state (a raw state change, or natural wall-clock expiry) but are untested at the wire here for that reason. mission_superseded is not yet defined by any companion in this codebase."
    },
    "level": "endpoint",
@@ -6056,7 +6056,7 @@
    "id": "core.introspection.composite-active",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "composite-active",
-   "text": "the AS MUST return `active: false` and include `mission.state` giving the reason",
+   "text": "the AS MUST return `active: false` and include `mission.state` and `mission.termination`, whose `reason` gives the cause",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -6070,7 +6070,7 @@
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a valid token on a revoked or expired Mission introspects as active: false plus mission.state"
+    "normative": "a valid token on a terminated Mission (revoked or expired) introspects as active: false plus mission.state `terminated` and mission.termination giving the reason"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -7083,7 +7083,7 @@
    "id": "status.discharge.event-replay",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
-   "text": "It issues a new signed envelope that echoes the new `nonce` and carries the stored operation result: the same `outcome` and resolved target, and the original `prior_version` and `current_version` the first commit produced.",
+   "text": "It issues a new signed envelope that echoes the new `nonce` and carries the stored operation result: the same `outcome` and resolved target, and the original `prior_version` and `new_version` the first commit produced.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -7096,7 +7096,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a repeated discharge request sharing (discharge authority, mission_id, entry_digest, condition_digest, event_id) and the same assertion fingerprint but a new nonce performs no state-changing work and returns a freshly signed envelope echoing the new nonce, carrying the stored outcome, selectors, and the original prior_version and current_version"
+    "normative": "a repeated discharge request sharing (discharge authority, mission_id, entry_digest, condition_digest, event_id) and the same assertion fingerprint but a new nonce performs no state-changing work and returns a freshly signed envelope echoing the new nonce, carrying the stored outcome, selectors, and the original prior_version and new_version"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -7213,7 +7213,7 @@
    "id": "status.discharge.terminal-noop",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
-   "text": "A delivery reaching the endpoint after `completed`, `revoked`, `expired`, or another terminal state returns an authenticated `terminal_noop` acknowledgement",
+   "text": "A delivery reaching the endpoint after the Mission is `terminated`, with reason `completed`, `revoked`, `expired`, or another, returns an authenticated `terminal_noop` acknowledgement",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -7226,7 +7226,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a discharge request against a Mission already in a terminal state returns terminal_noop with no transition and no version increment"
+    "normative": "a discharge request against a Mission already terminated, whatever its termination reason, returns terminal_noop with no transition and no version increment"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -7300,7 +7300,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the signed discharge_result's outcome member is discharged, already_discharged, or terminal_noop matching the actual transition, alongside the request's target form as sent, event_id, prior_version, and current_version"
+    "normative": "the signed discharge_result's outcome member is discharged, already_discharged, or terminal_noop matching the actual transition, alongside the request's target form as sent, event_id, prior_version, and new_version"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -8311,7 +8311,7 @@
    "id": "child-delegation.carryover.status-correlation",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
-   "text": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier when reporting the old child's `cascaded` state, and MUST omit it when no replacement was committed.",
+   "text": "A deployment implementing Child Mission Carryover MUST include `termination.carried_to` when reporting a `parent_terminated` termination for which a replacement was committed, and MUST omit it when none was",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -8322,7 +8322,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier when reporting the old child's `cascaded` state, and MUST omit it when no replacement was committed."
+    "normative": "a Status report of an old child terminated with reason parent_terminated carries termination.carried_to exactly when Carryover committed a replacement, and omits it otherwise"
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -8410,7 +8410,7 @@
    "id": "status.lifecycle.mission-error-diagnostic",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "When the issuance profile's gating refuses a derivation because the Mission is `suspended` or `completed`, the AS SHOULD include, alongside `error`, the `mission_error` token-error-response member",
+   "text": "When the issuance profile's gating refuses a derivation because the Mission is `suspended`, or `terminated` with reason `completed`, the AS SHOULD include, alongside `error`, the `mission_error` token-error-response member",
    "role": "AS",
    "strength": "SHOULD",
    "applicability": {
@@ -8421,7 +8421,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a derivation the issuance gate refuses because the Mission's own state is suspended carries mission_error mission_suspended, and one refused because it is completed carries mission_completed",
+    "normative": "a derivation the issuance gate refuses because the Mission's own state is suspended carries mission_error suspended, and one refused because it is terminated with reason completed carries completed",
     "local": "Witnessed at the wire for suspended on the approval-grant refresh, the delegation-family refresh, and the ICA continuation exchange (under that profile's unauthorized_client), and for completed on the approval-grant refresh. This demo's /lifecycle route destroys the OAuth grant on a terminal transition, so a completed Mission's refresh through the route fails at the grant lookup before the gate, outside this clause; the completed witness drives the raw kernel transition to reach the gate. A lineage refusal while the Mission's own state is active carries no value (unit witness)."
    },
    "level": "endpoint",
@@ -8655,7 +8655,7 @@
    "id": "status.lifecycle.schedule-applied-at-deadline",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "When the `suspend_until` of a current schedule passes, the AS MUST apply `on_expiry` (transition to `active` for `resume`, or to `revoked` for `revoke`) and emit the corresponding transition, without a further request.",
+   "text": "When the `suspend_until` of a current schedule passes, the AS MUST apply `on_expiry` (transition to `active` for `resume`, or to `terminated` with reason `revoked` for `revoke`) and emit the corresponding transition, without a further request.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -8666,7 +8666,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "once a current schedule's suspend_until passes before expires_at, the Mission is reported active (on_expiry resume) or revoked (on_expiry revoke) with the corresponding transition emitted, without any further lifecycle request"
+    "normative": "once a current schedule's suspend_until passes before expires_at, the Mission is reported active (on_expiry resume) or terminated with reason revoked (on_expiry revoke) with the corresponding transition emitted, without any further lifecycle request"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -8743,7 +8743,7 @@
    "id": "status.lifecycle.schedule-expiry-governs",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "legal-transitions",
-   "text": "When a schedule's `suspend_until` is at or after the Mission's `expires_at`, expiry governs: the Mission becomes `expired` at `expires_at`, and the AS MUST NOT apply that schedule's `on_expiry`.",
+   "text": "When a schedule's `suspend_until` is at or after the Mission's `expires_at`, expiry governs: the Mission is `terminated` with reason `expired` at `expires_at`, and the AS MUST NOT apply that schedule's `on_expiry`.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -8754,7 +8754,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "with suspend_until equal to or later than expires_at, the Mission reaches expired at expires_at and is never observed active from the scheduled resume (nor revoked from a revoke schedule)"
+    "normative": "with suspend_until equal to or later than expires_at, the Mission is terminated with reason expired at expires_at and is never observed active from the scheduled resume (nor terminated with reason revoked from a revoke schedule)"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -9164,7 +9164,7 @@
    "id": "child-delegation.carryover.signals-correlation",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "lifecycle-event",
-   "text": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier on the old child's `cascaded` event, and MUST omit it when no replacement was committed.",
+   "text": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier as `termination.carried_to` on the old child's `parent_terminated` event, and MUST omit it when no replacement was committed.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -9175,7 +9175,7 @@
    "surface": "signals",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment implementing Child Mission Carryover MUST include the committed replacement Mission identifier on the old child's `cascaded` event, and MUST omit it when no replacement was committed."
+    "normative": "an old child's parent_terminated lifecycle-change SET carries termination.carried_to exactly when Carryover committed a replacement, and omits it otherwise"
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -13788,7 +13788,7 @@
    "id": "runtime.decision-inputs.mission-expires-at-refusal",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-time",
-   "text": "where a Mission state source does expose it (or reports the Mission `expired`), the PDP MUST refuse on it independent of the credential's own expiry.",
+   "text": "where a Mission state source does expose it (or reports the Mission `terminated` with reason `expired`), the PDP MUST refuse on it independent of the credential's own expiry.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -13801,7 +13801,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Mission state source reporting expires_at passed, or the Mission expired, refuses the action independent of the token's own exp"
+    "normative": "a Mission state source reporting expires_at passed, or the Mission terminated with reason expired, refuses the action independent of the token's own exp"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -25631,7 +25631,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a redemption or refresh refused because the Mission is revoked, expired, or superseded carries mission_error (mission_revoked, mission_expired, or mission_superseded) beside error invalid_grant"
+    "normative": "a redemption or refresh refused because the Mission is terminated with reason revoked, expired, or superseded carries mission_error (revoked, expired, or superseded) beside error invalid_grant"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -29495,7 +29495,7 @@
    "id": "child-delegation.carryover.observation-correlation",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "carryover-evidence",
-   "text": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation on the old child's `cascaded` observation as defined by those profiles.",
+   "text": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation in the `termination` of the old child's `parent_terminated` observation as defined by those profiles.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -29506,7 +29506,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation on the old child's `cascaded` observation as defined by those profiles."
+    "normative": "with Status or Signals deployed, the old child's parent_terminated observation carries the committed carried_to correlation inside its termination"
    },
    "level": "cross-component",
    "coverage": "tested",
