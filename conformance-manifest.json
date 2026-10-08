@@ -253,6 +253,7 @@
    "submission-evidence.verification",
    "request-provenance.verification",
    "request-provenance.intake",
+   "expansion.adjudication",
    "expansion.interactive-completion"
   ]
  },
@@ -31191,6 +31192,72 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.successor.subject-source-preserved",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-source",
+   "text": "A successor's `subject` and `authority_source` MUST equal the predecessor's, whichever completion mode or approval basis creates it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every successor, whether a fresh human approval or a policy drawdown adjudicates it, records the predecessor's subject and authority_source unchanged, member for member"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. New capability expansion.adjudication: the deployment adjudicates expansion, Conformance's expansion-capable Mission Issuer target. No existing capability fits: expansion.interactive-completion covers only the interactive mode, progressive.ceiling-drawdown only the policy drawdown, and unconditional would also bind the related_to correlation target, to which only Independent Continuation applies. The reference AS copies the predecessor's subject but re-establishes the successor's authority_source at its approval event without comparing it with the predecessor's (src/services/authorization-server/src/kernel/expansion.ts)."
+  },
+  {
+   "id": "expansion.successor.other-subject-or-source-refused",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-source",
+   "text": "an approval that would establish another Subject or source creates no successor",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion whose approval event would establish a Subject or authority_source different from the predecessor's activates no successor and leaves the predecessor active; another Subject or source is reachable only through a separately approved Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice; capability as for expansion.successor.subject-source-preserved. No error code is pinned: the draft names none beyond the verification order's generic refusal."
+  },
+  {
+   "id": "expansion.successor.source-commit-check",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-source",
+   "text": "In the commit that activates the successor, the Mission Issuer MUST verify that the source still applies to the Subject and that the successor Authority Set lies within the source's ceiling as it stands at that commit",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion completion whose source no longer applies to the Subject, or whose successor Authority Set exceeds the source's ceiling as it stands at the activating commit (including a ceiling narrowed after adjudication), activates no successor and leaves the predecessor active"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice; capability as for expansion.successor.subject-source-preserved. The reference AS asserts the successor's set against the source it establishes before computing anchors (expansion.ts), but no test is mapped or mutation-proved under this row and no completion exercises a narrowing that lands between adjudication and activation."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
