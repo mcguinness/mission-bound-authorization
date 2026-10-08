@@ -4519,7 +4519,7 @@
    "id": "derivation-limits.effective.standing-consent-ceiling",
    "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
    "anchor": "effective-limit",
-   "text": "Where that maximum is finite, the AS MUST NOT establish a `derivation_limit` above it, or none, for such a Mission",
+   "text": "Where that maximum is finite, the AS MUST NOT establish a `derivation_limit` above it, nor leave `derivation_limit` absent, for such a Mission",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -4530,7 +4530,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "with a finite maximum M rendered at the standing consent, every Mission created under that consented version records a derivation_limit of at most M and never none; a stricter applicable policy or requested limit yields the stricter value; after the AS policy ceiling is raised or removed, a Mission newly created under the same consent still records at most M until a fresh human approval of the standing consent; each admitted Mission counts its own derivations except under the carryover and ceiling-drawdown exceptions",
+    "normative": "with a finite maximum M rendered at the standing consent, every Mission created under that consented version records a derivation_limit of at most M and never leaves it absent; a stricter applicable policy or requested limit yields the stricter value; after the AS policy ceiling is raised or removed, a Mission newly created under the same consent still records at most M until a fresh human approval of the standing consent; each admitted Mission counts its own derivations except under the carryover and ceiling-drawdown exceptions",
     "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
    },
    "level": "endpoint",

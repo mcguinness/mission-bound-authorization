@@ -282,13 +282,13 @@ A Mission created under a standing-consent basis
 Bases") is also bounded by the maximum rendered at that standing
 consent's human approval ({{approval-rendering}}). Where that maximum
 is finite, the AS MUST NOT establish a `derivation_limit` above it,
-or none, for such a Mission. A stricter applicable policy or
-requested limit narrows the Mission's limit, but no change of policy
-raises or removes the maximum; only a fresh human approval of the
-standing consent replaces it. The maximum caps each Mission's own
-limit and is not a count those Missions share: establishment and
-counting otherwise follow the rules above, including both
-exceptions.
+nor leave `derivation_limit` absent, for such a Mission. A stricter
+applicable policy or requested limit narrows the Mission's limit, but
+no change of policy raises or removes the maximum; only a fresh human
+approval of the standing consent replaces it. The maximum caps each
+Mission's own limit and is not a count those Missions share:
+establishment and counting otherwise follow the rules above,
+including both exceptions.
 
 ## Mission Record Member {#record-member}
 
@@ -510,11 +510,12 @@ each such Mission's `derivation_limit`, and either the rule's maximum
 or that no finite maximum is guaranteed. The rule and maximum are
 those of the exact version consented to and of the policy state it
 commits, which the AS retains; {{effective-limit}} bounds each
-Mission by them. Each statement above that applies to the deployment
-is part of this rendering, and the rendering MUST also state that the
-maximum is local to each Mission, as {{effective-limit}} counts it,
-and is not a budget across the Missions the consent admits, their
-descendants, or their lifetimes ({{sec-composition}}).
+Mission by them. The async delegation family and Mission Issuance
+Grant statements above, where they apply, are part of this rendering,
+and the rendering MUST also state that the maximum is local to each
+Mission, as {{effective-limit}} counts it, and is not a budget across
+the Missions the consent admits, their descendants, or their
+lifetimes ({{sec-composition}}).
 
 Where the deployment records Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), the
