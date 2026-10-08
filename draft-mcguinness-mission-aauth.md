@@ -174,7 +174,7 @@ made in that resource's vocabulary and at its own policy decision point.
 The PS applies the further contextual governance constraint when it is
 on the authorization path.
 
-## Scope
+## Scope {#scope}
 
 This document specifies:
 
@@ -399,14 +399,19 @@ The AAuth roles map to the Mission Context model as follows:
 | Resource | Defines and enforces its resource authorization; copies `mission_s256` unchanged from the presented token into each resource token it issues, as AAuth requires. |
 | Access Server | Evaluates resource policy and issues auth tokens in federated access; it does not evaluate the private mission blob. |
 
-For supervision decisions within this binding's scope, a PS with a
-configured deciding supervision server obtains that server's decision
-(Section 6 of {{I-D.draft-hardt-aauth-supervision}}).  The PS retains
-responsibility for verification, enforcement, issuance, and recording.
-Management authorization, revocation, and the person's acceptance of
-completion ({{lifecycle}}) are unchanged; AAuth Supervision excludes the
-first two from supervision (Section 1.3 of
-{{I-D.draft-hardt-aauth-supervision}}).
+An agent's deciding supervision server is the one supervision server
+the PS consults for that agent, as configured at the PS; an agent
+without one is supervised by the person (Section 6 of
+{{I-D.draft-hardt-aauth-supervision}}).  For supervision decisions
+within this binding's scope ({{scope}}), a PS with a deciding
+supervision server for the agent obtains that server's decision.  The
+PS retains responsibility for verification, enforcement, issuance, and
+recording.  Management authorization and revocation are unchanged;
+AAuth Supervision excludes both from supervision (Section 1.3 of
+{{I-D.draft-hardt-aauth-supervision}}).  A supervision server's `allow`
+of a completion does not by itself terminate the mission: the mission
+terminates with reason `completed` only when the person accepts
+({{lifecycle}}).
 
 No AAuth party becomes an OAuth client, authorization server, or resource
 server merely by implementing this binding.
@@ -1143,11 +1148,13 @@ incremental deployment remain distinct concerns.
 
 \[\[ To be removed from the final specification ]]
 
-- Maps AAuth's Supervisor role. A PS with a deciding supervision server
-  obtains that server's decision for supervision decisions and keeps
-  verification, enforcement, issuance, and recording; management
-  authorization, revocation, and the person's acceptance of completion
-  are unchanged. The mission log records the actual decider and, for a
+- Maps AAuth's Supervisor role and defines an agent's deciding
+  supervision server. A PS with one obtains that server's decision for
+  supervision decisions and keeps verification, enforcement, issuance,
+  and recording; management authorization and revocation are
+  unchanged, and a supervision server's `allow` of a completion does
+  not by itself terminate the mission, which still needs the person's
+  acceptance. The mission log records the actual decider and, for a
   supervision-server exchange, the `sdi` and the exchange with any
   signatures; the deciding server is a log reader; a supervision server
   does not see the R3 proposal. AAuth Supervision is cited
