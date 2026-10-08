@@ -70,26 +70,39 @@ merely because the mapped action's own schema declares one.
 
 ## Parameter schemas and normalization
 
-All request parameters are JSON objects validated against the schemas
-below before any authorization work; strings are NFC-normalized at intake;
-unknown members are rejected (`invalid_request` at the tool boundary).
+All request parameters are JSON objects. At the tool boundary the PEP
+NFC-normalizes every string, then validates the object against the tool's
+served input schema (`config/tool-catalogs/payments.json`), which is
+closed (`additionalProperties: false`), before any authorization work. An
+unknown member, an authoritative member (below), a missing required
+member, a non-string value or a malformed `idempotency_key` is refused
+`invalid_request`, with no decision request and a Refusal Record whose
+`denial_reason` is `request_invalid`. An unknown tool is refused
+`unknown_tool` (`request_unsupported`), and a schema intake cannot read is
+refused `capability_source_unresolvable`. Target lookup, effective
+parameters and execution use the normalized values.
 
+- `list_invoices`: `{ vendor_id?: string }`
 - `get_invoice`: `{ invoice_id: string }`
-- `schedule_payment`: `{ invoice_id: string, idempotency_key: string, execute_after?: RFC3339 }`
-- `cancel_scheduled_payment`: `{ invoice_id: string, idempotency_key: string }`
-- `execute_wire_transfer`: `{ invoice_id: string }`
-- `send_remittance_email`: `{ invoice_id: string, note?: string (<= 500 chars) }`
-- `list_invoices`: `{ vendor_id?: string, status?: enum }`
 - `lookup_vendor`: `{ vendor_id: string }`
+- `schedule_payment`: `{ invoice_id: string, idempotency_key: string }`
+- `cancel_scheduled_payment`: `{ invoice_id: string, idempotency_key: string }`
+- `check_transfer`: `{ invoice_id: string }`
+- `hold_transfer`: `{ invoice_id: string }`
+- `execute_wire_transfer`: `{ invoice_id: string, idempotency_key: string }`
+- `send_remittance_email`: `{ invoice_id: string, idempotency_key: string }`
+
+Every `idempotency_key` takes the format in Idempotency keys below.
 
 ## Authoritative vs caller-supplied fields (D34)
 
-Caller-supplied: `invoice_id`, `vendor_id`, `note`, `execute_after`,
-filters. Authoritative (loaded by the PEP from the payments store, never
-from the caller): invoice `amount`, `currency`, `payee_account`,
-`vendor_id`-of-invoice, invoice `status`, vendor `status`, and the record
-versions. Agent-supplied values for authoritative fields are ignored;
-their presence in a request is a schema violation.
+Caller-supplied: `invoice_id`, `vendor_id` (the `lookup_vendor` target and
+the `list_invoices` filter) and `idempotency_key`. Authoritative (loaded by
+the PEP from the payments store, never from the caller): invoice `amount`,
+`currency`, `payee_account`, `vendor_id`-of-invoice, invoice `status`,
+vendor `status`, and the record versions. No served schema declares an
+authoritative field, so its presence in a request is a schema violation,
+refused at the tool boundary.
 
 ## Effective parameters and the parameter digest
 
@@ -130,14 +143,16 @@ high-consequence operations, also require a caller-supplied
 one key per intended execution. The PEP forwards it as
 `action.properties.idempotency_key`; it never enters `parameter_digest`.
 The PDP claims (idempotency scope, key) with the operation identity before
-it issues a permit, and refuses a missing or malformed key with
+it issues a permit. The tool boundary refuses a missing or malformed key
+(above); the PDP also refuses one that reaches it with
 `parameter_violation` (#917).
 
 `schedule_payment` and `cancel_scheduled_payment`, the two reversible
 writes, take the "short validity window combined with an idempotency key"
 permit-lifetime control (runtime permit binding; #918). They require the
-same `idempotency_key`, forwarded the same way; the PDP refuses a missing
-or malformed one with `parameter_violation` and makes no claim for it. Its
+same `idempotency_key`, forwarded the same way; the tool boundary refuses
+a missing or malformed one, and the PDP also refuses one that reaches it
+with `parameter_violation` and makes no claim for it. Its
 permit expires no later than the operation's published
 `permit_validity_max_seconds` (300 s as shipped), which the statement holds
 shorter than the retention, so no permit outlives its reservation. The

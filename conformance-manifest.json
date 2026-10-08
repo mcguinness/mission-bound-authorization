@@ -11,12 +11,12 @@
     "content_sha256": "62ca5c493b76ebf99ebcf9b04bba2ce501396cc29bc74a28c41f20e0a51bad52"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "da32dfe33c1490a0db0e3ec7a8d1b56d9debaeee",
-    "content_sha256": "56f43e2044daa0270b1cc7c5161d910ad092b4a78f28d5bfb8f7e729859c79e1"
+    "revision": "6a1c23ed8f9280fe888b8c163be1b8c5fadefc7a",
+    "content_sha256": "0d4d7ba5c4453c5e8ed6da4e13189278ea3b6e350c4e209a2cdb52cb20f6d57c"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "da32dfe33c1490a0db0e3ec7a8d1b56d9debaeee",
-    "content_sha256": "3f336fb606f1c06fb55805ab42dd34e788ea70a8c1b6298efcbfb5092eedad0a"
+    "revision": "6a1c23ed8f9280fe888b8c163be1b8c5fadefc7a",
+    "content_sha256": "4fe095f30cd109c7468e5db7116d7096a11e82bbd549aaeb7d273db6d0c0dcb4"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -59,8 +59,8 @@
     "content_sha256": "9201cdc83aa8e79a1a2615bf25f69c9ff8fac11424be6336c8f5052ba1f24b5b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "0e0301309a14578771b9aef0379dbd2eb0b3f2fc9ec0e626303faf2808f75075"
+    "revision": "fd935e96fc5069a89ba676c3748820c6d8ac66be",
+    "content_sha256": "3777606e2cf8670ade9109ef217994ab980a625f4327c9ed9936134b6b0ac09c"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -79,8 +79,8 @@
     "content_sha256": "72d16463993b55af9238d7374a0a39764b6a8086935515180fa4841344510119"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "fb51475dad98490aaf30ee980baa6941e8a5ca483bea75cf00a158566ed400a9"
+    "revision": "afea606f3b955198867531dd37c68921907f29be",
+    "content_sha256": "c3a1a76468ca3bb889530928e25375f3001999571a31fa9437c9c89f9f006769"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -99,12 +99,12 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "cffd2db65c200bc44cf354d90f15c855af8c082ac497d8b539406398ea903375"
+    "revision": "5ad0d29770d9598408397835f9ecf5b2ad147830",
+    "content_sha256": "5be7ff2eda5a6c1b20cb10b2fa6791d4b05dc06b609d8f43b850214ef33a9aa2"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "1c4868141e7f09b14adbc053a048706e258b7e62f2541e94ab55d5caac00a830"
+    "revision": "b8109b0c3ad8216fc6c3ef3488a03b98d344a576",
+    "content_sha256": "4005ab62f0ad304e30982923ce4a1670d00783f236baa526091dd64ff0adf5e4"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -241,6 +241,7 @@
    "child-delegation.carryover",
    "child-delegation.subtree-rendering",
    "child-delegation.policy-drawdown",
+   "child-delegation.direct-approval",
    "core.instance-context",
    "core.delegation",
    "runtime.instance-context",
@@ -252,6 +253,7 @@
    "submission-evidence.verification",
    "request-provenance.verification",
    "request-provenance.intake",
+   "expansion.adjudication",
    "expansion.interactive-completion"
   ]
  },
@@ -14538,12 +14540,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
-     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > a keyed tool called without a key is refused by the PDP and executes nothing",
+     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > a keyed tool called without a key, or with a malformed one, is refused invalid_request at intake before any PDP call, and executes nothing",
      "level": "endpoint",
      "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed (#917): every tool the Operation Profile places in a high-consequence class (execute_wire_transfer, send_remittance_email) defines an idempotency key and its served schema requires idempotency_key in the Operation Profile format (16 to 128 characters of ALPHA / DIGIT / \"-\" / \"_\"); the PDP refuses a missing or malformed key with parameter_violation in all three classes, privileged administration through a fixture statement and action because the shipped deployment offers none."
+   "notes": "Witnessed (#917): every tool the Operation Profile places in a high-consequence class (execute_wire_transfer, send_remittance_email) defines an idempotency key and its served schema requires idempotency_key in the Operation Profile format (16 to 128 characters of ALPHA / DIGIT / \"-\" / \"_\"); the PDP refuses a missing or malformed key with parameter_violation in all three classes, privileged administration through a fixture statement and action because the shipped deployment offers none. At the resource's tool boundary, intake (D316) refuses a missing or malformed key invalid_request before any PDP call; the PDP check stays as defense for a key that reaches it directly."
   },
   {
    "id": "runtime.idempotency.atomic-claim-and-linearizable-consumption",
@@ -22039,7 +22041,7 @@
    "id": "evidence.refusal.denial-reason-enum-and-boundary",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
+   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `request_invalid` (the PEP established the action, and the supplied arguments fail its required input schema, including an unknown or authoritative member, a missing required member, a wrong type, or a pattern failure), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -22051,7 +22053,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
+    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
    "coverage": "partial",
@@ -22103,9 +22105,15 @@
      "name": "a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-profile-intake.test.ts",
+     "name": "intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > the signed Refusal Record names request_invalid for arguments outside the schema, request_unsupported for an unknown tool and capability_source_unresolvable for an unreadable schema, each with no PDP call and no effect",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, and decision_evidence_unverifiable. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; token_invalid, mission_claim_missing and mission_reference_conflict have no assertion on the signed value yet, and remain #594 wave 4. This is not full Refusal Record conformance."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, and decision_evidence_unverifiable. Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; token_invalid, mission_claim_missing and mission_reference_conflict have no assertion on the signed value yet, and remain #594 wave 4. This is not full Refusal Record conformance."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
@@ -26316,6 +26324,94 @@
    "notes": "The reference implementation measures from the template's created_at, which every instance records as approval_basis.approved_at. Its refusal reason review_overdue is implementation-local on access_denied (D205); the draft registers none."
   },
   {
+   "id": "template.consent.source-retained-per-version",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "template-consent",
+   "text": "The Mission Issuer MUST retain that source, including an `organizational` source's `policy` reference, with its authenticated record of the consent to that exact `template_version`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the authority source established at template consent, including an organizational source's policy id, version and digest, is retained with the authenticated consent record for that exact template_version, so every instance dispatched under that version carries it even after the source's configuration or governed policy changes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. The reference AS establishes the template's authority_source at template consent and keeps it outside template_hash (src/services/authorization-server/src/kernel/template.ts); no test is mapped or mutation-proved under this row."
+  },
+  {
+   "id": "template.dispatch.source-check",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "Verify that the source retained for this `template_version` ({{template-consent}}) applies to the instance's Subject and that the surviving set lies within that source's ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch whose retained authority source does not apply to the instance's established Subject, or whose surviving instance Authority Set exceeds that source's ceiling, is refused and creates no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. The reference AS re-asserts the inherited source's ceiling and subject discipline at Dispatch (kernel assertInheritedAuthoritySource and assertInheritedSubjectDiscipline, template.ts); candidate witnesses in src/services/authorization-server/test/authority-source.test.ts are not mapped or mutation-proved under this row. No denial reason is pinned: the draft names none."
+  },
+  {
+   "id": "template.dispatch.source-inherited",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "`authority_source` is the source retained for this `template_version` ({{template-consent}}), read from the Mission Issuer's retained template record, never from the Dispatch request and never a source or policy version substituted after consent",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a dispatched Mission's authority_source equals the source retained at consent to its template_version, member for member; Dispatch request content and a change to the source's configuration or governed policy after consent do not alter it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. The reference AS copies the template's authority_source onto each instance (template.ts); the candidate witness 'a template instance carries the template's source verbatim' in authority-source.test.ts is not mapped or mutation-proved under this row."
+  },
+  {
+   "id": "template.dispatch.commit-rechecks-source-and-expiry",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "The Mission Issuer MUST make the step 8 check, and verify that the effective `expires_at` is strictly later than the committed `created_at`, atomically with the commit, against the source as it stands at that commit",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch whose retained source, as it stands at the commit, no longer applies to the Subject or covers the instance Authority Set, or whose effective expires_at is at or before the committed created_at, creates no Mission and counts nothing against max_active or dispatch_rate"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. No test is mapped or mutation-proved under this row; the expiry facet needs a dispatch intent whose requested expires_at has already passed."
+  },
+  {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
@@ -26665,6 +26761,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1079 (D296) specification slice. Gated on progressive.drawdown-derivation-limits: a deployment that runs Progressive ceiling drawdown and also adopts Mission Derivation Limits. No Progressive implementation yet (#985/#1017), so todo; witnesses cover D296's examples, concurrency, rollback and recovery, and must fail with the guard disabled."
+  },
+  {
+   "id": "progressive.in-ceiling.successor-subject-source",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "The successor's `subject` and `authority_source` are the predecessor's, and the commit that activates it checks that source's ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a ceiling_drawdown successor records the predecessor's subject and authority_source unchanged, and a drawdown whose successor Authority Set exceeds that source's ceiling as it stands at the activating commit activates no successor and supersedes nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice: the drawdown facet of the expansion profile's Successor Subject and authority source rule (expansion.successor.* rows). Not implemented: the reference AS has no ceiling_drawdown activation."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
@@ -29276,6 +29394,92 @@
    "notes": "Both forms: without and with a child_creation_policy, the record's approval_event_id equals activation.activation_event_id and differs from the Parent Mission's approval_event_id. Proved by recording the parent's approval_event_id on the child (both tests fail). Scoped to child-delegation.policy-drawdown: a direct human-approved child records activation.approval_event_id, not an activation_event_id, so this requirement never applies to it."
   },
   {
+   "id": "child-delegation.subject.policy-drawdown-parent-subject",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "Under `policy_drawdown`, it MUST equal the Parent Mission's `subject`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.policy-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Child Mission created on a policy_drawdown basis records the Parent Mission's subject unchanged, the same iss and sub"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. The reference AS copies the parent's subject onto policy_drawdown children (src/services/authorization-server/src/kernel/child-delegation.ts); no test is mapped or mutation-proved under this row yet."
+  },
+  {
+   "id": "child-delegation.subject.direct-default",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "Under `direct`, it is the Parent Mission's `subject` unless the human approval event establishes another Subject through the issuance profile's Subject and authority-source establishment in full",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.direct-approval"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Child Mission created on a direct basis records the Parent Mission's subject unless its human approval event established another Subject through the authenticated approval surface, with the Approver authorized to approve for that Subject and to activate the child's authority source; no child-creation request parameter selects the Subject, and the child stays within every parent bound"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. New capability child-delegation.direct-approval (the deployment creates children at a human approval event, approval_basis direct), following D292's per-basis gating: this clause binds only directly approved children, and no existing capability names that basis. The reference AS creates only policy_drawdown children (carryover replacements follow the Carryover rules), so the capability is unclaimed."
+  },
+  {
+   "id": "child-delegation.source.inherited-from-parent",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "A Child Mission's `authority_source` MUST equal the Parent Mission's, including an `organizational` source's `policy` reference",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Child Mission other than a carryover replacement records an authority_source equal to the Parent Mission's, member for member, including an organizational source's policy id, version and digest"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. Unconditional: the clause binds every Child-Mission-capable Mission Issuer on either basis, and carves out carryover replacements itself. The reference AS copies the parent's authority_source verbatim (child-delegation.ts); the candidate witness 'a Child Mission carries the parent's source verbatim' in src/services/authorization-server/test/authority-source.test.ts is not mapped or mutation-proved under this row."
+  },
+  {
+   "id": "child-delegation.source.commit-check",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "at the creation commit, the Mission Issuer MUST verify that the source applies to the child's `subject` and that the child Authority Set lies within the source's ceiling as it stands at that commit, as well as within the parent's ({{strict-subset}}), and MUST refuse the creation otherwise",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child creation whose inherited source does not apply to the child's subject, or whose child Authority Set exceeds that source's ceiling as it stands at the creation commit (including a ceiling narrowed after the parent's approval or while the creation was pending), is refused and creates no Child Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. Unconditional, as for child-delegation.source.inherited-from-parent. The reference AS re-asserts the inherited source's ceiling against the root's current declaration before computing the child's anchors (kernel assertInheritedAuthoritySource); the candidate witness 'a drawdown refuses access_denied when the source narrowed since approval' in authority-source.test.ts is not mapped or mutation-proved under this row, and the reference AS has no deferred child creation to exercise the pending window. No error code is pinned: the draft names none."
+  },
+  {
    "id": "child-delegation.carryover.expansion-disclosure",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "deferred-window",
@@ -31218,6 +31422,72 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.successor.subject-source-preserved",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-source",
+   "text": "A successor's `subject` and `authority_source` MUST equal the predecessor's, whichever completion mode or approval basis creates it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every successor, whether a fresh human approval or a policy drawdown adjudicates it, records the predecessor's subject and authority_source unchanged, member for member"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. New capability expansion.adjudication: the deployment adjudicates expansion, Conformance's expansion-capable Mission Issuer target. No existing capability fits: expansion.interactive-completion covers only the interactive mode, progressive.ceiling-drawdown only the policy drawdown, and unconditional would also bind the related_to correlation target, to which only Independent Continuation applies. The reference AS copies the predecessor's subject but re-establishes the successor's authority_source at its approval event without comparing it with the predecessor's (src/services/authorization-server/src/kernel/expansion.ts)."
+  },
+  {
+   "id": "expansion.successor.other-subject-or-source-refused",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-source",
+   "text": "an approval that would establish another Subject or source creates no successor",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion whose approval event would establish a Subject or authority_source different from the predecessor's activates no successor and leaves the predecessor active; another Subject or source is reachable only through a separately approved Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice; capability as for expansion.successor.subject-source-preserved. No error code is pinned: the draft names none beyond the verification order's generic refusal."
+  },
+  {
+   "id": "expansion.successor.source-commit-check",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-source",
+   "text": "In the commit that activates the successor, the Mission Issuer MUST verify that the source still applies to the Subject and that the successor Authority Set lies within the source's ceiling as it stands at that commit",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion completion whose source no longer applies to the Subject, or whose successor Authority Set exceeds the source's ceiling as it stands at the activating commit (including a ceiling narrowed after adjudication), activates no successor and leaves the predecessor active"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice; capability as for expansion.successor.subject-source-preserved. The reference AS asserts the successor's set against the source it establishes before computing anchors (expansion.ts), but no test is mapped or mutation-proved under this row and no completion exercises a narrowing that lands between adjudication and activation."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",

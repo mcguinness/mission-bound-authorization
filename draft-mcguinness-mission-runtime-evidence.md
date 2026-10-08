@@ -682,10 +682,14 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   before any decision request, including a delegation instance whose
   authority has been withdrawn, which is distinct from a credential
   that failed validation), `request_unsupported` (the
-  enforcement surface implements no such action), `target_unresolvable`
-  (the request names a target object the enforcement surface cannot
-  resolve), `capability_source_unresolvable` (the capability
-  definition the PEP must present could not be resolved),
+  enforcement surface implements no such action), `request_invalid`
+  (the PEP established the action, and the supplied arguments fail its
+  required input schema, including an unknown or authoritative member,
+  a missing required member, a wrong type, or a pattern failure),
+  `target_unresolvable` (the request names a target object the
+  enforcement surface cannot resolve), `capability_source_unresolvable`
+  (the capability definition the PEP must present could not be
+  resolved),
   `decision_evidence_unverifiable` (the Decision Evidence for a permit
   was absent or did not verify, so no decision the PEP can rely on was
   obtained), `channel_failure`, `pdp_unreachable`, or
@@ -2395,6 +2399,11 @@ evidence representation their shared envelope carries (using the
   member, registered and owned by the AuthZEN profile: the authority
   bound that decided an `out_of_authority` or `parameter_violation`
   deny (#825).
+
+- The Refusal Record's PEP `denial_reason` set adds `request_invalid`:
+  the PEP established the action, and the supplied arguments fail its
+  required input schema. `request_unsupported` keeps its meaning, an
+  action the enforcement surface does not implement (#1106).
 
 - `join_view_id` is a coordinated Decision Evidence extension member,
   registered and owned by the Mission Authority Server: the
