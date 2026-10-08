@@ -11,6 +11,7 @@ import { getTracer, initTelemetry } from "@mission/telemetry";
 import { credentialAuthorityFrom, type TokenFacts } from "@mission/mcp-payments";
 import { TOPOLOGY } from "@mission/demo-data";
 import { approveDemoMission, composeStack } from "./stack.js";
+import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -22,6 +23,7 @@ async function main() {
   const stack = await composeStack({
     openfgaUrl: process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url,
     presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
+    resourcePolicyStore: resourcePolicyStoreFromEnv(),
     caCertPath: ca,
   });
 
@@ -38,6 +40,9 @@ async function main() {
   const record = stack.kernel.get(mission.id);
   const token = (): TokenFacts => ({
     sub: "alice",
+    // The issuer this resource authenticates its subjects under, as the token
+    // verifier sets it: the Resource policy's issuer-local principal (#828).
+    iss: stack.issuer,
     clientId: "ap-agent",
     clientInstanceId: "inst-1",
     mission: { id: mission.id, issuer: "https://as.example.com", authority_hash: record?.authority_hash ?? "" },

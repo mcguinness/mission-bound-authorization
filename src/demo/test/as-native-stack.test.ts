@@ -42,7 +42,7 @@ import {
   dpopProofFor,
   type McpPaymentsServer,
 } from "@mission/mcp-payments";
-import { Fga } from "@mission/pdp";
+import { DOMAIN_MODEL, Fga } from "@mission/pdp";
 import { issueMissionToken } from "../src/approval-console.js";
 import { asNativeLaunchOptions, launchAsNative } from "../src/as-native.js";
 import { ISSUANCE_ONLY_CAPABILITIES } from "../src/issuance-only.js";
@@ -55,6 +55,19 @@ import {
 import { AS_NATIVE_CAPABILITIES, composeStack, type DemoStack } from "../src/stack.js";
 
 type Json = Record<string, unknown>;
+
+/**
+ * The stubbed OpenFGA client: the Mission's contextual check and the stored
+ * Resource-policy check (#828) both allow, and the development seed writes
+ * nowhere.
+ */
+const STUB_FGA = {
+  checkWithContext: async () => true,
+  checkStored: async () => true,
+  client: { write: async () => ({}) },
+  modelId: "test",
+} as unknown as Fga;
+const STUB_BOOTSTRAP = { fga: STUB_FGA, storeId: "test", modelId: "test" };
 
 /** @spec runtime#idempotency (#917): each stack gets its own single-writer claim file. */
 const tempClaimsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-claims-")), "claims.sqlite");
@@ -157,7 +170,8 @@ const MCP_HEADERS = { "content-type": "application/json", accept: "application/j
 
 describe("the as-native target excludes the MAS join route at startup (D315)", () => {
   it("fails startup, before connecting to anything, when the payments resource is configured governed", async () => {
-    const connect = vi.spyOn(Fga, "connect").mockRejectedValue(new Error("OpenFGA was reached"));
+    const bootstrap = vi.spyOn(Fga, "bootstrap").mockRejectedValue(new Error("OpenFGA was reached"));
+    const attach = vi.spyOn(Fga, "attach").mockRejectedValue(new Error("OpenFGA was reached"));
     try {
       await expect(
         composeStack({
@@ -167,11 +181,14 @@ describe("the as-native target excludes the MAS join route at startup (D315)", (
           masGovernedResources: [CANONICAL_RESOURCE],
           claimsFile: tempClaimsFile(),
           writeReservationsFile: tempReservationsFile(),
+          resourcePolicyStore: { bootstrap: "development" },
         }),
       ).rejects.toThrow(/mounts no MAS join route/);
-      expect(connect).not.toHaveBeenCalled();
+      expect(bootstrap).not.toHaveBeenCalled();
+      expect(attach).not.toHaveBeenCalled();
     } finally {
-      connect.mockRestore();
+      bootstrap.mockRestore();
+      attach.mockRestore();
     }
   });
 
@@ -204,7 +221,7 @@ const missionIdOf = (token: string): string => (decodeJwt(token).mission as { id
  */
 function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinting?: boolean }) {
   let stack: DemoStack;
-  let connect: MockInstance | undefined;
+  let fgaBootstrap: MockInstance | undefined;
   /** A read Mission's token: the target's ordinary client. */
   let issued: IssuedMission;
   let missionId: string;
@@ -485,11 +502,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
   return {
     async setup(): Promise<void> {
       if (!opts.live) {
-        connect = vi.spyOn(Fga, "connect").mockResolvedValue({
-          fga: { checkWithContext: async () => true } as unknown as Fga,
-          storeId: "test",
-          modelId: "test",
-        });
+        fgaBootstrap = vi.spyOn(Fga, "bootstrap").mockResolvedValue(STUB_BOOTSTRAP);
       }
       stack = await composeStack({
         openfgaUrl: opts.live ? API_URL : "http://unused.test",
@@ -499,6 +512,9 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
         asPort: opts.asPort,
         claimsFile: tempClaimsFile(),
         writeReservationsFile: tempReservationsFile(),
+        // @spec runtime#input-resource-policy (#828): a development store,
+        // seeded with the demo's entitlements (Alice reads and pays Acme).
+        resourcePolicyStore: { bootstrap: "development" },
         ...(opts.ordinaryTokenMinting ? { testOrdinaryTokenMinting: true } : {}),
       });
       stack.onEnforce((e) =>
@@ -525,7 +541,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       stack?.writeReservations.close();
       stack?.payments.db.close();
       stack?.kernel.db.close();
-      connect?.mockRestore();
+      fgaBootstrap?.mockRestore();
     },
 
     topology(): void {
@@ -929,15 +945,11 @@ const LAUNCH_AS_PORT = 14111;
 const AUDIENCE = new URL(CANONICAL_RESOURCE);
 
 describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () => {
-  let fgaConnect: MockInstance;
+  let fgaBootstrap: MockInstance;
   beforeAll(() => {
-    fgaConnect = vi.spyOn(Fga, "connect").mockResolvedValue({
-      fga: { checkWithContext: async () => true } as unknown as Fga,
-      storeId: "test",
-      modelId: "test",
-    });
+    fgaBootstrap = vi.spyOn(Fga, "bootstrap").mockResolvedValue(STUB_BOOTSTRAP);
   });
-  afterAll(() => fgaConnect.mockRestore());
+  afterAll(() => fgaBootstrap.mockRestore());
 
   /** The launcher's own options from `env`, with only this test's AS port and store files added. */
   const launchOptions = (
@@ -949,6 +961,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     expect(asNativeLaunchOptions({})).toEqual({
       openfgaUrl: TOPOLOGY.openfga.url,
       presharedKey: TOPOLOGY.openfga.presharedKey,
+      resourcePolicyStore: { bootstrap: "development" },
       target: "as-native",
     });
     const ca = fileURLToPath(import.meta.url);
@@ -959,7 +972,19 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
         OPENFGA_CA_CERT: ca,
         MISSION_PDP_MODE: "remote",
       }),
-    ).toEqual({ openfgaUrl: "https://fga.test:8080", presharedKey: "k", caCertPath: ca, pdpMode: "remote", target: "as-native" });
+    ).toEqual({
+      openfgaUrl: "https://fga.test:8080",
+      presharedKey: "k",
+      caCertPath: ca,
+      pdpMode: "remote",
+      resourcePolicyStore: { bootstrap: "development" },
+      target: "as-native",
+    });
+    // @spec runtime#input-resource-policy (#828): a configured store and model
+    // are attached, never bootstrapped.
+    expect(asNativeLaunchOptions({ OPENFGA_STORE_ID: "store-1", OPENFGA_MODEL_ID: "model-1" }).resourcePolicyStore).toEqual({
+      attach: { storeId: "store-1", modelId: "model-1" },
+    });
     const launched = await launchAsNative(launchOptions());
     try {
       expect(launched.stack.authServer?.capabilities).toEqual(ENABLED);
@@ -979,13 +1004,13 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     }
     // Nothing else launches: the test-only fixture and any other target are
     // refused before anything connects.
-    fgaConnect.mockClear();
+    fgaBootstrap.mockClear();
     await expect(launchAsNative({ ...launchOptions(), testOrdinaryTokenMinting: true })).rejects.toThrow(
       /never enables the test-only ordinary-token minting fixture/,
     );
     const { target: _target, ...noTarget } = launchOptions();
     await expect(launchAsNative(noTarget)).rejects.toThrow(/composes only the as-native target/);
-    expect(fgaConnect).not.toHaveBeenCalled();
+    expect(fgaBootstrap).not.toHaveBeenCalled();
   });
 
   it("refuses an unusable configuration by name, before anything connects", () => {
@@ -994,8 +1019,27 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       [{ OPENFGA_HTTP_URL: "ftp://fga.test" }, /^OPENFGA_HTTP_URL is not an http or https URL: ftp:\/\/fga\.test$/],
       [{ OPENFGA_CA_CERT: "/nonexistent/openfga.crt" }, /^OPENFGA_CA_CERT names \/nonexistent\/openfga\.crt, which does not exist/],
       [{ MISSION_PDP_MODE: "bogus" }, /^MISSION_PDP_MODE must be co-resident or remote, not bogus$/],
+      [{ OPENFGA_STORE_ID: "store-1" }, /^set both OPENFGA_STORE_ID and OPENFGA_MODEL_ID to attach, or neither$/],
+      [{ OPENFGA_MODEL_ID: "model-1" }, /^set both OPENFGA_STORE_ID and OPENFGA_MODEL_ID to attach, or neither$/],
     ];
     for (const [env, message] of cases) expect(() => asNativeLaunchOptions(env), JSON.stringify(env)).toThrow(message);
+  });
+
+  it("attaches to a configured Resource-policy store and model: it reads the model back and creates, writes and seeds nothing (#828)", async () => {
+    const fga = await startFakeOpenFga();
+    try {
+      fgaBootstrap.mockClear();
+      const launched = await launchAsNative(
+        launchOptions({ OPENFGA_HTTP_URL: fga.url, OPENFGA_STORE_ID: FAKE_STORE_ID, OPENFGA_MODEL_ID: FAKE_MODEL_ID }),
+      );
+      await launched.close();
+      expect(fgaBootstrap).not.toHaveBeenCalled();
+      expect(fga.requests.map((r) => `${r.method} ${r.path}`)).toEqual([
+        `GET /stores/${FAKE_STORE_ID}/authorization-models/${FAKE_MODEL_ID}`,
+      ]);
+    } finally {
+      await fga.close();
+    }
   });
 
   it("refuses startup when the AS port or the declared audience's port is taken, and keeps no port or store file", async () => {
@@ -1034,13 +1078,21 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
   });
 });
 
-/** A stand-in OpenFGA answering the two calls `Fga.connect` makes, and recording each request. */
+const FAKE_STORE_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+const FAKE_MODEL_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAW";
+
+/**
+ * A stand-in OpenFGA, recording each request. It answers the calls a
+ * development Resource-policy store makes (`Fga.bootstrap`'s store and model,
+ * then the seed write) and an attach's model read, which returns the domain
+ * model (#828).
+ */
 async function startFakeOpenFga(): Promise<{
   url: string;
   requests: { method: string; path: string; authorization: string | undefined }[];
   close: () => Promise<void>;
 }> {
-  const storeId = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+  const storeId = FAKE_STORE_ID;
   const requests: { method: string; path: string; authorization: string | undefined }[] = [];
   const server: HttpServer = createHttpServer((req, res) => {
     requests.push({ method: req.method ?? "", path: req.url ?? "", authorization: req.headers.authorization });
@@ -1051,7 +1103,11 @@ async function startFakeOpenFga(): Promise<{
       if (req.method === "POST" && req.url === "/stores") {
         res.writeHead(201).end(JSON.stringify({ id: storeId, name: "mission-payments", created_at: now, updated_at: now }));
       } else if (req.method === "POST" && req.url === `/stores/${storeId}/authorization-models`) {
-        res.writeHead(201).end(JSON.stringify({ authorization_model_id: "01ARZ3NDEKTSV4RRFFQ69G5FAW" }));
+        res.writeHead(201).end(JSON.stringify({ authorization_model_id: FAKE_MODEL_ID }));
+      } else if (req.method === "POST" && req.url === `/stores/${storeId}/write`) {
+        res.writeHead(200).end(JSON.stringify({}));
+      } else if (req.method === "GET" && req.url === `/stores/${storeId}/authorization-models/${FAKE_MODEL_ID}`) {
+        res.writeHead(200).end(JSON.stringify({ authorization_model: { id: FAKE_MODEL_ID, ...DOMAIN_MODEL } }));
       } else {
         res.writeHead(404).end(JSON.stringify({ code: "not_found" }));
       }
@@ -1075,7 +1131,15 @@ const TSX_LOADER = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).
 /** The launcher's server entry as its own process, with `env` over a clean OpenFGA and PDP configuration. */
 function runLauncher(env: Record<string, string>) {
   const inherited: NodeJS.ProcessEnv = { ...process.env };
-  for (const name of ["OPENFGA_HTTP_URL", "OPENFGA_PRESHARED_KEY", "OPENFGA_CA_CERT", "MISSION_PDP_MODE", "NODE_OPTIONS"]) {
+  for (const name of [
+    "OPENFGA_HTTP_URL",
+    "OPENFGA_PRESHARED_KEY",
+    "OPENFGA_CA_CERT",
+    "OPENFGA_STORE_ID",
+    "OPENFGA_MODEL_ID",
+    "MISSION_PDP_MODE",
+    "NODE_OPTIONS",
+  ]) {
     delete inherited[name];
   }
   const child: ChildProcess = spawn(process.execPath, ["--import", TSX_LOADER, SERVE_ENTRY], {
@@ -1161,11 +1225,15 @@ describe("the as-native launcher process, the entry pnpm as-native runs, against
       expect(run.stdout()).toContain("  dev ordinary token not served");
       expect(run.stdout()).toContain(`  resource audience  ${CANONICAL_RESOURCE}  (HTTP MCP, DPoP verified on every request)`);
       expect(run.stdout()).toContain("  MAS join route     not mounted");
-      // It connected to the configured OpenFGA under the configured key.
+      // It connected to the configured OpenFGA under the configured key and,
+      // with no store configured, bootstrapped and seeded a development
+      // Resource-policy store (#828), naming it so a restart can attach.
       expect(fga.requests.map((r) => `${r.method} ${r.path} ${r.authorization}`)).toEqual([
         "POST /stores Bearer launch-test-key",
-        "POST /stores/01ARZ3NDEKTSV4RRFFQ69G5FAV/authorization-models Bearer launch-test-key",
+        `POST /stores/${FAKE_STORE_ID}/authorization-models Bearer launch-test-key`,
+        `POST /stores/${FAKE_STORE_ID}/write Bearer launch-test-key`,
       ]);
+      expect(run.stdout()).toContain(`development Resource-policy store ${FAKE_STORE_ID} model ${FAKE_MODEL_ID}`);
       // The AS it serves is the D332 surface, with no dev route.
       const meta = (await (await fetch(`${asUrl}/.well-known/openid-configuration`)).json()) as Json;
       expect(meta.grant_types_supported).toEqual(["implicit", "authorization_code", "refresh_token"]);
@@ -1204,6 +1272,7 @@ describe("the as-native launcher process, the entry pnpm as-native runs, against
     const cases: [Record<string, string>, RegExp][] = [
       [{ OPENFGA_HTTP_URL: fga.url, MISSION_PDP_MODE: "bogus" }, /MISSION_PDP_MODE must be co-resident or remote, not bogus$/],
       [{ OPENFGA_HTTP_URL: fga.url, OPENFGA_CA_CERT: "/nonexistent/openfga.crt" }, /OPENFGA_CA_CERT names \/nonexistent\/openfga\.crt, which does not exist/],
+      [{ OPENFGA_HTTP_URL: fga.url, OPENFGA_STORE_ID: FAKE_STORE_ID }, /set both OPENFGA_STORE_ID and OPENFGA_MODEL_ID to attach, or neither$/],
       [{ OPENFGA_HTTP_URL: `http://127.0.0.1:${closed}` }, /^as-native: startup failed: \S/],
     ];
     for (const [env, reason] of cases) {

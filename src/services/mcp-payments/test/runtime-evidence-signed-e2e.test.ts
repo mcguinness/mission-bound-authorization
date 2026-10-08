@@ -36,6 +36,7 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const ISSUER = "https://as.test";
 
@@ -84,7 +85,7 @@ function seededPayments(): PaymentsStore {
 
 function buildServer(missionView: MissionView, fga: Fga) {
   const payments = seededPayments();
-  const keys = createEphemeralEvidenceKeys();
+  const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === missionView.id && ref.issuer === missionView.issuer
@@ -118,7 +119,7 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
     // resource IS the enforcement scope); #739 review point 1 means a
     // resolver no longer verifies a genuinely signed record unless BOTH are
     // supplied exactly.
-    const keys = createEphemeralEvidenceKeys({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
     const resolver = buildEvidenceKeyResolver(keys.verification);
     const payments = seededPayments();
     const evidence = new EvidenceStore(keys.signing, resolver);
@@ -172,7 +173,7 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
     // resource IS the enforcement scope); #739 review point 1 means a
     // resolver no longer verifies a genuinely signed record unless BOTH are
     // supplied exactly.
-    const keys = createEphemeralEvidenceKeys({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
     const resolver = buildEvidenceKeyResolver(keys.verification);
     const payments = seededPayments();
     const evidence = new EvidenceStore(keys.signing, resolver);
@@ -235,7 +236,7 @@ describe("Decision Evidence per-(mission, emitter, role) sequence allocation", (
 
 describe("buildEvidenceKeyResolver: emitter + audience binding (#739 review point 1)", () => {
   it("rejects a genuinely signed, independently-verifiable retained record when the resolver's keys are registered for a DIFFERENT emitter id (same kid, role, and audience)", async () => {
-    const keys = createEphemeralEvidenceKeys({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
     // A resolver built for an IMPERSONATOR component: identical kid/role/
     // audience, but registered under a different emitter.id than the one
     // that actually signed. Pre-#739-review-point-1, `buildEvidenceKeyResolver`
@@ -282,6 +283,7 @@ describe("buildEvidenceKeyResolver: emitter + audience binding (#739 review poin
 
   it("never wildcards a missing audience for a pdp/pep/executor key, even when one is registered without one", () => {
     const keys = createEphemeralEvidenceKeys({
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       emitterId: "pdp.example.com",
       audience: "https://erp.example.com",
     });
@@ -300,7 +302,7 @@ describe("buildEvidenceKeyResolver: emitter + audience binding (#739 review poin
   });
 
   it("a receipt_issuer key MAY stay audience-unbound (the one role the binding does not require it for)", () => {
-    const keys = createEphemeralEvidenceKeys({ roles: ["receipt_issuer"], emitterId: "receipts.example.com" });
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, roles: ["receipt_issuer"], emitterId: "receipts.example.com" });
     const resolver = buildEvidenceKeyResolver(keys.verification);
     const resolved = resolver({
       kid: keys.verification.find((k) => k.role === "receipt_issuer")!.kid,

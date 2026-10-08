@@ -27,11 +27,12 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, RESOURCE_POLICY_REFUSES_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
 // decision point's entry point, which closes over the PDP's emission path.
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 
 const ISSUER = "https://as.test";
 const RESOURCE = "vendor.example";
@@ -433,13 +434,32 @@ describe("baseline MAS Join: rule 8's three bounds, one denial each (@spec autho
     expect(res.decision).toBeDefined();
   });
 
-  it("bound 3: current RESOURCE POLICY refusing denies out_of_authority with both other bounds satisfied", async () => {
+  it("bound 2, contextual check: the Mission's FGA projection refusing denies out_of_authority with the credential bound satisfied", async () => {
     const pep = build({ fga: denyingFga, masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
     const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
     expect(res.denial_reason).toBe("out_of_authority");
+    expect(res.decision).toBeDefined();
+  });
+
+  // @spec runtime#input-resource-policy (#828): the independently administered
+  // policy bound to the decision point, refusing with the credential bound,
+  // the joined Mission authority and the Mission's contextual check all
+  // satisfied.
+  it("bound 3, independently administered: a refusing Resource policy denies resource_policy with both other bounds satisfied", async () => {
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_REFUSES_ALL_FIXTURE });
+    const pep = build({
+      decide: keys.decide,
+      evidence: new EvidenceStore(keys.signing, keys.resolver),
+      masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY },
+    });
+    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(res.permitted).toBe(false);
+    expect(res.denial_reason).toBe("resource_policy");
     expect(res.decision).toBeDefined();
   });
 

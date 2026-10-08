@@ -33,6 +33,7 @@ import {
   type DecisionPoint,
   type EvidenceKeyResolver,
   openEphemeralClaimDomain,
+  type ResourcePolicy,
   RUNTIME_POSTURE,
 } from "@mission/pdp";
 import {
@@ -95,6 +96,14 @@ export interface CreateEphemeralEvidenceKeysOptions {
    * unreachable from anywhere.
    */
   decisionPoint?: Pick<DecisionPoint, "decide" | "decideAs" | "claimsFor"> & { evidenceVerification: DecisionEvidenceVerification };
+  /**
+   * @spec runtime#input-resource-policy (#828): the Resource policy bound to
+   * the decision point constructed here (ignored with `decisionPoint`, which
+   * carries its own). Absent, that decision point has none and every decision
+   * through `decide` throws, which this PEP records as `pdp_unreachable`: a
+   * caller that needs a permit names its policy, a fixture included.
+   */
+  resourcePolicy?: ResourcePolicy;
 }
 
 /**
@@ -131,6 +140,7 @@ export function createEphemeralEvidenceKeys(
     createEphemeralDecisionPoint({
       emitterId,
       audience,
+      ...(options.resourcePolicy ? { resourcePolicy: options.resourcePolicy } : {}),
       claims: openEphemeralClaimDomain({
         owner: RUNTIME_POSTURE.pdps[0] as string,
         statement: RUNTIME_POSTURE,

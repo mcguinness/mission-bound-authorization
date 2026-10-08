@@ -24,6 +24,7 @@
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "./decision-evidence.js";
 import { type DecisionFn, type EvaluateOptions, evaluate } from "./evaluate.js";
+import { isResourcePolicy, type ResourcePolicy, ResourcePolicyConfigError } from "./resource-policy.js";
 import type {
   ClaimRequester,
   ClaimResolution,
@@ -115,6 +116,15 @@ export interface DecisionPointConfig {
    * permit.
    */
   claims?: IdempotencyClaimDomain;
+  /**
+   * @spec runtime#input-resource-policy (#828): this decision point's
+   * independently administered Resource policy, bound here for the same
+   * reason as the claim domain: an enforcement component that could supply
+   * one could supply a policy that permits everything. REQUIRED for
+   * {@link createDecisionPoint}, which refuses construction without one; an
+   * ephemeral decision point without one throws at each decision instead.
+   */
+  resourcePolicy?: ResourcePolicy;
 }
 
 export interface DecisionPoint {
@@ -133,33 +143,43 @@ export interface DecisionPoint {
   claimsFor?: (requester: ClaimRequester, redeemingExecution?: RedeemingExecutionFn) => ClaimChannel;
 }
 
+/** The PDP-side bindings one decision point applies to every decision. */
+interface PointBindings {
+  emitter: DecisionEvidenceEmitter | undefined;
+  claims: IdempotencyClaimDomain | undefined;
+  resourcePolicy: ResourcePolicy | undefined;
+}
+
 /**
- * Bind one emission path, one claim domain and one requester to one decision
- * function. The returned function strips any `evidence`, `claims`,
- * `requester` or `consumptionStatus` a caller's options object carries before
- * applying this decision point's own: {@link DecisionOptions} omits the
- * members, but an options object built elsewhere and widened is still
- * structurally assignable, so they are removed rather than merely
- * overwritten. None of them can be supplied, replaced, or suppressed from the
- * enforcement side.
+ * Bind one emission path, one claim domain, one Resource policy and one
+ * requester to one decision function. The returned function strips any
+ * `evidence`, `claims`, `resourcePolicy`, `requester` or `consumptionStatus`
+ * a caller's options object carries before applying this decision point's
+ * own: {@link DecisionOptions} omits the members, but an options object built
+ * elsewhere and widened is still structurally assignable, so they are removed
+ * rather than merely overwritten. None of them can be supplied, replaced, or
+ * suppressed from the enforcement side. A decision point bound to no Resource
+ * policy forwards none, and `evaluate` refuses to decide.
  */
 function bindDecide(
-  emitter: DecisionEvidenceEmitter | undefined,
-  claims: IdempotencyClaimDomain | undefined,
+  bindings: PointBindings,
   requester: ClaimRequester,
   consumptionStatus?: ConsumptionStatusFn,
 ): DecisionFn {
+  const { emitter, claims, resourcePolicy } = bindings;
   return async (req, opts) => {
-    const forwarded = { ...opts } as EvaluateOptions;
+    const forwarded = { ...opts } as Partial<EvaluateOptions>;
     delete forwarded.evidence;
     delete forwarded.claims;
+    delete forwarded.resourcePolicy;
     delete forwarded.requester;
     delete forwarded.consumptionStatus;
     if (emitter) forwarded.evidence = emitter;
     if (claims) forwarded.claims = claims;
+    if (resourcePolicy) forwarded.resourcePolicy = resourcePolicy;
     forwarded.requester = requester;
     if (consumptionStatus) forwarded.consumptionStatus = consumptionStatus;
-    return evaluate(req, forwarded);
+    return evaluate(req, forwarded as EvaluateOptions);
   };
 }
 
@@ -173,14 +193,22 @@ function unboundRequester(): ClaimRequester {
   return { pep_id: "co-resident", pep_epoch: `co-resident:${randomUUID()}` };
 }
 
-/** Construct a co-resident PDP: one decision function, bound once to one emission path. */
+/**
+ * Construct a co-resident PDP: one decision function, bound once to one
+ * emission path, one claim domain and one Resource policy. A configuration
+ * with no Resource policy refuses here, at startup (@spec
+ * runtime#input-resource-policy, #828), never at the first decision.
+ */
 export function createDecisionPoint(
-  config: DecisionPointConfig & Required<Pick<DecisionPointConfig, "evidence">>,
+  config: DecisionPointConfig & Required<Pick<DecisionPointConfig, "evidence" | "resourcePolicy">>,
 ): Required<DecisionPoint>;
 export function createDecisionPoint(
-  config?: DecisionPointConfig,
+  config: DecisionPointConfig & Required<Pick<DecisionPointConfig, "resourcePolicy">>,
 ): DecisionPoint & Required<Pick<DecisionPoint, "decideAs" | "claimsFor">>;
-export function createDecisionPoint(config: DecisionPointConfig = {}): DecisionPoint {
+export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<DecisionPointConfig, "resourcePolicy">>): DecisionPoint {
+  if (!isResourcePolicy(config?.resourcePolicy)) {
+    throw new ResourcePolicyConfigError("createDecisionPoint requires a Resource policy");
+  }
   const emitter = config.evidence
     ? createDecisionEvidenceEmitter({
         signer: config.evidence.signer,
@@ -188,9 +216,10 @@ export function createDecisionPoint(config: DecisionPointConfig = {}): DecisionP
         audience: config.evidence.audience,
       })
     : undefined;
+  const bindings: PointBindings = { emitter, claims: config.claims, resourcePolicy: config.resourcePolicy };
   return {
-    decide: bindDecide(emitter, config.claims, unboundRequester()),
-    decideAs: (requester, consumptionStatus) => bindDecide(emitter, config.claims, requester, consumptionStatus),
+    decide: bindDecide(bindings, unboundRequester()),
+    decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),
     claimsFor: (requester, redeemingExecution) => claimChannelFor(config.claims, requester, redeemingExecution),
     ...(config.evidence
       ? {
@@ -231,13 +260,21 @@ export function createEphemeralDecisionPoint(options: {
   audience: string;
   kid?: string;
   claims?: IdempotencyClaimDomain;
+  /**
+   * @spec runtime#input-resource-policy (#828): bound exactly as in
+   * {@link createDecisionPoint}. Absent, every decision throws
+   * {@link ResourcePolicyConfigError}: no permit is ever reached without
+   * the bound.
+   */
+  resourcePolicy?: ResourcePolicy;
 }): EphemeralDecisionPoint {
-  const { emitterId, audience, kid = "ephemeral-pdp", claims } = options;
+  const { emitterId, audience, kid = "ephemeral-pdp", claims, resourcePolicy } = options;
   const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
   const emitter = createDecisionEvidenceEmitter({ signer: { kid, key: privateKey }, emitterId, audience });
+  const bindings: PointBindings = { emitter, claims, resourcePolicy };
   return {
-    decide: bindDecide(emitter, claims, unboundRequester()),
-    decideAs: (requester, consumptionStatus) => bindDecide(emitter, claims, requester, consumptionStatus),
+    decide: bindDecide(bindings, unboundRequester()),
+    decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),
     claimsFor: (requester, redeemingExecution) => claimChannelFor(claims, requester, redeemingExecution),
     evidenceVerification: { kid, publicKey, emitterId, audience },
     emitter,

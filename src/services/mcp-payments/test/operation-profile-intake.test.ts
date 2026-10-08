@@ -18,6 +18,7 @@ import { randomUUID } from "node:crypto";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import type { Fga, MissionView } from "@mission/pdp";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { describe, expect, it } from "vitest";
 import {
   CANONICAL_RESOURCE,
@@ -39,7 +40,7 @@ import {
 import { admitArguments } from "../src/intake.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
 const idem = (): string => `idem_${randomUUID()}`;
 const ISSUER = "https://as.test";

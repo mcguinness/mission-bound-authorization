@@ -15,6 +15,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { buildScopeStatement, createMediatedHarness, EgressGate, type MissionState, runAgentLoop } from "@mission/agent";
 import { CANONICAL_RESOURCE, DEMO_AGENT_PROPOSAL, TOPOLOGY } from "@mission/demo-data";
 import { composeStack } from "./stack.js";
+import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { issueMissionToken } from "./approval-console.js";
 
 const C = { dim: "\x1b[2m", green: "\x1b[32m", red: "\x1b[31m", cyan: "\x1b[36m", bold: "\x1b[1m", reset: "\x1b[0m" };
@@ -38,6 +39,7 @@ async function main(): Promise<void> {
   const stack = await composeStack({
     openfgaUrl: process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url,
     presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
+    resourcePolicyStore: resourcePolicyStoreFromEnv(),
     caCertPath: ca,
     withAuthServer: true,
   });

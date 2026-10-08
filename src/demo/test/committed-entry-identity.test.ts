@@ -22,14 +22,21 @@ const tempFile = (prefix: string, name: string): string => join(mkdtempSync(join
 
 describe("the canonical Mission loader preserves the committed entry identity (D335)", () => {
   it("reproduces the committed authority_hash and each entry's issuer digest, though it adds join_delegation", async () => {
-    const connect = vi
-      .spyOn(Fga, "connect")
-      .mockResolvedValue({ fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test" } as never);
+    // The stub allows the contextual and stored checks, and the development
+    // Resource-policy seed (#828) writes nowhere.
+    const stubFga = {
+      checkWithContext: async () => true,
+      checkStored: async () => true,
+      client: { write: async () => ({}) },
+      modelId: "test",
+    } as unknown as Fga;
+    const bootstrap = vi.spyOn(Fga, "bootstrap").mockResolvedValue({ fga: stubFga, storeId: "test", modelId: "test" });
     const stack = await composeStack({
       openfgaUrl: "http://unused.test",
       presharedKey: "unused",
       claimsFile: tempFile("demo-claims-", "claims.sqlite"),
       writeReservationsFile: tempFile("demo-reservations-", "write-reservations.sqlite"),
+      resourcePolicyStore: { bootstrap: "development" },
     });
     try {
       const mission = approveDemoMission(stack);
@@ -47,7 +54,7 @@ describe("the canonical Mission loader preserves the committed entry identity (D
         entryDigest(record.issuer, record.authority_set[delegable] as never),
       );
     } finally {
-      connect.mockRestore();
+      bootstrap.mockRestore();
       await stack.decisionChannel.close();
       await stack.masGovernedChannel?.close();
       stack.authServer?.closeAuthServer();

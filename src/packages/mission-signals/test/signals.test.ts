@@ -22,6 +22,7 @@ import {
   type Fga,
   type MissionView,
 } from "@mission/pdp";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import { withCredential } from "../../../services/pdp/test/with-credential.js";
@@ -158,6 +159,7 @@ async function bootstrap() {
       now: () => NOW,
       stalenessBound,
       relationForAction,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     });
   };
 

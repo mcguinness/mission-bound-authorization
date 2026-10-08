@@ -20,6 +20,7 @@ import {
   relationForAction,
   stalenessBound,
 } from "../src/index.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const ISSUER = "https://as.test";
@@ -52,6 +53,7 @@ const opts = (v: MissionView = view()) => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
 });
 
 type Credential = NonNullable<EvaluationRequest["context"]["credential"]>;

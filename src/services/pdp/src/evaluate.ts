@@ -4,7 +4,8 @@
  * @spec runtime (abstract decision contract)
  *
  * The PDP decision function (D28): a function of the envelope, the loaded
- * MissionView, the FGA authority check, the clock, and freshness inputs.
+ * MissionView, the FGA authority check, the independently administered
+ * Resource policy (#828), the clock, and freshness inputs.
  * Permit properties are declared; the PEP owns redemption state, execution
  * leases and effects. The one state the PDP holds is the Exact idempotency
  * claim for keyed high-consequence actions (@spec runtime#idempotency, #917,
@@ -72,6 +73,13 @@ import {
   viewHoldsCommittedSet,
 } from "./policy-view.js";
 import { permitDeadline } from "./permit-deadline.js";
+import {
+  checkResourcePolicy,
+  isResourcePolicy,
+  type ResourcePolicy,
+  ResourcePolicyConfigError,
+  type ResourcePolicyTarget,
+} from "./resource-policy.js";
 import {
   allowsNoActiveFreshness,
   RUNTIME_POSTURE,
@@ -294,6 +302,14 @@ export type DenialReason =
   | "action_approval_required"
   | "unsupported_authorization_type"
   /**
+   * @spec runtime#input-resource-policy, authzen#runtime-denial-classification
+   * (#828): "Resource policy refuses the action independently of Mission
+   * authority." The independently administered policy reached a refusal with
+   * every Mission-authority gate satisfied. A policy that could not answer is
+   * not this reason: it yields no decision at all.
+   */
+  | "resource_policy"
+  /**
    * @spec cross-domain#dual-axis, authzen#pdp-request rule 10 — the
    * cross-domain Origin Principal profile's registered extension reason: a
    * failed, missing, ambiguous, or stale mapping from `context.mission.subject`
@@ -342,6 +358,17 @@ export interface EvaluateOptions {
   view: MissionView;
   fga: Fga;
   modelId: string;
+  /**
+   * @spec runtime#input-resource-policy (#828): the independently
+   * administered Resource policy, the third bound beside the credential's
+   * authority and the Mission's. REQUIRED: {@link evaluate} throws
+   * {@link ResourcePolicyConfigError} without one rather than permitting on
+   * the other bounds alone. Bound PDP-side at decision-point construction,
+   * like `evidence` and `claims`, and never supplied by an enforcement
+   * component (see {@link DecisionOptions}). A unit test that evaluates the
+   * Mission bound alone binds a named fixture from `@mission/pdp/test-support`.
+   */
+  resourcePolicy: ResourcePolicy;
   now: () => Date;
   /**
    * The declared freshness posture per action class: a window in seconds, an
@@ -495,8 +522,12 @@ export interface EvaluateOptions {
  * consumption-status capability are PDP-side and channel-side bindings for
  * the same reason: a caller that could supply them could point the claim at
  * a domain of its choosing or answer for another PEP's redemption store.
+ *
+ * @spec runtime#input-resource-policy (#828): the Resource policy is a
+ * PDP-side binding too. An enforcement component that could supply it could
+ * hand the PDP a policy that permits everything.
  */
-export type DecisionOptions = Omit<EvaluateOptions, "evidence" | "claims" | "requester" | "consumptionStatus">;
+export type DecisionOptions = Omit<EvaluateOptions, "evidence" | "claims" | "requester" | "consumptionStatus" | "resourcePolicy">;
 
 /** What the claim step left for {@link evaluate} to finish. */
 interface ClaimContext {
@@ -552,6 +583,13 @@ function newDecisionId(): string {
 }
 
 export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
+  // @spec runtime#input-resource-policy (#828): a decision reached without
+  // the Resource-policy bound would permit on the other bounds alone. Options
+  // assembled outside the type system (a widened or cast object) are checked
+  // here, before any evaluation work: no decision, never an implicit allow.
+  if (!isResourcePolicy(opts.resourcePolicy)) {
+    throw new ResourcePolicyConfigError("no Resource policy is bound to this decision");
+  }
   // @spec authzen#evaluation-request-digest-input: digest the request as
   // submitted, on receipt, before evaluation applies any default or enrichment.
   const requestDigest = evaluationRequestDigest(req);
@@ -694,6 +732,21 @@ async function emitDecisionEvidence(
       ? { entry_digest: decision.context.entry_digest as string }
       : {}),
   });
+}
+
+/**
+ * @spec runtime#input-resource-policy, runtime#read-binding (#828): every
+ * object the action touches, as the trusted PEP named it: the request's
+ * target object, then each member of a bound collection
+ * (`resource.properties.vendor_ids`) not already named. Resource policy
+ * decides on all of them; a representative member never stands for the rest.
+ */
+function resourcePolicyTargets(req: EvaluationRequest): ResourcePolicyTarget[] {
+  const targets: ResourcePolicyTarget[] = [{ type: req.resource.type, id: req.resource.id }];
+  for (const vendorId of req.resource.properties?.vendor_ids ?? []) {
+    if (!targets.some((t) => t.type === "vendor" && t.id === vendorId)) targets.push({ type: "vendor", id: vendorId });
+  }
+  return targets;
 }
 
 async function evaluateInner(
@@ -1411,6 +1464,31 @@ async function evaluateInner(
       );
       if (!memberAllowed) return deny("out_of_authority");
     }
+  }
+
+  // 6b. Independent Resource policy (@spec runtime#input-resource-policy,
+  // authzen#runtime-denial-classification `resource_policy`, #828): "The
+  // action MUST fail closed unless both Mission authority and Resource policy
+  // permit it." Asked once every Mission-authority gate above has passed, and
+  // before the parameter, approval and claim steps, so a policy refusal is
+  // never offered as requestable and never claims an idempotency key. The
+  // query carries the authenticated subject, the authenticated client, the
+  // action and every target (the named object and each collection member),
+  // and nothing derived from the Mission. A policy that cannot answer throws
+  // out of `evaluate` (no decision; the PEP records `pdp_unreachable`), so
+  // no Decision Evidence ever claims a policy evaluation that did not happen.
+  const iss = req.subject.properties?.iss;
+  const client = req.context.actor?.client_id;
+  const policy = await checkResourcePolicy(opts.resourcePolicy, {
+    subject: { sub: req.subject.id, ...(typeof iss === "string" ? { iss } : {}) },
+    ...(typeof client === "string" ? { client } : {}),
+    action: req.action.name,
+    targets: resourcePolicyTargets(req),
+  });
+  if (!policy.allowed) {
+    // @spec authzen#runtime-denial-classification: "A terminal policy refusal
+    // SHOULD carry `next_action: none`".
+    return { decision: false, context: base({ denial_reason: "resource_policy", reason: "resource_policy", next_action: "none" }) };
   }
 
   // 7. Numeric constraint (overlay, O-6): per-payment cap.

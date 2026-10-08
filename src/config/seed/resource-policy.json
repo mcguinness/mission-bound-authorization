@@ -1,0 +1,8 @@
+{
+  "entitlements": [
+    { "sub": "alice", "relation": "authorized_reader", "vendor": "acme" },
+    { "sub": "alice", "relation": "authorized_payer", "vendor": "acme" },
+    { "sub": "alice", "relation": "authorized_reader", "vendor": "globex" },
+    { "sub": "alice", "relation": "authorized_payer", "vendor": "globex" }
+  ]
+}

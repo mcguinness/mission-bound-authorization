@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate as evaluateRequest, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -79,6 +80,7 @@ const optsFor = (actionClass: string) => ({
   requiresActionApproval: (_action: string, ac: string | undefined) => ac === actionClass,
   maxApprovalAgeSeconds: 300,
   relationForAction,
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   stateSourcePlacement: "pep" as const,
   claims: CLAIMS,
 });

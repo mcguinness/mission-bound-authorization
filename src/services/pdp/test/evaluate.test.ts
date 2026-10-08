@@ -12,6 +12,7 @@ import { evaluate as evaluateRequest, type EvaluationRequest } from "../src/eval
 import { type MissionView, policyViewId } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -102,13 +103,14 @@ const opts = (v: MissionView) => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   stateSourcePlacement: "pep" as const,
   claims: CLAIMS,
 });
 
 d("PDP decisions against OpenFGA (@spec authzen)", () => {
   beforeAll(async () => {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
   });
@@ -424,7 +426,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
 
 d("entry-driven action approval (@spec txn-authorization#applicability)", () => {
   beforeAll(async () => {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
   });
@@ -495,6 +497,7 @@ describe("basic gate: active predicate, non-active outcome, unrecognized-fails-c
     now: () => NOW,
     stalenessBound,
     relationForAction,
+    resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     // The placement the base request's observation is supplied under.
     stateSourcePlacement: "pep" as const,
   });

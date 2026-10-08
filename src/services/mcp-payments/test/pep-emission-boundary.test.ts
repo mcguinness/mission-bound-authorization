@@ -35,6 +35,7 @@ import {
   Pep,
   type PepDeps,
 } from "../src/index.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 /**
  * Every value reachable from `root` that exposes an `emit` function, by path.
@@ -68,7 +69,7 @@ function reachableEmitters(root: unknown): string[] {
 
 /** The dependencies this deployment's PEP is wired with, as the stack wires them. */
 function pepDeps(): PepDeps {
-  const keys = createEphemeralEvidenceKeys();
+  const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
   return {
     payments: new PaymentsStore(),
     evidence: new EvidenceStore(keys.signing, keys.resolver),

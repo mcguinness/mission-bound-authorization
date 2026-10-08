@@ -26,6 +26,7 @@ import {
   TransactionEngine,
 } from "@mission/mcp-payments";
 import { type Fga, type MissionView, RUNTIME_POSTURE } from "@mission/pdp";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 export type Expectation = "permit" | "deny";
 
@@ -101,7 +102,10 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
   // `signing`/`resolver` wire the PEP's own records and its verification of
   // what the PDP emitted; `decide` is the decision point's entry point, which
   // holds the emission path this harness never sees.
-  const evidenceKeys = createEphemeralEvidenceKeys();
+  // @spec runtime#input-resource-policy (#828): the scorecard measures the
+  // Mission and credential bounds, so the Resource-policy bound is held open
+  // by a named fixture; its own witnesses run against stored entitlements.
+  const evidenceKeys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
   const evidence = new EvidenceStore(evidenceKeys.signing, evidenceKeys.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-eval");

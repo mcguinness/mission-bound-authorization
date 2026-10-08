@@ -48,8 +48,9 @@ import {
   type WriteToolResult,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
-const KEYS = createEphemeralEvidenceKeys();
+const KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 const BASE_MS = Date.parse("2026-10-02T12:00:00.000Z");
 /** The PDP's consequential-write permit window, and one second past it. */
 const PAST_PERMIT_MS = 301_000;

@@ -10367,8 +10367,8 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "each of the three bounds denies ON ITS OWN with the other two satisfied, and all three satisfied permits, which is what makes them independently evaluated rather than one check wearing three names. Bound 1 is the acting credential's own authority (PepDeps.masJoin.resolveOrdinaryAuthority), checked on the facts the PEP establishes (resource, action, vendors, amount) before the PDP runs and carried to it as context.credential.authority; the joined Mission's view reaches the PDP unfiltered (D340), so a Mission entry broader than the credential still permits what the credential covers; absent, it cannot be honestly evaluated, so the joined route fails closed with out_of_authority rather than treating an unconfigured bound as unbounded. Bound 2 is the Mission's approved authority, matched by evaluate() against the joined authority set. Bound 3 is current Resource policy, the existing fga.checkWithContext call, which denies out_of_authority with both other bounds satisfied. The demo supplies a real bound-1 evaluator (src/demo/src/stack.ts): the credential's verified scope claim mapped through config/mas-join.json's scope_actions, so it models the token AS ISSUED and a narrower token yields a narrower permit for the same client",
-    "local": "bound 3's independence is shown by evaluation, not by an independent policy SOURCE: the contextual tuples the FGA check runs against are themselves derived from the matched Mission authority entry's own constraints (policy-view.ts, 'authority + constraint -> ephemeral grant'). A deployment whose resource policy is authored separately from the Mission would exercise the same call with a genuinely independent input; this one does not, and the row does not claim it does"
+    "normative": "each of the three bounds denies ON ITS OWN with the other two satisfied, and all three satisfied permits, which is what makes them independently evaluated rather than one check wearing three names. Bound 1 is the acting credential's own authority (PepDeps.masJoin.resolveOrdinaryAuthority), checked on the facts the PEP establishes (resource, action, vendors, amount) before the PDP runs and carried to it as context.credential.authority; the joined Mission's view reaches the PDP unfiltered (D340), so a Mission entry broader than the credential still permits what the credential covers; absent, it cannot be honestly evaluated, so the joined route fails closed with out_of_authority rather than treating an unconfigured bound as unbounded. Bound 2 is the Mission's approved authority, matched by evaluate() against the joined authority set and checked through the Mission's contextual FGA projection (fga.checkWithContext), either of which denies out_of_authority. Bound 3 is current Resource policy, the ResourcePolicy bound to the decision point (#828), which denies resource_policy with both other bounds satisfied. The demo supplies a real bound-1 evaluator (src/demo/src/stack.ts): the credential's verified scope claim mapped through config/mas-join.json's scope_actions, so it models the token AS ISSUED and a narrower token yields a narrower permit for the same client",
+    "local": "bound 3's unit witness binds a refusing Resource-policy fixture to the decision point; the policy it stands for is the demo's stored OpenFGA entitlements (fgaResourcePolicy, #828), queried with the authenticated subject, client, action and targets and no Mission-derived input. The Mission's contextual FGA check stays part of bound 2"
    },
    "level": "unit",
    "coverage": "tested",
@@ -10399,7 +10399,13 @@
     },
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: rule 8's three bounds, one denial each (@spec authority-server#mission-join rule 8) > bound 3: current RESOURCE POLICY refusing denies out_of_authority with both other bounds satisfied",
+     "name": "baseline MAS Join: rule 8's three bounds, one denial each (@spec authority-server#mission-join rule 8) > bound 2, contextual check: the Mission's FGA projection refusing denies out_of_authority with the credential bound satisfied",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8's three bounds, one denial each (@spec authority-server#mission-join rule 8) > bound 3, independently administered: a refusing Resource policy denies resource_policy with both other bounds satisfied",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -10434,7 +10440,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#557. Moved partial -> tested by #557 stage C2, which SUPERSEDES this row's earlier recorded ruling (\"Kept partial per review ... This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it\"). That ruling is overridden deliberately, not resolved: no Mission-agnostic resource-policy source exists in this deployment yet, and observation.local records that it does not. What changed is the other half. A deployment-side bound-1 evaluator now exists (the demo's scope-to-authority map over config/mas-join.json, with a shipped-config test that the map covers a derived Authority Set entry, so a configuration that could never permit its own demo fails CI), and each bound now has its own denial with the other two satisfied plus an all-three-satisfied permit, so no denial is attributable to the wrong bound. Bound 3's denial is driven by a refusing Fga stub: it proves the call site is reached and its result honored, not that the policy behind it is authored independently of the Mission. #557 step 14 rules that per-bound denials plus a configured evaluator satisfy the quoted clause's \"independently evaluated\" claim, which is about evaluation order, not about where a deployment sources its resource policy. D340: the PEP no longer filters the joined view by the credential (a filter dropped a Mission entry broader than the credential, refusing an action it covers, and broke D335's full-set proof); bound 1 refuses on its own facts instead."
+   "notes": "#557. Moved partial -> tested by #557 stage C2, which SUPERSEDES this row's earlier recorded ruling (\"Kept partial per review ... This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it\"). That ruling is overridden deliberately, not resolved: no Mission-agnostic resource-policy source exists in this deployment yet, and observation.local records that it does not. What changed is the other half. A deployment-side bound-1 evaluator now exists (the demo's scope-to-authority map over config/mas-join.json, with a shipped-config test that the map covers a derived Authority Set entry, so a configuration that could never permit its own demo fails CI), and each bound now has its own denial with the other two satisfied plus an all-three-satisfied permit, so no denial is attributable to the wrong bound. Bound 3's denial is driven by a refusing Fga stub: it proves the call site is reached and its result honored, not that the policy behind it is authored independently of the Mission. #557 step 14 rules that per-bound denials plus a configured evaluator satisfy the quoted clause's \"independently evaluated\" claim, which is about evaluation order, not about where a deployment sources its resource policy. D340: the PEP no longer filters the joined view by the credential (a filter dropped a Mission entry broader than the credential, refusing an action it covers, and broke D335's full-set proof); bound 1 refuses on its own facts instead. #828: bound 3 is now an independently administered policy bound to the decision point, with its own resource_policy denial; the refusing-Fga-stub case is retitled as bound 2's contextual check, which is what it exercises."
   },
   {
    "id": "mas.baseline-join.join-view-commitment",
@@ -13651,9 +13657,34 @@
     "normative": "an action proceeds only when both Mission authority and Resource policy permit it; either one refusing fails the action closed"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No independent Resource-policy conjunct exists to test: fga.checkWithContext is the Mission-authority projection itself (contextual tuples derived from the matched Authority Set entry via policy-view.ts's deriveContextualTuples, keyed mission:<id>), not a composed local authorization step separate from Mission authority. A prior mapping to evaluate-decision-inputs.test.ts's stub-FGA-denies case mislabeled that dependency-fail-closed case as the Resource-policy arm; the test has been renamed to an honest dependency-fail-closed claim and left uncited (see the file's docblock and describe title). The other candidate mapping, evaluate.test.ts's out-of-authority test, is already full tested evidence on runtime.decision-inputs.authority-entry-and-subset-required and exercises no Resource-policy input either, so remapping it here would only relabel the authority row's evidence, not add information about the conjunction: a gap of kind, not degree, so todo rather than partial. Full coverage needs an independent Resource-policy hook (a PDP-side check or a PEP-local policy step distinct from the Mission-authority/FGA check) plus a truth-table test with separately controlled Mission-authority and Resource-policy outcomes."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/resource-policy.test.ts",
+     "name": "independent Resource policy in the decision (@spec runtime#input-resource-policy, #828) > truth table: permits only when both Mission authority and Resource policy permit; either refusing denies",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/resource-policy.test.ts",
+     "name": "independent Resource policy in the decision (@spec runtime#input-resource-policy, #828) > a policy that cannot answer yields no decision: an unavailable backend, a thrown error and a malformed result each throw ResourcePolicyUnavailableError",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/resource-policy-fga.test.ts",
+     "name": "independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > a stored entitlement permits; an external revocation of only that entitlement denies resource_policy on the next decision with signed evidence; restoring it permits",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/resource-policy-fga.test.ts",
+     "name": "independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > Mission authority refusing still denies where the stored entitlement permits",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#828. The PDP now has an independent Resource-policy conjunct: a ResourcePolicy bound to the decision point, asked at evaluate() step 6b with the authenticated subject, client, action and targets and nothing Mission-derived, denying resource_policy. The unit truth table controls the Mission-authority and Resource-policy outcomes separately with named fixtures, and each cell was verified by disabling the step-6b refusal. A policy that cannot answer yields no decision, never a permit. Moved partial -> tested under #828's ledger rule, which required the real-OpenFGA assertion: the two OpenFGA citations (revoking only the stored entitlement denies resource_policy where the Mission permits, and restoring it permits; the Mission refusing denies where the entitlement permits) passed against a live OpenFGA in impl-ci at faf9250d. Since main's merge their requests carry the neutral credential authority #825 PR 2b requires (D341) and nothing else changed; they skip locally, so the impl-ci run at the merged head confirms them, and this row reverts to partial if it does not."
   },
   {
    "id": "runtime.decision-inputs.constraint-evaluation-and-unenforceable-refusal",
@@ -17534,7 +17565,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an out_of_authority or parameter_violation deny records authority_bound naming the bound that decided it (credential where the credential's own authority refused, mission where the Mission's own entry did), and no other decision carries it: a permit, a Resource-policy (FGA) deny, a missing relation mapping, a request fault, a lifecycle deny; the emitter refuses the member on a permit, on any other reason, or outside the two values"
+    "normative": "an out_of_authority or parameter_violation deny records authority_bound naming the bound that decided it (credential where the credential's own authority refused, mission where the Mission's own entry did), and no other decision carries it: a permit, a Resource-policy deny (resource_policy), a missing relation mapping, a request fault, a lifecycle deny; the emitter refuses the member on a permit, on any other reason, or outside the two values"
    },
    "level": "unit",
    "coverage": "tested",
@@ -17564,7 +17595,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "D322 kept D312's evidence requirement and moved it here (2b-ii); D324 extended it to parameter_violation; D340 ported #1134's authority_bound. A Resource-policy deny is out_of_authority on main and carries no bound; #1135 gives it its own reason, resource_policy."
+   "notes": "D322 kept D312's evidence requirement and moved it here (2b-ii); D324 extended it to parameter_violation; D340 ported #1134's authority_bound. #828 (#1135): a Resource-policy deny is resource_policy and carries no bound, witnessed in the no-bound test with the refusing Resource-policy fixture. The Mission's contextual FGA check refusing (fga.checkWithContext), which #828 files under bound 2, is out_of_authority and still names no bound, as before #828; whether it names mission is an open owner question."
   },
   {
    "id": "authzen.evidence.authority-bound-evaluation-order",

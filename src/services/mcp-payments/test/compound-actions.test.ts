@@ -44,8 +44,9 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 const BASE_MS = Date.parse("2026-09-08T12:00:00.000Z");
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
 

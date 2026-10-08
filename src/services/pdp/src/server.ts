@@ -42,6 +42,7 @@ import {
   type RedeemingExecutionFn,
   type IdempotencyClaimDomain,
 } from "./idempotency-claims.js";
+import { type ResourcePolicy, ResourcePolicyUnavailableError } from "./resource-policy.js";
 
 /**
  * One PEP the PDP recognizes: its shared authentication secret and the
@@ -91,6 +92,14 @@ export interface PdpRemoteServerConfig {
    * another is stripped.
    */
   claims?: IdempotencyClaimDomain;
+  /**
+   * @spec runtime#input-resource-policy (#828): this PDP's Resource policy,
+   * bound on this side of the network hop exactly as `claims` is: a request
+   * option naming another is stripped. Absent here, the decision function
+   * must bind one (a decision point's does); the default `evaluate` refuses
+   * to decide without one.
+   */
+  resourcePolicy?: ResourcePolicy;
   /**
    * The settlement and reconciliation channel for one authenticated
    * requester. Defaults to one over {@link PdpRemoteServerConfig.claims}.
@@ -311,10 +320,12 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     const opts = { ...(await config.getOptions(evalRequest)) } as EvaluateOptions;
     delete opts.evidence;
     delete opts.claims;
+    delete (opts as Partial<EvaluateOptions>).resourcePolicy;
     delete opts.requester;
     delete opts.consumptionStatus;
     if (config.evidence) opts.evidence = config.evidence;
     if (config.claims) opts.claims = config.claims;
+    if (config.resourcePolicy) opts.resourcePolicy = config.resourcePolicy;
     opts.requester = authed.requester;
     const status = config.consumptionStatus?.(authed.pepId);
     if (status) opts.consumptionStatus = status;
@@ -328,6 +339,13 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
       if (e instanceof ClaimDomainUnavailableError) {
         res.writeHead(503, { "content-type": "application/json" });
         res.end(JSON.stringify({ error: "claim_domain_unavailable" }));
+        return;
+      }
+      // @spec runtime#input-resource-policy (#828): likewise an unreachable
+      // Resource policy: no decision, never a refusal it did not reach.
+      if (e instanceof ResourcePolicyUnavailableError) {
+        res.writeHead(503, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "resource_policy_unavailable" }));
         return;
       }
       throw e;

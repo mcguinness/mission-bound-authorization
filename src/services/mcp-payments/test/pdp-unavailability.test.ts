@@ -4,9 +4,10 @@ import { createDecisionChannel, createEphemeralDecisionPoint, type DecisionEvide
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, openEphemeralWriteReservationStore, PaymentsStore, Pep, type TokenFacts } from "../src/index.js";
 import { PaymentsToolCatalog } from "../src/tool-catalog.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 async function build(mode: "co-resident" | "remote", override?: DecisionFn) {
-  const point = createEphemeralDecisionPoint({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
+  const point = createEphemeralDecisionPoint({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const payments = new PaymentsStore();
@@ -189,7 +190,7 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
   // past the class's declared budget (the cap arithmetic itself is asserted
   // in services/pdp/test/remote-channel.test.ts).
   it("bounds the call inside the declared action-class budget and refuses locally when the deadline elapses", async () => {
-    const point = createEphemeralDecisionPoint({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
+    const point = createEphemeralDecisionPoint({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
     const channel = await createDecisionChannel(point, {
       mode: "remote", pepId: "payments-pep", audience: CANONICAL_RESOURCE, timeoutMs: 40,
       getOptions: () => new Promise(() => {}),

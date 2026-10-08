@@ -8,13 +8,14 @@ import { describe, expect, it } from "vitest";
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, openEphemeralWriteReservationStore, PaymentsStore, PaymentsToolCatalog, Pep, TOOLS, parameterDigest, type TokenFacts } from "../src/index.js";
 import { startResourceMetadataServer } from "../src/resource-metadata.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const text = TRUSTED_TOOL_CATALOGS.find(c => c.service_id === "payments")!.text;
 const token: TokenFacts = { sub: "alice", clientId: "ap-agent", mission: { id: "msn_catalog", issuer: "https://as.test", authority_hash: "sha-256:test" }, cnfJkt: "key", credentialAuthority: ALL_ACTIONS_CREDENTIAL };
 function fixture(source: () => string = () => text) {
   const payments = new PaymentsStore();
   payments.seed([{ id: "acme", name: "Acme", status: "approved" }], [{ id: "inv-1", vendor_id: "acme", amount: "100.00", currency: "USD", payee_account: "acct", status: "payable" }]);
-  const keys = createEphemeralEvidenceKeys();
+  const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const view: MissionView = { id: token.mission.id, issuer: token.mission.issuer, authority_hash: token.mission.authority_hash!, state: "active", version: 1,
     // Deduped: several served tools now share one action identifier (@spec

@@ -102,7 +102,7 @@ d("O-31 red-team replay (live OpenFGA)", () => {
   let deps: HarnessDeps;
 
   beforeAll(async () => {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     const view: MissionView = {
       id: "msn_eval",
       issuer: "https://as.test",

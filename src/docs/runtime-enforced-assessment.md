@@ -70,7 +70,7 @@ calling process (`src/docs/control-plane-deployment.md`).
 | Mission state | In-process `MissionKernel`, issuer `https://as.demo` (`config/topology.json` `issuers.as`). With `withAuthServer`, the reference AS at `http://localhost:{asPort}` (default 4400) owns the kernel and signs the tokens | `composeStack` |
 | Resource and PEP | `McpPaymentsServer` and `Pep`, in-process. The audience `http://localhost:4403/mcp` (`resources.payments`) is an identifier: nothing listens on 4403. HTTP MCP channels bind ephemeral `127.0.0.1` ports | `createHttpMcpChannel` (`src/services/mcp-payments/src/mcp-http-transport.ts`) |
 | PDP | `createDecisionPoint`. Co-resident by default (a direct call); `MISSION_PDP_MODE=remote` puts it behind a loopback HTTP listener on an ephemeral `127.0.0.1` port | `createDecisionChannel` (`src/services/pdp/src/decision-channel.ts`), `createPdpHttpServer` (`server.ts`) |
-| Resource policy | OpenFGA at `openfga.url` (`https://localhost:8080`), the one external dependency. `composeStack` connects before anything else | `Fga.connect` (`src/services/pdp/src/fga.ts`) |
+| Resource policy | OpenFGA at `openfga.url` (`https://localhost:8080`), the one external dependency. Before anything else, `composeStack` attaches to a configured store and model, or bootstraps and seeds a development store (#828) | `Fga.attach`, `Fga.bootstrap` (`src/services/pdp/src/fga.ts`), `openResourcePolicyStore` (`src/demo/src/resource-policy-store.ts`) |
 | Approval | `AccessRequestService`, in-process; issues ARAP approval state audienced to `https://pdp.demo` | `composeStack` |
 
 **Token validation.** Without the AS, the resource gets an empty JWKS and
