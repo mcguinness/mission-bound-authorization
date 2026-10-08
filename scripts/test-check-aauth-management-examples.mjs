@@ -129,6 +129,34 @@ test("a malformed latest_update_s256 fails", () => {
   assertFinding(t, /\[status-response\]: latest_update_s256 is not an unpadded base64url SHA-256 digest/);
 });
 
+// The delegation-tree example's call_chain node (#966).
+const CALL_CHAIN = '      "relationship": "call_chain",\n      "upstream_token": { "iss": "https://ps.example", "jti": "auth-31" },\n      "person_token": { "iss": "https://ps.example", "jti": "pt-57" }\n';
+
+test("a sub_agent node without parent_agent fails", () => {
+  const t = mutate(DRAFT, '      "relationship": "sub_agent",\n      "parent_agent": "aauth:planner.7f3c@vendor.example",\n', '      "relationship": "sub_agent",\n');
+  assertFinding(t, /\[tree-response\]: node 1 is sub_agent without parent_agent/);
+});
+
+test("a call_chain node with parent_agent fails", () => {
+  const t = mutate(DRAFT, CALL_CHAIN, '      "relationship": "call_chain",\n      "parent_agent": "aauth:planner.7f3c@vendor.example",\n      "upstream_token": { "iss": "https://ps.example", "jti": "auth-31" },\n      "person_token": { "iss": "https://ps.example", "jti": "pt-57" }\n');
+  assertFinding(t, /\[tree-response\]: node 2 is call_chain with parent_agent/);
+});
+
+test("a call_chain node with only upstream_token fails", () => {
+  const t = mutate(DRAFT, CALL_CHAIN, '      "relationship": "call_chain",\n      "upstream_token": { "iss": "https://ps.example", "jti": "auth-31" }\n');
+  assertFinding(t, /\[tree-response\]: node 2 is call_chain with only upstream_token/);
+});
+
+test("a call_chain token reference without jti fails", () => {
+  const t = mutate(DRAFT, CALL_CHAIN, CALL_CHAIN.replace('{ "iss": "https://ps.example", "jti": "pt-57" }', '{ "iss": "https://ps.example" }'));
+  assertFinding(t, /\[tree-response\]: node 2 person_token is not an \{iss, jti\} object/);
+});
+
+test("a call_chain node with both token references omitted passes", () => {
+  const t = mutate(DRAFT, CALL_CHAIN, '      "relationship": "call_chain"\n');
+  assert.deepEqual(findings(t), []);
+});
+
 test("zero accepted_updates with no digest passes", () => {
   const t = mutate(DRAFT, STATUS_UPDATES, '  "fresh_until": "2026-04-10T09:15:32Z",\n  "accepted_updates": 0,\n');
   assert.deepEqual(findings(t), []);
