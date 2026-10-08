@@ -91,10 +91,23 @@ export {
   type HttpMcpChannel,
   type HttpMediatedClient,
 } from "./mcp-http-transport.js";
-export { Connectors, type WireCommit, type EmailCommit, type CommitResult } from "./connectors.js";
+export { Connectors, type WireCommit, type EmailCommit, type CommitResult, type CommittedEffect } from "./connectors.js";
 export { TransactionEngine, operationKey, type OpState } from "./transaction.js";
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
 export { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";
+export {
+  CollectingAlertSink,
+  indeterminateClaimAlert,
+  type OperatorAlert,
+  type OperatorAlertKind,
+  type OperatorAlertSink,
+  type OutcomeReconciliationRun,
+  OutcomeReconciler,
+  OutcomeReconcilerConfigError,
+  type OutcomeReconcilerOptions,
+  type OutcomeReconcilerStep,
+  stderrAlertSink,
+} from "./outcome-reconciler.js";
 export {
   CONSUMED_PERMIT_RETENTION_MARGIN_MS,
   openEphemeralWriteReservationStore,
