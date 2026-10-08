@@ -1101,6 +1101,15 @@ function runLauncher(env: Record<string, string>) {
     stdout: () => stdout,
     stderr: () => stderr,
     output,
+    /** The exit, or SIGKILL once `ms` pass, so a launcher that unexpectedly starts never outlives its test. */
+    settle: async (ms = 60_000) => {
+      const timer = setTimeout(() => child.kill("SIGKILL"), ms);
+      try {
+        return await exited;
+      } finally {
+        clearTimeout(timer);
+      }
+    },
     /** Resolve once stdout holds `text`; reject if the process exits or 60 s pass first. */
     waitFor: (text: string) =>
       new Promise<void>((resolve, reject) => {
@@ -1178,7 +1187,7 @@ describe("the as-native launcher process, the entry pnpm as-native runs, against
       expect(listeners).toHaveLength(3);
       for (const url of listeners) expect(await accepts(url), url).toBe(true);
       run.child.kill("SIGTERM");
-      expect(await run.exited, run.output()).toEqual({ code: 0, signal: null });
+      expect(await run.settle(30_000), run.output()).toEqual({ code: 0, signal: null });
       for (const url of listeners) expect(await accepts(url), `${url} after exit`).toBe(false);
       expect(run.stderr()).not.toContain("failed");
     } finally {
@@ -1200,7 +1209,7 @@ describe("the as-native launcher process, the entry pnpm as-native runs, against
     for (const [env, reason] of cases) {
       const before = fga.requests.length;
       const run = runLauncher(env);
-      expectStartupFailure(run, await run.exited, reason);
+      expectStartupFailure(run, await run.settle(), reason);
       if (env.OPENFGA_HTTP_URL === fga.url) expect(fga.requests.length, run.output()).toBe(before);
     }
     for (const url of [asUrl, CANONICAL_RESOURCE]) expect(await accepts(url), url).toBe(false);
@@ -1210,7 +1219,7 @@ describe("the as-native launcher process, the entry pnpm as-native runs, against
     const free = await holdPort(Number(AUDIENCE.port), AUDIENCE.hostname);
     try {
       const run = runLauncher({ OPENFGA_HTTP_URL: fga.url });
-      expectStartupFailure(run, await run.exited, /EADDRINUSE/);
+      expectStartupFailure(run, await run.settle(), /EADDRINUSE/);
       expect(await accepts(asUrl)).toBe(false);
     } finally {
       await free();
