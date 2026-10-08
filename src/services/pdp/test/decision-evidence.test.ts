@@ -155,6 +155,91 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     expect(denied.record.contributing_constraints).toEqual(["mission_resource_access", "vendors"]);
   });
 
+  describe("Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii)", () => {
+    const credentialOf = (constraints?: Record<string, unknown>, actions = ["payments:invoice.read"]) => ({
+      authority: [{ type: "mission_resource_access" as const, resource: RESOURCE, actions, ...(constraints ? { constraints } : {}) }],
+    });
+    const reaching = (r: EvaluationRequest, vendors: string[]) => {
+      r.resource.properties = {
+        ...r.resource.properties,
+        vendor_id: vendors[0] as string,
+        ...(vendors.length > 1 ? { vendor_ids: vendors } : {}),
+      };
+      return r;
+    };
+    /** The decision's reason and the signed record's `authority_bound`. */
+    const named = async (r: EvaluationRequest, v: MissionView, extra: Partial<EvaluateOptions> = {}) => {
+      const { record, decision } = await recorded(r, v, extra);
+      return { reason: decision.decision ? "permit" : decision.context.denial_reason, bound: record.authority_bound };
+    };
+
+    it("names the credential bound where it refused: no entry names the action, its constraint fails, its discharge condition cannot be established", async () => {
+      const noEntry = req();
+      noEntry.context.credential = credentialOf(undefined, ["payments:vendor.read"]) as never;
+      expect(await named(noEntry, view())).toEqual({ reason: "out_of_authority", bound: "credential" });
+      const constraint = req();
+      constraint.context.credential = credentialOf({ vendors: ["globex"] }) as never;
+      expect(await named(constraint, view())).toEqual({ reason: "parameter_violation", bound: "credential" });
+      const discharge = req();
+      discharge.context.credential = credentialOf({ terminal_when: [{ event_type: "period-closed" }] }) as never;
+      expect(await named(discharge, view())).toEqual({ reason: "out_of_authority", bound: "credential" });
+    });
+
+    it("names the Mission bound where the Mission's own entry refused: no entry names the action, its vendors, a collection member, its amount cap", async () => {
+      expect(await named(req({ action: { name: "payments:vendor.read" } }), view())).toEqual({ reason: "out_of_authority", bound: "mission" });
+      const vendors = view();
+      vendors.authority_set[0]!.constraints = { vendors: ["globex"] };
+      expect(await named(req(), vendors)).toEqual({ reason: "parameter_violation", bound: "mission" });
+      const member = view();
+      member.authority_set[0]!.constraints = { vendors: ["acme"] };
+      expect(await named(reaching(req(), ["acme", "globex"]), member)).toEqual({ reason: "parameter_violation", bound: "mission" });
+      const capped = view();
+      capped.authority_set[0]!.constraints = { max_amount: { amount: "10.00", currency: "USD" } };
+      const over = req();
+      over.context.amount = { amount: "20.00", currency: "USD" };
+      expect(await named(over, capped)).toEqual({ reason: "parameter_violation", bound: "mission" });
+    });
+
+    it("names the bound evaluated first when both exclude the action: a mirrored credential's constraint is the credential's", async () => {
+      const v = view();
+      v.authority_set[0]!.constraints = { vendors: ["globex"] };
+      const r = req();
+      r.context.credential = credentialOf({ vendors: ["globex"] }) as never;
+      expect(await named(r, v)).toEqual({ reason: "parameter_violation", bound: "credential" });
+    });
+
+    it("names no bound on any other decision: Resource policy, a missing relation mapping, a request fault, a lifecycle deny, a permit", async () => {
+      const refusing = { fga: { checkWithContext: async () => false } as unknown as Fga };
+      expect(await named(req(), view(), refusing)).toEqual({ reason: "out_of_authority", bound: undefined });
+      const unmapped = view();
+      unmapped.authority_set[0]!.actions = ["payments:unmapped.op"];
+      expect(await named(req({ action: { name: "payments:unmapped.op" } }), unmapped)).toEqual({ reason: "out_of_authority", bound: undefined });
+      const phase = req();
+      phase.context.action_phase = "not-a-phase" as never;
+      expect(await named(phase, view())).toEqual({ reason: "out_of_authority", bound: undefined });
+      expect(await named(req(), view({ state: "suspended" }))).toEqual({ reason: "mission_inactive", bound: undefined });
+      expect(await named(req(), view())).toEqual({ reason: "permit", bound: undefined });
+    });
+
+    it("refuses to sign authority_bound on a permit, on another denial reason, or with a value outside the two bounds", async () => {
+      const { emitter } = emitterFixture();
+      const base = {
+        mission: { id: "msn", issuer: "https://as.test", policy_view_id: "pv" }, subject: { id: "alice" },
+        resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, audience: RESOURCE,
+        evaluation_id: "evaluation", evaluated_at: NOW.toISOString(), evaluation_request_digest: canonicalDigest({ request: true }),
+      };
+      const deny = { ...base, decision: "deny" as const };
+      await expect(emitter.emit({ ...deny, denial_reason: "out_of_authority", authority_bound: "credential" })).resolves.toMatchObject({ authority_bound: "credential" });
+      await expect(emitter.emit({ ...deny, denial_reason: "mission_inactive", authority_bound: "mission" })).rejects.toThrow("authority_bound");
+      await expect(emitter.emit({ ...deny, denial_reason: "parameter_violation", authority_bound: "resource_policy" as never })).rejects.toThrow("authority_bound");
+      const permit = {
+        ...base, decision: "permit" as const,
+        entry_digest: canonicalDigest({ entry: true }), conditions: { valid_until: NOW.toISOString() },
+      };
+      await expect(emitter.emit({ ...permit, authority_bound: "mission" })).rejects.toThrow("authority_bound");
+    });
+  });
+
   describe("a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324)", () => {
     type Constraints = Record<string, unknown>;
     const credentialEntry = (constraints?: Constraints, actions = ["payments:invoice.read"]) => ({
