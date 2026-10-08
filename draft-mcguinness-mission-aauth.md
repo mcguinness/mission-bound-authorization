@@ -1201,6 +1201,13 @@ incremental deployment remain distinct concerns.
 
 \[\[ To be removed from the final specification ]]
 
+- A chained hop is PS-governed derivation under the same Mission: the
+  Mission's `agent` is the root actor, the holder of a chained person
+  token is the intermediary, whose identity the PS establishes from its
+  authenticated agent token and its records (`cnf` binds only the key),
+  and the PS copies `mission_s256` from the upstream token, which the
+  intermediary never supplies (#966).
+
 - An accepted update approves a new immutable version of the Approved
   Context, identified by the Mission Reference and its position in the
   accepted-update sequence; `mission_s256` commits to the original
