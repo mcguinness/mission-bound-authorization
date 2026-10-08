@@ -488,7 +488,8 @@ prove what its supervision server decided requires a server that
 signs.
 
 The PS MUST protect the mission log's integrity, MUST restrict read
-access to the person, the PS itself, and parties authorized under its
+access to the person, the PS itself, the deciding supervision server
+for the mission's agent ({{roles}}), and parties authorized under its
 administrative policy, and MUST retain the log for a declared period
 that extends beyond termination.
 
@@ -985,7 +986,12 @@ SHOULD minimize recorded personal data, separate token identifiers from
 raw token material, define retention and deletion policies, protect log
 access, and give the person meaningful visibility into the retained
 history.  Termination does not itself require erasure because the log can
-be needed for audit and incident response.
+be needed for audit and incident response.  A deciding supervision
+server receives mission text, justifications, audit records, and
+clarification transcripts for the agents routed to it, and a newly
+routed server receives the active state the PS replays to it (Sections
+14 and 17.1 of {{I-D.draft-hardt-aauth-supervision}}); the routing
+configured at the PS determines that disclosure.
 
 Pairwise subject identifiers and other AAuth privacy mechanisms remain
 applicable.  This binding does not replace them with the agent identifier
