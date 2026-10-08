@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { evaluateRemote, isDecisionChannelRefusal } from "../src/client.js";
 import { createDecisionPoint, createEphemeralDecisionPoint } from "../src/decision-point.js";
 import type { DecisionEvidenceObject } from "../src/decision-evidence.js";
-import { evaluate, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
+import { evaluate as evaluateRequest, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
 import { assertDomainTuple, DomainTupleError, DOMAIN_MODEL, Fga, FgaAttachError, FgaDomainAdmin, modelFingerprint } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
@@ -34,6 +34,12 @@ import {
   resourcePolicyFixture,
 } from "../src/test-support.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { withCredential } from "./with-credential.js";
+
+// Every decision carries the credential's own authority (#825 PR 2b); the
+// fixture adds a neutral one where a test does not name it.
+const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
+  evaluateRequest(withCredential(req), opts);
 
 const RESOURCE = "http://localhost:4403/mcp";
 const ISSUER = "https://as.test";
@@ -158,7 +164,7 @@ describe("independent Resource policy in the decision (@spec runtime#input-resou
   it("a policy refusal is recorded in the decision point's signed Decision Evidence as resource_policy", async () => {
     const point = createEphemeralDecisionPoint({ emitterId: RESOURCE, audience: RESOURCE, resourcePolicy: RESOURCE_POLICY_REFUSES_ALL_FIXTURE });
     const { resourcePolicy: _bound, ...decisionOptions } = opts({ fga: missionFga(true).fga, resourcePolicy: RESOURCE_POLICY_REFUSES_ALL_FIXTURE });
-    const dec = await point.decide(req(), decisionOptions);
+    const dec = await point.decide(withCredential(req()), decisionOptions);
     const record = dec.context.decision_evidence as DecisionEvidenceObject;
     expect(record.decision).toBe("deny");
     expect(record.denial_reason).toBe("resource_policy");
@@ -205,18 +211,18 @@ describe("independent Resource policy in the decision (@spec runtime#input-resou
     const { resourcePolicy: _none, ...unbound } = opts({ fga: missionFga(true).fga, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
     await expect(evaluate(req(), unbound as EvaluateOptions)).rejects.toBeInstanceOf(ResourcePolicyConfigError);
     const point = createEphemeralDecisionPoint({ emitterId: RESOURCE, audience: RESOURCE });
-    await expect(point.decide(req(), unbound)).rejects.toBeInstanceOf(ResourcePolicyConfigError);
+    await expect(point.decide(withCredential(req()), unbound)).rejects.toBeInstanceOf(ResourcePolicyConfigError);
     expect(() => createDecisionPoint({} as never)).toThrow(ResourcePolicyConfigError);
   });
 
   it("an enforcement component cannot replace the decision point's policy: a caller-supplied one is stripped", async () => {
     const point = createEphemeralDecisionPoint({ emitterId: RESOURCE, audience: RESOURCE, resourcePolicy: RESOURCE_POLICY_REFUSES_ALL_FIXTURE });
     const widened = opts({ fga: missionFga(true).fga, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
-    const dec = await point.decide(req(), widened);
+    const dec = await point.decide(withCredential(req()), widened);
     expect(dec.context.denial_reason).toBe("resource_policy");
     // A decision point bound to none does not adopt the caller's: it refuses to decide.
     const unbound = createEphemeralDecisionPoint({ emitterId: RESOURCE, audience: RESOURCE });
-    await expect(unbound.decide(req(), widened)).rejects.toBeInstanceOf(ResourcePolicyConfigError);
+    await expect(unbound.decide(withCredential(req()), widened)).rejects.toBeInstanceOf(ResourcePolicyConfigError);
   });
 });
 
@@ -241,21 +247,21 @@ describe("the remote PDP binds its own Resource policy (@spec runtime#input-reso
 
   it("a server bound to no policy never adopts the one the options resolver names: no decision", async () => {
     const server = await start(undefined);
-    const dec = await evaluateRemote(req(), { url: server.url, pepId: PEP_ID, secret: SECRET });
+    const dec = await evaluateRemote(withCredential(req()), { url: server.url, pepId: PEP_ID, secret: SECRET });
     expect(dec.decision).toBe(false);
     expect(isDecisionChannelRefusal(dec)).toBe(true);
   });
 
   it("a refusing server policy denies resource_policy even though the options resolver names a permit-all one", async () => {
     const server = await start(RESOURCE_POLICY_REFUSES_ALL_FIXTURE);
-    const dec = await evaluateRemote(req(), { url: server.url, pepId: PEP_ID, secret: SECRET });
+    const dec = await evaluateRemote(withCredential(req()), { url: server.url, pepId: PEP_ID, secret: SECRET });
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("resource_policy");
   });
 
   it("an unavailable server policy answers 503: the PEP obtains no decision, never a refusal", async () => {
     const server = await start(RESOURCE_POLICY_UNAVAILABLE_FIXTURE);
-    const dec = await evaluateRemote(req(), { url: server.url, pepId: PEP_ID, secret: SECRET });
+    const dec = await evaluateRemote(withCredential(req()), { url: server.url, pepId: PEP_ID, secret: SECRET });
     expect(isDecisionChannelRefusal(dec)).toBe(true);
     expect(dec.context).toMatchObject({ channel_status: 503 });
     expect(dec.context.denial_reason).not.toBe("resource_policy");

@@ -29,6 +29,7 @@ import {
   type ExecutionEvidence,
   type MediatedClient,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   signedDenialReason,
@@ -174,6 +175,7 @@ async function build(): Promise<{
     instanceEpoch: "epoch-1",
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,
@@ -245,11 +247,13 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
 
   // Each adversarial input is run twice on fresh stacks -- once over the direct
   // PEP method, once over MCP -- to prove the channel enforces IDENTICALLY.
+  // Every case carries a well-formed key, so intake (D316) admits it and the
+  // refusal under test is the one each name describes.
   const adversarial: { name: string; tool: string; args: Record<string, unknown>; missionId?: string }[] = [
-    { name: "over-cap wire (inv-2, 900 > 500)", tool: "execute_wire_transfer", args: { invoice_id: "inv-2" } },
-    { name: "wrong-vendor wire (inv-3, globex)", tool: "execute_wire_transfer", args: { invoice_id: "inv-3" } },
-    { name: "ungranted tool (send_remittance_email)", tool: "send_remittance_email", args: { invoice_id: "inv-1" } },
-    { name: "unknown mission (msn_unknown)", tool: "execute_wire_transfer", args: { invoice_id: "inv-1" }, missionId: "msn_unknown" },
+    { name: "over-cap wire (inv-2, 900 > 500)", tool: "execute_wire_transfer", args: { invoice_id: "inv-2", idempotency_key: idem() } },
+    { name: "wrong-vendor wire (inv-3, globex)", tool: "execute_wire_transfer", args: { invoice_id: "inv-3", idempotency_key: idem() } },
+    { name: "ungranted tool (send_remittance_email)", tool: "send_remittance_email", args: { invoice_id: "inv-1", idempotency_key: idem() } },
+    { name: "unknown mission (msn_unknown)", tool: "execute_wire_transfer", args: { invoice_id: "inv-1", idempotency_key: idem() }, missionId: "msn_unknown" },
   ];
 
   for (const c of adversarial) {

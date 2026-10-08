@@ -145,7 +145,8 @@ verification procedure, and the verified output facts that
 verification yields.
 
 This document defines no generic member other than `type`, and no
-evidence types; an AS that supports no evidence type refuses every
+evidence types; an authorization server (AS) that supports no evidence
+type refuses every
 presented entry under the OAuth binding's dispatch rule
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Intent Submission
 Evidence").
@@ -255,7 +256,7 @@ type conforms to this document.
 Verified evidence is not copied into the Authority Set, and the facts
 the Mission Record retains are not carried on the `mission` claim
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Record"). A
-Resource Server does not need to understand this document.
+resource server does not need to understand this document.
 
 # Security Considerations {#security-considerations}
 

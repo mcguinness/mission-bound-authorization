@@ -65,6 +65,41 @@ export interface HttpMediatedClient {
 }
 
 /**
+ * Who an MCP session belongs to: the holder whose credential opened it. The
+ * DPoP key (`cnf.jkt`, which every request's proof re-proves), the token
+ * subject and the client. A later credential of the same holder (a refreshed
+ * token, or the transaction token bound to the same key) may use the
+ * session; any other holder may not.
+ */
+interface SessionHolder {
+  cnfJkt: string;
+  sub: string;
+  clientId: string;
+}
+
+const holderOf = (facts: TokenFacts): SessionHolder => ({
+  cnfJkt: facts.cnfJkt,
+  sub: facts.sub,
+  clientId: facts.clientId,
+});
+
+const sameHolder = (a: SessionHolder, b: SessionHolder): boolean =>
+  a.cnfJkt === b.cnfJkt && a.sub === b.sub && a.clientId === b.clientId;
+
+/** One MCP session: its own transport and MCP `Server`, and its holder. */
+interface McpSession {
+  transport: StreamableHTTPServerTransport;
+  server: Server;
+  holder: SessionHolder;
+}
+
+/** The streamable-HTTP transport's own answer for a session it does not hold. */
+function sessionNotFound(res: ServerResponse): void {
+  res.writeHead(404, { "content-type": "application/json" });
+  res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32001, message: "Session not found" }, id: null }));
+}
+
+/**
  * The canonical `htu` (RFC 9449): the request URI WITHOUT query or fragment.
  * BOTH the client (from the URL it is handed) and the server middleware (from the
  * reconstructed request URL) derive `htu` through THIS one function, so the two
@@ -183,24 +218,27 @@ function unauthorized(res: ServerResponse, description: string): void {
 }
 
 /**
- * The DPoP-auth middleware, run for EVERY HTTP request before dispatch to MCP.
- * Missing/malformed credential or failed proof-of-possession -> 401, and the
- * request is NEVER handed to the transport (the PEP is never reached).
+ * The DPoP-auth middleware, run for EVERY HTTP request before dispatch to MCP,
+ * including every request on an established session. Missing/malformed
+ * credential or failed proof-of-possession -> 401, and the request is NEVER
+ * handed to a transport (the PEP is never reached). Returns the validated
+ * facts, or `undefined` once it has answered the request.
  */
 async function authenticate(
   req: AuthedRequest,
   res: ServerResponse,
   paymentsServer: McpPaymentsServer,
-  transport: StreamableHTTPServerTransport,
   masGoverned: boolean,
-): Promise<void> {
+): Promise<TokenFacts | undefined> {
   const authz = req.headers.authorization;
   const proof = req.headers.dpop;
   if (typeof authz !== "string" || !authz.startsWith("DPoP ")) {
-    return unauthorized(res, "missing DPoP-scheme access token");
+    unauthorized(res, "missing DPoP-scheme access token");
+    return undefined;
   }
   if (typeof proof !== "string" || proof.length === 0) {
-    return unauthorized(res, "missing DPoP proof");
+    unauthorized(res, "missing DPoP proof");
+    return undefined;
   }
   const accessToken = authz.slice("DPoP ".length).trim();
   // Reconstruct the SAME canonical htu the client signed: http://<host><path>,
@@ -225,7 +263,8 @@ async function authenticate(
       ? await paymentsServer.validateGatewayCredential(accessToken, { proof, htu, htm }, true)
       : await paymentsServer.validateCredential(accessToken, { proof, htu, htm });
   } catch {
-    return unauthorized(res, "DPoP proof-of-possession failed");
+    unauthorized(res, "DPoP proof-of-possession failed");
+    return undefined;
   }
 
   // @spec txn-authorization#resource-challenge — the client's
@@ -256,18 +295,29 @@ async function authenticate(
       signals: { acceptTxnChallenge, ...(missionReference ? { missionReference } : {}) },
     },
   };
-  await transport.handleRequest(req, res);
+  return facts;
 }
 
 /**
  * Start a real HTTP MCP channel: a node HTTP server that gates every request with
- * the DPoP-auth middleware, in front of a single {@link StreamableHTTPServerTransport}
- * + MCP `Server`. Binds an ephemeral port on 127.0.0.1 and reports the actual URL.
+ * the DPoP-auth middleware, in front of one {@link StreamableHTTPServerTransport}
+ * + MCP `Server` per MCP session, so successive and concurrent clients each
+ * initialize their own. A session is bound to the holder that opened it
+ * ({@link SessionHolder}); a request on it is authenticated like any other and
+ * then dispatched only if its holder matches, and is otherwise answered 404
+ * `Session not found`, exactly as for a session that does not exist. Binds an
+ * ephemeral port on 127.0.0.1 by default and reports the actual URL.
  */
 export async function createHttpMcpChannel(
   paymentsServer: McpPaymentsServer,
   opts?: {
     host?: string;
+    /**
+     * The port to bind. Default 0, an ephemeral port. A deployment serving its
+     * declared resource audience passes that audience's port; a port already in
+     * use rejects rather than waiting.
+     */
+    port?: number;
     /**
      * @spec authority-server#mission-join (#557) — this route is MAS-governed:
      * it admits an ordinary OAuth credential with no `mission` claim and joins
@@ -281,42 +331,78 @@ export async function createHttpMcpChannel(
 ): Promise<HttpMcpChannel> {
   const host = opts?.host ?? "127.0.0.1";
   const masGoverned = opts?.masGoverned ?? false;
-  const mcpServer = createHttpMcpServer(paymentsServer);
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: () => randomUUID(),
-    enableJsonResponse: true,
-  });
-  // The SDK's transport classes model onclose/sessionId as `T | undefined`, which
-  // does not satisfy their own `Transport` interface's optional members under this
-  // repo's exactOptionalPropertyTypes; cast at the connect boundary only.
-  await mcpServer.connect(transport as unknown as Transport);
+  const sessions = new Map<string, McpSession>();
+
+  /**
+   * Hand an authenticated request to its session. A request naming a session
+   * reaches it only when the session's holder is this request's holder; a
+   * request naming none gets a fresh transport and MCP `Server`, which keep
+   * the session an `initialize` opens on them. The SDK answers anything else
+   * there 400, and that pair is discarded.
+   */
+  const dispatch = async (req: AuthedRequest, res: ServerResponse, holder: SessionHolder): Promise<void> => {
+    const sessionId = req.headers["mcp-session-id"];
+    if (sessionId !== undefined) {
+      const session = typeof sessionId === "string" ? sessions.get(sessionId) : undefined;
+      if (!session || !sameHolder(session.holder, holder)) return sessionNotFound(res);
+      return session.transport.handleRequest(req, res);
+    }
+    const server = createHttpMcpServer(paymentsServer);
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+      enableJsonResponse: true,
+      onsessioninitialized: (id) => {
+        sessions.set(id, { transport, server, holder });
+      },
+    });
+    // Closing the session (the client's DELETE, or the channel's close)
+    // forgets it.
+    transport.onclose = () => {
+      if (transport.sessionId !== undefined) sessions.delete(transport.sessionId);
+    };
+    // The SDK's transport classes model onclose/sessionId as `T | undefined`, which
+    // does not satisfy their own `Transport` interface's optional members under this
+    // repo's exactOptionalPropertyTypes; cast at the connect boundary only.
+    await server.connect(transport as unknown as Transport);
+    await transport.handleRequest(req, res);
+    if (transport.sessionId === undefined) await server.close().catch(() => {});
+  };
 
   const httpServer: HttpServer = createServer((req, res) => {
     // @spec txn-authorization#two-phase-expiry — the unauthenticated discovery
     // routes (RFC 9728 metadata + txn_challenge_jwks_uri) are served in front of
     // the credential gate: they publish public keys and metadata.
     if (serveResourceMetadata(paymentsServer, req, res)) return;
-    authenticate(req as AuthedRequest, res, paymentsServer, transport, masGoverned).catch(() => {
-      if (!res.headersSent) {
-        res.writeHead(500, { "content-type": "application/json" });
-        res.end(JSON.stringify({ error: "server_error" }));
-      } else {
-        res.end();
-      }
-    });
+    const authed = req as AuthedRequest;
+    authenticate(authed, res, paymentsServer, masGoverned)
+      .then((facts) => (facts ? dispatch(authed, res, holderOf(facts)) : undefined))
+      .catch(() => {
+        if (!res.headersSent) {
+          res.writeHead(500, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "server_error" }));
+        } else {
+          res.end();
+        }
+      });
   });
 
   // Bind 127.0.0.1 explicitly: listen(0) alone binds :: and address() reports an
   // IPv6 host, which would break the URL handed to the client and the Host the
   // server reconstructs htu from.
-  await new Promise<void>((resolve) => httpServer.listen(0, host, () => resolve()));
+  await new Promise<void>((resolve, reject) => {
+    httpServer.once("error", reject);
+    httpServer.listen(opts?.port ?? 0, host, () => {
+      httpServer.off("error", reject);
+      resolve();
+    });
+  });
   const addr = httpServer.address();
   const port = typeof addr === "object" && addr !== null ? addr.port : 0;
   const url = `http://${host}:${port}/mcp`;
 
   const close = async (): Promise<void> => {
-    await transport.close().catch(() => {});
-    await mcpServer.close().catch(() => {});
+    for (const session of [...sessions.values()]) await session.server.close().catch(() => {});
+    sessions.clear();
     // undici keep-alive would leave sockets idle; drop them so close() resolves.
     httpServer.closeAllConnections();
     await new Promise<void>((resolve, reject) =>
@@ -355,14 +441,16 @@ export function dpopFetch(
  * Connect an HTTP mediated client over the {@link StreamableHTTPClientTransport}
  * whose custom fetch DPoP-binds every request (including `initialize` and the SSE
  * stream). The credential lives in the HTTP headers, so tool access takes NO token
- * argument. Returns the client surface plus a `close()`.
+ * argument. Returns the client surface, the MCP session id the server issued,
+ * and a `close()` that ends that session at the server (an authenticated
+ * DELETE, best effort) before closing the client.
  */
 export async function createHttpMediatedClient(
   url: string,
   credential: string,
   dpopKeys: DpopKeys,
   extraHeaders: Record<string, string> = {},
-): Promise<{ client: HttpMediatedClient; close: () => Promise<void> }> {
+): Promise<{ client: HttpMediatedClient; sessionId: string | undefined; close: () => Promise<void> }> {
   const transport = new StreamableHTTPClientTransport(new URL(url), {
     fetch: dpopFetch(credential, dpopKeys, extraHeaders),
   });
@@ -380,5 +468,14 @@ export async function createHttpMediatedClient(
     },
   };
 
-  return { client, close: async () => { await mcp.close(); } };
+  return {
+    client,
+    sessionId: transport.sessionId,
+    close: async () => {
+      // A credential the resource no longer accepts cannot end the session;
+      // the channel's own close() still does.
+      await transport.terminateSession().catch(() => {});
+      await mcp.close();
+    },
+  };
 }

@@ -344,7 +344,7 @@ below partition the space this profile addresses.
 The Identity Continuation Assertion
 ({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}) is the
 multi-hop, cross-workload transport among Resource Authorization Servers
-that trust a common IdP Authorization Server (IdP). A Continuation
+that trust a common IdP authorization server (IdP). A Continuation
 Assertion Issuer attests that a Resource Authorization Server accepted
 an earlier ID-JAG and that its authorization remains active; the acting
 workload presents that assertion to the IdP as an {{RFC8693}} subject

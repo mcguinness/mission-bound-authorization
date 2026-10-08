@@ -16,6 +16,7 @@ import { type AuthorityEntry, deriveContextualTuples, type MissionView } from ".
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { fgaResourcePolicy, issuerLocalPrincipals, principalObject, type ResourcePolicy } from "../src/resource-policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { withCredential } from "./with-credential.js";
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -70,27 +71,34 @@ const context = (over: Partial<EvaluationRequest["context"]> = {}): EvaluationRe
   ...over,
 });
 
+// Every request carries the credential's own authority (#825 PR 2b) through
+// the neutral fixture, so the Mission and Resource-policy bounds stay the
+// ones under test.
+
 /** A keyed payment on one invoice: the verified subject, the PEP-resolved vendor, a fresh key. */
-const payReq = (invoiceId: string, vendorId: string, iss = ISSUER): EvaluationRequest => ({
-  subject: { id: "alice", properties: { iss } },
-  resource: { type: "invoice", id: invoiceId, properties: { audience: RESOURCE, vendor_id: vendorId } },
-  action: { name: "payments:payment.execute", properties: { idempotency_key: freshKey() } },
-  context: context({ action_class: "irreversible_action", parameter_digest: `sha-256:pd-${invoiceId}`, amount: { amount: "125.00", currency: "USD" } }),
-});
+const payReq = (invoiceId: string, vendorId: string, iss = ISSUER): EvaluationRequest =>
+  withCredential({
+    subject: { id: "alice", properties: { iss } },
+    resource: { type: "invoice", id: invoiceId, properties: { audience: RESOURCE, vendor_id: vendorId } },
+    action: { name: "payments:payment.execute", properties: { idempotency_key: freshKey() } },
+    context: context({ action_class: "irreversible_action", parameter_digest: `sha-256:pd-${invoiceId}`, amount: { amount: "125.00", currency: "USD" } }),
+  });
 
-const readReq = (invoiceId: string, vendorId: string, iss = ISSUER): EvaluationRequest => ({
-  subject: { id: "alice", properties: { iss } },
-  resource: { type: "invoice", id: invoiceId, properties: { audience: RESOURCE, vendor_id: vendorId } },
-  action: { name: "payments:invoice.read" },
-  context: context({ action_class: "consequential_read" }),
-});
+const readReq = (invoiceId: string, vendorId: string, iss = ISSUER): EvaluationRequest =>
+  withCredential({
+    subject: { id: "alice", properties: { iss } },
+    resource: { type: "invoice", id: invoiceId, properties: { audience: RESOURCE, vendor_id: vendorId } },
+    action: { name: "payments:invoice.read" },
+    context: context({ action_class: "consequential_read" }),
+  });
 
-const listReq = (vendorIds: string[]): EvaluationRequest => ({
-  subject: { id: "alice", properties: { iss: ISSUER } },
-  resource: { type: "vendor", id: vendorIds[0] as string, properties: { audience: RESOURCE, vendor_id: vendorIds[0] as string, vendor_ids: vendorIds } },
-  action: { name: "payments:invoice.list" },
-  context: context({ action_class: "consequential_read" }),
-});
+const listReq = (vendorIds: string[]): EvaluationRequest =>
+  withCredential({
+    subject: { id: "alice", properties: { iss: ISSUER } },
+    resource: { type: "vendor", id: vendorIds[0] as string, properties: { audience: RESOURCE, vendor_id: vendorIds[0] as string, vendor_ids: vendorIds } },
+    action: { name: "payments:invoice.list" },
+    context: context({ action_class: "consequential_read" }),
+  });
 
 let fga: Fga;
 let storeId: string;

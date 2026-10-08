@@ -139,7 +139,7 @@ describe("the resource enforces an independent Resource-policy refusal (@spec ru
     for (const mode of MODES) {
       const x = await build(mode, RESOURCE_POLICY_REFUSES_ALL_FIXTURE);
       try {
-        const res = await x.server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: `idem_${mode}_828` }, TOKEN);
+        const res = await x.server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: `idem_${mode}_828_policy` }, TOKEN);
         expect(res.ok, mode).toBe(false);
         expect(x.writeReservations.schedules(), mode).toEqual([]);
         expect(x.writeReservations.reservations(), mode).toEqual([]);

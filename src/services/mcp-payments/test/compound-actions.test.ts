@@ -77,6 +77,7 @@ const TOKEN: TokenFacts = {
 
 interface Harness {
   server: McpPaymentsServer;
+  pep: Pep;
   evidence: EvidenceStore;
   connectors: Connectors;
   engine: TransactionEngine;
@@ -205,6 +206,7 @@ function harness(
 
   self = {
     server,
+    pep,
     evidence,
     connectors,
     engine,
@@ -266,8 +268,12 @@ async function cross(
   invoiceId = "inv-1",
 ): Promise<{ ok: boolean; refusal_reason?: string; denial_reason?: string; result?: unknown }> {
   // @spec runtime#idempotency (#917): every crossing is a new intended
-  // execution; only the keyed commit crossing forwards the key.
-  const args = { invoice_id: invoiceId, idempotency_key: `idem_${randomUUID()}` };
+  // execution; only the keyed commit crossing takes a key, and intake (D316)
+  // refuses one on the two crossings whose served schema declares none.
+  const args =
+    crossing.call === "transaction"
+      ? { invoice_id: invoiceId, idempotency_key: `idem_${randomUUID()}` }
+      : { invoice_id: invoiceId };
   if (crossing.call === "read") return h.server.callReadTool(crossing.tool, args, TOKEN, hook);
   if (crossing.call === "write") return h.server.callWriteTool(crossing.tool, args, TOKEN, hook);
   return h.server.callTransactionTool(crossing.tool, args, TOKEN, hook);
@@ -462,24 +468,26 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
 
   it("ignores an agent-supplied action_phase argument and uses the catalog phase", async () => {
     const h = harness();
-    const res = await h.server.callWriteTool(
-      "hold_transfer",
-      { invoice_id: "inv-1", action_phase: "commit" },
-      TOKEN,
-    );
-    expect(res.ok, JSON.stringify(res)).toBe(true);
-    // The request context and the permit condition both carry the profile's
+    // The PEP, handed the argument past the tool boundary, never reads it:
+    // the request context and the permit condition both carry the profile's
     // phase, not the argument's.
+    const res = await h.pep.enforce("hold_transfer", { invoice_id: "inv-1", action_phase: "commit" }, TOKEN);
+    expect(res.permitted, res.refusal_reason ?? res.denial_reason).toBe(true);
     expect(h.lastEnvelope()?.action_phase).toBe("prepare");
     expect(conditionsOf(h.lastDecision())?.action_phase).toBe("prepare");
-    // And the argument cannot make a commit crossing accept this permit.
+    // At the served tool boundary the argument is a member of neither
+    // crossing's schema, so intake (D316) refuses it before any Decision, and
+    // it cannot make a commit crossing accept the prepare permit.
     h.replay(h.lastDecision());
+    const prepare = await h.server.callWriteTool("hold_transfer", { invoice_id: "inv-1", action_phase: "commit" }, TOKEN);
+    expect(prepare).toEqual({ ok: false, refusal_reason: "invalid_request" });
     const refused = await h.server.callTransactionTool(
       "execute_wire_transfer",
       { invoice_id: "inv-1", action_phase: "prepare", idempotency_key: `idem_${randomUUID()}` },
       TOKEN,
     );
-    expect(refused.refusal_reason).toBe("phase_mismatch");
+    expect(refused).toEqual({ ok: false, refusal_reason: "invalid_request" });
+    expect(h.connectors.ledgerEntries("msn_252")).toHaveLength(0);
   });
 
   it("treats the permit as invalid when the PEP's recognized set lacks action_phase", async () => {

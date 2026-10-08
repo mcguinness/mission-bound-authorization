@@ -3,7 +3,11 @@
     {
       "name": "list_invoices",
       "description": "List invoices",
-      "inputSchema": { "type": "object", "properties": { "vendor_id": { "type": "string" } } }
+      "inputSchema": {
+        "type": "object",
+        "properties": { "vendor_id": { "type": "string" } },
+        "additionalProperties": false
+      }
     },
     {
       "name": "get_invoice",
@@ -11,13 +15,19 @@
       "inputSchema": {
         "type": "object",
         "properties": { "invoice_id": { "type": "string" } },
-        "required": ["invoice_id"]
+        "required": ["invoice_id"],
+        "additionalProperties": false
       }
     },
     {
       "name": "lookup_vendor",
       "description": "Look up a vendor",
-      "inputSchema": { "type": "object", "properties": { "vendor_id": { "type": "string" } } }
+      "inputSchema": {
+        "type": "object",
+        "properties": { "vendor_id": { "type": "string" } },
+        "required": ["vendor_id"],
+        "additionalProperties": false
+      }
     },
     {
       "name": "schedule_payment",
@@ -28,7 +38,8 @@
           "invoice_id": { "type": "string" },
           "idempotency_key": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" }
         },
-        "required": ["invoice_id", "idempotency_key"]
+        "required": ["invoice_id", "idempotency_key"],
+        "additionalProperties": false
       }
     },
     {
@@ -40,7 +51,8 @@
           "invoice_id": { "type": "string" },
           "idempotency_key": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" }
         },
-        "required": ["invoice_id", "idempotency_key"]
+        "required": ["invoice_id", "idempotency_key"],
+        "additionalProperties": false
       }
     },
     {
@@ -49,7 +61,8 @@
       "inputSchema": {
         "type": "object",
         "properties": { "invoice_id": { "type": "string" } },
-        "required": ["invoice_id"]
+        "required": ["invoice_id"],
+        "additionalProperties": false
       }
     },
     {
@@ -58,7 +71,8 @@
       "inputSchema": {
         "type": "object",
         "properties": { "invoice_id": { "type": "string" } },
-        "required": ["invoice_id"]
+        "required": ["invoice_id"],
+        "additionalProperties": false
       }
     },
     {
@@ -70,7 +84,8 @@
           "invoice_id": { "type": "string" },
           "idempotency_key": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" }
         },
-        "required": ["invoice_id", "idempotency_key"]
+        "required": ["invoice_id", "idempotency_key"],
+        "additionalProperties": false
       }
     },
     {
@@ -82,7 +97,8 @@
           "invoice_id": { "type": "string" },
           "idempotency_key": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" }
         },
-        "required": ["invoice_id", "idempotency_key"]
+        "required": ["invoice_id", "idempotency_key"],
+        "additionalProperties": false
       }
     }
   ]

@@ -35,6 +35,7 @@ import {
   createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   type TokenFacts,
@@ -192,6 +193,7 @@ beforeAll(async () => {
   chain = [root, child];
 
   server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep: new Pep({
       decide: EVIDENCE_KEYS.decide,
       payments: new PaymentsStore(),

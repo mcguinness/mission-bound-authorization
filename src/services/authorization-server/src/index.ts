@@ -632,6 +632,19 @@ export interface BuiltAs {
    * protected-event report with a source's private key.
    */
   protectedEventSources: SeededTrustedSource[];
+  /**
+   * @spec authority-server#mission-join (#557): whether this assembly armed
+   * the dev ordinary-token route with a signer (`devOrdinaryIssuance`). The
+   * route mints only when this is true and the `dev-token` capability is
+   * enabled, so a deployment that must serve neither (D332) can show this
+   * half is off even where the capability gate already refuses.
+   */
+  devOrdinaryIssuance: boolean;
+  /**
+   * The capability set this assembly was built with (`adapters/capabilities.ts`).
+   * Absent: every capability is on, the full reference provider.
+   */
+  capabilities?: ReadonlySet<ProviderCapability>;
 }
 
 export async function buildAuthorizationServer(opts: {
@@ -1201,5 +1214,7 @@ export async function buildAuthorizationServer(opts: {
     templateStore,
     issuerEvidence,
     protectedEventSources: seededSources,
+    devOrdinaryIssuance: opts.devOrdinaryIssuance === true,
+    ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
   };
 }

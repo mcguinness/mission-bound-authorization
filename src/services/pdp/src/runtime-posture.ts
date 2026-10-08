@@ -189,7 +189,8 @@ export function executionLeaseMaxSeconds(posture: RuntimePosture, actionClass: s
  * the request's operation elects the "short validity window combined with an
  * idempotency key" control. Read from the same statement object the resource
  * metadata publishes, so the PDP refuses a keyless request exactly where the
- * deployment says a key is the control.
+ * deployment says a key is the control. An operation whose selected
+ * declaration is `single_use_decision_identifier` (D333) reads `false`.
  */
 export function reversibleWriteKeyControl(posture: RuntimePosture, actionClass: string | undefined, action: string): boolean {
   return reversibleWriteDeclarationFor(posture, actionClass, action) !== undefined;
@@ -199,7 +200,8 @@ export function reversibleWriteKeyControl(posture: RuntimePosture, actionClass: 
  * @spec runtime#permit-binding (#918, #1028 review P2): the "short validity
  * window" half of the control, as the statement publishes it: the declared
  * operation's `permit_validity_max_seconds`, or `undefined` when the
- * operation elects no key control. The PDP caps the permit it issues by this
+ * operation elects no key control (including the published single-use class
+ * default, D333). The PDP caps the permit it issues by this
  * value, and the loader holds the published retention longer than it, so a
  * permit never outlives its reservation's record.
  */

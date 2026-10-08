@@ -18,6 +18,7 @@ import {
   EvidenceStore,
   type ExecutionEvidence,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   parameterDigest,
   PaymentsStore,
   Pep,
@@ -191,6 +192,7 @@ function build(
     ...(opts.challengeSigner ? { challengeSigner: opts.challengeSigner } : {}),
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,
@@ -211,7 +213,7 @@ function build(
     ...(opts.asIssuer ? { asIssuer: opts.asIssuer } : {}),
     ...(opts.txnStores ? { txnStores: opts.txnStores } : {}),
   });
-  return { payments, evidence, connectors, engine, server };
+  return { payments, evidence, connectors, engine, server, pep };
 }
 
 // AROP Transaction Challenge (phase 2) test helpers.
@@ -515,32 +517,33 @@ d("M5 transaction-assurance tier", () => {
   it("derives the challenge's mission, parameter_digest and cnf itself, never from the client's arguments (@spec txn-authorization#resource-challenge)", async () => {
     const { generateKeyPair } = await import("jose");
     const rsTxn = await generateKeyPair("ES256", { extractable: true });
-    const { server, payments } = build({
+    const { server, payments, pep } = build({
       challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
     });
 
     // The client supplies its own `mission`, `parameter_digest` and `cnf`
     // alongside the operation's real argument. All three are the resource's to
     // derive from the request and the VERIFIED token, so none is reflected.
-    const res = await server.callTransactionTool(
-      "send_remittance_email",
-      {
-        invoice_id: "inv-1",
-        mission: {
-          id: "msn_supplied",
-          issuer: "https://elsewhere.test",
-          authority_hash: "sha-256:supplied",
-          expires_at: "2100-01-01T00:00:00Z",
-          approval_basis: { type: "direct" },
-        },
-        parameter_digest: "sha-256:client-supplied",
-        cnf: { jkt: "jkt-client-supplied" },
+    const supplied = {
+      invoice_id: "inv-1",
+      mission: {
+        id: "msn_supplied",
+        issuer: "https://elsewhere.test",
+        authority_hash: "sha-256:supplied",
+        expires_at: "2100-01-01T00:00:00Z",
+        approval_basis: { type: "direct" },
       },
-      TOKEN,
-      undefined,
-      ACCEPT_CHALLENGE,
-    );
-    const claims = decodeJwt(res.transaction_challenge as string);
+      parameter_digest: "sha-256:client-supplied",
+      cnf: { jkt: "jkt-client-supplied" },
+    };
+    // Intake (D316) refuses the undeclared members at the tool boundary, so
+    // no challenge is issued for them there.
+    expect(
+      await server.callTransactionTool("send_remittance_email", { ...supplied, idempotency_key: idem() }, TOKEN, undefined, ACCEPT_CHALLENGE),
+    ).toEqual({ ok: false, refusal_reason: "invalid_request" });
+    // The PEP, handed them past that boundary, still derives all three itself.
+    const res = await pep.enforce("send_remittance_email", supplied, TOKEN, undefined, ACCEPT_CHALLENGE);
+    const claims = decodeJwt(res.challenge?.transaction_challenge as string);
     expect((claims.mission as { id: string }).id).toBe("msn_m5");
     expect((claims.mission as { issuer: string }).issuer).toBe("https://as.test");
     expect(claims.parameter_digest).toBe(digestFor(payments));

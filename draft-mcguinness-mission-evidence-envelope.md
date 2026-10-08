@@ -534,7 +534,8 @@ kind's own editors to schedule.
 # Intent Admission Evidence {#intent-admission-evidence}
 
 Intent Admission Evidence spans two planes, and the terms below keep
-them distinct because the AS's own evidence hook does
+them distinct because the authorization server's (AS's) own evidence
+hook does
 ({{I-D.draft-mcguinness-oauth-mission}}). Inbound, a client presents an
 **Intent Admission Assertion** as an Intent Submission Evidence entry
 ({{intent-admission-assertion}}): this is the first type this document

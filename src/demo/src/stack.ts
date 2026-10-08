@@ -20,6 +20,7 @@ import {
   MissionKernel,
   missionResourceAccessProfile,
   OperationProfileRegistry,
+  type ProviderCapability,
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
@@ -84,6 +85,19 @@ export const ISS = TOPOLOGY.issuers.as;
 /** The second trust domain (LedgerCloud) for the cross-domain leg (M9). */
 export const RAS_ISS = TOPOLOGY.issuers.ras;
 
+/**
+ * D332: the AS capabilities the as-native target enables beyond the always-on
+ * issuance profile: exactly the issuance-only floor's `lifecycle-revoke`
+ * (#873) and `transaction-authorization`, where the remittance action-bound
+ * approval redeems its challenge. Every other optional capability is off, and
+ * so are the dev ordinary-token route (`dev-token`) and dev ordinary issuance.
+ * `src/docs/initial-runtime-deployment.md` §2 and §9 state the set.
+ */
+export const AS_NATIVE_CAPABILITIES: ReadonlySet<ProviderCapability> = new Set<ProviderCapability>([
+  "lifecycle-revoke",
+  "transaction-authorization",
+]);
+
 /** The cross-domain / real-issuance extras, present only with withAuthServer. */
 export interface AuthServerExtras {
   /** Base URL of the running AS provider (all OAuth endpoints derive from it). */
@@ -111,8 +125,24 @@ export interface AuthServerExtras {
     missionId: string,
     cnfJkt: string,
   ) => Promise<{ grant: string; jti: string; audienceScoped: AuthorityEntry[] }>;
-  /** Stop the AS HTTP listener (the exhibit calls this before exit). */
-  closeAuthServer: () => void;
+  /**
+   * Stop the AS HTTP listener and the txn-challenge discovery listener; resolves
+   * once both ports are released (the exhibit calls this before exit).
+   */
+  closeAuthServer: () => Promise<void>;
+  /**
+   * The capability set the AS was built with, as the AS reports it
+   * (`BuiltAs.capabilities`): {@link AS_NATIVE_CAPABILITIES} under the
+   * `as-native` target. Absent: the full reference assembly, every capability
+   * on.
+   */
+  capabilities?: ReadonlySet<ProviderCapability>;
+  /**
+   * Whether the AS armed its dev ordinary-token route, as the AS reports it
+   * (`BuiltAs.devOrdinaryIssuance`). False on the `as-native` target (D332)
+   * unless its test fixture is on.
+   */
+  devOrdinaryIssuance: boolean;
 }
 
 export interface DemoStack {
@@ -166,6 +196,16 @@ export interface DemoStack {
    * channels are untouched. Close it with `masGovernedChannel.close()`.
    */
   masGovernedChannel?: HttpMcpChannel;
+  /**
+   * @spec runtime-oauth#token-validation (D315): the HTTP MCP endpoint at the
+   * declared resource audience (`url` is exactly `CANONICAL_RESOURCE`),
+   * verifying a DPoP proof on every request. Started only for the `as-native`
+   * target; Mission-bound only, so it admits no ordinary credential. Close it
+   * with `resourceChannel.close()`.
+   */
+  resourceChannel?: HttpMcpChannel;
+  /** The decision channel's mode, as resolved from the option or `MISSION_PDP_MODE`. */
+  pdpMode: "co-resident" | "remote";
   /** Trusted operator shutdown/fault-injection seam, never agent-accessible. */
   decisionChannel: { close: () => Promise<void> };
   /**
@@ -224,7 +264,40 @@ export async function composeStack(opts: {
    * (./resource-policy-store.ts).
    */
   resourcePolicyStore: ResourcePolicyStore;
+  /**
+   * D284, D315: `as-native` assembles #253's first runtime target. It implies
+   * `withAuthServer`, builds the AS with exactly {@link AS_NATIVE_CAPABILITIES}
+   * (D332), mounts no MAS join route on the payments resource, and serves the
+   * HTTP MCP transport at the declared resource audience with DPoP verified on
+   * every request. Absent: the shared demo composition, unchanged.
+   */
+  target?: "as-native";
+  /**
+   * TEST FIXTURE ONLY (D332); `pnpm as-native` never sets it. Under the
+   * `as-native` target, also enable `dev-token` and dev ordinary issuance, so
+   * a negative test can mint the ordinary credential a baseline Join would
+   * present. A composition with this on is not the target's capability set,
+   * and nothing it shows bears on the target's enabled capabilities. The
+   * shared demo composition serves that route regardless.
+   */
+  testOrdinaryTokenMinting?: boolean;
+  /**
+   * @spec authority-server#mission-join (#557): the resources this deployment's
+   * MAS join governs. Defaults to `config/mas-join.json` `governed_resources`,
+   * less the payments resource under the `as-native` target.
+   */
+  masGovernedResources?: readonly string[];
 }): Promise<DemoStack> {
+  const asNative = opts.target === "as-native";
+  const masGovernedResources =
+    opts.masGovernedResources ??
+    (asNative ? MAS_JOIN.governed_resources.filter((r) => r !== CANONICAL_RESOURCE) : MAS_JOIN.governed_resources);
+  // D315: the as-native target excludes the MAS route (#818 owns it), so a
+  // configuration that would still mount it on the payments resource fails
+  // startup here, before anything connects or listens.
+  if (asNative && masGovernedResources.includes(CANONICAL_RESOURCE)) {
+    throw new Error(`the as-native target mounts no MAS join route, but ${CANONICAL_RESOURCE} is configured governed (D315)`);
+  }
   const mode = opts.pdpMode ?? process.env.MISSION_PDP_MODE ?? "co-resident";
   if (mode !== "co-resident" && mode !== "remote") throw new Error("MISSION_PDP_MODE must be co-resident or remote");
   const conn = await openResourcePolicyStore(
@@ -286,7 +359,7 @@ export async function composeStack(opts: {
   // lazily because the resource's own metadata names that listener's origin.
   let paymentsServerRef: McpPaymentsServer | undefined;
 
-  if (opts.withAuthServer) {
+  if (opts.withAuthServer || asNative) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
     const asUrl = `http://localhost:${asPort}`;
     // The RS's txn-challenge signing key (rs-txn); the AS is configured with its
@@ -317,6 +390,15 @@ export async function composeStack(opts: {
       ],
     ]);
     const approverServiceToken = crypto.randomUUID();
+    // D332: the as-native target's AS runs exactly AS_NATIVE_CAPABILITIES,
+    // plus `dev-token` only under the test fixture. The shared demo passes no
+    // set, which is the full reference assembly.
+    const ordinaryMinting = !asNative || opts.testOrdinaryTokenMinting === true;
+    const capabilities: ReadonlySet<ProviderCapability> | undefined = asNative
+      ? ordinaryMinting
+        ? new Set<ProviderCapability>([...AS_NATIVE_CAPABILITIES, "dev-token"])
+        : AS_NATIVE_CAPABILITIES
+      : undefined;
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
@@ -324,11 +406,13 @@ export async function composeStack(opts: {
         [approverServiceToken]: { principal_id: "svc:approver-console", scopes: [MISSION_APPROVAL_SCOPE],
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
       },
+      ...(capabilities ? { capabilities } : {}),
       // @spec authority-server#mission-join (#557) — the demo's MAS-governed
       // route acts under an ORDINARY OAuth credential, and no other path in
       // this deployment mints one. The AS itself is unchanged by the Join;
-      // this only gives the demo a plain token to present.
-      devOrdinaryIssuance: true,
+      // this only gives the demo a plain token to present. The as-native
+      // target mounts no such route and mints none (D332).
+      devOrdinaryIssuance: ordinaryMinting,
       transactionAuthorization: {
         challengeIssuers,
         ars,
@@ -381,6 +465,17 @@ export async function composeStack(opts: {
       },
     });
     const asServer = as.provider.listen(asPort);
+    // A port already in use refuses startup here, with the discovery
+    // listener released, rather than surfacing as an unhandled error event.
+    try {
+      await new Promise<void>((resolve, reject) => {
+        asServer.once("listening", () => resolve());
+        asServer.once("error", reject);
+      });
+    } catch (err) {
+      await metadataServer.close();
+      throw err;
+    }
     kernel = as.kernel;
     issuer = asUrl;
     issuerEvidenceStore = as.issuerEvidence;
@@ -498,10 +593,17 @@ export async function composeStack(opts: {
           cnfJkt,
           resourceToAs,
         }),
-      closeAuthServer: () => {
-        asServer.close();
-        void metadataServer?.close();
+      closeAuthServer: async () => {
+        // Idle keep-alive sockets would hold the close open; drop them so the
+        // promise resolves once both ports are released.
+        asServer.closeAllConnections();
+        await Promise.all([
+          new Promise<void>((resolve) => asServer.close(() => resolve())),
+          metadataServer?.close(),
+        ]);
       },
+      ...(as.capabilities ? { capabilities: as.capabilities } : {}),
+      devOrdinaryIssuance: as.devOrdinaryIssuance,
     };
   } else {
     const asKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
@@ -826,9 +928,37 @@ export async function composeStack(opts: {
   // governed. It is a SECOND channel: the Mission-bound channels keep
   // `validateCredential` and keep rejecting a credential with no `mission`
   // claim, so turning the Join on never loosens an existing route.
-  const masGovernedChannel = MAS_JOIN.governed_resources.includes(CANONICAL_RESOURCE)
+  const masGovernedChannel = masGovernedResources.includes(CANONICAL_RESOURCE)
     ? await createHttpMcpChannel(server, { masGoverned: true })
     : undefined;
+  // D315: the as-native target's one resource entry point, at the declared
+  // audience itself, so the `htu` a client signs and the `aud` the AS issues
+  // name the same URL. It is the Mission-bound channel (`validateCredential`
+  // with the request's DPoP proof); the in-process mediated channel is outside
+  // this target's claims.
+  let resourceChannel: HttpMcpChannel | undefined;
+  if (asNative) {
+    const audience = new URL(CANONICAL_RESOURCE);
+    // A failed startup releases what it already opened: the AS and discovery
+    // listeners, the decision channel and both single-writer store files.
+    const release = async (): Promise<void> => {
+      await authServer?.closeAuthServer();
+      await decisionChannel.close();
+      pdpClaims.close();
+      writeReservations.close();
+    };
+    try {
+      resourceChannel = await createHttpMcpChannel(server, { host: audience.hostname, port: Number(audience.port) });
+    } catch (err) {
+      await release();
+      throw err;
+    }
+    if (resourceChannel.url !== CANONICAL_RESOURCE) {
+      await resourceChannel.close();
+      await release();
+      throw new Error(`the as-native endpoint ${resourceChannel.url} is not the declared audience ${CANONICAL_RESOURCE}`);
+    }
+  }
 
   // Transparency + producers.
   const transparencyKey = TOPOLOGY.keys.transparency;
@@ -891,6 +1021,8 @@ export async function composeStack(opts: {
     revokedInstances,
     actorRecords,
     ...(masGovernedChannel ? { masGovernedChannel } : {}),
+    ...(resourceChannel ? { resourceChannel } : {}),
+    pdpMode: mode,
     viewFor,
     publishEvidence,
     onEnforce: (fn) => {
@@ -899,6 +1031,9 @@ export async function composeStack(opts: {
     ...(authServer ? { authServer } : {}),
   };
 }
+
+/** The options {@link composeStack} takes. */
+export type ComposeStackOptions = Parameters<typeof composeStack>[0];
 
 /** Approve a demo mission for alice, approved by bob (write-bearing governance). */
 export function approveDemoMission(stack: DemoStack): { id: string } {

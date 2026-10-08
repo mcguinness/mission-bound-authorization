@@ -21,7 +21,8 @@
     "demo:trace": "node scripts/trace.mjs",
     "demo:serve": "node scripts/serve.mjs",
     "issuance-only": "node scripts/issuance-only.mjs",
-    "issuance-only:walkthrough": "node scripts/issuance-only-walkthrough.mjs"
+    "issuance-only:walkthrough": "node scripts/issuance-only-walkthrough.mjs",
+    "as-native": "node scripts/as-native.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.4",

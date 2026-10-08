@@ -214,6 +214,12 @@ export interface DecisionEvidenceObject {
   conditions?: RuntimeConditions;
   decision: "permit" | "deny";
   denial_reason?: string;
+  /**
+   * @spec authzen#evidence `authority_bound` (#825 PR 2b-ii; D322, D324,
+   * D340): the authority bound that decided an `out_of_authority` or
+   * `parameter_violation` deny, the presented credential's or the Mission's.
+   */
+  authority_bound?: AuthorityBound;
   contributing_constraints?: string[];
   entry_digest?: string;
   sequence: number;
@@ -307,6 +313,7 @@ export interface DecisionEvidenceEmissionInput {
   evaluation_request_digest?: string;
   conditions?: RuntimeConditions;
   denial_reason?: string;
+  authority_bound?: AuthorityBound;
   contributing_constraints?: readonly string[];
   entry_digest?: string;
 }
@@ -344,6 +351,11 @@ export interface DecisionEvidenceEmitterConfig {
  * and instance-epoch binding are a separate concern from the emission
  * boundary this module establishes.
  */
+/** @spec authzen#evidence `authority_bound`: the bound an authority deny failed. */
+export type AuthorityBound = "credential" | "mission";
+const AUTHORITY_BOUNDS: readonly string[] = ["credential", "mission"];
+const AUTHORITY_BOUND_REASONS: readonly string[] = ["out_of_authority", "parameter_violation"];
+
 export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterConfig): DecisionEvidenceEmitter {
   const sequences = new Map<string, number>();
   const nextSequence = (mission: RuntimeMissionRef): number => {
@@ -383,6 +395,16 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
       }
       if (input.decision === "permit" && classes.slice(2).includes(action_class) && input.conditions?.use_limit !== 1) {
         throw new Error("Decision Evidence high-consequence permit requires use_limit 1");
+      }
+      // @spec authzen#evidence `authority_bound`: only on a deny one of the
+      // two authority bounds decided, and only with one of its two values.
+      if (
+        input.authority_bound !== undefined &&
+        (input.decision !== "deny" ||
+          !AUTHORITY_BOUND_REASONS.includes(input.denial_reason ?? "") ||
+          !AUTHORITY_BOUNDS.includes(input.authority_bound))
+      ) {
+        throw new Error("Decision Evidence authority_bound names a bound on a deny one decided");
       }
       const class_source: RuntimeClassSource = input.action_class !== undefined ? "deployment" : "default";
       if (input.parameter_digest === undefined && !(typeof input.evaluation_request_digest === "string" && input.evaluation_request_digest.length > 0)) {
@@ -428,6 +450,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         } } : {}),
         decision: input.decision,
         ...(input.denial_reason !== undefined ? { denial_reason: input.denial_reason } : {}),
+        ...(input.authority_bound !== undefined ? { authority_bound: input.authority_bound } : {}),
         ...(input.contributing_constraints?.length ? {
           contributing_constraints: [...new Set(input.contributing_constraints.map(requiredString))],
         } : {}),

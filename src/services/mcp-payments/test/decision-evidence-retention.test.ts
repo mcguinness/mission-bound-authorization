@@ -63,6 +63,7 @@ import {
   EvidenceStore,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   publishedEvidenceJwk,
@@ -149,6 +150,7 @@ function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withD
     instanceEpoch: "epoch-1",
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,
@@ -156,7 +158,7 @@ function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withD
     keyRoles: { accessToken: jwks.keys.map((k) => String(k.kid)), attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
   });
-  return { server, evidence };
+  return { server, evidence, pep };
 }
 
 describe("the enforcement path holds no PDP evidence key (@spec runtime-evidence#decision-evidence-object, #741)", () => {
@@ -164,7 +166,7 @@ describe("the enforcement path holds no PDP evidence key (@spec runtime-evidence
     const { privateKey, publicKey } = await generateKeyPair("ES256");
     const jwk = await exportJWK(publicKey); jwk.kid = "credential-test";
     const { keys } = decisionPointAndKeys();
-    const { server, evidence } = buildServer(keys, true, { keys: [jwk] });
+    const { server, evidence, pep } = buildServer(keys, true, { keys: [jwk] });
     const exp = Math.floor(Date.now() / 1000) + 600;
     const sign = (key: CryptoKey) => new SignJWT({ sub: "alice", client_id: "ap-agent", mission: TOKEN.mission, cnf: { jkt: "jkt-1" }, authorization_details: [...ALL_ACTIONS_CREDENTIAL], raw_claim: "PRIVATE-CREDENTIAL-CLAIM" })
       .setProtectedHeader({ alg: "ES256", kid: jwk.kid, typ: "at+jwt" }).setIssuer(ISSUER).setAudience(CANONICAL_RESOURCE).setIssuedAt().setJti(crypto.randomUUID()).setExpirationTime(exp).sign(key);
@@ -173,8 +175,11 @@ describe("the enforcement path holds no PDP evidence key (@spec runtime-evidence
     expect(evidence.all()).toEqual([]);
     const credential = await sign(privateKey);
     const facts = await server.validateMissionToken(credential);
-    const result = await server.callReadTool("get_invoice", { invoice_id: "inv-1", credential: { issuer: "https://attacker.test", expires_at: "2099-01-01T00:00:00Z" } }, facts);
-    expect(result.isError).not.toBe(true);
+    const smuggled = { invoice_id: "inv-1", credential: { issuer: "https://attacker.test", expires_at: "2099-01-01T00:00:00Z" } };
+    // Intake (D316) refuses the undeclared member at the tool boundary, and
+    // the PEP, handed it past that boundary, still never reads it.
+    expect(await server.callReadTool("get_invoice", smuggled, facts)).toEqual({ ok: false, refusal_reason: "invalid_request" });
+    expect((await pep.enforce("get_invoice", smuggled, facts)).permitted).toBe(true);
     const record = evidence.all().find((e): e is DecisionEvidence => e.kind === "decision")!.content;
     expect(record.credential).toEqual({ issuer: ISSUER, expires_at: new Date(exp * 1000).toISOString() });
     const signed = Buffer.from(record.evidence_envelope.value.split(".")[1]!, "base64url").toString("utf8");
@@ -444,7 +449,15 @@ describe("the record survives the remote decision channel byte-identically (@spe
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1", properties: { audience: CANONICAL_RESOURCE, vendor_id: "acme" } },
       action: { name: "payments:invoice.read" },
-      context: { mission: { id: "msn_ret", issuer: ISSUER } },
+      context: {
+        mission: { id: "msn_ret", issuer: ISSUER },
+        // The credential's own authority rides every decision (#825 PR 2b).
+        credential: {
+          authority: [
+            { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
+          ],
+        },
+      },
     };
     const decision = await evaluateRemote(request, { url: handle.url, pepId: PEP_ID, secret: SECRET });
     expect(decision.decision, JSON.stringify(decision.context)).toBe(true);

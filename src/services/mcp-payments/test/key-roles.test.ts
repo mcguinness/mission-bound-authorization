@@ -16,6 +16,7 @@ import {
   dpopProofFor,
   type KeyRoles,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   roleKeyResolvers,
 } from "../src/index.js";
@@ -52,6 +53,7 @@ async function roleKey(kid: string): Promise<RoleKey> {
 function server(roles: KeyRoles = ROLES): McpPaymentsServer {
   const keys = [access.jwk, root.jwk, txn.jwk];
   return new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep: undefined as never, // signature verification refuses before any PEP use
     payments: new PaymentsStore(),
     loadView: () => undefined,
@@ -225,6 +227,7 @@ describe("one key material serves one role, whatever kids it is published under 
     expect(
       () =>
         new McpPaymentsServer({
+          writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
           pep: undefined as never,
           payments: new PaymentsStore(),
           loadView: () => undefined,

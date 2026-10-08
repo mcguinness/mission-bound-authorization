@@ -28,6 +28,7 @@ import { macHex, REQUEST_MAC_DOMAIN } from "../src/channel-mac.js";
 import { evaluateRemote, isDecisionChannelRefusal, requestMacParts } from "../src/client.js";
 import { channelDeadlineMs } from "../src/decision-channel.js";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
+import { withCredential } from "./with-credential.js";
 import type { Fga } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
@@ -56,17 +57,20 @@ const view = (): MissionView => ({
   client_id: "ap-agent",
 });
 
-const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
-  subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
-  action: { name: "payments:invoice.read" },
-  // The observation is REQUIRED under the declared pep placement (#1049 owner ruling).
-  context: {
-    mission: { id: "msn_test_1", issuer: "https://as.test" },
-    mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
-  },
-  ...over,
-});
+// The credential's own authority rides every request (#825 PR 2b), so the
+// fixture runs in the builder: requests reach the PDP over the channel.
+const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest =>
+  withCredential({
+    subject: { id: "alice" },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+    action: { name: "payments:invoice.read" },
+    // The observation is REQUIRED under the declared pep placement (#1049 owner ruling).
+    context: {
+      mission: { id: "msn_test_1", issuer: "https://as.test" },
+      mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
+    },
+    ...over,
+  });
 
 let handle: PdpHttpServerHandle | undefined;
 afterEach(async () => {
@@ -128,6 +132,46 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
     const decision = await evaluateRemote(req(), { url: server.url, pepId: PEP_ID, secret: SECRET });
     expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
     expect(evaluations.n).toBe(1);
+  });
+
+  it("enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)", async () => {
+    const evaluations = { n: 0 };
+    const server = await startServer(evaluations);
+    const client = { url: server.url, pepId: PEP_ID, secret: SECRET };
+    const built = req();
+    const withAuthority = (credential: NonNullable<EvaluationRequest["context"]["credential"]>): EvaluationRequest => ({
+      ...built,
+      context: { ...built.context, credential },
+    });
+    // The view and policy allow this invoice read; the credential covers only globex.
+    const narrowed = await evaluateRemote(
+      withAuthority({
+        authority: [
+          {
+            type: "mission_resource_access",
+            resource: RESOURCE,
+            actions: ["payments:invoice.read"],
+            constraints: { vendors: ["globex"] },
+          },
+        ],
+      }),
+      client,
+    );
+    expect(narrowed.decision).toBe(false);
+    // The entry names the action and fails its own vendor constraint (D324).
+    expect(narrowed.context.denial_reason).toBe("parameter_violation");
+    const otherAction = await evaluateRemote(
+      withAuthority({
+        authority: [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:vendor.read"] }],
+      }),
+      client,
+    );
+    expect(otherAction.decision).toBe(false);
+    expect(otherAction.context.denial_reason).toBe("out_of_authority");
+    const missing = await evaluateRemote(withAuthority({}), client);
+    expect(missing.decision).toBe(false);
+    expect(missing.context.denial_reason).toBe("credential_invalid");
+    expect(evaluations.n).toBe(3);
   });
 
   it("a request with no channel signature is refused before evaluation, with zero PDP evaluation", async () => {
@@ -418,17 +462,18 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
  * request body, and an unreachable claim domain is no decision at all.
  */
 describe("the remote channel binds the claim requester (@spec runtime#idempotency, #917)", () => {
-  const keyed = (key: string): EvaluationRequest => ({
-    subject: { id: "alice" },
-    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
-    action: { name: "payments:invoice.read", properties: { idempotency_key: key } },
-    context: {
-      mission: { id: "msn_test_1", issuer: "https://as.test" },
-      action_class: "irreversible_action",
-      parameter_digest: "sha-256:pd-917",
-      mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
-    },
-  });
+  const keyed = (key: string): EvaluationRequest =>
+    withCredential({
+      subject: { id: "alice" },
+      resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+      action: { name: "payments:invoice.read", properties: { idempotency_key: key } },
+      context: {
+        mission: { id: "msn_test_1", issuer: "https://as.test" },
+        action_class: "irreversible_action",
+        parameter_digest: "sha-256:pd-917",
+        mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
+      },
+    });
   async function startClaimServer(claims = openTestClaims({ now: () => NOW })): Promise<PdpHttpServerHandle> {
     handle = await createPdpHttpServer({
       peps: new Map([[PEP_ID, { secret: SECRET, scopes: [RESOURCE] }]]),

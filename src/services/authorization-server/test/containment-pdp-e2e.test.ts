@@ -13,7 +13,8 @@ import { type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, type SeededTrustedSource } from "@mission/demo-data";
 import { type CryptoKey, importJWK, SignJWT } from "jose";
 import {
-  evaluate,
+  evaluate as evaluateRequest,
+  type EvaluationRequest,
   Fga,
   type MissionView,
   policyViewId,
@@ -24,6 +25,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer, createExpansion, validateMissionIntent } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { withCredential } from "../../pdp/test/with-credential.js";
+
+// Every decision carries the credential's own authority (#825 PR 2b); the
+// fixture adds a neutral one where a test does not name it.
+const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
+  evaluateRequest(withCredential(req), opts);
 
 const PORT = 14495;
 const ISSUER = `http://localhost:${PORT}`;

@@ -1,8 +1,14 @@
 /** @spec runtime#state-freshness — configuration and runtime share the floor. */
 import { describe, it, expect } from "vitest";
-import { evaluate, type EvaluationRequest, type EvaluateOptions, type MissionView, relationForAction } from "../src/index.js";
+import { evaluate as evaluateRequest, type EvaluationRequest, type EvaluateOptions, type MissionView, relationForAction } from "../src/index.js";
 import { loadRuntimePosture, postureStalenessBound, RUNTIME_POSTURE } from "../src/runtime-posture.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { withCredential } from "./with-credential.js";
+
+// Every decision carries the credential's own authority (#825 PR 2b); the
+// fixture adds a neutral one where a test does not name it.
+const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
+  evaluateRequest(withCredential(req), opts);
 
 describe("consequential freshness floor (@spec runtime#state-freshness)", () => {
   it("rejects disabling freshness for every consequential class at configuration load", () => {

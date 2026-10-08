@@ -15,6 +15,7 @@
 import type { AATConstraint, AATTools } from "./attenuation-chain.js";
 import { parseAatToolId } from "./attenuation-chain.js";
 import type { AuthorityEntry, TerminalWhenCondition } from "./authority-entry.js";
+import { conditionCanonicalBytes } from "./authority-subset.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 
 /** One entry of a verified credential's authority. */
@@ -47,6 +48,9 @@ const CONSTRAINT_KEYS = new Set([
   "requires_action_approval",
   "terminal_when",
 ]);
+
+/** @spec discharge#terminal-when — `1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )`. */
+const DISCHARGE_AUTHORITY = /^[A-Za-z0-9\-_:.]{1,64}$/;
 
 const nonEmptyString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -92,18 +96,37 @@ function parseConstraints(
     out.requires_action_approval = value.requires_action_approval;
   }
   if (value.terminal_when !== undefined) {
-    if (
-      !Array.isArray(value.terminal_when) ||
-      !value.terminal_when.every(
-        (c) =>
-          isObject(c) &&
-          nonEmptyString(c.event_type) &&
-          (c.discharge_authority === undefined || nonEmptyString(c.discharge_authority)),
-      )
-    ) {
+    // @spec discharge#terminal-when — the shape the AS admits: one or more
+    // conditions, each exactly { event_type, discharge_authority? }, the
+    // authority in its registered syntax, no two sharing a canonical form.
+    // An unknown member is refused, never dropped: condition identity is the
+    // whole object's canonical bytes, so ignoring a member misreads it.
+    const conditions = value.terminal_when;
+    if (!Array.isArray(conditions) || conditions.length === 0) {
       throw new CredentialAuthorityError(`${at}.constraints.terminal_when is malformed`);
     }
-    out.terminal_when = (value.terminal_when as TerminalWhenCondition[]).map((c) => ({ ...c }));
+    const seen = new Set<string>();
+    for (const c of conditions) {
+      const bytes = conditionCanonicalBytes(c);
+      if (bytes === undefined) {
+        throw new CredentialAuthorityError(
+          `${at}.constraints.terminal_when carries a condition other than { event_type, discharge_authority? }`,
+        );
+      }
+      if (seen.has(bytes)) {
+        throw new CredentialAuthorityError(
+          `${at}.constraints.terminal_when carries two identical conditions`,
+        );
+      }
+      seen.add(bytes);
+      const authority = (c as TerminalWhenCondition).discharge_authority;
+      if (authority !== undefined && !DISCHARGE_AUTHORITY.test(authority)) {
+        throw new CredentialAuthorityError(
+          `${at}.constraints.terminal_when carries a malformed discharge_authority`,
+        );
+      }
+    }
+    out.terminal_when = (conditions as TerminalWhenCondition[]).map((c) => ({ ...c }));
   }
   return out;
 }
@@ -233,23 +256,89 @@ export interface CredentialTarget {
   approvalEnforced: boolean;
 }
 
-function entryPermits(entry: CredentialAuthorityEntry, target: CredentialTarget): boolean {
-  if (entry.resource !== target.resource || !entry.actions.includes(target.action)) return false;
+/** The facts about an action an enforcement point establishes by itself. */
+export type CredentialFacts = Omit<CredentialTarget, "approvalEnforced">;
+
+/** Whether an entry names the action's resource and action, before any constraint. */
+export function entryMatchesAction(
+  entry: CredentialAuthorityEntry,
+  facts: Pick<CredentialFacts, "resource" | "action">,
+): boolean {
+  return entry.resource === facts.resource && entry.actions.includes(facts.action);
+}
+
+/** The constraint gates an evaluation of one entry reached, and whether each held. */
+export interface CredentialConstraintTrace {
+  satisfied: boolean;
+  /** The keys whose gate ran, in order; a gate after a failed one is never reached. */
+  evaluated: ("vendors" | "max_amount")[];
+}
+
+/**
+ * Evaluate an entry's establishable constraints gate by gate, `vendors` then
+ * `max_amount`, stopping at the first that fails. `evaluated` is what Decision
+ * Evidence may record for the entry: a check never reached is never listed
+ * (@spec runtime-evidence#decision-evidence-object).
+ */
+export function credentialConstraintGates(
+  entry: CredentialAuthorityEntry,
+  facts: Pick<CredentialFacts, "vendorIds" | "amount">,
+): CredentialConstraintTrace {
   const c = entry.constraints;
-  if (!c) return true;
-  // A discharge condition is evaluated against Mission state this credential
-  // check does not hold, so an entry carrying one cannot be shown undischarged.
-  if (c.terminal_when !== undefined && c.terminal_when.length > 0) return false;
-  if (c.requires_action_approval === true && !target.approvalEnforced) return false;
-  if (c.vendors !== undefined) {
-    if (target.vendorIds.length === 0) return false;
-    if (!target.vendorIds.every((v) => c.vendors?.includes(v))) return false;
+  const evaluated: CredentialConstraintTrace["evaluated"] = [];
+  if (c?.vendors !== undefined) {
+    evaluated.push("vendors");
+    const vendors = c.vendors;
+    if (facts.vendorIds.length === 0 || !facts.vendorIds.every((v) => vendors.includes(v))) {
+      return { satisfied: false, evaluated };
+    }
   }
-  if (c.max_amount !== undefined) {
-    const amt = target.amount;
-    if (!amt || amt.currency !== c.max_amount.currency || !isValidAmount(amt.amount)) return false;
-    if (compareAmounts(amt.amount, c.max_amount.amount) > 0) return false;
+  if (c?.max_amount !== undefined) {
+    evaluated.push("max_amount");
+    const amt = facts.amount;
+    if (
+      !amt ||
+      amt.currency !== c.max_amount.currency ||
+      !isValidAmount(amt.amount) ||
+      compareAmounts(amt.amount, c.max_amount.amount) > 0
+    ) {
+      return { satisfied: false, evaluated };
+    }
   }
+  return { satisfied: true, evaluated };
+}
+
+/**
+ * Whether an entry covers the action on the facts an enforcement point
+ * establishes by itself: resource, action, every vendor reached and the
+ * amount. The entry's discharge condition and approval requirement are not
+ * judged here: they turn on Mission state and approvals the PDP holds, so a
+ * PEP refuses only what these facts already rule out and the PDP decides the
+ * rest (@spec runtime#input-authority, D312).
+ */
+export function entryCoversFacts(entry: CredentialAuthorityEntry, facts: CredentialFacts): boolean {
+  return entryMatchesAction(entry, facts) && credentialConstraintGates(entry, facts).satisfied;
+}
+
+/**
+ * The credential entries that cover the action on establishable facts, in
+ * order. Each is a whole-entry candidate; the PDP applies the discharge and
+ * approval conditions of the one it relies on.
+ */
+export function coveringCredentialEntries(
+  entries: readonly CredentialAuthorityEntry[],
+  facts: CredentialFacts,
+): readonly CredentialAuthorityEntry[] {
+  return entries.filter((entry) => entryCoversFacts(entry, facts));
+}
+
+function entryPermits(entry: CredentialAuthorityEntry, target: CredentialTarget): boolean {
+  if (!entryCoversFacts(entry, target)) return false;
+  const c = entry.constraints;
+  // A discharge condition is evaluated against Mission state this check does
+  // not hold, so an entry carrying one cannot be shown undischarged here.
+  if (c?.terminal_when !== undefined && c.terminal_when.length > 0) return false;
+  if (c?.requires_action_approval === true && !target.approvalEnforced) return false;
   return true;
 }
 

@@ -762,7 +762,8 @@ in Execution Evidence, without new members.
 
 The `credential` member carries credential-derived facts the PEP has
 already validated and that the PDP needs to enforce the runtime
-decision's time, issuer, and sender-constraint checks:
+decision's time, issuer, sender-constraint, and credential authority
+checks:
 
 `issuer`:
 : REQUIRED when known. A string containing a URI. The credential
@@ -779,7 +780,34 @@ decision's time, issuer, and sender-constraint checks:
   digest of that value, included only after the PEP has verified the
   proof-of-possession check for the presented credential.
 
+`authority`:
+: REQUIRED. An array of `authorization_details` entries: the
+  authority the verified credential itself carries, the credential
+  authority of {{I-D.draft-mcguinness-mission-runtime}}. For a
+  Mission-bound token it is the token's own entries; for an ordinary
+  token joined to a Mission it is the authority that token carries as
+  issued, as the join profile establishes it
+  ({{I-D.draft-mcguinness-mission-runtime-oauth}}).
+
 The PEP MUST NOT include unverified credential claims in this member.
+
+The PDP evaluates the action against `authority` independently of the
+Mission entry it matches. The action MUST fall within one entry of
+`authority` as a whole: its resource, its actions, and every
+constraint it carries. The PDP MUST NOT substitute the Mission's
+Authority Set, or any other record of Mission authority, for
+`authority`. A condition on that entry that the PDP cannot establish
+from its own state does not permit, and an action-approval requirement
+on it applies as one on the matched Mission entry does
+({{context-approval}}). An action that no entry of `authority` names
+by resource and action is denied `out_of_authority`. An action that
+entries name, but whose parameters violate a constraint on each of
+them, is denied `parameter_violation`, as on the matched Mission entry
+({{runtime-denial-classification}}); Decision Evidence's
+`authority_bound` names which bound decided either deny
+({{evidence}}). A request whose `authority` is absent, or carries an
+entry the PDP cannot evaluate in full, is denied `credential_invalid`:
+the PDP MUST NOT fall back to the Mission's authority.
 
 ## Action Parameters and Parameter Digest {#parameter-digest}
 
@@ -1229,7 +1257,14 @@ Authorization: ...
     },
     "credential": {
       "issuer": "https://as.example.com",
-      "expires_at": "2026-11-02T09:14:00Z"
+      "expires_at": "2026-11-02T09:14:00Z",
+      "authority": [
+        {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": ["journal-entries.write"]
+        }
+      ]
     }
   }
 }
@@ -1445,7 +1480,14 @@ Authorization: ...
         "actor": { "client_id": "s6BhdRkqt3" },
         "credential": {
           "issuer": "https://as.example.com",
-          "expires_at": "2026-11-02T09:14:00Z"
+          "expires_at": "2026-11-02T09:14:00Z",
+          "authority": [
+            {
+              "type": "mission_resource_access",
+              "resource": "https://erp.example.com",
+              "actions": ["journal-entries.write"]
+            }
+          ]
         }
       }
     },
@@ -1481,7 +1523,14 @@ Authorization: ...
         "actor": { "client_id": "s6BhdRkqt3" },
         "credential": {
           "issuer": "https://as.example.com",
-          "expires_at": "2026-11-02T09:14:00Z"
+          "expires_at": "2026-11-02T09:14:00Z",
+          "authority": [
+            {
+              "type": "mission_resource_access",
+              "resource": "https://erp.example.com",
+              "actions": ["journal-entries.write"]
+            }
+          ]
         }
       }
     }
@@ -1829,7 +1878,7 @@ approval record is created ({{lanes}}).
 Authentication step-up has no dedicated denial-reason value under this
 profile: an in-process step-up rides the obligation on a permit, and
 an RFC 9470 step-up rides the obligation on a `resource_policy`
-denial. The Resource Server's own challenge-surface signal for a weak
+denial. The resource server's own challenge-surface signal for a weak
 or stale token-associated authentication is the RFC 9470
 `insufficient_user_authentication` challenge itself
 ({{I-D.draft-mcguinness-oauth-mission}}), not a Mission-defined denial
@@ -1929,7 +1978,10 @@ one defined by the runtime profile. This section binds those
 conditions to AuthZEN responses and gives the denial-reason identifiers
 carried in Decision Evidence:
 
-- `out_of_authority`: the action is not within the Authority Set.
+- `out_of_authority`: the action is not within the Authority Set, or
+  not within the presented credential's authority
+  ({{context-credential}}); Decision Evidence's `authority_bound`
+  records which ({{evidence}}).
 - `approval_required`: deployment or Resource policy requires an
   action-bound approval for this action
   ({{I-D.draft-mcguinness-mission-runtime}}) and no `context.approval`
@@ -2238,6 +2290,7 @@ carrier's extensibility rule.
 | Mission state not establishable at the PEP | Refusal Record | `state_unavailable` |
 | Presented credential's own authority does not cover the request, established before any decision request | Refusal Record | `credential_authority_insufficient` |
 | Enforcement surface implements no such action | Refusal Record | `request_unsupported` |
+| Supplied arguments fail the PEP-established action's required input schema | Refusal Record | `request_invalid` |
 | Named target object not resolvable at the enforcement surface | Refusal Record | `target_unresolvable` |
 | Capability definition the PEP must present not resolvable before the decision request | Refusal Record | `capability_source_unresolvable` |
 | Decision Evidence for a permit absent or not verifiable, so no relied-upon decision was obtained | Refusal Record | `decision_evidence_unverifiable` |
@@ -2254,6 +2307,9 @@ carrier's extensibility rule.
 | External Mission-binding join verification fails | PDP denial | `mission_binding_failed` |
 | Required `act` chain missing or malformed | PDP denial | `actor_invalid` |
 | Credential facts expired or inconsistent | PDP denial | `credential_invalid` |
+| Credential authority absent, or carrying an entry the PDP cannot evaluate in full | PDP denial | `credential_invalid` |
+| No entry of the presented credential's own authority names the action's resource and action, established by the PDP | PDP denial | `out_of_authority` |
+| Entries of the presented credential's own authority name the action, but its parameters violate a constraint on each | PDP denial | `parameter_violation` |
 | Parameter constraint violated, PDP digest mismatch, or required digest absent | PDP denial | `parameter_violation` |
 | Idempotency key and operation identity match a prior unresolved or completed claim | PDP denial | `duplicate_suppressed` |
 | Idempotency key reused with a different operation identity | PDP denial | `idempotency_conflict` |
@@ -2350,7 +2406,7 @@ cache hit ratio ({{I-D.draft-mcguinness-mission-runtime}}).
 ## Evaluation identifier propagation {#decision-id-propagation}
 
 The resource request a permit authorizes is commonly served by a
-Resource Server that did not see the PDP exchange. The PEP SHOULD
+resource server that did not see the PDP exchange. The PEP SHOULD
 propagate the permit's `evaluation_id` to the resource request in the
 `Mission-Decision` request header field ({{iana}}); the field value is
 the `evaluation_id`, whose ABNF ({{response-context}}) is
@@ -2359,19 +2415,19 @@ minimum it rides the TLS channel this profile already requires
 ({{security-considerations}}), and where the deployment signs resource
 requests the signature MUST cover it.
 
-A Resource Server that logs the received `evaluation_id` with the
+A resource server that logs the received `evaluation_id` with the
 access it serves closes the decision-to-access join: the Decision
-Evidence, the Execution Evidence, and the Resource Server's access log
+Evidence, the Execution Evidence, and the resource server's access log
 then share one identifier, so an access is joined to the decision that
 permitted it without timestamp correlation. This extends the issuance
-profile's recommendation that a Resource Server log the `mission`
+profile's recommendation that a resource server log the `mission`
 claim's `id` and the token `jti` with each decision
 ({{I-D.draft-mcguinness-oauth-mission}}): the evaluation identifier is
 this profile's addition to that correlation set.
 
 The field is a correlation aid, not an authorization. Its presence or
-value grants nothing, the Resource Server's token validation and PEP
-obligations are unchanged, and a Resource Server MUST NOT treat it as a
+value grants nothing, the resource server's token validation and PEP
+obligations are unchanged, and a resource server MUST NOT treat it as a
 permit; the permit-binding rules above govern.
 
 # Runtime Evidence {#evidence}
@@ -2389,15 +2445,26 @@ evidence duty in its own internal form instead
 its own record identifier (`evidence_id`, `execution_id`, or
 `refusal_id`). Every core Decision Evidence and Execution Evidence
 member is defined directly by the runtime evidence companion. This
-profile registers one Decision Evidence extension member of its own,
+profile registers two Decision Evidence extension members of its own,
 `mission_history` (the policy-selected history predicates and their
-outcomes), under that companion's coordinated-extension rule
+outcomes) and `authority_bound` (below), under that companion's
+coordinated-extension rule
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}); it also carries
 other coordinated extension members whose semantics are owned
 elsewhere, for example `taint` (owned by the harness profile,
 {{I-D.draft-mcguinness-mission-harness}}) and `capability_source`
 (owned by the Mission Capability Binding companion,
 {{I-D.draft-mcguinness-mission-capability-binding}}).
+
+`authority_bound`:
+: A string, recorded at the top level of Decision Evidence:
+  `credential` when the presented credential's own authority
+  ({{context-credential}}) decided the deny, `mission` when the
+  Mission's own authority did. It is REQUIRED on an `out_of_authority`
+  or `parameter_violation` deny that one of those two bounds decided,
+  and absent on every other decision, including a permit and a deny by
+  Resource policy. When both bounds exclude the action, the PDP records
+  the one it evaluated first.
 
 This profile's own contribution is the mapping: which decision
 request and response members the PDP and PEP echo into a record, and
@@ -2691,12 +2758,12 @@ privacy properties of the Decision Evidence, Execution Evidence, and
 Refusal Record objects, including their status as PII sinks,
 parameter exposure, and actor-chain correlation, are the runtime
 evidence companion's ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
-This profile's one coordinated extension member, `mission_history`
-({{evidence}}), carries behavioral history predicates and their
+Of this profile's two coordinated extension members, `mission_history`
+({{evidence}}) carries behavioral history predicates and their
 outcomes and inherits that guidance in full: it is subject to the
 same PII-sink, access-control, and retention treatment as the OAuth binding
-record, with no exemption. This profile otherwise defines no
-additional record content.
+record, with no exemption; `authority_bound` names only an authority
+bound. This profile otherwise defines no additional record content.
 
 # IANA Considerations {#iana}
 
@@ -2842,6 +2909,22 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Decision Evidence gains `authority_bound`, registered by this
+  profile: `credential` or `mission`, the authority bound that decided
+  an `out_of_authority` or `parameter_violation` deny (#825).
+
+- The failure-condition table maps supplied arguments that fail the
+  PEP-established action's required input schema to the Refusal
+  Record's `request_invalid` (#1106).
+
+- `context.credential` carries `authority`, the verified credential's
+  own `authorization_details`, on every decision; the PDP enforces it
+  as the credential authority bound, independently of the matched
+  Mission entry, and denies `credential_invalid` when it is absent or
+  not evaluable (#825). An action no credential entry names is
+  `out_of_authority`; one whose parameters violate a constraint on
+  every entry that names it is `parameter_violation`.
 
 - The RAR remediation grain cites the working-group successor
   draft-ietf-oauth-rar-metadata-remediation and defers its routing to

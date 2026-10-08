@@ -71,6 +71,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-oauth-mission-progressive:
@@ -460,6 +468,18 @@ dispatch policy, the allowed dispatchers and recipients, and the
 bounds, and the approval commits them under `template_hash`
 ({{template-hash}}), the anchor over the object consented to.
 
+Template consent also establishes the authority source the template's
+instances draw on, under the issuance profile's rules: from trusted
+configuration or authenticated governance state, never from client
+assertion, with the consenting human authorized to activate it
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Approval").
+The Mission Issuer MUST retain that source, including an
+`organizational` source's `policy` reference, with its authenticated
+record of the consent to that exact `template_version`. Like a
+Mission's `authority_source`, it is provenance outside
+`template_hash`; using another source or policy version takes a new
+`template_version` and a fresh human approval.
+
 Where Consent Evidence is claimed, the template-creation approval's
 disclosure is committed as that profile commits any disclosure
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). The template
@@ -481,6 +501,17 @@ A consent that does not render these is standing dispatch authority
 obtained by omission. A template the human did not knowingly consent to
 is not a Mission Template under this document.
 
+This paragraph binds only a deployment that also adopts Mission
+Derivation Limits
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}). The
+Dispatch Policy states the rule that establishes each instance's
+`derivation_limit` and its maximum, if any, so `template_hash`
+commits them. The consent disclosure MUST render them as that
+document's Approval Rendering section requires, beside `max_active`
+and `dispatch_rate`: each instance establishes and counts its own
+limit, so one consent admits up to `max_active` such limits at once
+and more over time.
+
 A Mission Template's consent is standing consent, and standing consent
 decays. The Mission Issuer MUST NOT dispatch from a template whose most
 recent human approval is older than the published `review_cadence`
@@ -497,7 +528,7 @@ is submitted on the binding's existing Mission creation surface as a
 single authenticated back-channel request that references the template
 by `id` and carries the dispatch intent, and it is answered in one
 round trip. This document defines no new endpoint and no new
-Authorization Server metadata: dispatch is a non-interactive Mission
+authorization server metadata: dispatch is a non-interactive Mission
 creation under the pre-consented template, at the token endpoint under
 the grant type this document defines ({{grant-type}}).
 
@@ -545,7 +576,11 @@ The Mission Issuer adjudicates a Dispatch in this order:
    `max_active` or `dispatch_rate`, if no Agent is selected, or if the
    instance's Mission-Issuer-established Subject or its selected Agent
    falls outside `allowed_recipients` ({{the-mission-template}}).
-8. **Commit the instance.** Commit an ordinary Mission whose Authority
+8. **Check the authority source.** Verify that the source retained for
+   this `template_version` ({{template-consent}}) applies to the
+   instance's Subject and that the surviving set lies within that
+   source's ceiling. Refuse the Dispatch otherwise.
+9. **Commit the instance.** Commit an ordinary Mission whose Authority
    Set is the surviving set and whose:
 
    - `approver` is the template's human approver, the accountable
@@ -582,6 +617,10 @@ The Mission Issuer adjudicates a Dispatch in this order:
      taken from Dispatcher input, and is an entry of
      `allowed_recipients` `subjects`
      ({{I-D.draft-mcguinness-oauth-mission}});
+   - `authority_source` is the source retained for this
+     `template_version` ({{template-consent}}), read from the Mission
+     Issuer's retained template record, never from the Dispatch request
+     and never a source or policy version substituted after consent;
    - `client_id` is the Agent selected from `allowed_recipients`
      `agents` ({{the-mission-template}}), never taken from Dispatcher
      input. The selection is part of the committed instance: a retried
@@ -602,8 +641,17 @@ The Mission Issuer adjudicates a Dispatch in this order:
      Dispatch: a deployment that needs a tighter standing-consent
      lifetime records it in `instance_lifetime` or the template's
      `expires_at` under a newly consented `template_version`, rather
-     than applying an undisclosed fourth clamp; and
+     than applying an undisclosed fourth clamp;
+   - `derivation_limit`, where the deployment also adopts Mission
+     Derivation Limits, is established afresh for this instance as
+     that document's Effective Limit section states, never above the
+     Dispatch Policy's maximum ({{template-consent}}); and
    - `template` lineage member is set ({{template-member}}).
+
+The Mission Issuer MUST make the step 8 check, and verify that the
+effective `expires_at` is strictly later than the committed
+`created_at`, atomically with the commit, against the source as it
+stands at that commit; on failure no Mission is created.
 
 A Dispatch MUST be idempotent per `dispatch_event_id`. The Dispatcher
 supplies a `dispatch_event_id` with the request, adopting the
@@ -1014,8 +1062,9 @@ conforming issuance-profile Mission Issuer
   ({{the-mission-template}}, {{template-hash}}), and treat template
   creation as a human approval under the issuance profile whose
   disclosure renders the ceiling, the no-per-instance-approval fact,
-  and the prohibited-class
-  reservation ({{template-consent}});
+  the prohibited-class reservation, and, where Mission Derivation
+  Limits is adopted, the per-instance derivation-limit rule
+  ({{template-consent}});
 - adjudicate a Dispatch in the order of {{dispatch}}: authenticate and
   authorize the Dispatcher, derive the instance Authority Set,
   double-intersect it with the derivation-policy ceiling and the
@@ -1028,6 +1077,11 @@ conforming issuance-profile Mission Issuer
   `activation` the template lineage and this Dispatch's
   `dispatch_event_id`, `activation_actor` the Dispatcher, and
   `root_commitment` the `template_hash` ({{dispatch}});
+- record on every dispatched Mission the authority source retained at
+  template consent for its `template_version`, checking at the
+  creation commit that it applies to the instance's Subject and covers
+  the instance Authority Set, and that the effective expiry is later
+  than the creation instant ({{template-consent}}, {{dispatch}});
 - refuse a Dispatch outside the ceiling with `out_of_template_ceiling`
   and a Dispatch of a prohibited class with `dispatch_prohibited_class`
   ({{denial-reasons}});
@@ -1047,7 +1101,7 @@ conforming issuance-profile Mission Issuer
   Deployment Profile ({{the-mission-template}}, {{prohibited-classes}})
   and retain the audit linkage of {{audit-linkage}}.
 
-A Resource Server requires no new behavior: it enforces a dispatched
+A resource server requires no new behavior: it enforces a dispatched
 Mission's tokens exactly as it enforces any Mission-bound token, and
 treats the `template` member, if it reads it at all, as audit context
 it MUST NOT use to grant authority ({{template-member}}).
@@ -1118,6 +1172,23 @@ IANA action. Following the restraint of the sibling profiles:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Template Consent, Dispatch and Conformance: where Mission
+  Derivation Limits is adopted, the Dispatch Policy states the rule
+  that establishes each instance's `derivation_limit` and its
+  maximum, committed under `template_hash`; the template consent
+  renders them beside `max_active` and `dispatch_rate`, and each
+  instance establishes its own limit afresh, never above that
+  maximum (#1119).
+
+- Template Consent and Dispatch: template consent establishes the
+  authority source its instances draw on, retained with the consent to
+  that exact `template_version`. Each instance carries that source,
+  never Dispatcher input or a substituted policy. A new step 8 checks
+  that the source applies to the instance's Subject and covers the
+  instance Authority Set, and the creation commit makes that check
+  against the source as it stands then, with the effective-expiry
+  check (#1118).
 
 - Template Consent: creating a Mission Template is a human approval
   that creates no Mission, so it is the standing consent each

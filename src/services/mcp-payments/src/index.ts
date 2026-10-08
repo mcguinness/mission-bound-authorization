@@ -96,6 +96,7 @@ export { TransactionEngine, operationKey, type OpState } from "./transaction.js"
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
 export { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";
 export {
+  CONSUMED_PERMIT_RETENTION_MARGIN_MS,
   openEphemeralWriteReservationStore,
   openWriteReservationStore,
   type PaymentSchedule,

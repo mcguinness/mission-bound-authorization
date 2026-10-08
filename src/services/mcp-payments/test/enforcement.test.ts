@@ -12,6 +12,7 @@ import { Fga, type MissionView } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
   createEphemeralEvidenceKeys,
+  credentialAuthorityFrom,
   EvidenceStore,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
@@ -304,6 +305,7 @@ d("M4 core enforcement tier", () => {
       instanceEpoch: "epoch-1",
     });
     const containedServer = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
       pep,
       payments,
       loadView: loadViewFor(containedView),
@@ -330,5 +332,74 @@ d("M4 core enforcement tier", () => {
     const prm = server.protectedResourceMetadata();
     expect(prm.mission_bound_authorization_required).toBe(true);
     expect(prm.resource).toBe(CANONICAL_RESOURCE);
+  });
+});
+
+// @spec authzen#context-credential, authzen#runtime-denial-classification
+// (D324): a vendor read carries the vendor the store resolved, as the vendor
+// object it targets, so the credential bound, the Mission's vendor constraint
+// and resource policy all evaluate that vendor.
+d("a vendor lookup carries the store-resolved vendor to both bounds and to resource policy (live OpenFGA, D324)", () => {
+  const LOOKUP_VIEW: MissionView = {
+    ...VIEW,
+    id: "msn_m4_lookup",
+    authority_hash: "sha-256:m4lookup",
+    authority_set: [
+      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"], constraints: { vendors: ["acme"] } },
+    ],
+  };
+  let liveFga: Fga;
+  let liveModelId: string;
+  beforeAll(async () => {
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, ...(CA ? { caCertPath: CA } : {}) });
+    liveFga = conn.fga;
+    liveModelId = conn.modelId;
+  });
+
+  /** Look up `vendorId` under a credential scoped to `credentialVendors`. */
+  const lookUp = async (vendorId: string, credentialVendors: string[]) => {
+    const store = new PaymentsStore();
+    store.seed(
+      [
+        { id: "acme", name: "Acme", status: "approved" },
+        { id: "globex", name: "Globex", status: "pending" },
+      ],
+      [],
+    );
+    const lookupEvidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
+    const pep = new Pep({
+      decide: EVIDENCE_KEYS.decide,
+      payments: store,
+      evidence: lookupEvidence,
+      fga: liveFga,
+      modelId: liveModelId,
+      loadView: loadViewFor(LOOKUP_VIEW),
+      instanceEpoch: "epoch-lookup",
+    });
+    const token: TokenFacts = {
+      ...TOKEN,
+      mission: { id: LOOKUP_VIEW.id, issuer: ISSUER, authority_hash: LOOKUP_VIEW.authority_hash },
+      credentialAuthority: credentialAuthorityFrom([
+        { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"], constraints: { vendors: credentialVendors } },
+      ]),
+    };
+    return { result: await pep.enforce("lookup_vendor", { vendor_id: vendorId }, token), evidence: lookupEvidence };
+  };
+
+  it("permits a vendor both the constrained credential and the Mission allow", async () => {
+    const { result } = await lookUp("acme", ["acme"]);
+    expect(result.permitted, JSON.stringify(result)).toBe(true);
+  });
+
+  it("refuses a vendor the credential excludes", async () => {
+    const { result } = await lookUp("globex", ["acme"]);
+    expect(result).toMatchObject({ permitted: false, denial_reason: "out_of_authority" });
+  });
+
+  it("refuses a vendor the Mission excludes though the credential allows it, parameter_violation", async () => {
+    const { result, evidence: recorded } = await lookUp("globex", ["acme", "globex"]);
+    expect(result).toMatchObject({ permitted: false, denial_reason: "parameter_violation" });
+    const decision = recorded.all().find((e) => e.kind === "decision");
+    expect(decision?.content).toMatchObject({ denial_reason: "parameter_violation", resource: { type: "vendor", id: "globex" } });
   });
 });

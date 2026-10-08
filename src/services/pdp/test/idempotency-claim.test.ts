@@ -22,7 +22,7 @@ import { openDurableStore } from "@mission/store";
 import { describe, expect, it } from "vitest";
 import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "../src/decision-evidence.js";
 import type { EnforcementScopeStatement } from "../src/enforcement-scope.js";
-import { type Decision, evaluate, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
+import { type Decision, evaluate as evaluateRequest, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
 import {
   ClaimDomainConfigError,
@@ -39,6 +39,12 @@ import { EXECUTION_EVIDENCE_MEDIA_TYPE, signEvidenceEnvelope } from "../src/runt
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
 import { CLAIM_OWNER, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { withCredential } from "./with-credential.js";
+
+// Every decision carries the credential's own authority (#825 PR 2b); the
+// fixture adds a neutral one where a test does not name it.
+const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
+  evaluateRequest(withCredential(req), opts);
 
 const RESOURCE = "http://localhost:4403/mcp";
 const OTHER_RESOURCE = "http://localhost:4499/mcp";

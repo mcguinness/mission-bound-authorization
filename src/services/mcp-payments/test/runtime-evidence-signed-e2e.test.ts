@@ -28,6 +28,7 @@ import {
   DECISION_EVIDENCE_MEDIA_TYPE,
   EvidenceStore,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   type DecisionEvidence,
@@ -100,6 +101,7 @@ function buildServer(missionView: MissionView, fga: Fga) {
     instanceEpoch: "epoch-1",
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,
@@ -136,6 +138,7 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
       instanceEpoch: "epoch-1",
     });
     const server = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
       pep,
       payments,
       loadView,
@@ -189,6 +192,7 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
       instanceEpoch: "epoch-1",
     });
     const server = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
       pep,
       payments,
       loadView,
@@ -259,6 +263,7 @@ describe("buildEvidenceKeyResolver: emitter + audience binding (#739 review poin
       instanceEpoch: "epoch-1",
     });
     const server = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
       pep,
       payments,
       loadView,

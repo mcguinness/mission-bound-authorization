@@ -1,10 +1,16 @@
 import { AUTHORITY_ENTRY_TYP, capabilitySourceDigest, computeAnchor, type CapabilitySourceBinding } from "@mission/core";
 import { describe, expect, it } from "vitest";
-import { evaluate, type EvaluationRequest, type EvaluateOptions } from "../src/evaluate.js";
+import { evaluate as evaluateRequest, type EvaluationRequest, type EvaluateOptions } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { withCredential } from "./with-credential.js";
+
+// Every decision carries the credential's own authority (#825 PR 2b); the
+// fixture adds a neutral one where a test does not name it.
+const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
+  evaluateRequest(withCredential(req), opts);
 
 const resource = "https://payments.test/mcp", action = "payments:invoice.read";
 const binding: CapabilitySourceBinding = { action, tool_id: "mcp://payments.test/tools/get_invoice", source_uri: "https://payments.test/.well-known/mcp", source_digest: capabilitySourceDigest({ name: "get_invoice" }), operation_ref: "get_invoice" };
