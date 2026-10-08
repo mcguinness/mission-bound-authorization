@@ -14413,9 +14413,15 @@
      "name": "single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > at the resource operation, the hold_transfer permit carries use_limit: 1, and the keyed writes keep the key control with no use_limit",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the statement's permit-lifetime controls, discriminated on permit_lifetime_control (@spec runtime#permit-binding, runtime#single-use-identifiers, #1080, D333) > selects the most specific declaration before the class default, and returns a key declaration only when that selection is the key control: a less-specific key default never covers an operation that elects single use",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Tested (#918, #1080). Every reversible consequential write the deployment serves is witnessed at the resource operation: hold_transfer, the prepare phase of payments:payment.execute, elects no key control and its permit carries use_limit: 1, the PDP's single-use default for a consequential_write that no key-control declaration covers (D317); schedule_payment and cancel_scheduled_payment elect the idempotency-key control, a keyless request is refused parameter_violation, and a keyed one is permitted under the short validity window (at most the published permit_validity_max_seconds, 300 s as shipped, 30 s under a 30 s maximum; #1028 review) with no use_limit and no claim. The PDP-level tests show the default follows the declaration, not the action name: a class-wide key control removes it. The PEP redeems the single-use identifier on the unkeyed write path and reserves the key on the keyed path (runtime.idempotency.reversible-write-pep-reserve-and-retain). Outside this row: the Enforcement Scope Statement does not yet publish the single-use default (#1080)."
+   "notes": "Tested (#918, #1080, D333). Every reversible consequential write the deployment serves is witnessed at the resource operation: hold_transfer, the prepare phase of payments:payment.execute, resolves to the statement's consequential_write class default, single_use_decision_identifier, and its permit carries use_limit: 1 (D317, D333); schedule_payment and cancel_scheduled_payment resolve to their own validity_window_plus_idempotency_key declarations, a keyless request is refused parameter_violation, and a keyed one is permitted under the short validity window (at most the published permit_validity_max_seconds, 300 s as shipped, 30 s under a 30 s maximum; #1028 review) with no use_limit and no claim. The PDP-level tests show the control follows the selected declaration, not the action name: an operation's own declaration is selected before the class default, so a class-wide key control removes the default, and an operation electing single use under a class-wide key default is permitted with use_limit: 1 and no key. The Enforcement Scope Statement publishes single_use_decision_identifier as the consequential_write class default (D333). The PEP consumes the single-use identifier on the unkeyed write path and reserves the key on the keyed path (runtime.idempotency.reversible-write-pep-reserve-and-retain); its refusal of a consumed identifier, on admission or retrieval under any key (D342), is runtime.single-use.reversible-write-refuse-second-presentation."
   },
   {
    "id": "runtime.single-use.record-and-refuse-second-presentation",
@@ -14450,6 +14456,91 @@
      "surface": "evidence-emission"
     }
    ]
+  },
+  {
+   "id": "runtime.single-use.reversible-write-refuse-second-presentation",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "single-use-identifiers",
+   "text": "The enforcing component MUST refuse, fail closed, any second presentation of a consumed identifier.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "replay",
+   "observation": {
+    "normative": "on a reversible-write path, a single-use decision identifier the PEP has consumed is refused, fail closed, on any second presentation, under any idempotency key, and the refusal releases nothing",
+    "local": "the reference meters a carried use_limit on both reversible-write paths and counts releasing a retained result as a use of the permit (D333, D342); a store that cannot record the consumption refuses consumption_unavailable; permit_consumed is the decision-API binding's classification"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > a second presentation of one hold_transfer Decision is refused permit_consumed, releases no second hold, and records the suppression against the same evaluation_id",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "a use_limit a keyed write's permit carries is metered, never ignored (@spec runtime#single-use-identifiers, #1136 review, D317) > the review's probe: scheduled under a use_limit: 1 permit, cancelled under a fresh Decision, the original permit replayed under another key is refused permit_consumed and schedules nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "a use_limit a keyed write's permit carries is metered, never ignored (@spec runtime#single-use-identifiers, #1136 review, D317) > the consumed permit replayed under its own key is refused permit_consumed before the retained result is disclosed; a keyed effect that refuses consumes nothing; a use_limit other than 1 is refused condition_unrecognized",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "a use_limit a keyed write's permit carries is metered, never ignored (@spec runtime#single-use-identifiers, #1136 review, D317) > a keyed presentation refused before admission's transaction burns nothing, and two concurrent presentations of that use_limit: 1 Decision under different keys schedule once",
+     "level": "concurrency",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > two retrievals under one identifier: the first releases the retained result and consumes the permit, the second is refused permit_consumed and discloses nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > a retrieval followed by admission under another key: the permit the retrieval consumed is refused permit_consumed and schedules nothing, even after a separately authorized cancellation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > two concurrent retrievals of one unconsumed single-use Decision, held after their permit-use checks, release the retained result once",
+     "level": "concurrency",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > the concurrent-existing fallback consumes the losing permit: two single-use Decisions under one new key, both admitted, schedule once, and the loser's permit, though it only retrieved, is refused permit_consumed under another key",
+     "level": "concurrency",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > replay after a store reopen: a permit a retrieval consumed is refused permit_consumed by a new server on the same file, under its own key and under another",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > a consumed-identifier store that cannot be written refuses the retrieval consumption_unavailable and discloses nothing: no retained result and no retained-record disposition",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Tested on the reversible-write paths (#1080, D317, D333, D342). The clause applies wherever a single-use decision identifier is used; in this deployment that is every consequential_write the statement does not key (the published single_use_decision_identifier class default) and any keyed write whose permit carries use_limit. A consumed identifier is refused permit_consumed on the unkeyed path, on keyed admission under any key, and on retrieval of a retained result, which is itself a use (D342), also after a store reopen and under concurrency; a store that cannot record the consumption refuses and discloses nothing. A fresh Decision still retrieves the original result, and a permit with no use_limit keeps the key control: retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > a fresh Decision still retrieves the original result and repeats no effect: a fresh single-use one after the first is consumed, and one with no use limit keeps the key control and consumes nothing. The transaction tier's own refusal is runtime.single-use.record-and-refuse-second-presentation."
   },
   {
    "id": "runtime.single-use.store-durability-and-multi-instance-sharing",
