@@ -1461,19 +1461,22 @@ authority ceiling for later staged widening
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 Who holds the deciding side is a spectrum, not a species. The approval
-event requires an accountable principal deciding against committed
-inputs before any authority exists, and the proposer is never the
-approver.
+event requires a decision against committed inputs before any
+authority exists, made by the accountable principal or by a policy
+that principal authorized, and the proposer is never the approver.
 
-A deterministic, versioned policy can approve at machine speed within
-a ceiling a human consented to (the `template`, `policy_drawdown`, and
-`ceiling_drawdown` authorization bases that companion profiles define
-on the OAuth binding's extension point; see Authorization bases in
-{{invariants}}). Policy
-approves the instance because a human approved the policy or the
-template; `policy_version` keeps that chain re-checkable. Derivation
-fixes the authority, the adjudicator (a human or such a policy)
-decides activation, and a human is accountable.
+A deterministic, versioned policy can adjudicate activation at machine
+speed within a ceiling a human consented to (the `template`,
+`policy_drawdown`, and `ceiling_drawdown` authorization bases that
+companion profiles define on the OAuth binding's extension point; see
+Authorization bases in {{invariants}}). The policy is the instance's
+adjudication mechanism; the human or human-accountable principal who
+consented to the policy or the template stays the accountable Approver
+(`consent_principal`), and `policy_version` keeps that chain
+re-checkable. A policy artifact, a model's output, or the actor that
+triggered the instance never becomes that principal. Derivation fixes
+the authority, the adjudicator (a human or such a policy) decides
+activation, and a human is accountable.
 
 A model's judgment, over risk signals or enterprise context, enters
 adjudication only as a recorded input to the policy: it can refuse or
@@ -4188,6 +4191,12 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Approve and Record discussion names the authorized policy as an
+  instance's adjudication mechanism and the human who consented to
+  the policy or template as the accountable Approver
+  (`consent_principal`); no policy artifact, model output or
+  triggering actor becomes that principal (#1084).
 
 - Revocation is possession-independent points at the Security Model's
   statement that revocation does not prohibit equivalent authority
