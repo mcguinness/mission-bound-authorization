@@ -26555,6 +26555,28 @@
    "notes": "#1079 (D296) specification slice. Gated on progressive.drawdown-derivation-limits: a deployment that runs Progressive ceiling drawdown and also adopts Mission Derivation Limits. No Progressive implementation yet (#985/#1017), so todo; witnesses cover D296's examples, concurrency, rollback and recovery, and must fail with the guard disabled."
   },
   {
+   "id": "progressive.in-ceiling.successor-subject-source",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "The successor's `subject` and `authority_source` are the predecessor's, and the commit that activates it checks that source's ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a ceiling_drawdown successor records the predecessor's subject and authority_source unchanged, and a drawdown whose successor Authority Set exceeds that source's ceiling as it stands at the activating commit activates no successor and supersedes nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice: the drawdown facet of the expansion profile's Successor Subject and authority source rule (expansion.successor.* rows). Not implemented: the reference AS has no ceiling_drawdown activation."
+  },
+  {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
    "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
    "anchor": "per-domain-delegation-depth",
