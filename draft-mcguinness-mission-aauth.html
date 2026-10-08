@@ -1281,7 +1281,10 @@ structural and where a mission reference is only advisory context.<a href="#sect
             <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.13.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1659,7 +1662,11 @@ protocol and the resource's own authorization semantics.<a href="#section-3.3.1-
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Person</td>
-              <td class="text-left" rowspan="1" colspan="1">Reviews, clarifies, approves, and accepts completion through the PS.</td>
+              <td class="text-left" rowspan="1" colspan="1">Reviews, clarifies, and approves through the PS when the Person is the Supervisor or a supervision server asks, and accepts completion through the PS.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Supervisor</td>
+              <td class="text-left" rowspan="1" colspan="1">Performs supervision (Section 4.3 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>): the Person by default, or the deciding supervision server the PS consults for the agent (<span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>).</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Resource</td>
@@ -1671,8 +1678,21 @@ protocol and the resource's own authorization semantics.<a href="#section-3.3.1-
             </tr>
           </tbody>
         </table>
-<p id="section-4.1-3">No AAuth party becomes an OAuth client, authorization server, or resource
-server merely by implementing this binding.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-3">An agent's deciding supervision server is the one supervision server
+the PS consults for that agent, as configured at the PS; an agent
+without one is supervised by the person (Section 6 of
+<span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>).  For supervision decisions
+within this binding's scope (<a href="#scope" class="auto internal xref">Section 1.2</a>), a PS with a deciding
+supervision server for the agent obtains that server's decision.  The
+PS retains responsibility for verification, enforcement, issuance, and
+recording.  Management authorization and revocation are unchanged;
+AAuth Supervision excludes both from supervision (Section 1.3 of
+<span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>).  A supervision server's <code>allow</code>
+of a completion does not by itself terminate the mission: the mission
+terminates with reason <code>completed</code> only when the person accepts
+(<a href="#lifecycle" class="auto internal xref">Section 4.8</a>).<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">No AAuth party becomes an OAuth client, authorization server, or resource
+server merely by implementing this binding.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="approval">
@@ -1684,11 +1704,11 @@ server merely by implementing this binding.<a href="#section-4.1-3" class="pilcr
 proposal to the PS <code>mission_endpoint</code>.  The proposal contains the
 natural-language description and can contain requested tools as defined
 by AAuth.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
-<p id="section-4.2-2">The PS MAY defer the response while the person or another appropriate
-decision-maker reviews the proposal.  AAuth clarification messages can
-ask the agent for missing context or negotiate changes.  The agent MUST
-NOT treat the proposal, a pending response, or a clarification exchange
-as approval.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">The PS MAY defer the response while the Supervisor (<a href="#roles" class="auto internal xref">Section 4.1</a>), by
+default the person, reviews the proposal.  AAuth clarification messages
+can ask the agent for missing context or negotiate changes.  The agent
+MUST NOT treat the proposal, a pending response, or a clarification
+exchange as approval.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
 <p id="section-4.2-3">Approval occurs only when the PS returns the approval envelope: <code>s256</code>
 and the approved mission blob as the base64url-encoded <code>mission</code>
 member.  Before using the context, the agent MUST:<a href="#section-4.2-3" class="pilcrow">¶</a></p>
@@ -1757,11 +1777,24 @@ requests, clarification chats, and the supervision decisions made
 SHOULD preserve sufficient correlation data to associate each decision
 with its authenticated request and any issued token without recording
 raw credentials.<a href="#section-4.3-6" class="pilcrow">¶</a></p>
-<p id="section-4.3-7">The PS MUST protect the mission log's integrity, MUST restrict read
-access to the person, the PS itself, and parties authorized under its
+<p id="section-4.3-7">For each supervision decision, the PS records the actual decider: the
+person acting directly, the deciding supervision server identified by
+its <code>issuer</code>, or the person answering after the server's <code>ask</code> or while
+the server is unavailable.  For an exchange with a supervision server,
+the log entry is the exchange itself under the PS-minted <code>sdi</code>, with
+any signatures preserved, and the person's later answer is recorded
+under the same <code>sdi</code> (Sections 7.3 and 9.4 of
+<span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>).  An unsigned response rests on
+the PS's own record; a response signed under the server's published
+<code>jwks_uri</code> is independently verifiable.  A deployment that claims to
+prove what its supervision server decided requires a server that
+signs.<a href="#section-4.3-7" class="pilcrow">¶</a></p>
+<p id="section-4.3-8">The PS MUST protect the mission log's integrity, MUST restrict read
+access to the person, the PS itself, the deciding supervision server
+for the mission's agent (<a href="#roles" class="auto internal xref">Section 4.1</a>), and parties authorized under its
 administrative policy, and MUST retain the log for a declared period
-that extends beyond termination.<a href="#section-4.3-7" class="pilcrow">¶</a></p>
-<p id="section-4.3-8">The mission log is complete only for PS-observed operations.
+that extends beyond termination.<a href="#section-4.3-8" class="pilcrow">¶</a></p>
+<p id="section-4.3-9">The mission log is complete only for PS-observed operations.
 <code>approved_tools</code> activity the agent performs without a per-call PS
 decision, and any other agent-side action, enters the log only as
 agent-reported audit records; the PS MUST distinguish agent-reported
@@ -1769,13 +1802,13 @@ entries from PS-observed ones and MUST NOT represent the former as
 the latter.  A counter or hash chain alone does not prove
 completeness for activity that can occur without consuming it; a
 deployment needing stronger completeness for local activity requires
-a non-bypassable observation point.<a href="#section-4.3-8" class="pilcrow">¶</a></p>
-<p id="section-4.3-9">The approved blob is immutable.  New facts, decisions, and actions are
+a non-bypassable observation point.<a href="#section-4.3-9" class="pilcrow">¶</a></p>
+<p id="section-4.3-10">The approved blob is immutable.  New facts, decisions, and actions are
 appended to the log; they do not mutate or replace the committed blob.
 An accepted <code>update</code> at the mission's own URL is one such entry,
 digested by its own <code>s256</code>; it changes neither the blob nor
 <code>mission_s256</code> (Section 8.4 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.3-9" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.3-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deterministic-resource-authorization">
@@ -1969,7 +2002,11 @@ members, it defines no extensions to close a gap.<a href="#section-4.6-1" class=
             </tr>
           </tbody>
         </table>
-<p id="section-4.6-3">The R3 parameter commitment is not shown to be equivalent to
+<p id="section-4.6-3">Where a supervision server (<a href="#roles" class="auto internal xref">Section 4.1</a>) makes the fresh decision, it
+receives the resource token, which commits to the proposal through
+<code>r3_uri</code> and <code>r3_s256</code>, but not the proposal itself (Section 11.2 of
+<span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>).<a href="#section-4.6-3" class="pilcrow">¶</a></p>
+<p id="section-4.6-4">The R3 parameter commitment is not shown to be equivalent to
 <code>parameter_digest</code> (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).  R3
 commits to the parameters exactly as the resource serialized them in
 the proposal, and under <code>401</code> compares the retried call to them by
@@ -1983,14 +2020,14 @@ effect-bearing parameter in that normalized form, which neither R3 nor
 this binding requires.  Under <code>202</code> the held call itself is executed,
 so no parameter can be substituted, but no digest exists for another
 verifier to recompute.  This binding defines no second
-canonicalization to close the gap.<a href="#section-4.6-3" class="pilcrow">¶</a></p>
-<p id="section-4.6-4">R3 also lets a resource seek approval to release a result it has
+canonicalization to close the gap.<a href="#section-4.6-4" class="pilcrow">¶</a></p>
+<p id="section-4.6-5">R3 also lets a resource seek approval to release a result it has
 already computed, rather than approval to execute (Section 10.4 of
 <span>[<a href="#I-D.draft-hardt-aauth-r3" class="cite xref">I-D.draft-hardt-aauth-r3</a>]</span>).  That approval gates disclosure, not
 execution.  The floor's invariants concern pre-execution approval, so a
 release-gated call is outside this mapping, and approving release is
-never treated as approving execution.<a href="#section-4.6-4" class="pilcrow">¶</a></p>
-<p id="section-4.6-5">The slots without a native home are operation supersession, parameter
+never treated as approving execution.<a href="#section-4.6-5" class="pilcrow">¶</a></p>
+<p id="section-4.6-6">The slots without a native home are operation supersession, parameter
 equivalence, a declared pending-workflow lifetime, the <code>401</code> workflow
 handle and admission idempotency, a distinguishable result class, an
 issuance guard giving one result per transaction instance, and an
@@ -2001,7 +2038,7 @@ on the execution path (it is claimed conditionally), and either
 Structured Authority or an equivalent resource-owned evaluation of the
 operation commitment (not supplied).  Until then the execution gate and
 the authority evaluation the transaction invariants require have no
-source in this binding, and hosting the flow is unsupported.<a href="#section-4.6-5" class="pilcrow">¶</a></p>
+source in this binding, and hosting the flow is unsupported.<a href="#section-4.6-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="ref-propagation">
@@ -2421,7 +2458,12 @@ SHOULD minimize recorded personal data, separate token identifiers from
 raw token material, define retention and deletion policies, protect log
 access, and give the person meaningful visibility into the retained
 history.  Termination does not itself require erasure because the log can
-be needed for audit and incident response.<a href="#section-7-3" class="pilcrow">¶</a></p>
+be needed for audit and incident response.  A deciding supervision
+server receives mission text, justifications, audit records, and
+clarification transcripts for the agents routed to it, and a newly
+routed server receives the active state the PS replays to it (Sections
+14 and 17.1 of <span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>); the routing
+configured at the PS determines that disclosure.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <p id="section-7-4">Pairwise subject identifiers and other AAuth privacy mechanisms remain
 applicable.  This binding does not replace them with the agent identifier
 or mission reference.  Where the deployment uses pairwise or directed
@@ -2677,6 +2719,10 @@ metadata member, error code, capability value, or registry value.<a href="#secti
         <dd>
 <span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Rich Resource Requests (R3)"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-aauth-r3-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-aauth-r3-00">https://datatracker.ietf.org/doc/html/draft-hardt-aauth-r3-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-hardt-aauth-supervision">[I-D.draft-hardt-aauth-supervision]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Supervision"</span>, <span class="refContent">Work in Progress, editor's copy at commit 70d67375, not submitted as an Internet-Draft</span>, <time datetime="2026-10-03" class="refDate">3 October 2026</time>, <span>&lt;<a href="https://github.com/dickhardt/AAuth/blob/70d67375deb0bb002af7da0711fc58f6e8926e7e/draft-hardt-aauth-supervision.md">https://github.com/dickhardt/AAuth/blob/70d67375deb0bb002af7da0711fc58f6e8926e7e/draft-hardt-aauth-supervision.md</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-aauth-mission-expiry">[I-D.draft-mcguinness-aauth-mission-expiry]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"AAuth Mission Expiry"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html</a>&gt;</span>. </dd>
@@ -2708,8 +2754,31 @@ which contextual governance, deterministic resource authorization, and
 incremental deployment remain distinct concerns.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="authors-addresses">
+<div id="document-history">
 <section id="appendix-B">
+      <h2 id="name-document-history">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-B-2.1">
+          <p id="appendix-B-2.1.1">Maps AAuth's Supervisor role and defines an agent's deciding
+supervision server. A PS with one obtains that server's decision for
+supervision decisions and keeps verification, enforcement, issuance,
+and recording; management authorization and revocation are
+unchanged, and a supervision server's <code>allow</code> of a completion does
+not by itself terminate the mission, which still needs the person's
+acceptance. The mission log records the actual decider and, for a
+supervision-server exchange, the <code>sdi</code> and the exchange with any
+signatures; the deciding server is a log reader; a supervision server
+does not see the R3 proposal. AAuth Supervision is cited
+informatively, pinned at dickhardt/AAuth commit 70d67375 (#967).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

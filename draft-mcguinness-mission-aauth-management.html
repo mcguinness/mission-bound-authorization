@@ -1804,6 +1804,13 @@ channel, and <span class="bcp14">MUST NOT</span> apply the service's administrat
 How the service conveys the human's identity is a deployment trust
 relationship this document does not define, and the PS relies on it
 only for a service it registers for that purpose.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
+<p id="section-5.3-4">A supervision server (<span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>) is not a
+Management Principal by virtue of supervising: it only answers the PS
+(Section 7.1 of <span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>).  The PS <span class="bcp14">MAY</span>
+register the server's operator as a management service under this
+section; the registered metadata then needs the <code>jwks_uri</code> that AAuth
+Supervision leaves optional (Section 5 of
+<span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>).<a href="#section-5.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="owning-agent">
@@ -2826,6 +2833,10 @@ otherwise untracked access.<a href="#section-15-4" class="pilcrow">¶</a></p>
 <a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-hardt-aauth-supervision">[I-D.draft-hardt-aauth-supervision]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Supervision"</span>, <span class="refContent">Work in Progress, editor's copy at commit 70d67375, not submitted as an Internet-Draft</span>, <time datetime="2026-10-03" class="refDate">3 October 2026</time>, <span>&lt;<a href="https://github.com/dickhardt/AAuth/blob/70d67375deb0bb002af7da0711fc58f6e8926e7e/draft-hardt-aauth-supervision.md">https://github.com/dickhardt/AAuth/blob/70d67375deb0bb002af7da0711fc58f6e8926e7e/draft-hardt-aauth-supervision.md</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-aauth-mission-expiry">[I-D.draft-mcguinness-aauth-mission-expiry]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"AAuth Mission Expiry"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html</a>&gt;</span>. </dd>
@@ -2861,14 +2872,20 @@ native choices.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Person Tokens are Tracked Credentials: the PS retains them, counts
+          <p id="appendix-B-2.1.1">A supervision server is not a Management Principal by virtue of
+supervising; the PS may register its operator as a management
+service, whose metadata then needs the <code>jwks_uri</code> AAuth Supervision
+leaves optional (#967).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Person Tokens are Tracked Credentials: the PS retains them, counts
 them in <code>token_residual</code>, revokes them at the Resource in <code>aud</code> and at
 each AS it presented them to, and reports <code>complete</code> false while any
 is live and unconfirmed. The residual bounds name a live Person Token
-at a Resource serving person identity access (#834).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+at a Resource serving person identity access (#834).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">A Person reaches status and termination through the PS's own
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">A Person reaches status and termination through the PS's own
 interface, by internal invocation or by a backend calling the control
 plane as a management service; the PS authorizes and records the
 action as the authenticated Person and never applies a management
@@ -2877,7 +2894,7 @@ a human is authorized and recorded as that human, with the service as
 the channel. A browser session never authenticates a control-plane
 request, and Person Interfaces security considerations cover
 cross-site submission, account or tenant switching, stale sessions,
-and the service-principal confused deputy (#839).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+and the service-principal confused deputy (#839).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
