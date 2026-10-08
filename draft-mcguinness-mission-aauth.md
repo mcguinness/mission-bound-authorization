@@ -597,6 +597,11 @@ members, it defines no extensions to close a gap.
 | Fresh decision | PS adjudication under the lifecycle gate ({{lifecycle}}) | Supplied | None |
 {: title="Transaction authorization requirements: native carriers and status"}
 
+Where a supervision server ({{roles}}) makes the fresh decision, it
+receives the resource token, which commits to the proposal through
+`r3_uri` and `r3_s256`, but not the proposal itself (Section 11.2 of
+{{I-D.draft-hardt-aauth-supervision}}).
+
 The R3 parameter commitment is not shown to be equivalent to
 `parameter_digest` ({{I-D.draft-mcguinness-mission-runtime}}).  R3
 commits to the parameters exactly as the resource serialized them in
