@@ -836,7 +836,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 | Target and parameter binding | Yes | `Pep.intake` (closed schema, NFC) before any decision work; `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level and MCP channel, [FGA] (§5.4) | A single-record read re-derives no digest at use (§5.4) |
 | Permit redemption | Transaction tier, keyed writes, and single-use permits on the unkeyed write path | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation; `takeSingleUse` (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction. An unkeyed-write redemption is one insert, immediately before the effect; a keyed retrieval's is one insert before anything is disclosed (D342) | None; settlement is awaited | Claim, reservation and consumed-identifier records survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | One redemption per operation key per process (§5.5) |
 | Evidence | Yes | The PDP's emitter; `recordRefusal`, `suppressExecution`; the executor's `completed` write (§5.6) | Synchronous in the request; Decision Evidence is verified before release | None | Retention is in memory and lost at restart | PEP-level (§5.6) | A failed `completed` write after a connector commit is silent (#1104); no Execution Evidence on a successful call outside the transaction tier (§5.6) |
-| Recovery and reconciliation | Declared by the Enforcement Scope Statement | `reconcileClaims`, `reconcile`, the reservation `sweep()` (§5.7) | None runs | Reconciliation would be the overlay's only asynchronous work | A prior process's claim closes `indeterminate` and its key stays refused (§5.7) | PEP-level restart witness (§5.7); the PDP crash boundary (§5.5) | No production caller and no alert (#1103) |
+| Recovery and reconciliation | Declared by the Enforcement Scope Statement | `OutcomeReconciler`: `reconcileClaims`, `reconcile`, both reservation sweeps; the claim domain's `onIndeterminate` alert hook (§5.7) | Each step on its own; a step that throws alerts and the others run | The reconciler is the overlay's only asynchronous work: at start, then every 300 s | A prior process's claim closes `indeterminate` with the declared alert and its key stays refused, a stated bound (§5.7) | PEP-level, composed and launcher (§5.7); the PDP crash boundary (§5.5) | A prior process's outcome is never reconciled; a `reserved` row is escalated, never resolved (§5.7) |
 
 ### 5.1 Credential validation
 
@@ -1132,27 +1132,46 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 ### 5.7 Recovery and reconciliation
 
 - **Hook.** The Enforcement Scope Statement declares `outcome_reconciliation`
-  (`config/enforcement-scope.json:88-92`): a PT15M window, `mcp-payments-pep`
-  as the responsible component, and an operator alert for every claim that
-  closes `indeterminate`. `reconcileClaims`
-  (`services/mcp-payments/src/claim-reconciliation.ts:47`) and `reconcile`
-  (`services/mcp-payments/src/reconcile.ts:21`) implement it, and the
-  reservation store has `sweep()` (`write-reservations.ts:430`).
-- **Boundary.** None of them runs: no production code calls them.
-- **Asynchronous work.** Reconciliation would be the overlay's only
-  asynchronous work.
+  (`config/enforcement-scope.json`): a PT15M window, `mcp-payments-pep` as
+  the responsible component, an operator alert for every claim that closes
+  `indeterminate`, and the restart bound
+  `prior_process_outcomes: indeterminate_at_window_close`.
+  `OutcomeReconciler` (`services/mcp-payments/src/outcome-reconciler.ts`) is
+  built from that declaration and refuses one naming another component. Each
+  run settles this epoch's unresolved claims (`reconcileClaims`,
+  `services/mcp-payments/src/claim-reconciliation.ts:47`), alerts what stays
+  unmatched between `completed` Execution Evidence and the connectors'
+  committed effects (`reconcile`), runs the reservation store's `sweep()` and
+  `sweepConsumedPermits()`, and escalates a `reserved` row without executing
+  it. The claim domain's `onIndeterminate` hook raises the declared alert for
+  every claim that closes `indeterminate`, after the transition commits.
+- **Boundary.** Each step stands alone. A step that throws raises
+  `reconciliation_failed` and the others still run; a run never overlaps the
+  next.
+- **Asynchronous work.** The reconciler is the overlay's only asynchronous
+  work: once at start, then every 300 s (a third of the window), on a timer
+  that holds no process open. `pnpm as-native` and `pnpm demo:serve` start
+  it; `composeStack` returns it stopped; every close path stops it first.
 - **Crash and recovery.** A restarted PEP draws a new claim-requester epoch
   (`services/mcp-payments/src/redemption-status.ts:67`), so it cannot list or
-  reconcile a prior process's claim (`idempotency-claims.ts:647`, `:682`). A
-  retry against that claim is suppressed (`:444-455`). The claim moves to
-  `unresolved` once its lease elapses and closes `indeterminate` when the
-  window closes (`:723-735`); its key stays refused.
+  reconcile a prior process's claim (`idempotency-claims.ts:647`, `:682`), and
+  the redemption records, connectors and retained evidence that could
+  establish its outcome are in memory. That is the stated bound. A retry
+  against the claim is suppressed (`:444-455`); the restarted reconciler's
+  own listing sweeps it `indeterminate` when its window closes
+  (`:723-735`), the hook raises the alert, and its key stays refused.
 - **Tests:**
+  - `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect, over the remote channel: the wire stands once, and a run inside the window settles the claim completed from the ledger, with exactly one ledger entry` (PEP-level)
+  - `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > a refusal before any effect: the redeeming attempt's own suppressed Execution Evidence settles failed when its settlement never arrived, and nothing executes` (PEP-level)
+  - `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > an outcome nothing establishes stays open, closes indeterminate when its window closes, and raises the declared alert exactly once, never from a run's open list` (PEP-level)
+  - `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing` (PEP-level)
+  - `the declared outcome reconciler's loop (@spec runtime#runtime-conformance, #1103) > a reserved write reservation is escalated once and never resolved by executing: no schedule, no ledger entry, and the row stays reserved` (PEP-level)
+  - `the composed stack's declared outcome reconciler (@spec runtime#evidence outcome reconciliation, #1103) > a prior process's unsettled claim raises one operator_alert JSON line on stderr when the restarted stack's reconciler runs past its window` (composed)
+  - `the as-native launcher in process, OpenFGA client stubbed (D332) > starts the declared outcome reconciler at launch, a third of the PT15M window apart, and its first run raises no alert; close stops it before the claim domain closes, in co-resident and remote PDP mode` (launcher)
   - `the PDP idempotency claim through the executing PEP (@spec runtime#idempotency, #917) > refuses the retry when the redemption store cannot answer, or answers for another epoch` (PEP-level)
-- **Residual.** No production caller and no alert (#1103). Recovery tests must
-  distinguish a refusal before any effect from missing evidence after an
-  effect, and show that no retry or reconciliation repeats the effect (#1103,
-  #1104).
+- **Residual.** A prior process's outcome is never reconciled: it closes
+  `indeterminate` and alerts, the bound the statement states. A `reserved`
+  row is escalated, never resolved; no tool produces one.
 
 ## 6. Unsupported and residual
 
@@ -1184,8 +1203,6 @@ Runtime overlay:
 
 7. A state source for a PEP or PDP separated from the AS (#1101). This target
    uses the declared local read (D293). §5.3.
-8. Running the declared outcome reconciliation, its alert, and recovery of a
-   prior process's claims (#1103). §5.7.
 10. An assembled deployment of exactly the contract's components:
     `pnpm as-native` runs the D332 AS capability set (the issuance profile
     plus exactly `lifecycle-revoke` and `transaction-authorization`, with
@@ -1249,9 +1266,8 @@ Runtime overlay:
   path, and the run-to-completion interval (§5.3); the PDP emitter throwing,
   a Refusal Record emission throwing, both `suppressExecution` gaps and the
   failed `completed` write, each distinguishing a refusal before any effect
-  from missing evidence after one (§5.6; #1104); reconciliation across a
-  restart (§5.7; #1103); the assembled-path test against a live OpenFGA runs
-  only in CI (§5).
+  from missing evidence after one (§5.6; #1104); the assembled-path test
+  against a live OpenFGA runs only in CI (§5).
 
 ## 7. Provider-specific notes (oidc-provider 9.10)
 
