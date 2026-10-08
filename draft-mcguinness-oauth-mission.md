@@ -769,8 +769,8 @@ The client writes every member; how it produces them, for example
 through a Mission Shaper working from a natural-language
 instruction, is out of scope
 ({{the-mission-the-plan-and-execution}}). The prose members (`goal`,
-`task_bounds`, `success_criteria`) bound authority only through
-disclosure: the Approver refuses authority the words do not support
+`task_bounds`) bound authority only through disclosure: the Approver
+refuses authority the words do not support
 ({{authorization-derivation}}). An AS that makes no use of an
 optional member still accepts it and records it with the Intent
 ({{submission-processing}}). The smallest Intent carries only the
@@ -784,7 +784,6 @@ member definitions after it are authoritative.
 | `goal_lang` | no | Checks the language tag and uses it when rendering |
 | `target_resources` | yes | Bounds the resources a derived entry can name; can key a configured mapping |
 | `task_bounds` | no | Records it and renders it to the Approver as inert text; never interprets it |
-| `success_criteria` | no | Records it and renders it to the Approver as inert text; never interprets it |
 | `purpose` | no | Records it; can key a configured mapping; in any other decision can only lead to a refusal or stricter treatment |
 | `expires_at` | yes | Caps the Mission's effective expiry; refuses a malformed or past value |
 {: title="Mission Intent members at a glance"}
@@ -793,14 +792,17 @@ The Mission Intent members are:
 
 `goal`:
 : REQUIRED. A string. A human-readable statement of the task,
-  for rendering to the Approver. Maximum 4096 characters. Prose
+  for rendering to the Approver. It can describe the outcomes that
+  show the task is complete; like the rest of the prose, that
+  description carries no machine semantics
+  ({{authorization-derivation}}). Maximum 4096 characters. Prose
   here persists on the record and can carry personal data about
   third parties ({{third-party-data-subjects}}).
 
 `goal_lang`:
 : OPTIONAL. A string. A BCP 47 language tag {{RFC5646}} declaring
   the language of the Intent's human-readable members (`goal`,
-  `task_bounds`, `success_criteria`). It is disclosure metadata for
+  `task_bounds`). It is disclosure metadata for
   rendering, committed by `intent_hash` like every Intent member, and
   carries no machine semantics ({{authorization-derivation}}). At
   submission acceptance, the AS MUST refuse a `goal_lang` that is not
@@ -825,13 +827,6 @@ The Mission Intent members are:
   Authority Set ({{approval-event}}), and carry no machine semantics
   ({{authorization-derivation}}); a machine-enforceable bound enters
   as structure instead.
-
-`success_criteria`:
-: OPTIONAL. An array of strings. Human-readable observable outcomes
-  that indicate the task is complete. These are disclosure and audit
-  material only: they are rendered to the Approver and committed by
-  `intent_hash` ({{integrity-anchors}}) and carry no machine
-  semantics ({{authorization-derivation}}).
 
 `purpose`:
 : OPTIONAL. A string. A URI identifying the purpose of the
@@ -882,10 +877,6 @@ The following is an example of a Mission Intent:
   "task_bounds": [
     "Read only invoices issued in 2026-Q3.",
     "Post journal entries under $500."
-  ],
-  "success_criteria": [
-    "All Q3 invoices reconciled.",
-    "Each posted adjustment references a source invoice."
   ],
   "purpose": "urn:example:purpose:reconcile",
   "expires_at": "2026-12-31T23:59:59Z"
@@ -1242,11 +1233,11 @@ what the AS can derive mechanically, its prose members bound through
 disclosure (the Approver refuses authority the words do not
 support), and none widens.
 
-The `goal`, `task_bounds`, and `success_criteria` members are
-human-readable disclosure and audit context. The AS MUST derive the
-same Authority Set, under the same policy, for two submissions that
-differ only in `goal`, `goal_lang`, `task_bounds`, or
-`success_criteria`, and MUST NOT gate issuance on those members,
+The `goal` and `task_bounds` members are human-readable disclosure
+and audit context. The AS MUST derive the same Authority Set, under
+the same policy, for two submissions that differ only in `goal`,
+`goal_lang`, or `task_bounds`, and MUST NOT gate issuance on those
+members,
 whether in derivation, in an adjudicating policy, or through a model
 input to either; translating a user's words into structure is the
 shaper's job, before admission and outside the trust boundary
@@ -1558,8 +1549,7 @@ At a direct approval event the AS MUST, in order:
      agent may do, not the `goal` or Mission Intent: derivation is
      local policy, and nothing commits that the derived authority
      reflects the goal the Approver read. An approval surface that
-     renders only the `goal`, `success_criteria`, or Mission Intent
-     does not conform.
+     renders only the `goal` or Mission Intent does not conform.
    - When the Approver is not the Subject, the rendering MUST
      identify the Subject the authority is granted for.
    - The rendering MUST identify the authority source and, for
@@ -1609,9 +1599,8 @@ of {{RFC8707}}.
 
 The consent rendering is hardened against client text:
 
-- Client-supplied strings (`goal`, `task_bounds`,
-  `success_criteria`) MUST be rendered as inert text and MUST NOT be
-  interpreted as markup.
+- Client-supplied strings (`goal`, `task_bounds`) MUST be rendered as
+  inert text and MUST NOT be interpreted as markup.
 - The AS SHOULD mitigate Unicode direction-override and
   confusable-character presentation in them.
 - The rendering MUST visually distinguish the AS-derived Authority
@@ -4274,11 +4263,10 @@ resources the approved task needs, and per-task Missions
 ({{applicability}}) further limit the effect of a compromise.
 
 Against the untrusted-content leg, it contributes one thing:
-`success_criteria` is inert, granting, widening, and gating no
-authority, `purpose` supplies candidate authority only as a lookup key
-of the pre-approval derivation whose result the Approver reads and
-consents to and otherwise can only refuse or tighten, and `goal`
-bounds it only through that disclosure
+`purpose` supplies candidate authority only as a lookup key of the
+pre-approval derivation whose result the Approver reads and consents
+to and otherwise can only refuse or tighten, and `goal` and
+`task_bounds` bound it only through that disclosure
 ({{mission-intent}}, {{authorization-derivation}}). Authority is fixed
 at the approval event, so injected text cannot expand an approved
 Mission.
@@ -4644,8 +4632,7 @@ independently under its current disclosure policy.
 Third-party personal data can enter through any Intent, proposal,
 authority, or recorded-evidence member:
 
-- the prose members (`goal`, `task_bounds`, `success_criteria`) and
-  `purpose`;
+- the prose members (`goal`, `task_bounds`) and `purpose`;
 - `target_resources` and any explicit member a companion profile defines
   (for example, the metering companion's consumption bounds,
   {{I-D.draft-mcguinness-mission-metering}});
@@ -4687,8 +4674,8 @@ Record and its audit-horizon retention floor untouched.
 
 # Internationalization Considerations {#i18n}
 
-Mission Intent prose (`goal`, `task_bounds`, `success_criteria`) is
-human-readable disclosure. `goal_lang` ({{mission-intent}}) declares the
+Mission Intent prose (`goal`, `task_bounds`) is human-readable
+disclosure. `goal_lang` ({{mission-intent}}) declares the
 language of that prose as a BCP 47 language tag {{RFC5646}}, so an
 approval surface can render, translate, or route it without guessing the
 language.
@@ -4955,10 +4942,6 @@ evidence, and proposing concrete authority alongside it on the
     "task_bounds": [
       "Read only invoices issued in 2026-Q3.",
       "Post journal entries under $500."
-    ],
-    "success_criteria": [
-      "All Q3 invoices reconciled.",
-      "Each posted adjustment references a source invoice."
     ],
     "purpose": "urn:example:purpose:reconcile",
     "expires_at": "2026-12-31T23:59:59Z"
@@ -5912,6 +5895,16 @@ Cross-Domain:
 
 -01
 
+- Mission Intent: `success_criteria` is removed. It carried no
+  machine authorization semantics; `goal` can describe the outcomes
+  that show the task is complete, as human-readable and unenforced
+  prose, and Entry Discharge's `terminal_when` is the typed
+  per-entry completion condition. A submission whose Intent carries
+  `success_criteria` is refused under the closed top level. A
+  Mission created earlier keeps its recorded Intent and
+  `intent_hash` unchanged. The prose-invariance rule, the inert-text
+  rendering rule and the approval-surface conformance sentence keep
+  their force over the remaining prose members.
 - Editorial, family-wide (#876, D337): generic role nouns are
   lowercase ("authorization server", "resource server") in prose; the
   defined Mission-aware Resource Server, Mission Issuer, Mission Client

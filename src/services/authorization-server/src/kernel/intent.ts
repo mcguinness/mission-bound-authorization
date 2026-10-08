@@ -42,14 +42,16 @@ import type {
 // @spec mission#authority-proposal — `proposed_authority` is deliberately NOT
 // in this set: the Intent carries no authority members, and an Intent carrying
 // the retired member is refused as an unknown top-level member by the
-// closed-top-level rule below (@spec mission#submission-via-par).
+// closed-top-level rule below (@spec mission#submission-via-par). The retired
+// `success_criteria` member is refused the same way (@spec mission#mission-intent:
+// completion outcomes are `goal` prose). Recorded Missions are never re-parsed
+// here, so an earlier Intent that carried it keeps its record and intent_hash.
 const TOP_LEVEL = new Set([
   "goal",
   "goal_lang",
   "target_resources",
   "expires_at",
   "task_bounds",
-  "success_criteria",
   "purpose",
   "requested_derivation_limit",
 ]);
@@ -524,11 +526,11 @@ function validateMissionIntentObject(
     throw new IntentError("invalid_request", "expires_at is already past");
   }
 
-  for (const member of ["task_bounds", "success_criteria"] as const) {
-    const v = obj[member];
-    if (v !== undefined && (!isStringArray(v) || v.length > MAX_ARRAY_LEN)) {
-      throw new IntentError("invalid_request", `${member} must be a string array`);
-    }
+  if (
+    obj.task_bounds !== undefined &&
+    (!isStringArray(obj.task_bounds) || obj.task_bounds.length > MAX_ARRAY_LEN)
+  ) {
+    throw new IntentError("invalid_request", "task_bounds must be a string array");
   }
   if (obj.purpose !== undefined && typeof obj.purpose !== "string") {
     throw new IntentError("invalid_request", "purpose must be a string");
