@@ -22,10 +22,16 @@ import {
   type Fga,
   type MissionView,
 } from "@mission/pdp";
-import { exportJWK, generateKeyPair } from "jose";
+import { decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
 import { withCredential } from "../../../services/pdp/test/with-credential.js";
-import { MissionSignalEmitter, MissionSignalReceiver, signLifecycleEvent } from "../src/index.js";
+import {
+  LIFECYCLE_CHANGE_EVENT_URI,
+  MissionSignalEmitter,
+  MissionSignalReceiver,
+  SET_TYP,
+  signLifecycleEvent,
+} from "../src/index.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -162,19 +168,18 @@ async function bootstrap() {
   };
 
   const revokedSet = (
-    over: {
-      audience?: string;
-      issuer?: string;
-      key?: CryptoKey;
-      version?: number;
-      state?: string;
-    } = {},
+    over: { audience?: string; issuer?: string; key?: CryptoKey; version?: number } = {},
   ) =>
     signLifecycleEvent(
       {
         id: record.id,
         issuer: over.issuer ?? ISS,
-        state: over.state ?? "revoked",
+        state: "terminated",
+        termination: {
+          reason: "revoked",
+          terminated_at: NOW.toISOString(),
+          version: over.version ?? 2,
+        },
         prior_state: "active",
         version: over.version ?? 2,
         committed_at: NOW.toISOString(),
@@ -191,7 +196,13 @@ async function bootstrap() {
 }
 
 const ACTIVE_V1 = { state: "active", version: 1, expires_at: EXPIRES_AT };
-const REVOKED_V2 = { state: "revoked", version: 2, expires_at: EXPIRES_AT };
+/** A revoke at v2: `terminated`, reason `revoked`, the termination's version the event's. */
+const REVOKED_V2 = {
+  state: "terminated",
+  termination: { reason: "revoked", terminated_at: NOW.toISOString(), version: 2 },
+  version: 2,
+  expires_at: EXPIRES_AT,
+};
 
 describe("Mission Signals — SET lifecycle events (@spec signals#lifecycle-event)", () => {
   it("permits before the signal, then denies mission_inactive after a revoke SET (@spec signals#consumer-behavior)", async () => {
@@ -212,7 +223,8 @@ describe("Mission Signals — SET lifecycle events (@spec signals#lifecycle-even
 
     // The signal-established state is also readable as the shared harness lease.
     expect(b.receiver.lease(b.record.id, NOW.toISOString())).toEqual({
-      state: "revoked",
+      state: "terminated",
+      termination: REVOKED_V2.termination,
       version: 2,
       status_checked_at: NOW.toISOString(),
       status_expires_at: EXPIRES_AT,
@@ -286,5 +298,355 @@ describe("Mission Signals — SET lifecycle events (@spec signals#lifecycle-even
     const second = await b.receiver.verifyAndApply(set); // same jti
     expect(second).toEqual({ status: "duplicate" });
     expect(b.receiver.viewState(b.record.id)).toEqual(REVOKED_V2);
+  });
+});
+
+/**
+ * @spec mission#termination, signals#lifecycle-event: the SET reports a
+ * Mission's lifecycle as `active`, `suspended` or `terminated`, with
+ * `termination` in the event body exactly beside `terminated` and holding the
+ * termination's references; no top-level `successor` or `carried_to` exists.
+ * The receiver reads `termination` from the event body, never refuses a
+ * terminated event over a bad one, and reads a legacy terminal `state` as
+ * `terminated` with that reason only after the signature verifies.
+ * Kernel-free: commits and SETs are built by hand.
+ */
+describe("Mission Signals: termination in the lifecycle-change event (@spec mission#termination)", () => {
+  const MISSION_ID = "msn_termination_000000000000001";
+  const LIFECYCLE_STATES = ["active", "suspended", "terminated"];
+
+  async function fixture() {
+    const keys = await generateKeyPair("ES256", { extractable: true });
+    const pub = {
+      ...(await exportJWK(keys.publicKey)),
+      kid: "as-status",
+      alg: "ES256",
+      use: "sig",
+    };
+    const receiver = new MissionSignalReceiver({
+      jwks: { keys: [pub] },
+      issuer: ISS,
+      audience: CONSUMER_AUD,
+    });
+    let n = 0;
+    /** Sign an arbitrary event body as the trusted issuer (or `key`), as a pre-existing emitter might have. */
+    const signEvent = (
+      body: Record<string, unknown>,
+      key: CryptoKey = keys.privateKey,
+      id = MISSION_ID,
+    ) =>
+      new SignJWT({
+        sub_id: { format: "opaque", id },
+        events: {
+          [LIFECYCLE_CHANGE_EVENT_URI]: {
+            mission: { id, issuer: ISS },
+            committed_at: NOW.toISOString(),
+            expires_at: EXPIRES_AT,
+            ...body,
+          },
+        },
+      })
+        .setProtectedHeader({ alg: "ES256", kid: "as-status", typ: SET_TYP })
+        .setIssuer(ISS)
+        .setAudience(CONSUMER_AUD)
+        .setIssuedAt()
+        .setJti(`set_termination_${++n}`)
+        .sign(key);
+    const eventOf = (set: string) =>
+      (decodeJwt(set).events as Record<string, Record<string, unknown>>)[
+        LIFECYCLE_CHANGE_EVENT_URI
+      ] as Record<string, unknown>;
+    const build = (commit: Record<string, unknown>) =>
+      signLifecycleEvent(
+        {
+          id: MISSION_ID,
+          issuer: ISS,
+          committed_at: NOW.toISOString(),
+          expires_at: EXPIRES_AT,
+          ...commit,
+        } as unknown as LifecycleCommit,
+        { audience: CONSUMER_AUD, key: keys.privateKey, kid: "as-status" },
+      );
+    return { keys, receiver, signEvent, eventOf, build };
+  }
+
+  it("the SET builder emits only active, suspended or terminated, with termination exactly beside terminated and no top-level successor or carried_to", async () => {
+    const { build, eventOf } = await fixture();
+    const T = NOW.toISOString();
+    const commits: Array<[string, Record<string, unknown>]> = [
+      ["activation", { state: "active", version: 1 }],
+      ["suspend", { state: "suspended", prior_state: "active", version: 2 }],
+      [
+        "active with a stray termination",
+        { state: "active", prior_state: "active", version: 3, termination: { reason: "revoked" } },
+      ],
+      [
+        "revoke",
+        {
+          state: "terminated",
+          prior_state: "active",
+          version: 4,
+          termination: { reason: "revoked", terminated_at: T, version: 4 },
+        },
+      ],
+      [
+        "complete",
+        {
+          state: "terminated",
+          prior_state: "suspended",
+          version: 4,
+          termination: { reason: "completed", terminated_at: T, version: 4 },
+        },
+      ],
+      [
+        "expire",
+        {
+          state: "terminated",
+          prior_state: "active",
+          version: 4,
+          termination: { reason: "expired", terminated_at: EXPIRES_AT, version: 4 },
+        },
+      ],
+      [
+        "supersede",
+        {
+          state: "terminated",
+          prior_state: "active",
+          version: 4,
+          termination: {
+            reason: "superseded",
+            terminated_at: T,
+            version: 4,
+            successor: "msn_successor",
+          },
+        },
+      ],
+      [
+        "cascade with carryover",
+        {
+          state: "terminated",
+          prior_state: "active",
+          version: 4,
+          termination: {
+            reason: "parent_terminated",
+            terminated_at: T,
+            version: 4,
+            parent: "msn_parent",
+            origin: "msn_root",
+            origin_reason: "revoked",
+            carried_to: "msn_replacement",
+          },
+        },
+      ],
+      // Journaled before the termination vocabulary, never signed: signed in it.
+      ["legacy revoked", { state: "revoked", prior_state: "active", version: 4 }],
+      ["legacy expired", { state: "expired", prior_state: "active", version: 4 }],
+      ["legacy completed", { state: "completed", prior_state: "active", version: 4 }],
+      [
+        "legacy superseded",
+        { state: "superseded", prior_state: "active", version: 4, successor: "msn_successor" },
+      ],
+      [
+        "legacy cascaded",
+        { state: "cascaded", prior_state: "suspended", version: 4, carried_to: "msn_replacement" },
+      ],
+      [
+        "a legacy prior_state",
+        {
+          state: "terminated",
+          prior_state: "revoked",
+          version: 4,
+          termination: { reason: "revoked", terminated_at: T, version: 4 },
+        },
+      ],
+    ];
+    const events = new Map<string, Record<string, unknown>>();
+    for (const [label, commit] of commits) {
+      const event = eventOf(await build(commit));
+      events.set(label, event);
+      expect(LIFECYCLE_STATES, label).toContain(event.state);
+      expect("termination" in event, label).toBe(event.state === "terminated");
+      if (event.state === "terminated") {
+        expect(typeof (event.termination as { reason?: unknown }).reason, label).toBe("string");
+      }
+      expect(event, label).not.toHaveProperty("successor");
+      expect(event, label).not.toHaveProperty("carried_to");
+      if (event.prior_state !== undefined)
+        expect(["active", "suspended"], label).toContain(event.prior_state);
+    }
+    // A committed termination: every member its reason requires, its version the event's.
+    expect(events.get("revoke")?.termination).toEqual({
+      reason: "revoked",
+      terminated_at: T,
+      version: 4,
+    });
+    const revoke = events.get("revoke") as { termination: { version: number }; version: number };
+    expect(revoke.termination.version).toBe(revoke.version);
+    expect(events.get("expire")?.termination).toEqual({
+      reason: "expired",
+      terminated_at: EXPIRES_AT,
+      version: 4,
+    });
+    expect(events.get("supersede")?.termination).toMatchObject({
+      reason: "superseded",
+      successor: "msn_successor",
+    });
+    expect(events.get("cascade with carryover")?.termination).toMatchObject({
+      reason: "parent_terminated",
+      parent: "msn_parent",
+      carried_to: "msn_replacement",
+    });
+    // A legacy commit: its reason and its retained reference only, nothing invented.
+    expect(events.get("legacy revoked")?.termination).toEqual({ reason: "revoked" });
+    expect(events.get("legacy expired")?.termination).toEqual({ reason: "expired" });
+    expect(events.get("legacy completed")?.termination).toEqual({ reason: "completed" });
+    expect(events.get("legacy superseded")?.termination).toEqual({
+      reason: "superseded",
+      successor: "msn_successor",
+    });
+    expect(events.get("legacy cascaded")?.termination).toEqual({
+      reason: "parent_terminated",
+      carried_to: "msn_replacement",
+    });
+    expect(events.get("a legacy prior_state")).not.toHaveProperty("prior_state");
+  });
+
+  it("the receiver reads termination from the event body beside terminated only, and carries it to the harness lease", async () => {
+    const { receiver, signEvent } = await fixture();
+    const T = NOW.toISOString();
+    const superseded = await signEvent({
+      state: "terminated",
+      termination: {
+        reason: "superseded",
+        terminated_at: T,
+        version: 1,
+        successor: "msn_successor",
+        successor_note: 1,
+      },
+      // A top-level member is not the termination's reference: never read.
+      successor: "msn_wrong",
+      version: 1,
+    });
+    const applied = await receiver.verifyAndApply(superseded);
+    const termination = {
+      reason: "superseded",
+      terminated_at: T,
+      version: 1,
+      successor: "msn_successor",
+    };
+    expect(applied).toEqual({
+      status: "applied",
+      state: "terminated",
+      termination,
+      version: 1,
+      rematerialize: false,
+    });
+    expect(receiver.viewState(MISSION_ID)).toEqual({
+      state: "terminated",
+      termination,
+      version: 1,
+      expires_at: EXPIRES_AT,
+    });
+    expect(receiver.lease(MISSION_ID, T)).toEqual({
+      state: "terminated",
+      termination,
+      version: 1,
+      status_checked_at: T,
+      status_expires_at: EXPIRES_AT,
+      state_source: "signal",
+    });
+
+    // A termination beside any other state is dropped.
+    const other = "msn_termination_000000000000002";
+    const { receiver: second, signEvent: signSecond } = await fixture();
+    const suspended = await signSecond(
+      { state: "suspended", termination: { reason: "revoked" }, version: 1 },
+      undefined,
+      other,
+    );
+    expect(await second.verifyAndApply(suspended)).toEqual({
+      status: "applied",
+      state: "suspended",
+      version: 1,
+      rematerialize: false,
+    });
+    expect(second.viewState(other)).toEqual({
+      state: "suspended",
+      version: 1,
+      expires_at: EXPIRES_AT,
+    });
+  });
+
+  it("a missing or malformed termination never refuses a terminated event: an earlier active is never left in place", async () => {
+    for (const termination of [
+      undefined,
+      "revoked",
+      { reason: 7 },
+      { reason: "" },
+      [{ reason: "revoked" }],
+    ]) {
+      const { receiver, signEvent } = await fixture();
+      expect(
+        (await receiver.verifyAndApply(await signEvent({ state: "active", version: 1 }))).status,
+      ).toBe("applied");
+      const set = await signEvent({
+        state: "terminated",
+        ...(termination !== undefined ? { termination } : {}),
+        version: 2,
+      });
+      const res = await receiver.verifyAndApply(set);
+      expect(res, JSON.stringify(termination)).toEqual({
+        status: "applied",
+        state: "terminated",
+        version: 2,
+        rematerialize: false,
+      });
+      expect(receiver.viewState(MISSION_ID)?.state, JSON.stringify(termination)).toBe("terminated");
+      expect(
+        receiver.viewState(MISSION_ID)?.termination,
+        JSON.stringify(termination),
+      ).toBeUndefined();
+    }
+  });
+
+  it("normalizes a legacy SET's state only after its signature verifies, reading no top-level successor or carried_to", async () => {
+    const legacy: Array<[Record<string, unknown>, Record<string, unknown>]> = [
+      [{ state: "revoked", prior_state: "active" }, { reason: "revoked" }],
+      [{ state: "expired", prior_state: "active" }, { reason: "expired" }],
+      [{ state: "completed", prior_state: "active" }, { reason: "completed" }],
+      [
+        { state: "superseded", prior_state: "active", successor: "msn_successor" },
+        { reason: "superseded" },
+      ],
+      [
+        { state: "cascaded", prior_state: "active", carried_to: "msn_replacement" },
+        { reason: "parent_terminated" },
+      ],
+    ];
+    for (const [body, termination] of legacy) {
+      const { keys, receiver, signEvent } = await fixture();
+      // Verify before normalize: a legacy SET under an untrusted key is refused, the cache untouched.
+      const rogue = await generateKeyPair("ES256", { extractable: true });
+      const forged = await signEvent({ ...body, version: 1 }, rogue.privateKey);
+      expect(await receiver.verifyAndApply(forged)).toEqual({
+        status: "refused",
+        reason: "signature",
+      });
+      expect(receiver.viewState(MISSION_ID)).toBeUndefined();
+
+      const set = await signEvent({ ...body, version: 1 }, keys.privateKey);
+      const res = await receiver.verifyAndApply(set);
+      expect(res, String(body.state)).toEqual({
+        status: "applied",
+        state: "terminated",
+        termination,
+        version: 1,
+        rematerialize: false,
+      });
+      expect(
+        receiver.lease(MISSION_ID, NOW.toISOString())?.termination,
+        String(body.state),
+      ).toEqual(termination);
+    }
   });
 });

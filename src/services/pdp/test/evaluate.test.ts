@@ -285,7 +285,8 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
   });
 
   it("revoked mission -> deny mission_inactive within the bound", async () => {
-    const dec = await evaluate(req(), opts(view({ state: "revoked" })));
+    // A revoked Mission is reported `terminated` (reason `revoked`).
+    const dec = await evaluate(req(), opts(view({ state: "terminated" })));
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("mission_inactive");
   });
@@ -506,7 +507,9 @@ describe("basic gate: active predicate, non-active outcome, unrecognized-fails-c
   });
 
   it("active predicate false -> the non-active outcome (mission_inactive), for every recognized non-active state, never a positive decision", async () => {
-    for (const state of ["revoked", "expired", "suspended", "superseded"]) {
+    // The recognized non-active lifecycle states: `terminated`, whatever its
+    // termination reason, and Mission Status's `suspended`.
+    for (const state of ["terminated", "suspended"]) {
       const dec = await evaluate(req(), gateOpts(view({ state })));
       expect(dec.decision, state).toBe(false);
       expect(dec.context.denial_reason, state).toBe("mission_inactive");

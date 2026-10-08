@@ -31,7 +31,13 @@
 
 import { randomBytes } from "node:crypto";
 import type { LifecycleCommit } from "@mission/authorization-server";
-import type { MissionStatusLease, StateSource } from "@mission/core";
+import {
+  type MissionStatusLease,
+  type MissionTermination,
+  normalizeLegacyMissionState,
+  readMissionTermination,
+  type StateSource,
+} from "@mission/core";
 import { type Database, openStore, type StoreOptions, withTransaction } from "@mission/store";
 import { createLocalJWKSet, type JWK, type JWTPayload, jwtVerify, SignJWT } from "jose";
 
@@ -70,9 +76,19 @@ export interface SignLifecycleOptions {
  * Serialization with `typ` secevent+jwt: envelope `iss` (the Mission Issuer),
  * `aud` (the consumer), `iat`, `jti`, and a `sub_id` opaque Subject Identifier
  * whose `id` is the Mission Identifier; body carries the event under the
- * event-type URI with the Mission identity, `state`, optional `prior_state`,
- * `version`, `committed_at`, `expires_at`, optional `successor`, optional
- * `carried_to`, and optional `containment_version` and `authority_changed`.
+ * event-type URI with the Mission identity, `state`, `termination` beside a
+ * `terminated` state, optional `prior_state`, `version`, `committed_at`,
+ * `expires_at`, and optional `containment_version` and `authority_changed`.
+ *
+ * @spec mission#termination, signals#lifecycle-event: `state` is `active`,
+ * `suspended` or `terminated`, and `prior_state` only `active` or
+ * `suspended` (a terminated Mission commits no further transition).
+ * `termination` is the commit's own termination, relayed unchanged (its
+ * `version` is the committing transition's, this event's `version`), and it
+ * holds the termination's references (`successor`, `parent`, `carried_to`):
+ * no top-level `successor` or `carried_to` member is emitted. A commit
+ * journaled before the termination vocabulary is signed in it ({@link
+ * eventLifecycle}); a SET already signed is redelivered byte for byte.
  *
  * @spec containment#propagation — `containment_version` rides the same
  * event (no dedicated containment event type): when the kernel commit carries
@@ -93,20 +109,20 @@ export async function signLifecycleEvent(
   commit: LifecycleCommit,
   opts: SignLifecycleOptions,
 ): Promise<string> {
+  const { state, prior_state, termination } = eventLifecycle(commit);
   const event: Record<string, unknown> = {
     mission: { id: commit.id, issuer: commit.issuer },
-    state: commit.state,
-    ...(commit.prior_state ? { prior_state: commit.prior_state } : {}),
+    state,
+    // @spec signals#lifecycle-event: a `parent_terminated`
+    // termination's CONDITIONAL `carried_to` (the committed replacement
+    // Mission identifier, present exactly when a replacement was committed)
+    // rides inside `termination`, qualified by this event's own Mission
+    // issuer (the envelope `iss`); correlation, never authority.
+    ...(termination !== undefined ? { termination } : {}),
+    ...(prior_state !== undefined ? { prior_state } : {}),
     version: commit.version,
     committed_at: commit.committed_at,
     expires_at: commit.expires_at,
-    ...(commit.successor ? { successor: commit.successor } : {}),
-    // @spec signals#lifecycle-event — CONDITIONAL `carried_to`: the committed
-    // replacement Mission identifier on an old child's `cascaded` event,
-    // omitted when no replacement was committed. Qualified by this event's own
-    // Mission issuer (the envelope `iss`), relayed from the kernel commit
-    // unchanged; correlation, never authority.
-    ...(commit.carried_to ? { carried_to: commit.carried_to } : {}),
     ...(commit.containment_version !== undefined
       ? { containment_version: commit.containment_version }
       : {}),
@@ -129,11 +145,60 @@ export async function signLifecycleEvent(
   );
 }
 
+/**
+ * @spec mission#termination, signals#lifecycle-event: the lifecycle members
+ * a SET reports for one commit. A commit in the termination vocabulary is
+ * relayed: `termination` only beside `terminated`, `prior_state` only when it
+ * is `active` or `suspended`. A commit journaled before that vocabulary (a
+ * durable outbox job whose SET was never signed) still carries a legacy
+ * terminal `state` and top-level `successor` or `carried_to`: it is reported
+ * as `terminated` with that reason (`cascaded` as `parent_terminated`), its
+ * retained reference folded into `termination` (`successor` for
+ * `superseded`, `carried_to` for `parent_terminated`), and no member it did
+ * not retain is filled in.
+ */
+function eventLifecycle(commit: LifecycleCommit): {
+  state: string;
+  prior_state?: string;
+  termination?: MissionTermination;
+} {
+  const journaled = commit as LifecycleCommit & {
+    state: string;
+    prior_state?: string;
+    successor?: unknown;
+    carried_to?: unknown;
+  };
+  const prior =
+    journaled.prior_state === "active" || journaled.prior_state === "suspended"
+      ? { prior_state: journaled.prior_state }
+      : {};
+  const normalized = normalizeLegacyMissionState(journaled.state);
+  if (normalized.state !== "terminated") return { state: normalized.state, ...prior };
+  let termination: MissionTermination | undefined;
+  if (normalized.termination !== undefined) {
+    termination = { ...normalized.termination };
+    const ref = (value: unknown) => (typeof value === "string" && value !== "" ? value : undefined);
+    const successor = ref(journaled.successor);
+    const carriedTo = ref(journaled.carried_to);
+    if (termination.reason === "superseded" && successor !== undefined)
+      termination.successor = successor;
+    if (termination.reason === "parent_terminated" && carriedTo !== undefined)
+      termination.carried_to = carriedTo;
+  } else if (commit.termination !== undefined) {
+    termination = { ...commit.termination };
+  }
+  return { state: "terminated", ...prior, ...(termination !== undefined ? { termination } : {}) };
+}
+
 /** The last Mission state a receiver established over the stream, per Mission. */
 export interface CachedState {
   /** Received `state` typed as an open string: any non-active value, including
    *  an unrecognized one, is treated as non-deriving (draft §consumer-behavior). */
   state: string;
+  /** @spec mission#termination: the event's `termination` beside a
+   *  `terminated` state, its well-typed members only; absent for any other
+   *  state, and when the event carried none or a malformed one. */
+  termination?: MissionTermination;
   version: number;
   expires_at: string;
   /** @spec containment#propagation — the last `containment_version` this
@@ -164,7 +229,13 @@ export interface RematerializationBaseline {
 
 /** The outcome of applying a received SET (asserted on, so each rule is proven). */
 export type ApplyResult =
-  | { status: "applied"; state: string; version: number; rematerialize: boolean }
+  | {
+      status: "applied";
+      state: string;
+      termination?: MissionTermination;
+      version: number;
+      rematerialize: boolean;
+    }
   | { status: "duplicate" }
   | { status: "stale"; version: number }
   | {
@@ -172,6 +243,7 @@ export type ApplyResult =
       expected: number;
       received: number;
       state: string;
+      termination?: MissionTermination;
       version: number;
       rematerialize: boolean;
     }
@@ -192,8 +264,8 @@ export interface ReceiverOptions {
  * A consumer's Shared Signals receiver: it verifies each SET, dedups by `jti`,
  * and applies the transition idempotently by `version` into a per-Mission cache.
  * The apply is anti-revive: a lower-or-equal `version` NEVER regresses the
- * recorded state (an old `active` can never override a newer `revoked`, whether
- * a forgery, a replay, or an at-least-once duplicate). `viewState` reads the
+ * recorded state (an old `active` can never override a newer `terminated`,
+ * whether a forgery, a replay, or an at-least-once duplicate). `viewState` reads the
  * cache for a consumer's `loadView`. It also detects, per applied event,
  * whether the Mission's effective authority view needs rematerializing
  * through Mission Status before further consequential reliance: on
@@ -282,8 +354,16 @@ export class MissionSignalReceiver {
     if (parsed.missionIssuer !== this.opts.issuer) return { status: "refused", reason: "issuer" };
     this.seen.add(JSON.stringify([this.opts.issuer, jti]));
 
-    const { missionId, state, version, expires_at, authority_changed, containment_version } =
-      parsed;
+    const {
+      missionId,
+      state,
+      termination,
+      version,
+      expires_at,
+      authority_changed,
+      containment_version,
+    } = parsed;
+    const terminationMember = termination !== undefined ? { termination } : {};
     const current = this.cache.get(JSON.stringify([this.opts.issuer, missionId]));
     // Anti-revive: a version at or below the last applied never regresses state.
     if (current !== undefined && version <= current.version) {
@@ -333,6 +413,7 @@ export class MissionSignalReceiver {
     const nextContainmentVersion = containment_version ?? priorContainmentVersion;
     this.cache.set(JSON.stringify([this.opts.issuer, missionId]), {
       state,
+      ...terminationMember,
       version,
       expires_at,
       ...(nextContainmentVersion !== undefined
@@ -355,10 +436,18 @@ export class MissionSignalReceiver {
     }
     if (isGap) {
       this.gapped.add(JSON.stringify([this.opts.issuer, missionId]));
-      return { status: "gap", expected, received: version, state, version, rematerialize };
+      return {
+        status: "gap",
+        expected,
+        received: version,
+        state,
+        ...terminationMember,
+        version,
+        rematerialize,
+      };
     }
     this.gapped.delete(JSON.stringify([this.opts.issuer, missionId]));
-    return { status: "applied", state, version, rematerialize };
+    return { status: "applied", state, ...terminationMember, version, rematerialize };
   }
 
   /** The last state established for a Mission, for a consumer's `loadView`. */
@@ -377,6 +466,7 @@ export class MissionSignalReceiver {
     if (!s) return undefined;
     return {
       state: s.state,
+      ...(s.termination !== undefined ? { termination: s.termination } : {}),
       version: s.version,
       status_checked_at: checkedAt,
       status_expires_at: s.expires_at,
@@ -450,6 +540,8 @@ interface ParsedEvent {
   missionId: string;
   missionIssuer: string;
   state: string;
+  /** @spec mission#termination: beside a `terminated` state only. */
+  termination?: MissionTermination;
   version: number;
   expires_at: string;
   /** @spec signals#lifecycle-event — the generic narrowing discriminator,
@@ -460,7 +552,21 @@ interface ParsedEvent {
   containment_version?: number;
 }
 
-/** Pull and shape-check the required members of the lifecycle-change event. */
+/**
+ * Pull and shape-check the required members of the lifecycle-change event.
+ * Called only on a SET whose signature has verified, so a legacy event is
+ * read over its verified bytes.
+ *
+ * @spec mission#termination: `termination` is read from the event body
+ * beside a `terminated` state; there is no top-level `successor` or
+ * `carried_to` to read. A missing or malformed `termination` never refuses
+ * the event (refusing would leave an earlier `active` in the cache): the
+ * Mission is applied as `terminated` with no termination facts, and a
+ * `termination` beside any other state is dropped. A legacy terminal `state`
+ * (`revoked`, `expired`, `completed`, `superseded`, `cascaded`) is read as
+ * `terminated` with that reason, `cascaded` as `parent_terminated`, with no
+ * other member: a local view, never re-emitted or re-signed.
+ */
 function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
   const events = payload.events as Record<string, unknown> | undefined;
   const raw = events?.[LIFECYCLE_CHANGE_EVENT_URI];
@@ -469,22 +575,29 @@ function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
   const mission = ev.mission as { id?: unknown; issuer?: unknown } | undefined;
   const missionId = typeof mission?.id === "string" ? mission.id : undefined;
   const missionIssuer = typeof mission?.issuer === "string" ? mission.issuer : undefined;
-  const state = typeof ev.state === "string" ? ev.state : undefined;
+  const reported = typeof ev.state === "string" ? ev.state : undefined;
   const version = typeof ev.version === "number" ? ev.version : undefined;
   const expires_at = typeof ev.expires_at === "string" ? ev.expires_at : undefined;
   if (
     missionId === undefined ||
     missionIssuer === undefined ||
-    state === undefined ||
+    reported === undefined ||
     version === undefined ||
     expires_at === undefined
   ) {
     return undefined;
   }
+  const normalized = normalizeLegacyMissionState(reported);
+  const state = normalized.state;
+  const termination =
+    state !== "terminated"
+      ? undefined
+      : (normalized.termination ?? readMissionTermination(ev.termination));
   return {
     missionId,
     missionIssuer,
     state,
+    ...(termination !== undefined ? { termination } : {}),
     version,
     expires_at,
     // `authority_changed` is a MUST-ignore-if-unrecognized member; a consumer

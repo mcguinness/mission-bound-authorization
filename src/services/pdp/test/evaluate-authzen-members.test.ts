@@ -241,7 +241,16 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
         ["another audience", withAssertion(await signStatus({ privateKey, aud: OTHER_RESOURCE })), true],
         ["already expired", withAssertion(await signStatus({ privateKey, exp: issued - 60 })), true],
         ["another Mission", withAssertion(await signStatus({ privateKey, mission: { id: "msn_other" } })), true],
-        ["a state other than the observation's", withAssertion(await signStatus({ privateKey, mission: { state: "revoked" } })), true],
+        [
+          "a state other than the observation's",
+          withAssertion(
+            await signStatus({
+              privateKey,
+              mission: { state: "terminated", termination: { reason: "revoked", terminated_at: NOW.toISOString(), version: 3 } },
+            }),
+          ),
+          true,
+        ],
         ["a version other than the observation's", withAssertion(await signStatus({ privateKey, mission: { version: 2 } })), true],
         ["an issuance other than mission_status_issued_at", withAssertion(good, { mission_status_issued_at: new Date((issued - 1) * 1000).toISOString() }), true],
         ["an expiry later than its fresh_until", withAssertion(good, { mission_status_expires_at: new Date(NOW.getTime() + 61_000).toISOString() }), true],
@@ -431,10 +440,13 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
     const CLASSES = ["consequential_write", ...HIGH_CONSEQUENCE_CLASSES];
 
     it("the PDP's own active view against a PEP-supplied revoked state denies mission_inactive", async () => {
+      // A revoked Mission is observed `terminated` with its OPTIONAL
+      // `termination` beside the state; the PDP keys on exactly `active` alone.
+      const revoked = { state: "terminated", termination: { reason: "revoked", terminated_at: NOW.toISOString() } };
       for (const placement of ["pep", "pdp"] as const) {
         for (const actionClass of CLASSES) {
           const dec = await evaluate(
-            observedRequest({ actionClass, observation: observed({ state: "revoked" }) }),
+            observedRequest({ actionClass, observation: observed(revoked) }),
             options({ stateSourcePlacement: placement, stateObservedAt: NOW.toISOString() }),
           );
           expect(dec.decision, `${placement} ${actionClass}`).toBe(false);
@@ -461,7 +473,7 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
         for (const actionClass of CLASSES) {
           const dec = await evaluate(
             observedRequest({ actionClass, observation: observed({ state: "active" }) }),
-            options({ view: view({ state: "revoked" }), stateSourcePlacement: placement, stateObservedAt: NOW.toISOString() }),
+            options({ view: view({ state: "terminated" }), stateSourcePlacement: placement, stateObservedAt: NOW.toISOString() }),
           );
           expect(dec.decision, `${placement} ${actionClass}`).toBe(false);
           expect(dec.context.denial_reason, `${placement} ${actionClass}`).toBe("mission_inactive");

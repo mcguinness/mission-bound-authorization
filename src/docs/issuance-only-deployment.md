@@ -154,8 +154,8 @@ target that processes the `act` chain and the `mission` claim.
   Mission-bound grant has its configured lifetime or the Mission's remaining
   whole seconds, whichever is shorter (`clampToMission` and the `ttl`
   configuration in `buildProvider`). A Mission with under one second left is
-  refused `invalid_grant` `mission_expired` at the token endpoint, never given
-  a token:
+  refused `invalid_grant` with `mission_error` `expired` at the token
+  endpoint, never given a token:
   `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > code exchange: the access token, refresh token and authorization code all expire no later than a Mission ending inside their lifetimes`,
   `> a credential minted with under one second of Mission left is refused, never given a 0 s or overrunning lifetime`.
 - **Access tokens:** 300 seconds (`config/topology.json`
@@ -453,7 +453,8 @@ targets the plain RS, the `authorization_details` proposal is
                                    "mission":{"id":"msn_...","issuer":"http://localhost:4400"},"cnf":{"jkt":"..."}}}
 4. GET /api/reports        <- 200 {"reports":[]}
 5. POST /api/reports       <- 403 {"error":"insufficient_scope", ... scope="reports.write" ...}
-6. Revoke                  <- 200 {"id":"msn_...","state":"revoked","version":2}   (as svc:console)
+6. Revoke                  <- 200 {"id":"msn_...","state":"terminated","termination":{"reason":"revoked", ...},"version":2}
+                                                                                    (as svc:console)
 6a. Refresh after revoke   <- 400 {"error":"invalid_grant"}
 6b. GET after revoke       <- 200 {"reports":[]}                                    JWT only: honored until exp
 6b. GET after revoke       <- 401 {"error":"invalid_token","error_description":"the access token is not active"}
@@ -615,8 +616,9 @@ from the companion's:
 - the caller authenticates with an `x-service-token` header, not mTLS, a
   sender-constrained access token or private-key JWT (the endpoint's
   Authentication subsection);
-- a transition answers `{"id", "state", "version"}` JSON, not a signed
-  Mission Status Response;
+- a transition answers `{"id", "state", "version"}` JSON, with
+  `termination` beside a `terminated` state, not a signed Mission Status
+  Response;
 - `mission_lifecycle_endpoint` and its auth-methods member are not
   advertised.
 
