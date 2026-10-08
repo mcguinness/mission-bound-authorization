@@ -781,6 +781,29 @@ export async function handleTokenExchangeGrant(
  * second derivation count, and never a sibling refresh token once the initial
  * one is consumed (consumption proves delivery).
  */
+/**
+ * @spec mission#self-exchange rule 2 (#825 PR 2c, D353) — the authority a
+ * verified Mission access token itself carries, or `undefined` when it cannot
+ * be read in full: a missing or empty `authorization_details`, or an entry
+ * without its type, resource and string actions. A caller refuses the
+ * exchange on `undefined`; it never substitutes the Mission's authority.
+ */
+export function presentedTokenAuthority(claims: Record<string, unknown>): AuthorityEntry[] | undefined {
+  const raw = claims.authorization_details;
+  const wellFormed = (e: unknown): boolean => {
+    if (typeof e !== "object" || e === null || Array.isArray(e)) return false;
+    const entry = e as Record<string, unknown>;
+    return (
+      typeof entry.type === "string" &&
+      typeof entry.resource === "string" &&
+      Array.isArray(entry.actions) &&
+      entry.actions.every((a) => typeof a === "string")
+    );
+  };
+  if (!Array.isArray(raw) || raw.length === 0 || !raw.every(wellFormed)) return undefined;
+  return raw as AuthorityEntry[];
+}
+
 export async function handleAsyncDelegationExchange(
   opts: AdapterOptions,
   provider: Provider,
@@ -881,6 +904,22 @@ export async function handleAsyncDelegationExchange(
     txError(ctx, 400, "invalid_grant", "subject_token mission not found");
     return;
   }
+  // @spec mission#self-exchange rule 1 (#825 PR 2c, D353) — a no-actor
+  // exchange is refused unless the authenticated client is the Mission's
+  // approved agent, the Mission Record's own client_id, not merely the client
+  // the base token names.
+  if (record.client_id !== client.clientId) {
+    txError(ctx, 400, "invalid_request", "a no-actor exchange is open only to the Mission's approved agent");
+    return;
+  }
+  // @spec mission#self-exchange rule 2 (#825 PR 2c, D312, D353) — the presented
+  // token's own authority bounds the family. Read here, before the idempotency
+  // lookup, so a retry recovers a recorded family only within it.
+  const presentedAuthority = presentedTokenAuthority(baseClaims);
+  if (!presentedAuthority) {
+    txError(ctx, 400, "invalid_grant", "subject_token carries no readable authorization_details");
+    return;
+  }
 
   // @spec continuation#transport-async — REQUIRED creation_request_id on the
   // delegation-family-creating exchange, adopting expansion#creation-request-id
@@ -940,7 +979,7 @@ export async function handleAsyncDelegationExchange(
   // family derivation (or whose Mission changed state) when it succeeded.
   const existing = idem.find(client.clientId, creationRequestId);
   if (existing) {
-    await recoverAsyncDelegation(opts, provider, ctx, existing, fingerprint, jkt);
+    await recoverAsyncDelegation(opts, provider, ctx, existing, fingerprint, jkt, presentedAuthority);
     return;
   }
 
@@ -978,26 +1017,8 @@ export async function handleAsyncDelegationExchange(
   }
   // @spec mission#self-exchange rule 2, runtime#input-authority (#825 PR 2c,
   // D312) — this is a no-actor exchange of the agent's own token, so the family
-  // is bounded by the presented token's own authority as well as the Mission's:
-  // a down-scoped token never opens a family broader than itself. A Mission
-  // access token whose authority cannot be read is refused, never replaced by
-  // the Mission's.
-  const presentedRaw = baseClaims.authorization_details;
-  const wellFormed = (e: unknown): boolean => {
-    if (typeof e !== "object" || e === null || Array.isArray(e)) return false;
-    const entry = e as Record<string, unknown>;
-    return (
-      typeof entry.type === "string" &&
-      typeof entry.resource === "string" &&
-      Array.isArray(entry.actions) &&
-      entry.actions.every((a) => typeof a === "string")
-    );
-  };
-  if (!Array.isArray(presentedRaw) || presentedRaw.length === 0 || !presentedRaw.every(wellFormed)) {
-    txError(ctx, 400, "invalid_grant", "subject_token carries no readable authorization_details");
-    return;
-  }
-  const presentedAuthority = presentedRaw as AuthorityEntry[];
+  // is bounded by the presented token's own authority (read above) as well as
+  // the Mission's: a down-scoped token never opens a family broader than itself.
   let confinedSubset: AuthorityEntry[];
   if (requestedSubset === undefined) {
     confinedSubset = projectThroughEffective(presentedAuthority, effective);
@@ -1060,7 +1081,7 @@ export async function handleAsyncDelegationExchange(
     if (e instanceof UniqueViolationError) {
       const winner = idem.find(client.clientId, creationRequestId);
       if (winner) {
-        await recoverAsyncDelegation(opts, provider, ctx, winner, fingerprint, jkt);
+        await recoverAsyncDelegation(opts, provider, ctx, winner, fingerprint, jkt, presentedAuthority);
         return;
       }
     }
@@ -1280,6 +1301,7 @@ async function recoverAsyncDelegation(
   op: CreationOperation,
   fingerprint: string,
   presenterJkt: string,
+  presentedAuthority: readonly AuthorityEntry[],
 ): Promise<void> {
   if (op.op !== "async-delegation" || op.fingerprint !== fingerprint) {
     txError(
@@ -1329,6 +1351,23 @@ async function recoverAsyncDelegation(
     txError(ctx, 400, "invalid_grant", "recorded delegation family not found");
     return;
   }
+  // The family's recorded authority: the grant's rar, the structural subset it
+  // was created with, or for a completed delivery whose grant is gone, the
+  // authority its stored response carried.
+  const GrantModel = (provider as unknown as {
+    Grant: { find: (id: string) => Promise<{ rar?: unknown } | undefined> };
+  }).Grant;
+  const grant = await GrantModel.find(grantId);
+  const grantRar = Array.isArray(grant?.rar) ? (grant.rar as AuthorityEntry[]) : undefined;
+  // @spec mission#self-exchange rule 2 (#825 PR 2c, D353) — a retry recovers
+  // the recorded family only within the token it presents: a narrower
+  // replacement token never retrieves, or resumes, a broader family. An
+  // equivalent (or broader) replacement token still recovers.
+  const recordedAuthority = grantRar ?? (stored?.body?.authorization_details as AuthorityEntry[] | undefined);
+  if (recordedAuthority && !isSubsetSetIgnoringCapabilitySources(recordedAuthority, [...presentedAuthority])) {
+    txError(ctx, 400, "invalid_authorization_details", "the recorded delegation exceeds the presented token's authority");
+    return;
+  }
   if (op.state === "reserved") {
     // FAMILY-CREATED: the family and its single derivation count exist but the
     // response was never delivered (no token was ever issued). RESUME delivery
@@ -1337,11 +1376,6 @@ async function recoverAsyncDelegation(
     // authoritative structural subset; it is projected through the CURRENT
     // effective set so a capability contained since creation cannot ride the
     // resumed delivery. A grant already destroyed fails closed.
-    const GrantModel = (provider as unknown as {
-      Grant: { find: (id: string) => Promise<{ rar?: unknown } | undefined> };
-    }).Grant;
-    const grant = await GrantModel.find(grantId);
-    const grantRar = Array.isArray(grant?.rar) ? (grant.rar as AuthorityEntry[]) : undefined;
     if (!grantRar) {
       txError(ctx, 400, "invalid_grant", "recorded delegation family no longer exists");
       return;
