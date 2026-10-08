@@ -2404,8 +2404,6 @@ The following is an example of a Mission Record.
     "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
   "subject": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
-  "approver": { "iss": "https://idp.example.com",
-    "sub": "user_3p2q8mN1a0kV7tR" },
   "approval_basis": {
     "type": "direct",
     "consent_principal": { "iss": "https://idp.example.com",

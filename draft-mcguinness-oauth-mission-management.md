@@ -403,7 +403,11 @@ match against the Mission record
 `state`:
 : An array of strings. Matches a Mission whose current lifecycle
   state equals any listed value, drawn from the issuance profile's
-  open state space as extended by the profiles the deployment runs.
+  open state space as extended by the profiles the deployment runs. A
+  Mission at or past its `expires_at` is `terminated` with reason
+  `expired` for this match and in its summary, whether or not that
+  transition was persisted ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Mission Lifecycle and Gating").
   The AS MUST NOT refuse a filter for carrying a state value it does
   not produce; such a value matches no Mission, except that, for a
   transition period, `revoked`, `expired`, `completed`, `superseded`,
