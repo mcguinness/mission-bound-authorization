@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             6 October 2026
-Expires: 9 April 2027
+Intended status: Experimental                             8 October 2026
+Expires: 11 April 2027
 
 
          Mission Cross-Organizational Delegation for OAuth 2.0
@@ -22,8 +22,8 @@ Abstract
    authority proof, each hop carries its own actor under an explicit
    identity-binding rule, the originally approved agent and the on-
    behalf-of principal travel with the chain, and Cross-Domain
-   Projection remains the adapter by which a destination Authorization
-   Server validates the chain, applies local policy, and issues a local
+   Projection remains the adapter by which a destination authorization
+   server validates the chain, applies local policy, and issues a local
    token.  Projection and delegation stay distinct verbs; the profile
    composes them and never merges them.
 
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -164,7 +164,7 @@ Table of Contents
    Chain-verifying consumer:  a relying party that receives and verifies
       the complete Chain.
 
-   AS-mediated consumer:  a Resource Server that trusts a local token
+   AS-mediated consumer:  a resource server that trusts a local token
       its Resource Authorization Server minted after verifying a Chain,
       and does not claim to have independently verified the Chain.
 
@@ -200,8 +200,8 @@ Table of Contents
    urn:ietf:params:oauth:token-type:mission-delegation-chain; for
    retention and evidence its media type is application/mission-
    delegation-chain+json (Section 15).  Direct presentation of a Chain
-   to a Resource Server is not defined in this version: a chain-
-   verifying Resource Server obtains the Presentation through a
+   to a resource server is not defined in this version: a chain-
+   verifying resource server obtains the Presentation through a
    deployment-defined channel and applies Section 7 unchanged.
 
    A verifier MUST declare maximum hop count, maximum Presentation size,
@@ -257,7 +257,7 @@ Table of Contents
    presenting conflicting or duplicated actor representations.  A
    materialized nested act projection ([RFC8693]) is constructed from
    the validated Chain at a consuming boundary, a PDP, an introspection
-   responder, or a destination Authorization Server; it is not carried
+   responder, or a destination authorization server; it is not carried
    on the artifacts ([I-D.draft-mcguinness-oauth-mission-attenuation],
    Section "Actor Attribution on the Chain").
 
@@ -400,8 +400,8 @@ Table of Contents
       issuer-qualified (act.iss, act.sub) to a workload key
       (Section 3.3);
 
-   *  resource identifiers to the Resource AS or RS authorized to
-      consume them;
+   *  resource identifiers to the Resource AS or resource server
+      authorized to consume them;
 
    *  authorization-details types and constraint registries to supported
       versions; and
@@ -420,7 +420,7 @@ Table of Contents
 
 7.  Destination Verification
 
-   A Resource AS or chain-verifying Resource Server MUST perform the
+   A Resource AS or chain-verifying resource server MUST perform the
    following, in order:
 
    1.   resolve the origin Mission Issuer to an accepted trust domain
@@ -542,11 +542,11 @@ Table of Contents
       actor lineage, and principal_mapping of Section 8).
 
    Issuer-signed hop receipts belong to the issuer-mediated lane: a
-   destination AS MUST NOT manufacture receipts for holder-created hops.
-   A signed chain-verification attestation, an AS statement that it
-   verified a Chain and survives the local token's expiry, is deferred
-   to a companion until a consumer demonstrates that these two modes are
-   insufficient.
+   destination authorization server (AS) MUST NOT manufacture receipts
+   for holder-created hops.  A signed chain-verification attestation, an
+   AS statement that it verified a Chain and survives the local token's
+   expiry, is deferred to a companion until a consumer demonstrates that
+   these two modes are insufficient.
 
 10.  Capability and Discovery
 
@@ -565,9 +565,9 @@ Table of Contents
    *  *Chain-verifying*: the relying party receives and verifies the
       complete Chain per Section 7.
 
-   *  *AS-mediated*: an RS trusts its Resource AS's locally issued token
-      and does not claim independent verification of the Chain;
-      provenance uses Section 9.
+   *  *AS-mediated*: a resource server trusts its Resource AS's locally
+      issued token and does not claim independent verification of the
+      Chain; provenance uses Section 9.
 
    Positive and negative vectors cover, at minimum: a valid three-domain
    A to B to C chain; action, resource, amount, audience, or expiry
@@ -721,8 +721,8 @@ Table of Contents
    A; Optional parameters: N/A; Encoding considerations: binary (UTF-8
    JSON); Security considerations: see this document; Interoperability
    considerations: N/A; Published specification: this document;
-   Applications that use this media type: Mission-aware Authorization
-   Servers, Resource Servers, and audit systems; Change controller:
+   Applications that use this media type: Mission-aware authorization
+   servers, resource servers, and audit systems; Change controller:
    IESG.
 
 16.  References

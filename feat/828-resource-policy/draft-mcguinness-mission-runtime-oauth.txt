@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          6 October 2026
-Expires: 9 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
           Mission-Bound Runtime Enforcement: OAuth 2.0 Profile
@@ -49,7 +49,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -102,7 +102,7 @@ Table of Contents
    semantics.  Mission-Bound Authorization for OAuth 2.0
    [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") defines
    the Mission-bound access token: its claims, its issuance and
-   delegation, and the validation a Resource Server applies to it.
+   delegation, and the validation a resource server applies to it.
 
    Neither says which validated token values supply which runtime
    inputs, which OAuth mechanisms observe Mission state, or how a
@@ -116,8 +116,8 @@ Table of Contents
    +========================================+==========================+
    | Issuance profile                       | Token claims,            |
    | [I-D.draft-mcguinness-oauth-mission]   | issuance, delegation,    |
-   |                                        | and baseline Resource    |
-   |                                        | Server validation        |
+   |                                        | and baseline resource    |
+   |                                        | server validation        |
    +----------------------------------------+--------------------------+
    | Runtime core                           | Decision inputs,         |
    | [I-D.draft-mcguinness-mission-runtime] | enforcement, freshness   |
@@ -155,8 +155,8 @@ Table of Contents
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
 
-   This specification uses the terms "access token", "Authorization
-   Server", "client", "protected resource", "resource owner", and
+   This specification uses the terms "access token", "authorization
+   server", "client", "protected resource", "resource owner", and
    "Resource Server" from OAuth 2.0 [RFC6749] through the terminology
    incorporated by [I-D.draft-mcguinness-oauth-mission].  It uses Policy
    Enforcement Point (PEP), Policy Decision Point (PDP), established
@@ -195,13 +195,13 @@ Table of Contents
    forms; this document adds no validation step of its own:
 
    *  A JWT access token is validated under the issuance profile's
-      Resource Server rules, which apply [RFC9068] and verify any
+      resource server rules, which apply [RFC9068] and verify any
       sender-constraint binding ([I-D.draft-mcguinness-oauth-mission],
       Section "Resource Server Enforcement").
 
    *  An opaque access token is resolved under the issuance profile's
       introspected token consumption mode: introspection before each
-      use, an active response, the Resource Server's own identity in
+      use, an active response, the resource server's own identity in
       aud, and a sender-constraint binding verified locally
       ([I-D.draft-mcguinness-oauth-mission], Section "Introspected Token
       Consumption").
@@ -247,8 +247,8 @@ Table of Contents
 
    A PEP MUST NOT ask a PDP to authorize an action from unverified token
    claims.  If token validation fails, the PEP MUST refuse before
-   runtime Mission evaluation.  When the PEP is an OAuth Resource
-   Server, it uses the normal OAuth error behavior for the protected
+   runtime Mission evaluation.  When the PEP is an OAuth resource
+   server, it uses the normal OAuth error behavior for the protected
    resource (for example, Bearer token errors under [RFC6750]); this
    document defines no new OAuth error code.
 
@@ -447,7 +447,7 @@ Table of Contents
       to a Mission under an externally established reference
       (Section 3), the authority that token carries as issued,
       established and enforced as the join profile defines (the Mission
-      Authority Server enforces it at the Resource Server or gateway,
+      Authority Server enforces it at the resource server or gateway,
       [I-D.draft-mcguinness-mission-authority-server]); and
 
    *  the current effective authority: the approved Authority Set,
@@ -462,7 +462,7 @@ Table of Contents
    therefore evaluated at its own narrower entry.
 
    Each entry is enforced under its type's own specification, as the
-   issuance profile requires of a Resource Server
+   issuance profile requires of a resource server
    ([I-D.draft-mcguinness-oauth-mission], Section "Resource Server
    Enforcement").  For an entry of type mission_resource_access, the
    action's resource and invoked action or tool identity MUST be within

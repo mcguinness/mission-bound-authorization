@@ -13,7 +13,7 @@ disclosure shown to the Approver. This document defines an optional
 Consent Evidence profile. It specifies a structured consent disclosure
 object, a  consent_rendering_hash  integrity anchor, and a signed
 Consent Evidence object that records the structured disclosure the
-Authorization Server rendered or committed to rendering, which Approver
+authorization server rendered or committed to rendering, which Approver
 it recorded as deciding, which Mission authority the disclosure
 corresponded to, and which notices or material risks it carried.
 Evidence is recorded for approved, declined, and narrowed
@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 9 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-consent-evidence-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-06" class="published">6 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1106,7 +1106,7 @@ disclosure shown to the Approver. This document defines an optional
 Consent Evidence profile. It specifies a structured consent disclosure
 object, a <code>consent_rendering_hash</code> integrity anchor, and a signed
 Consent Evidence object that records the structured disclosure the
-Authorization Server rendered or committed to rendering, which Approver
+authorization server rendered or committed to rendering, which Approver
 it recorded as deciding, which Mission authority the disclosure
 corresponded to, and which notices or material risks it carried.
 Evidence is recorded for approved, declined, and narrowed
@@ -1149,7 +1149,7 @@ authority grant.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1345,11 +1345,11 @@ remaining gap: the exact consent disclosure rendered to the Approver is
 not itself committed.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document narrows that gap. It defines a structured consent
 disclosure object and a Consent Evidence object. The disclosure object
-is what the Authorization Server renders or commits to rendering. The
+is what the authorization server renders or commits to rendering. The
 evidence object records the approval event, the rendering context, the
 Mission anchors, and an integrity envelope over the evidence.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">This profile commits the structured disclosure that the Authorization
-Server says it rendered, and binds it to the same Mission anchors used
+<p id="section-1-3">This profile commits the structured disclosure that the authorization
+server says it rendered, and binds it to the same Mission anchors used
 for authority. What no server-side commitment can prove, that the
 pixels presented to the Approver matched the committed object, is the
 what-you-see-is-what-you-sign problem this profile names and bounds in
@@ -1455,7 +1455,7 @@ approved under <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite 
 </li>
           <li id="section-2.1-2.2">
             <p id="section-2.1-2.2.1">the Consent Disclosure object, which defines in structured form what
-the Authorization Server rendered or committed to rendering for the
+the authorization server rendered or committed to rendering for the
 Approver; and<a href="#section-2.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-2.1-2.3">
@@ -1640,7 +1640,7 @@ bound is not faithful, and a verifier can check the rendered set
 against the committed Authority Set. When the client submitted an
 authority proposal, the issuance profile requires the rendering to
 distinguish the entries the client proposed from any narrowing or
-restructuring the AS applied
+restructuring the authorization server (AS) applied
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); a disclosure for such a
 Mission carries that distinction in its rendered elements. A
 disclosure that renders
@@ -2139,7 +2139,7 @@ across modalities.<a href="#section-5-7" class="pilcrow">¶</a></p>
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-rendering-assurance" class="section-name selfRef">Rendering Assurance</a>
       </h2>
 <p id="section-6-1">The commitment of <a href="#consent-rendering-hash" class="auto internal xref">Section 5</a> records what disclosure the
-Authorization Server says it rendered; it cannot by itself prove what a
+authorization server says it rendered; it cannot by itself prove what a
 human perceived. This is the what-you-see-is-what-you-sign problem. This
 profile does not close it with a server-side commitment, which is
 impossible, but defines a ladder a deployment climbs as far as its
@@ -2334,7 +2334,7 @@ fixes the role, not the attestation format.<a href="#section-7-2.22.1" class="pi
           <p id="section-7-2.24.1"><span class="bcp14">OPTIONAL</span> and experimental. An object. A confirmation produced by the
 Approver's authenticator at approval (Rung 3,
 <a href="#experimental-rungs" class="auto internal xref">Appendix A</a>). To bind the trust to the Approver rather
-than the Authorization Server:<a href="#section-7-2.24.1" class="pilcrow">¶</a></p>
+than the authorization server:<a href="#section-7-2.24.1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-2.24.2.1">
               <p id="section-7-2.24.2.1.1">it <span class="bcp14">MUST</span> sign the <code>consent_rendering_hash</code> together with a
@@ -3423,7 +3423,7 @@ authenticator over the <code>consent_rendering_hash</code> at approval, binding
 the approval credential itself to the exact committed disclosure. What
 this proves is narrow but real: that the Approver's authenticator was
 invoked over that specific <code>consent_rendering_hash</code>, and that the
-confirmation could not be fabricated by the Authorization Server,
+confirmation could not be fabricated by the authorization server,
 because it is signed by a credential bound to the Approver. It does
 not by itself prove the authenticator displayed the disclosure, so it
 is what-you-see-is-what-you-sign only when the authenticator also

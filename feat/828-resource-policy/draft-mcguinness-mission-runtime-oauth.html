@@ -1056,7 +1056,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 9 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1069,12 +1069,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-runtime-oauth-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-06" class="published">6 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1125,7 +1125,7 @@ semantics are defined by Mission-Bound Authorization for OAuth 2.0.<a href="#sec
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1242,7 +1242,7 @@ these as abstract roles, so a non-OAuth binding can implement it
 without importing OAuth semantics. Mission-Bound Authorization for OAuth 2.0
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile")
 defines the Mission-bound access token: its claims, its issuance and
-delegation, and the validation a Resource Server applies to it.<a href="#section-1-1" class="pilcrow">¶</a></p>
+delegation, and the validation a resource server applies to it.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">Neither says which validated token values supply which runtime
 inputs, which OAuth mechanisms observe Mission state, or how a
 protected resource publishes its classification floor. This document
@@ -1261,7 +1261,7 @@ work:<a href="#section-1-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>
 </td>
-            <td class="text-left" rowspan="1" colspan="1">Token claims, issuance, delegation, and baseline Resource Server validation</td>
+            <td class="text-left" rowspan="1" colspan="1">Token claims, issuance, delegation, and baseline resource server validation</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Runtime core <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>
@@ -1297,8 +1297,8 @@ credential profile and uses the runtime core unchanged
 "<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
 described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
 appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
-<p id="section-2-2">This specification uses the terms "access token", "Authorization
-Server", "client", "protected resource", "resource owner", and
+<p id="section-2-2">This specification uses the terms "access token", "authorization
+server", "client", "protected resource", "resource owner", and
 "Resource Server" from OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> through the terminology
 incorporated by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. It uses Policy
 Enforcement Point (PEP), Policy Decision Point (PDP), established
@@ -1352,14 +1352,14 @@ forms; this document adds no validation step of its own:<a href="#section-3-2" c
 <ul class="normal">
 <li class="normal" id="section-3-3.1">
           <p id="section-3-3.1.1">A JWT access token is validated under the issuance profile's
-Resource Server rules, which apply <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> and verify any
+resource server rules, which apply <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> and verify any
 sender-constraint binding (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 Section "Resource Server Enforcement").<a href="#section-3-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-3.2">
           <p id="section-3-3.2.1">An opaque access token is resolved under the issuance profile's
 introspected token consumption mode: introspection before each use,
-an <code>active</code> response, the Resource Server's own identity in <code>aud</code>,
+an <code>active</code> response, the resource server's own identity in <code>aud</code>,
 and a sender-constraint binding verified locally
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Introspected Token
 Consumption").<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
@@ -1403,7 +1403,7 @@ record (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I
 Token Consumption").<a href="#section-3-6" class="pilcrow">¶</a></p>
 <p id="section-3-7">A PEP <span class="bcp14">MUST NOT</span> ask a PDP to authorize an action from unverified token
 claims. If token validation fails, the PEP <span class="bcp14">MUST</span> refuse before runtime
-Mission evaluation. When the PEP is an OAuth Resource Server, it uses
+Mission evaluation. When the PEP is an OAuth resource server, it uses
 the normal OAuth error behavior for the protected resource (for
 example, Bearer token errors under <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>); this document defines
 no new OAuth error code.<a href="#section-3-7" class="pilcrow">¶</a></p>
@@ -1633,7 +1633,7 @@ token, of its introspection response; for an ordinary token joined
 to a Mission under an externally established reference
 (<a href="#token-validation" class="auto internal xref">Section 3</a>), the authority that token carries as issued,
 established and enforced as the join profile defines (the Mission
-Authority Server enforces it at the Resource Server or gateway,
+Authority Server enforces it at the resource server or gateway,
 <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>); and<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.1-2.2">
@@ -1649,7 +1649,7 @@ draws it from the Mission.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p
 <p id="section-5.1-3">A token narrowed below its Mission's approved Authority Set is
 therefore evaluated at its own narrower entry.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
 <p id="section-5.1-4">Each entry is enforced under its type's own specification, as the
-issuance profile requires of a Resource Server
+issuance profile requires of a resource server
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Resource Server
 Enforcement"). For an entry of type <code>mission_resource_access</code>, the
 action's <code>resource</code> and invoked action or tool identity <span class="bcp14">MUST</span> be within

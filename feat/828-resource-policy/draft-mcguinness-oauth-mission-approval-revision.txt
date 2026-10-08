@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             6 October 2026
-Expires: 9 April 2027
+Intended status: Experimental                             8 October 2026
+Expires: 11 April 2027
 
 
                 Mission Approval Revision for OAuth 2.0
@@ -17,8 +17,8 @@ Abstract
    lets a client poll for the decision.  A reviewer commonly approves a
    narrowed subset of a proposed Mission rather than an all-or-nothing
    outcome.  This document defines an experimental revisable approval
-   mode on top of the deferred approval profile: when the Authorization
-   Server can grant only a narrowed version of the proposed Mission, it
+   mode on top of the deferred approval profile: when the authorization
+   server can grant only a narrowed version of the proposed Mission, it
    invites the client to push a narrowing revision and continue the same
    deferred approval rather than abandon it and start over.  A revision
    can only narrow, measured against the current baseline, the Authority
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 

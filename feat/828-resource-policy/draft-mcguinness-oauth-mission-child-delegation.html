@@ -1061,7 +1061,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 9 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1074,12 +1074,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-child-delegation-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-06" class="published">6 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1136,7 +1136,7 @@ Mission is never created by session ancestry alone.<a href="#section-abstract-1"
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1489,9 +1489,9 @@ design: the same sub-agent takes a delegated token when invoked
 inline and a Child Mission when parked on a queue. Audience is a
 second test: a delegated token reaches only a Mission-aware Resource
 Server (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so a sub-agent that
-calls a Resource Server that is not Mission-aware runs under a Child
+calls a resource server that is not Mission-aware runs under a Child
 Mission even when invoked inline, where child creation is authorized
-(<a href="#fanout" class="auto internal xref">Section 8</a>) and that Resource Server can enforce the authority
+(<a href="#fanout" class="auto internal xref">Section 8</a>) and that resource server can enforce the authority
 projected to it; creating the child establishes neither condition.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1736,7 +1736,8 @@ own namespace.<a href="#section-5-4.18.2.4.1" class="pilcrow">¶</a></p>
 </dl>
 <p id="section-5-4.18.3">A <code>child_actor</code> <span class="bcp14">MAY</span> be identified at instance granularity where the
 deployment authenticates client instances
-(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>): the AS
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>): the authorization
+server (AS)
 establishes that actor's identity, and its association with the
 authenticated instance, separately from the instance evidence
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section 5), and
@@ -2123,7 +2124,8 @@ carries a <code>children</code> object permitting child creation, and that
 <a href="#completion" class="auto internal xref">Section 5.4</a>: synchronous, deferred, or interactive.<a href="#section-5.7-2.9.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-5.7-2.10">
-            <p id="section-5.7-2.10.1">At the creation commit, re-verify parent state (<a href="#creation-race" class="auto internal xref">Section 5.3</a>),
+            <p id="section-5.7-2.10.1">At the creation commit, re-verify parent state (<a href="#creation-race" class="auto internal xref">Section 5.3</a>)
+and the inherited authority source (<a href="#record-requirements" class="auto internal xref">Section 6.1</a>),
 create the Child Mission record with <code>parent</code> and the completed
 <code>(client, creation_request_id)</code> reservation atomically
 (<a href="#creation-idempotency" class="auto internal xref">Section 5.8</a>), and record Child Evidence.<a href="#section-5.7-2.10.1" class="pilcrow">¶</a></p>
@@ -2575,6 +2577,32 @@ and re-approves the referenced policy's content as a standing
 consent of its own, <code>approved_at</code> is that policy version's
 human-approval instant, verified from the deployment's retained
 governance record.<a href="#section-6.1-12" class="pilcrow">¶</a></p>
+<p id="section-6.1-13">The child's <code>subject</code> follows its basis:<a href="#section-6.1-13" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.1-14.1">
+            <p id="section-6.1-14.1.1">Under <code>policy_drawdown</code>, it <span class="bcp14">MUST</span> equal the Parent Mission's
+<code>subject</code>.<a href="#section-6.1-14.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.1-14.2">
+            <p id="section-6.1-14.2.1">Under <code>direct</code>, it is the Parent Mission's <code>subject</code> unless the
+human approval event establishes another Subject through the
+issuance profile's Subject and authority-source establishment in
+full (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Approval"): never from client input, with the Approver authorized
+to approve for that Subject and to activate the child's authority
+source. This document defines no request parameter that names a
+Subject, and <a href="#attenuation" class="auto internal xref">Section 7</a> bounds the child either way.<a href="#section-6.1-14.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.1-15">A Child Mission's <code>authority_source</code> <span class="bcp14">MUST</span> equal the Parent Mission's,
+including an <code>organizational</code> source's <code>policy</code> reference; a carryover
+replacement's follows <a href="#carryover-records" class="auto internal xref">Section 10.5</a> instead. Copying the
+source establishes no authority: at the creation commit, the Mission
+Issuer <span class="bcp14">MUST</span> verify that the source applies to the child's <code>subject</code>
+and that the child Authority Set lies within the source's ceiling as
+it stands at that commit, as well as within the parent's
+(<a href="#strict-subset" class="auto internal xref">Section 7.1</a>), and <span class="bcp14">MUST</span> refuse the creation otherwise. The same
+commit rechecks the effective expiry (<a href="#attenuation" class="auto internal xref">Section 7</a>).<a href="#section-6.1-15" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2636,8 +2664,12 @@ request.<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
       </ul>
 <p id="section-7-3">The Mission Issuer <span class="bcp14">MUST</span> compute the Child Mission's <code>authority_hash</code>
 over the child Authority Set, not over the parent Authority Set. A
-Resource Server enforces child tokens exactly as Mission-bound tokens:
-the child <code>authority_hash</code> is the immediate authority commitment.<a href="#section-7-3" class="pilcrow">¶</a></p>
+resource server enforces child tokens exactly as Mission-bound tokens:
+it enforces the carried <code>authorization_details</code>. The child
+<code>authority_hash</code> commits the child Authority Set on the child's
+Mission record; a resource server that must check carried authority
+against the complete set adopts Approved-Set Verification
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approved-set-verification" class="cite xref">I-D.draft-mcguinness-oauth-mission-approved-set-verification</a>]</span>).<a href="#section-7-3" class="pilcrow">¶</a></p>
 <p id="section-7-4">Child Mission tokens <span class="bcp14">MUST</span> be sender-constrained to the child actor's
 own key, matching the issuance profile's delegated-token posture
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-4" class="pilcrow">¶</a></p>
@@ -2716,7 +2748,19 @@ subtree is enforced. One is enforced only where a lineage-keyed
 budget is deployed (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>);
 otherwise the rendering states that no finite lifetime aggregate is
 enforced.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
-<p id="section-7.2-7">Bounding the aggregate
+<p id="section-7.2-7">For a <code>policy_drawdown</code> entry, the rendered per-child derivation
+limit is the standing-consent maximum of Mission Derivation Limits
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>, Sections
+"Effective Limit" and "Approval Rendering"), taken from the policy
+state the Parent Mission's approval committed: the entry's
+<code>child_creation_policy</code> snapshot where it carries one, otherwise the
+policy that the Parent Mission's <code>policy_version</code> identifies. Each
+child created under the entry establishes and counts its own limit,
+never above a finite rendered figure, and a figure rendered as
+unlimited guarantees no finite maximum. A stricter policy at creation
+narrows a child's limit; no later policy change raises or removes the
+figure.<a href="#section-7.2-7" class="pilcrow">¶</a></p>
+<p id="section-7.2-8">Bounding the aggregate
 across a subtree is the role of consumption metering, not this
 profile's attenuation rules
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). An exclusivity group, by
@@ -2728,7 +2772,7 @@ counts derivations within a single Mission's own continued grants,
 where a delegated refresh-token family's successive refreshes are one
 derivation, not one per refresh
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>, Section
-"Authorization Continuity and the Mission").<a href="#section-7.2-7" class="pilcrow">¶</a></p>
+"Authorization Continuity and the Mission").<a href="#section-7.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3599,14 +3643,19 @@ adjudicates, with the Parent Mission's human <code>approver</code> as
 <code>consent_principal</code>;<a href="#section-16-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.8">
-          <p id="section-16-2.8.1">implement cascade revocation; and<a href="#section-16-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.8.1">record each child's <code>subject</code> per its basis and the parent's
+<code>authority_source</code>, verifying that source at the creation commit
+(<a href="#record-requirements" class="auto internal xref">Section 6.1</a>);<a href="#section-16-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.9">
-          <p id="section-16-2.9.1">record child delegation evidence.<a href="#section-16-2.9.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.9.1">implement cascade revocation; and<a href="#section-16-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.10">
+          <p id="section-16-2.10.1">record child delegation evidence.<a href="#section-16-2.10.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-16-3">A Resource Server does not need to understand this profile to enforce
-child tokens as Mission-bound tokens. A Resource Server <span class="bcp14">MUST NOT</span> apply
+<p id="section-16-3">A resource server does not need to understand this profile to enforce
+child tokens as Mission-bound tokens. A resource server <span class="bcp14">MUST NOT</span> apply
 lineage-sensitive policy from the <code>parent</code> member unless it implements
 the semantics of the parent-member (<a href="#parent-member" class="auto internal xref">Section 6</a>) and cascade
 (<a href="#cascade" class="auto internal xref">Section 9</a>) sections.<a href="#section-16-3" class="pilcrow">¶</a></p>
@@ -4036,6 +4085,10 @@ token-exchange grant the rest of the Mission family already uses.<a href="#secti
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Deferred Approval for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-approved-set-verification">[I-D.draft-mcguinness-oauth-mission-approved-set-verification]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approved-Set Verification for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-attenuation">[I-D.draft-mcguinness-oauth-mission-attenuation]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Offline Attenuation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html</a>&gt;</span>. </dd>
@@ -4168,60 +4221,84 @@ apply unchanged.<a href="#appendix-A-7" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Mission Record Requirements: the delegation event creates the Child
-Mission record the issuance profile and this section require; human
-accountability is inherited from the parent only where policy
-adjudicates; Conformance names <code>consent_principal</code> per basis (#1121).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.1.1">Derivation Budget Is Not Inherited: for a <code>policy_drawdown</code> entry,
+the rendered per-child derivation limit is Mission Derivation
+Limits' standing-consent maximum, taken from the policy state the
+Parent Mission's approval committed; each child's limit stays
+within it, and no later policy change raises or removes it (#1119).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Completion: a deployment can require a fresh human approval for
-child creation; every child creation, human or policy-adjudicated,
-is the Child Mission's approval event (#1078).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.2.1">Mission Record Requirements: a <code>policy_drawdown</code> child has the
+Parent Mission's <code>subject</code>; a <code>direct</code> child defaults to it and
+names another Subject only through the issuance profile's full
+Subject and authority-source establishment. Every ordinary child
+carries the parent's <code>authority_source</code>, and its creation commit
+verifies that the source applies to the child's Subject and that the
+child Authority Set lies within the source's current ceiling and the
+parent's; carryover keeps its own source rules (#1118).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Mission Record Requirements: under <code>policy_drawdown</code> the record's
-<code>approval_event_id</code> is the creation's <code>activation_event_id</code>, never
-the Parent Mission's approval event (#1017).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.3.1">Attenuation Rules: a resource server enforces a child
+token's carried <code>authorization_details</code>; the child <code>authority_hash</code>
+commits the child Authority Set on the child's Mission record, and
+checking carried authority against the complete set is
+Approved-Set Verification (#1086). No requirement changed.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">The completion comparison names the progressive authorization
-companion's synchronous drawdown as the one synchronous expansion.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.4.1">Mission Record Requirements: the delegation event creates the Child
+Mission record the issuance profile and this section require; human
+accountability is inherited from the parent only where policy
+adjudicates; Conformance names <code>consent_principal</code> per basis (#1121).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Child Missions and carryover replacements share their ancestors'
-exclusivity latches under the metering profile.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.5.1">Completion: a deployment can require a fresh human approval for
+child creation; every child creation, human or policy-adjudicated,
+is the Child Mission's approval event (#1078).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1"><code>child_creation_policy</code> is an activation policy reference (<code>id</code>,
+          <p id="appendix-B-2.6.1">Mission Record Requirements: under <code>policy_drawdown</code> the record's
+<code>approval_event_id</code> is the creation's <code>activation_event_id</code>, never
+the Parent Mission's approval event (#1017).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.7">
+          <p id="appendix-B-2.7.1">The completion comparison names the progressive authorization
+companion's synchronous drawdown as the one synchronous expansion.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.8">
+          <p id="appendix-B-2.8.1">Child Missions and carryover replacements share their ancestors'
+exclusivity latches under the metering profile.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.9">
+          <p id="appendix-B-2.9.1"><code>child_creation_policy</code> is an activation policy reference (<code>id</code>,
 <code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
 Bases; <code>root_commitment</code> is its <code>digest</code>, <code>activation</code> carries it as
 <code>policy_id</code>, <code>policy_version</code>, and <code>policy_digest</code>, and a mismatched
 snapshot denies child creation with <code>policy_denied</code>. Creation against
 the delegation entry itself, with no <code>child_creation_policy</code>, is
-unchanged.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+unchanged.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">Approval rendering of child creation shows <code>max_children</code> as a
+        <li class="normal" id="appendix-B-2.10">
+          <p id="appendix-B-2.10.1">Approval rendering of child creation shows <code>max_children</code> as a
 concurrency limit, <code>max_child_depth</code>, and the per-child derivation
 limit as distinct figures, never one composed total, and states
 whether a finite aggregate is enforced. The Parent Mission's
 approval renders them where child creation can be adjudicated by
-policy.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+policy.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">The child's initial grant states how it differs from the Mission
+        <li class="normal" id="appendix-B-2.11">
+          <p id="appendix-B-2.11.1">The child's initial grant states how it differs from the Mission
 Issuance Grant: its audience is the Mission Issuer's own token
 endpoint, since that issuer mints and redeems it, not a consuming
-Authorization Server's issuer identifier. No wire change.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+Authorization Server's issuer identifier. No wire change.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.9">
-          <p id="appendix-B-2.9.1">The delegated-token versus Child Mission test adds audience: a
-sub-agent that calls a Resource Server that is not Mission-aware
+        <li class="normal" id="appendix-B-2.12">
+          <p id="appendix-B-2.12.1">The delegated-token versus Child Mission test adds audience: a
+sub-agent that calls a resource server that is not Mission-aware
 runs under a Child Mission, where child creation is authorized and
-that Resource Server can enforce the projected authority.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+that resource server can enforce the projected authority.<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.10">
-          <p id="appendix-B-2.10.1">Client-instance references follow their successors:
+        <li class="normal" id="appendix-B-2.13">
+          <p id="appendix-B-2.13.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -4229,13 +4306,13 @@ cited. An instance-granular
 <code>child_actor</code> no longer carries the instance identifier in <code>sub</code>:
 the successor forbids setting <code>sub</code> or an actor from instance
 evidence alone (Section 5), and <code>client_instance</code> was a value only
-the deprecated draft defined.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+the deprecated draft defined.<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.11">
-          <p id="appendix-B-2.11.1">Added the capability-gated Child Mission Carryover foundation, including
+        <li class="normal" id="appendix-B-2.14">
+          <p id="appendix-B-2.14.1">Added the capability-gated Child Mission Carryover foundation, including
 full snapshot and budget checks, committed exclusion semantics, fresh
 direct approvals, and durable observation and recovery. Carryover
-preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
+preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.14.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

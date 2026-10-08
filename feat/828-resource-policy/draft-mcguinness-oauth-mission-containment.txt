@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             6 October 2026
-Expires: 9 April 2027
+Intended status: Experimental                             8 October 2026
+Expires: 11 April 2027
 
 
                    Mission Containment for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -977,10 +977,10 @@ Table of Contents
 
    A containment-capable Mission Issuer is also a conforming issuance-
    profile Mission Issuer ([I-D.draft-mcguinness-oauth-mission]).
-   Containment gives every Resource Server the Baseline property with no
-   change to the Resource Server; the Runtime-Enforced property
+   Containment gives every resource server the Baseline property with no
+   change to the resource server; the Runtime-Enforced property
    additionally requires it to consult a fresh state source
-   (Section 11).  "No new behavior" holds only for a Resource Server
+   (Section 11).  "No new behavior" holds only for a resource server
    that relies on Baseline: a token issued after the contain transition
    never carries contained capability, and a token issued before the
    transition can still carry it until that token's own expiry

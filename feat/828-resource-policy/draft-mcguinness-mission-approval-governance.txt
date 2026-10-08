@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          6 October 2026
-Expires: 9 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                       Mission Approval Governance
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -278,8 +278,8 @@ Table of Contents
          assertion, the authentication context of the assertion.  For a
          policy assertion, the deciding policy's identifier and version,
          and approved_at: the family's provenance chain for non-human
-         approval, in which the policy approves the instance because a
-         human approved the policy.  For a service assertion, the
+         adjudication, in which the policy decides the instance because
+         a human approved the policy.  For a service assertion, the
          identifier and version of the logic that produced the decision,
          including the model's identifier and version where a model
          produced it.
@@ -380,21 +380,24 @@ Table of Contents
 
    *  Exactly one assertion MUST match the Mission record's accountable
       approver and carry an approve decision; the record supports the
-      approval it claims to govern or it does not commit.  A policy-
-      authority Approver satisfies this with a policy assertion carrying
-      its provenance chain, subject to the high-risk-class restriction
-      of Section 7.  The matching assertion's kind MUST be human or
-      policy: a service assertion, including one a model produced, is a
-      contributing governance input, never the accountable approver's
-      assertion.  A Mission rooted in a named standing-consent
-      approval_basis ([I-D.draft-mcguinness-oauth-mission]) satisfies
-      this rule through that record instead of a contributing assertion:
-      consent_principal (equal to approver), root_commitment, and
-      approved_at, already fixed at the approval event and immutable,
-      stand in place of a matching assertion, subject to the same high-
-      risk-class restriction.  No assertion is fabricated in the name of
-      the activating policy or the requesting actor to stand in for a
-      fresh human decision that did not occur.
+      approval it claims to govern or it does not commit.  Where the
+      accountable approver's approval is exercised through an authorized
+      deterministic policy, the matching assertion is a policy assertion
+      carrying that policy's provenance chain: the policy is the
+      decision mechanism and the matched principal stays the accountable
+      approver, subject to the high-risk-class restriction of Section 7.
+      The matching assertion's kind MUST be human or policy: a service
+      assertion, including one a model produced, is a contributing
+      governance input, never the accountable approver's assertion.  A
+      Mission rooted in a named standing-consent approval_basis
+      ([I-D.draft-mcguinness-oauth-mission]) satisfies this rule through
+      that record instead of a contributing assertion: consent_principal
+      (equal to approver), root_commitment, and approved_at, already
+      fixed at the approval event and immutable, stand in place of a
+      matching assertion, subject to the same high-risk-class
+      restriction.  No assertion is fabricated in the name of the
+      activating policy or the requesting actor to stand in for a fresh
+      human decision that did not occur.
 
    *  An assertion that fails authentication, event binding, or policy
       authorization MUST NOT contribute to the evaluation and MUST NOT
@@ -1398,6 +1401,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Assertion Requirements and the authority member name a policy
+      assertion's policy as the decision mechanism; the principal it
+      matches stays the accountable approver.  The policy assertion
+      path, provenance and recency checks are unchanged (#1084).
 
    *  The accountable approver's assertion is human or policy, never
       service, and authority is defined for a service assertion, naming
