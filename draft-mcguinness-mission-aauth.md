@@ -87,6 +87,15 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-hardt-aauth-supervision:
+    title: "AAuth Supervision"
+    target: https://github.com/dickhardt/AAuth/blob/70d67375deb0bb002af7da0711fc58f6e8926e7e/draft-hardt-aauth-supervision.md
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026-10-03
+    refcontent: "Work in Progress, editor's copy at commit 70d67375, not submitted as an Internet-Draft"
 
 --- abstract
 
@@ -165,7 +174,7 @@ made in that resource's vocabulary and at its own policy decision point.
 The PS applies the further contextual governance constraint when it is
 on the authorization path.
 
-## Scope
+## Scope {#scope}
 
 This document specifies:
 
@@ -385,9 +394,24 @@ The AAuth roles map to the Mission Context model as follows:
 |---|---|
 | Agent | Proposes work, verifies and stores the approved blob, names the mission at person-token issuance, supplies justifications, and records actions as AAuth requires. |
 | Person Server | Acts as controlling authority, conducts approval and clarification, stores state and the mission log, and governs requests on PS endpoints. |
-| Person | Reviews, clarifies, approves, and accepts completion through the PS. |
+| Person | Reviews, clarifies, and approves through the PS when the Person is the Supervisor or a supervision server asks, and accepts completion through the PS. |
+| Supervisor | Performs supervision (Section 4.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}): the Person by default, or the deciding supervision server the PS consults for the agent ({{I-D.draft-hardt-aauth-supervision}}). |
 | Resource | Defines and enforces its resource authorization; copies `mission_s256` unchanged from the presented token into each resource token it issues, as AAuth requires. |
 | Access Server | Evaluates resource policy and issues auth tokens in federated access; it does not evaluate the private mission blob. |
+
+An agent's deciding supervision server is the one supervision server
+the PS consults for that agent, as configured at the PS; an agent
+without one is supervised by the person (Section 6 of
+{{I-D.draft-hardt-aauth-supervision}}).  For supervision decisions
+within this binding's scope ({{scope}}), a PS with a deciding
+supervision server for the agent obtains that server's decision.  The
+PS retains responsibility for verification, enforcement, issuance, and
+recording.  Management authorization and revocation are unchanged;
+AAuth Supervision excludes both from supervision (Section 1.3 of
+{{I-D.draft-hardt-aauth-supervision}}).  A supervision server's `allow`
+of a completion does not by itself terminate the mission: the mission
+terminates with reason `completed` only when the person accepts
+({{lifecycle}}).
 
 No AAuth party becomes an OAuth client, authorization server, or resource
 server merely by implementing this binding.
@@ -399,11 +423,11 @@ proposal to the PS `mission_endpoint`.  The proposal contains the
 natural-language description and can contain requested tools as defined
 by AAuth.
 
-The PS MAY defer the response while the person or another appropriate
-decision-maker reviews the proposal.  AAuth clarification messages can
-ask the agent for missing context or negotiate changes.  The agent MUST
-NOT treat the proposal, a pending response, or a clarification exchange
-as approval.
+The PS MAY defer the response while the Supervisor ({{roles}}), by
+default the person, reviews the proposal.  AAuth clarification messages
+can ask the agent for missing context or negotiate changes.  The agent
+MUST NOT treat the proposal, a pending response, or a clarification
+exchange as approval.
 
 Approval occurs only when the PS returns the approval envelope: `s256`
 and the approved mission blob as the base64url-encoded `mission`
@@ -455,8 +479,22 @@ SHOULD preserve sufficient correlation data to associate each decision
 with its authenticated request and any issued token without recording
 raw credentials.
 
+For each supervision decision, the PS records the actual decider: the
+person acting directly, the deciding supervision server identified by
+its `issuer`, or the person answering after the server's `ask` or while
+the server is unavailable.  For an exchange with a supervision server,
+the log entry is the exchange itself under the PS-minted `sdi`, with
+any signatures preserved, and the person's later answer is recorded
+under the same `sdi` (Sections 7.3 and 9.4 of
+{{I-D.draft-hardt-aauth-supervision}}).  An unsigned response rests on
+the PS's own record; a response signed under the server's published
+`jwks_uri` is independently verifiable.  A deployment that claims to
+prove what its supervision server decided requires a server that
+signs.
+
 The PS MUST protect the mission log's integrity, MUST restrict read
-access to the person, the PS itself, and parties authorized under its
+access to the person, the PS itself, the deciding supervision server
+for the mission's agent ({{roles}}), and parties authorized under its
 administrative policy, and MUST retain the log for a declared period
 that extends beyond termination.
 
@@ -563,6 +601,11 @@ members, it defines no extensions to close a gap.
 | Failure vocabulary | Proposal pending; the `denied`, `abandoned`, `expired`, and `revoked` polling errors (11.9.4); and an expired presented token when a per-call approval outlives it (R3 10.2) | Supplied | None |
 | Fresh decision | PS adjudication under the lifecycle gate ({{lifecycle}}) | Supplied | None |
 {: title="Transaction authorization requirements: native carriers and status"}
+
+Where a supervision server ({{roles}}) makes the fresh decision, it
+receives the resource token, which commits to the proposal through
+`r3_uri` and `r3_s256`, but not the proposal itself (Section 11.2 of
+{{I-D.draft-hardt-aauth-supervision}}).
 
 The R3 parameter commitment is not shown to be equivalent to
 `parameter_digest` ({{I-D.draft-mcguinness-mission-runtime}}).  R3
@@ -953,7 +996,12 @@ SHOULD minimize recorded personal data, separate token identifiers from
 raw token material, define retention and deletion policies, protect log
 access, and give the person meaningful visibility into the retained
 history.  Termination does not itself require erasure because the log can
-be needed for audit and incident response.
+be needed for audit and incident response.  A deciding supervision
+server receives mission text, justifications, audit records, and
+clarification transcripts for the agents routed to it, and a newly
+routed server receives the active state the PS replays to it (Sections
+14 and 17.1 of {{I-D.draft-hardt-aauth-supervision}}); the routing
+configured at the PS determines that disclosure.
 
 Pairwise subject identifiers and other AAuth privacy mechanisms remain
 applicable.  This binding does not replace them with the agent identifier
@@ -1095,3 +1143,19 @@ metadata member, error code, capability value, or registry value.
 The author thanks the AAuth community for defining a mission model in
 which contextual governance, deterministic resource authorization, and
 incremental deployment remain distinct concerns.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Maps AAuth's Supervisor role and defines an agent's deciding
+  supervision server. A PS with one obtains that server's decision for
+  supervision decisions and keeps verification, enforcement, issuance,
+  and recording; management authorization and revocation are
+  unchanged, and a supervision server's `allow` of a completion does
+  not by itself terminate the mission, which still needs the person's
+  acceptance. The mission log records the actual decider and, for a
+  supervision-server exchange, the `sdi` and the exchange with any
+  signatures; the deciding server is a log reader; a supervision server
+  does not see the R3 proposal. AAuth Supervision is cited
+  informatively, pinned at dickhardt/AAuth commit 70d67375 (#967).
