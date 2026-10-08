@@ -9,9 +9,9 @@
 <meta content="
        The Mission-Bound Authorization for OAuth 2.0 profile binds issued
 authority to a durable, human-approved Mission held by a single
-Authorization Server, the Mission Issuer. This document specifies that
+authorization server, the Mission Issuer. This document specifies that
 profile's optional cross-domain projection: a single hop that lets an
-Authorization Server in another trust domain, a Resource AS, honor a
+authorization server in another trust domain, a Resource AS, honor a
 Mission it did not issue. The Mission Issuer projects audience-scoped
 Mission authority in a short-lived, sender-constrained cross-domain
 grant of the OAuth identity chaining architecture; the Resource AS
@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 9 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1076,12 +1076,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-cross-domain-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-06" class="published">6 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1096,9 +1096,9 @@ svg {
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">The Mission-Bound Authorization for OAuth 2.0 profile binds issued
 authority to a durable, human-approved Mission held by a single
-Authorization Server, the Mission Issuer. This document specifies that
+authorization server, the Mission Issuer. This document specifies that
 profile's optional cross-domain projection: a single hop that lets an
-Authorization Server in another trust domain, a Resource AS, honor a
+authorization server in another trust domain, a Resource AS, honor a
 Mission it did not issue. The Mission Issuer projects audience-scoped
 Mission authority in a short-lived, sender-constrained cross-domain
 grant of the OAuth identity chaining architecture; the Resource AS
@@ -1139,7 +1139,7 @@ of the issuance profile are unaffected by this document.<a href="#section-abstra
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1309,16 +1309,17 @@ of the issuance profile are unaffected by this document.<a href="#section-abstra
       </h2>
 <p id="section-1-1">The issuance profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> makes a
 Mission a durable, human-approved, integrity-bound OAuth authorization
-artifact: one Authorization Server, the Mission Issuer, approves it,
+artifact: one authorization server, the Mission Issuer, approves it,
 records it, and derives every token under it. That profile is
-deliberately single-domain: the AS that holds the Mission is the AS
+deliberately single-domain: the authorization server (AS) that holds the
+Mission is the AS
 that issues for it.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">Real tasks cross trust domains. An agent reconciling invoices may need
-a partner's ERP, behind a partner Authorization Server the home AS
+a partner's ERP, behind a partner authorization server the home AS
 does not control and whose accounts it does not manage. This document
 specifies <strong>cross-domain projection</strong>: the originating Mission Issuer
 projects a Mission's authority, audience-scoped and
-integrity-anchored, to an Authorization Server in another trust
+integrity-anchored, to an authorization server in another trust
 domain, which honors it by minting local tokens for its own resources.
 The projection is a single hop, issuer to Resource AS; chaining a
 Mission across more than one trust-domain boundary remains future work
@@ -1380,7 +1381,7 @@ authoritative.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-3">
         <dt id="section-2-3.1">Resource AS:</dt>
         <dd style="margin-left: 1.5em" id="section-2-3.2">
-          <p id="section-2-3.2.1">An Authorization Server in another trust domain that honors a
+          <p id="section-2-3.2.1">An authorization server in another trust domain that honors a
 Mission it did not issue, minting its own tokens for its resources
 from a cross-domain grant. A Resource AS is never the Mission
 Issuer.<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
@@ -1409,12 +1410,12 @@ cross-domain grant (<a href="#validation-at-resource-as" class="auto internal xr
 <a href="#section-3" class="section-number selfRef">3. </a><a href="#name-cross-domain-projection" class="section-name selfRef">Cross-Domain Projection</a>
       </h2>
 <p id="section-3-1">A Mission is approved and held by one Mission Issuer (its <code>issuer</code>).
-This document lets a single Mission be honored by Authorization
-Servers in other trust domains, so a Mission can span more than one
+This document lets a single Mission be honored by authorization
+servers in other trust domains, so a Mission can span more than one
 AS, using the cross-domain authorization grant of the OAuth identity
 chaining architecture <span>[<a href="#I-D.draft-ietf-oauth-identity-chaining" class="cite xref">I-D.draft-ietf-oauth-identity-chaining</a>]</span>: the
 issuer AS issues, through an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange, a short-lived
-JWT authorization grant audienced to the target Authorization Server,
+JWT authorization grant audienced to the target authorization server,
 which the client redeems there with the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> JWT-bearer grant.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">This document calls that artifact the <strong>cross-domain grant</strong> and
 attaches Mission context to it (<a href="#cross-domain-grant" class="auto internal xref">Section 8</a>). The Identity
@@ -1917,8 +1918,8 @@ profile is claimed, that approved agent's origin principal is
 instead conveyed to the local token through <code>mission.subject</code>
 (<a href="#origin-principal" class="auto internal xref">Section 10</a>); otherwise the approved agent remains
 recoverable only at the originating AS from the Mission Record
-identified by <code>mission.id</code> and <code>mission.issuer</code>. A Resource
-Server <span class="bcp14">MAY</span> impose stronger actor-chain requirements but <span class="bcp14">MUST NOT</span>
+identified by <code>mission.id</code> and <code>mission.issuer</code>. A resource
+server <span class="bcp14">MAY</span> impose stronger actor-chain requirements but <span class="bcp14">MUST NOT</span>
 reinterpret <code>client_id</code>.<a href="#section-9-2.7.2.4.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
@@ -1932,7 +1933,7 @@ conveyed entries were derived under the originating AS's local policy,
 the Resource AS does not re-derive them; it interprets and enforces
 them by their structure and vocabulary. It <span class="bcp14">MUST</span> fail closed on a
 conveyed <code>actions</code> identifier or <code>constraints</code> key it does not
-recognize for the resource in question, exactly as a Resource Server
+recognize for the resource in question, exactly as a resource server
 does (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Resource
 Server Enforcement"), so authority it cannot interpret is never
 honored across the trust boundary rather than enforced by guess.<a href="#section-9-2.8.1" class="pilcrow">¶</a></p>
@@ -2004,7 +2005,7 @@ relation to the approved set) and the Resource AS's local re-mint is
 is never a silent attenuation of the origin's authority.<a href="#section-9-7" class="pilcrow">¶</a></p>
 <p id="section-9-8">Downstream, <code>authority_hash</code> is an immutable audit and correlation
 anchor to the originating AS's consent commitment. A Resource AS and
-its Resource Servers hold only the audience-scoped subset, never the
+its resource servers hold only the audience-scoped subset, never the
 full Authority Set, so they cannot recompute <code>authority_hash</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Integrity Anchors");
 its integrity rests on the signature chain (the originating AS signs
@@ -2243,7 +2244,7 @@ lifetime-bounded baseline.<a href="#section-10.5-3" class="pilcrow">¶</a></p>
 <a href="#section-10.6" class="section-number selfRef">10.6. </a><a href="#name-disclosure-and-evidence" class="section-name selfRef">Disclosure and Evidence</a>
         </h3>
 <p id="section-10.6-1"><code>mission.subject</code> is a correlation handle. Tokens carrying it <span class="bcp14">MUST</span> be
-narrowed to one Resource AS or Resource Server audience; a Resource
+narrowed to one Resource AS or resource server audience; a Resource
 AS <span class="bcp14">MUST NOT</span> copy it into tokens for unrelated audiences. An
 introspection responder, the issuer or a Resource AS, <span class="bcp14">MUST</span> disclose
 it only to a caller holding an explicit <code>origin_principal</code> disclosure
@@ -2671,7 +2672,7 @@ carries human-readable PII. Logs and evidence keep digests where the
 raw value is not needed (<a href="#origin-principal-disclosure" class="auto internal xref">Section 10.6</a>).<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="section-16-2">The cross-domain grant and every local token minted from it carry the
 canonical <code>mission_id</code>, <code>mission.issuer</code>, and <code>authority_hash</code>
-unchanged, so a Resource AS and its Resource Servers can correlate a
+unchanged, so a Resource AS and its resource servers can correlate a
 Mission's activity across domains, and <code>mission.issuer</code> identifies the
 issuing AS to the partner domain. This is the deliberate correlation
 property of the issuance profile
@@ -2886,7 +2887,7 @@ to the partner domain (<code>ras.partner.example.com</code>).<a href="#appendix-
 </li>
         <li class="normal" id="appendix-A-3.2">
           <p id="appendix-A-3.2.1"><strong>Transaction Tokens</strong> propagate <em>within</em> the partner trust domain:
-from the partner's Resource Server through its internal services.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
+from the partner's resource server through its internal services.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-A-4">The Mission is the durable anchor across both: <code>mission.id</code>,
@@ -3057,8 +3058,8 @@ grant.<a href="#appendix-A.2-5" class="pilcrow">¶</a></p>
         <h3 id="name-stage-4-the-resource-server">
 <a href="#appendix-A.3" class="section-number selfRef">A.3. </a><a href="#name-stage-4-the-resource-server" class="section-name selfRef">Stage 4: The Resource Server Enforces</a>
         </h3>
-<p id="appendix-A.3-1">The agent calls the ERP Resource Server (<code>erp.partner.example.com</code>)
-with that token. The Resource Server validates the JWT and the <code>cnf</code>
+<p id="appendix-A.3-1">The agent calls the ERP resource server (<code>erp.partner.example.com</code>)
+with that token. The resource server validates the JWT and the <code>cnf</code>
 binding and enforces the <code>authorization_details</code> whose <code>resource</code> it
 serves, permitting <code>invoices.read</code> and <code>journal-entries.write</code> up to
 a <code>max_amount</code> of 500.00 USD
@@ -3080,9 +3081,9 @@ The baseline bounds the write only by token lifetime and
         <h3 id="name-stage-5-internal-call-conte">
 <a href="#appendix-A.4" class="section-number selfRef">A.4. </a><a href="#name-stage-5-internal-call-conte" class="section-name selfRef">Stage 5: Internal Call Context via Transaction Tokens</a>
         </h3>
-<p id="appendix-A.4-1">To serve the request, the ERP Resource Server calls internal services
+<p id="appendix-A.4-1">To serve the request, the ERP resource server calls internal services
 inside the partner trust domain. Here it calls a ledger service for one
-invoice. The Resource Server is the entry edge of that domain: after
+invoice. The resource server is the entry edge of that domain: after
 it has validated the Mission-bound access token, it obtains a
 short-lived Transaction Token for the internal call.<a href="#appendix-A.4-1" class="pilcrow">¶</a></p>
 <p id="appendix-A.4-2">The following shows one illustrative way the Mission context could
@@ -3116,8 +3117,8 @@ operation:<a href="#appendix-A.4-2" class="pilcrow">¶</a></p>
 </pre><a href="#appendix-A.4-3" class="pilcrow">¶</a>
 </div>
 <p id="appendix-A.4-4">The Transaction Token is intra-domain and the shortest-lived
-credential in the chain (60 s). The holder has changed: the Resource
-Server's workload, not the agent, possesses it. The local context has
+credential in the chain (60 s). The holder has changed: the resource
+server's workload, not the agent, possesses it. The local context has
 narrowed again, to one ledger lookup for one invoice, while the
 <code>mission</code> anchor is unchanged.<a href="#appendix-A.4-4" class="pilcrow">¶</a></p>
 </section>

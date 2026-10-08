@@ -10,13 +10,13 @@
        This specification defines the Mission Issuance Grant, a profile of
 the JSON Web Token (JWT) authorization grant of RFC 7523. A Mission
 Authority Server approves and records Missions without changing an
-estate's OAuth Authorization Servers. Under this profile it also
+estate's OAuth authorization servers. Under this profile it also
 issues, for an active Mission, a short-lived, audience-restricted,
-single-use JWT that the client presents at an Authorization Server's
-token endpoint. The Authorization Server validates the grant and
+single-use JWT that the client presents at an authorization server's
+token endpoint. The authorization server validates the grant and
 issues Mission-bound tokens: they carry the Mission, are bounded by
 the authority the grant conveys, and expire no later than the
-Mission. An Authorization Server that checks Mission state at
+Mission. An authorization server that checks Mission state at
 redemption and at every refresh stops issuing and renewing those
 tokens once the Mission is no longer active, and narrows them when
 its authority is narrowed; one that does not check issues no refresh
@@ -1065,7 +1065,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 9 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1078,12 +1078,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-issuance-grant-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-06" class="published">6 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1099,13 +1099,13 @@ svg {
 <p id="section-abstract-1">This specification defines the Mission Issuance Grant, a profile of
 the JSON Web Token (JWT) authorization grant of RFC 7523. A Mission
 Authority Server approves and records Missions without changing an
-estate's OAuth Authorization Servers. Under this profile it also
+estate's OAuth authorization servers. Under this profile it also
 issues, for an active Mission, a short-lived, audience-restricted,
-single-use JWT that the client presents at an Authorization Server's
-token endpoint. The Authorization Server validates the grant and
+single-use JWT that the client presents at an authorization server's
+token endpoint. The authorization server validates the grant and
 issues Mission-bound tokens: they carry the Mission, are bounded by
 the authority the grant conveys, and expire no later than the
-Mission. An Authorization Server that checks Mission state at
+Mission. An authorization server that checks Mission state at
 redemption and at every refresh stops issuing and renewing those
 tokens once the Mission is no longer active, and narrows them when
 its authority is narrowed; one that does not check issues no refresh
@@ -1143,7 +1143,7 @@ Server.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1331,11 +1331,11 @@ Server.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 <p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") binds
 issued authority to a durable, human-approved Mission, with the
-Authorization Server (AS) as the Mission Issuer. The Mission Authority
+authorization server (AS) as the Mission Issuer. The Mission Authority
 Server (MAS, <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>) hosts
-the same Mission without changing the estate's Authorization Servers:
+the same Mission without changing the estate's authorization servers:
 it validates Mission Intents, runs approval, records Missions, and
-operates their lifecycle. The tokens those Authorization Servers issue
+operates their lifecycle. The tokens those authorization servers issue
 remain ordinary. They do not carry the Mission, and their issuance
 and refresh do not depend on Mission state; enforcement can relate
 them to a Mission only at the point of use, through the Mission Join.<a href="#section-1-1" class="pilcrow">¶</a></p>
@@ -1362,7 +1362,7 @@ redemption adds to the issued token's lifetime
 <p id="section-1-4">The AS implements none of the issuance profile's intake, approval
 ceremony, authority derivation, record, or lifecycle surfaces; those
 stay at the MAS. A deployment can adopt the issuance join at some
-Authorization Servers and keep the Mission Join at others
+authorization servers and keep the Mission Join at others
 (<a href="#relationships" class="auto internal xref">Section 9</a>).<a href="#section-1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1387,7 +1387,7 @@ profile the MAS is the Mission Issuer. It additionally uses:<a href="#section-2-
         <dt id="section-2-3.1">Issuance join:</dt>
         <dd style="margin-left: 1.5em" id="section-2-3.2">
           <p id="section-2-3.2.1">The integration this document defines: a MAS-approved Mission
-carried by a grant that an Authorization Server redeems at its
+carried by a grant that an authorization server redeems at its
 token endpoint.<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -1399,7 +1399,7 @@ for Mission-bound tokens.<a href="#section-2-3.4.1" class="pilcrow">¶</a></p>
         <dd class="break"></dd>
 <dt id="section-2-3.5">Consuming Authorization Server (consuming AS):</dt>
         <dd style="margin-left: 1.5em" id="section-2-3.6">
-          <p id="section-2-3.6.1">An OAuth Authorization Server <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> that redeems Mission
+          <p id="section-2-3.6.1">An OAuth authorization server <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> that redeems Mission
 Issuance Grants at its token endpoint; conformance role of
 <a href="#conformance" class="auto internal xref">Section 10</a>.<a href="#section-2-3.6.1" class="pilcrow">¶</a></p>
 </dd>
@@ -1473,7 +1473,7 @@ grants only from Mission Issuers its local policy names, resolving
 their signing keys through the MAS's published key material (its
 discovery <code>jwks_uri</code>,
 <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>); a MAS mints
-grants only for Authorization Servers named as audiences by
+grants only for authorization servers named as audiences by
 deployment configuration. Subject and client correspondence between
 the Mission record and the consuming AS's accounts is governed by
 the deployment's mapping policy; where the Enterprise Mission
@@ -2486,7 +2486,7 @@ per AS (<a href="#issued-tokens" class="auto internal xref">Section 3.3</a>).<a 
         </h3>
 <p id="section-9.1-1">In the substrate's terms (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>),
 a MAS alone claims neither Credential-Bound nor Lifecycle-Gated
-Authorization for tokens its unchanged Authorization Servers issue.
+Authorization for tokens its unchanged authorization servers issue.
 Together with its consuming Authorization Servers under this profile,
 it supplies both, for the resources those servers serve. In the
 Mission Assurance Levels
@@ -2555,7 +2555,7 @@ Enforcement Scope Statement (<span>[<a href="#I-D.draft-mcguinness-mission-runti
 Section "Enforcement Scope and Conformance"):<a href="#section-10-6" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-10-7.1">
-          <p id="section-10-7.1.1">which Authorization Servers consume grants, and which of them have
+          <p id="section-10-7.1.1">which authorization servers consume grants, and which of them have
 a Mission-state integration;<a href="#section-10-7.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-10-7.2">
@@ -2709,7 +2709,7 @@ Section "Mission Identifier Correlation").<a href="#section-12-1" class="pilcrow
 </li>
             <li class="normal" id="section-13.1.1-1.9">
               <p id="section-13.1.1-1.9.1">Applications that use this media type: Mission Authority Servers
-and OAuth Authorization Servers implementing this profile<a href="#section-13.1.1-1.9.1" class="pilcrow">¶</a></p>
+and OAuth authorization servers implementing this profile<a href="#section-13.1.1-1.9.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-13.1.1-1.10">
               <p id="section-13.1.1-1.10.1">Fragment identifier considerations: n/a<a href="#section-13.1.1-1.10.1" class="pilcrow">¶</a></p>

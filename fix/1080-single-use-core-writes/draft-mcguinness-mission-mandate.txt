@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          6 October 2026
-Expires: 9 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                             Mission Mandate
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -181,7 +181,7 @@ Table of Contents
    uses:
 
    Mission Issuer:  The component that approved and holds the Mission,
-      identified by the Mission's issuer: the OAuth Authorization Server
+      identified by the Mission's issuer: the OAuth authorization server
       under the issuance profile, a Mission Authority Server
       ([I-D.draft-mcguinness-mission-authority-server]) under the
       standalone binding, or an AAuth Person Server
@@ -214,16 +214,16 @@ Table of Contents
 
    *  the OAuth binding [I-D.draft-mcguinness-oauth-mission] (the
       issuance profile), this version's reference host, publishing keys
-      through its Authorization Server metadata jwks_uri; and
+      through its authorization server metadata jwks_uri; and
 
    *  the Mission Authority Server
       ([I-D.draft-mcguinness-mission-authority-server]), a standalone
       binding of the same primitives with its own metadata jwks_uri.
 
    UMA 2.0's authorization server ([I-D.draft-mcguinness-mission-uma])
-   realizes the issuance profile's Authorization Server for Mandate
+   realizes the issuance profile's authorization server for Mandate
    purposes: it publishes the same key material through the same
-   Authorization Server metadata jwks_uri.  A Mandate minted there
+   authorization server metadata jwks_uri.  A Mandate minted there
    verifies as the issuance profile's; UMA adds no third Mandate host.
 
    This version's payload is defined over the OAuth-shaped record: the

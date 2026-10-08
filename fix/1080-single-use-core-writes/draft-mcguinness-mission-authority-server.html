@@ -10,16 +10,16 @@
        This specification defines the Mission Authority Server (MAS), a
 standalone service that implements the Mission Issuer role of
 Mission-Bound Authorization for OAuth 2.0 (the OAuth binding) without
-being an OAuth Authorization Server. A MAS validates Mission Intents,
+being an OAuth authorization server. A MAS validates Mission Intents,
 runs approval events, records Missions, operates the Mission
 lifecycle, and serves Mission state. It derives no tokens. Access
 tokens remain ordinary OAuth tokens; a Policy Decision Point joins
 each presented credential to its Mission at the point of use and
 enforces through the Mission-Bound Runtime Enforcement profile. This
-standalone binding leaves Authorization Servers unchanged and
+standalone binding leaves authorization servers unchanged and
 provides no Mission-bound credentials or issuance gating; the OAuth
 binding provides both, and the issuance-grant companion restores them
-at Authorization Servers that redeem its grants. This document
+at authorization servers that redeem its grants. This document
 defines a conformance floor and an Enterprise Mission Authority
 Profile. 
     " name="description">
@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 9 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-authority-server-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-06" class="published">6 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1098,16 +1098,16 @@ svg {
 <p id="section-abstract-1">This specification defines the Mission Authority Server (MAS), a
 standalone service that implements the Mission Issuer role of
 Mission-Bound Authorization for OAuth 2.0 (the OAuth binding) without
-being an OAuth Authorization Server. A MAS validates Mission Intents,
+being an OAuth authorization server. A MAS validates Mission Intents,
 runs approval events, records Missions, operates the Mission
 lifecycle, and serves Mission state. It derives no tokens. Access
 tokens remain ordinary OAuth tokens; a Policy Decision Point joins
 each presented credential to its Mission at the point of use and
 enforces through the Mission-Bound Runtime Enforcement profile. This
-standalone binding leaves Authorization Servers unchanged and
+standalone binding leaves authorization servers unchanged and
 provides no Mission-bound credentials or issuance gating; the OAuth
 binding provides both, and the issuance-grant companion restores them
-at Authorization Servers that redeem its grants. This document
+at authorization servers that redeem its grants. This document
 defines a conformance floor and an Enterprise Mission Authority
 Profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
@@ -1141,7 +1141,7 @@ Profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1441,7 +1441,7 @@ Profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 <p id="section-1-1">Mission-Bound Authorization for OAuth 2.0
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "OAuth binding") binds
 issued authority to a durable, human-approved Mission. In the OAuth
-binding, the OAuth Authorization Server (AS) <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> plays the
+binding, the OAuth authorization server (AS) <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> plays the
 Mission Issuer role: the AS validates the Mission Intent, runs the
 approval event, records the Mission, derives Mission-bound tokens,
 and gates issuance on Mission state. Deploying the OAuth binding
@@ -1450,7 +1450,7 @@ requires changing the AS.<a href="#section-1-1" class="pilcrow">¶</a></p>
 or third-party service. This document defines the <strong>Mission
 Authority Server (MAS)</strong> for those deployments: a standalone service
 that implements the Mission Issuer role of the OAuth binding without
-being an OAuth Authorization Server. A MAS validates Mission Intents,
+being an OAuth authorization server. A MAS validates Mission Intents,
 runs approval events, records Missions, operates the Mission
 lifecycle, and serves Mission state. It derives no tokens, and it
 requires no change to the deployment's existing AS.<a href="#section-1-2" class="pilcrow">¶</a></p>
@@ -1468,11 +1468,11 @@ gating; a deployment that changes its AS obtains both
 <p id="section-1-5">The MAS mode is a peer binding, not a staging area. A deployment can
 keep governance decoupled from token issuance as its long-term
 architecture. An enterprise that governs agent tasks across many
-Authorization Servers, SaaS tenants, APIs, and tool gateways can use
+authorization servers, SaaS tenants, APIs, and tool gateways can use
 a central MAS as the one place that holds the approved task, its
 lifecycle, and its authority, independent of which system issued a
 given token. A central MAS can remain in that role after some
-Authorization Servers become Mission-aware.<a href="#section-1-5" class="pilcrow">¶</a></p>
+authorization servers become Mission-aware.<a href="#section-1-5" class="pilcrow">¶</a></p>
 <p id="section-1-6">A deployment that later wants Mission-bound tokens at a particular AS
 can move issuance into that AS. The record, anchors, and lifecycle
 carry over unchanged, because a MAS operates the OAuth binding's own
@@ -1568,12 +1568,12 @@ same flow with concrete messages.<a href="#section-1.1-4" class="pilcrow">¶</a>
 <a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-applicability" class="section-name selfRef">Applicability</a>
         </h3>
 <p id="section-1.2-1">This profile targets deployments that need governed, approvable,
-revocable agent tasks but cannot extend their Authorization Server,
+revocable agent tasks but cannot extend their authorization server,
 and that can route consequential actions through the runtime profile's
 enforcement. A deployment <span class="bcp14">MAY</span> also prefer a standalone Mission Issuer
 even where it controls its AS, to keep governance decoupled from token
 issuance or to govern with one Mission Issuer across many
-Authorization Servers, accepting the enforcement posture of
+authorization servers, accepting the enforcement posture of
 <a href="#limitations" class="auto internal xref">Section 11</a>. A deployment that wants Mission-bound tokens and
 issuance gating implements the OAuth binding. A deployment that
 cannot deploy runtime enforcement over its consequential action paths
@@ -1606,7 +1606,7 @@ the following terms:<a href="#section-2-3" class="pilcrow">¶</a></p>
         <dt id="section-2-4.1">Mission Authority Server (MAS):</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.2">
           <p id="section-2-4.2.1">A service that implements the Mission Issuer role of the OAuth
-binding without being an OAuth Authorization Server. It is the
+binding without being an OAuth authorization server. It is the
 <code>issuer</code> of the Missions it records, and it derives no tokens.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -2418,7 +2418,7 @@ of <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.
             <p id="section-6.1-2.8.1"><strong>The permit intersects three bounds.</strong> A permit under a join never
 exceeds any of three independently evaluated bounds: the authority
 the acting credential itself carries (the token as issued, enforced
-at the Resource Server or gateway), the Mission's approved
+at the resource server or gateway), the Mission's approved
 authority, and current Resource policy. The join adds the Mission
 bound and <span class="bcp14">MUST NOT</span> widen either of the other two. A PEP <span class="bcp14">MUST NOT</span> treat a Mission permit as overriding what the credential or
 the resource would refuse.<a href="#section-6.1-2.8.1" class="pilcrow">¶</a></p>
@@ -2508,7 +2508,7 @@ any holder inside the (subject, client) equivalence class joins
         <h3 id="name-instance-bound-joins">
 <a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-instance-bound-joins" class="section-name selfRef">Instance-Bound Joins</a>
         </h3>
-<p id="section-6.4-1">Where the deployment's Authorization Server conveys Instance Context in
+<p id="section-6.4-1">Where the deployment's authorization server conveys Instance Context in
 its tokens (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>: the
 <code>client_instance</code> claim or introspection member), the acting credential
 identifies a concrete runtime instance once the component holding the
@@ -3717,8 +3717,8 @@ the host and the issuer's path (for <code>issuer</code>
 <code>https://host/.well-known/mission-authority-server/tenant</code>).<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-10-3">The document's members mirror the Mission suite's Authorization
-Server metadata members where applicable, so a consumer reads the
+<p id="section-10-3">The document's members mirror the Mission suite's authorization
+server metadata members where applicable, so a consumer reads the
 same member names it would read from AS metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>,
 resolved from the MAS metadata document instead:<a href="#section-10-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-10-4">
@@ -3899,7 +3899,7 @@ are structural properties of the mode, not implementation quality
 issues, and a deployment claiming this profile <span class="bcp14">MUST NOT</span> overstate
 them. The mode supplies the capabilities its Mission Substrate
 Statement lists (<a href="#mission-substrate" class="auto internal xref">Section 14</a>). It does not
-claim that an unchanged Authorization Server's credential was issued
+claim that an unchanged authorization server's credential was issued
 under the Mission or that its issuance was lifecycle-gated.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <p id="section-11-2">Credential correlation and action-time lifecycle gating compose
 through the runtime join and PEP coverage, within the conditional
@@ -3939,7 +3939,7 @@ no Mission-derived <code>authorization_details</code>. Nothing cryptographically
 binds a token to the approval event. No audit anchor travels in
 credentials: <code>authority_hash</code> reaches consumers only through the MAS's
 signed status responses and the PDP's evidence, never in the
-credential a resource actually accepted. Resource Servers cannot
+credential a resource actually accepted. Resource servers cannot
 enforce Mission authority statelessly from the token.<a href="#section-11-6" class="pilcrow">¶</a></p>
 <p id="section-11-7"><strong>No issuance gating.</strong> The AS issues and refreshes tokens with no
 knowledge of Mission state. Revoking a Mission stops nothing at the
@@ -3977,7 +3977,7 @@ for tokens issued after the upgrade, which carry the <code>mission</code> claim.
 <p id="section-11-11">The Mission Issuance Grant companion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>) defines the
 issuance join: a grant the MAS mints for an active Mission and an
-estate Authorization Server redeems at its token endpoint for
+estate authorization server redeems at its token endpoint for
 Mission-bound tokens, state-gated at minting and at refresh. Where
 deployed, it removes the credential and issuance-gating limitations
 for the resources of each consuming Authorization Server, while
@@ -3994,7 +3994,7 @@ profile is the operating profile for a MAS used as an estate's
 Mission control plane. It makes several of the floor's
 recommendations and options mandatory and adds the obligations below.<a href="#section-12-1" class="pilcrow">¶</a></p>
 <p id="section-12-2">A deployment claims the Enterprise Mission Authority Profile over a
-declared coverage set: the Authorization Server, resource, and
+declared coverage set: the authorization server, resource, and
 action-class paths the claim names. The estate-level obligations
 below hold deployment-wide. The per-path credential, join, and
 runtime obligations hold for every path in the set. A path outside
@@ -4061,7 +4061,7 @@ stays with the reference propagation channel and the
 <code>work-item-bound</code> property.<a href="#section-12-4.4.2.3.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-12-4.4.2.4">
-              <p id="section-12-4.4.2.4.1">The Enterprise claim is made per covered Authorization Server,
+              <p id="section-12-4.4.2.4.1">The Enterprise claim is made per covered authorization server,
 resource, and action path; a mixed estate's weaker paths never
 inherit it from the deployment's name.<a href="#section-12-4.4.2.4.1" class="pilcrow">¶</a></p>
 </li>
@@ -4219,7 +4219,7 @@ claim is the binding, and nothing re-points it.<a href="#section-12.1-7.6.1" cla
 <a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-estate-prerequisites" class="section-name selfRef">Estate Prerequisites</a>
         </h3>
 <p id="section-12.2-1">The profile's mandatory path runs through the deployment's unchanged
-Authorization Server and assumes capabilities there. They require
+authorization server and assumes capabilities there. They require
 configuration rather than code, but they are prerequisites. Before
 claiming the profile, a deployment confirms that its estate AS
 provides:<a href="#section-12.2-1" class="pilcrow">¶</a></p>
@@ -4245,13 +4245,13 @@ since the assertion binds the key or certificate thumbprint they
 report.<a href="#section-12.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-12.2-3">An estate whose Authorization Server cannot provide these capabilities
+<p id="section-12.2-3">An estate whose authorization server cannot provide these capabilities
 still joins under the mapping join at the conformance floor
 (<a href="#mission-join" class="auto internal xref">Section 6</a>, <a href="#conformance" class="auto internal xref">Section 13</a>), but it does not claim this
 profile.<a href="#section-12.2-3" class="pilcrow">¶</a></p>
 <p id="section-12.2-4">The digest pair of <a href="#join-assertion-request" class="auto internal xref">Section 8.1</a> also assumes an
 introspection surface that resolves a token by digest. Widely
-deployed Authorization Servers do not provide one, so a deployment
+deployed authorization servers do not provide one, so a deployment
 plans for the <code>access_token</code> form.<a href="#section-12.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -4519,7 +4519,7 @@ by the authorized parties (<a href="#lifecycle-and-state" class="auto internal x
 bounds: a signed Mission Status is relied on within its declared
 freshness window (<a href="#lifecycle-and-state" class="auto internal xref">Section 5</a>), and a Join Assertion
 within the acting token's remaining lifetime (<a href="#join-assertion" class="auto internal xref">Section 8</a>).
-Tokens of the unchanged Authorization Server are not represented as
+Tokens of the unchanged authorization server are not represented as
 Mission-governed artifacts.<a href="#section-14-3.7.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-14-3.8">
@@ -4527,7 +4527,7 @@ Mission-governed artifacts.<a href="#section-14-3.7.1" class="pilcrow">¶</a></p
 Status responses carry the Mission Reference. A Mission-joining PDP
 verifies the reference against the acting credential before using
 Mission authority. That join establishes correlation, not that the
-unchanged Authorization Server issued the credential under the
+unchanged authorization server issued the credential under the
 Mission (<a href="#mission-reference" class="auto internal xref">Section 3.3</a>, <a href="#mission-join" class="auto internal xref">Section 6</a>). The
 <code>Mission-Reference</code> HTTP field and the MCP <code>_meta</code> key carry the
 reference to a PEP that does not hold the Mission binding
@@ -4567,7 +4567,7 @@ Reliance floor (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="
             <td class="text-left" rowspan="1" colspan="1">supplied</td>
             <td class="text-left" rowspan="1" colspan="1">always for MAS-native authority operations; a Mission-joining PDP for joined decisions</td>
             <td class="text-left" rowspan="1" colspan="1">A current-state check at each such operation or decision (<a href="#lifecycle-and-state" class="auto internal xref">Section 5</a>, <a href="#mission-join" class="auto internal xref">Section 6</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">The unchanged Authorization Server gates neither issuance nor refresh; the token-layer residual runs to expiry</td>
+            <td class="text-left" rowspan="1" colspan="1">The unchanged authorization server gates neither issuance nor refresh; the token-layer residual runs to expiry</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
@@ -4595,7 +4595,7 @@ Reliance floor (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="
             <td class="text-left" rowspan="1" colspan="1">supplied</td>
             <td class="text-left" rowspan="1" colspan="1">the Join Assertion endpoint (<a href="#join-assertion" class="auto internal xref">Section 8</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">A signed assertion binds one token's digest and <code>cnf</code> thumbprint to the Mission; fact semantics: verified party correlation</td>
-            <td class="text-left" rowspan="1" colspan="1">Does not prove the Authorization Server issued the token under the Mission; mapping-join-only deployments are outside this row</td>
+            <td class="text-left" rowspan="1" colspan="1">Does not prove the authorization server issued the token under the Mission; mapping-join-only deployments are outside this row</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Authorized Context Correlation</td>
@@ -5439,7 +5439,7 @@ estate and how a deployment adopts it incrementally.<a href="#appendix-A-1" clas
 <a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-topology" class="section-name selfRef">Topology</a>
         </h3>
 <p id="appendix-A.1-1">A typical MAS deployment runs the MAS beside the existing identity
-provider and Authorization Server, changing neither:<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
+provider and authorization server, changing neither:<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A.1-2.1">
             <p id="appendix-A.1-2.1.1">the MAS records Missions, runs approvals, operates the lifecycle,
@@ -5562,7 +5562,7 @@ for Mission-bound issuance, and instance-bound joins narrow it to
 one workload (the Enterprise profile, <a href="#enterprise-profile" class="auto internal xref">Section 12</a>).<a href="#appendix-A.3-4.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="appendix-A.3-4.5">
-            <p id="appendix-A.3-4.5.1">Estate Authorization Servers adopt the issuance join
+            <p id="appendix-A.3-4.5.1">Estate authorization servers adopt the issuance join
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), redeeming
 MAS-minted grants for Mission-bound, state-gated tokens: the
 token-layer kill switch returns without moving approval into the
@@ -5579,7 +5579,7 @@ rest of the estate.<a href="#appendix-A.3-4.6.1" class="pilcrow">¶</a></p>
 floor is required to begin. The MAS remains the control plane of the
 family's delegated-authority layer
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) even as individual
-Authorization Servers become Mission-aware.<a href="#appendix-A.3-5" class="pilcrow">¶</a></p>
+authorization servers become Mission-aware.<a href="#appendix-A.3-5" class="pilcrow">¶</a></p>
 <p id="appendix-A.3-6">A common starting estate runs automated jobs on standing service
 accounts with
 broad, durable entitlements. Migration is per task, not per account.
@@ -5852,7 +5852,7 @@ and recovery semantics (#310). No MAS requirement changed.<a href="#appendix-C-2
       </h2>
 <p id="appendix-D-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
 work. It profiles the Mission Issuer role for deployments whose
-Authorization Server cannot change, and builds on the Mission Status
+authorization server cannot change, and builds on the Mission Status
 and Lifecycle, Mission-Bound Runtime Enforcement, and AuthZEN profile
 companions.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 </section>

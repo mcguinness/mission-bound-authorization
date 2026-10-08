@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            6 October 2026
-Expires: 9 April 2027
+Intended status: Informational                            8 October 2026
+Expires: 11 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -178,7 +178,7 @@ Table of Contents
       OAuth 2.0 [RFC6749] realization.
 
    *  A standalone binding hosts the same object without changing an
-      existing Authorization Server
+      existing authorization server
       ([I-D.draft-mcguinness-mission-authority-server]).
 
    *  An AAuth binding ([I-D.draft-mcguinness-mission-aauth]) maps the
@@ -314,7 +314,7 @@ Table of Contents
        parameter ([I-D.draft-mcguinness-mission-shaping]; the OAuth
        binding).
 
-   2.  *Approve and record.* The Authorization Server derives and
+   2.  *Approve and record.* The authorization server derives and
        discloses an Authority Set (read invoices, post adjustments under
        a cap), and the Approver approves.  The approval event creates
        the Mission, active with an expiry, and commits intent_hash,
@@ -417,10 +417,10 @@ Table of Contents
       | 10 permit          |                  |            |
       |<---------------------------------------------------|
 
-   The token in step 7 is an ordinary OAuth token from the unchanged AS;
-   steps 8 through 10 are the Mission Join and the runtime decision (the
-   MAS's Mission Join section), and the MAS's staged walkthrough of the
-   same flow is its end-to-end appendix
+   The token in step 7 is an ordinary OAuth token from the unchanged
+   authorization server (AS); steps 8 through 10 are the Mission Join
+   and the runtime decision (the MAS's Mission Join section), and the
+   MAS's staged walkthrough of the same flow is its end-to-end appendix
    ([I-D.draft-mcguinness-mission-authority-server]).
 
    Under the AAuth binding, the Person Server instead governs the native
@@ -792,7 +792,7 @@ Table of Contents
       event, records the Mission, and owns its state.  The authority-
       bearing bindings host it:
 
-      *  OAuth Authorization Server: every derived token carries the
+      *  OAuth authorization server: every derived token carries the
          mission claim, and issuance and refresh are gated on Mission
          state ([I-D.draft-mcguinness-oauth-mission]).
 
@@ -801,7 +801,7 @@ Table of Contents
          credentials to the Mission at the point of use
          ([I-D.draft-mcguinness-mission-authority-server]).
 
-      *  UMA 2.0 Authorization Server (experimental sketch): the pushed
+      *  UMA 2.0 authorization server (experimental sketch): the pushed
          Mission Intent rides UMA claims pushing, the resource owner's
          decision fills UMA's authorization assessment, and RPT issuance
          is gated on state ([I-D.draft-mcguinness-mission-uma]).
@@ -833,7 +833,7 @@ Table of Contents
       [I-D.draft-hardt-oauth-aauth-protocol],
       [I-D.draft-mcguinness-mission-aauth]).
 
-   Resource Server:  The protected resource.  In the OAuth binding it
+   Resource server:  The protected resource.  In the OAuth binding it
       enforces statelessly from the token and can check the mission
       claim (the OAuth binding's Resource Server Enforcement section).
       In the standalone binding the token carries no Mission signal, and
@@ -1361,18 +1361,23 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
    Who holds the deciding side is a spectrum, not a species.  The
-   approval event requires an accountable principal deciding against
-   committed inputs before any authority exists, and the proposer is
-   never the approver.
+   approval event requires a decision against committed inputs before
+   any authority exists, made by the accountable principal or by a
+   policy that principal authorized, and the proposer is never the
+   approver.
 
-   A deterministic, versioned policy can approve at machine speed within
-   a ceiling a human consented to (the template, policy_drawdown, and
-   ceiling_drawdown authorization bases that companion profiles define
-   on the OAuth binding's extension point; see Authorization bases in
-   Section 8).  Policy approves the instance because a human approved
-   the policy or the template; policy_version keeps that chain re-
-   checkable.  Derivation fixes the authority, the adjudicator (a human
-   or such a policy) decides activation, and a human is accountable.
+   A deterministic, versioned policy can adjudicate activation at
+   machine speed within a ceiling a human consented to (the template,
+   policy_drawdown, and ceiling_drawdown authorization bases that
+   companion profiles define on the OAuth binding's extension point; see
+   Authorization bases in Section 8).  The policy is the instance's
+   adjudication mechanism; the human or human-accountable principal who
+   consented to the policy or the template stays the accountable
+   Approver (consent_principal), and policy_version keeps that chain re-
+   checkable.  A policy artifact, a model's output, or the actor that
+   triggered the instance never becomes that principal.  Derivation
+   fixes the authority, the adjudicator (a human or such a policy)
+   decides activation, and a human is accountable.
 
    A model's judgment, over risk signals or enterprise context, enters
    adjudication only as a recorded input to the policy: it can refuse or
@@ -1990,12 +1995,11 @@ Table of Contents
    Derivation is mechanical: the Mission Issuer narrows a submitted
    authority proposal to policy, or looks up candidate entries in a
    configured mapping keyed on structured Intent members and narrows
-   those.  The prose members (goal, task_bounds, success_criteria) never
-   change what is derived; they bound authority through disclosure,
-   since the Approver refuses authority the words do not support.
-   Translating a user's words into structure is the shaper's job, before
-   admission and outside the trust boundary
-   ([I-D.draft-mcguinness-mission-shaping]).
+   those.  The prose members (goal, task_bounds) never change what is
+   derived; they bound authority through disclosure, since the Approver
+   refuses authority the words do not support.  Translating a user's
+   words into structure is the shaper's job, before admission and
+   outside the trust boundary ([I-D.draft-mcguinness-mission-shaping]).
 
    Derivation policy stays local: what the Mission Issuer narrows to,
    and what its mappings contain.  The consequence is a trust boundary:
@@ -2242,10 +2246,10 @@ Table of Contents
           Table 4: Substrate primitives in their OAuth realization
 
    The anchors in the envelope row are *commitment anchors*, not
-   enforcement proofs (Section 9.2).  A Resource Server holding a
+   enforcement proofs (Section 9.2).  A resource server holding a
    narrowed token enforces the authority it receives rather than
    reconstructing authority from a hash of a full set it does not hold
-   ([I-D.draft-mcguinness-mission-security-model]).  A Resource Server
+   ([I-D.draft-mcguinness-mission-security-model]).  A resource server
    or policy decision point that needs an independent check retrieves
    the complete approved set, recomputes its anchor, and checks the
    carried authority as a subset of it under Mission Approved-Set
@@ -2566,7 +2570,7 @@ Table of Contents
    and no state evaluation at the resource.
 
    The standalone mode trades the token-layer kill switch for zero
-   Authorization Server changes.  A MAS creates, approves, and serves
+   authorization server changes.  A MAS creates, approves, and serves
    Missions while tokens remain ordinary; the PDP joins credentials to
    Missions, and the MAS is the freshness source.  The cost is
    structural:
@@ -2587,7 +2591,7 @@ Table of Contents
 
    Between those two architectures sits the issuance join
    ([I-D.draft-mcguinness-oauth-mission-issuance-grant]): the MAS
-   remains the Mission Issuer while estate Authorization Servers redeem
+   remains the Mission Issuer while estate authorization servers redeem
    Mission Issuance Grants for Mission-bound, state-gated tokens,
    restoring the token-layer chokepoint without moving approval.
 
@@ -2681,7 +2685,7 @@ Table of Contents
       the deployment's tolerated staleness
       ([I-D.draft-mcguinness-oauth-mission-status]), gives a quantified
       cutoff: revocation within one token lifetime on every path whose
-      minting checks current Mission state, with no Resource Server
+      minting checks current Mission state, with no resource server
       changes and no status traffic.  Expiry closes the temporal bound
       by the clock alone and observes no revocation, suspension,
       completion, or containment, so the lifetime must not exceed the
@@ -2795,7 +2799,7 @@ Table of Contents
      +==================+===========================================+
      | Baseline         | Consequential reads and writes outside    |
      | Issuance         | the high-consequence classes whose bounds |
-     |                  | the receiving Resource Server enforces,   |
+     |                  | the receiving resource server enforces,   |
      |                  | attributable and killable at the issuance |
      |                  | gate, outstanding tokens running to their |
      |                  | own expiry or the next introspection      |
@@ -2803,7 +2807,7 @@ Table of Contents
      | Runtime-Enforced | Consequential actions that need a per-    |
      |                  | action decision: parameter-bound writes   |
      |                  | and bounds finer than the receiving       |
-     |                  | Resource Server enforces; reversal and    |
+     |                  | resource server enforces; reversal and    |
      |                  | compensation stay the orchestration       |
      |                  | profile's, where adopted                  |
      +------------------+-------------------------------------------+
@@ -2852,16 +2856,17 @@ Table of Contents
    capabilities.  The family manifest records each stack's exact
    membership.
 
-   *  *Protocol core* (Baseline Issuance): the OAuth binding alone, the
-      standardizable primitive of approved, anchored, state-gated
-      Missions, meeting the Mission Context requirements (Appendix A).
+   *  *OAuth issuance binding* (Baseline Issuance): the OAuth binding
+      alone, the standardizable primitive of approved, anchored, state-
+      gated Missions, meeting the Mission Context requirements
+      (Appendix A).
 
-   *  *Reference security architecture* (Runtime-Enforced): the protocol
-      core plus runtime enforcement, its AuthZEN profile, runtime
-      evidence (the decision and execution objects AuthZEN consumes),
-      and a freshness source (Status is the reference choice).  Adoption
-      closure brings in the substrate contract, the normative kernel of
-      runtime and AuthZEN.
+   *  *Reference security architecture* (Runtime-Enforced): the OAuth
+      issuance binding plus runtime enforcement, its AuthZEN profile,
+      runtime evidence (the decision and execution objects AuthZEN
+      consumes), and a freshness source (Status is the reference
+      choice).  Adoption closure brings in the substrate contract, the
+      normative kernel of runtime and AuthZEN.
 
    *  *Recommended agent architecture* (Governed Agent): what a
       deployment running autonomous AI agents should build.
@@ -3012,7 +3017,7 @@ Table of Contents
    The mapping join and the Mission Join Assertion are the MAS's
    ([I-D.draft-mcguinness-mission-authority-server]).
 
-   The properties are claimed per covered Authorization Server,
+   The properties are claimed per covered authorization server,
    resource, and action path, never as a product-wide maximum.  A mixed
    estate claims what each path has, and a weaker path never inherits a
    stronger path's claim from the deployment's name.  Where policy
@@ -3627,7 +3632,7 @@ Table of Contents
 
    The estate a deployment already runs, not preference, decides which
    chokepoint it builds first.  The OAuth binding's issuance ramp
-   assumes an Authorization Server that supports pushed authorization
+   assumes an authorization server that supports pushed authorization
    requests, rich authorization requests, and JWT access tokens.  The
    standalone ramp assumes none of that and trades it for PEP coverage.
    By starting condition:
@@ -3643,7 +3648,7 @@ Table of Contents
    | JWT access    |            | with it, submitting mission_intent  |
    | tokens in     |            | through PAR and handling Mission    |
    | place         |            | responses and lifecycle refusals;   |
-   |               |            | scope-only Resource Servers         |
+   |               |            | scope-only resource servers         |
    |               |            | continue unchanged at scope grain,  |
    |               |            | per-entry constraints reaching them |
    |               |            | only through a projection or a PEP  |
@@ -3666,8 +3671,8 @@ Table of Contents
    | SaaS)         |            |                                     |
    +---------------+------------+-------------------------------------+
    | Many          | MAS as     | Each AS adds grant redemption only  |
-   | Authorization | estate     |                                     |
-   | Servers, one  | control    |                                     |
+   | authorization | estate     |                                     |
+   | servers, one  | control    |                                     |
    | governance    | plane;     |                                     |
    | point         | issuance   |                                     |
    |               | join per   |                                     |
@@ -3697,8 +3702,8 @@ Table of Contents
 12.2.  The Issuance-Only Deployment
 
    The entry-ramp table's last row is a deployment in its own right, the
-   *issuance-only deployment*: the Authorization Server and the Mission-
-   creating client change, and Resource Servers need not be Mission-
+   *issuance-only deployment*: the authorization server and the Mission-
+   creating client change, and resource servers need not be Mission-
    aware.  A delegated token reaches only a Mission-aware Resource
    Server, so a delegate calling any other resource runs under a Child
    Mission where child creation is authorized
@@ -3713,8 +3718,8 @@ Table of Contents
    *  no credential outlives the Mission's expiry.
 
    The deployment sizes token lifetime to its tolerated staleness.
-   Where the Authorization Server offers introspection, a Resource
-   Server that introspects per request stops honoring a token at its
+   Where the authorization server offers introspection, a resource
+   server that introspects per request stops honoring a token at its
    next request once the Mission leaves active, with no Mission-specific
    code ([I-D.draft-mcguinness-oauth-mission]).
 
@@ -3728,7 +3733,7 @@ Table of Contents
 
    *  approval bound to a single action; or
 
-   *  a bound the receiving Resource Server cannot enforce.
+   *  a bound the receiving resource server cannot enforce.
 
 12.3.  The Short Mission
 
@@ -3823,7 +3828,7 @@ Table of Contents
 
    *  the MAS mapping contract;
 
-   *  the Resource Server coverage split;
+   *  the resource server coverage split;
 
    *  the transparency-service topology and schedule; and
 
@@ -4460,7 +4465,7 @@ Appendix B.  Comparison to a Conventional Stack
    [RFC9396], short-lived tokens, and an AuthZEN PDP holding policy and
    session state server-side would not suffice.
 
-   *  RAR supplies structured authorization data an Authorization Server
+   *  RAR supplies structured authorization data an authorization server
       renders into an itemized approval experience.  RAR itself
       guarantees neither approval fidelity nor a consent UI.
 
@@ -4474,7 +4479,7 @@ Appendix B.  Comparison to a Conventional Stack
       deployment supplies those properties in either design.
 
    Inside one administrative domain, a conventional stack (structured
-   request data, an Authorization Server's consent or grant record,
+   request data, an authorization server's consent or grant record,
    short credentials, and a stateful PDP) implements durable task state,
    fan-out joins, persistent narrowing, and audit locally.  Five places
    mark where that local composition meets what this family
@@ -4492,8 +4497,8 @@ Appendix B.  Comparison to a Conventional Stack
    | tokens and  | outlive the   | anchors             |               |
    | restarts    | token         | consistently        |               |
    |             |               | interpreted by the  |               |
-   |             |               | Authorization       |               |
-   |             |               | Server, PDP,        |               |
+   |             |               | authorization       |               |
+   |             |               | server, PDP,        |               |
    |             |               | agents, audiences,  |               |
    |             |               | and evidence        |               |
    |             |               | producers; it does  |               |
@@ -4545,8 +4550,8 @@ Appendix B.  Comparison to a Conventional Stack
    |             |               | verb)               |               |
    +-------------+---------------+---------------------+---------------+
    | Persistent  | A stateful    | Monotonic subset    | AS or MAS     |
-   | narrowing   | Authorization | semantics across    | integration;  |
-   |             | Server or PDP | issuance,           | ecosystem     |
+   | narrowing   | authorization | semantics across    | integration;  |
+   |             | server or PDP | issuance,           | ecosystem     |
    |             | stores        | delegation,         | adoption      |
    |             | reduced       | attenuation, and    |               |
    |             | entitlements  | cross-domain        |               |
@@ -4955,8 +4960,8 @@ Appendix F.  Deployment Profile Example Shapes
 
    *  no runtime, credential_custody, or harness member;
 
-   *  its token lifetime stated as the revocation bound where a Resource
-      Server does not introspect; and
+   *  its token lifetime stated as the revocation bound where a resource
+      server does not introspect; and
 
    *  residuals that name the per-action check it does not run.
 
@@ -4992,8 +4997,8 @@ Appendix G.  Mission Document Map
    One row per document, grouped as the family groups them; the short
    form drops the draft-mcguinness- prefix, and the repository's
    DRAFTS.md is the full catalog with maturity and adoption metadata.
-   The naming encodes a boundary: profiles extending the Authorization
-   Server's own surfaces keep "oauth" in their names; profiles defined
+   The naming encodes a boundary: profiles extending the authorization
+   server's own surfaces keep "oauth" in their names; profiles defined
    against the substrate of Section 10 are named without it.  This
    document is named without it because the architecture is substrate-
    neutral.
@@ -5046,7 +5051,7 @@ Appendix G.  Mission Document Map
     |                               | credentials to Missions.        |
     +-------------------------------+---------------------------------+
     | oauth-mission-issuance-grant  | The issuance join: MAS-minted   |
-    |                               | grants an Authorization Server  |
+    |                               | grants an authorization server  |
     |                               | redeems for Mission-bound,      |
     |                               | state-gated tokens.             |
     +-------------------------------+---------------------------------+
@@ -5372,6 +5377,15 @@ Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  The Approve and Record discussion names the authorized policy as
+      an instance's adjudication mechanism and the human who consented
+      to the policy or template as the accountable Approver
+      (consent_principal); no policy artifact, model output or
+      triggering actor becomes that principal (#1084).
+
+   *  The prose members are goal and task_bounds, following the OAuth
+      binding's removal of success_criteria.
+
    *  Revocation is possession-independent points at the Security
       Model's statement that revocation does not prohibit equivalent
       authority under a separately approved Mission.  No profile's
@@ -5546,7 +5560,7 @@ Appendix H.  Document History
    *  The issuance-only deployment is named under Entry Ramps by Estate
       with its invariants, introspection cutoff, claims, and runtime
       triggers; the adoption-ladder table grants Baseline Issuance the
-      reads and writes whose bounds the receiving Resource Server
+      reads and writes whose bounds the receiving resource server
       enforces; and the Deployment Profile gains an issuance-only
       example shape.
 

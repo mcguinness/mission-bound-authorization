@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          6 October 2026
-Expires: 9 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
              Mission Resource Access Profile for OAuth 2.0
@@ -16,7 +16,7 @@ Abstract
    Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
    derives a Mission's Authority Set as one or more OAuth 2.0 Rich
    Authorization Requests (RAR) authorization_details entries, of any
-   Authorization Server-supported type, and is type-agnostic toward that
+   authorization server-supported type, and is type-agnostic toward that
    type's own semantics.  This document defines mission_resource_access:
    a general-purpose, cross-resource authorization_details type carrying
    a resource identifier matched exactly or by path prefix, an action
@@ -28,7 +28,8 @@ Abstract
    declaration under the issuance profile's machine-readable
    transformation-capability map.  This document is a profile of the
    issuance profile; a deployment can support mission_resource_access,
-   another AS-supported authorization_details type, or both.
+   another authorization_details type its authorization server supports,
+   or both.
 
 About This Document
 
@@ -58,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -108,11 +109,11 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") commits
    a Mission's Authority Set as one or more [RFC9396]
    authorization_details entries, of whatever authorization_details type
-   or types the Authorization Server supports.  The issuance profile is
-   type-agnostic: it derives, commits, and gates entries of any AS-
-   supported type the same way, and leaves each type's own comparison
-   and transformation semantics to the specification that defines the
-   type, exactly as [RFC9396] Section 2 permits.
+   or types the authorization server (AS) supports.  The issuance
+   profile is type-agnostic: it derives, commits, and gates entries of
+   any AS-supported type the same way, and leaves each type's own
+   comparison and transformation semantics to the specification that
+   defines the type, exactly as [RFC9396] Section 2 permits.
 
    This document defines that specification for one type:
    mission_resource_access, a cross-resource authorization language
@@ -122,7 +123,7 @@ Table of Contents
    and a per-entry delegation policy, together with the subset and
    intersection algebra a deployment uses to compare and narrow two
    entries. mission_resource_access is a general-purpose type: an
-   Authorization Server with no reason to define a narrower, audience-
+   authorization server with no reason to define a narrower, audience-
    specific authorization_details type can use it directly, and the
    issuance profile's own worked examples use it throughout.
 
@@ -221,11 +222,11 @@ Table of Contents
       Common Constraint (Section 3.2) has shared semantics across
       deployments; any other name is deployment-defined.
 
-      *  Because a constraints member narrows authority, a Resource
-         Server that cannot enforce one MUST fail closed (Section 3.3).
+      *  Because a constraints member narrows authority, a resource
+         server that cannot enforce one MUST fail closed (Section 3.3).
 
       *  To avoid that failure mode, the AS SHOULD emit for a given
-         resource only constraints keys that the Resource Server serving
+         resource only constraints keys that the resource server serving
          it is known (by registration, deployment policy, or the
          resource's advertised mission_constraints_supported
          (Section 3.4)) to understand and enforce.
@@ -383,7 +384,7 @@ Table of Contents
    be; the granted authorization_details echo reflects any such omission
    ([I-D.draft-mcguinness-oauth-mission]).  Carrying the entry forward
    with the key dropped would widen effective authority past the ceiling
-   exactly as an unenforced key would at the Resource Server
+   exactly as an unenforced key would at the resource server
    ([I-D.draft-mcguinness-oauth-mission]).
 
    This document defines the initial Common Constraints:
@@ -483,7 +484,7 @@ Table of Contents
    token ("NaN", "Infinity"), is malformed, and a consumer MUST reject
    it rather than attempt to parse it: an authority proposal carrying
    one is refused at submission ([I-D.draft-mcguinness-oauth-mission]),
-   and a Resource Server treats a malformed decimal value the same as a
+   and a resource server treats a malformed decimal value the same as a
    constraints key it cannot enforce (Section 3.3).  Comparison and
    intersection over two such decimal-string values MUST be computed as
    exact decimal arithmetic (for example, by scaling both values to
@@ -502,12 +503,12 @@ Table of Contents
 
 3.3.  Resource Server Enforcement
 
-   [I-D.draft-mcguinness-oauth-mission] requires a Resource Server to
+   [I-D.draft-mcguinness-oauth-mission] requires a resource server to
    enforce each applicable authorization_details entry according to that
    entry's own type specification, and to fail closed on an entry whose
    type it does not implement or cannot fully evaluate.  This section
    states that specification for a mission_resource_access entry.  A
-   Resource Server:
+   resource server:
 
    *  MUST enforce an entry whose resource (under resource_match,
       Section 3) matches the request, permitting only the listed actions
@@ -553,7 +554,7 @@ Table of Contents
    carried entries on the entry type's own delegation policy, evaluated
    at the delegate's delegation depth d (the nesting depth of the
    token's act claim, as that document defines).  For a
-   mission_resource_access entry, the Authorization Server includes it
+   mission_resource_access entry, the authorization server includes it
    in a delegated token issued at delegation depth d only if all of the
    following hold:
 
@@ -601,7 +602,7 @@ Table of Contents
 3.6.  Scope Projection
 
    [I-D.draft-mcguinness-oauth-mission] states the semantic subset
-   condition and issuance algorithm an Authorization Server applies
+   condition and issuance algorithm an authorization server applies
    before emitting scope for any authorization_details entry: the
    projected scope's effective rights, together with every independently
    mandatory control on the target's enforcement path, MUST be a subset
@@ -609,7 +610,7 @@ Table of Contents
    that condition holds for a mission_resource_access entry.
 
    A scope-projection mapping's entry for this type names, for a target
-   Resource Server: the scope value or values it emits, the resource and
+   resource server: the scope value or values it emits, the resource and
    resource_match the mapping covers, the actions value or values each
    scope value stands for, and, for every constraints key an entry may
    carry, whether the target independently and identically enforces that
@@ -642,26 +643,26 @@ Table of Contents
        no constraints trivially satisfies this condition.  A key the
        mapping does not name as independently enforced fails the
        condition for that entry, exactly as an unenforced key fails
-       closed at a Resource Server that consumes authorization_details
+       closed at a resource server that consumes authorization_details
        directly.
 
    An entry failing any condition MUST NOT be projected to scope.  Per
    [I-D.draft-mcguinness-oauth-mission]'s issuance algorithm, the
-   Authorization Server then omits scope for that entry where the
+   authorization server then omits scope for that entry where the
    target's enforcement path consumes authorization_details, and refuses
    issuance to that target when it is scope-only and no other carried
    entry supplies a safe projection.
 
 3.7.  Transformation Capabilities
 
-   [I-D.draft-mcguinness-oauth-mission] requires an Authorization Server
+   [I-D.draft-mcguinness-oauth-mission] requires an authorization server
    to declare, for every AS-supported authorization_details type,
    whether it understands the type's narrowing, delegation, and scope-
    projection semantics, through deployment documentation or, where
    available, the machine-readable mission_transformation_capabilities
    carrier that document defines.
 
-   For mission_resource_access, an Authorization Server that implements
+   For mission_resource_access, an authorization server that implements
    this document in full declares:
 
    narrowing: true  The subset and intersection algebra of Section 3.1
@@ -674,10 +675,10 @@ Table of Contents
 
    projection: true  A safe scope projection is defined, and decidable
       per entry, by Section 3.6; it is not unconditionally available for
-      every entry, and an Authorization Server MUST still apply that
+      every entry, and an authorization server MUST still apply that
       section's conditions per entry before emitting scope.
 
-   An Authorization Server that implements only part of this document
+   An authorization server that implements only part of this document
    (for example, mission_resource_access entries without ever emitting
    scope for them) declares projection as undeclared rather than true,
    and [I-D.draft-mcguinness-oauth-mission]'s carried-as-approved
@@ -758,7 +759,7 @@ Table of Contents
 
    An implementation conforms to this document in one of two roles.
 
-   An *Authorization Server* conforms by supporting
+   An *authorization server* conforms by supporting
    mission_resource_access as one of the authorization_details types
    [I-D.draft-mcguinness-oauth-mission] names in its approved set, and
    implements:
@@ -770,7 +771,7 @@ Table of Contents
       which of narrowing, delegation, and projection it claims for this
       type.
 
-   Beyond that floor, an Authorization Server implements, for each
+   Beyond that floor, an authorization server implements, for each
    capability it declares as true:
 
    *  *narrowing*: the subset and intersection algebra (Section 3.1,
@@ -779,7 +780,7 @@ Table of Contents
    *  *delegation*: the delegate eligibility test (Section 3.5); and
 
    *  *projection*: the three per-entry, per-target safety conditions of
-      Section 3.6 before emitting scope.  An Authorization Server that
+      Section 3.6 before emitting scope.  An authorization server that
       does not claim projection MUST NOT emit scope for a
       mission_resource_access entry under
       [I-D.draft-mcguinness-oauth-mission]'s issuance algorithm, and
@@ -787,14 +788,14 @@ Table of Contents
       exactly as that document requires for any type without a declared
       projection.
 
-   A *Resource Server* conforms by implementing the enforcement duties
+   A *resource server* conforms by implementing the enforcement duties
    of Section 3.3: exact or prefix resource matching, action and action-
    family matching, and every carried constraints key, failing closed on
-   a member, matching mode, or key it does not implement.  A Resource
-   Server does not implement narrowing, delegate eligibility, or the
-   Transformation Capabilities declaration; those are the Authorization
-   Server's, and their presence or absence does not bear on a Resource
-   Server's conformance.
+   a member, matching mode, or key it does not implement.  A resource
+   server does not implement narrowing, delegate eligibility, or the
+   Transformation Capabilities declaration; those are the authorization
+   server's, and their presence or absence does not bear on a resource
+   server's conformance.
 
 5.  Security Considerations
 
@@ -812,7 +813,7 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission]).
 
    *  *Unenforceable constraints widen silently if not refused.* A
-      Resource Server or scope projection that treats an unrecognized
+      resource server or scope projection that treats an unrecognized
       constraints key as absent, or as disclosure-only, grants more than
       the entry authorizes; [I-D.draft-mcguinness-oauth-mission] and
       Section 3.6 both require fail-closed handling instead.
@@ -820,14 +821,14 @@ Table of Contents
    *  *A safe projection is per entry, not per type.* That
       mission_resource_access defines a projection relation
       (Section 3.6) does not make every entry of the type safely
-      projectable; an Authorization Server MUST evaluate the three
+      projectable; an authorization server MUST evaluate the three
       conditions of Section 3.6 for the specific entry and mapping in
       force, not assume the type's general capability extends to it.
 
 5.1.  Resource Boundary Canonicalization
 
    A prefix entry (Section 3) draws an authority boundary in URI space.
-   The AS's containment test (Section 3.1) and the Resource Server's
+   The AS's containment test (Section 3.1) and the resource server's
    request matching (Section 3.3) MUST apply the single RFC 3986
    [RFC3986] normalization defined in Section 3.1, so issuance and
    enforcement draw the same boundary.  A matcher that normalizes
@@ -842,7 +843,7 @@ Table of Contents
    *  *Encoded slash (%2F).* A reserved octet, left encoded by this
       normalization (which decodes only unreserved octets) and never a
       path-segment separator when matching.  An intermediary that
-      decodes it before the Resource Server enforces shifts the
+      decodes it before the resource server enforces shifts the
       boundary; a deployment MUST prevent that rewriting or account for
       it.
 
@@ -920,7 +921,7 @@ Table of Contents
          Table 1: Prefix matching for https://api.example/orders
 
    A deployment MAY agree out of band on the canonicalization profile
-   its AS and Resource Servers apply; this document defines one rule
+   its AS and resource servers apply; this document defines one rule
    (Section 3.1), so no profile identifier is required for
    interoperation.
 
@@ -940,7 +941,7 @@ Table of Contents
    mission_resource_access is an authorization_details type per
    [RFC9396] Section 2, defined by this document in Section 3.  RFC 9396
    does not establish an IANA registry of authorization details types
-   (type identifiers are interpreted by the Authorization Server), so
+   (type identifiers are interpreted by the authorization server), so
    this document creates no registry entry for it and requires no IANA
    action here.  If a registry of authorization details types is
    established in the future, this type SHOULD be registered in it.
@@ -1187,18 +1188,18 @@ Appendix A.  Document History
       the RAR entry-level object, unaffected by the retirement of the
       Mission Intent's separate controls bucket.
 
-   *  Review response (#637): relocated the Resource Server enforcement
+   *  Review response (#637): relocated the resource server enforcement
       duties (exact/prefix resource matching, action matching, per-entry
       constraints enforcement) and the mission_constraints_supported
       protected-resource metadata member (definition and IANA
       registration) from the issuance profile, which had continued to
-      interpret this type's members directly in its generic Resource
-      Server contract.  Split the Conformance section by role
-      (Authorization Server vs. Resource Server) so an RS is not
-      measured against issuer-only duties (subset/intersection, delegate
-      eligibility, Transformation Capabilities declaration) it has no
-      reason to implement.  Adds this document's conformance-manifest
-      source pin and its own requirement rows.
+      interpret this type's members directly in its generic resource
+      server contract.  Split the Conformance section by role
+      (authorization server vs. resource server) so a resource server is
+      not measured against issuer-only duties (subset/intersection,
+      delegate eligibility, Transformation Capabilities declaration) it
+      has no reason to implement.  Adds this document's conformance-
+      manifest source pin and its own requirement rows.
 
    *  Initial version: mission_resource_access, its resource and action
       matching, generic constraints, the Common Constraints registry,

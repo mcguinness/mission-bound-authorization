@@ -1059,7 +1059,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 9 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1072,12 +1072,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-transaction-authorization-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-06" class="published">6 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1131,7 +1131,7 @@ fresh decision, and the transaction-token profile.<a href="#section-abstract-1" 
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1363,12 +1363,12 @@ companion defines it
 <span class="break"></span><dl class="dlParallel" id="section-2-3">
         <dt id="section-2-3.1">Transaction Authorization Server (TAS):</dt>
         <dd style="margin-left: 1.5em" id="section-2-3.2">
-          <p id="section-2-3.2.1">The OAuth Authorization Server acting in the role
+          <p id="section-2-3.2.1">The OAuth authorization server acting in the role
 <span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span> defines for the
 transaction authorization endpoint: it validates the challenge,
 applies the Mission validation and fresh-decision rules of this
 profile, and mints the transaction token. A TAS instance <span class="bcp14">MAY</span> be the
-Mission Issuer itself or an Authorization Server deployed separately
+Mission Issuer itself or an authorization server deployed separately
 from it; this profile does not require either arrangement.<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -1670,7 +1670,7 @@ completion, before <a href="#challenge-redemption" class="auto internal xref">Se
           </h4>
 <p id="section-5.1.1-1">A TAS <span class="bcp14">MAY</span> restrict which <code>subject_token</code> issuers and subject
 namespaces it accepts. Whether an accepted issuer shares this
-Authorization Server's subject namespace is configured trust policy,
+authorization server's subject namespace is configured trust policy,
 never inferred from request data. For a same-namespace issuer the
 verified <code>sub</code> is the destination-local subject, unchanged.<a href="#section-5.1.1-1" class="pilcrow">¶</a></p>
 <p id="section-5.1.1-2">For every
@@ -1715,9 +1715,9 @@ Resource publishes its challenge-signing keys at
 <code>txn_challenge_jwks_uri</code> with
 <code>txn_challenge_signing_alg_values_supported</code>, and the TAS resolves a
 challenge issuer's keys there and nowhere else; a client discovers
-the TAS through <code>transaction_authorization_endpoint</code> in Authorization
-Server metadata. A TAS <span class="bcp14">MAY</span>
-be the Mission Issuer itself or an Authorization Server deployed
+the TAS through <code>transaction_authorization_endpoint</code> in authorization
+server metadata. A TAS <span class="bcp14">MAY</span>
+be the Mission Issuer itself or an authorization server deployed
 separately from it; a resource trusts a TAS's token-signing key and
 policy role through pre-established federation metadata, not through
 anything the request asserts about itself.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
@@ -1736,7 +1736,7 @@ validation of that protected <code>typ</code> value, together with mutually
 exclusive validation rules for the artifact profiles, implements the
 substitution defense of <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span>, Sections 3.11 and 3.12. This is its own
 JWT access-token profile with the complete validation semantics below;
-it does not conform to <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>, and a Resource Server that
+it does not conform to <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>, and a resource server that
 recognizes only <code>at+jwt</code> correctly rejects it as unknown. A deployment
 wanting RFC 9068 interoperability instead relies on the upstream <code>txn</code>
 claim carried by an ordinary JWT access token
@@ -2258,7 +2258,7 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 </li>
           </ul>
 <p id="section-12.1.1-2">The transaction token's registered semantics are sender-constrained,
-single-audience, and single-use. A Resource Server that recognizes
+single-audience, and single-use. A resource server that recognizes
 <code>typ</code> <code>mission-txn-token+jwt</code> enforces exactly those properties regardless
 of any member on the token; this document defines no <code>single_use</code>
 member anywhere, because single use is semantic to the type itself.<a href="#section-12.1.1-2" class="pilcrow">¶</a></p>

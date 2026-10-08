@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          6 October 2026
-Expires: 9 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                      Mission Substrate Requirements
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -179,7 +179,7 @@ Table of Contents
 
    In particular, the kernel does not require:
 
-   *  an OAuth client_id, Authorization Server, or OAuth issuer
+   *  an OAuth client_id, authorization server, or OAuth issuer
       identifier;
 
    *  JSON, JWT, or a member named mission;
@@ -1387,7 +1387,7 @@ Appendix A.  Binding Mapping Guidance
 A.1.  OAuth-Native Mapping: The Broad-Claims Pole
 
    The OAuth binding can intentionally claim a broad set of
-   capabilities.  Its Authorization Server can act as Controller, OAuth
+   capabilities.  Its authorization server can act as Controller, OAuth
    identifiers can instantiate Actor and subject mappings, and protected
    access-token fields can supply Credential-Bound.  Registered
    authorization-detail types can supply Structured Authority: each
@@ -1408,7 +1408,7 @@ A.1.  OAuth-Native Mapping: The Broad-Claims Pole
 A.2.  Standalone MAS Mapping: The Separation-and-Join Pole
 
    The MAS separates Mission governance from an otherwise unchanged
-   Authorization Server.  It can satisfy the kernel and can provide
+   authorization server.  It can satisfy the kernel and can provide
    Structured Authority and Monotonic Derivation for operations it owns.
    It does not, by itself, prove that an OAuth access token was issued
    under a Mission.
@@ -1417,7 +1417,7 @@ A.2.  Standalone MAS Mapping: The Separation-and-Join Pole
    credential issuer can add stronger lifecycle and credential-binding
    properties.  The MAS Statement needs to describe those with their
    activation conditions and preserve the boundary between MAS
-   assertions and Authorization Server behavior.
+   assertions and authorization server behavior.
 
 A.3.  AAuth-Native Mapping: The Private-Context Pole
 
@@ -1456,37 +1456,38 @@ Appendix B.  Mission-Bound Authorization Family Use
    ([I-D.draft-mcguinness-oauth-mission]), use the vocabulary this
    contract was generalized from.  The terms correspond as follows:
 
-    +============+====================================================+
-    | This       | Family documents                                   |
-    | document   |                                                    |
-    +============+====================================================+
-    | Mission    | Mission                                            |
-    | Context    |                                                    |
-    +------------+----------------------------------------------------+
-    | Mission    | Mission Identifier                                 |
-    | Reference  |                                                    |
-    +------------+----------------------------------------------------+
-    | Controller | Mission Issuer, where the binding issues; natively |
-    |            | the AS, MAS, UMA authorization server, or AAuth PS |
-    +------------+----------------------------------------------------+
-    | Actor      | the authenticated acting client or agent           |
-    +------------+----------------------------------------------------+
-    | Approver   | for a direct approval, the Approver                |
-    |            | (consent_principal); under a standing-consent      |
-    |            | basis, see below                                   |
-    +------------+----------------------------------------------------+
-    | Approval   | approval event: the atomic, adjudicated creation   |
-    | event      | of a Mission under its approval_basis, for every   |
-    |            | basis                                              |
-    +------------+----------------------------------------------------+
-    | Approved   | the Mission Intent, the recorded authority         |
-    | Context    | proposal where one was submitted, and the derived  |
-    |            | Authority Set                                      |
-    +------------+----------------------------------------------------+
-    | Ordered    | the Mission log, assessment log, or audit record   |
-    | governance |                                                    |
-    | record     |                                                    |
-    +------------+----------------------------------------------------+
+        +============+============================================+
+        | This       | Family documents                           |
+        | document   |                                            |
+        +============+============================================+
+        | Mission    | Mission                                    |
+        | Context    |                                            |
+        +------------+--------------------------------------------+
+        | Mission    | Mission Identifier                         |
+        | Reference  |                                            |
+        +------------+--------------------------------------------+
+        | Controller | Mission Issuer, where the binding issues;  |
+        |            | natively the OAuth authorization server,   |
+        |            | MAS, UMA authorization server, or AAuth PS |
+        +------------+--------------------------------------------+
+        | Actor      | the authenticated acting client or agent   |
+        +------------+--------------------------------------------+
+        | Approver   | for a direct approval, the Approver        |
+        |            | (consent_principal); under a standing-     |
+        |            | consent basis, see below                   |
+        +------------+--------------------------------------------+
+        | Approval   | approval event: the atomic, adjudicated    |
+        | event      | creation of a Mission under its            |
+        |            | approval_basis, for every basis            |
+        +------------+--------------------------------------------+
+        | Approved   | the Mission Intent, the recorded authority |
+        | Context    | proposal where one was submitted, and the  |
+        |            | derived Authority Set                      |
+        +------------+--------------------------------------------+
+        | Ordered    | the Mission log, assessment log, or audit  |
+        | governance | record                                     |
+        | record     |                                            |
+        +------------+--------------------------------------------+
 
                      Table 4: Family vocabulary mapping
 

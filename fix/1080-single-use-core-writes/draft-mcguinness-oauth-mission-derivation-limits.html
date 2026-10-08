@@ -1059,7 +1059,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 9 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1072,12 +1072,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-derivation-limits-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-06" class="published">6 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1132,7 +1132,7 @@ bound on the authority a token carries or on how that token is used.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1276,7 +1276,8 @@ bound on the authority a token carries or on how that token is used.<a href="#se
 derivation under a Mission on its lifecycle state, its Authority Set,
 and its expiry. It does not bound how many derivations the issuer
 performs. This document adds that bound: a derivation limit on the
-number of derivations the issuer AS performs under a Mission. The limit
+number of derivations the issuer authorization server (AS) performs
+under a Mission. The limit
 is an issuer-side operational control. It bounds counted issuance
 operations at the token endpoint, or at the Mission Authority
 Server's grant endpoint under the Mission Issuance Grant profile
@@ -1656,9 +1657,9 @@ Enforcement").<a href="#section-6-3" class="pilcrow">¶</a></p>
 to it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Caller
 Authorization and Minimization"), and its disclosure is member-scoped.
 <code>derivations_remaining</code> serves issuance-budget consumers, not
-Resource Server enforcement, and the AS <span class="bcp14">MUST</span> disclose it only to a
+resource server enforcement, and the AS <span class="bcp14">MUST</span> disclose it only to a
 caller the deployment has granted that member's disclosure privilege.
-By default, an audience-authorized Resource Server receives the
+By default, an audience-authorized resource server receives the
 audience-filtered enforcement projection without it.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <p id="section-6-5">An AS <span class="bcp14">MUST NOT</span> include <code>derivations_remaining</code> in an introspection
 response unless it holds the Mission, that is, unless it is the
@@ -1733,7 +1734,7 @@ approval interface discloses beside it
 rules for <code>derivations_remaining</code> (<a href="#introspection" class="auto internal xref">Section 6</a>).<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-3">A Resource Server does not need to understand this document to enforce
+<p id="section-8-3">A resource server does not need to understand this document to enforce
 Mission-bound tokens; <code>derivations_remaining</code> is not an enforcement
 input (<a href="#introspection" class="auto internal xref">Section 6</a>).<a href="#section-8-3" class="pilcrow">¶</a></p>
 </section>
@@ -1755,7 +1756,7 @@ issuer performs; the refreshes of an async delegation family, and
 redemption and refresh at a Mission Issuance Grant consuming
 Authorization Server, are not counted (<a href="#sec-async-family" class="auto internal xref">Section 9.2</a>,
 <a href="#issuance-grant-counting" class="auto internal xref">Section 4.5</a>). It does not narrow the Authority Set,
-shorten a token's lifetime, or bound the requests a Resource Server
+shorten a token's lifetime, or bound the requests a resource server
 honors under a token already issued: a derived token remains usable
 until its <code>exp</code>. A deployment that needs to bound use, rather than
 issuance, adopts a runtime control such as metering

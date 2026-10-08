@@ -9,7 +9,7 @@
 <meta content="
        Mission-Bound Authorization for OAuth 2.0 and its companion profiles
 spread enforcement across several components: a Mission Issuer, in one
-of three bindings (OAuth Authorization Server, standalone Mission
+of three bindings (OAuth authorization server, standalone Mission
 Authority Server, AAuth Person Server), derives authority and, where
 it also issues tokens, gates issuance; a Policy Enforcement Point and
 Policy Decision Point evaluate each action; a harness establishes a
@@ -18,7 +18,7 @@ authority to an Approver; an orchestrator unwinds in-flight work; and
 optional services report Mission state, adjudicate requested
 authority, meter consumption, manage the Mission fleet, log evidence,
 and report completion events. In cross-domain use, a resource-side
-Authorization Server joins this base. Each profile states its own security
+authorization server joins this base. Each profile states its own security
 considerations, but no single document says which components must be
 trusted, what each assumes of the others, and how the compromise of
 each degrades the guarantees. This document provides that consolidated
@@ -1069,7 +1069,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 9 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-security-model-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-06" class="published">6 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1102,7 +1102,7 @@ svg {
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 and its companion profiles
 spread enforcement across several components: a Mission Issuer, in one
-of three bindings (OAuth Authorization Server, standalone Mission
+of three bindings (OAuth authorization server, standalone Mission
 Authority Server, AAuth Person Server), derives authority and, where
 it also issues tokens, gates issuance; a Policy Enforcement Point and
 Policy Decision Point evaluate each action; a harness establishes a
@@ -1111,7 +1111,7 @@ authority to an Approver; an orchestrator unwinds in-flight work; and
 optional services report Mission state, adjudicate requested
 authority, meter consumption, manage the Mission fleet, log evidence,
 and report completion events. In cross-domain use, a resource-side
-Authorization Server joins this base. Each profile states its own security
+authorization server joins this base. Each profile states its own security
 considerations, but no single document says which components must be
 trusted, what each assumes of the others, and how the compromise of
 each degrades the guarantees. This document provides that consolidated
@@ -1151,7 +1151,7 @@ considerations of each profile rather than restating them.<a href="#section-abst
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1268,7 +1268,7 @@ to bound what such an agent can do, not to make it trustworthy
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Bounding the agent
 means relying on other components: the Mission Issuer that derives
 authority and, where it also issues tokens, gates issuance (an
-Authorization Server, a standalone Mission Authority Server, or an
+authorization server, a standalone Mission Authority Server, or an
 AAuth Person Server), the enforcement
 points that evaluate each action,
 the harness that removes unmediated paths, and a set of optional
@@ -1300,7 +1300,7 @@ requirement of its own.<a href="#section-1-4" class="pilcrow">¶</a></p>
       <h2 id="name-conventions-and-terminology">
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-terminology" class="section-name selfRef">Conventions and Terminology</a>
       </h2>
-<p id="section-2-1">This document uses Mission, Mission Issuer (the Authorization Server
+<p id="section-2-1">This document uses Mission, Mission Issuer (the authorization server
 in the OAuth binding; the Mission Authority Server in the standalone
 binding; the AAuth Person Server in the AAuth binding,
 <span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), Policy
@@ -1464,7 +1464,7 @@ it must achieve, what it assumes of the others, and how its compromise
 degrades the guarantees. The authoritative security considerations are in
 the cited profile.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-6-2">
-        <dt id="section-6-2.1">Authorization Server (Mission Issuer):</dt>
+        <dt id="section-6-2.1">Authorization server (Mission Issuer):</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.2">
           <p id="section-6-2.2.1">The root of trust. It derives the Authority Set, runs the approval
 event, commits the integrity anchors, and gates issuance on Mission
@@ -1481,7 +1481,7 @@ trust assumption in the suite
         <dd class="break"></dd>
 <dt id="section-6-2.3">Resource Authorization Server (cross-domain):</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.4">
-          <p id="section-6-2.4.1">When cross-domain access is used, a resource-side Authorization Server
+          <p id="section-6-2.4.1">When cross-domain access is used, a resource-side authorization server
 mints local Mission-bound tokens that the Mission's issuer cannot
 observe. It must mint only within the audience and lifetime the
 cross-domain grant scopes. Its compromise mints arbitrary authority
@@ -1494,7 +1494,7 @@ issuer, which never sees these tokens
 <dt id="section-6-2.5">Mission Authority Server (standalone binding):</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.6">
           <p id="section-6-2.6.1">When the standalone Mission Authority Server binding is used, a
-service outside the OAuth Authorization Server implements the
+service outside the OAuth authorization server implements the
 Mission Issuer role, while the deployment's tokens remain ordinary
 and carry no Mission binding. It must run the approval ceremony
 faithfully, keep the Mission record and its anchors intact, and
@@ -1507,7 +1507,7 @@ combined with the PDP's trust in it yields arbitrary attribution of
 authority to any credential the join accepts. Where Mission Join
 Assertions are used, the PDP's join
 trust concentrates in one MAS signature, and the MAS may hold
-introspection credentials at the Authorization Server, a
+introspection credentials at the authorization server, a
 cross-component channel whose compromise forges joins
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). Where
 consuming Authorization Servers redeem its issuance grants
@@ -1521,7 +1521,8 @@ reaching token issuance across the estate.<a href="#section-6-2.6.1" class="pilc
           <p id="section-6-2.8.1">When the AAuth binding is used, the AAuth Person Server implements
 the Mission Issuer role for that protocol's native missions, and it
 also issues or gates every AAuth auth token, so issuance gating
-holds at the PS as it does at the AS in the OAuth binding. Its
+holds at the PS as it does at the authorization server (AS) in the
+OAuth binding. Its
 compromise is Mission Issuer compromise plus token-issuer
 compromise: forged approvals, altered records, false state, and
 freely minted or ungated auth tokens
@@ -1676,7 +1677,7 @@ operator independence or a second, independent service.<a href="#section-6-2.28.
           <p id="section-6-2.30.1">When completion or trigger-based discharge is used, it reports whether
 a completion event has occurred. It must report accurately and be
 authenticated. A compromised event source can keep a discharged entry
-derivable or falsely discharge one; the Authorization Server fails
+derivable or falsely discharge one; the authorization server fails
 closed when it cannot determine the event status
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>, Section
 "Mission Entry Discharge").<a href="#section-6-2.30.1" class="pilcrow">¶</a></p>
@@ -1745,12 +1746,16 @@ method (<span>[<a href="#I-D.draft-mcguinness-oauth-id-assertion-framework" clas
 concrete publication and evaluation mechanisms for such policy.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.4">
-          <p id="section-7-2.4.1"><strong>Authority does not move on inert input.</strong> <code>purpose</code>,
-<code>success_criteria</code>, and disclosure-only audit material are inert
-and cannot derive, widen, or gate authority; <code>goal</code> shapes
-authority only through the pre-approval derivation whose result the
-Approver reads and consents to, and is inert once the Mission is
-approved (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.4.1"><strong>Authority does not move on inert input.</strong> <code>task_bounds</code> and
+disclosure-only audit material are inert and cannot derive,
+widen, or gate authority; <code>goal</code> shapes authority only through the
+pre-approval derivation whose result the Approver reads and
+consents to, and is inert once the Mission is approved. <code>purpose</code>
+selects candidate authority only as a configured-mapping lookup
+key, bounded by the Intent, policy, and approval; any other use can
+only refuse or apply stricter treatment, never supply, widen,
+relax, or refresh authority or replace an independently required
+check (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <div id="failure-crosswalk">
@@ -2037,7 +2042,7 @@ authority the agent legitimately holds.<a href="#section-9-3.2.1" class="pilcrow
 <dt id="section-9-3.3">Prompt injection tries to widen authority:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.4">
           <p id="section-9-3.4.1">Addressed by the same approval-time commitment: the Intent's prose
-members (<code>goal</code>, <code>constraints</code>, <code>success_criteria</code>) are inert at
+members (<code>goal</code>, <code>task_bounds</code>) are inert at
 derivation, never parsed for machine semantics; authority enters as
 the structured proposal the AS only narrows, and the Approver
 consents to the derived result (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Residual:
@@ -2347,12 +2352,12 @@ that the authority faithfully serves the intent is a derivation
 policy fact (a recommendation, auditable via <code>policy_version</code>), not
 something any of the hashes proves. And <code>authority_hash</code> commits the full
 consented set, which a per-Resource-Server token, carrying a
-narrowed subset, does not contain: at such a Resource Server the
+narrowed subset, does not contain: at such a resource server the
 anchor is an audit correlator, not an enforcement input, and the
 subset relationship it stands for is trust in the issuer's
 signature, not a per-token cryptographic proof. Enforcement value
 from the anchor accrues only to a full-set holder (an auditor, a
-Mandate verifier, a full-set Resource Server).<a href="#section-9-5.3.1" class="pilcrow">¶</a></p>
+Mandate verifier, a full-set resource server).<a href="#section-9-5.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-5.4">
           <p id="section-9-5.4.1"><strong>Standalone-join ceiling.</strong> Under the standalone binding, an
@@ -2465,8 +2470,8 @@ runs. The following non-normative table names the governing parameter at
 each layer; the end-to-end worst case for an action class is the tightest
 layer the deployment enforces for that class. The tables in this
 section read on the credential-issuing bindings (the OAuth
-Authorization Server and the AAuth Person Server); under the
-standalone MAS binding the unchanged Authorization Server keeps
+authorization server and the AAuth Person Server); under the
+standalone MAS binding the unchanged authorization server keeps
 issuing valid tokens after revocation, and the cutoff for every
 column is the runtime layer's state re-check. Where the issuance
 join is deployed
@@ -2665,7 +2670,7 @@ the profile governs.<a href="#section-13-1" class="pilcrow">¶</a></p>
       <h2 id="name-privacy-considerations">
 <a href="#section-14" class="section-number selfRef">14. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-14-1">The trusted components see Mission data: the Authorization Server and PDP
+<p id="section-14-1">The trusted components see Mission data: the authorization server and PDP
 see the Authority Set, the consent rendering layer and Approver see the
 disclosed authority, and the Transparency Service and state sources see
 the Mission Identifier and its activity over time. The single canonical
@@ -3079,76 +3084,88 @@ model and pipeline layers, and saying so is the point:<a href="#appendix-A-5" cl
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Revocation-to-Action Latency states that revoking a Mission does not
-prohibit equivalent authority under a separately approved Mission,
-and that preventing re-approval takes policy over the relevant
-approval paths.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.1.1">Prose-member references follow the OAuth binding, which removed
+<code>success_criteria</code>: the inert-input assumption names <code>task_bounds</code>,
+and the prompt-injection entry names <code>goal</code> and <code>task_bounds</code>
+(replacing the retired <code>constraints</code>).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">The emergent-authority residual points at the Architecture's
-statement that cross-issuer joint authorization is outside the
-family's scope.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.2.1">The inert-input assumption separates <code>purpose</code> from inert material:
+it selects candidate authority only as a configured-mapping lookup
+key, and any other use can only refuse or apply stricter treatment,
+as the OAuth binding states (#1102).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">The effective-ceiling composition residual states that the
-per-Mission figures do not compose into a lifetime total, and
-points at the child-delegation profile's distinct-figures
-rendering.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.3.1">Revocation-to-Action Latency states that revoking a Mission does not
+prohibit equivalent authority under a separately approved Mission,
+and that preventing re-approval takes policy over the relevant
+approval paths.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">The issuance-only residuals state issuance-time bounding and
-per-request introspection rather than audit only.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.4.1">The emergent-authority residual points at the Architecture's
+statement that cross-issuer joint authorization is outside the
+family's scope.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Client-instance references follow their successors:
+          <p id="appendix-B-2.5.1">The effective-ceiling composition residual states that the
+per-Mission figures do not compose into a lifetime total, and
+points at the child-delegation profile's distinct-figures
+rendering.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.6">
+          <p id="appendix-B-2.6.1">The issuance-only residuals state issuance-time bounding and
+per-request introspection rather than audit only.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.7">
+          <p id="appendix-B-2.7.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id} and
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-attesters" class="cite xref">I-D.draft-mcguinness-oauth-client-attesters</a>]</span>, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
 cited. The trusted-base note
-names the Client Attester and its endorsement.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">Named agent-invokable approval resolution as a bypass distinct from
-evidence forgery or nominal principal equality (#759).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">Added the three-ring Enforcement Perimeter, its arbitrary-code
-adversary entry, and the explicit unrecorded-compute residual (#758).<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+names the Client Attester and its endorsement.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">Pointed the Availability limit at Runtime's Operational Considerations
-for the dependency-conditional outage and ride-through semantics (#310).<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.8.1">Named agent-invokable approval resolution as a bypass distinct from
+evidence forgery or nominal principal equality (#759).<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.9">
-          <p id="appendix-B-2.9.1">Failure taxonomy crosswalk (#671): an informative subsection added
+          <p id="appendix-B-2.9.1">Added the three-ring Enforcement Perimeter, its arbitrary-code
+adversary entry, and the explicit unrecorded-compute residual (#758).<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.10">
+          <p id="appendix-B-2.10.1">Pointed the Availability limit at Runtime's Operational Considerations
+for the dependency-conditional outage and ride-through semantics (#310).<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.11">
+          <p id="appendix-B-2.11.1">Failure taxonomy crosswalk (#671): an informative subsection added
 to <a href="#cross-cutting" class="auto internal xref">Section 7</a>, mapping the Mandate, Audit, Consent Evidence,
 and Transaction Authorization failure classes onto the
 fail-closed/fail-safe axis, and stating that the axis depends on how
 the artifact is used rather than on the class label alone. Every
 source document's terms are preserved. No normative content,
-guarantee, adversary-model row, mitigation, or residual changed.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+guarantee, adversary-model row, mitigation, or residual changed.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.10">
-          <p id="appendix-B-2.10.1">Controls taxonomy retirement (#636): the Approver-compromise row's
+        <li class="normal" id="appendix-B-2.12">
+          <p id="appendix-B-2.12.1">Controls taxonomy retirement (#636): the Approver-compromise row's
 <code>controls.acr</code> reference updated to the standard <code>acr_values</code>/<code>max_age</code>
 step-up request carriage; the effective-ceiling-composition row's
 <code>max_derivations</code> renamed <code>derivation_limit</code>. No adversary-model
-change.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+change.<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.11">
-          <p id="appendix-B-2.11.1">Editorial density pass on this Informational document: the
+        <li class="normal" id="appendix-B-2.13">
+          <p id="appendix-B-2.13.1">Editorial density pass on this Informational document: the
 Transparency Service entry of <a href="#trusted-base" class="auto internal xref">Section 6</a> kept as the one
 full statement of the single-service-equivocation point, with the
 Ten Residuals restatement compressed to a pointer at it; the
-Documenting section's echo of the Authorization Server entry's
+Documenting section's echo of the authorization server entry's
 "strongest trust assumption" phrasing dropped in favor of its
 existing <a href="#trusted-base" class="auto internal xref">Section 6</a> cross-reference, and that entry given an
 explicit citation to the Mission Mandate document it shares the
 issuer-key-compromise concern with. Several over-long paragraphs in
 <a href="#guarantees" class="auto internal xref">Section 8</a> split for one idea per paragraph. No normative
 content, anchor, or adversary-model row, mitigation, or residual
-changed.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

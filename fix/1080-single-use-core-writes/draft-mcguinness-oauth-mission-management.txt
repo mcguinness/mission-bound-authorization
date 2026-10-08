@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          6 October 2026
-Expires: 9 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                     Mission Management for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -110,6 +110,7 @@ Table of Contents
    References
      Normative References
      Informative References
+   Appendix A.  Document History
    Author's Address
 
 1.  Introduction
@@ -161,7 +162,7 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission] and the status profile
    [I-D.draft-mcguinness-oauth-mission-status], in particular Mission,
    Mission Issuer (the Mission issuer: in this document's OAuth binding
-   the Authorization Server; a standalone Mission Issuer, the Mission
+   the authorization server; a standalone Mission Issuer, the Mission
    Authority Server [I-D.draft-mcguinness-mission-authority-server],
    serves this surface with the same semantics), mission_id, the Mission
    record, and the Mission lifecycle states and operations.  It
@@ -182,7 +183,7 @@ Table of Contents
 3.  Mission Management Endpoint
 
    The Mission Issuer publishes its Mission Management endpoint URL in
-   Authorization Server metadata (Section 11) as
+   authorization server metadata (Section 11) as
    mission_management_endpoint.  The endpoint MUST be served over TLS
    1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of
    [RFC9325].
@@ -244,10 +245,10 @@ Table of Contents
 
 3.1.  Idempotency
 
-   The nonce is the idempotency key.  The AS MUST deduplicate management
-   requests by (client, nonce) for a bounded window, at least the
-   validity span of the signed response it would replay, as the status
-   profile's lifecycle endpoint requires
+   The nonce is the idempotency key.  The authorization server (AS) MUST
+   deduplicate management requests by (client, nonce) for a bounded
+   window, at least the validity span of the signed response it would
+   replay, as the status profile's lifecycle endpoint requires
    ([I-D.draft-mcguinness-oauth-mission-status]).  On a retransmit, the
    AS MUST replay the original response rather than re-execute the
    request.
@@ -547,7 +548,10 @@ Table of Contents
 
    suspend_until, on_expiry:  OPTIONAL and CONDITIONAL respectively,
       valid only when operation is suspend, with the status profile's
-      semantics, applied uniformly to every Mission in the set.
+      semantics, applied uniformly to every Mission in the set.  A
+      suspend whose on_expiry is resume schedules a bulk resume and
+      needs the resume grant of Section 13.1, checked at dry run and
+      again at execute.
 
    The AS MAY declare a bound on the evaluated set size and refuse a dry
    run whose match count exceeds it with filter_too_broad (Section 8);
@@ -576,6 +580,11 @@ Table of Contents
       SHOULD NOT exceed 15 minutes: long enough to review, short enough
       that the reviewed set cannot silently age.
 
+   Before evaluating the filter for a suspend whose on_expiry is resume,
+   the AS MUST verify that the caller holds the resume grant of
+   Section 13.1, and MUST refuse a caller that lacks it with forbidden
+   (Section 8), issuing no bulk token.
+
    A dry run commits no transition.  To review the membership behind the
    count, the caller runs enumerate presenting the bulk_token
    (Section 6), which returns exactly the pinned set, so the reviewed
@@ -600,13 +609,17 @@ Table of Contents
    5.  pins a membership every member of which is still within the
        caller's current filter scope (Section 3.3).
 
-   An execute whose operation, filter, or on_expiry differs from what
-   the token pins MUST be refused with invalid_bulk_token, executing
-   nothing.  An execute any of whose pinned members has left the
-   caller's filter scope (administrative metadata changed under the
-   reviewed set, Section 4) MUST be refused with stale_bulk_token,
-   executing nothing and naming no member; the caller re-runs the dry
-   run under current scope (Section 13.3).  Either check completes
+   An execute whose operation, filter, suspend_until, or on_expiry
+   differs from what the token pins MUST be refused with
+   invalid_bulk_token, executing nothing.  An execute any of whose
+   pinned members has left the caller's filter scope (administrative
+   metadata changed under the reviewed set, Section 4) MUST be refused
+   with stale_bulk_token, executing nothing and naming no member; the
+   caller re-runs the dry run under current scope (Section 13.3).  For a
+   suspend whose on_expiry is resume, the AS MUST verify again that the
+   caller holds the resume grant of Section 13.1, and MUST refuse a
+   caller that no longer holds it with forbidden, executing nothing; the
+   bulk token never substitutes for this check.  Each check completes
    before any transition commits.  The token is then consumed: it is
    single-use whatever the outcome.
 
@@ -618,6 +631,14 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-signals]).  There is no bulk
    event type and no transactionality: transitions commit independently,
    and a failure on one member MUST NOT roll back another.
+
+   For a suspend, those semantics include the status profile's schedule
+   rules ([I-D.draft-mcguinness-oauth-mission-status]): on a member
+   already suspended, a request that omits suspend_until and on_expiry
+   leaves the member's recorded schedule and its committing party
+   unchanged, and one that carries them replaces that schedule.  The
+   caller is the committing party of every schedule a bulk suspend
+   commits.
 
    The membership is the one the dry run evaluated.  A Mission created,
    or newly matching the filter, after the dry run is not in the
@@ -812,8 +833,12 @@ Table of Contents
    *  *Suspend-first triage.* Bulk suspend with suspend_until and
       on_expiry of revoke, investigate, then selectively resume
       individual Missions through the status profile's lifecycle
-      endpoint; anything not affirmatively cleared revokes itself at the
-      deadline.
+      endpoint, under its resume authorization; anything not
+      affirmatively cleared revokes itself at the deadline.  The revoke
+      deadline needs no resume grant and replaces any schedule a member
+      already suspended had recorded, so no earlier scheduled resume
+      outlives the triage; a timed pause ending in resume needs the
+      resume grant (Section 13.1).
 
    What bulk revocation does and does not stop is the security model's
    revocation-to-action latency table
@@ -836,7 +861,7 @@ Table of Contents
 11.  Authorization Server Metadata
 
    An AS that serves the Mission Management endpoint advertises it in
-   its Authorization Server metadata [RFC8414]:
+   its authorization server metadata [RFC8414]:
 
    mission_management_endpoint:  OPTIONAL.  A string containing a URL.
       The URL of the Mission Management endpoint (Section 3).  Present
@@ -924,8 +949,9 @@ Table of Contents
 
    One qualification: bulk resume re-activates Missions suspended for
    cause, undoing an in-flight containment.  A deployment MUST require a
-   distinct or elevated grant for resume at this endpoint.  A deployment
-   SHOULD alert on bulk resume.
+   distinct or elevated grant for resume at this endpoint, including for
+   a suspend whose on_expiry is resume, which schedules the same re-
+   activation.  A deployment SHOULD alert on bulk resume.
 
    Deployments SHOULD:
 
@@ -1188,6 +1214,17 @@ Informative References
               "Best Current Practice for OAuth 2.0 Security", BCP 240,
               RFC 9700, DOI 10.17487/RFC9700, January 2025,
               <https://www.rfc-editor.org/rfc/rfc9700>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  A bulk suspend whose on_expiry is resume needs the distinct or
+      elevated resume grant, checked at dry run and again at execute
+      before any member changes.  The caller is each committed
+      schedule's committing party, an omitted schedule is preserved, and
+      an execute must match the dry run's suspend_until as well as its
+      on_expiry (#1002).
 
 Author's Address
 

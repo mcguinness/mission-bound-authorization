@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             6 October 2026
-Expires: 9 April 2027
+Intended status: Experimental                             8 October 2026
+Expires: 11 April 2027
 
 
                    Mission Continuation for OAuth 2.0
@@ -39,7 +39,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -294,7 +294,7 @@ Table of Contents
    The Identity Continuation Assertion
    ([I-D.draft-mcguinness-oauth-id-continuation-assertion]) is the
    multi-hop, cross-workload transport among Resource Authorization
-   Servers that trust a common IdP Authorization Server (IdP).  A
+   Servers that trust a common IdP authorization server (IdP).  A
    Continuation Assertion Issuer attests that a Resource Authorization
    Server accepted an earlier ID-JAG and that its authorization remains
    active; the acting workload presents that assertion to the IdP as an

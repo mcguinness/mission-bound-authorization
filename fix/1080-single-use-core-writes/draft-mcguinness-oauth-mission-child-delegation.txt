@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          6 October 2026
-Expires: 9 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -248,9 +248,9 @@ Table of Contents
    inline and a Child Mission when parked on a queue.  Audience is a
    second test: a delegated token reaches only a Mission-aware Resource
    Server ([I-D.draft-mcguinness-oauth-mission]), so a sub-agent that
-   calls a Resource Server that is not Mission-aware runs under a Child
+   calls a resource server that is not Mission-aware runs under a Child
    Mission even when invoked inline, where child creation is authorized
-   (Section 8) and that Resource Server can enforce the authority
+   (Section 8) and that resource server can enforce the authority
    projected to it; creating the child establishes neither condition.
 
 2.2.  Relationship to In-Mission Delegation
@@ -416,9 +416,10 @@ Table of Contents
 
       A child_actor MAY be identified at instance granularity where the
       deployment authenticates client instances
-      ([I-D.draft-mcguinness-oauth-client-instance-id]): the AS
-      establishes that actor's identity, and its association with the
-      authenticated instance, separately from the instance evidence
+      ([I-D.draft-mcguinness-oauth-client-instance-id]): the
+      authorization server (AS) establishes that actor's identity, and
+      its association with the authenticated instance, separately from
+      the instance evidence
       ([I-D.draft-mcguinness-oauth-client-instance-id], Section 5), and
       sub_profile carries the actor type (for example, ai_agent).  The
       child client-identity rule (Section 5.1), under which child
@@ -716,10 +717,11 @@ Table of Contents
    9.   Determine subset derivation versus fresh approval and complete
         per Section 5.4: synchronous, deferred, or interactive.
 
-   10.  At the creation commit, re-verify parent state (Section 5.3),
-        create the Child Mission record with parent and the completed
-        (client, creation_request_id) reservation atomically
-        (Section 5.8), and record Child Evidence.
+   10.  At the creation commit, re-verify parent state (Section 5.3) and
+        the inherited authority source (Section 6.1), create the Child
+        Mission record with parent and the completed (client,
+        creation_request_id) reservation atomically (Section 5.8), and
+        record Child Evidence.
 
    On any failure the Mission Issuer MUST refuse with invalid_request,
    invalid_grant, or invalid_token as appropriate, and MUST NOT create a
@@ -1048,6 +1050,29 @@ Table of Contents
    approved_at is that policy version's human-approval instant, verified
    from the deployment's retained governance record.
 
+   The child's subject follows its basis:
+
+   *  Under policy_drawdown, it MUST equal the Parent Mission's subject.
+
+   *  Under direct, it is the Parent Mission's subject unless the human
+      approval event establishes another Subject through the issuance
+      profile's Subject and authority-source establishment in full
+      ([I-D.draft-mcguinness-oauth-mission], Section "Mission
+      Approval"): never from client input, with the Approver authorized
+      to approve for that Subject and to activate the child's authority
+      source.  This document defines no request parameter that names a
+      Subject, and Section 7 bounds the child either way.
+
+   A Child Mission's authority_source MUST equal the Parent Mission's,
+   including an organizational source's policy reference; a carryover
+   replacement's follows Section 10.5 instead.  Copying the source
+   establishes no authority: at the creation commit, the Mission Issuer
+   MUST verify that the source applies to the child's subject and that
+   the child Authority Set lies within the source's ceiling as it stands
+   at that commit, as well as within the parent's (Section 7.1), and
+   MUST refuse the creation otherwise.  The same commit rechecks the
+   effective expiry (Section 7).
+
 7.  Attenuation Rules
 
    A Child Mission MUST be bounded by the Parent Mission:
@@ -1090,9 +1115,12 @@ Table of Contents
 
    The Mission Issuer MUST compute the Child Mission's authority_hash
    over the child Authority Set, not over the parent Authority Set. A
-   Resource Server enforces child tokens exactly as Mission-bound
-   tokens: the child authority_hash is the immediate authority
-   commitment.
+   resource server enforces child tokens exactly as Mission-bound
+   tokens: it enforces the carried authorization_details.  The child
+   authority_hash commits the child Authority Set on the child's Mission
+   record; a resource server that must check carried authority against
+   the complete set adopts Approved-Set Verification
+   ([I-D.draft-mcguinness-oauth-mission-approved-set-verification]).
 
    Child Mission tokens MUST be sender-constrained to the child actor's
    own key, matching the issuance profile's delegated-token posture
@@ -1904,12 +1932,16 @@ Table of Contents
       consent_principal, and policy_drawdown for one policy adjudicates,
       with the Parent Mission's human approver as consent_principal;
 
+   *  record each child's subject per its basis and the parent's
+      authority_source, verifying that source at the creation commit
+      (Section 6.1);
+
    *  implement cascade revocation; and
 
    *  record child delegation evidence.
 
-   A Resource Server does not need to understand this profile to enforce
-   child tokens as Mission-bound tokens.  A Resource Server MUST NOT
+   A resource server does not need to understand this profile to enforce
+   child tokens as Mission-bound tokens.  A resource server MUST NOT
    apply lineage-sensitive policy from the parent member unless it
    implements the semantics of the parent-member (Section 6) and cascade
    (Section 9) sections.
@@ -2272,6 +2304,12 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-
               approval.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-approved-set-verification]
+              McGuinness, K., "Mission Approved-Set Verification for
+              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
+              approved-set-verification.html>.
+
    [I-D.draft-mcguinness-oauth-mission-attenuation]
               McGuinness, K., "Mission Offline Attenuation for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -2381,6 +2419,21 @@ Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Mission Record Requirements: a policy_drawdown child has the
+      Parent Mission's subject; a direct child defaults to it and names
+      another Subject only through the issuance profile's full Subject
+      and authority-source establishment.  Every ordinary child carries
+      the parent's authority_source, and its creation commit verifies
+      that the source applies to the child's Subject and that the child
+      Authority Set lies within the source's current ceiling and the
+      parent's; carryover keeps its own source rules (#1118).
+
+   *  Attenuation Rules: a resource server enforces a child token's
+      carried authorization_details; the child authority_hash commits
+      the child Authority Set on the child's Mission record, and
+      checking carried authority against the complete set is Approved-
+      Set Verification (#1086).  No requirement changed.
+
    *  Mission Record Requirements: the delegation event creates the
       Child Mission record the issuance profile and this section
       require; human accountability is inherited from the parent only
@@ -2422,9 +2475,9 @@ Appendix B.  Document History
       Authorization Server's issuer identifier.  No wire change.
 
    *  The delegated-token versus Child Mission test adds audience: a
-      sub-agent that calls a Resource Server that is not Mission-aware
+      sub-agent that calls a resource server that is not Mission-aware
       runs under a Child Mission, where child creation is authorized and
-      that Resource Server can enforce the projected authority.
+      that resource server can enforce the projected authority.
 
    *  Client-instance references follow their successors: draft-
       mcguinness-oauth-client-instance-assertion is replaced by {I-

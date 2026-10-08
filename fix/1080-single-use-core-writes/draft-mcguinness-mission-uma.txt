@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             6 October 2026
-Expires: 9 April 2027
+Intended status: Experimental                             8 October 2026
+Expires: 11 April 2027
 
 
      Mission-Bound Authorization for User-Managed Access (UMA) 2.0
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -160,19 +160,20 @@ Table of Contents
    per deployment.
 
    This is the fourth binding of the Mission model: the issuance profile
-   binds it to the OAuth Authorization Server, the Mission Authority
-   Server to a standalone service beside an unchanged AS
-   ([I-D.draft-mcguinness-mission-authority-server]), the AAuth binding
-   to the AAuth Person Server ([I-D.draft-mcguinness-mission-aauth]),
-   and this document to the UMA 2.0 authorization server.  Like the
-   AAuth binding, it provides issuance gating structurally: no RPT
-   exists without passing the authorization server's token endpoint.  It
-   is also the first binding authored against the Mission Substrate
-   Requirements contract ([I-D.draft-mcguinness-mission-substrate])
-   rather than one the contract was extracted from; its Mission
-   Substrate Statement (Section 10) is written to that document's
-   conformance rules, and exercising the checklist on a substrate none
-   of its source bindings resemble is part of this sketch's purpose.
+   binds it to the OAuth authorization server, the Mission Authority
+   Server to a standalone service beside an unchanged authorization
+   server ([I-D.draft-mcguinness-mission-authority-server]), the AAuth
+   binding to the AAuth Person Server
+   ([I-D.draft-mcguinness-mission-aauth]), and this document to the UMA
+   2.0 authorization server.  Like the AAuth binding, it provides
+   issuance gating structurally: no RPT exists without passing the
+   authorization server's token endpoint.  It is also the first binding
+   authored against the Mission Substrate Requirements contract
+   ([I-D.draft-mcguinness-mission-substrate]) rather than one the
+   contract was extracted from; its Mission Substrate Statement
+   (Section 10) is written to that document's conformance rules, and
+   exercising the checklist on a substrate none of its source bindings
+   resemble is part of this sketch's purpose.
 
 1.1.  Attempt-First Operation
 
@@ -266,7 +267,7 @@ Table of Contents
          | Client        | Agent: its OAuth client identifier   |
          |               | is the Mission's client_id           |
          +---------------+--------------------------------------+
-         | Resource      | Resource Server: protection API      |
+         | Resource      | Resource server: protection API      |
          | server        | participant, no Mission awareness    |
          |               | required                             |
          +---------------+--------------------------------------+
