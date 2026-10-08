@@ -125,6 +125,10 @@
    "draft-mcguinness-mission-aauth-management.md": {
     "revision": "8a52c00cac783ebef32da8c60babacf3dea663f6",
     "content_sha256": "f9d19f801a349372fe527943ccf42aea74965d3997707dc732ed48322b6fd0f6"
+   },
+   "draft-mcguinness-mission-aauth.md": {
+    "revision": "119142291c967bb1f3499833bca4bdfeb221d18c",
+    "content_sha256": "300f37982869ca23f2a7d2518c05130d8644b2397d4c9f4c26e59d21a03ad249"
    }
   }
  },
@@ -254,7 +258,9 @@
    "request-provenance.verification",
    "request-provenance.intake",
    "expansion.adjudication",
-   "expansion.interactive-completion"
+   "expansion.interactive-completion",
+   "aauth.supervision-server",
+   "aauth.supervision-proof"
   ]
  },
  "profiles": [
@@ -32131,6 +32137,140 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth.mission-log.supervision-decider",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "mission-log",
+   "text": "For each supervision decision, the PS records the actual decider: the person acting directly, the deciding supervision server identified by its `issuer`, or the person answering after the server's `ask` or while the server is unavailable.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission-log entry for every supervision decision names its actual decider: the person when the person decided directly, the deciding supervision server by its `issuer` when that server decided, or the person when the person answered after the server's `ask` or while the server was unavailable; no entry attributes the person's decision to a supervision server or a server's decision to the person"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#967 (PR #1156). Native AAuth tests are scoped to the #836 pilot; no reference implementation of supervision-server routing exists."
+  },
+  {
+   "id": "aauth.mission-log.supervision-exchange",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "mission-log",
+   "text": "For an exchange with a supervision server, the log entry is the exchange itself under the PS-minted `sdi`, with any signatures preserved, and the person's later answer is recorded under the same `sdi`",
+   "facet": "exchange-and-signatures",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.supervision-server"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the log entry for a supervision-server decision holds the request as the PS signed it and the response as the PS received it, keyed by the `sdi` the PS minted for that request, and keeps the response's signature when the server signed"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#967 (PR #1156). Native AAuth tests are scoped to the #836 pilot; no reference implementation of supervision-server routing exists."
+  },
+  {
+   "id": "aauth.mission-log.supervision-person-answer",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "mission-log",
+   "text": "For an exchange with a supervision server, the log entry is the exchange itself under the PS-minted `sdi`, with any signatures preserved, and the person's later answer is recorded under the same `sdi`",
+   "facet": "person-answer-correlation",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.supervision-server"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when the person decides after the server's `ask`, or while the server is unavailable, the person's decision is recorded under the same `sdi` as the supervision request it answers"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#967 (PR #1156). Native AAuth tests are scoped to the #836 pilot; no reference implementation of supervision-server routing exists."
+  },
+  {
+   "id": "aauth.mission-log.signing-server-for-proof",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "mission-log",
+   "text": "A deployment that claims to prove what its supervision server decided requires a server that signs.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.supervision-proof"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "in a deployment that claims to prove what its supervision server decided, every deciding supervision server publishes `jwks_uri`, and every supervision-server decision the PS records carries a response signature that verifies under it"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#967 (PR #1156). Native AAuth tests are scoped to the #836 pilot; no reference implementation of supervision-server routing exists."
+  },
+  {
+   "id": "aauth.mission-log.read-restriction",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "mission-log",
+   "text": "MUST restrict read access to the person, the PS itself, the deciding supervision server for the mission's agent ({{roles}}), and parties authorized under its administrative policy",
+   "facet": "reader-set",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "mission-log content is disclosed only to the person, the PS itself, the deciding supervision server for the mission's agent, and parties the PS's administrative policy authorizes; a read by any other party is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#967 (PR #1156). Native AAuth tests are scoped to the #836 pilot; no reference implementation of supervision-server routing exists."
+  },
+  {
+   "id": "aauth.mission-log.read-restriction-supervision-server",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "mission-log",
+   "text": "MUST restrict read access to the person, the PS itself, the deciding supervision server for the mission's agent ({{roles}}), and parties authorized under its administrative policy",
+   "facet": "supervision-server-reader",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.supervision-server"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a supervision server receives a mission's log content, through supervision requests, events, or replay, only when it is the deciding supervision server for that mission's agent; a server not routed for the agent receives none of it"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#967 (PR #1156). Native AAuth tests are scoped to the #836 pilot; no reference implementation of supervision-server routing exists."
   }
  ]
 }
