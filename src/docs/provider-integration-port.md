@@ -1016,9 +1016,16 @@ Mission-bound token through the assembled path (#1105).
     and recorded in `consumed_permits` inside the reservation's transaction
     (`WriteReservationStore.reserve`), so a consumed identifier is refused
     `permit_consumed` under any key and an effect that refuses consumes
-    nothing; retrieval of a retained result consumes nothing but refuses a
-    consumed identifier; any other `use_limit` is refused
-    `condition_unrecognized`.
+    nothing. Retrieval of a retained result is a use too (D342):
+    `releaseRetained` consumes `use_limit: 1` with one `consumePermit`
+    insert after the permit-use check and before the disposition or the
+    result is disclosed, on the initial lookup and on the
+    concurrent-existing fallback alike. A consumed identifier is refused
+    `permit_consumed`, a store that cannot be written refuses
+    `consumption_unavailable`, and neither discloses the record; a later
+    retrieval takes a fresh Decision. Any other `use_limit` is refused
+    `condition_unrecognized`. A permit with no `use_limit` keeps the key
+    control and consumes nothing.
   - Startup: the server does not start unless every served
     `consequential_write` is covered by a control its write path enforces,
     with the store configured and owned by the declared owner
@@ -1027,8 +1034,9 @@ Mission-bound token through the assembled path (#1105).
 - **Boundary.** The claim insert is one transaction in the PDP's store.
   Redemption, effect, evidence and settlement follow as separate writes, in
   that order. A keyed write is one local transaction, including the
-  redemption of any `use_limit` it carries. An unkeyed write's redemption is
-  one insert; the effect follows it synchronously.
+  redemption of any `use_limit` it carries. An unkeyed write's redemption,
+  and a keyed retrieval's, is one insert; the effect, or the disposition and
+  the retained result, follows it.
 - **Asynchronous work.** None. `settleClaim` is awaited.
 - **Crash and recovery.** The claim and reservation files survive a restart,
   and with them the consumed identifiers.
@@ -1050,6 +1058,14 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
   - `single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > retains each consumed identifier through the permit's whole acceptance window: until valid_until plus the margin, and a sweep at valid_until keeps it` (server-level)
   - `a use_limit a keyed write's permit carries is metered, never ignored (@spec runtime#single-use-identifiers, #1136 review, D317) > the review's probe: scheduled under a use_limit: 1 permit, cancelled under a fresh Decision, the original permit replayed under another key is refused permit_consumed and schedules nothing` (server-level)
   - `a use_limit a keyed write's permit carries is metered, never ignored (@spec runtime#single-use-identifiers, #1136 review, D317) > the consumed permit replayed under its own key is refused permit_consumed before the retained result is disclosed; a keyed effect that refuses consumes nothing; a use_limit other than 1 is refused condition_unrecognized` (server-level)
+  - `a use_limit a keyed write's permit carries is metered, never ignored (@spec runtime#single-use-identifiers, #1136 review, D317) > a keyed presentation refused before admission's transaction burns nothing, and two concurrent presentations of that use_limit: 1 Decision under different keys schedule once` (server-level)
+  - `retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > two retrievals under one identifier: the first releases the retained result and consumes the permit, the second is refused permit_consumed and discloses nothing` (server-level)
+  - `retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > a retrieval followed by admission under another key: the permit the retrieval consumed is refused permit_consumed and schedules nothing, even after a separately authorized cancellation` (server-level)
+  - `retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > two concurrent retrievals of one unconsumed single-use Decision, held after their permit-use checks, release the retained result once` (server-level)
+  - `retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > the concurrent-existing fallback consumes the losing permit: two single-use Decisions under one new key, both admitted, schedule once, and the loser's permit, though it only retrieved, is refused permit_consumed under another key` (server-level)
+  - `retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > replay after a store reopen: a permit a retrieval consumed is refused permit_consumed by a new server on the same file, under its own key and under another` (server-level)
+  - `retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > a fresh Decision still retrieves the original result and repeats no effect: a fresh single-use one after the first is consumed, and one with no use limit keeps the key control and consumes nothing` (server-level)
+  - `retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > a consumed-identifier store that cannot be written refuses the retrieval consumption_unavailable and discloses nothing: no retained result and no retained-record disposition` (server-level)
   - `the statement's permit-lifetime controls, discriminated on permit_lifetime_control (@spec runtime#permit-binding, runtime#single-use-identifiers, #1080, D333) > publishes single_use_decision_identifier as the consequential_write class default, with its consumed-identifier owner, domain and permit_acceptance_window posture and no key member, while the schedule and cancel entries keep the key control` (PDP-level)
   - `the statement's permit-lifetime controls, discriminated on permit_lifetime_control (@spec runtime#permit-binding, runtime#single-use-identifiers, #1080, D333) > selects the most specific declaration before the class default, and returns a key declaration only when that selection is the key control: a less-specific key default never covers an operation that elects single use` (PDP-level)
   - `the statement's permit-lifetime controls, discriminated on permit_lifetime_control (@spec runtime#permit-binding, runtime#single-use-identifiers, #1080, D333) > refuses an invalid or ambiguous declaration: a key member on a single-use entry, a single-use member on a key entry, a missing single-use member, the other variant's retention posture, an owner outside the PEP locations, an unknown control, and a class or operation declared twice` (PDP-level)
