@@ -1096,11 +1096,15 @@ The contextual-governance kernel maps as follows:
    governance state, and the mission log ({{roles}}).  Consumers
    establish its identity and keys from AAuth's published PS metadata
    and key set ({{I-D.draft-hardt-oauth-aauth-protocol}}).
-3. **Actor binding**: the blob's `agent` member names the AAuth agent
-   identifier, authenticated by its agent token and HTTP message
-   signatures; parent-mediated and call-chaining relationships are
-   the only delegations, and the identifier maps to no OAuth
-   `client_id` ({{blob}}, {{roles}}).
+3. **Actor binding**: the blob's `agent` member names the root actor,
+   the AAuth agent identifier authenticated by its agent token and
+   HTTP message signatures; parent-mediated and call-chaining
+   relationships are the only delegations, and the identifier maps to
+   no OAuth `client_id` ({{blob}}, {{roles}}).  The holder of a chained
+   person token is the intermediary, a separate actor whose agent
+   identity the PS establishes from the intermediary's authenticated
+   agent token and its own records; the token's `cnf` binds the key,
+   not the identity ({{ref-propagation}}).
 4. **Approved Context**: the private approved mission blob, delivered
    as the approval envelope's base64url `mission` member and immutable
    under the exact-byte `s256` commitment over its decoded bytes, and
@@ -1133,9 +1137,11 @@ The contextual-governance kernel maps as follows:
    Expiry {{I-D.draft-mcguinness-aauth-mission-expiry}} profiles the
    member this binding relies on.
 8. **Context propagation**: the signed `mission_s256` claim, carried
-   by person, resource, and auth tokens, carries governance context;
-   the blob itself never propagates; coverage varies by access mode
-   ({{ref-propagation}}, {{access-modes}}).
+   by person, resource, and auth tokens, carries governance context,
+   including on a person token the PS issues to an intermediary on an
+   upstream token, where the PS copies the claim and the intermediary
+   never supplies it; the blob itself never propagates; coverage varies
+   by access mode ({{ref-propagation}}, {{access-modes}}).
 9. **Governance record**: the PS mission log is the ordered
    governance record, scoped to PS-observed operations with
    agent-reported local activity distinguished, and with the
