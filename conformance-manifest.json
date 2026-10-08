@@ -9182,7 +9182,7 @@
    "tests": [
     {
      "file": "src/packages/mission-signals/test/carryover-correlation.test.ts",
-     "name": "carryover cascade propagated by Mission Signals > delivers carried_to on the carried child's cascaded SET and omits it on an excluded child's",
+     "name": "carryover cascade propagated by Mission Signals > delivers termination.carried_to on the carried child's parent_terminated SET and omits it on an excluded child's",
      "level": "cross-component",
      "surface": "signals"
     }
@@ -13808,7 +13808,7 @@
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-decision-inputs.test.ts",
-     "name": "Time input: a Mission state source reporting the Mission expired refuses (@spec runtime#input-time) > a Mission state of expired refuses the action; evaluate() has no token-exp input to depend on in the first place",
+     "name": "Time input: a Mission state source reporting the Mission expired refuses (@spec runtime#input-time) > a Mission state of terminated (reason expired) refuses the action; evaluate() has no token-exp input to depend on in the first place",
      "level": "endpoint",
      "surface": "decision-request"
     }
@@ -29519,7 +29519,7 @@
     },
     {
      "file": "src/packages/mission-signals/test/carryover-correlation.test.ts",
-     "name": "carryover cascade propagated by Mission Signals > delivers carried_to on the carried child's cascaded SET and omits it on an excluded child's",
+     "name": "carryover cascade propagated by Mission Signals > delivers termination.carried_to on the carried child's parent_terminated SET and omits it on an excluded child's",
      "level": "cross-component",
      "surface": "evidence-emission"
     }
