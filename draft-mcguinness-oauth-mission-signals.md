@@ -344,9 +344,9 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   emits that state here on the corresponding transition.
 
 `prior_state` (string, conditional):
-: the state immediately before the transition: `active` or
-  `suspended`, since a `terminated` Mission admits no further
-  transition. REQUIRED on a transition emission; absent only on the
+: the state immediately before the transition, never `terminated`,
+  since a `terminated` Mission admits no further transition (for
+  example `active`, or Status's `suspended`). REQUIRED on a transition emission; absent only on the
   approval-event emission, where there is no prior state. A supersede
   transition emits `prior_state` of `active`, `state` of `terminated`,
   and a `termination` with reason `superseded`.
