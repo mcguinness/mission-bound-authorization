@@ -50,10 +50,10 @@ export interface AsNativeLaunch {
   /** The lines the launcher prints once the target is ready. */
   summary: string[];
   /**
-   * Close every listener the target opened (the resource endpoint, the AS,
-   * the txn-challenge discovery listener and, in remote mode, the PDP hop) and
-   * release both single-writer store files. Resolves once every port is free.
-   * Idempotent.
+   * Stop the outcome reconciler, close every listener the target opened (the
+   * resource endpoint, the AS, the txn-challenge discovery listener and, in
+   * remote mode, the PDP hop) and release both single-writer store files.
+   * Resolves once every port is free. Idempotent.
    */
   close: () => Promise<void>;
 }
@@ -76,6 +76,7 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
   let closing: Promise<void> | undefined;
   const close = (): Promise<void> =>
     (closing ??= (async () => {
+      await stack.reconciler.stop();
       await resourceChannel?.close();
       await stack.masGovernedChannel?.close();
       await authServer?.closeAuthServer();
@@ -87,6 +88,10 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
     await close();
     throw new Error("the as-native target assembles the AS with its capability set and the resource endpoint");
   }
+  // @spec runtime#evidence (outcome reconciliation) (#1103): the declared
+  // reconciler runs for the target's lifetime, once now and then every third
+  // of the declared window; `close` stops it before anything it reads closes.
+  stack.reconciler.start();
   return {
     stack,
     summary: [
@@ -97,6 +102,7 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
       `  resource audience  ${resourceChannel.url}  (HTTP MCP, DPoP verified on every request)`,
       `  PDP mode           ${stack.pdpMode}`,
       `  MAS join route     ${stack.masGovernedChannel ? "mounted" : "not mounted"}`,
+      `  reconciliation     every ${stack.reconciler.intervalMs / 1000} s (window ${stack.reconciler.windowMs / 1000} s), operator alerts on stderr`,
       "  ready. Ctrl-C to stop.",
     ],
     close,

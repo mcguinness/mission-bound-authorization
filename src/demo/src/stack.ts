@@ -54,11 +54,13 @@ import {
   EvidenceRetentionStore,
   EvidenceStore,
   type HttpMcpChannel,
+  indeterminateClaimAlert,
   type KeyRoles,
   type LoadedView,
   McpPaymentsServer,
   type MediatedToolResult,
   type MissionReference,
+  OutcomeReconciler,
   PaymentsStore,
   Pep,
   type PepDeps,
@@ -66,6 +68,7 @@ import {
   redemptionStatusFor,
   type ResourceMetadataServer,
   startResourceMetadataServer,
+  stderrAlertSink,
   type TokenFacts,
   TransactionEngine,
   openWriteReservationStore,
@@ -218,6 +221,13 @@ export interface DemoStack {
    * file for this stack's lifetime, beside (never inside) the PDP's claims.
    */
   writeReservations: WriteReservationStore;
+  /**
+   * @spec runtime#evidence (outcome reconciliation) (#1103): the declared
+   * reconciler, built from the statement's `outcome_reconciliation`. Returned
+   * stopped: the launchers (`pnpm as-native`, `pnpm demo:serve`) start it, and
+   * a test runs it with `runOnce()`. Every close path stops it first.
+   */
+  reconciler: OutcomeReconciler;
   /** The issuer this stack's kernel/tokens use (ISS, or the AS URL). */
   issuer: string;
   viewFor: (missionId: string) => MissionView | undefined;
@@ -646,11 +656,17 @@ export async function composeStack(opts: {
   // process holds, or a statement it cannot run, refuses the stack at boot.
   const claimsFile = opts.claimsFile ?? TOPOLOGY.stores.pdpIdempotencyClaims.file;
   mkdirSync(dirname(claimsFile), { recursive: true });
+  // @spec runtime#evidence (outcome reconciliation) (#1103): the declared
+  // alerting obligation, one JSON line on stderr per alert. A claim that
+  // closes indeterminate alerts where the claim domain moves it, after the
+  // move commits, so a prior process's claim alerts too.
+  const operatorAlerts = stderrAlertSink();
   const pdpClaims = openIdempotencyClaimDomain({
     file: claimsFile,
     owner: RUNTIME_POSTURE.pdps[0] as string,
     statement: RUNTIME_POSTURE,
     settlementKeys: buildEvidenceKeyResolver(evidenceKeys.verification.filter((k) => k.role !== "pdp")),
+    onIndeterminate: (claim) => operatorAlerts.alert(indeterminateClaimAlert(claim)),
   });
   const decisionPoint = createDecisionPoint({
     evidence: {
@@ -819,8 +835,9 @@ export async function composeStack(opts: {
   // the channel binds, and its read-only answer is retransmission condition 6.
   const engine = new TransactionEngine("demo-epoch");
   const redemption = redemptionStatusFor(engine);
+  const pepId = "mcp-payments-pep";
   const decisionChannel = await createDecisionChannel(decisionPoint, {
-    mode, pepId: "mcp-payments-pep", audience: CANONICAL_RESOURCE,
+    mode, pepId, audience: CANONICAL_RESOURCE,
     pepEpoch: redemption.epoch,
     consumptionStatus: redemption.status,
     redeemingExecution: redemption.redeemer,
@@ -900,6 +917,20 @@ export async function composeStack(opts: {
     ...(txnChallengePublication ? { txnChallenge: txnChallengePublication } : {}),
   });
   paymentsServerRef = server;
+  // @spec runtime#evidence (outcome reconciliation) (#1103): this PEP is the
+  // statement's responsible component, so it runs the reconciliation over its
+  // own claim channel, redemption store, connectors, evidence and
+  // reservations. Constructed here and not started: see `DemoStack.reconciler`.
+  const reconciler = new OutcomeReconciler({
+    statement: RUNTIME_POSTURE,
+    component: pepId,
+    claims: decisionChannel.claims,
+    evidence,
+    redemption,
+    connectors,
+    writeReservations,
+    alerts: operatorAlerts,
+  });
 
   // @spec authority-server#mission-join (#557) — the MAS-governed route, on
   // its own listener, started only for a resource this deployment declares
@@ -920,6 +951,7 @@ export async function composeStack(opts: {
     // A failed startup releases what it already opened: the AS and discovery
     // listeners, the decision channel and both single-writer store files.
     const release = async (): Promise<void> => {
+      await reconciler.stop();
       await authServer?.closeAuthServer();
       await decisionChannel.close();
       pdpClaims.close();
@@ -980,6 +1012,7 @@ export async function composeStack(opts: {
     decisionChannel,
     pdpClaims,
     writeReservations,
+    reconciler,
     fga,
     modelId,
     payments,
