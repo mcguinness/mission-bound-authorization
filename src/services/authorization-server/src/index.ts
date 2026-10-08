@@ -640,6 +640,11 @@ export interface BuiltAs {
    * half is off even where the capability gate already refuses.
    */
   devOrdinaryIssuance: boolean;
+  /**
+   * The capability set this assembly was built with (`adapters/capabilities.ts`).
+   * Absent: every capability is on, the full reference provider.
+   */
+  capabilities?: ReadonlySet<ProviderCapability>;
 }
 
 export async function buildAuthorizationServer(opts: {
@@ -1210,5 +1215,6 @@ export async function buildAuthorizationServer(opts: {
     issuerEvidence,
     protectedEventSources: seededSources,
     devOrdinaryIssuance: opts.devOrdinaryIssuance === true,
+    ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
   };
 }

@@ -128,9 +128,10 @@ export interface AuthServerExtras {
    */
   closeAuthServer: () => Promise<void>;
   /**
-   * The capability set the AS was built with: {@link AS_NATIVE_CAPABILITIES}
-   * under the `as-native` target. Absent: the full reference assembly, every
-   * capability on.
+   * The capability set the AS was built with, as the AS reports it
+   * (`BuiltAs.capabilities`): {@link AS_NATIVE_CAPABILITIES} under the
+   * `as-native` target. Absent: the full reference assembly, every capability
+   * on.
    */
   capabilities?: ReadonlySet<ProviderCapability>;
   /**
@@ -589,7 +590,7 @@ export async function composeStack(opts: {
           metadataServer?.close(),
         ]);
       },
-      ...(capabilities ? { capabilities } : {}),
+      ...(as.capabilities ? { capabilities: as.capabilities } : {}),
       devOrdinaryIssuance: as.devOrdinaryIssuance,
     };
   } else {
