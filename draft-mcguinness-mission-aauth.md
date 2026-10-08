@@ -1138,3 +1138,17 @@ metadata member, error code, capability value, or registry value.
 The author thanks the AAuth community for defining a mission model in
 which contextual governance, deterministic resource authorization, and
 incremental deployment remain distinct concerns.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Maps AAuth's Supervisor role. A PS with a deciding supervision server
+  obtains that server's decision for supervision decisions and keeps
+  verification, enforcement, issuance, and recording; management
+  authorization, revocation, and the person's acceptance of completion
+  are unchanged. The mission log records the actual decider and, for a
+  supervision-server exchange, the `sdi` and the exchange with any
+  signatures; the deciding server is a log reader; a supervision server
+  does not see the R3 proposal. AAuth Supervision is cited
+  informatively, pinned at dickhardt/AAuth commit 70d67375 (#967).
