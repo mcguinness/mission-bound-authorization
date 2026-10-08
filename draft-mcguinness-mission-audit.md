@@ -716,7 +716,7 @@ protected header ({{hash-commitment}}, {{feed}}):
 The family's evidence runs from the approval to the enforced action,
 but the derivation event between them, the `issuer` issuing a token
 under the Mission ({{I-D.draft-mcguinness-oauth-mission}}), is
-otherwise visible only in Authorization Server logs no profile
+otherwise visible only in authorization server logs no profile
 mandates. A derivation record closes that gap: it commits which token
 was issued, to which audience, carrying which entries, under which
 Mission.
@@ -1007,7 +1007,7 @@ components that are not entitled to write to a Mission's feed.
 A relying party discovers a producer's key by the producer's role. The
 `issuer`'s key is resolved through its published key material:
 
-- the Authorization Server's metadata `jwks_uri` in the OAuth binding
+- the authorization server's metadata `jwks_uri` in the OAuth binding
   ({{I-D.draft-mcguinness-oauth-mission}});
 - the Mission Authority Server's discovery `jwks_uri` in the
   standalone binding
@@ -1104,7 +1104,7 @@ trail is transparent and not only the governance trail.
 A Mission Issuer deploying this profile SHOULD register a derivation record
 ({{derivation-record}}) for each derivation event. The derivation is
 where approval becomes an issued token, and the family's evidence
-otherwise leaves that step to Authorization Server logs no profile
+otherwise leaves that step to authorization server logs no profile
 mandates; registering it closes the approval-to-action gap.
 
 # Cross-Producer Correlation {#cross-producer-correlation}

@@ -221,7 +221,7 @@ This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} and the Status profile
 {{I-D.draft-mcguinness-oauth-mission-status}}, in particular Mission,
 Mission Issuer (the Mission `issuer`: in this document's OAuth binding
-the Authorization Server; a standalone Mission Issuer, the Mission
+the authorization server; a standalone Mission Issuer, the Mission
 Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
 transmits these events with the same semantics; the AAuth Person
 Server exposes lifecycle state for its native missions through its
@@ -232,7 +232,7 @@ Token (SET)** {{RFC8417}} and the **Shared Signals Framework (SSF)**
 {{OIDC-SSF}} transmitter, receiver, and stream terminology.
 
 A **consumer** here is an SSF receiver that relies on Mission state,
-typically a Resource Server or an Authorization Server acting on a
+typically a resource server or an authorization server acting on a
 Mission it did not issue.
 
 All JSON shown in this document is non-normative and illustrative; the
@@ -249,7 +249,7 @@ rely on token lifetime and the polling surfaces of
 
 A Mission Issuer that emits lifecycle events publishes a Shared Signals
 Framework {{OIDC-SSF}} Transmitter Configuration Metadata document and
-advertises its URL in Authorization Server metadata ({{as-metadata}})
+advertises its URL in authorization server metadata ({{as-metadata}})
 as `mission_event_stream_endpoint`. From that document a consumer
 discovers the SSF stream configuration, stream status, add-subject, and
 poll endpoints, and the supported delivery methods, per {{OIDC-SSF}};
@@ -271,8 +271,8 @@ advertised in the SSF Transmitter Configuration Metadata's
 
 A Mission Issuer that emits events MUST support at least one method.
 A consumer discovers the supported methods from the SSF Transmitter
-Configuration Metadata rather than from a separate Authorization
-Server metadata member. The consumer's stream configuration declares,
+Configuration Metadata rather than from a separate authorization
+server metadata member. The consumer's stream configuration declares,
 in its `delivery` object, the method it uses.
 
 The Mission Issuer MUST
@@ -802,7 +802,7 @@ revive the Mission.
 # Authorization Server Metadata {#as-metadata}
 
 A Mission Issuer that emits lifecycle events advertises the following in
-its Authorization Server metadata {{RFC8414}}, in addition to the
+its authorization server metadata {{RFC8414}}, in addition to the
 issuance-profile and Status-profile members it already publishes:
 
 `mission_event_stream_endpoint`:

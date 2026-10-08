@@ -187,7 +187,7 @@ in {{status-list}}.
 # IANA Considerations {#iana}
 
 This document requests no IANA actions. It defines no new OAuth
-Authorization Server metadata member, media type, or registry: the
+authorization server metadata member, media type, or registry: the
 `status_list` object it profiles reuses the Status profile's
 existing Mission Status Response and introspection extension point
 ({{I-D.draft-mcguinness-oauth-mission-status}}).

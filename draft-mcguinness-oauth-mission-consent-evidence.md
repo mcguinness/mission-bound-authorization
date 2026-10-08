@@ -144,7 +144,7 @@ disclosure shown to the Approver. This document defines an optional
 Consent Evidence profile. It specifies a structured consent disclosure
 object, a `consent_rendering_hash` integrity anchor, and a signed
 Consent Evidence object that records the structured disclosure the
-Authorization Server rendered or committed to rendering, which Approver
+authorization server rendered or committed to rendering, which Approver
 it recorded as deciding, which Mission authority the disclosure
 corresponded to, and which notices or material risks it carried.
 Evidence is recorded for approved, declined, and narrowed
@@ -170,12 +170,12 @@ not itself committed.
 
 This document narrows that gap. It defines a structured consent
 disclosure object and a Consent Evidence object. The disclosure object
-is what the Authorization Server renders or commits to rendering. The
+is what the authorization server renders or commits to rendering. The
 evidence object records the approval event, the rendering context, the
 Mission anchors, and an integrity envelope over the evidence.
 
-This profile commits the structured disclosure that the Authorization
-Server says it rendered, and binds it to the same Mission anchors used
+This profile commits the structured disclosure that the authorization
+server says it rendered, and binds it to the same Mission anchors used
 for authority. What no server-side commitment can prove, that the
 pixels presented to the Approver matched the committed object, is the
 what-you-see-is-what-you-sign problem this profile names and bounds in
@@ -249,7 +249,7 @@ This profile separates three artifacts:
 1. the Mission Intent and Authority Set, which define what is being
    approved under {{I-D.draft-mcguinness-oauth-mission}};
 2. the Consent Disclosure object, which defines in structured form what
-   the Authorization Server rendered or committed to rendering for the
+   the authorization server rendered or committed to rendering for the
    Approver; and
 3. the Consent Evidence object, which records the approval or decline
    event and integrity-protects the disclosure commitment.
@@ -380,7 +380,7 @@ A Consent Disclosure object has these members:
   against the committed Authority Set. When the client submitted an
   authority proposal, the issuance profile requires the rendering to
   distinguish the entries the client proposed from any narrowing or
-  restructuring the AS applied
+  restructuring the authorization server (AS) applied
   ({{I-D.draft-mcguinness-oauth-mission}}); a disclosure for such a
   Mission carries that distinction in its rendered elements. A
   disclosure that renders
@@ -744,7 +744,7 @@ across modalities.
 # Rendering Assurance {#rendering-assurance}
 
 The commitment of {{consent-rendering-hash}} records what disclosure the
-Authorization Server says it rendered; it cannot by itself prove what a
+authorization server says it rendered; it cannot by itself prove what a
 human perceived. This is the what-you-see-is-what-you-sign problem. This
 profile does not close it with a server-side commitment, which is
 impossible, but defines a ladder a deployment climbs as far as its
@@ -893,7 +893,7 @@ A Consent Evidence object has these members:
 : OPTIONAL and experimental. An object. A confirmation produced by the
   Approver's authenticator at approval (Rung 3,
   {{experimental-rungs}}). To bind the trust to the Approver rather
-  than the Authorization Server:
+  than the authorization server:
 
   - it MUST sign the `consent_rendering_hash` together with a
     per-approval value (the `evidence_id`, or a nonce echoed in
@@ -1501,7 +1501,7 @@ Rung 3, Approver confirmation:
   the approval credential itself to the exact committed disclosure. What
   this proves is narrow but real: that the Approver's authenticator was
   invoked over that specific `consent_rendering_hash`, and that the
-  confirmation could not be fabricated by the Authorization Server,
+  confirmation could not be fabricated by the authorization server,
   because it is signed by a credential bound to the Approver. It does
   not by itself prove the authenticator displayed the disclosure, so it
   is what-you-see-is-what-you-sign only when the authenticator also
