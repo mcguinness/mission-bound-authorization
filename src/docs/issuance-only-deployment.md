@@ -137,7 +137,7 @@ Tests:
 
 A
 non-active Mission yields `active: false` with `mission.state`
-(`composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state revoked, NO top-level or mission authorization_details`).
+(`composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details`).
 
 **The scope-projection mapping is trusted operator configuration.** Its
 ownership, integrity and update procedure are in `src/config/README.md`.
