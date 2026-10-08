@@ -595,13 +595,16 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
         ALL_PROVIDER_CAPABILITIES.filter((c) => !ENABLED.has(c)).sort(),
       );
       const meta = (await send("/.well-known/openid-configuration")).body;
+      // Every probe runs, so a failure names each capability that answered.
+      const answered: string[] = [];
       for (const [capability, probe] of Object.entries(disabledProbes)) {
         try {
           await probe(meta);
         } catch (err) {
-          throw new Error(`${capability}: ${(err as Error).message}`);
+          answered.push(`${capability}: ${(err as Error).message.split("\n")[0]}`);
         }
       }
+      expect(answered).toEqual([]);
       // Every refusal came before the Mission was touched.
       expect(stack.kernel.get(missionId)?.state).toBe("active");
       expect(stack.kernel.get(missionId)?.version).toBe(1);
