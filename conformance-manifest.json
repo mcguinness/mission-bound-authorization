@@ -29949,6 +29949,48 @@
    "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
   },
   {
+   "id": "core.self-exchange.result-subset",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "self-exchange",
+   "text": "The result MUST be a subset ({{subset}}) of the presented token's authority",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a no-actor exchange of the agent's own token (the async-delegation transport) issues a family no broader than the presented token: an absent request confines to the token's authority as the effective set narrows it, a request beyond the token is refused invalid_authorization_details though the Mission allows it, and a request within it is issued"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's own authority bounds the family (@spec mission#self-exchange rule 2, #825 PR 2c) > confines an absent request to the presented token's authority, never the Mission's",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's own authority bounds the family (@spec mission#self-exchange rule 2, #825 PR 2c) > refuses a request beyond the presented token's authority, though the Mission allows it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's own authority bounds the family (@spec mission#self-exchange rule 2, #825 PR 2c) > permits a request within the presented token's authority",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#825 PR 2c (D312). The presented token is a real down-scoped token, a family's own access token, so the tests exercise the escalation path the gap allowed. Partial: the AS implements no separate self-exchange endpoint, so the rule is tested on the async-delegation transport, its one no-actor exchange; a token whose authority cannot be read is refused invalid_grant, a guard no AS path can reach because the AS never signs a Mission access token without authorization_details."
+  },
+  {
    "id": "runtime.oauth.required-instance-attribution",
    "spec": "draft-mcguinness-mission-runtime-oauth.md",
    "anchor": "instance-attribution",
