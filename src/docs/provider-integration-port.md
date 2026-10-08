@@ -801,7 +801,8 @@ token this AS issued. The deployment contract,
 operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
-`01874fd5`.
+`01874fd5`; statements about the as-native target (#1105) are true at
+`001183f5`, and every `file:line` citation is read there.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -810,11 +811,22 @@ one process. The PDP is a direct call by default, with no PEP
 authentication (`services/pdp/src/decision-channel.ts:56-61`).
 `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret
 that is never configured, so it cannot cross processes as shipped (`:64-66`).
-The tests cited here drive the PEP (`enforce`), the in-process
-`mcp-payments` server methods or the PDP directly; only the intake witnesses
-in §5.4 go over the in-process MCP channel. Tests marked
-[FGA] are skipped without a live OpenFGA. No test yet drives an AS-issued
-Mission-bound token through the assembled path (#1105).
+Most tests cited here drive the PEP (`enforce`), the in-process
+`mcp-payments` server methods or the PDP directly, not the MCP transport;
+the intake witnesses in §5.4 go over the in-process MCP channel.
+Tests marked
+[FGA] are skipped without a live OpenFGA. The AS-native target and its
+acceptance pack are HTTP MCP with verified DPoP (D315): they reach the PEP
+only through the endpoint `composeStack({ target: "as-native" })` serves at
+the declared resource audience, and exclude the in-process mediated channel.
+The target's AS runs the issuance profile plus exactly `lifecycle-revoke`
+and `transaction-authorization`, arms no dev ordinary issuance, and refuses
+each of the other 15 optional capabilities with its standard error (D332;
+the contract's §2 maps each to its witness). Ordinary-token minting is a
+test-only composition option that the launcher refuses.
+[FGA]
+`the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > carries the AS-issued Mission-bound token with a valid DPoP proof through mcp-payments and the PDP to one permitted read`
+drives an AS-issued Mission-bound token through that assembled path.
 
 | Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
@@ -830,34 +842,40 @@ Mission-bound token through the assembled path (#1105).
 
 - **Hook.** Two entry points reach the same claim checks, and only one proves
   possession.
-  - **HTTP transport** (`services/mcp-payments/src/mcp-http-transport.ts:226`):
+  - **HTTP transport** (`services/mcp-payments/src/mcp-http-transport.ts:264`):
     `validateCredential` with the request's DPoP presentation calls
-    `validateToken`, which runs `verifyDpopBoundToken` (`server.ts:563-580`):
+    `validateToken`, which runs `verifyDpopBoundToken` (`server.ts:495-512`):
     signature, issuer, audience, `cnf.jkt` and the DPoP proof over this
-    request. A MAS-governed route calls `validateGatewayCredential` instead;
-    that route is excluded from this target (#1105).
+    request. The target serves this entry point at the declared resource
+    audience. A MAS-governed route calls `validateGatewayCredential` instead;
+    the target mounts none (D315). Each MCP session belongs to the holder
+    whose credential opened it (`cnf.jkt`, subject and client): every request
+    is authenticated before its session is resolved, and another holder's
+    request on the session is answered 404 `Session not found`
+    (`createHttpMcpChannel`).
   - **In-process mediated channel** (`services/mcp-payments/src/mcp-transport.ts:121`,
     `:147`): `validateCredential` with no proof calls `validateMissionToken`
-    (`server.ts:725-738`): signature, issuer and audience. It carries
+    (`server.ts:657-670`): signature, issuer and audience. It carries
     `cnf.jkt` into the token facts but verifies no proof of possession,
     because the channel has no HTTP request to bind one to. It refuses a
     transaction token (`txn_pop_required`), so a challenged retry goes over
     HTTP. The demo agent (`pnpm agent`, through `createMediatedHarness`) uses
-    this channel with AS-issued Mission-bound tokens.
+    this channel with AS-issued Mission-bound tokens. The AS-native target
+    and its acceptance pack exclude it (D315).
 
-  Both then apply `missionBoundFactsFrom` (`server.ts:591-624`) and
+  Both then apply `missionBoundFactsFrom` (`server.ts:523-556`) and
   `readMissionAccessClaims`
   (`services/mcp-payments/src/token-verifier.ts:108-120`): `typ` `at+jwt`, the
   RFC 9068 claims, a `mission` claim with `id` and `issuer`, and the token's
   own `authorization_details`, read as the credential's authority. A token
   that fails the profile is refused, never demoted to the ordinary class.
   Before the PDP is asked, the PEP refuses `out_of_authority` for an action
-  outside that authority, one whole entry at a time (`pep.ts:1330-1368`).
+  outside that authority, one whole entry at a time (`pep.ts:1372-1406`).
 - **Boundary.** In request, before any claim reaches a decision.
 - **Asynchronous work.** None.
 - **Crash and recovery.** The DPoP replay cache is in memory. Signing keys are
   generated per boot (D25), so a pre-restart token fails signature
-  validation. The PEP fetches the AS JWKS once at assembly (`stack.ts:377`);
+  validation. The PEP fetches the AS JWKS once at assembly (`stack.ts:472`);
   refresh is #831's.
 - **Tests:**
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
@@ -867,6 +885,8 @@ Mission-bound token through the assembled path (#1105).
   - `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route` (PEP-level)
   - `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > refuses vendor lookup under an invoice-only token, and lets a broad token reach the PDP, on the same broad Mission` (PEP-level)
   - [FGA] `M5 transaction-assurance tier > refuses a transaction credential on the transport that cannot prove possession (@spec txn-authorization#offline-verification)` (mediated channel)
+  - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision`, `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision` and `the as-native target with the test-only ordinary-token minting fixture, OpenFGA client stubbed (D315, D332) > refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it` (HTTP transport, assembled path)
+  - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > binds a session to the holder that opened it: every request on it is authenticated, and another holder's credential carrying its id is answered 404 Session not found before the PEP` (HTTP transport, assembled path) and `MCP sessions on the HTTP channel (D315, #1105) > dispatches a request on a session only for its holder: another key, subject or client is answered 404 Session not found and reaches no handler, and a refused credential is answered 401` (HTTP transport, stubbed payments server)
 - **Required, not met.** The PDP neither receives nor evaluates the
   credential authority: it matches the kernel's current Authority Set
   (`evaluate.ts:1110-1117`). D312 splits the rest of #825 into three PRs: 2a
@@ -880,9 +900,9 @@ Mission-bound token through the assembled path (#1105).
   high-consequence classes included, runs on a token whose possession is not
   proven. D240 requires a current proof of possession for a credential used
   on a high-consequence action (`runtime.custody.high-consequence-credential-sender-constrained`,
-  `todo`), so this target's high-consequence claims hold on the HTTP entry
-  point only. #825 records the limitation; a shared verifier never claims a
-  proof it did not receive.
+  `todo`). The AS-native target and its acceptance pack therefore exclude
+  this channel (D315), and the gap stays documented here. #825 records the
+  limitation; a shared verifier never claims a proof it did not receive.
 
 ### 5.2 Independent Resource policy
 
@@ -902,7 +922,7 @@ Mission-bound token through the assembled path (#1105).
 
 ### 5.3 Protected state and lifecycle
 
-- **Hook.** `loadView` (`stack.ts:679-686`) reads the kernel's committed state
+- **Hook.** `loadView` (`stack.ts:781-788`) reads the kernel's committed state
   and version for each decision, with `mode: "fresh"` and `freshness_at` set
   to now. Under PEP placement the PEP forwards that observation at
   `context.mission_state_observation`, and the PDP's own view wins on
@@ -940,14 +960,14 @@ Mission-bound token through the assembled path (#1105).
   parameters from the payments store, never from tool arguments, and
   `parameterDigest` (`:83`) commits them into the decision request. Three
   separate PEP checks run at use:
-  - `verifyPermitAtUse` (`pep.ts:1973`) runs the permit-use table
-    (`pep.ts:417-457`): the permit's bound phase against the crossing's phase
+  - `verifyPermitAtUse` (`pep.ts:2021`) runs the permit-use table
+    (`pep.ts:419-459`): the permit's bound phase against the crossing's phase
     (`phase_mismatch`), then `valid_until` (`permit_expired`). It compares no
     digest.
-  - `reverifyCapability` (`pep.ts:2094`) re-checks the capability snapshot
+  - `reverifyCapability` (`pep.ts:2142`) re-checks the capability snapshot
     (`capability_source_unresolvable`).
-  - `reverify` (`pep.ts:2005`, a single-record operation) and `reverifyList`
-    (`pep.ts:2045`, a list read) re-derive the effective parameters and
+  - `reverify` (`pep.ts:2053`, a single-record operation) and `reverifyList`
+    (`pep.ts:2093`, a list read) re-derive the effective parameters and
     compare the digest (`parameter_mismatch`; a target that no longer resolves
     is also `parameter_mismatch`).
 - **Order and boundary, by dispatch path** (`dispatchPathFor`, called from
@@ -1052,7 +1072,7 @@ Mission-bound token through the assembled path (#1105).
 - **Crash and recovery.** The claim and reservation files survive a restart,
   and with them the consumed identifiers.
   The engine's redemption records do not, and every process reuses the epoch
-  `demo-epoch` (`stack.ts:718`), so single use across a restart rests on the
+  `demo-epoch` (`stack.ts:820`), so single use across a restart rests on the
   persisted claim and reservations (the contract's §7). Surviving is not
 recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Tests:**
@@ -1092,14 +1112,14 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Hook.** The PDP emits Decision Evidence for every decision. The PEP
   verifies it (byte equality, signature, emitter-bound key, role, audience)
   before release, refusing `decision_evidence_unverifiable` otherwise
-  (`pep.ts:1564-1576`). The PEP emits Refusal Records (`pep.ts:2109-2171`) and
-  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1869-1912`). The
+  (`pep.ts:1606-1618`). The PEP emits Refusal Records (`pep.ts:2157-2218`) and
+  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1917-1960`). The
   executor emits `completed` Execution Evidence after a connector commit
-  (`server.ts:1773-1797`). The record table is the contract's §6.
+  (`server.ts:1602-1633`). The record table is the contract's §6.
 - **Boundary.** Synchronous, inside the request.
 - **Asynchronous work.** None.
 - **Crash and recovery.** `EvidenceRetentionStore` is in memory as shipped
-  (`stack.ts:580-582`). Retained records are lost at restart.
+  (`stack.ts:682-684`). Retained records are lost at restart.
 - **Tests (PEP-level):**
   - `a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence`
   - `retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart` (on a file-backed store, not the shipped one)
@@ -1166,8 +1186,12 @@ Runtime overlay:
    uses the declared local read (D293). §5.3.
 8. Running the declared outcome reconciliation, its alert, and recovery of a
    prior process's claims (#1103). §5.7.
-9. An assembled deployment of exactly this topology: the shipped stack also
-   mounts the MAS join route on the payments resource (#1105).
+10. An assembled deployment of exactly the contract's components:
+    `pnpm as-native` runs the D332 AS capability set (the issuance profile
+    plus exactly `lifecycle-revoke` and `transaction-authorization`, with
+    `dev-token` and dev ordinary issuance off) and mounts no MAS join route,
+    but it builds the cross-domain RAS and SaaS objects in process, with no
+    listener (#1105).
 
 **Residual.**
 
@@ -1226,8 +1250,8 @@ Runtime overlay:
   a Refusal Record emission throwing, both `suppressExecution` gaps and the
   failed `completed` write, each distinguishing a refusal before any effect
   from missing evidence after one (§5.6; #1104); reconciliation across a
-  restart (§5.7; #1103); an AS-issued token through the assembled path
-  (#1105).
+  restart (§5.7; #1103); the assembled-path test against a live OpenFGA runs
+  only in CI (§5).
 
 ## 7. Provider-specific notes (oidc-provider 9.10)
 
