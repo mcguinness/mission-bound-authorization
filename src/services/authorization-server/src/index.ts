@@ -633,7 +633,7 @@ export interface BuiltAs {
    */
   protectedEventSources: SeededTrustedSource[];
   /**
-   * @spec authority-server#mission-join (#557) — whether this assembly armed
+   * @spec authority-server#mission-join (#557): whether this assembly armed
    * the dev ordinary-token route with a signer (`devOrdinaryIssuance`). The
    * route mints only when this is true and the `dev-token` capability is
    * enabled, so a deployment that must serve neither (D332) can show this
