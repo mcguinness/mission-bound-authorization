@@ -26204,6 +26204,94 @@
    "notes": "The reference implementation measures from the template's created_at, which every instance records as approval_basis.approved_at. Its refusal reason review_overdue is implementation-local on access_denied (D205); the draft registers none."
   },
   {
+   "id": "template.consent.source-retained-per-version",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "template-consent",
+   "text": "The Mission Issuer MUST retain that source, including an `organizational` source's `policy` reference, with its authenticated record of the consent to that exact `template_version`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the authority source established at template consent, including an organizational source's policy id, version and digest, is retained with the authenticated consent record for that exact template_version, so every instance dispatched under that version carries it even after the source's configuration or governed policy changes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. The reference AS establishes the template's authority_source at template consent and keeps it outside template_hash (src/services/authorization-server/src/kernel/template.ts); no test is mapped or mutation-proved under this row."
+  },
+  {
+   "id": "template.dispatch.source-check",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "Verify that the source retained for this `template_version` ({{template-consent}}) applies to the instance's Subject and that the surviving set lies within that source's ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch whose retained authority source does not apply to the instance's established Subject, or whose surviving instance Authority Set exceeds that source's ceiling, is refused and creates no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. The reference AS re-asserts the inherited source's ceiling and subject discipline at Dispatch (kernel assertInheritedAuthoritySource and assertInheritedSubjectDiscipline, template.ts); candidate witnesses in src/services/authorization-server/test/authority-source.test.ts are not mapped or mutation-proved under this row. No denial reason is pinned: the draft names none."
+  },
+  {
+   "id": "template.dispatch.source-inherited",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "`authority_source` is the source retained for this `template_version` ({{template-consent}}), read from the Mission Issuer's retained template record, never from the Dispatch request and never a source or policy version substituted after consent",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a dispatched Mission's authority_source equals the source retained at consent to its template_version, member for member; Dispatch request content and a change to the source's configuration or governed policy after consent do not alter it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. The reference AS copies the template's authority_source onto each instance (template.ts); the candidate witness 'a template instance carries the template's source verbatim' in authority-source.test.ts is not mapped or mutation-proved under this row."
+  },
+  {
+   "id": "template.dispatch.commit-rechecks-source-and-expiry",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "The Mission Issuer MUST make the step 8 check, and verify that the effective `expires_at` is strictly later than the committed `created_at`, atomically with the commit, against the source as it stands at that commit",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch whose retained source, as it stands at the commit, no longer applies to the Subject or covers the instance Authority Set, or whose effective expires_at is at or before the committed created_at, creates no Mission and counts nothing against max_active or dispatch_rate"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. No test is mapped or mutation-proved under this row; the expiry facet needs a dispatch intent whose requested expires_at has already passed."
+  },
+  {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
