@@ -802,6 +802,12 @@ processing the mission:
       "tokens": [
         { "iss": "https://as.search.example", "jti": "token-19" }
       ]
+    },
+    {
+      "agent": "aauth:booking@flights.example",
+      "relationship": "call_chain",
+      "upstream_token": { "iss": "https://ps.example", "jti": "auth-31" },
+      "person_token": { "iss": "https://ps.example", "jti": "pt-57" }
     }
   ],
   "complete": true
@@ -812,11 +818,23 @@ processing the mission:
 page exists, `next_cursor` is REQUIRED and `complete` is false.
 
 A node contains an `agent` and one of `root`, `sub_agent`, or
-`call_chain` as `relationship`.  A non-root node contains
-`parent_agent`.  `tokens` MAY
-be returned to a Person or authorized administrator and SHOULD be
-omitted from a response to an admitted Owning Agent unless required
-for that Agent's own revocation accounting.
+`call_chain` as `relationship`.  A `sub_agent` node contains
+`parent_agent`.  A `call_chain` node is one chained hop.  Its `agent`
+is the intermediary, whose identity the PS establishes from the
+intermediary's authenticated agent token and its own records.  It
+contains `upstream_token` and `person_token`, each an object with the
+`iss` and `jti` of, respectively, the upstream token the intermediary
+presented and the Person Token the PS issued on it, and it does not
+contain `parent_agent`.  One upstream token can support several
+downstream requests (Section 10.1.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), so a hop is identified by
+both token references and the intermediary's agent identifier, never
+by the upstream token alone.  `tokens`, `upstream_token`, and
+`person_token` MAY be returned to a Person or authorized administrator
+and SHOULD be omitted from a response to an admitted Owning Agent
+unless required for that Agent's own revocation accounting;
+`upstream_token` and `person_token` are returned together or omitted
+together.
 
 The result is observational, not exhaustive proof.  Agent identity
 calls and resource-managed access can occur without a PS token request.
@@ -1276,6 +1294,13 @@ native choices.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A `call_chain` node is one chained hop: its `agent` is the
+  intermediary, and it carries `upstream_token` and `person_token`,
+  the `(iss, jti)` of the upstream token and of the Person Token the PS
+  issued on it, instead of `parent_agent`, which stays for `sub_agent`
+  nodes. Both token references follow the existing disclosure rule for
+  `tokens` and are returned together or omitted together (#966).
 
 - Status gains optional `accepted_updates` and `latest_update_s256`:
   the count of accepted updates and the latest one's `s256`, from the
