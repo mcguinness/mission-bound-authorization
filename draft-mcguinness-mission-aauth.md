@@ -682,7 +682,10 @@ caller presented as `upstream_token`.  When that upstream token carries
 `mission_s256`, the PS evaluates the request against that mission and
 copies `mission_s256` into the person token it issues; the
 intermediary does not send `mission_s256` of its own (Sections 7.1 and
-10.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  A chained hop is
+10.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  The copied
+`mission_s256` names the mission, not a version of its Approved
+Context ({{reference}}); the PS evaluates each chained request against
+the mission's current version when it decides.  A chained hop is
 therefore PS-governed derivation under the same Mission, not a child
 mission: the Mission's `agent` stays the root actor, the intermediary
 is a separate actor ({{mission-substrate}}), and the hop's supervision
