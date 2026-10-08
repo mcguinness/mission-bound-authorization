@@ -1062,7 +1062,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 10 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1075,12 +1075,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-signals-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-07" class="published">7 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-10">10 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1136,7 +1136,7 @@ issuance profile; a deployment that does not adopt it is unaffected.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1328,7 +1328,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and the Status profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, in particular Mission,
 Mission Issuer (the Mission <code>issuer</code>: in this document's OAuth binding
-the Authorization Server; a standalone Mission Issuer, the Mission
+the authorization server; a standalone Mission Issuer, the Mission
 Authority Server <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>,
 transmits these events with the same semantics; the AAuth Person
 Server exposes lifecycle state for its native missions through its
@@ -1338,7 +1338,7 @@ and the Mission lifecycle states. It additionally uses <strong>Security Event
 Token (SET)</strong> <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> and the <strong>Shared Signals Framework (SSF)</strong>
         <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> transmitter, receiver, and stream terminology.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">A <strong>consumer</strong> here is an SSF receiver that relies on Mission state,
-typically a Resource Server or an Authorization Server acting on a
+typically a resource server or an authorization server acting on a
 Mission it did not issue.<a href="#section-2-3" class="pilcrow">¶</a></p>
 <p id="section-2-4">All JSON shown in this document is non-normative and illustrative; the
 member definitions in the surrounding text are authoritative. JWT and
@@ -1357,7 +1357,7 @@ rely on token lifetime and the polling surfaces of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">A Mission Issuer that emits lifecycle events publishes a Shared Signals
 Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> Transmitter Configuration Metadata document and
-advertises its URL in Authorization Server metadata (<a href="#as-metadata" class="auto internal xref">Section 11</a>)
+advertises its URL in authorization server metadata (<a href="#as-metadata" class="auto internal xref">Section 11</a>)
 as <code>mission_event_stream_endpoint</code>. From that document a consumer
 discovers the SSF stream configuration, stream status, add-subject, and
 poll endpoints, and the supported delivery methods, per <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span>;
@@ -1382,8 +1382,8 @@ to poll.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
       </ul>
 <p id="section-3-5">A Mission Issuer that emits events <span class="bcp14">MUST</span> support at least one method.
 A consumer discovers the supported methods from the SSF Transmitter
-Configuration Metadata rather than from a separate Authorization
-Server metadata member. The consumer's stream configuration declares,
+Configuration Metadata rather than from a separate authorization
+server metadata member. The consumer's stream configuration declares,
 in its <code>delivery</code> object, the method it uses.<a href="#section-3-5" class="pilcrow">¶</a></p>
 <p id="section-3-6">The Mission Issuer <span class="bcp14">MUST</span>
 respect the declared method. It <span class="bcp14">MUST NOT</span> silently fall back to a
@@ -2004,7 +2004,7 @@ revive the Mission.<a href="#section-10-3" class="pilcrow">¶</a></p>
 <a href="#section-11" class="section-number selfRef">11. </a><a href="#name-authorization-server-metada" class="section-name selfRef">Authorization Server Metadata</a>
       </h2>
 <p id="section-11-1">A Mission Issuer that emits lifecycle events advertises the following in
-its Authorization Server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, in addition to the
+its authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, in addition to the
 issuance-profile and Status-profile members it already publishes:<a href="#section-11-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-11-2">
         <dt id="section-11-2.1">

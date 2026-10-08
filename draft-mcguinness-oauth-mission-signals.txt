@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          7 October 2026
-Expires: 10 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                 Mission Lifecycle Signals for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -167,7 +167,7 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission] and the Status profile
    [I-D.draft-mcguinness-oauth-mission-status], in particular Mission,
    Mission Issuer (the Mission issuer: in this document's OAuth binding
-   the Authorization Server; a standalone Mission Issuer, the Mission
+   the authorization server; a standalone Mission Issuer, the Mission
    Authority Server [I-D.draft-mcguinness-mission-authority-server],
    transmits these events with the same semantics; the AAuth Person
    Server exposes lifecycle state for its native missions through its
@@ -178,7 +178,7 @@ Table of Contents
    transmitter, receiver, and stream terminology.
 
    A *consumer* here is an SSF receiver that relies on Mission state,
-   typically a Resource Server or an Authorization Server acting on a
+   typically a resource server or an authorization server acting on a
    Mission it did not issue.
 
    All JSON shown in this document is non-normative and illustrative;
@@ -195,7 +195,7 @@ Table of Contents
 
    A Mission Issuer that emits lifecycle events publishes a Shared
    Signals Framework [OIDC-SSF] Transmitter Configuration Metadata
-   document and advertises its URL in Authorization Server metadata
+   document and advertises its URL in authorization server metadata
    (Section 11) as mission_event_stream_endpoint.  From that document a
    consumer discovers the SSF stream configuration, stream status, add-
    subject, and poll endpoints, and the supported delivery methods, per
@@ -218,8 +218,8 @@ Table of Contents
 
    A Mission Issuer that emits events MUST support at least one method.
    A consumer discovers the supported methods from the SSF Transmitter
-   Configuration Metadata rather than from a separate Authorization
-   Server metadata member.  The consumer's stream configuration
+   Configuration Metadata rather than from a separate authorization
+   server metadata member.  The consumer's stream configuration
    declares, in its delivery object, the method it uses.
 
    The Mission Issuer MUST respect the declared method.  It MUST NOT
@@ -747,7 +747,7 @@ Table of Contents
 11.  Authorization Server Metadata
 
    A Mission Issuer that emits lifecycle events advertises the following
-   in its Authorization Server metadata [RFC8414], in addition to the
+   in its authorization server metadata [RFC8414], in addition to the
    issuance-profile and Status-profile members it already publishes:
 
    mission_event_stream_endpoint:  OPTIONAL.  A string containing a URL.

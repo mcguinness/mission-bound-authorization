@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 10 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-status-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-07" class="published">7 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-10">10 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1144,7 +1144,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1359,7 +1359,7 @@ an agent derives. It is, by design, a minimum-viable issuance layer.
 It gates derivation on Mission state, carries the <code>mission</code> claim on
 every derived token, and offers only <span class="bcp14">OPTIONAL</span> token introspection
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission State via
-Token Introspection") as a way for a Resource Server to observe
+Token Introspection") as a way for a resource server to observe
 Mission state. It names this profile for the canonical Mission Status
 surface (keyed by <code>mission_id</code>) and its signed status evidence, and
 defers a standardized management endpoint for lifecycle transitions to
@@ -1397,7 +1397,7 @@ bound and how to size token lifetimes to the propagation mechanisms
 in use.<a href="#section-1-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.6">
-          <p id="section-1-3.6.1"><strong>Authorization Server metadata</strong> members
+          <p id="section-1-3.6.1"><strong>authorization server metadata</strong> members
 (<a href="#as-metadata" class="auto internal xref">Section 8</a>) advertising the endpoints above.<a href="#section-1-3.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
@@ -1428,7 +1428,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <p id="section-2-2">This document uses the terms defined in the issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, in particular Mission,
 Mission Issuer (the Mission <code>issuer</code>: in this document's OAuth binding
-the Authorization Server; a standalone Mission Issuer, the Mission
+the authorization server; a standalone Mission Issuer, the Mission
 Authority Server <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>,
 serves these surfaces with the same semantics; the AAuth Person
 Server plays the same role for its native missions through its own
@@ -1496,10 +1496,11 @@ the issuance profile defers. Unlike token introspection
 token's authorization still good," the Mission Status operation answers
 "what is the state of this Mission" keyed by the <code>mission_id</code> alone. Any
 consumer holding a <code>mission_id</code> (including an auditor or a
-cross-domain Resource AS) resolves it without holding a token the AS
+cross-domain Resource AS) resolves it without holding a token the
+authorization server (AS)
 issued.<a href="#section-3-2" class="pilcrow">¶</a></p>
 <p id="section-3-3">The Mission Issuer publishes its Mission Status endpoint URL in
-Authorization Server metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>) as
+authorization server metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>) as
 <code>mission_status_endpoint</code>, which a consumer resolves from a
 credential's <code>mission.issuer</code>. The endpoint <span class="bcp14">MUST</span> be served over TLS
 1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>), following the recommendations of
@@ -1525,12 +1526,13 @@ issuance profile's external-surface convention
           <dd style="margin-left: 1.5em" id="section-3.1-2.4">
             <p id="section-3.1-2.4.1">CONDITIONAL. A string. The audience identifier of the
 requesting consumer, or of another audience the Mission Issuer
-authorizes that consumer to request (below). An authorized non-RS
-consumer (for example an auditor or a cross-domain Resource AS) that
+authorizes that consumer to request (below). An authorized consumer
+that is not a resource
+server (for example an auditor or a cross-domain Resource AS) that
 needs only Mission state,
 not audience-scoped authority, <span class="bcp14">MAY</span> omit <code>audience</code>; the response is
 then state-only and carries no <code>authorization_details</code>
-(<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>). A Resource Server resolving authority
+(<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>). A resource server resolving authority
 for a specific audience <span class="bcp14">MUST</span> send it.<a href="#section-3.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
@@ -2288,8 +2290,8 @@ deployment-defined means and defers a standardized management API and
 the richer <code>suspend</code>, <code>resume</code>, and <code>complete</code> operations
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Revocation"). This
 section standardizes that management surface.<a href="#section-5-1" class="pilcrow">¶</a></p>
-<p id="section-5-2">The AS publishes its Mission Lifecycle endpoint URL in Authorization
-Server metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>) as <code>mission_lifecycle_endpoint</code>,
+<p id="section-5-2">The AS publishes its Mission Lifecycle endpoint URL in authorization
+server metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>) as <code>mission_lifecycle_endpoint</code>,
 distinct from <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> token revocation. The endpoint <span class="bcp14">MUST</span> be
 served over TLS 1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>), following the
 recommendations of <span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
@@ -3096,7 +3098,7 @@ and <code>introspection_signing_alg_values_supported</code>;<a href="#section-6-
 </li>
         <li class="normal" id="section-6-3.3">
           <p id="section-6-3.3.1">the Mission Status operation (<a href="#mission-status" class="auto internal xref">Section 3</a>) for per-request
-state checks by high-assurance Resource Servers, discovered from
+state checks by high-assurance resource servers, discovered from
 <code>mission_status_endpoint</code>; and<a href="#section-6-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-3.4">
@@ -3180,7 +3182,7 @@ member, availability target, or replication protocol is defined here.<a href="#s
       </h2>
 <p id="section-8-1">This section is <span class="bcp14">OPTIONAL</span> and applies only to a deployment that adopts
 one or more of the extensions above. An AS advertises the surfaces it
-supports through the following members of its Authorization Server
+supports through the following members of its authorization server
 metadata document <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, in addition to the issuance profile's
 <code>mission_bound_authorization_supported</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Authorization Server

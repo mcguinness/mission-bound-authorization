@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             7 October 2026
-Expires: 10 April 2027
+Intended status: Experimental                             8 October 2026
+Expires: 11 April 2027
 
 
                       Mission Open-World Discovery
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -245,7 +245,7 @@ Table of Contents
       capability-source rules
       ([I-D.draft-mcguinness-mission-capability-binding]).
 
-   *  *A foreign trust domain*: a resource whose Authorization Server
+   *  *A foreign trust domain*: a resource whose authorization server
       the deployment's trust does not cover.  This profile does not bind
       it; cross-domain projection exists for domains with established
       trust ([I-D.draft-mcguinness-oauth-mission-cross-domain]), and
@@ -294,8 +294,8 @@ Table of Contents
        Issuer's own connection at encounter, not as the agent reports
        it.
 
-   2.  *Authorization chain.* Where the resource names an Authorization
-       Server, the Mission Issuer MUST retrieve the OAuth 2.0 Protected
+   2.  *Authorization chain.* Where the resource names an authorization
+       server, the Mission Issuer MUST retrieve the OAuth 2.0 Protected
        Resource Metadata [RFC9728] server-side and digest the exact
        bytes it retrieved into the evidence.  It MUST NOT reuse an
        agent-supplied digest.  The Mission Issuer MUST verify that the
@@ -304,10 +304,10 @@ Table of Contents
        ([I-D.draft-mcguinness-oauth-domain-authorized-issuer]).  Where
        it cannot, the encounter routes to a human and never binds by
        policy.  Origin pinning ([RFC9728]) authenticates domain control,
-       not the operator's trustworthiness or the resource-to-AS
-       authorization: a party that controls a domain can publish
-       metadata naming any issuer, so domain control alone is not
-       authorization.
+       not the operator's trustworthiness or the resource-to-
+       authorization-server authorization: a party that controls a
+       domain can publish metadata naming any issuer, so domain control
+       alone is not authorization.
 
    3.  *Self-declaration.* Where the resource publishes a self-
        declaration, the Mission Issuer computes its content-addressed
@@ -342,7 +342,7 @@ Table of Contents
       encoded digest of its exact retrieved bytes.
 
    issuer:  CONDITIONAL.  REQUIRED when the metadata names an
-      Authorization Server: the issuer identifier it names.
+      authorization server: the issuer identifier it names.
 
    In an AAuth deployment, the Person Server performs the equivalent
    pinning with native material: the Access Server association and,

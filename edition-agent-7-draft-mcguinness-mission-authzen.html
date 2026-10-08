@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 10 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-authzen-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-07" class="published">7 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-10">10 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1149,7 +1149,7 @@ the capability-binding companion owns.<a href="#section-abstract-1" class="pilcr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -3374,7 +3374,7 @@ approval record is created (<a href="#lanes" class="auto internal xref">Section 
 <p id="section-7.2-9">Authentication step-up has no dedicated denial-reason value under this
 profile: an in-process step-up rides the obligation on a permit, and
 an RFC 9470 step-up rides the obligation on a <code>resource_policy</code>
-denial. The Resource Server's own challenge-surface signal for a weak
+denial. The resource server's own challenge-surface signal for a weak
 or stale token-associated authentication is the RFC 9470
 <code>insufficient_user_authentication</code> challenge itself
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), not a Mission-defined denial
@@ -4242,7 +4242,7 @@ cache hit ratio (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="c
 <a href="#section-7.10" class="section-number selfRef">7.10. </a><a href="#name-evaluation-identifier-propa" class="section-name selfRef">Evaluation identifier propagation</a>
         </h3>
 <p id="section-7.10-1">The resource request a permit authorizes is commonly served by a
-Resource Server that did not see the PDP exchange. The PEP <span class="bcp14">SHOULD</span>
+resource server that did not see the PDP exchange. The PEP <span class="bcp14">SHOULD</span>
 propagate the permit's <code>evaluation_id</code> to the resource request in the
 <code>Mission-Decision</code> request header field (<a href="#iana" class="auto internal xref">Section 13</a>); the field value is
 the <code>evaluation_id</code>, whose ABNF (<a href="#response-context" class="auto internal xref">Section 7.1</a>) is
@@ -4250,18 +4250,18 @@ field-value-safe. The field is protected in transit per deployment: at
 minimum it rides the TLS channel this profile already requires
 (<a href="#security-considerations" class="auto internal xref">Section 11</a>), and where the deployment signs resource
 requests the signature <span class="bcp14">MUST</span> cover it.<a href="#section-7.10-1" class="pilcrow">¶</a></p>
-<p id="section-7.10-2">A Resource Server that logs the received <code>evaluation_id</code> with the
+<p id="section-7.10-2">A resource server that logs the received <code>evaluation_id</code> with the
 access it serves closes the decision-to-access join: the Decision
-Evidence, the Execution Evidence, and the Resource Server's access log
+Evidence, the Execution Evidence, and the resource server's access log
 then share one identifier, so an access is joined to the decision that
 permitted it without timestamp correlation. This extends the issuance
-profile's recommendation that a Resource Server log the <code>mission</code>
+profile's recommendation that a resource server log the <code>mission</code>
 claim's <code>id</code> and the token <code>jti</code> with each decision
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): the evaluation identifier is
 this profile's addition to that correlation set.<a href="#section-7.10-2" class="pilcrow">¶</a></p>
 <p id="section-7.10-3">The field is a correlation aid, not an authorization. Its presence or
-value grants nothing, the Resource Server's token validation and PEP
-obligations are unchanged, and a Resource Server <span class="bcp14">MUST NOT</span> treat it as a
+value grants nothing, the resource server's token validation and PEP
+obligations are unchanged, and a resource server <span class="bcp14">MUST NOT</span> treat it as a
 permit; the permit-binding rules above govern.<a href="#section-7.10-3" class="pilcrow">¶</a></p>
 </section>
 </div>

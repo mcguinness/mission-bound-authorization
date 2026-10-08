@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             7 October 2026
-Expires: 10 April 2027
+Intended status: Experimental                             8 October 2026
+Expires: 11 April 2027
 
 
                       Mission Consumption Metering
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -138,7 +138,7 @@ Table of Contents
    consumption bounds on its Missions and is fully conformant to the
    issuance and runtime profiles.  The derivation limits profile's
    derivation_limit is not a consumption bound: it is enforced by the
-   issuing Authorization Server at each derivation and needs none of
+   issuing authorization server at each derivation and needs none of
    this document
    ([I-D.draft-mcguinness-oauth-mission-derivation-limits]).
 
@@ -487,7 +487,7 @@ Table of Contents
       absent an explicitly approved relaxation (Section 8).
 
    The bounds are carried on the Mission and committed by intent_hash.
-   They are not enforced by the Authorization Server at issuance; they
+   They are not enforced by the authorization server at issuance; they
    are enforced by the runtime layer at the point of use (Section 7).
    The one issuance-time step is the child-creation rule of Section 9.
 
@@ -615,7 +615,7 @@ Table of Contents
       bound never over-consumes; it is a hard cap.
 
    Bounded-consistency enforcement profile:  Multiple or distributed
-      PDPs (for example, Resource Server-hosted PDPs) share the counter
+      PDPs (for example, resource server-hosted PDPs) share the counter
       without linearizable coordination, a distributed-counting problem.
       The deployment MUST publish, per bound class, the maximum
       overshoot and staleness it operates under (for example, a bounded

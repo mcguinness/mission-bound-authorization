@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             7 October 2026
-Expires: 10 April 2027
+Intended status: Experimental                             8 October 2026
+Expires: 11 April 2027
 
 
 Mission-Bound Authorization for the Grant Negotiation and Authorization
@@ -66,7 +66,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -176,9 +176,9 @@ Table of Contents
    here the parallel is the substrate itself.
 
    This is the fifth binding of the Mission model: the issuance profile
-   binds it to the OAuth Authorization Server, the Mission Authority
-   Server to a standalone service beside an unchanged AS, the AAuth
-   binding to the AAuth Person Server
+   binds it to the OAuth authorization server, the Mission Authority
+   Server to a standalone service beside an unchanged authorization
+   server (AS), the AAuth binding to the AAuth Person Server
    ([I-D.draft-mcguinness-mission-aauth]), the UMA binding to the UMA
    2.0 authorization server ([I-D.draft-mcguinness-mission-uma]), and
    this document to the GNAP authorization server.  Like the AAuth and
@@ -293,7 +293,7 @@ Table of Contents
     | End user      | The interacting operator; no Mission role      |
     |               | follows automatically                          |
     +---------------+------------------------------------------------+
-    | Resource      | Resource Server: [RFC9767] participant or      |
+    | Resource      | Resource server: [RFC9767] participant or      |
     | server        | structured-token validator, no Mission         |
     |               | awareness required                             |
     +---------------+------------------------------------------------+

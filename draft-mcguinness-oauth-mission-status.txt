@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          7 October 2026
-Expires: 10 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -135,7 +135,7 @@ Table of Contents
    It gates derivation on Mission state, carries the mission claim on
    every derived token, and offers only OPTIONAL token introspection
    ([I-D.draft-mcguinness-oauth-mission], Section "Mission State via
-   Token Introspection") as a way for a Resource Server to observe
+   Token Introspection") as a way for a resource server to observe
    Mission state.  It names this profile for the canonical Mission
    Status surface (keyed by mission_id) and its signed status evidence,
    and defers a standardized management endpoint for lifecycle
@@ -167,7 +167,7 @@ Table of Contents
       mission_max_stale_seconds bound and how to size token lifetimes to
       the propagation mechanisms in use.
 
-   *  *Authorization Server metadata* members (Section 8) advertising
+   *  *authorization server metadata* members (Section 8) advertising
       the endpoints above.
 
    Each capability is independently optional.  An implementation states
@@ -195,7 +195,7 @@ Table of Contents
    This document uses the terms defined in the issuance profile
    [I-D.draft-mcguinness-oauth-mission], in particular Mission, Mission
    Issuer (the Mission issuer: in this document's OAuth binding the
-   Authorization Server; a standalone Mission Issuer, the Mission
+   authorization server; a standalone Mission Issuer, the Mission
    Authority Server [I-D.draft-mcguinness-mission-authority-server],
    serves these surfaces with the same semantics; the AAuth Person
    Server plays the same role for its native missions through its own
@@ -250,10 +250,11 @@ Table of Contents
    good," the Mission Status operation answers "what is the state of
    this Mission" keyed by the mission_id alone.  Any consumer holding a
    mission_id (including an auditor or a cross-domain Resource AS)
-   resolves it without holding a token the AS issued.
+   resolves it without holding a token the authorization server (AS)
+   issued.
 
    The Mission Issuer publishes its Mission Status endpoint URL in
-   Authorization Server metadata (Section 8) as mission_status_endpoint,
+   authorization server metadata (Section 8) as mission_status_endpoint,
    which a consumer resolves from a credential's mission.issuer.  The
    endpoint MUST be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED),
    following the recommendations of [RFC9325].
@@ -269,12 +270,13 @@ Table of Contents
 
    audience:  CONDITIONAL.  A string.  The audience identifier of the
       requesting consumer, or of another audience the Mission Issuer
-      authorizes that consumer to request (below).  An authorized non-RS
-      consumer (for example an auditor or a cross-domain Resource AS)
-      that needs only Mission state, not audience-scoped authority, MAY
-      omit audience; the response is then state-only and carries no
-      authorization_details (Section 3.4).  A Resource Server resolving
-      authority for a specific audience MUST send it.
+      authorizes that consumer to request (below).  An authorized
+      consumer that is not a resource server (for example an auditor or
+      a cross-domain Resource AS) that needs only Mission state, not
+      audience-scoped authority, MAY omit audience; the response is then
+      state-only and carries no authorization_details (Section 3.4).  A
+      resource server resolving authority for a specific audience MUST
+      send it.
 
    nonce:  REQUIRED.  A string.  A client-generated nonce binding the
       response to this request.  It MUST be unique per request within
@@ -900,8 +902,8 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission], Section "Revocation").  This
    section standardizes that management surface.
 
-   The AS publishes its Mission Lifecycle endpoint URL in Authorization
-   Server metadata (Section 8) as mission_lifecycle_endpoint, distinct
+   The AS publishes its Mission Lifecycle endpoint URL in authorization
+   server metadata (Section 8) as mission_lifecycle_endpoint, distinct
    from [RFC7009] token revocation.  The endpoint MUST be served over
    TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations
    of [RFC9325].
@@ -1471,7 +1473,7 @@ Table of Contents
       introspection_signing_alg_values_supported;
 
    *  the Mission Status operation (Section 3) for per-request state
-      checks by high-assurance Resource Servers, discovered from
+      checks by high-assurance resource servers, discovered from
       mission_status_endpoint; and
 
    *  event-driven propagation of state changes over a Shared Signals
@@ -1549,7 +1551,7 @@ Table of Contents
 
    This section is OPTIONAL and applies only to a deployment that adopts
    one or more of the extensions above.  An AS advertises the surfaces
-   it supports through the following members of its Authorization Server
+   it supports through the following members of its authorization server
    metadata document [RFC8414], in addition to the issuance profile's
    mission_bound_authorization_supported
    ([I-D.draft-mcguinness-oauth-mission], Section "Authorization Server

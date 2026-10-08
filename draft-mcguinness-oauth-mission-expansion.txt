@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          7 October 2026
-Expires: 10 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                     Mission Expansion for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -1668,7 +1668,7 @@ Table of Contents
 
    An expansion-capable Mission Issuer is also a conforming issuance-
    profile Mission Issuer ([I-D.draft-mcguinness-oauth-mission]); this
-   document adds the expansion surface to that role.  A Resource Server
+   document adds the expansion surface to that role.  A resource server
    requires no new behavior: it enforces a successor's tokens exactly as
    it enforces any Mission-bound token, and treats the predecessor
    member, if it reads it at all, as audit context it MUST NOT use to
@@ -1950,7 +1950,7 @@ Table of Contents
    suffices.
 
    The registry covers values of the mission_denial_reason parameter
-   only (Section 12); the Resource Server WWW-Authenticate
+   only (Section 12); the resource server WWW-Authenticate
    mission_denial attribute ([I-D.draft-mcguinness-oauth-mission],
    Section "Resource Server Enforcement") and AuthZEN decision-context
    denial reasons ([I-D.draft-mcguinness-mission-authzen]) are separate

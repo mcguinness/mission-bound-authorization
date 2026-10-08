@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            7 October 2026
-Expires: 10 April 2027
+Intended status: Informational                            8 October 2026
+Expires: 11 April 2027
 
 
                          Mission Intent Shaping
@@ -15,7 +15,7 @@ Abstract
 
    Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
    defines the Mission Intent a client submits and the Authority Set an
-   Authorization Server derives from it, but not how an open-ended task
+   authorization server derives from it, but not how an open-ended task
    request becomes a Mission Intent.  This document describes the
    Mission Shaper, a client-side component that turns a user request or
    upstream trigger into a candidate Mission Intent and, optionally, an
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -121,7 +121,7 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") makes a
    Mission a first-class authorization artifact.  A client submits a
    Mission Intent, and optionally an Authority Proposal, in a Pushed
-   Authorization Request [RFC9126].  The Authorization Server, acting as
+   Authorization Request [RFC9126].  The authorization server, acting as
    Mission Issuer, derives an Authority Set, obtains the Approver's
    consent, and binds issued tokens to the approved Mission.  The
    issuance profile does not specify how a deployment turns an open-
@@ -215,7 +215,7 @@ Table of Contents
    Issuer, Approver, and Agent (Client).  "Client" and "client-side"
    refer to that Agent (Client), the OAuth client that submits the
    Mission Intent.  The issuance profile's Mission Issuer is an
-   Authorization Server [RFC6749]; this document calls it the Mission
+   authorization server [RFC6749]; this document calls it the Mission
    Issuer throughout.  "The issuance profile" without a section
    reference means that document as a whole.
 
@@ -331,7 +331,7 @@ Table of Contents
    Mission Shaper:  Produces a shaped proposal and Shaping Evidence.
       Not authoritative for policy or consent.
 
-   Mission Issuer:  The Authorization Server that validates the
+   Mission Issuer:  The authorization server that validates the
       proposal, derives the Authority Set, records the approval event,
       and issues Mission-bound credentials under the issuance profile.
 
@@ -388,8 +388,8 @@ Table of Contents
       identifier, and the shaper verified that it is admissible for
       shaping.
 
-   capability_projection:  A resource-owning system or Authorization
-      Server supplied an allowed resource and action projection for this
+   capability_projection:  A resource-owning system or authorization
+      server supplied an allowed resource and action projection for this
       task.
 
    A model-generated capability name with none of these bases is
@@ -701,7 +701,7 @@ Table of Contents
 
    Shaping Evidence records how a proposal was produced.  It is audit
    material: it does not grant authority and MUST NOT be used by a
-   Resource Server or Policy Decision Point (PDP) to permit an action.
+   resource server or Policy Decision Point (PDP) to permit an action.
    It makes the intent generator an attributable role, distinct from the
    requester, the Approver, and the executing agent
    ([I-D.draft-mcguinness-mission-architecture]).  This document defines
@@ -853,8 +853,8 @@ Table of Contents
    member of the consent-disclosure object
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
 
-   Neither the hash nor the envelope confers authority.  A Resource
-   Server or PDP MUST NOT treat a shaping evidence hash as proof of
+   Neither the hash nor the envelope confers authority.  A resource
+   server or PDP MUST NOT treat a shaping evidence hash as proof of
    authority.
 
    When a Mission record cites a shaping_evidence_hash, the deployment
@@ -1063,7 +1063,7 @@ Table of Contents
 
    *  bypass the approval event; or
 
-   *  cause a Resource Server to act without authority issued by the
+   *  cause a resource server to act without authority issued by the
       Mission Issuer.
 
    The Mission Issuer remains the enforcement point for approval: the

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          7 October 2026
-Expires: 10 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                 Mission Derivation Limits for OAuth 2.0
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -111,15 +111,16 @@ Table of Contents
    derivation under a Mission on its lifecycle state, its Authority Set,
    and its expiry.  It does not bound how many derivations the issuer
    performs.  This document adds that bound: a derivation limit on the
-   number of derivations the issuer AS performs under a Mission.  The
-   limit is an issuer-side operational control.  It bounds counted
-   issuance operations at the token endpoint, or at the Mission
-   Authority Server's grant endpoint under the Mission Issuance Grant
-   profile (Section 4.5), not the authority any derived token carries or
-   how often a token already issued is used.  The refreshes of an async
-   delegation family are not counted (Section 4.3), nor are redemption
-   and refresh at a consuming Authorization Server under the Mission
-   Issuance Grant profile (Section 4.5).
+   number of derivations the issuer authorization server (AS) performs
+   under a Mission.  The limit is an issuer-side operational control.
+   It bounds counted issuance operations at the token endpoint, or at
+   the Mission Authority Server's grant endpoint under the Mission
+   Issuance Grant profile (Section 4.5), not the authority any derived
+   token carries or how often a token already issued is used.  The
+   refreshes of an async delegation family are not counted
+   (Section 4.3), nor are redemption and refresh at a consuming
+   Authorization Server under the Mission Issuance Grant profile
+   (Section 4.5).
 
    The limit uses these extension seams of the OAuth binding and changes
    none of its rules:
@@ -413,9 +414,9 @@ Table of Contents
    to it ([I-D.draft-mcguinness-oauth-mission], Section "Caller
    Authorization and Minimization"), and its disclosure is member-
    scoped. derivations_remaining serves issuance-budget consumers, not
-   Resource Server enforcement, and the AS MUST disclose it only to a
+   resource server enforcement, and the AS MUST disclose it only to a
    caller the deployment has granted that member's disclosure privilege.
-   By default, an audience-authorized Resource Server receives the
+   By default, an audience-authorized resource server receives the
    audience-filtered enforcement projection without it.
 
    An AS MUST NOT include derivations_remaining in an introspection
@@ -476,7 +477,7 @@ Table of Contents
    *  where it supports token introspection for Mission-bound tokens,
       the rules for derivations_remaining (Section 6).
 
-   A Resource Server does not need to understand this document to
+   A resource server does not need to understand this document to
    enforce Mission-bound tokens; derivations_remaining is not an
    enforcement input (Section 6).
 
@@ -492,7 +493,7 @@ Table of Contents
    redemption and refresh at a Mission Issuance Grant consuming
    Authorization Server, are not counted (Section 9.2, Section 4.5).  It
    does not narrow the Authority Set, shorten a token's lifetime, or
-   bound the requests a Resource Server honors under a token already
+   bound the requests a resource server honors under a token already
    issued: a derived token remains usable until its exp.  A deployment
    that needs to bound use, rather than issuance, adopts a runtime
    control such as metering ([I-D.draft-mcguinness-mission-metering]).

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          7 October 2026
-Expires: 10 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                     Mission Management for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -162,7 +162,7 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission] and the status profile
    [I-D.draft-mcguinness-oauth-mission-status], in particular Mission,
    Mission Issuer (the Mission issuer: in this document's OAuth binding
-   the Authorization Server; a standalone Mission Issuer, the Mission
+   the authorization server; a standalone Mission Issuer, the Mission
    Authority Server [I-D.draft-mcguinness-mission-authority-server],
    serves this surface with the same semantics), mission_id, the Mission
    record, and the Mission lifecycle states and operations.  It
@@ -183,7 +183,7 @@ Table of Contents
 3.  Mission Management Endpoint
 
    The Mission Issuer publishes its Mission Management endpoint URL in
-   Authorization Server metadata (Section 11) as
+   authorization server metadata (Section 11) as
    mission_management_endpoint.  The endpoint MUST be served over TLS
    1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of
    [RFC9325].
@@ -245,10 +245,10 @@ Table of Contents
 
 3.1.  Idempotency
 
-   The nonce is the idempotency key.  The AS MUST deduplicate management
-   requests by (client, nonce) for a bounded window, at least the
-   validity span of the signed response it would replay, as the status
-   profile's lifecycle endpoint requires
+   The nonce is the idempotency key.  The authorization server (AS) MUST
+   deduplicate management requests by (client, nonce) for a bounded
+   window, at least the validity span of the signed response it would
+   replay, as the status profile's lifecycle endpoint requires
    ([I-D.draft-mcguinness-oauth-mission-status]).  On a retransmit, the
    AS MUST replay the original response rather than re-execute the
    request.
@@ -861,7 +861,7 @@ Table of Contents
 11.  Authorization Server Metadata
 
    An AS that serves the Mission Management endpoint advertises it in
-   its Authorization Server metadata [RFC8414]:
+   its authorization server metadata [RFC8414]:
 
    mission_management_endpoint:  OPTIONAL.  A string containing a URL.
       The URL of the Mission Management endpoint (Section 3).  Present

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          7 October 2026
-Expires: 10 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -280,8 +280,8 @@ Table of Contents
    approved; the approved boundary bounds composition, with the
    cumulative bounds and exclusive latch of the metering companion where
    deployed (Section 10, [I-D.draft-mcguinness-mission-metering]).  The
-   PEP is whatever component can actually prevent the action: a Resource
-   Server, an MCP server, an egress proxy, a workflow engine, or the
+   PEP is whatever component can actually prevent the action: a resource
+   server, an MCP server, an egress proxy, a workflow engine, or the
    orchestrator itself (Section 5.5).  The PDP's placement is a
    deployment choice (Section 7).  A deployment whose acting tokens
    carry no mission claim can still bind each decision to a Mission: the
@@ -769,9 +769,9 @@ Table of Contents
 
    The runtime decision MUST include any applicable Resource policy.  A
    Mission-bound credential and runtime permit are an upper bound on
-   authority, not a command for the Resource Server to perform the
-   action.  Resource policy MAY be evaluated by the PDP, by the Resource
-   Server or PEP as a composed local authorization step, or by both.
+   authority, not a command for the resource server to perform the
+   action.  Resource policy MAY be evaluated by the PDP, by the resource
+   server or PEP as a composed local authorization step, or by both.
    The action MUST fail closed unless both Mission authority and
    Resource policy permit it.  Resource policy includes object-level
    authorization, tenant configuration, legal holds, service invariants,
@@ -1242,7 +1242,7 @@ Table of Contents
    capitals, as shown here.
 
    This specification defines its own architectural roles (PEP, PDP,
-   Resource Server, Resource policy) rather than importing them from a
+   resource server, Resource policy) rather than importing them from a
    credential binding, so that the contract it states is readable
    without reference to any one binding's wire format.  It uses the
    Mission, Mission Intent, Mission Issuer, and Authority Set
@@ -1254,18 +1254,18 @@ Table of Contents
    Policy Enforcement Point (PEP):  The component that can prevent a
       consequential action and that obtains and enforces a decision
       before the action runs.  Depending on the action this is a
-      Resource Server, an MCP server, an egress proxy, a workflow
+      resource server, an MCP server, an egress proxy, a workflow
       engine, or the orchestrator itself.
 
    Policy Decision Point (PDP):  The component that evaluates a
       consequential action against the Mission and returns permit or
       deny.  Its placement is a deployment choice (Section 7).
 
-   Resource Server:  The component that hosts the protected resources an
+   Resource server:  The component that hosts the protected resources an
       action targets and applies Resource policy to them, whichever
       credential type it accepts.
 
-   Resource policy:  Local policy of the Resource Server or protected
+   Resource policy:  Local policy of the resource server or protected
       resource, including object-level authorization, tenant
       configuration, legal holds, service invariants, and risk
       decisions.  Mission authority is an upper bound and does not
@@ -1314,9 +1314,9 @@ Table of Contents
       binding rules a deployment publishes; defined in full in
       Section 8.
 
-   Resource Server runtime profile:  A deployment's Resource Server-
+   Resource Server runtime profile:  A deployment's resource server-
       facing conformance statement for this profile.  It defines which
-      protected resources and operations the Resource Server enforces,
+      protected resources and operations the resource server enforces,
       where the PEP sits, how local Resource policy composes with
       Mission authority, and which Operation Profiles apply.
 
@@ -1466,7 +1466,7 @@ Table of Contents
    Server runtime profile* for the protected resources it mediates
    (Section 6), and the *PEP/PDP decision path* for each consequential
    action (Section 7).  Conformance is not global to a product,
-   credential issuer, Resource Server, or PDP: a deployment conforms to
+   credential issuer, resource server, or PDP: a deployment conforms to
    this profile only for the resources, action classes, execution paths,
    and authority-entry types named in its enforcement scope.
 
@@ -1683,7 +1683,7 @@ Table of Contents
    by the floor below and by any Resource-policy minimum (Section 7):
    the profile does not require every read to reach a PDP.  A read that
    is already fully constrained by the token's audience, resource, and
-   the Resource Server's object-level authorization, and that does not
+   the resource server's object-level authorization, and that does not
    materially affect the resource set or disclosure risk, need not be
    classified a consequential read, and is then not separately PDP-gated
    by this profile.  A deployment MUST NOT, however, use classification
@@ -1850,7 +1850,7 @@ Table of Contents
    transaction authorization challenge
    ([I-D.draft-rosomakho-oauth-txn-challenge]) has the protected
    resource return a signed challenge that the client presents to the
-   AS, which obtains approval and issues a token whose
+   authorization server, which obtains approval and issues a token whose
    authorization_details describe the approved operation; under a
    Mission, the approval event is the policy behind that challenge, the
    Authority Set bounds what any challenge can be approved into, and
@@ -1881,7 +1881,7 @@ Table of Contents
       check.
 
    *  A credential-issuance decision does not replace execution-time
-      authorization.  A Resource Server that only validates credentials
+      authorization.  A resource server that only validates credentials
       cannot claim runtime enforcement; the issuance gate is governance,
       the runtime gate is enforcement.
 
@@ -1890,15 +1890,15 @@ Table of Contents
       control; every consequential tool call MUST still pass the runtime
       gate.
 
-   *  An orchestrator's internal check does not replace a Resource
-      Server's PEP.  Defense in depth is permitted; substitution is not.
+   *  An orchestrator's internal check does not replace a resource
+      server's PEP.  Defense in depth is permitted; substitution is not.
 
    *  If no PEP can prevent the action for a given class, the deployment
       MUST NOT claim runtime enforcement for that class, and MUST name
       the action classes and execution paths it does mediate.
 
    The boundary varies by action: an OAuth-protected API call is gated
-   at the Resource Server; a consequential MCP tools/call at the MCP
+   at the resource server; a consequential MCP tools/call at the MCP
    server; a local tool invocation, file write, or payment at the
    orchestrator or whatever component drives the call; external egress
    at an egress proxy.  Where an action can be reached by an unmediated
@@ -2196,7 +2196,7 @@ Table of Contents
 
 6.  Resource Server Runtime Profile
 
-   A Resource Server that claims conformance to this runtime profile
+   A resource server that claims conformance to this runtime profile
    MUST publish or otherwise make available a Resource Server runtime
    profile for the protected resources and operations in scope.  The
    Resource Server runtime profile is a deployment conformance
@@ -2212,7 +2212,7 @@ Table of Contents
    Enforcement Scope Statement (Section 5.2): it inherits the
    enforcement-scope items and records only what is specific to its
    protected operations, restating an inherited item only where its per-
-   operation value differs.  An independently operated Resource Server
+   operation value differs.  An independently operated resource server
    MAY instead carry the full statement as a separable annex.  It MUST
    define:
 
@@ -2246,15 +2246,15 @@ Table of Contents
       is detectable and two independent implementations can name the
       same adapter contract.
 
-   A Resource Server MUST NOT claim this runtime profile for an
+   A resource server MUST NOT claim this runtime profile for an
    operation unless the operation's consequential effects pass through a
    PEP that can refuse the operation after credential validation and
-   before execution.  A Resource Server that only validates the acting
+   before execution.  A resource server that only validates the acting
    credential and checks static authorization claims on it, without a
    per-action PDP decision, does not implement this runtime profile.
 
-   The Resource Server runtime profile MAY be documented in Resource
-   Server configuration, resource-server metadata defined elsewhere, a
+   The Resource Server runtime profile MAY be documented in resource
+   server configuration, resource-server metadata defined elsewhere, a
    contractual deployment profile, or another deployment-specific
    mechanism.  This document does not define a discovery document,
    registry, or wire format for publishing it.
@@ -2306,7 +2306,7 @@ Table of Contents
    composition, and its transient-denial members (Section 15).
 
    The PDP's placement is a deployment choice (co-located with the
-   Mission's issuer, embedded in the Resource Server, a tenant-scoped
+   Mission's issuer, embedded in the resource server, a tenant-scoped
    service, or a shared service); this document does not mandate one.
    The requirement is only that a PEP at each consequential boundary can
    reach an applicable PDP.
@@ -2761,7 +2761,7 @@ Table of Contents
       single use, a decision-API binding's permit_consumed
       classification ([I-D.draft-mcguinness-mission-authzen]).
 
-   *Operation idempotency (Resource Server / Operation Profile)*:  The
+   *Operation idempotency (resource server / Operation Profile)*:  The
       resource, not the PDP, owns the key's lifecycle and the prior
       result once an operation completes: for a COMPLETED duplicate the
       resource returns the prior operation result under the Operation
@@ -3549,8 +3549,8 @@ Table of Contents
 
    *Token lifetime trades against the enforcement layer.* The issuance
    profile recommends short-lived tokens because, in an issuance-only
-   deployment, token expiry is the revocation cutoff wherever a Resource
-   Server does not introspect.  Where this profile's enforcement covers
+   deployment, token expiry is the revocation cutoff wherever a resource
+   server does not introspect.  Where this profile's enforcement covers
    the high-consequence classes with an active-freshness state source,
    the PDP is the cutoff for the actions that matter, and a deployment
    MAY extend token lifetimes for issuance-load reasons without silently
@@ -3966,7 +3966,7 @@ Table of Contents
 17.8.  Resource Policy Remains Authoritative
 
    Mission authority is a maximum authority envelope.  It does not force
-   a Resource Server to perform an action, bypass local authorization,
+   a resource server to perform an action, bypass local authorization,
    or override object ACLs, tenant configuration, legal holds, service
    invariants, or risk policy.  A runtime deployment that treats a
    Mission-bound permit as sufficient without Resource policy evaluation
@@ -4021,15 +4021,15 @@ Table of Contents
 
 17.11.  Decision Channel and Credential Disclosure
 
-   A separate PDP becomes part of the Resource Server's trusted
+   A separate PDP becomes part of the resource server's trusted
    authorization path for the operations in its enforcement scope, which
    is why mutual authentication, integrity protection, and authorization
    for the declared scope are baseline requirements on that channel
    (Section 2.4), not deployment advice.  Passing full credentials to a
-   PDP also extends credential exposure beyond the Resource Server
+   PDP also extends credential exposure beyond the resource server
    boundary; a deployment that does so needs the same credential
    handling, retention, and disclosure controls it applies at the
-   Resource Server.
+   resource server.
 
    General OAuth security guidance [RFC9700] applies to the underlying
    OAuth credentials, where the binding is OAuth

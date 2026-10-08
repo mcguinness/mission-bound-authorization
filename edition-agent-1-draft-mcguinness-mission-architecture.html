@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 10 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-architecture-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-07" class="published">7 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-10">10 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1144,7 +1144,7 @@ it names is defined by the profile it points to.<a href="#section-abstract-1" cl
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1438,7 +1438,7 @@ OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> realiz
 </li>
         <li class="normal" id="section-1-5.2">
           <p id="section-1-5.2.1">A standalone binding hosts the same object without changing an
-existing Authorization Server
+existing authorization server
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-1-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-5.3">
@@ -1615,7 +1615,7 @@ parameter (<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xr
 binding).<a href="#section-3-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-3-2.2">
-          <p id="section-3-2.2.1"><strong>Approve and record.</strong> The Authorization Server derives and
+          <p id="section-3-2.2.1"><strong>Approve and record.</strong> The authorization server derives and
 discloses an Authority Set (read invoices, post adjustments under
 a cap), and the Approver approves. The approval event creates the
 Mission, <code>active</code> with an expiry, and commits <code>intent_hash</code>,
@@ -1729,7 +1729,8 @@ runs submit, approve, poll, join, permit:<a href="#section-3-5" class="pilcrow">
    |&lt;---------------------------------------------------|
 </pre><a href="#section-3-6" class="pilcrow">¶</a>
 </div>
-<p id="section-3-7">The token in step 7 is an ordinary OAuth token from the unchanged AS;
+<p id="section-3-7">The token in step 7 is an ordinary OAuth token from the unchanged
+authorization server (AS);
 steps 8 through 10 are the Mission Join and the runtime decision (the
 MAS's Mission Join section), and the MAS's staged walkthrough of the
 same flow is its end-to-end appendix
@@ -2173,7 +2174,7 @@ naming it; the person reviews and approves through that PS.<a href="#section-6-2
 Mission, and owns its state. The authority-bearing bindings host it:<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6-2.8.2.1">
-              <p id="section-6-2.8.2.1.1">OAuth Authorization Server: every derived token carries the
+              <p id="section-6-2.8.2.1.1">OAuth authorization server: every derived token carries the
 <code>mission</code> claim, and issuance and refresh are gated on Mission
 state (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6-2.8.2.1.1" class="pilcrow">¶</a></p>
 </li>
@@ -2184,7 +2185,7 @@ credentials to the Mission at the point of use
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-6-2.8.2.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6-2.8.2.3">
-              <p id="section-6-2.8.2.3.1">UMA 2.0 Authorization Server (experimental sketch): the pushed
+              <p id="section-6-2.8.2.3.1">UMA 2.0 authorization server (experimental sketch): the pushed
 Mission Intent rides UMA claims pushing, the resource owner's
 decision fills UMA's authorization assessment, and RPT issuance
 is gated on state (<span>[<a href="#I-D.draft-mcguinness-mission-uma" class="cite xref">I-D.draft-mcguinness-mission-uma</a>]</span>).<a href="#section-6-2.8.2.3.1" class="pilcrow">¶</a></p>
@@ -2221,7 +2222,7 @@ gate agent identity or resource-managed access (Section 4.2 of
 <span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.11">Resource Server:</dt>
+<dt id="section-6-2.11">Resource server:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.12">
           <p id="section-6-2.12.1">The protected resource. In the OAuth binding it enforces
 statelessly from the token and can check the <code>mission</code> claim (the
@@ -4010,10 +4011,10 @@ Controller;<a href="#section-10-6.1.1" class="pilcrow">¶</a></p>
           </tbody>
         </table>
 <p id="section-10.1-2">The anchors in the envelope row are <strong>commitment anchors</strong>, not
-enforcement proofs (<a href="#derivation-boundary" class="auto internal xref">Section 9.2</a>). A Resource Server holding
+enforcement proofs (<a href="#derivation-boundary" class="auto internal xref">Section 9.2</a>). A resource server holding
 a narrowed token enforces the authority it receives rather than
 reconstructing authority from a hash of a full set it does not hold
-(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>). A Resource Server
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>). A resource server
 or policy decision point that needs an independent check retrieves
 the complete approved set, recomputes its anchor, and checks the
 carried authority as a subset of it under Mission Approved-Set
@@ -4369,7 +4370,7 @@ and lets every other resource ride lifetime-bounded reliance
 (<a href="#assurance-level-definitions" class="auto internal xref">Section 11.1</a>), with token lifetimes sized to the
 tolerated staleness and no state evaluation at the resource.<a href="#section-10.5-13" class="pilcrow">¶</a></p>
 <p id="section-10.5-14">The standalone mode trades the token-layer kill switch for zero
-Authorization Server changes. A MAS creates, approves, and serves
+authorization server changes. A MAS creates, approves, and serves
 Missions while tokens remain ordinary; the PDP joins credentials to
 Missions, and the MAS is the freshness source. The cost is structural:<a href="#section-10.5-14" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -4391,7 +4392,7 @@ from a lesser one: the MAS remains a peer binding, not a staging area
 (its own document's framing).<a href="#section-10.5-16" class="pilcrow">¶</a></p>
 <p id="section-10.5-17">Between those two architectures sits the issuance join
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>): the MAS remains
-the Mission Issuer while estate Authorization Servers redeem Mission
+the Mission Issuer while estate authorization servers redeem Mission
 Issuance Grants for Mission-bound, state-gated tokens, restoring the
 token-layer chokepoint without moving approval.<a href="#section-10.5-17" class="pilcrow">¶</a></p>
 </section>
@@ -4517,7 +4518,7 @@ outstanding tokens run to their own expiry.<a href="#section-11.1-2.2.2" class="
 the deployment's tolerated staleness
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), gives a quantified
 cutoff: revocation within one token lifetime on every path whose
-minting checks current Mission state, with no Resource Server
+minting checks current Mission state, with no resource server
 changes and no status traffic. Expiry closes the temporal
 bound by the clock alone and observes no revocation, suspension,
 completion, or containment, so the lifetime must not exceed the
@@ -4638,11 +4639,11 @@ work defensible to grant.<a href="#section-11.1-3" class="pilcrow">¶</a></p>
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Baseline Issuance</td>
-              <td class="text-left" rowspan="1" colspan="1">Consequential reads and writes outside the high-consequence classes whose bounds the receiving Resource Server enforces, attributable and killable at the issuance gate, outstanding tokens running to their own expiry or the next introspection</td>
+              <td class="text-left" rowspan="1" colspan="1">Consequential reads and writes outside the high-consequence classes whose bounds the receiving resource server enforces, attributable and killable at the issuance gate, outstanding tokens running to their own expiry or the next introspection</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Runtime-Enforced</td>
-              <td class="text-left" rowspan="1" colspan="1">Consequential actions that need a per-action decision: parameter-bound writes and bounds finer than the receiving Resource Server enforces; reversal and compensation stay the orchestration profile's, where adopted</td>
+              <td class="text-left" rowspan="1" colspan="1">Consequential actions that need a per-action decision: parameter-bound writes and bounds finer than the receiving resource server enforces; reversal and compensation stay the orchestration profile's, where adopted</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Governed Agent</td>
@@ -4880,7 +4881,7 @@ states what each mechanism establishes.<a href="#section-11.4-4" class="pilcrow"
         </table>
 <p id="section-11.4-6">The mapping join and the Mission Join Assertion are the MAS's
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-11.4-6" class="pilcrow">¶</a></p>
-<p id="section-11.4-7">The properties are claimed per covered Authorization Server,
+<p id="section-11.4-7">The properties are claimed per covered authorization server,
 resource, and action path, never as a product-wide maximum. A mixed
 estate claims what each path has, and a weaker path never inherits a
 stronger path's claim from the deployment's name. Where policy
@@ -5514,7 +5515,7 @@ Profile states what it built (<a href="#deployment-profile" class="auto internal
         </h3>
 <p id="section-12.1-1">The estate a deployment already runs, not preference, decides which
 chokepoint it builds first. The OAuth binding's issuance ramp assumes
-an Authorization Server that supports pushed authorization requests,
+an authorization server that supports pushed authorization requests,
 rich authorization requests, and JWT access tokens. The standalone
 ramp assumes none of that and trades it for PEP coverage. By starting
 condition:<a href="#section-12.1-1" class="pilcrow">¶</a></p>
@@ -5534,7 +5535,7 @@ condition:<a href="#section-12.1-1" class="pilcrow">¶</a></p>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">AS changeable; PAR, RAR, and JWT access tokens in place</td>
               <td class="text-left" rowspan="1" colspan="1">The OAuth binding</td>
-              <td class="text-left" rowspan="1" colspan="1">AS adds intent intake, derivation, approval, record, and gating; a Mission-creating client changes with it, submitting <code>mission_intent</code> through PAR and handling Mission responses and lifecycle refusals; scope-only Resource Servers continue unchanged at scope grain, per-entry constraints reaching them only through a projection or a PEP</td>
+              <td class="text-left" rowspan="1" colspan="1">AS adds intent intake, derivation, approval, record, and gating; a Mission-creating client changes with it, submitting <code>mission_intent</code> through PAR and handling Mission responses and lifecycle refusals; scope-only resource servers continue unchanged at scope grain, per-entry constraints reaching them only through a projection or a PEP</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">AS changeable; RAR absent or tokens opaque</td>
@@ -5547,7 +5548,7 @@ condition:<a href="#section-12.1-1" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">Records and approvals first; enforcement arrives with PEP/PDP coverage</td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Many Authorization Servers, one governance point</td>
+              <td class="text-left" rowspan="1" colspan="1">Many authorization servers, one governance point</td>
               <td class="text-left" rowspan="1" colspan="1">MAS as estate control plane; issuance join per consuming AS</td>
               <td class="text-left" rowspan="1" colspan="1">Each AS adds grant redemption only</td>
             </tr>
@@ -5571,8 +5572,8 @@ adopts later.<a href="#section-12.1-3" class="pilcrow">¶</a></p>
 <a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-the-issuance-only-deploymen" class="section-name selfRef">The Issuance-Only Deployment</a>
         </h3>
 <p id="section-12.2-1">The entry-ramp table's last row is a deployment in its own right, the
-<strong>issuance-only deployment</strong>: the Authorization Server and the
-Mission-creating client change, and Resource Servers need not be
+<strong>issuance-only deployment</strong>: the authorization server and the
+Mission-creating client change, and resource servers need not be
 Mission-aware. A delegated token reaches only a Mission-aware Resource
 Server, so a delegate calling any other resource runs under a Child
 Mission where child creation is authorized
@@ -5590,7 +5591,7 @@ Mission where child creation is authorized
 </li>
         </ul>
 <p id="section-12.2-4">The deployment sizes token lifetime to its tolerated staleness. Where
-the Authorization Server offers introspection, a Resource Server that
+the authorization server offers introspection, a resource server that
 introspects per request stops honoring a token at its next request
 once the Mission leaves <code>active</code>, with no Mission-specific code
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-12.2-4" class="pilcrow">¶</a></p>
@@ -5607,7 +5608,7 @@ high-consequence classes and for an action class that needs:<a href="#section-12
             <p id="section-12.2-6.2.1">approval bound to a single action; or<a href="#section-12.2-6.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-6.3">
-            <p id="section-12.2-6.3.1">a bound the receiving Resource Server cannot enforce.<a href="#section-12.2-6.3.1" class="pilcrow">¶</a></p>
+            <p id="section-12.2-6.3.1">a bound the receiving resource server cannot enforce.<a href="#section-12.2-6.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -5723,7 +5724,7 @@ profile is run:<a href="#section-12.6-2" class="pilcrow">¶</a></p>
             <p id="section-12.6-3.3.1">the MAS mapping contract;<a href="#section-12.6-3.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.6-3.4">
-            <p id="section-12.6-3.4.1">the Resource Server coverage split;<a href="#section-12.6-3.4.1" class="pilcrow">¶</a></p>
+            <p id="section-12.6-3.4.1">the resource server coverage split;<a href="#section-12.6-3.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.6-3.5">
             <p id="section-12.6-3.5.1">the transparency-service topology and schedule; and<a href="#section-12.6-3.5.1" class="pilcrow">¶</a></p>
@@ -6371,7 +6372,7 @@ oauth-mission-cross-domain).<a href="#appendix-A.4-1.7.1" class="pilcrow">¶</a>
 session state server-side would not suffice.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">RAR supplies structured authorization data an Authorization Server
+          <p id="appendix-B-2.1.1">RAR supplies structured authorization data an authorization server
 renders into an itemized approval experience. RAR itself guarantees
 neither approval fidelity nor a consent UI.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
@@ -6388,7 +6389,7 @@ deployment supplies those properties in either design.<a href="#appendix-B-2.3.1
 </li>
       </ul>
 <p id="appendix-B-3">Inside one administrative domain, a conventional stack (structured
-request data, an Authorization Server's consent or grant record,
+request data, an authorization server's consent or grant record,
 short credentials, and a stateful PDP) implements durable task
 state, fan-out joins, persistent narrowing, and audit locally. Five
 places mark where that local composition meets what this family
@@ -6410,7 +6411,7 @@ standardizes:<a href="#appendix-B-3" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Durable task semantics across tokens and restarts</td>
             <td class="text-left" rowspan="1" colspan="1">OAuth grants, refresh families, or PDP records outlive the token</td>
-            <td class="text-left" rowspan="1" colspan="1">An independently addressable, lifecycle-bearing approved task with anchors consistently interpreted by the Authorization Server, PDP, agents, audiences, and evidence producers; it does not make persistence newly possible (the OAuth binding's Why a New Object and Relationship to Other Authorization Objects sections)</td>
+            <td class="text-left" rowspan="1" colspan="1">An independently addressable, lifecycle-bearing approved task with anchors consistently interpreted by the authorization server, PDP, agents, audiences, and evidence producers; it does not make persistence newly possible (the OAuth binding's Why a New Object and Relationship to Other Authorization Objects sections)</td>
             <td class="text-left" rowspan="1" colspan="1">Durable-object and lifecycle storage</td>
           </tr>
           <tr>
@@ -6433,7 +6434,7 @@ standardizes:<a href="#appendix-B-3" class="pilcrow">¶</a></p>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Persistent narrowing</td>
-            <td class="text-left" rowspan="1" colspan="1">A stateful Authorization Server or PDP stores reduced entitlements and consults them at issuance</td>
+            <td class="text-left" rowspan="1" colspan="1">A stateful authorization server or PDP stores reduced entitlements and consults them at issuance</td>
             <td class="text-left" rowspan="1" colspan="1">Monotonic subset semantics across issuance, delegation, attenuation, and cross-domain projections, auditable across components (<a href="#invariants" class="auto internal xref">Section 8</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">AS or MAS integration; ecosystem adoption</td>
           </tr>
@@ -6908,8 +6909,8 @@ shape, with:<a href="#appendix-F-5" class="pilcrow">¶</a></p>
           <p id="appendix-F-6.1.1">no <code>runtime</code>, <code>credential_custody</code>, or <code>harness</code> member;<a href="#appendix-F-6.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-F-6.2">
-          <p id="appendix-F-6.2.1">its token lifetime stated as the revocation bound where a Resource
-Server does not introspect; and<a href="#appendix-F-6.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-F-6.2.1">its token lifetime stated as the revocation bound where a resource
+server does not introspect; and<a href="#appendix-F-6.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-F-6.3">
           <p id="appendix-F-6.3.1">residuals that name the per-action check it does not run.<a href="#appendix-F-6.3.1" class="pilcrow">¶</a></p>
@@ -6955,8 +6956,8 @@ Server does not introspect; and<a href="#appendix-F-6.2.1" class="pilcrow">¶</a
 <p id="appendix-G-1">One row per document, grouped as the family groups them; the short
 form drops the <code>draft-mcguinness-</code> prefix, and the repository's
 DRAFTS.md is the full catalog with maturity and adoption metadata.
-The naming encodes a boundary: profiles extending the Authorization
-Server's own surfaces keep "oauth" in their names; profiles defined
+The naming encodes a boundary: profiles extending the authorization
+server's own surfaces keep "oauth" in their names; profiles defined
 against the substrate of <a href="#substrate" class="auto internal xref">Section 10</a> are named without it. This
 document is named without it because the architecture is
 substrate-neutral.<a href="#appendix-G-1" class="pilcrow">¶</a></p>
@@ -7024,7 +7025,7 @@ bound profiled by <code>aauth-mission-expiry</code>.<a href="#appendix-G-3" clas
             <td class="text-left" rowspan="1" colspan="1">
               <code>oauth-mission-issuance-grant</code>
 </td>
-            <td class="text-left" rowspan="1" colspan="1">The issuance join: MAS-minted grants an Authorization Server redeems for Mission-bound, state-gated tokens.</td>
+            <td class="text-left" rowspan="1" colspan="1">The issuance join: MAS-minted grants an authorization server redeems for Mission-bound, state-gated tokens.</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
@@ -7600,7 +7601,7 @@ what ends within a staleness bound or at a token's own expiry.<a href="#appendix
           <p id="appendix-H-2.21.1">The issuance-only deployment is named under Entry Ramps by Estate
 with its invariants, introspection cutoff, claims, and runtime
 triggers; the adoption-ladder table grants Baseline Issuance the
-reads and writes whose bounds the receiving Resource Server
+reads and writes whose bounds the receiving resource server
 enforces; and the Deployment Profile gains an issuance-only example
 shape.<a href="#appendix-H-2.21.1" class="pilcrow">¶</a></p>
 </li>

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          7 October 2026
-Expires: 10 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
             Mission Intent Submission Evidence for OAuth 2.0
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -158,10 +158,10 @@ Table of Contents
    procedure, and the verified output facts that verification yields.
 
    This document defines no generic member other than type, and no
-   evidence types; an AS that supports no evidence type refuses every
-   presented entry under the OAuth binding's dispatch rule
-   ([I-D.draft-mcguinness-oauth-mission], Section "Intent Submission
-   Evidence").
+   evidence types; an authorization server (AS) that supports no
+   evidence type refuses every presented entry under the OAuth binding's
+   dispatch rule ([I-D.draft-mcguinness-oauth-mission], Section "Intent
+   Submission Evidence").
 
 4.  Processing Rules
 
@@ -271,7 +271,7 @@ Table of Contents
    Verified evidence is not copied into the Authority Set, and the facts
    the Mission Record retains are not carried on the mission claim
    ([I-D.draft-mcguinness-oauth-mission], Section "Mission Record").  A
-   Resource Server does not need to understand this document.
+   resource server does not need to understand this document.
 
 8.  Security Considerations
 

@@ -1067,7 +1067,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 10 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1080,12 +1080,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-substrate-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-07" class="published">7 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-10">10 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1148,7 +1148,7 @@ authority hashes.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1391,7 +1391,7 @@ language, evidence format, or identifier syntax.<a href="#section-1.1-1" class="
 <p id="section-1.1-2">In particular, the kernel does not require:<a href="#section-1.1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1.1-3.1">
-            <p id="section-1.1-3.1.1">an OAuth <code>client_id</code>, Authorization Server, or OAuth issuer
+            <p id="section-1.1-3.1.1">an OAuth <code>client_id</code>, authorization server, or OAuth issuer
 identifier;<a href="#section-1.1-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.1-3.2">
@@ -2876,7 +2876,7 @@ which a new substrate can locate itself.<a href="#appendix-A-1" class="pilcrow">
 <a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-oauth-native-mapping-the-br" class="section-name selfRef">OAuth-Native Mapping: The Broad-Claims Pole</a>
         </h3>
 <p id="appendix-A.1-1">The OAuth binding can intentionally claim a broad set of capabilities.
-Its Authorization Server can act as Controller, OAuth identifiers can
+Its authorization server can act as Controller, OAuth identifiers can
 instantiate Actor and subject mappings, and protected access-token
 fields can supply Credential-Bound.  Registered authorization-detail
 types can supply Structured Authority: each type's semantics owner
@@ -2899,7 +2899,7 @@ follow from a Mission identifier or hash alone.<a href="#appendix-A.1-2" class="
 <a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-standalone-mas-mapping-the-" class="section-name selfRef">Standalone MAS Mapping: The Separation-and-Join Pole</a>
         </h3>
 <p id="appendix-A.2-1">The MAS separates Mission governance from an otherwise unchanged
-Authorization Server.  It can satisfy the kernel and can provide
+authorization server.  It can satisfy the kernel and can provide
 Structured Authority and Monotonic Derivation for operations it owns.
 It does not, by itself, prove that an OAuth access token was issued
 under a Mission.<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
@@ -2907,7 +2907,7 @@ under a Mission.<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
 cooperating credential issuer can add stronger lifecycle and
 credential-binding properties.  The MAS Statement needs to describe
 those with their activation conditions and preserve the boundary
-between MAS assertions and Authorization Server behavior.<a href="#appendix-A.2-2" class="pilcrow">¶</a></p>
+between MAS assertions and authorization server behavior.<a href="#appendix-A.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="aauth-native-mapping-the-private-context-pole">
@@ -2973,7 +2973,7 @@ contract was generalized from.  The terms correspond as follows:<a href="#append
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Controller</td>
-            <td class="text-left" rowspan="1" colspan="1">Mission Issuer, where the binding issues; natively the AS, MAS, UMA authorization server, or AAuth PS</td>
+            <td class="text-left" rowspan="1" colspan="1">Mission Issuer, where the binding issues; natively the OAuth authorization server, MAS, UMA authorization server, or AAuth PS</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Actor</td>

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             7 October 2026
-Expires: 10 April 2027
+Intended status: Experimental                             8 October 2026
+Expires: 11 April 2027
 
 
                   Mission Work Products for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -400,7 +400,7 @@ Table of Contents
       key within the deployment's published key set.  A relying party
       resolves it by the mediator's role, reusing the family's existing
       role-keyed resolution path ([I-D.draft-mcguinness-mission-audit]):
-      the Mission Issuer key through the Authorization Server metadata
+      the Mission Issuer key through the authorization server metadata
       jwks_uri when role is issuer, and the harness signing key
       published in the deployment key set when role is harness.  This
       document defines no new key-resolution path.

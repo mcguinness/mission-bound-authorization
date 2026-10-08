@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          7 October 2026
-Expires: 10 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -61,7 +61,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -1762,7 +1762,7 @@ Table of Contents
    Authentication step-up has no dedicated denial-reason value under
    this profile: an in-process step-up rides the obligation on a permit,
    and an RFC 9470 step-up rides the obligation on a resource_policy
-   denial.  The Resource Server's own challenge-surface signal for a
+   denial.  The resource server's own challenge-surface signal for a
    weak or stale token-associated authentication is the RFC 9470
    insufficient_user_authentication challenge itself
    ([I-D.draft-mcguinness-oauth-mission]), not a Mission-defined denial
@@ -2482,7 +2482,7 @@ Table of Contents
 7.10.  Evaluation identifier propagation
 
    The resource request a permit authorizes is commonly served by a
-   Resource Server that did not see the PDP exchange.  The PEP SHOULD
+   resource server that did not see the PDP exchange.  The PEP SHOULD
    propagate the permit's evaluation_id to the resource request in the
    Mission-Decision request header field (Section 13); the field value
    is the evaluation_id, whose ABNF (Section 7.1) is field-value-safe.
@@ -2490,19 +2490,19 @@ Table of Contents
    the TLS channel this profile already requires (Section 11), and where
    the deployment signs resource requests the signature MUST cover it.
 
-   A Resource Server that logs the received evaluation_id with the
+   A resource server that logs the received evaluation_id with the
    access it serves closes the decision-to-access join: the Decision
-   Evidence, the Execution Evidence, and the Resource Server's access
+   Evidence, the Execution Evidence, and the resource server's access
    log then share one identifier, so an access is joined to the decision
    that permitted it without timestamp correlation.  This extends the
-   issuance profile's recommendation that a Resource Server log the
+   issuance profile's recommendation that a resource server log the
    mission claim's id and the token jti with each decision
    ([I-D.draft-mcguinness-oauth-mission]): the evaluation identifier is
    this profile's addition to that correlation set.
 
    The field is a correlation aid, not an authorization.  Its presence
-   or value grants nothing, the Resource Server's token validation and
-   PEP obligations are unchanged, and a Resource Server MUST NOT treat
+   or value grants nothing, the resource server's token validation and
+   PEP obligations are unchanged, and a resource server MUST NOT treat
    it as a permit; the permit-binding rules above govern.
 
 8.  Runtime Evidence

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          7 October 2026
-Expires: 10 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                   Mission Issuance Grant for OAuth 2.0
@@ -16,13 +16,13 @@ Abstract
    This specification defines the Mission Issuance Grant, a profile of
    the JSON Web Token (JWT) authorization grant of RFC 7523.  A Mission
    Authority Server approves and records Missions without changing an
-   estate's OAuth Authorization Servers.  Under this profile it also
+   estate's OAuth authorization servers.  Under this profile it also
    issues, for an active Mission, a short-lived, audience-restricted,
-   single-use JWT that the client presents at an Authorization Server's
-   token endpoint.  The Authorization Server validates the grant and
+   single-use JWT that the client presents at an authorization server's
+   token endpoint.  The authorization server validates the grant and
    issues Mission-bound tokens: they carry the Mission, are bounded by
    the authority the grant conveys, and expire no later than the
-   Mission.  An Authorization Server that checks Mission state at
+   Mission.  An authorization server that checks Mission state at
    redemption and at every refresh stops issuing and renewing those
    tokens once the Mission is no longer active, and narrows them when
    its authority is narrowed; one that does not check issues no refresh
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -124,12 +124,12 @@ Table of Contents
    Mission-Bound Authorization for OAuth 2.0
    [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") binds
    issued authority to a durable, human-approved Mission, with the
-   Authorization Server (AS) as the Mission Issuer.  The Mission
+   authorization server (AS) as the Mission Issuer.  The Mission
    Authority Server (MAS,
    [I-D.draft-mcguinness-mission-authority-server]) hosts the same
-   Mission without changing the estate's Authorization Servers: it
+   Mission without changing the estate's authorization servers: it
    validates Mission Intents, runs approval, records Missions, and
-   operates their lifecycle.  The tokens those Authorization Servers
+   operates their lifecycle.  The tokens those authorization servers
    issue remain ordinary.  They do not carry the Mission, and their
    issuance and refresh do not depend on Mission state; enforcement can
    relate them to a Mission only at the point of use, through the
@@ -159,7 +159,7 @@ Table of Contents
    The AS implements none of the issuance profile's intake, approval
    ceremony, authority derivation, record, or lifecycle surfaces; those
    stay at the MAS.  A deployment can adopt the issuance join at some
-   Authorization Servers and keep the Mission Join at others
+   authorization servers and keep the Mission Join at others
    (Section 9).
 
 2.  Conventions and Terminology
@@ -180,14 +180,14 @@ Table of Contents
    profile the MAS is the Mission Issuer.  It additionally uses:
 
    Issuance join:  The integration this document defines: a MAS-approved
-      Mission carried by a grant that an Authorization Server redeems at
+      Mission carried by a grant that an authorization server redeems at
       its token endpoint.
 
    Mission Issuance Grant (grant):  The signed assertion of Section 4,
       issued by the MAS and redeemed for Mission-bound tokens.
 
    Consuming Authorization Server (consuming AS):  An OAuth
-      Authorization Server [RFC6749] that redeems Mission Issuance
+      authorization server [RFC6749] that redeems Mission Issuance
       Grants at its token endpoint; conformance role of Section 10.
 
    Mission-state integration:  A consuming AS's means of resolving the
@@ -244,7 +244,7 @@ Table of Contents
    grants only from Mission Issuers its local policy names, resolving
    their signing keys through the MAS's published key material (its
    discovery jwks_uri, [I-D.draft-mcguinness-mission-authority-server]);
-   a MAS mints grants only for Authorization Servers named as audiences
+   a MAS mints grants only for authorization servers named as audiences
    by deployment configuration.  Subject and client correspondence
    between the Mission record and the consuming AS's accounts is
    governed by the deployment's mapping policy; where the Enterprise
@@ -1001,7 +1001,7 @@ Table of Contents
 
    In the substrate's terms ([I-D.draft-mcguinness-mission-substrate]),
    a MAS alone claims neither Credential-Bound nor Lifecycle-Gated
-   Authorization for tokens its unchanged Authorization Servers issue.
+   Authorization for tokens its unchanged authorization servers issue.
    Together with its consuming Authorization Servers under this profile,
    it supplies both, for the resources those servers serve.  In the
    Mission Assurance Levels
@@ -1048,7 +1048,7 @@ Table of Contents
    Enforcement Scope Statement ([I-D.draft-mcguinness-mission-runtime],
    Section "Enforcement Scope and Conformance"):
 
-   *  which Authorization Servers consume grants, and which of them have
+   *  which authorization servers consume grants, and which of them have
       a Mission-state integration;
 
    *  the staleness bound of each one's state gating, and the bound on
@@ -1172,7 +1172,7 @@ Table of Contents
    *  Published specification: this document
 
    *  Applications that use this media type: Mission Authority Servers
-      and OAuth Authorization Servers implementing this profile
+      and OAuth authorization servers implementing this profile
 
    *  Fragment identifier considerations: n/a
 

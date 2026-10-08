@@ -9,7 +9,7 @@
 <meta content="
        Mission-Bound Authorization for OAuth 2.0 (the &quot;issuance profile&quot;)
 defines the Mission Intent a client submits and the Authority Set an
-Authorization Server derives from it, but not how an open-ended task
+authorization server derives from it, but not how an open-ended task
 request becomes a Mission Intent. This document describes the Mission
 Shaper, a client-side component that turns a user request or upstream
 trigger into a candidate Mission Intent and, optionally, an Authority
@@ -1060,7 +1060,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 10 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1073,12 +1073,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-shaping-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-07" class="published">7 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-10">10 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1093,7 +1093,7 @@ svg {
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
 defines the Mission Intent a client submits and the Authority Set an
-Authorization Server derives from it, but not how an open-ended task
+authorization server derives from it, but not how an open-ended task
 request becomes a Mission Intent. This document describes the Mission
 Shaper, a client-side component that turns a user request or upstream
 trigger into a candidate Mission Intent and, optionally, an Authority
@@ -1134,7 +1134,7 @@ and approval.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1320,7 +1320,7 @@ and approval.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile") makes a
 Mission a first-class authorization artifact. A client submits a
 Mission Intent, and optionally an Authority Proposal, in a Pushed
-Authorization Request <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>. The Authorization Server, acting as
+Authorization Request <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>. The authorization server, acting as
 Mission Issuer, derives an Authority Set, obtains the Approver's
 consent, and binds issued tokens to the approved Mission. The issuance
 profile does not specify how a deployment turns an open-ended task
@@ -1421,7 +1421,7 @@ profile: Mission, Mission Intent, Mission Intent Submission (Submission
 envelope), Authority Proposal, Authority Set, Mission Issuer, Approver,
 and Agent (Client). "Client" and "client-side" refer to that Agent
 (Client), the OAuth client that submits the Mission Intent. The
-issuance profile's Mission Issuer is an Authorization Server
+issuance profile's Mission Issuer is an authorization server
 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>; this document calls it the Mission Issuer throughout.
 "The issuance profile"
 without a section reference means that document as a whole.<a href="#section-2-6" class="pilcrow">¶</a></p>
@@ -1578,7 +1578,7 @@ for policy or consent.<a href="#section-3.3-2.4.1" class="pilcrow">¶</a></p>
           <dd class="break"></dd>
 <dt id="section-3.3-2.5">Mission Issuer:</dt>
           <dd style="margin-left: 1.5em" id="section-3.3-2.6">
-            <p id="section-3.3-2.6.1">The Authorization Server that validates the proposal, derives the
+            <p id="section-3.3-2.6.1">The authorization server that validates the proposal, derives the
 Authority Set, records the approval event, and issues Mission-bound
 credentials under the issuance profile.<a href="#section-3.3-2.6.1" class="pilcrow">¶</a></p>
 </dd>
@@ -1672,7 +1672,7 @@ shaper verified that it is admissible for shaping.<a href="#section-5-3.6.1" cla
 <dt id="section-5-3.7">
 <code>capability_projection</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-3.8">
-          <p id="section-5-3.8.1">A resource-owning system or Authorization Server supplied an allowed
+          <p id="section-5-3.8.1">A resource-owning system or authorization server supplied an allowed
 resource and action projection for this task.<a href="#section-5-3.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
@@ -2076,7 +2076,7 @@ substitutes the shaper's judgment for the Approver's.<a href="#section-7.2-4" cl
       </h2>
 <p id="section-8-1">Shaping Evidence records how a proposal was produced. It is audit
 material: it does not grant authority and <span class="bcp14">MUST NOT</span> be used by a
-Resource Server or Policy Decision Point (PDP) to permit an action. It
+resource server or Policy Decision Point (PDP) to permit an action. It
 makes the intent generator an attributable role, distinct from the
 requester, the Approver, and the executing agent
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>). This document defines
@@ -2304,7 +2304,7 @@ hash in the <code>mission_shaping_evidence_hash</code> request parameter, and th
 Mission Issuer records it in the <span class="bcp14">OPTIONAL</span> <code>shaping_evidence_hash</code>
 member of the consent-disclosure object
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-8.1-6" class="pilcrow">¶</a></p>
-<p id="section-8.1-7">Neither the hash nor the envelope confers authority. A Resource Server
+<p id="section-8.1-7">Neither the hash nor the envelope confers authority. A resource server
 or PDP <span class="bcp14">MUST NOT</span> treat a shaping evidence hash as proof of authority.<a href="#section-8.1-7" class="pilcrow">¶</a></p>
 <p id="section-8.1-8">When a Mission record cites a <code>shaping_evidence_hash</code>, the deployment
 <span class="bcp14">SHOULD</span> retain the Shaping Evidence and its <code>input_exclusion_ruleset</code>
@@ -2574,7 +2574,7 @@ from the one intended; or<a href="#section-12.2-2.2.1" class="pilcrow">¶</a></p
             <p id="section-12.2-4.3.1">bypass the approval event; or<a href="#section-12.2-4.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-4.4">
-            <p id="section-12.2-4.4.1">cause a Resource Server to act without authority issued by the
+            <p id="section-12.2-4.4.1">cause a resource server to act without authority issued by the
 Mission Issuer.<a href="#section-12.2-4.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             7 October 2026
-Expires: 10 April 2027
+Intended status: Experimental                             8 October 2026
+Expires: 11 April 2027
 
 
             Mission Progressive Authorization for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -346,11 +346,11 @@ Table of Contents
    *  The successor MUST carry forward the predecessor's committed
       derivation count.  Where the predecessor has a derivation_limit,
       the successor's derivation_limit MUST NOT exceed it: a stricter
-      AS-policy ceiling or requested_derivation_limit narrows it
-      further, and omitting or raising the request neither removes nor
-      raises it.  A predecessor without a derivation_limit has no finite
-      limit to pass on, and the successor's is established as Mission
-      Derivation Limits' Effective Limit section states.
+      authorization-server policy ceiling or requested_derivation_limit
+      narrows it further, and omitting or raising the request neither
+      removes nor raises it.  A predecessor without a derivation_limit
+      has no finite limit to pass on, and the successor's is established
+      as Mission Derivation Limits' Effective Limit section states.
 
    *  The Mission Issuer MUST read the predecessor's committed count and
       transfer it in the atomic step above that activates the successor,

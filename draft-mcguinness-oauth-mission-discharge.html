@@ -1065,7 +1065,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 10 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1078,12 +1078,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-discharge-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-07" class="published">7 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-10">10 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1142,7 +1142,7 @@ unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1337,7 +1337,7 @@ an extension <code>operation</code> value on the Status profile's Mission
 Lifecycle endpoint, authenticated and authorized independently of
 that endpoint's other operations, that commits a condition's firing.
 When a condition is met, the entry is <strong>discharged</strong>: the
-Authorization Server no longer derives a token carrying that entry
+authorization server no longer derives a token carrying that entry
 (<a href="#discharge" class="auto internal xref">Section 3.3</a>), exactly as it refuses derivation for a non-<code>active</code>
 Mission. <a href="#completion" class="auto internal xref">Section 3</a> states the properties this mechanism requires
 and the threat analysis, including why a prompt-injected agent cannot
@@ -1368,7 +1368,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <p id="section-2-2">This document uses the terms defined in the issuance profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, in particular Mission, Mission
 Issuer (the Mission <code>issuer</code>: in this document's OAuth binding the
-Authorization Server), Authority Set, and <code>mission_id</code>; the
+authorization server), Authority Set, and <code>mission_id</code>; the
 <code>mission_resource_access</code> authorization details type and Common
 Constraints defined in its Mission Resource Access Profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>); and the
@@ -1472,7 +1472,8 @@ are deployment- or registry-defined and opaque to this document, as
               <dd style="margin-left: 1.5em" id="section-3.2-2.2.2.4">
                 <p id="section-3.2-2.2.2.4.1"><span class="bcp14">OPTIONAL</span>. A string, <code>1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )</code>
                   <span>[<a href="#RFC5234" class="cite xref">RFC5234</a>]</span>, opaque. It names the authority approved to assert
-this condition, which the AS resolves to its discharge-authority
+this condition, which the authorization server (AS) resolves to its
+discharge-authority
 mapping (<a href="#discharge-authority" class="auto internal xref">Section 4.3.1</a>).<a href="#section-3.2-2.2.2.4.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
@@ -1512,7 +1513,7 @@ a <code>terminal_when</code> condition is a single external event.<a href="#sect
 <a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-discharge-and-issuance-gati" class="section-name selfRef">Discharge and Issuance Gating</a>
         </h3>
 <p id="section-3.3-1">When a condition in an entry's <code>terminal_when</code> has been met, the entry is
-discharged. The Authorization Server <span class="bcp14">MUST NOT</span> derive a token carrying a
+discharged. The authorization server <span class="bcp14">MUST NOT</span> derive a token carrying a
 discharged entry, at the token endpoint, on refresh, or on Token
 Exchange, exactly as issuance is refused for a non-<code>active</code> Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A derivation that would carry
@@ -1592,7 +1593,7 @@ change discharges earlier or later from opaque <code>event_type</code> values.<a
 <a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-forward-compatibility" class="section-name selfRef">Forward Compatibility</a>
         </h3>
 <p id="section-3.5-1">Because <code>terminal_when</code> is a <code>constraints</code> member, a consumer that does
-not recognize it fails closed by the issuance profile's Resource Server
+not recognize it fails closed by the issuance profile's resource server
 enforcement rule directly: a consumer <span class="bcp14">MUST</span> fail closed on any
 <code>constraints</code> key it does not understand, or understands but cannot
 enforce, refusing the request rather than granting access while ignoring
@@ -1600,7 +1601,7 @@ the key (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">
 load-bearing narrowing, so ignoring <code>terminal_when</code> would silently widen
 the grant. That enforcement rule is the honest basis of discharge's
 safety: an unrecognized <code>terminal_when</code> is refused, never dropped.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
-<p id="section-3.5-2">An Authorization Server that does not implement this capability simply
+<p id="section-3.5-2">An authorization server that does not implement this capability simply
 does not emit <code>terminal_when</code>, and is unaffected. The fail-closed rule
 binds a consumer that encounters the constraint without implementing
 it.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
@@ -1611,7 +1612,7 @@ it.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
         <h3 id="name-derivation-guidance">
 <a href="#section-3.6" class="section-number selfRef">3.6. </a><a href="#name-derivation-guidance" class="section-name selfRef">Derivation Guidance</a>
         </h3>
-<p id="section-3.6-1">This guidance is non-normative. When the Authorization Server derives an
+<p id="section-3.6-1">This guidance is non-normative. When the authorization server derives an
 entry from the Mission Intent, a reviewable rule governs what each
 element of the Intent becomes:<a href="#section-3.6-1" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -2438,20 +2439,20 @@ condition: the close-management system's workload identity, not
 <code>alice</code>'s agent, may assert <code>accounting-period-closed</code>
 (<a href="#discharge-authority" class="auto internal xref">Section 4.3.1</a>). The agent cannot drive its own discharge: it
 holds no <code>mission_discharge</code> authorization for that <code>event_type</code>.<a href="#section-4.6-3" class="pilcrow">¶</a></p>
-<p id="section-4.6-4">While the period is open, the Authorization Server derives both entries.
+<p id="section-4.6-4">While the period is open, the authorization server derives both entries.
 When the finance team finalizes the Q3 close, the close-management
 system calls <code>discharge</code> on the Mission Lifecycle endpoint, naming the
 write entry's <code>entry_digest</code>, this condition's <code>condition_digest</code>,
 <code>event_type</code> <code>accounting-period-closed</code>, and an <code>event_id</code> for its own
-occurrence record. The Authorization Server authenticates the caller
+occurrence record. The authorization server authenticates the caller
 against the resolved <code>discharge_authority</code> mapping, commits the latch,
 and returns a signed <code>discharge_result</code> of outcome <code>discharged</code>
-(<a href="#discharge-result" class="auto internal xref">Section 4.3.4</a>). A Resource Server that holds a token for the
+(<a href="#discharge-result" class="auto internal xref">Section 4.3.4</a>). A resource server that holds a token for the
 write entry, and so cannot compute the record entry's digest, names
 the same target by the condition selector it reads from introspection
 (<a href="#condition-selectors" class="auto internal xref">Section 4.2</a>).<a href="#section-4.6-4" class="pilcrow">¶</a></p>
 <p id="section-4.6-5">From then on the
-Authorization Server refuses to derive the write entry: a refresh
+authorization server refuses to derive the write entry: a refresh
 returns a token carrying only the read entry. The Mission stays
 <code>active</code>, so the agent can still read the ledger to finish its
 reconciliation report, but it can no longer post journal entries. No
@@ -2507,7 +2508,8 @@ cannot-determine-means-no-issuance runs a synchronous status or
 policy check outside this baseline.<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.1-2.4">
-            <p id="section-5.1-2.4.1">RS enforcement honesty. A stateless Resource Server cannot evaluate
+            <p id="section-5.1-2.4.1">Resource server enforcement honesty. A stateless resource server
+cannot evaluate
 issuer-held discharge state from the token alone; it honors the
 issued token until expiry. Prompt cutoff on a discharged entry
 requires the Status profile's Mission Status operation or
@@ -2730,7 +2732,7 @@ profile.<a href="#section-8-1" class="pilcrow">¶</a></p>
         <h3 id="name-completion-conformance">
 <a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-completion-conformance" class="section-name selfRef">Completion Conformance</a>
         </h3>
-<p id="section-8.1-1">An Authorization Server claiming the completion capability <span class="bcp14">MUST</span>:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-1">An authorization server claiming the completion capability <span class="bcp14">MUST</span>:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8.1-2.1">
             <p id="section-8.1-2.1.1">treat an entry whose <code>terminal_when</code> has been discharged as

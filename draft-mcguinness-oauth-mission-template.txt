@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             7 October 2026
-Expires: 10 April 2027
+Intended status: Experimental                             8 October 2026
+Expires: 11 April 2027
 
 
                      Mission Template for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -435,7 +435,7 @@ Table of Contents
    a single authenticated back-channel request that references the
    template by id and carries the dispatch intent, and it is answered in
    one round trip.  This document defines no new endpoint and no new
-   Authorization Server metadata: dispatch is a non-interactive Mission
+   authorization server metadata: dispatch is a non-interactive Mission
    creation under the pre-consented template, at the token endpoint
    under the grant type this document defines (Section 6.2).
 
@@ -1008,7 +1008,7 @@ Table of Contents
       Deployment Profile (Section 4, Section 7) and retain the audit
       linkage of Section 10.
 
-   A Resource Server requires no new behavior: it enforces a dispatched
+   A resource server requires no new behavior: it enforces a dispatched
    Mission's tokens exactly as it enforces any Mission-bound token, and
    treats the template member, if it reads it at all, as audit context
    it MUST NOT use to grant authority (Section 6.1).
