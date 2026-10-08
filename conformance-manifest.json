@@ -59,8 +59,8 @@
     "content_sha256": "9201cdc83aa8e79a1a2615bf25f69c9ff8fac11424be6336c8f5052ba1f24b5b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "0e0301309a14578771b9aef0379dbd2eb0b3f2fc9ec0e626303faf2808f75075"
+    "revision": "fd935e96fc5069a89ba676c3748820c6d8ac66be",
+    "content_sha256": "3777606e2cf8670ade9109ef217994ab980a625f4327c9ed9936134b6b0ac09c"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -79,8 +79,8 @@
     "content_sha256": "72d16463993b55af9238d7374a0a39764b6a8086935515180fa4841344510119"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "fb51475dad98490aaf30ee980baa6941e8a5ca483bea75cf00a158566ed400a9"
+    "revision": "afea606f3b955198867531dd37c68921907f29be",
+    "content_sha256": "c3a1a76468ca3bb889530928e25375f3001999571a31fa9437c9c89f9f006769"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -99,12 +99,12 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "cffd2db65c200bc44cf354d90f15c855af8c082ac497d8b539406398ea903375"
+    "revision": "5ad0d29770d9598408397835f9ecf5b2ad147830",
+    "content_sha256": "5be7ff2eda5a6c1b20cb10b2fa6791d4b05dc06b609d8f43b850214ef33a9aa2"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "1c4868141e7f09b14adbc053a048706e258b7e62f2541e94ab55d5caac00a830"
+    "revision": "b8109b0c3ad8216fc6c3ef3488a03b98d344a576",
+    "content_sha256": "4005ab62f0ad304e30982923ce4a1670d00783f236baa526091dd64ff0adf5e4"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
