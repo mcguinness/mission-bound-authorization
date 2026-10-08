@@ -16,7 +16,8 @@ production-readiness or interoperability claim (D284 ruling 1).
 
 Every behavioral statement is true of the reference implementation read at
 origin/main `e9001b2f`, and each statement about the as-native target and its
-launcher (#1105) at `001183f5`. Each cites the function (`file:line`, read at
+launcher (#1105) at `001183f5`; statements about the outcome reconciler
+(#1103) describe it as merged and cite tests and function names. Each cites the function (`file:line`, read at
 `001183f5`, paths relative to `src/`) or the exact test (`describe > it`)
 that shows it. A path with no
 witnessing test says "no test yet". Tests marked [FGA] are skipped without a
@@ -78,7 +79,7 @@ so this target cannot pass acceptance while either is missing.
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:781-788`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
 | Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP only: an action outside the verified token's own `authorization_details` is refused before the PDP, which does not evaluate it. Independent Resource policy is not implemented (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR 1 merged as #1062; PRs 2a to 2c remain, D312). Resource policy: #828 |
 | Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | Emission failures: #1104 |
-| Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain and the PEP write reservations are durable files; every other store is in memory (§7). The declared reconciler is not run | Partial | Reconciliation never runs: #1103. #250, #831 |
+| Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain and the PEP write reservations are durable files; every other store is in memory (§7). The declared reconciler runs in the launched PEP process; a restarted process cannot reconcile a prior one's claims, a stated bound (§7) | Partial | #250, #831 |
 | Claims | Per-action limits only; execution and transaction handling for applicable operations; no aggregate cap, compromise containment or unattended prohibited-class exception | §8 | Partial | §8 |
 
 **AS capability set (D332).** The target extends the issuance-only floor
@@ -409,7 +410,7 @@ The pack cannot pass while #825 or #828 is unmet (§1).
 | Failed commit predicate with the permit retained | none | applies only to a connector that claims a commit-point predicate; none does at this revision (#817), so the guarantee stays excluded (§8) |
 | Bob for Alice, with and without `openid` | `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject` and `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves for another principal without openid: the token and introspection carry the Subject, the record the Approver, and the provider account and session the Approver` | not on the assembled path; #826 awaits implementation acceptance |
 | Revoke during issuance | none on this surface | #250, #873 |
-| Restart and uncertain recovery | the unit-level witnesses in §7 | no assembled restart test; reconciliation never runs (#1103) |
+| Restart and uncertain recovery | the unit-level witnesses in §7 | no assembled restart test; a prior process's unsettled claims close indeterminate with an operator alert, a stated bound (§7) |
 | Emission failure | none (§6) | #1104 |
 | Unknown or authoritative argument member | `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > an argument member the served schema does not declare is refused invalid_request with no PDP call and one Refusal Record` and `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > an authoritative member (D34) is refused invalid_request with no PDP call and one Refusal Record` (§3) | not on the assembled path |
 
@@ -485,7 +486,7 @@ the overlay's obligations to their hooks in the port's eight columns. Next:
 
 1. **Acceptance pack (step 3):** `pnpm as-native` (#1105) and the vectors of
    §10, after the required enforcement gaps (#825, #828) and the recovery
-   gaps (#1103, #1104) are resolved.
+   gap (#1104) are resolved.
 2. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
    independently and separately pinned.
 
