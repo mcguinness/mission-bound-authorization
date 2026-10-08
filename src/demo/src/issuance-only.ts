@@ -396,9 +396,15 @@ export async function runWalkthrough(
   try {
     revokeResult = JSON.parse(revokeText) as Record<string, unknown>;
   } catch {
-    // A signed Mission Status response (compact JWS): show its state.
+    // A signed Mission Status response (compact JWS): show its state and,
+    // beside a `terminated` state, its termination.
     const signed = decodeJwt(revokeText) as Record<string, unknown>;
-    revokeResult = { state: signed.state ?? (signed.mission as { state?: unknown } | undefined)?.state, signed: true };
+    const mission = signed.mission as { state?: unknown; termination?: unknown } | undefined;
+    revokeResult = {
+      state: signed.state ?? mission?.state,
+      ...(mission?.termination !== undefined ? { termination: mission.termination } : {}),
+      signed: true,
+    };
   }
   record({
     step: "6. Revoke",

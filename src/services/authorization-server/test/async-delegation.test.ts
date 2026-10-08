@@ -1072,19 +1072,19 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
     return { iso: new Date(ms).toISOString(), ms };
   };
 
-  it("fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused mission_expired and saves no family refresh token (@spec mission#mission-bound-tokens)", async () => {
+  it("fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused with mission_error expired and saves no family refresh token (@spec mission#mission-bound-tokens)", async () => {
     const expiry = halfSecondExpiry(10);
     const { baseAccessToken } = await issueBaseMission(expiry.iso);
     const { result: res, saved } = await refreshTokensSavedAt(expiry.ms - 900, () => asyncDelegate(baseAccessToken));
     const body = (await res.json()) as { error?: string; mission_error?: string; refresh_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_grant");
-    expect(body.mission_error).toBe("mission_expired");
+    expect(body.mission_error).toBe("expired");
     expect(body.refresh_token).toBeUndefined();
     expect(saved).toBe(0);
   });
 
-  it("fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused mission_expired with no refresh token saved (@spec mission#mission-bound-tokens)", async () => {
+  it("fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens)", async () => {
     const expiry = halfSecondExpiry(20);
     const { missionId, baseAccessToken } = await issueBaseMission(expiry.iso);
     // Open the family 5.4 s before expires_at: its refresh token's lifetime is
@@ -1103,7 +1103,7 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
     const body = (await res.json()) as { error?: string; mission_error?: string; refresh_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_grant");
-    expect(body.mission_error).toBe("mission_expired");
+    expect(body.mission_error).toBe("expired");
     expect(body.refresh_token).toBeUndefined();
     expect(saved).toBe(0);
   });
@@ -1130,7 +1130,7 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
     vi.spyOn(Date, "now").mockReturnValue(ms - 900);
     try {
       const rt = new as.provider.RefreshToken({ accountId: "alice", client, grantId });
-      await expect(rt.save()).rejects.toMatchObject({ error: "invalid_grant", missionError: "mission_expired" });
+      await expect(rt.save()).rejects.toMatchObject({ error: "invalid_grant", missionError: "expired" });
     } finally {
       vi.restoreAllMocks();
     }
@@ -1185,7 +1185,7 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
     // (familyStore terminal marking is synchronous, so resolve is undefined at once).
     const rec = as.kernel.get(missionId);
     as.kernel.applyExpiry(rec as NonNullable<typeof rec>);
-    expect(as.kernel.get(missionId)?.state).toBe("expired");
+    expect(as.kernel.get(missionId)?.termination?.reason).toBe("expired");
     expect(as.delegationFamilyStore.resolve(grantId)).toBeUndefined();
   }, 15_000);
 });

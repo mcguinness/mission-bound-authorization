@@ -128,53 +128,79 @@ export class MissionGrantError extends errors.InvalidGrant {
 }
 
 /**
- * The `mission_error` values this deployment emits: the OAuth binding's own,
- * Derivation Limits' `derivations_exhausted`, and Mission Status's
- * `mission_suspended` and `mission_completed`.
+ * The `mission_error` values this deployment emits: the OAuth binding's
+ * `revoked`, `expired` and `superseded` (Expansion defines supersession),
+ * Mission Status's `completed` and `suspended`, Child Delegation's
+ * `parent_terminated`, and Derivation Limits' `derivations_exhausted`. Each
+ * lifecycle value is the Mission's termination reason (or, for `suspended`,
+ * its state); none carries a `mission_` prefix.
  */
 export type MissionErrorValue =
-  | "mission_revoked"
-  | "mission_expired"
-  | "derivations_exhausted"
-  | "mission_suspended"
-  | "mission_completed";
+  | "revoked"
+  | "expired"
+  | "superseded"
+  | "completed"
+  | "suspended"
+  | "parent_terminated"
+  | "derivations_exhausted";
+
+/** The termination reasons that are also `mission_error` values. */
+const TERMINATION_MISSION_ERRORS: ReadonlySet<string> = new Set([
+  "revoked",
+  "expired",
+  "superseded",
+  "completed",
+  "parent_terminated",
+]);
+
+/**
+ * @spec mission#issuance-gating, mission#termination: the lifecycle
+ * `mission_error` for an OBSERVED Mission: `suspended` for a suspended one,
+ * the termination reason for a terminated one when it is a registered
+ * `mission_error` value, and none otherwise (an active Mission, or a reason
+ * this deployment does not recognize: the client still gets `invalid_grant`).
+ */
+export function lifecycleMissionError(
+  observed: { state: string; termination?: { reason: string } } | undefined,
+): MissionErrorValue | undefined {
+  if (!observed) return undefined;
+  if (observed.state === "suspended") return "suspended";
+  if (observed.state !== "terminated") return undefined;
+  const reason = observed.termination?.reason;
+  return reason !== undefined && TERMINATION_MISSION_ERRORS.has(reason) ? (reason as MissionErrorValue) : undefined;
+}
 
 /**
  * @spec mission#issuance-gating, status#mission-lifecycle-endpoint — map a
  * kernel {@link GateError} onto the `mission_error` diagnostic value, where
  * one applies. `reason` alone is not enough: `mission_not_active` covers
- * `revoked` and Mission Status's `suspended` and `completed`, each with its
+ * every termination reason and Mission Status's `suspended`, each with its
  * own value, and the ancestor-lineage-walk refusal (also
  * `mission_not_active`) names an ancestor's state, not `missionId`'s own.
- * `currentState`, the FRESH persisted state of `missionId` itself (read
- * after the throw, since `applyExpiry` may have just committed an `expired`
- * transition), resolves both: the value names `missionId`'s own state, so a
- * lineage-refused Mission whose own state is still `active` gets no
- * `mission_error` rather than a misleading one. A child that a parent's
- * suspension projects to `suspended` holds that state as its own, so it gets
- * `mission_suspended`. `authority_contained` and `authority_exhausted` are
- * not `mission_error` values (the former rides the Containment companion's
- * own `mission_denial_reason`; the latter has no diagnostic), so both also
- * fall through to plain `invalid_grant`, which the SHOULD permits.
+ * `observed`, the OBSERVED record of `missionId` itself (read after the
+ * throw: its own expiry, and the ancestor-termination projection, apply
+ * whether or not either was persisted), resolves both: the value is
+ * `missionId`'s own termination reason, so a terminated Mission reports its
+ * RECORDED cause (never `expired` over an earlier one), a child under a
+ * terminated parent reports `parent_terminated`, and a lineage-refused
+ * Mission whose own observed state is still `active` (under a suspended
+ * ancestor) gets no `mission_error` rather than a misleading one. A child
+ * that a parent's suspension projects to `suspended` holds that state as its
+ * own, so it gets `suspended`. `authority_contained` and
+ * `authority_exhausted` are not `mission_error` values (the former rides the
+ * Containment companion's own `mission_denial_reason`; the latter has no
+ * diagnostic), so both also fall through to plain `invalid_grant`, which the
+ * SHOULD permits.
  */
 export function gateErrorToMissionError(
   reason: GateError["reason"],
-  currentState: string | undefined,
+  observed: { state: string; termination?: { reason: string } } | undefined,
 ): MissionErrorValue | undefined {
   switch (reason) {
     case "mission_expired":
-      return "mission_expired";
+      return "expired";
     case "mission_not_active":
-      switch (currentState) {
-        case "revoked":
-          return "mission_revoked";
-        case "suspended":
-          return "mission_suspended";
-        case "completed":
-          return "mission_completed";
-        default:
-          return undefined;
-      }
+      return lifecycleMissionError(observed);
     case "derivation_cap_exhausted":
       return "derivations_exhausted";
     default:
@@ -816,7 +842,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
   /** A {@link GateError} as the token endpoint's `invalid_grant` (with `mission_error` where a value applies). */
   function missionGateRefusal(e: unknown, missionId: string): unknown {
     return e instanceof GateError
-      ? new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.get(missionId)?.state))
+      ? new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.observedRecord(missionId)))
       : e;
   }
 
@@ -894,7 +920,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const expiring = (): Error =>
       authorization
         ? new errors.AccessDenied("the Mission expires before the authorization can complete")
-        : new MissionGrantError("the Mission expires before a credential can be issued", "mission_expired");
+        : new MissionGrantError("the Mission expires before a credential can be issued", "expired");
     let record: MissionRecord | undefined;
     try {
       record = missionForGrant(grantId);
@@ -914,7 +940,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
         if (authorization) {
           throw e.reason === "mission_expired" ? expiring() : new errors.AccessDenied("the Mission is not active");
         }
-        throw new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.get(record.id)?.state));
+        throw new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.observedRecord(record.id)));
       }
       throw e;
     }
@@ -2904,7 +2930,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // it can neither join nor roll back with this commit.
         const transitioned = withTransaction(kernel.db, () => {
           const record = kernel.transition(missionId, body.operation as LifecycleOperation);
-          const outcome = { id: record.id, state: record.state, version: record.version };
+          // @spec status#mission-lifecycle-endpoint, mission#termination: the
+          // committed outcome reports `termination` beside `state` exactly when
+          // it is `terminated` (with the committing `version`).
+          const outcome = {
+            id: record.id,
+            state: record.state,
+            ...(record.termination ? { termination: record.termination } : {}),
+            version: record.version,
+          };
           if (nonceKey) {
             lifecycleResponses.claimInCallerTx(nonceKey, {
               requestDigest: digest,
@@ -4490,15 +4524,17 @@ async function handleDischarge(input: {
   // an unknown Mission still reaches the kernel's DischargeNotFoundError and the
   // one indistinguishable not-found body; it sits outside the `try` so a storage
   // failure here is never disguised as not-found. `kernel.discharge` keeps its
-  // own expiry clock for other callers. The walk follows committed `carried_to`
-  // correlations too, so a replacement a forwarded discharge may reach keeps
-  // the expiry it discovers when the forwarded request is refused. (The walk
-  // only materializes expiry; forwarding resolves through Carryover Evidence.)
+  // own expiry clock for other callers. The walk follows committed
+  // `termination.carried_to` correlations too, so a replacement a forwarded
+  // discharge may reach keeps the expiry it discovers when the forwarded
+  // request is refused. (The walk only materializes expiry; forwarding
+  // resolves through Carryover Evidence.)
   const walked = new Set<string>();
   for (let cur = kernel.get(missionId); cur && !walked.has(cur.id); ) {
     walked.add(cur.id);
     kernel.materializeExpiry(cur.id);
-    cur = cur.carried_to ? kernel.get(cur.carried_to) : undefined;
+    const carriedTo = cur.termination?.carried_to;
+    cur = carriedTo ? kernel.get(carriedTo) : undefined;
   }
   try {
     // @spec control-plane#serialization, control-plane#fresh-observation — the

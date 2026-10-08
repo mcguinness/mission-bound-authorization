@@ -222,7 +222,7 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
     expect(successor.predecessor).toBe(predecessor.id);
     expect(successor.authority_set[0]?.constraints?.vendors).toContain("globex");
     kernel.supersedeOnRedemption(successor.id);
-    expect(kernel.get(predecessor.id)?.state).toBe("superseded");
+    expect(kernel.get(predecessor.id)?.termination?.reason).toBe("superseded");
     expect(Date.parse(successor.expires_at)).toBeLessThanOrEqual(Date.parse("2026-12-31T00:00:00Z"));
   });
 });

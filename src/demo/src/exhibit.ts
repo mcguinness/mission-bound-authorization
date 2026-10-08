@@ -243,6 +243,14 @@ function shortMission(id: string): string {
   return id.length > 14 ? `${id.slice(0, 12)}..` : id;
 }
 
+/**
+ * A Mission's lifecycle as the rail prints it: its state, with the termination
+ * reason when it is `terminated` (@spec mission#termination).
+ */
+function lifecycleText(rec: { state: string; termination?: { reason: string } }): string {
+  return rec.state === "terminated" ? `terminated(${rec.termination?.reason ?? "unknown"})` : rec.state;
+}
+
 // The mission the lifecycle rail is tracking, and a snapshot of what the rail
 // last DISPLAYED. The snapshot is used ONLY to print on-change and to name the
 // delta; the authoritative values are always re-read from the kernel below.
@@ -258,7 +266,7 @@ function readRail(stack: DemoStack): RailSnap | undefined {
   const eff = stack.kernel.effectiveAuthoritySet(rec);
   return {
     id: rec.id,
-    state: rec.state,
+    state: lifecycleText(rec),
     version: rec.version,
     policy: rec.policy_version,
     cv: rec.containment?.containment_version ?? 0,
@@ -284,7 +292,7 @@ function railLine(stack: DemoStack): string {
   const sep = `${C.dim}  ·  ${C.reset}`;
   const cells = [
     `${C.cyan}mission ${shortMission(rec.id)}${C.reset}`,
-    `${C.dim}state=${C.reset}${stateColor}${rec.state}${C.reset}`,
+    `${C.dim}state=${C.reset}${stateColor}${lifecycleText(rec)}${C.reset}`,
     `${C.dim}v${rec.version}${C.reset}`,
     `${C.dim}policy=${rec.policy_version}${C.reset}`,
     `${C.dim}authority ${effKeys.size}/${approvedKeys.length}${C.reset}`,
@@ -574,7 +582,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     id: dispatchedRecord.id,
     state: dispatchedRecord.state,
     subject: dispatchedRecord.subject,
-    approver: dispatchedRecord.approver,
+    approver: dispatchedRecord.approval_basis.consent_principal,
     template: dispatchedRecord.template,
     authority_hash: dispatchedRecord.authority_hash,
     expires_at: dispatchedRecord.expires_at,
@@ -590,7 +598,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     exp: dispClaims.exp,
   });
   note(
-    `machine speed, no human: approver-of-record == the template's human (${dispatchedRecord.approver.sub}); ` +
+    `machine speed, no human: approver-of-record == the template's human (${dispatchedRecord.approval_basis.consent_principal.sub}); ` +
       `template lineage template_hash ${dispatchedRecord.template?.template_hash === templateHash ? "==" : "!="} the consented template; ` +
       "the Authority Set == the template-clipped effective set, and it is READ-ONLY.",
   );
@@ -599,12 +607,12 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   const dispatchedActions = (dispBody.authorization_details as Array<{ actions: string[] }>).flatMap((e) => e.actions);
   const dispatchOk =
     dispRes.status === 200 &&
-    dispatchedRecord.approver.sub === "bob" &&
+    dispatchedRecord.approval_basis.consent_principal.sub === "bob" &&
     dispatchedRecord.template?.template_hash === templateHash &&
     !dispatchedActions.includes("payments:remittance.send");
   outcome({
     decision: "PERMIT",
-    observed: `dispatched mission ${dispatchedMissionId}, approver-of-record ${dispatchedRecord.approver.sub}, template-clipped READ-ONLY authority`,
+    observed: `dispatched mission ${dispatchedMissionId}, approver-of-record ${dispatchedRecord.approval_basis.consent_principal.sub}, template-clipped READ-ONLY authority`,
     ok: dispatchOk,
   });
 
@@ -766,7 +774,9 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   const egressGate = new EgressGate({
     statement: scopeStatement,
     missionId: dispatchedMissionId,
-    readState: async (id) => stack.kernel.get(id)?.state as MissionState | undefined,
+    // The OBSERVED state: a Mission past its `expires_at` reads `terminated`
+    // whether or not its expiry has been persisted (@spec mission#lifecycle).
+    readState: async (id) => stack.kernel.observedRecord(id)?.state as MissionState | undefined,
     authorityHash: dispatchedRecord.authority_hash,
     evidence: stack.egressEvidence,
     emitterId: "aam-egress-gate",
@@ -810,14 +820,14 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     id: humanRecord.id,
     state: humanRecord.state,
     subject: humanRecord.subject,
-    approver: humanRecord.approver,
+    approver: humanRecord.approval_basis.consent_principal,
     approval_basis: humanRecord.approval_basis,
     template: humanRecord.template,
     authority_hash: humanRecord.authority_hash,
   });
   note(
     `approval_basis.type == "${humanRecord.approval_basis.type}" (direct, not "template"); template lineage is ` +
-      `${humanRecord.template === undefined ? "absent" : "present"}; subject ${humanRecord.subject.sub} != approver ${humanRecord.approver.sub} ` +
+      `${humanRecord.template === undefined ? "absent" : "present"}; subject ${humanRecord.subject.sub} != approver ${humanRecord.approval_basis.consent_principal.sub} ` +
       "(write-bearing missions need a distinct approver, Governance D37).",
   );
   const humanRsProof = await dpopProofFor(humanIssued.dpopKeys, CANONICAL_RESOURCE, "POST", humanIssued.accessToken);
@@ -1171,7 +1181,7 @@ async function main() {
     id: record.id,
     state: record.state,
     subject: record.subject,
-    approver: record.approver,
+    approver: record.approval_basis.consent_principal,
     policy_version: record.policy_version,
     intent_hash: record.intent_hash,
     authority_hash: record.authority_hash,
@@ -1835,7 +1845,7 @@ async function main() {
     state: expansion.successor.state,
     predecessor: expansion.successor.predecessor,
     subject: expansion.successor.subject,
-    approver: expansion.successor.approver,
+    approver: expansion.successor.approval_basis.consent_principal,
     authority_hash: expansion.successor.authority_hash,
     expires_at: expansion.successor.expires_at,
   });
@@ -1853,7 +1863,8 @@ async function main() {
   // Supersession: on the successor's first redemption the predecessor is superseded atomically.
   hop("Operator", "AS", "supersede predecessor on the successor's first redemption (kernel op)", "in-process");
   stack.kernel.supersedeOnRedemption(expansion.successor.id);
-  note(`predecessor ${missionId} state → ${stack.kernel.get(missionId)?.state}`);
+  const superseded = stack.kernel.get(missionId);
+  note(`predecessor ${missionId} state → ${superseded ? lifecycleText(superseded) : "unknown"}`);
   rail(stack);
   hop("Agent", "Payments RS", "tools/call get_invoice (original token, predecessor superseded)", "in-process MCP · O-33");
   const afterSupersede = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
