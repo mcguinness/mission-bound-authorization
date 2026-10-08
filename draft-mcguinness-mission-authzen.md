@@ -1877,7 +1877,7 @@ approval record is created ({{lanes}}).
 Authentication step-up has no dedicated denial-reason value under this
 profile: an in-process step-up rides the obligation on a permit, and
 an RFC 9470 step-up rides the obligation on a `resource_policy`
-denial. The Resource Server's own challenge-surface signal for a weak
+denial. The resource server's own challenge-surface signal for a weak
 or stale token-associated authentication is the RFC 9470
 `insufficient_user_authentication` challenge itself
 ({{I-D.draft-mcguinness-oauth-mission}}), not a Mission-defined denial
@@ -2402,7 +2402,7 @@ cache hit ratio ({{I-D.draft-mcguinness-mission-runtime}}).
 ## Evaluation identifier propagation {#decision-id-propagation}
 
 The resource request a permit authorizes is commonly served by a
-Resource Server that did not see the PDP exchange. The PEP SHOULD
+resource server that did not see the PDP exchange. The PEP SHOULD
 propagate the permit's `evaluation_id` to the resource request in the
 `Mission-Decision` request header field ({{iana}}); the field value is
 the `evaluation_id`, whose ABNF ({{response-context}}) is
@@ -2411,19 +2411,19 @@ minimum it rides the TLS channel this profile already requires
 ({{security-considerations}}), and where the deployment signs resource
 requests the signature MUST cover it.
 
-A Resource Server that logs the received `evaluation_id` with the
+A resource server that logs the received `evaluation_id` with the
 access it serves closes the decision-to-access join: the Decision
-Evidence, the Execution Evidence, and the Resource Server's access log
+Evidence, the Execution Evidence, and the resource server's access log
 then share one identifier, so an access is joined to the decision that
 permitted it without timestamp correlation. This extends the issuance
-profile's recommendation that a Resource Server log the `mission`
+profile's recommendation that a resource server log the `mission`
 claim's `id` and the token `jti` with each decision
 ({{I-D.draft-mcguinness-oauth-mission}}): the evaluation identifier is
 this profile's addition to that correlation set.
 
 The field is a correlation aid, not an authorization. Its presence or
-value grants nothing, the Resource Server's token validation and PEP
-obligations are unchanged, and a Resource Server MUST NOT treat it as a
+value grants nothing, the resource server's token validation and PEP
+obligations are unchanged, and a resource server MUST NOT treat it as a
 permit; the permit-binding rules above govern.
 
 # Runtime Evidence {#evidence}

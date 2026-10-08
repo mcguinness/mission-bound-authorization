@@ -111,8 +111,8 @@
   "draft-mcguinness-mission-substrate": {
    "requirement_inventory": {
     "attested": true,
-    "audited_by": "0ddf5037f33a71d77b4ccbf1a8ba5c210074d931",
-    "report": { "path": "notes/audits/2026-08-25-substrate-completeness-audit.md", "document_sha256": "5488bd571ad351f0e17675a52a18200b6fed96bd503d4029e84bb0a8f964578c" }
+    "audited_by": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "report": { "path": "notes/audits/2026-08-25-substrate-completeness-audit.md", "document_sha256": "4674e17b5206d3eb54dba9c939b61208d9bb985b4955289ab2c53279a9e3a255" }
    },
    "decide_resolutions": [
     { "issue": 708, "status": "resolved_in_tree", "commit": "30982cda740aa761272d847e476d9a77a1ee9726", "note": "PR #717 removed the substrate's normative OAuth dependency (assessment placement, bridge tier, neutral vectors)." }

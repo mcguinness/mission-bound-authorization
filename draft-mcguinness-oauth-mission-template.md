@@ -497,7 +497,7 @@ is submitted on the binding's existing Mission creation surface as a
 single authenticated back-channel request that references the template
 by `id` and carries the dispatch intent, and it is answered in one
 round trip. This document defines no new endpoint and no new
-Authorization Server metadata: dispatch is a non-interactive Mission
+authorization server metadata: dispatch is a non-interactive Mission
 creation under the pre-consented template, at the token endpoint under
 the grant type this document defines ({{grant-type}}).
 
@@ -1047,7 +1047,7 @@ conforming issuance-profile Mission Issuer
   Deployment Profile ({{the-mission-template}}, {{prohibited-classes}})
   and retain the audit linkage of {{audit-linkage}}.
 
-A Resource Server requires no new behavior: it enforces a dispatched
+A resource server requires no new behavior: it enforces a dispatched
 Mission's tokens exactly as it enforces any Mission-bound token, and
 treats the `template` member, if it reads it at all, as audit context
 it MUST NOT use to grant authority ({{template-member}}).

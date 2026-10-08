@@ -187,7 +187,7 @@ A deployment that does not implement this document carries no
 consumption bounds on its Missions and is fully conformant to the
 issuance and runtime profiles. The derivation limits profile's
 `derivation_limit` is not a consumption bound: it is enforced by the
-issuing Authorization Server at each derivation and needs none of this
+issuing authorization server at each derivation and needs none of this
 document ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 
 The consent-integrity rule of {{consent}} is the boundary that makes
@@ -484,7 +484,7 @@ that a companion profile may add a named member coordinated with it:
   absent an explicitly approved relaxation ({{exclusivity}}).
 
 The bounds are carried on the Mission and committed by `intent_hash`.
-They are not enforced by the Authorization Server at issuance; they are
+They are not enforced by the authorization server at issuance; they are
 enforced by the runtime layer at the point of use ({{metering}}). The
 one issuance-time step is the child-creation rule of
 {{capacity-across-missions}}.
@@ -608,7 +608,7 @@ Exact enforcement profile:
   it is a hard cap.
 
 Bounded-consistency enforcement profile:
-: Multiple or distributed PDPs (for example, Resource Server-hosted
+: Multiple or distributed PDPs (for example, resource server-hosted
   PDPs) share the counter without linearizable coordination, a
   distributed-counting problem. The deployment MUST publish, per
   bound class, the maximum overshoot and staleness it operates under

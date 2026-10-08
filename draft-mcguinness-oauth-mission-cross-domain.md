@@ -170,9 +170,9 @@ informative:
 
 The Mission-Bound Authorization for OAuth 2.0 profile binds issued
 authority to a durable, human-approved Mission held by a single
-Authorization Server, the Mission Issuer. This document specifies that
+authorization server, the Mission Issuer. This document specifies that
 profile's optional cross-domain projection: a single hop that lets an
-Authorization Server in another trust domain, a Resource AS, honor a
+authorization server in another trust domain, a Resource AS, honor a
 Mission it did not issue. The Mission Issuer projects audience-scoped
 Mission authority in a short-lived, sender-constrained cross-domain
 grant of the OAuth identity chaining architecture; the Resource AS
@@ -189,17 +189,18 @@ of the issuance profile are unaffected by this document.
 
 The issuance profile {{I-D.draft-mcguinness-oauth-mission}} makes a
 Mission a durable, human-approved, integrity-bound OAuth authorization
-artifact: one Authorization Server, the Mission Issuer, approves it,
+artifact: one authorization server, the Mission Issuer, approves it,
 records it, and derives every token under it. That profile is
-deliberately single-domain: the AS that holds the Mission is the AS
+deliberately single-domain: the authorization server (AS) that holds the
+Mission is the AS
 that issues for it.
 
 Real tasks cross trust domains. An agent reconciling invoices may need
-a partner's ERP, behind a partner Authorization Server the home AS
+a partner's ERP, behind a partner authorization server the home AS
 does not control and whose accounts it does not manage. This document
 specifies **cross-domain projection**: the originating Mission Issuer
 projects a Mission's authority, audience-scoped and
-integrity-anchored, to an Authorization Server in another trust
+integrity-anchored, to an authorization server in another trust
 domain, which honors it by minting local tokens for its own resources.
 The projection is a single hop, issuer to Resource AS; chaining a
 Mission across more than one trust-domain boundary remains future work
@@ -259,7 +260,7 @@ illustrative; the member definitions in the surrounding text are
 authoritative.
 
 Resource AS:
-: An Authorization Server in another trust domain that honors a
+: An authorization server in another trust domain that honors a
   Mission it did not issue, minting its own tokens for its resources
   from a cross-domain grant. A Resource AS is never the Mission
   Issuer.
@@ -277,12 +278,12 @@ Local token:
 # Cross-Domain Projection {#model}
 
 A Mission is approved and held by one Mission Issuer (its `issuer`).
-This document lets a single Mission be honored by Authorization
-Servers in other trust domains, so a Mission can span more than one
+This document lets a single Mission be honored by authorization
+servers in other trust domains, so a Mission can span more than one
 AS, using the cross-domain authorization grant of the OAuth identity
 chaining architecture {{I-D.draft-ietf-oauth-identity-chaining}}: the
 issuer AS issues, through an {{RFC8693}} token exchange, a short-lived
-JWT authorization grant audienced to the target Authorization Server,
+JWT authorization grant audienced to the target authorization server,
 which the client redeems there with the {{RFC7523}} JWT-bearer grant.
 
 This document calls that artifact the **cross-domain grant** and
@@ -710,8 +711,8 @@ A Resource AS consuming a Mission-bound cross-domain grant:
     instead conveyed to the local token through `mission.subject`
     ({{origin-principal}}); otherwise the approved agent remains
     recoverable only at the originating AS from the Mission Record
-    identified by `mission.id` and `mission.issuer`. A Resource
-    Server MAY impose stronger actor-chain requirements but MUST NOT
+    identified by `mission.id` and `mission.issuer`. A resource
+    server MAY impose stronger actor-chain requirements but MUST NOT
     reinterpret `client_id`.
 - MUST bound the issued `authorization_details` by what the
   cross-domain grant conveyed. It MUST apply its own local
@@ -721,7 +722,7 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   the Resource AS does not re-derive them; it interprets and enforces
   them by their structure and vocabulary. It MUST fail closed on a
   conveyed `actions` identifier or `constraints` key it does not
-  recognize for the resource in question, exactly as a Resource Server
+  recognize for the resource in question, exactly as a resource server
   does ({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource
   Server Enforcement"), so authority it cannot interpret is never
   honored across the trust boundary rather than enforced by guess.
@@ -793,7 +794,7 @@ is never a silent attenuation of the origin's authority.
 
 Downstream, `authority_hash` is an immutable audit and correlation
 anchor to the originating AS's consent commitment. A Resource AS and
-its Resource Servers hold only the audience-scoped subset, never the
+its resource servers hold only the audience-scoped subset, never the
 full Authority Set, so they cannot recompute `authority_hash`
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Integrity Anchors");
 its integrity rests on the signature chain (the originating AS signs
@@ -988,7 +989,7 @@ lifetime-bounded baseline.
 ## Disclosure and Evidence {#origin-principal-disclosure}
 
 `mission.subject` is a correlation handle. Tokens carrying it MUST be
-narrowed to one Resource AS or Resource Server audience; a Resource
+narrowed to one Resource AS or resource server audience; a Resource
 AS MUST NOT copy it into tokens for unrelated audiences. An
 introspection responder, the issuer or a Resource AS, MUST disclose
 it only to a caller holding an explicit `origin_principal` disclosure
@@ -1300,7 +1301,7 @@ raw value is not needed ({{origin-principal-disclosure}}).
 
 The cross-domain grant and every local token minted from it carry the
 canonical `mission_id`, `mission.issuer`, and `authority_hash`
-unchanged, so a Resource AS and its Resource Servers can correlate a
+unchanged, so a Resource AS and its resource servers can correlate a
 Mission's activity across domains, and `mission.issuer` identifies the
 issuing AS to the partner domain. This is the deliberate correlation
 property of the issuance profile
@@ -1338,7 +1339,7 @@ the point of the example:
   *between* trust domains: from the home domain (`as.example.com`)
   to the partner domain (`ras.partner.example.com`).
 - **Transaction Tokens** propagate *within* the partner trust domain:
-  from the partner's Resource Server through its internal services.
+  from the partner's resource server through its internal services.
 
 The Mission is the durable anchor across both: `mission.id`,
 `mission.issuer`, and `authority_hash` ride unchanged through every
@@ -1501,8 +1502,8 @@ grant.
 
 ## Stage 4: The Resource Server Enforces
 
-The agent calls the ERP Resource Server (`erp.partner.example.com`)
-with that token. The Resource Server validates the JWT and the `cnf`
+The agent calls the ERP resource server (`erp.partner.example.com`)
+with that token. The resource server validates the JWT and the `cnf`
 binding and enforces the `authorization_details` whose `resource` it
 serves, permitting `invoices.read` and `journal-entries.write` up to
 a `max_amount` of 500.00 USD
@@ -1521,9 +1522,9 @@ The baseline bounds the write only by token lifetime and
 
 ## Stage 5: Internal Call Context via Transaction Tokens
 
-To serve the request, the ERP Resource Server calls internal services
+To serve the request, the ERP resource server calls internal services
 inside the partner trust domain. Here it calls a ledger service for one
-invoice. The Resource Server is the entry edge of that domain: after
+invoice. The resource server is the entry edge of that domain: after
 it has validated the Mission-bound access token, it obtains a
 short-lived Transaction Token for the internal call.
 
@@ -1558,8 +1559,8 @@ operation:
 ~~~
 
 The Transaction Token is intra-domain and the shortest-lived
-credential in the chain (60 s). The holder has changed: the Resource
-Server's workload, not the agent, possesses it. The local context has
+credential in the chain (60 s). The holder has changed: the resource
+server's workload, not the agent, possesses it. The local context has
 narrowed again, to one ledger lookup for one invoice, while the
 `mission` anchor is unchanged.
 
