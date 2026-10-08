@@ -13657,11 +13657,17 @@
     "normative": "an action proceeds only when both Mission authority and Resource policy permit it; either one refusing fails the action closed"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/resource-policy.test.ts",
      "name": "independent Resource policy in the decision (@spec runtime#input-resource-policy, #828) > truth table: permits only when both Mission authority and Resource policy permit; either refusing denies",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/resource-policy.test.ts",
+     "name": "independent Resource policy in the decision (@spec runtime#input-resource-policy, #828) > a policy that cannot answer yields no decision: an unavailable backend, a thrown error and a malformed result each throw ResourcePolicyUnavailableError",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -13678,7 +13684,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#828. The PDP now has an independent Resource-policy conjunct: a ResourcePolicy bound to the decision point, asked at evaluate() step 6b with the authenticated subject, client, action and targets and nothing Mission-derived, denying resource_policy. The unit truth table controls the Mission-authority and Resource-policy outcomes separately with named fixtures, and each cell was verified by disabling the step-6b refusal. Kept partial per #828's ledger rule: a row reaches tested only with the real-OpenFGA assertion, and the two OpenFGA citations here skip without a live OpenFGA, so they await a CI run before this row moves to tested."
+   "notes": "#828. The PDP now has an independent Resource-policy conjunct: a ResourcePolicy bound to the decision point, asked at evaluate() step 6b with the authenticated subject, client, action and targets and nothing Mission-derived, denying resource_policy. The unit truth table controls the Mission-authority and Resource-policy outcomes separately with named fixtures, and each cell was verified by disabling the step-6b refusal. A policy that cannot answer yields no decision, never a permit. Moved partial -> tested under #828's ledger rule, which required the real-OpenFGA assertion: the two OpenFGA citations (revoking only the stored entitlement denies resource_policy where the Mission permits, and restoring it permits; the Mission refusing denies where the entitlement permits) passed against a live OpenFGA in impl-ci at faf9250d. Since main's merge their requests carry the neutral credential authority #825 PR 2b requires (D341) and nothing else changed; they skip locally, so the impl-ci run at the merged head confirms them, and this row reverts to partial if it does not."
   },
   {
    "id": "runtime.decision-inputs.constraint-evaluation-and-unenforceable-refusal",
