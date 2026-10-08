@@ -122,14 +122,23 @@ export interface AuthServerExtras {
     missionId: string,
     cnfJkt: string,
   ) => Promise<{ grant: string; jti: string; audienceScoped: AuthorityEntry[] }>;
-  /** Stop the AS HTTP listener (the exhibit calls this before exit). */
-  closeAuthServer: () => void;
+  /**
+   * Stop the AS HTTP listener and the txn-challenge discovery listener; resolves
+   * once both ports are released (the exhibit calls this before exit).
+   */
+  closeAuthServer: () => Promise<void>;
   /**
    * The capability set the AS was built with: {@link AS_NATIVE_CAPABILITIES}
    * under the `as-native` target. Absent: the full reference assembly, every
    * capability on.
    */
   capabilities?: ReadonlySet<ProviderCapability>;
+  /**
+   * Whether the AS armed its dev ordinary-token route, as the AS reports it
+   * (`BuiltAs.devOrdinaryIssuance`). False on the `as-native` target (D332)
+   * unless its test fixture is on.
+   */
+  devOrdinaryIssuance: boolean;
 }
 
 export interface DemoStack {
@@ -443,6 +452,17 @@ export async function composeStack(opts: {
       },
     });
     const asServer = as.provider.listen(asPort);
+    // A port already in use refuses startup here, with the discovery
+    // listener released, rather than surfacing as an unhandled error event.
+    try {
+      await new Promise<void>((resolve, reject) => {
+        asServer.once("listening", () => resolve());
+        asServer.once("error", reject);
+      });
+    } catch (err) {
+      await metadataServer.close();
+      throw err;
+    }
     kernel = as.kernel;
     issuer = asUrl;
     issuerEvidenceStore = as.issuerEvidence;
@@ -560,11 +580,17 @@ export async function composeStack(opts: {
           cnfJkt,
           resourceToAs,
         }),
-      closeAuthServer: () => {
-        asServer.close();
-        void metadataServer?.close();
+      closeAuthServer: async () => {
+        // Idle keep-alive sockets would hold the close open; drop them so the
+        // promise resolves once both ports are released.
+        asServer.closeAllConnections();
+        await Promise.all([
+          new Promise<void>((resolve) => asServer.close(() => resolve())),
+          metadataServer?.close(),
+        ]);
       },
       ...(capabilities ? { capabilities } : {}),
+      devOrdinaryIssuance: as.devOrdinaryIssuance,
     };
   } else {
     const asKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
@@ -890,9 +916,23 @@ export async function composeStack(opts: {
   let resourceChannel: HttpMcpChannel | undefined;
   if (asNative) {
     const audience = new URL(CANONICAL_RESOURCE);
-    resourceChannel = await createHttpMcpChannel(server, { host: audience.hostname, port: Number(audience.port) });
+    // A failed startup releases what it already opened: the AS and discovery
+    // listeners, the decision channel and both single-writer store files.
+    const release = async (): Promise<void> => {
+      await authServer?.closeAuthServer();
+      await decisionChannel.close();
+      pdpClaims.close();
+      writeReservations.close();
+    };
+    try {
+      resourceChannel = await createHttpMcpChannel(server, { host: audience.hostname, port: Number(audience.port) });
+    } catch (err) {
+      await release();
+      throw err;
+    }
     if (resourceChannel.url !== CANONICAL_RESOURCE) {
       await resourceChannel.close();
+      await release();
       throw new Error(`the as-native endpoint ${resourceChannel.url} is not the declared audience ${CANONICAL_RESOURCE}`);
     }
   }
@@ -968,6 +1008,9 @@ export async function composeStack(opts: {
     ...(authServer ? { authServer } : {}),
   };
 }
+
+/** The options {@link composeStack} takes. */
+export type ComposeStackOptions = Parameters<typeof composeStack>[0];
 
 /** Approve a demo mission for alice, approved by bob (write-bearing governance). */
 export function approveDemoMission(stack: DemoStack): { id: string } {
