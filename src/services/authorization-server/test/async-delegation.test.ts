@@ -511,6 +511,45 @@ describe("async-delegation issuance (@spec async-delegation)", () => {
   });
 });
 
+describe("the presented token's own authority bounds the family (@spec mission#self-exchange rule 2, #825 PR 2c)", () => {
+  /** A family access token confined to the invoice read: a real token narrower than its Mission, same client, no act. */
+  async function narrowerToken(): Promise<{ token: string; authority: unknown; derived: unknown }> {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const res = await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() });
+    const body = (await res.json()) as { access_token: string; authorization_details: unknown };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    return { token: body.access_token, authority: body.authorization_details, derived: as.kernel.get(missionId)?.authority_set };
+  }
+
+  it("confines an absent request to the presented token's authority, never the Mission's", async () => {
+    const narrow = await narrowerToken();
+    expect(narrow.authority).not.toEqual(narrow.derived);
+    const res = await asyncDelegate(narrow.token); // no authorization_details
+    const body = (await res.json()) as { access_token?: string; authorization_details?: unknown };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details).toEqual(narrow.authority);
+    const { payload } = await jwtVerify(body.access_token as string, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
+    expect(payload.authorization_details).toEqual(narrow.authority);
+  });
+
+  it("refuses a request beyond the presented token's authority, though the Mission allows it", async () => {
+    const narrow = await narrowerToken();
+    const res = await asyncDelegate(narrow.token, { authorizationDetails: fullAuthority() });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(body.error_description).toContain("presented token");
+  });
+
+  it("permits a request within the presented token's authority", async () => {
+    const narrow = await narrowerToken();
+    const res = await asyncDelegate(narrow.token, { authorizationDetails: confinedAuthority() });
+    const body = (await res.json()) as { authorization_details?: unknown };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details).toEqual(narrow.authority);
+  });
+});
+
 describe("async-delegation disconnected refresh (@spec async-delegation)", () => {
   it("grant_type=refresh_token with no resource -> a new access token audienced to the target + a rotated refresh token", async () => {
     const { baseAccessToken } = await issueBaseMission();
