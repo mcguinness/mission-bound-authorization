@@ -844,7 +844,7 @@ drives an AS-issued Mission-bound token through that assembled path.
   possession.
   - **HTTP transport** (`services/mcp-payments/src/mcp-http-transport.ts:264`):
     `validateCredential` with the request's DPoP presentation calls
-    `validateToken`, which runs `verifyDpopBoundToken` (`server.ts:495-512`):
+    `validateToken`, which runs `verifyDpopBoundToken` (`server.ts:563-580`):
     signature, issuer, audience, `cnf.jkt` and the DPoP proof over this
     request. The target serves this entry point at the declared resource
     audience. A MAS-governed route calls `validateGatewayCredential` instead;
@@ -855,7 +855,7 @@ drives an AS-issued Mission-bound token through that assembled path.
     (`createHttpMcpChannel`).
   - **In-process mediated channel** (`services/mcp-payments/src/mcp-transport.ts:121`,
     `:147`): `validateCredential` with no proof calls `validateMissionToken`
-    (`server.ts:657-670`): signature, issuer and audience. It carries
+    (`server.ts:725-738`): signature, issuer and audience. It carries
     `cnf.jkt` into the token facts but verifies no proof of possession,
     because the channel has no HTTP request to bind one to. It refuses a
     transaction token (`txn_pop_required`), so a challenged retry goes over
@@ -863,7 +863,7 @@ drives an AS-issued Mission-bound token through that assembled path.
     this channel with AS-issued Mission-bound tokens. The AS-native target
     and its acceptance pack exclude it (D315).
 
-  Both then apply `missionBoundFactsFrom` (`server.ts:523-556`) and
+  Both then apply `missionBoundFactsFrom` (`server.ts:591-624`) and
   `readMissionAccessClaims`
   (`services/mcp-payments/src/token-verifier.ts:108-120`): `typ` `at+jwt`, the
   RFC 9068 claims, a `mission` claim with `id` and `issuer`, and the token's
@@ -977,21 +977,21 @@ drives an AS-issued Mission-bound token through that assembled path.
     again, then the read. A single-record read re-derives no digest at use.
     Nothing is written. A `consequential_write` sent down this path is
     served by the write path.
-  - Write (`callWriteTool`, `server.ts:1131`): the permit-use table, the
+  - Write (`callWriteTool`, `server.ts:1137`): the permit-use table, the
     capability check, `reverify`, the permit-use table again, then, for a
     permit carrying `use_limit`, its single-use redemption (§5.5), then the
     effect. For a keyed reversible write, the effect is the reservation
     transaction, which also redeems a carried `use_limit` (§5.5). Nothing
     else is written before the effect.
-  - Transaction tier (`callTransactionTool`, `server.ts:1503`): the
-    permit-use table at admission (`:1571`); single-use redemption (`:1613`),
+  - Transaction tier (`callTransactionTool`, `server.ts:1513`): the
+    permit-use table at admission (`:1588`); single-use redemption (`:1630`),
     which writes the engine's operation state; then the capability check
-    (`:1644`), the execution lease (`:1662`), `reverify` (`:1668`) and the
-    permit-use table again (`:1680`); then the `txn` consumption, where a
-    transaction token is presented, and the connector commit (`:1692-1743`).
+    (`:1661`), the execution lease (`:1679`), `reverify` (`:1685`) and the
+    permit-use table again (`:1697`); then the `txn` consumption, where a
+    transaction token is presented, and the connector commit (`:1709-1760`).
     A refusal after redemption marks the operation `abandoned` and records
     suppressed Execution Evidence, which settles the PDP claim `failed`
-    because the attempt is redeemed (`pep.ts:1902-1904`). The permit is spent;
+    because the attempt is redeemed (`pep.ts:1950-1952`). The permit is spent;
     a retry needs a fresh decision (code reading).
 - **Asynchronous work.** None.
 - **Crash and recovery.** The payments store is in memory and reseeded per
@@ -1017,14 +1017,14 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Hook.**
   - Transaction tier: the PDP claims (idempotency scope, `idempotency_key`)
     with the operation identity before issuing the permit
-    (`idempotency-claims.ts`). `callTransactionTool` (`server.ts:1503`)
+    (`idempotency-claims.ts`). `callTransactionTool` (`server.ts:1513`)
     redeems the permit once (`TransactionEngine.redeemPermit`,
-    `server.ts:1613`) under an execution lease, commits the connector effect,
+    `server.ts:1630`) under an execution lease, commits the connector effect,
     emits Execution Evidence and settles the claim (`settleClaim`,
-    `server.ts:1803`).
+    `server.ts:1820`).
   - Keyed reversible writes: the PEP reserves the key in its own SQLite store
     and commits the effect, the reservation and the result in one local
-    transaction (`server.ts:1453`;
+    transaction (`server.ts:1463`;
     `services/mcp-payments/src/write-reservations.ts:281`).
   - Single-use permits on the unkeyed write path: the statement publishes
     `single_use_decision_identifier` as the `consequential_write` class
@@ -1115,7 +1115,7 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
   (`pep.ts:1606-1618`). The PEP emits Refusal Records (`pep.ts:2157-2218`) and
   suppressed Execution Evidence (`suppressExecution`, `pep.ts:1917-1960`). The
   executor emits `completed` Execution Evidence after a connector commit
-  (`server.ts:1602-1633`). The record table is the contract's §6.
+  (`server.ts:1790-1814`). The record table is the contract's §6.
 - **Boundary.** Synchronous, inside the request.
 - **Asynchronous work.** None.
 - **Crash and recovery.** `EvidenceRetentionStore` is in memory as shipped
