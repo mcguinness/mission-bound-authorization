@@ -674,6 +674,20 @@ four-party access) copies the same flat `mission_s256` claim onward
 from the resource token (Section 9.4.1 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}).
 
+A resource that calls a downstream resource for its caller acts as an
+intermediary: an agent with its own agent identifier and key (Section
+10.1.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  It requests a
+person token for the downstream resource, presenting the token its
+caller presented as `upstream_token`.  When that upstream token carries
+`mission_s256`, the PS evaluates the request against that mission and
+copies `mission_s256` into the person token it issues; the
+intermediary does not send `mission_s256` of its own (Sections 7.1 and
+10.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  A chained hop is
+therefore PS-governed derivation under the same Mission, not a child
+mission: the Mission's `agent` stays the root actor, the intermediary
+is a separate actor ({{mission-substrate}}), and the hop's supervision
+decision follows {{roles}}.
+
 This binding adds no member alongside that claim.  The approving PS
 that scopes it is named as {{reference}} describes.  Receivers MUST NOT
 require `mission_id`,
