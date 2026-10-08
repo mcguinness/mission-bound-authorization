@@ -2096,10 +2096,11 @@ on it applies as one on the matched Mission entry does
 by resource and action is denied <code>out_of_authority</code>. An action that
 entries name, but whose parameters violate a constraint on each of
 them, is denied <code>parameter_violation</code>, as on the matched Mission entry
-(<a href="#runtime-denial-classification" class="auto internal xref">Section 7.5</a>). A request whose <code>authority</code> is
-absent, or carries an entry the PDP cannot evaluate in full, is denied
-<code>credential_invalid</code>: the PDP <span class="bcp14">MUST NOT</span> fall back to the Mission's
-authority.<a href="#section-6.4-4" class="pilcrow">¶</a></p>
+(<a href="#runtime-denial-classification" class="auto internal xref">Section 7.5</a>); Decision Evidence's
+<code>authority_bound</code> names which bound decided either deny
+(<a href="#evidence" class="auto internal xref">Section 8</a>). A request whose <code>authority</code> is absent, or carries an
+entry the PDP cannot evaluate in full, is denied <code>credential_invalid</code>:
+the PDP <span class="bcp14">MUST NOT</span> fall back to the Mission's authority.<a href="#section-6.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="parameter-digest">
@@ -3481,7 +3482,10 @@ conditions to AuthZEN responses and gives the denial-reason identifiers
 carried in Decision Evidence:<a href="#section-7.5-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7.5-2.1">
-            <p id="section-7.5-2.1.1"><code>out_of_authority</code>: the action is not within the Authority Set.<a href="#section-7.5-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-7.5-2.1.1"><code>out_of_authority</code>: the action is not within the Authority Set, or
+not within the presented credential's authority
+(<a href="#context-credential" class="auto internal xref">Section 6.4</a>); Decision Evidence's <code>authority_bound</code>
+records which (<a href="#evidence" class="auto internal xref">Section 8</a>).<a href="#section-7.5-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.5-2.2">
             <p id="section-7.5-2.2.1"><code>approval_required</code>: deployment or Resource policy requires an
@@ -4289,16 +4293,32 @@ evidence duty in its own internal form instead
 its own record identifier (<code>evidence_id</code>, <code>execution_id</code>, or
 <code>refusal_id</code>). Every core Decision Evidence and Execution Evidence
 member is defined directly by the runtime evidence companion. This
-profile registers one Decision Evidence extension member of its own,
+profile registers two Decision Evidence extension members of its own,
 <code>mission_history</code> (the policy-selected history predicates and their
-outcomes), under that companion's coordinated-extension rule
+outcomes) and <code>authority_bound</code> (below), under that companion's
+coordinated-extension rule
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>); it also carries
 other coordinated extension members whose semantics are owned
 elsewhere, for example <code>taint</code> (owned by the harness profile,
 <span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) and <code>capability_source</code>
 (owned by the Mission Capability Binding companion,
 <span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">This profile's own contribution is the mapping: which decision
+<span class="break"></span><dl class="dlParallel" id="section-8-2">
+        <dt id="section-8-2.1">
+<code>authority_bound</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.2">
+          <p id="section-8-2.2.1">A string, recorded at the top level of Decision Evidence:
+<code>credential</code> when the presented credential's own authority
+(<a href="#context-credential" class="auto internal xref">Section 6.4</a>) decided the deny, <code>mission</code> when the
+Mission's own authority did. It is <span class="bcp14">REQUIRED</span> on an <code>out_of_authority</code>
+or <code>parameter_violation</code> deny that one of those two bounds decided,
+and absent on every other decision, including a permit and a deny by
+Resource policy. When both bounds exclude the action, the PDP records
+the one it evaluated first.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-8-3">This profile's own contribution is the mapping: which decision
 request and response members the PDP and PEP echo into a record, and
 which the PDP computes and records directly without a wire echo. The
 Decision Evidence <code>mission</code>, <code>subject</code>, <code>resource</code>, <code>action</code>,
@@ -4312,13 +4332,13 @@ returned in <code>context.reason</code> (<a href="#runtime-denial-classification
 The Decision Evidence <code>action_class</code>, <code>class_source</code>, and
 <code>mission_state_version</code> members are not echoed on this profile's
 wire: the PDP computes them and records them directly in Decision
-Evidence (<a href="#response-context" class="auto internal xref">Section 7.1</a>).<a href="#section-8-2" class="pilcrow">¶</a></p>
-<p id="section-8-3">The runtime evidence companion's integrity envelope is this profile's
+Evidence (<a href="#response-context" class="auto internal xref">Section 7.1</a>).<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">The runtime evidence companion's integrity envelope is this profile's
 one signing convention for evidence objects: the default envelope
 format is <code>jws-compact</code>, the protected <code>typ</code> is the one value that
 envelope fixes, and the protected <code>cty</code> names the record's own
 registered media type
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-8-3" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-8-4" class="pilcrow">¶</a></p>
 <div id="evaluation-request-digest-input">
 <section id="section-8.1">
         <h3 id="name-evaluation-request-digest-i">
@@ -4651,12 +4671,12 @@ privacy properties of the Decision Evidence, Execution Evidence, and
 Refusal Record objects, including their status as PII sinks,
 parameter exposure, and actor-chain correlation, are the runtime
 evidence companion's (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).
-This profile's one coordinated extension member, <code>mission_history</code>
-(<a href="#evidence" class="auto internal xref">Section 8</a>), carries behavioral history predicates and their
+Of this profile's two coordinated extension members, <code>mission_history</code>
+(<a href="#evidence" class="auto internal xref">Section 8</a>) carries behavioral history predicates and their
 outcomes and inherits that guidance in full: it is subject to the
 same PII-sink, access-control, and retention treatment as the OAuth binding
-record, with no exemption. This profile otherwise defines no
-additional record content.<a href="#section-12-1" class="pilcrow">¶</a></p>
+record, with no exemption; <code>authority_bound</code> names only an authority
+bound. This profile otherwise defines no additional record content.<a href="#section-12-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
@@ -5041,46 +5061,51 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The failure-condition table maps supplied arguments that fail the
-PEP-established action's required input schema to the Refusal
-Record's <code>request_invalid</code> (#1106).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Decision Evidence gains <code>authority_bound</code>, registered by this
+profile: <code>credential</code> or <code>mission</code>, the authority bound that decided
+an <code>out_of_authority</code> or <code>parameter_violation</code> deny (#825).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1"><code>context.credential</code> carries <code>authority</code>, the verified credential's
+          <p id="appendix-A-2.2.1">The failure-condition table maps supplied arguments that fail the
+PEP-established action's required input schema to the Refusal
+Record's <code>request_invalid</code> (#1106).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1"><code>context.credential</code> carries <code>authority</code>, the verified credential's
 own <code>authorization_details</code>, on every decision; the PDP enforces it
 as the credential authority bound, independently of the matched
 Mission entry, and denies <code>credential_invalid</code> when it is absent or
 not evaluable (#825). An action no credential entry names is
 <code>out_of_authority</code>; one whose parameters violate a constraint on
-every entry that names it is <code>parameter_violation</code>.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">The RAR remediation grain cites the working-group successor
-draft-ietf-oauth-rar-metadata-remediation and defers its routing to
-the issuance profile's remediation routing instead of restating it.
-No requirement changed.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+every entry that names it is <code>parameter_violation</code>.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Mission-to-Policy Materialization describes the materialized policy
+          <p id="appendix-A-2.4.1">The RAR remediation grain cites the working-group successor
+draft-ietf-oauth-rar-metadata-remediation and defers its routing to
+the issuance profile's remediation routing instead of restating it.
+No requirement changed.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Mission-to-Policy Materialization describes the materialized policy
 view as one evaluation path: a PDP that evaluates the Mission's
 recorded authority directly meets the runtime profile's authority
 input without a view and omits <code>policy_view_id</code>. The PDP-side
 consistency checks compare the request against the loaded view or
 the directly evaluated Mission record, and the <code>policy_view_id</code>
-check applies only where a view is used.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Defined the input to <code>evaluation_request_digest</code>: the complete
-request body as submitted, extension members included, before any
-default or enrichment, with header fields and transport framing
-excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+check applies only where a view is used.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
+          <p id="appendix-A-2.6.1">Defined the input to <code>evaluation_request_digest</code>: the complete
+request body as submitted, extension members included, before any
+default or enrichment, with header fields and transport framing
+excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
 form of a Mission Status Response's <code>iat</code>, which <code>freshness_at</code>
 precedes by no more than the published maximum clock skew, and
 <code>mission_status_expires_at</code> and the state valid-through are its
-<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

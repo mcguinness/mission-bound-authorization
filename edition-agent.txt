@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-08T04:10:02Z
-Source repository commit: f05c111faa6c4a99613da9f0e54e7ecc28bee710
+Generated: 2026-10-08T05:01:43Z
+Source repository commit: ed4b1870e26a87a1f6de692138eca6d4393c2ab8
 Member count: 9
 
 Reading order:
@@ -21780,8 +21780,8 @@ Table of Contents
    A Decision Evidence Object is closed to uncoordinated extension; see
    Section 8 for the extension rule and the coordinated extension
    members a deployment following the AuthZEN profile commonly carries
-   (taint, mission_history, capability_source, hop_reference,
-   principal_mapping, join_view_id).
+   (taint, mission_history, authority_bound, capability_source,
+   hop_reference, principal_mapping, join_view_id).
 
 4.2.  Refusal Record
 
@@ -23098,6 +23098,13 @@ Table of Contents
       member.  Registered and owned by the AuthZEN profile
       ([I-D.draft-mcguinness-mission-authzen]).
 
+   authority_bound:  OPTIONAL.  A string, recorded at the top level of
+      Decision Evidence: which authority bound, credential or mission,
+      decided an out_of_authority or parameter_violation deny.
+      Registered and owned by the AuthZEN profile
+      ([I-D.draft-mcguinness-mission-authzen]), which defines when it is
+      REQUIRED.
+
    capability_source:  OPTIONAL.  An object, recorded on Decision
       Evidence: the catalog-source binding the PDP evaluated for a
       catalog-sourced action.  Registered and owned by the Mission
@@ -23793,6 +23800,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  authority_bound is a coordinated Decision Evidence extension
+      member, registered and owned by the AuthZEN profile: the authority
+      bound that decided an out_of_authority or parameter_violation deny
+      (#825).
 
    *  The Refusal Record's PEP denial_reason set adds request_invalid:
       the PEP established the action, and the supplied arguments fail
@@ -24563,10 +24575,11 @@ Table of Contents
    entry of authority names by resource and action is denied
    out_of_authority.  An action that entries name, but whose parameters
    violate a constraint on each of them, is denied parameter_violation,
-   as on the matched Mission entry (Section 7.5).  A request whose
-   authority is absent, or carries an entry the PDP cannot evaluate in
-   full, is denied credential_invalid: the PDP MUST NOT fall back to the
-   Mission's authority.
+   as on the matched Mission entry (Section 7.5); Decision Evidence's
+   authority_bound names which bound decided either deny (Section 8).  A
+   request whose authority is absent, or carries an entry the PDP cannot
+   evaluate in full, is denied credential_invalid: the PDP MUST NOT fall
+   back to the Mission's authority.
 
 6.5.  Action Parameters and Parameter Digest
 
@@ -25690,7 +25703,9 @@ Table of Contents
    conditions to AuthZEN responses and gives the denial-reason
    identifiers carried in Decision Evidence:
 
-   *  out_of_authority: the action is not within the Authority Set.
+   *  out_of_authority: the action is not within the Authority Set, or
+      not within the presented credential's authority (Section 6.4);
+      Decision Evidence's authority_bound records which (Section 8).
 
    *  approval_required: deployment or Resource policy requires an
       action-bound approval for this action
@@ -26358,15 +26373,25 @@ Table of Contents
    record carries its own record identifier (evidence_id, execution_id,
    or refusal_id).  Every core Decision Evidence and Execution Evidence
    member is defined directly by the runtime evidence companion.  This
-   profile registers one Decision Evidence extension member of its own,
+   profile registers two Decision Evidence extension members of its own,
    mission_history (the policy-selected history predicates and their
-   outcomes), under that companion's coordinated-extension rule
+   outcomes) and authority_bound (below), under that companion's
+   coordinated-extension rule
    ([I-D.draft-mcguinness-mission-runtime-evidence]); it also carries
    other coordinated extension members whose semantics are owned
    elsewhere, for example taint (owned by the harness profile,
    [I-D.draft-mcguinness-mission-harness]) and capability_source (owned
    by the Mission Capability Binding companion,
    [I-D.draft-mcguinness-mission-capability-binding]).
+
+   authority_bound:  A string, recorded at the top level of Decision
+      Evidence: credential when the presented credential's own authority
+      (Section 6.4) decided the deny, mission when the Mission's own
+      authority did.  It is REQUIRED on an out_of_authority or
+      parameter_violation deny that one of those two bounds decided, and
+      absent on every other decision, including a permit and a deny by
+      Resource policy.  When both bounds exclude the action, the PDP
+      records the one it evaluated first.
 
    This profile's own contribution is the mapping: which decision
    request and response members the PDP and PEP echo into a record, and
@@ -26659,13 +26684,13 @@ Table of Contents
    Refusal Record objects, including their status as PII sinks,
    parameter exposure, and actor-chain correlation, are the runtime
    evidence companion's
-   ([I-D.draft-mcguinness-mission-runtime-evidence]).  This profile's
-   one coordinated extension member, mission_history (Section 8),
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).  Of this profile's
+   two coordinated extension members, mission_history (Section 8)
    carries behavioral history predicates and their outcomes and inherits
    that guidance in full: it is subject to the same PII-sink, access-
    control, and retention treatment as the OAuth binding record, with no
-   exemption.  This profile otherwise defines no additional record
-   content.
+   exemption; authority_bound names only an authority bound.  This
+   profile otherwise defines no additional record content.
 
 13.  IANA Considerations
 
@@ -27007,6 +27032,10 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Decision Evidence gains authority_bound, registered by this
+      profile: credential or mission, the authority bound that decided
+      an out_of_authority or parameter_violation deny (#825).
 
    *  The failure-condition table maps supplied arguments that fail the
       PEP-established action's required input schema to the Refusal

@@ -1973,8 +1973,9 @@ required) and a <code>value</code> (string, required).<a href="#section-4.1-1.56
 <p id="section-4.1-2">A Decision Evidence Object is closed to uncoordinated extension; see
 <a href="#evidence-extensions" class="auto internal xref">Section 8</a> for the extension rule and the coordinated
 extension members a deployment following the AuthZEN profile
-commonly carries (<code>taint</code>, <code>mission_history</code>, <code>capability_source</code>,
-<code>hop_reference</code>, <code>principal_mapping</code>, <code>join_view_id</code>).<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+commonly carries (<code>taint</code>, <code>mission_history</code>, <code>authority_bound</code>,
+<code>capability_source</code>, <code>hop_reference</code>, <code>principal_mapping</code>,
+<code>join_view_id</code>).<a href="#section-4.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pre-decision-refusal">
@@ -3578,18 +3579,29 @@ member. Registered and owned by the AuthZEN profile
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.5">
-<code>capability_source</code>:</dt>
+<code>authority_bound</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-3.6">
-          <p id="section-8-3.6.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence: the
-catalog-source binding the PDP evaluated for a catalog-sourced
-action. Registered and owned by the Mission Capability Binding
-companion (<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-8-3.6.1" class="pilcrow">¶</a></p>
+          <p id="section-8-3.6.1"><span class="bcp14">OPTIONAL</span>. A string, recorded at the top level of Decision Evidence:
+which authority bound, <code>credential</code> or <code>mission</code>, decided an
+<code>out_of_authority</code> or <code>parameter_violation</code> deny. Registered and
+owned by the AuthZEN profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), which defines when it is
+<span class="bcp14">REQUIRED</span>.<a href="#section-8-3.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.7">
-<code>hop_reference</code>:</dt>
+<code>capability_source</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-3.8">
-          <p id="section-8-3.8.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence, Execution
+          <p id="section-8-3.8.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence: the
+catalog-source binding the PDP evaluated for a catalog-sourced
+action. Registered and owned by the Mission Capability Binding
+companion (<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-8-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-3.9">
+<code>hop_reference</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-3.10">
+          <p id="section-8-3.10.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence, Execution
 Evidence, or a Refusal Record when the action or refusal concerns a
 credential authorized under a continuation profile's continued
 credential, attributing the record to the specific hop that carried
@@ -3602,13 +3614,13 @@ by the Mission Continuation profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>), which
 requires execution-time evidence to record the continuation hop
 reference; this member formalizes that requirement as a coordinated
-extension.<a href="#section-8-3.8.1" class="pilcrow">¶</a></p>
+extension.<a href="#section-8-3.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-8-3.9">
+<dt id="section-8-3.11">
 <code>principal_mapping</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-8-3.10">
-          <p id="section-8-3.10.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence and Refusal
+        <dd style="margin-left: 1.5em" id="section-8-3.12">
+          <p id="section-8-3.12.1"><span class="bcp14">OPTIONAL</span>. An object, recorded on Decision Evidence and Refusal
 Records when the decision evaluated the cross-domain Origin
 Principal profile's mapping
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), and on the
@@ -3622,20 +3634,20 @@ date-time, the observation's validity bound). Protected references
 follow the privacy rule of this document (<a href="#evidence-pii" class="auto internal xref">Section 11.1</a>).
 Execution Evidence joins the mapping through <code>evaluation_id</code> rather
 than carrying the object again. Registered and owned by the
-cross-domain profile.<a href="#section-8-3.10.1" class="pilcrow">¶</a></p>
+cross-domain profile.<a href="#section-8-3.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-8-3.11">
+<dt id="section-8-3.13">
 <code>join_view_id</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-8-3.12">
-          <p id="section-8-3.12.1"><span class="bcp14">OPTIONAL</span>. A string, recorded at the top level of Decision Evidence:
+        <dd style="margin-left: 1.5em" id="section-8-3.14">
+          <p id="section-8-3.14.1"><span class="bcp14">OPTIONAL</span>. A string, recorded at the top level of Decision Evidence:
 the joined-view commitment of a decision reached over a successful
 Mission Join. <span class="bcp14">REQUIRED</span> on the Decision Evidence of every decision
 reached over a successful join, including one that policy then
 denies, and absent for a failed join and for a direct Mission-bound
 decision. Registered and owned by the Mission Authority Server
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), which defines
-what the commitment distinguishes.<a href="#section-8-3.12.1" class="pilcrow">¶</a></p>
+what the commitment distinguishes.<a href="#section-8-3.14.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -4515,33 +4527,39 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The Refusal Record's PEP <code>denial_reason</code> set adds <code>request_invalid</code>:
-the PEP established the action, and the supplied arguments fail its
-required input schema. <code>request_unsupported</code> keeps its meaning, an
-action the enforcement surface does not implement (#1106).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1"><code>authority_bound</code> is a coordinated Decision Evidence extension
+member, registered and owned by the AuthZEN profile: the authority
+bound that decided an <code>out_of_authority</code> or <code>parameter_violation</code>
+deny (#825).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1"><code>join_view_id</code> is a coordinated Decision Evidence extension member,
+          <p id="appendix-A-2.2.1">The Refusal Record's PEP <code>denial_reason</code> set adds <code>request_invalid</code>:
+the PEP established the action, and the supplied arguments fail its
+required input schema. <code>request_unsupported</code> keeps its meaning, an
+action the enforcement surface does not implement (#1106).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1"><code>join_view_id</code> is a coordinated Decision Evidence extension member,
 registered and owned by the Mission Authority Server: the
 joined-view commitment of a decision reached over a successful
 Mission Join (#972 item 27a). The list of commonly carried
-coordinated members also names <code>principal_mapping</code>.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+coordinated members also names <code>principal_mapping</code>.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
 PDP evaluates through a materialized policy view; a PDP that
 evaluates the Mission's recorded authority directly omits it and
 records <code>authority_hash</code> and the new <code>pdp_policy_version</code>, following
 the runtime profile's two evaluation paths; the Mission Receipt's
-<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1"><code>evaluation_request_digest</code> covers the evaluation request as the
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1"><code>evaluation_request_digest</code> covers the evaluation request as the
 decision-API profile defines it or, for a Refusal Record emitted
 before any request, a defined pre-request input; the Refusal Record
 member <code>request_digest_input</code> names which. The digest is no longer
 described as privacy-preserving: it commits to its input and does
-not hide an input a party can guess (#971).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+not hide an input a party can guess (#971).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

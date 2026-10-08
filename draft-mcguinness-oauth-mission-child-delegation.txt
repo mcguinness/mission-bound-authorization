@@ -1194,6 +1194,19 @@ Table of Contents
    otherwise the rendering states that no finite lifetime aggregate is
    enforced.
 
+   For a policy_drawdown entry, the rendered per-child derivation limit
+   is the standing-consent maximum of Mission Derivation Limits
+   ([I-D.draft-mcguinness-oauth-mission-derivation-limits], Sections
+   "Effective Limit" and "Approval Rendering"), taken from the policy
+   state the Parent Mission's approval committed: the entry's
+   child_creation_policy snapshot where it carries one, otherwise the
+   policy that the Parent Mission's policy_version identifies.  Each
+   child created under the entry establishes and counts its own limit,
+   never above a finite rendered figure, and a figure rendered as
+   unlimited guarantees no finite maximum.  A stricter policy at
+   creation narrows a child's limit; no later policy change raises or
+   removes the figure.
+
    Bounding the aggregate across a subtree is the role of consumption
    metering, not this profile's attenuation rules
    ([I-D.draft-mcguinness-mission-metering]).  An exclusivity group, by
@@ -2418,6 +2431,13 @@ Appendix A.  Experimental Consumer-Verified Cascade Modes
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Derivation Budget Is Not Inherited: for a policy_drawdown entry,
+      the rendered per-child derivation limit is Mission Derivation
+      Limits' standing-consent maximum, taken from the policy state the
+      Parent Mission's approval committed; each child's limit stays
+      within it, and no later policy change raises or removes it
+      (#1119).
 
    *  Mission Record Requirements: a policy_drawdown child has the
       Parent Mission's subject; a direct child defaults to it and names

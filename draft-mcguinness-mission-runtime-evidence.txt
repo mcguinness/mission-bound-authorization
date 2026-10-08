@@ -594,8 +594,8 @@ Table of Contents
    A Decision Evidence Object is closed to uncoordinated extension; see
    Section 8 for the extension rule and the coordinated extension
    members a deployment following the AuthZEN profile commonly carries
-   (taint, mission_history, capability_source, hop_reference,
-   principal_mapping, join_view_id).
+   (taint, mission_history, authority_bound, capability_source,
+   hop_reference, principal_mapping, join_view_id).
 
 4.2.  Refusal Record
 
@@ -1912,6 +1912,13 @@ Table of Contents
       member.  Registered and owned by the AuthZEN profile
       ([I-D.draft-mcguinness-mission-authzen]).
 
+   authority_bound:  OPTIONAL.  A string, recorded at the top level of
+      Decision Evidence: which authority bound, credential or mission,
+      decided an out_of_authority or parameter_violation deny.
+      Registered and owned by the AuthZEN profile
+      ([I-D.draft-mcguinness-mission-authzen]), which defines when it is
+      REQUIRED.
+
    capability_source:  OPTIONAL.  An object, recorded on Decision
       Evidence: the catalog-source binding the PDP evaluated for a
       catalog-sourced action.  Registered and owned by the Mission
@@ -2607,6 +2614,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  authority_bound is a coordinated Decision Evidence extension
+      member, registered and owned by the AuthZEN profile: the authority
+      bound that decided an out_of_authority or parameter_violation deny
+      (#825).
 
    *  The Refusal Record's PEP denial_reason set adds request_invalid:
       the PEP established the action, and the supplied arguments fail
