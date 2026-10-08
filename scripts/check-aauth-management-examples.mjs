@@ -12,7 +12,10 @@
 // The rules restate the draft's own requirements and are kept beside it:
 //   status / terminate response: mission_s256, mission_status, approved_at,
 //     observed_at, fresh_until REQUIRED; terminated_at, termination_reason,
-//     token_residual REQUIRED when terminated and absent when active.
+//     token_residual REQUIRED when terminated and absent when active;
+//     accepted_updates, when present, a non-negative integer, with
+//     latest_update_s256 (an unpadded base64url SHA-256 digest) present
+//     exactly when accepted_updates is greater than zero and never without it.
 //   token_residual: tracked, revocation_attempted, revocation_confirmed
 //     (non-negative integers) and complete (boolean) REQUIRED;
 //     residual_until a date-time when present.
@@ -128,6 +131,17 @@ function checkStatusRepresentation(obj, err) {
   }
   const observed = instant(obj.observed_at), fresh = instant(obj.fresh_until);
   if (!Number.isNaN(observed) && !Number.isNaN(fresh) && fresh < observed) err("fresh_until precedes observed_at");
+  if ("accepted_updates" in obj && (!Number.isInteger(obj.accepted_updates) || obj.accepted_updates < 0)) {
+    err("accepted_updates is not a non-negative integer");
+  }
+  if ("latest_update_s256" in obj) {
+    if (!("accepted_updates" in obj)) err("latest_update_s256 without accepted_updates");
+    if (!S256.test(obj.latest_update_s256)) err("latest_update_s256 is not an unpadded base64url SHA-256 digest");
+  }
+  if (Number.isInteger(obj.accepted_updates)) {
+    if (obj.accepted_updates > 0 && !("latest_update_s256" in obj)) err("accepted_updates is greater than zero but latest_update_s256 is absent");
+    if (obj.accepted_updates === 0 && "latest_update_s256" in obj) err("latest_update_s256 present with zero accepted_updates");
+  }
   const conditional = ["terminated_at", "termination_reason", "token_residual"];
   if (obj.mission_status === "terminated") {
     for (const m of conditional) if (!(m in obj)) err(`missing ${m}, REQUIRED when terminated`);
