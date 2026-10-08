@@ -567,6 +567,8 @@ After authenticating and authorizing the caller, the PS returns:
   "termination_reason": "revoked",
   "observed_at": "2026-04-10T09:15:02Z",
   "fresh_until": "2026-04-10T09:15:32Z",
+  "accepted_updates": 2,
+  "latest_update_s256": "DCPMK1mFVV7rRr2gXYhuIoHABzG8_FrKIuAKTUuqYQA",
   "token_residual": {
     "tracked": 4,
     "revocation_attempted": 4,
@@ -594,6 +596,17 @@ REQUIRED when `mission_status` is `terminated` and MUST be absent while
 it is `active`; it reports the residual as of `observed_at`, which
 gives an authorized caller the current revocation state of a
 terminated mission.
+
+`accepted_updates` and `latest_update_s256` are OPTIONAL.  A PS that
+supports them returns `accepted_updates` in every status response, as
+the number of `update` actions it has accepted for the mission
+(Section 8.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}), and returns
+`latest_update_s256`, the `s256` of the most recently accepted update,
+exactly when that number is greater than zero; with no accepted
+update, `accepted_updates` is `0` and `latest_update_s256` is absent.
+Both describe the same observation as `observed_at`.  Together they
+identify the observed update position; they are not a commitment to
+the update history or a substitute for reading it.
 
 The response reports state as of `observed_at` and is reliable until
 `fresh_until`; it is not a promise that the state will remain active.
@@ -679,6 +692,8 @@ The PS returns `200 OK` with the full status representation
   "termination_reason": "revoked",
   "observed_at": "2026-04-10T09:12:44Z",
   "fresh_until": "2026-04-10T09:13:14Z",
+  "accepted_updates": 2,
+  "latest_update_s256": "DCPMK1mFVV7rRr2gXYhuIoHABzG8_FrKIuAKTUuqYQA",
   "token_residual": {
     "tracked": 4,
     "revocation_attempted": 4,
@@ -787,6 +802,12 @@ processing the mission:
       "tokens": [
         { "iss": "https://as.search.example", "jti": "token-19" }
       ]
+    },
+    {
+      "agent": "aauth:booking@flights.example",
+      "relationship": "call_chain",
+      "upstream_token": { "iss": "https://ps.example", "jti": "auth-31" },
+      "person_token": { "iss": "https://ps.example", "jti": "pt-57" }
     }
   ],
   "complete": true
@@ -797,11 +818,27 @@ processing the mission:
 page exists, `next_cursor` is REQUIRED and `complete` is false.
 
 A node contains an `agent` and one of `root`, `sub_agent`, or
-`call_chain` as `relationship`.  A non-root node contains
-`parent_agent`.  `tokens` MAY
-be returned to a Person or authorized administrator and SHOULD be
-omitted from a response to an admitted Owning Agent unless required
-for that Agent's own revocation accounting.
+`call_chain` as `relationship`.  A `sub_agent` node contains
+`parent_agent`.  A `call_chain` node is one chained hop.  Its `agent`
+is the intermediary, whose identity the PS establishes from the
+intermediary's authenticated agent token and its own records.  It
+contains `upstream_token` and `person_token`, each an object with the
+`iss` and `jti` of, respectively, the upstream token the intermediary
+presented and the Person Token the PS issued on it, and it does not
+contain `parent_agent`.  One upstream token can support several
+downstream requests (Section 10.1.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), so a hop is identified by
+both token references and the intermediary's agent identifier, never
+by the upstream token alone.  In the example, the upstream token is an
+Auth Token the PS issued.  `tokens` lists the Auth Tokens issued or
+provided for the node's agent under the Mission; a `call_chain` node's
+`person_token` is the hop's own Person Token and is not repeated in
+`tokens`.  `tokens`, `upstream_token`, and
+`person_token` MAY be returned to a Person or authorized administrator
+and SHOULD be omitted from a response to an admitted Owning Agent
+unless required for that Agent's own revocation accounting;
+`upstream_token` and `person_token` are returned together or omitted
+together.
 
 The result is observational, not exhaustive proof.  Agent identity
 calls and resource-managed access can occur without a PS token request.
@@ -1261,6 +1298,19 @@ native choices.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A `call_chain` node is one chained hop: its `agent` is the
+  intermediary, and it carries `upstream_token` and `person_token`,
+  the `(iss, jti)` of the upstream token and of the Person Token the PS
+  issued on it, instead of `parent_agent`, which stays for `sub_agent`
+  nodes. Both token references follow the existing disclosure rule for
+  `tokens` and are returned together or omitted together (#966).
+
+- Status gains optional `accepted_updates` and `latest_update_s256`:
+  the count of accepted updates and the latest one's `s256`, from the
+  same observation as `observed_at`, with the digest absent when the
+  count is zero. They identify the observed update position, not a
+  commitment to the update history (#965).
 
 - A supervision server is not a Management Principal by virtue of
   supervising; the PS may register its operator as a management

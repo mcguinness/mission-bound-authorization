@@ -332,6 +332,22 @@ commitments would create ambiguity about which object was approved and
 would require implementations to keep multiple canonicalizations in
 lockstep.
 
+`mission_s256` commits to the original approved blob and to nothing
+accepted after it.  An accepted `update` changes neither the blob nor
+`mission_s256`, but from its acceptance the mission's meaning is the
+blob plus its accepted updates (Section 8.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  This binding therefore
+treats each accepted update as the approval of a new immutable version
+of the Approved Context ({{I-D.draft-mcguinness-mission-substrate}}):
+the blob plus the accepted updates through that one, in acceptance
+order.  A version is identified by the Mission Reference together with
+its position in the accepted-update sequence, the original blob being
+position zero; the update's own `s256` is verification material for
+the entry at that position, not a unique identifier.  A pending or
+rejected update is part of no version.  Work that the original
+description no longer describes uses a successor mission, and the old
+mission terminates as `superseded`.
+
 The reference does not authenticate itself when copied outside a
 protected AAuth message.  It gains protocol integrity from the AAuth
 message signature or signed token that carries it.  Implementations MUST
@@ -674,6 +690,23 @@ four-party access) copies the same flat `mission_s256` claim onward
 from the resource token (Section 9.4.1 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}).
 
+A resource that calls a downstream resource for its caller acts as an
+intermediary: an agent with its own agent identifier and key (Section
+10.1.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  It requests a
+person token for the downstream resource, presenting the token its
+caller presented as `upstream_token`.  When that upstream token carries
+`mission_s256`, the PS evaluates the request against that mission and
+copies `mission_s256` into the person token it issues; the
+intermediary does not send `mission_s256` of its own (Sections 7.1 and
+10.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  The copied
+`mission_s256` names the mission, not a version of its Approved
+Context ({{reference}}); the PS evaluates each chained request against
+the mission's current version when it decides.  A chained hop is
+therefore PS-governed derivation under the same Mission, not a child
+mission: the Mission's `agent` stays the root actor, the intermediary
+is a separate actor ({{mission-substrate}}), and the hop's supervision
+decision follows {{roles}}.
+
 This binding adds no member alongside that claim.  The approving PS
 that scopes it is named as {{reference}} describes.  Receivers MUST NOT
 require `mission_id`,
@@ -807,6 +840,19 @@ is non-active whatever its reason:
 | none | `administrative` | AAuth records it when an authorized administrator ends the mission under local policy.  The family registers no such reason. |
 | unrecognized | unrecognized | A family reader treats the Mission as terminated: it stops governed work, follows no absent reference, and infers no cause-specific action.  An AAuth Mission Management recipient retains `terminated` and treats the reason as an opaque audit value. |
 {: title="Termination reason correspondence"}
+
+An accepted `update` can narrow or broaden the work under the same
+reference ({{reference}}).  The PS MUST NOT accept an update that
+broadens the work without the Supervisor's acceptance.  The Supervisor
+is the Person unless a deciding supervision server is configured for
+the agent ({{roles}}).  Under a deciding supervision server, the
+server's `allow` accepts the update and its `ask` requires the
+person's response (Section 10.3 of
+{{I-D.draft-hardt-aauth-supervision}}); the PS does not classify
+broadening itself to decide whether to consult the server, so a
+configured server can authorize broadening without a fresh human
+decision.  The Supervisor's acceptance is the approval of the new
+version ({{reference}}).
 
 Every mission approved under this binding MUST carry AAuth's
 `expires_at` member, and the PS MUST enforce it on every decision path
@@ -1090,15 +1136,23 @@ The contextual-governance kernel maps as follows:
    governance state, and the mission log ({{roles}}).  Consumers
    establish its identity and keys from AAuth's published PS metadata
    and key set ({{I-D.draft-hardt-oauth-aauth-protocol}}).
-3. **Actor binding**: the blob's `agent` member names the AAuth agent
-   identifier, authenticated by its agent token and HTTP message
-   signatures; parent-mediated and call-chaining relationships are
-   the only delegations, and the identifier maps to no OAuth
-   `client_id` ({{blob}}, {{roles}}).
+3. **Actor binding**: the blob's `agent` member names the root actor,
+   the AAuth agent identifier authenticated by its agent token and
+   HTTP message signatures; parent-mediated and call-chaining
+   relationships are the only delegations, and the identifier maps to
+   no OAuth `client_id` ({{blob}}, {{roles}}).  The holder of a chained
+   person token is the intermediary, a separate actor whose agent
+   identity the PS establishes from the intermediary's authenticated
+   agent token and its own records; the token's `cnf` binds the key,
+   not the identity ({{ref-propagation}}).
 4. **Approved Context**: the private approved mission blob, delivered
    as the approval envelope's base64url `mission` member and immutable
-   under the exact-byte `s256` commitment over its decoded bytes; it is
-   never disclosed to Resources or Access Servers.  Both governance
+   under the exact-byte `s256` commitment over its decoded bytes, and
+   each later version an accepted update approves: the blob plus the
+   accepted updates through it, immutable and identified by the
+   Mission Reference and its position in the accepted-update sequence,
+   by the kernel's new-version route ({{reference}}, {{lifecycle}}).
+   None of it is disclosed to Resources or Access Servers.  Both governance
    parties retain the decoded blob, satisfying the kernel's
    maintained-value branch; `s256` is verification material for
    holders, and AAuth fixes its algorithm at SHA-256 with no migration
@@ -1123,9 +1177,11 @@ The contextual-governance kernel maps as follows:
    Expiry {{I-D.draft-mcguinness-aauth-mission-expiry}} profiles the
    member this binding relies on.
 8. **Context propagation**: the signed `mission_s256` claim, carried
-   by person, resource, and auth tokens, carries governance context;
-   the blob itself never propagates; coverage varies by access mode
-   ({{ref-propagation}}, {{access-modes}}).
+   by person, resource, and auth tokens, carries governance context,
+   including on a person token the PS issues to an intermediary on an
+   upstream token, where the PS copies the claim and the intermediary
+   never supplies it; the blob itself never propagates; coverage varies
+   by access mode ({{ref-propagation}}, {{access-modes}}).
 9. **Governance record**: the PS mission log is the ordered
    governance record, scoped to PS-observed operations with
    agent-reported local activity distinguished, and with the
@@ -1142,7 +1198,7 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 | Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, person-token issuance under a named or upstream-inherited mission, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and intentionally missionless requests, admitted by policy with no required or inherited association, are outside the claim; a failed required association is rejected, never treated as missionless ({{ref-propagation}}); the post-transition residual is bounded by person-token and auth-token lifetime and `expires_at` |
 | State-Observable | supplied | the AAuth Mission Management status operation active ({{I-D.draft-mcguinness-mission-aauth-management}}) | Authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable | The base binding exposes no consumer-facing state source; token acceptance is not observation |
 | Structured Authority | not supplied | -- | -- | The mission description is private prose and `approved_tools` is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary |
-| Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary |
+| Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary; an accepted update can broaden the work under the same reference with the Supervisor's acceptance ({{lifecycle}}), so the binding offers no containment guarantee |
 | Credential-Bound | supplied | PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering, and the PS's delivery check rejects one that omits or alters the claim ({{ref-propagation}}) |
 | Authorized Context Correlation | not supplied | -- | -- | The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined |
 | Independently Verifiable | not supplied | -- | -- | `s256` proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties |
@@ -1190,6 +1246,23 @@ incremental deployment remain distinct concerns.
   family's `parent_terminated`, and an unrecognized reason on either
   side, and notes that Mission Status's `suspended` state has no AAuth
   counterpart.  AAuth's states and members are unchanged (#705).
+
+- A chained hop is PS-governed derivation under the same Mission: the
+  Mission's `agent` is the root actor, the holder of a chained person
+  token is the intermediary, whose identity the PS establishes from its
+  authenticated agent token and its records (`cnf` binds only the key),
+  and the PS copies `mission_s256` from the upstream token, which the
+  intermediary never supplies (#966).
+
+- An accepted update approves a new immutable version of the Approved
+  Context, identified by the Mission Reference and its position in the
+  accepted-update sequence; `mission_s256` commits to the original
+  blob only, and a pending or rejected update is part of no version.
+  The PS must not accept a broadening update without the Supervisor's
+  acceptance; under a deciding supervision server, its `allow` accepts
+  and its `ask` requires the person, so a configured server can
+  authorize broadening without a fresh human decision. The Statement
+  names the versions and disclaims any containment guarantee (#965).
 
 - Maps AAuth's Supervisor role and defines an agent's deciding
   supervision server. A PS with one obtains that server's decision for

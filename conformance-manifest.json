@@ -3,108 +3,108 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-control-plane.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "60d31c12bd9e5f725b3030b1fd04517aea7957d0ab167599f940b7471d20c093"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
-    "content_sha256": "879815f65295f326c74311451251815e13539153e8d1f9de5ba1e3cd496fcf0e"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "62ca5c493b76ebf99ebcf9b04bba2ce501396cc29bc74a28c41f20e0a51bad52"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "d3d9adabb9a93b0ca5c6093e226e7fc55af3c8f070b8603566baa6fd89b04e4b"
+    "revision": "9b890b427ffd23c4c0b8c7f33118df6f4038219a",
+    "content_sha256": "fefdf0f9ed2e783ca2c16f7ec9eb88329079afcef44c962cf487bc0454b2f103"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "9b890b427ffd23c4c0b8c7f33118df6f4038219a",
     "content_sha256": "c1fb17ce0f9d37cc15c973fbac912fa4ef31a9e27ed81cbda8b7645d6ea4b37d"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "8fd969aba32757b674ea7137286bdce4f2cdd3ecb1d5c5769252f01b033f9434"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "8ab87ab396665ac745402777e8a4783ee99acadf1169505f7e06719ac22cdfa1"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "b04d0ffcb8c296552afd6a19109608a7605bce9006cd2e4e5ecafaa2cc041577"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "86d7115e923c7b860dee2f9d035e84e6a03e995066587690d069abe2af4bf863"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
-    "content_sha256": "544a843d5bfd57cff78271abd280050b85816f87de51c615e2911c805966f334"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "4674e17b5206d3eb54dba9c939b61208d9bb985b4955289ab2c53279a9e3a255"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "4d8951b1b1177f6a4b04eb80e01099e16daa02c9e1d788c6e44504fd739b00e6"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "aef325527519d5b315b8b41a9a9f4c132ad90eee5c16358d18b25af1d8ba0f81"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
     "content_sha256": "567d56a9a8d82ae5a4495e3c0147ae4570470a6931b6a2cf4ca72c3eace6d961"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "6bd08d8a5b7f30d59dfbba56c6b7e80fa16371d4",
-    "content_sha256": "cb0e3b0cb189dada58ea0eebac2cefbcf74dcaaa8cc9583bd763f6bd7677821d"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "69f0dedae0b7fbce2eff956e069fc6f519a6d185eda9923f2310098a15ad79f3"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "e6d514ce5ebf4ae47dee9bad3eaff6c2544ae64e",
-    "content_sha256": "59f5bb1554f7f4d60be297ba66c33a5df756983e22eb1c5ebb361d3b9c34d18e"
+    "revision": "58f7481453f3e7f94f93fb2a8a2b951bf1dbf11e",
+    "content_sha256": "4ffa3d5f41152987dcaa565d30b77f6e17e151586d80da1179f3140c85d9dd39"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "eecf22076356a14f7f797e410d708f4ae98cef6a",
-    "content_sha256": "b003fdb0e919729c8b4ba20dda56b31ecdb99dae3ea8c0bd77a715863dba0e18"
+    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
+    "content_sha256": "6c20b08bbe97595d0223d7c3c4e082cf4e9c8b3081196a942214b4e6dea7113e"
    },
    "draft-mcguinness-oauth-mission-management.md": {
-    "revision": "5bc15030b4a95624b7cd3567076c069211b42ab4",
-    "content_sha256": "1a44eedfe6f5a91b0dea8bd392da5b8bcc3d23bdf1b9fae416f5aa6d93f04cfa"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "9201cdc83aa8e79a1a2615bf25f69c9ff8fac11424be6336c8f5052ba1f24b5b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
-    "content_sha256": "a1ca451cfc406d792f4db8f942dc42745652d23863703cb77c9e761077ec5c46"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "435652531b159beb785f5867c9e09da1fad63263586b4a9cbfef79b9b63b9b1f"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ccddd9e88c6445332e4c5807e8000f03685ddbfe",
-    "content_sha256": "0b78fc15c33129d6c530f9726b5d3ec9a54515b37e5b39a0c2cd2ec3e6001ec6"
+    "revision": "58f7481453f3e7f94f93fb2a8a2b951bf1dbf11e",
+    "content_sha256": "c0cea30579bc94d809565c019b91672b64862e23e871da81893abc123dd2cb46"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
     "content_sha256": "1929eef4d3128482f7ce4ed5cff9f79b63eef818262e15f8ecb3d155d3dc64b7"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "468cc194eed433fd9d5afcdae54cb0727226f165f6c2580d0e91e3fd5c5a04e7"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "72d16463993b55af9238d7374a0a39764b6a8086935515180fa4841344510119"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "fde328e1de5cc5d286402164d12f799916c15b7b804348484ca941d943208740"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "81de7af0ad94b3a39a6ec8067377ac39b9884a4705cd14c24cd712c9f090a5f1"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
-    "content_sha256": "7378469e21e6268fe0aca8fe62b1e6901b29efde8a7f9c0b05cb8c518fb68279"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "2d348d6ca191d1122ae288d6ddc455b10f78ec267a5ad228c4af52a10b619015"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
     "content_sha256": "9d17b521502210144da5a492ef3109138621627cc495b474b4db771775a0daf8"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
-    "content_sha256": "2825d7ecba19859737d4d31a0b07485c45616db1d4fca50f2f31e41aa9442e44"
+    "revision": "7568a8d708beb6ea9c3906b13d4d3a0e12482e43",
+    "content_sha256": "ec63c9707af35ecd0fac6bca50df29edb07a5307bc50e334eaae4ed6c0383afb"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "e6d514ce5ebf4ae47dee9bad3eaff6c2544ae64e",
-    "content_sha256": "f47ce123511fcb11509c380b8cd5e3131a5c7782739b9b19f2410a32dbcadadb"
+    "revision": "5ad0d29770d9598408397835f9ecf5b2ad147830",
+    "content_sha256": "5be7ff2eda5a6c1b20cb10b2fa6791d4b05dc06b609d8f43b850214ef33a9aa2"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "e6d514ce5ebf4ae47dee9bad3eaff6c2544ae64e",
-    "content_sha256": "0818fcd69f0ad54f83ab03603e393f4a563c143b4a45d5259b6ae6a40a00fcac"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "cb10f822787bc00906fc6250622e11f5b3510527123e441f194dfcea77505fec"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "c74a85acc97dc6ba157b26721f18767d76085b80",
@@ -123,16 +123,12 @@
     "content_sha256": "b0fcb6a467d70b0348ba62d7ec2a567cf49101c94e5e39ad4f5c8490258f521e"
    },
    "draft-mcguinness-mission-aauth-management.md": {
-    "revision": "8a52c00cac783ebef32da8c60babacf3dea663f6",
-    "content_sha256": "f9d19f801a349372fe527943ccf42aea74965d3997707dc732ed48322b6fd0f6"
+    "revision": "0b57b6fe260b12759f6c19256fee24f8a05faa12",
+    "content_sha256": "7a24c9a98ece9ae1ac533dde1a1158558a8e93c7d8419bbc39e4c1d33a4622fe"
    },
    "draft-mcguinness-mission-aauth.md": {
-    "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
-    "content_sha256": "7bfd1f35a21fedcb340f30e9cdd3a7ee7dde1db1f77b10ddbb3c9a6de14baac9"
-   },
-   "draft-mcguinness-mission-mandate.md": {
-    "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
-    "content_sha256": "4f8b85890777de9b580a511bfcc15e31cba4284603f2438b152ef4aeb26840b9"
+    "revision": "4ff70fc6f752d393e5f10cb1ae224b47e3b6dfef",
+    "content_sha256": "efee406ce623267b33e23da49e6f4a7072aaadb3370478e518c7d531842ba2dd"
    }
   }
  },
@@ -264,7 +260,9 @@
    "expansion.adjudication",
    "expansion.interactive-completion",
    "aauth.supervision-server",
-   "aauth.supervision-proof"
+   "aauth.supervision-proof",
+   "aauth-management.update-position",
+   "aauth-management.delegation-tree"
   ]
  },
  "profiles": [
@@ -32577,6 +32575,182 @@
    "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
   },
   {
+   "id": "aauth-management.status.accepted-updates-count",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "status",
+   "text": "A PS that supports them returns `accepted_updates` in every status response, as the number of `update` actions it has accepted for the mission",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.update-position"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every status and terminate response from a PS supporting the update position carries `accepted_updates`, a non-negative integer equal to the number of updates accepted for the mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). The examples are validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.status.latest-update-iff-nonzero",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "status",
+   "text": "returns `latest_update_s256`, the `s256` of the most recently accepted update, exactly when that number is greater than zero; with no accepted update, `accepted_updates` is `0` and `latest_update_s256` is absent.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.update-position"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`latest_update_s256` is present exactly when `accepted_updates` is above zero and equals the `s256` the PS returned for the most recently accepted update; with none, `accepted_updates` is 0 and `latest_update_s256` is absent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). The examples are validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.status.update-position-same-observation",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "status",
+   "text": "Both describe the same observation as `observed_at`.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.update-position"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`accepted_updates` and `latest_update_s256` reflect the mission as of the response's `observed_at`; an update accepted after that instant appears in neither"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). The examples are validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.delegation-tree.call-chain-edge",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "delegation-tree",
+   "text": "It contains `upstream_token` and `person_token`, each an object with the `iss` and `jti` of, respectively, the upstream token the intermediary presented and the Person Token the PS issued on it, and it does not contain `parent_agent`.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.delegation-tree"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each `call_chain` node names the intermediary as `agent` and, when token references are returned, carries the upstream token's and the issued Person Token's `(iss, jti)` as the PS recorded them, and never `parent_agent`; two hops on one upstream token appear as two nodes with distinct `person_token` values"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). The example is validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.delegation-tree.sub-agent-parent",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "delegation-tree",
+   "text": "A `sub_agent` node contains `parent_agent`.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.delegation-tree"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every `sub_agent` node carries `parent_agent`, the parent agent the PS verified for that sub-agent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). The example is validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.delegation-tree.token-refs-owning-agent",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "delegation-tree",
+   "text": "`tokens`, `upstream_token`, and `person_token` MAY be returned to a Person or authorized administrator and SHOULD be omitted from a response to an admitted Owning Agent unless required for that Agent's own revocation accounting",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.delegation-tree"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a delegation-tree response to an admitted Owning Agent omits `tokens`, `upstream_token`, and `person_token` unless they are required for that Agent's own revocation accounting"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). The example is validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.delegation-tree.token-refs-together",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "delegation-tree",
+   "text": "`upstream_token` and `person_token` are returned together or omitted together.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.delegation-tree"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a `call_chain` node carries both `upstream_token` and `person_token` or neither"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). The example is validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.delegation-tree.person-token-not-in-tokens",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "delegation-tree",
+   "text": "a `call_chain` node's `person_token` is the hop's own Person Token and is not repeated in `tokens`.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.delegation-tree"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "no `call_chain` node lists its own `person_token` `(iss, jti)` among its `tokens`; `tokens` names only Auth Tokens issued or provided for the node's agent under the Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356, owner review). The example is validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
    "id": "aauth.mission-log.supervision-decider",
    "spec": "draft-mcguinness-mission-aauth.md",
    "anchor": "mission-log",
@@ -32709,6 +32883,154 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#967 (PR #1156). Native AAuth tests are scoped to the #836 pilot; no reference implementation of supervision-server routing exists."
+  },
+  {
+   "id": "aauth.reference.update-version",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "This binding therefore treats each accepted update as the approval of a new immutable version of the Approved Context ({{I-D.draft-mcguinness-mission-substrate}}): the blob plus the accepted updates through that one, in acceptance order.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each update the Supervisor accepts creates the next version of the Approved Context, the blob plus the accepted updates through it, at the next position in the accepted-update sequence (the original blob is position zero); the blob and `mission_s256` are unchanged, and the PS evaluates later requests against the latest version"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
+  },
+  {
+   "id": "aauth.reference.pending-rejected-no-version",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "A pending or rejected update is part of no version.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an update that is pending or rejected creates no version: the accepted-update position does not advance and the PS does not evaluate later requests against it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
+  },
+  {
+   "id": "aauth.lifecycle.broadening-update-needs-supervisor",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "lifecycle",
+   "text": "The PS MUST NOT accept an update that broadens the work without the Supervisor's acceptance.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an `update` that broadens the work is not accepted, returns no update `s256`, and creates no version unless the Supervisor accepted it: the person, or the deciding supervision server where one is configured for the agent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
+  },
+  {
+   "id": "aauth.lifecycle.update-under-supervision-server",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "lifecycle",
+   "text": "Under a deciding supervision server, the server's `allow` accepts the update and its `ask` requires the person's response",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.supervision-server"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with a deciding supervision server configured, the server's `allow` accepts an update and its `ask` holds the update until the person responds; the PS accepts no update on its own classification of broadening"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
+  },
+  {
+   "id": "aauth.statement.chained-holder-identity",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "mission-substrate",
+   "text": "The holder of a chained person token is the intermediary, a separate actor whose agent identity the PS establishes from the intermediary's authenticated agent token and its own records",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-statement",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a person token issued on an `upstream_token`, the PS's records name as holder the intermediary authenticated by its own agent token on the request, and keep the Mission's `agent` as the root actor; a `cnf` key match alone never establishes the intermediary's agent identity"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). Native AAuth tests are scoped to the #836 pilot's chained slice; no reference implementation of call chaining exists."
+  },
+  {
+   "id": "aauth.ref-propagation.chained-copy",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "When that upstream token carries `mission_s256`, the PS evaluates the request against that mission and copies `mission_s256` into the person token it issues",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a person token the PS issues on an `upstream_token` carrying `mission_s256` carries exactly that value, and the PS evaluated the request against that mission before issuing it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356). Native AAuth tests are scoped to the #836 pilot's chained slice; no reference implementation of call chaining exists."
+  },
+  {
+   "id": "aauth.ref-propagation.chained-current-version",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "the PS evaluates each chained request against the mission's current version when it decides.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a chained request is decided against the mission's current version, including updates accepted after the upstream token was issued, while the issued person token's `mission_s256` stays the original blob's digest"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#966 (D356, owner review). Native AAuth tests are scoped to the #836 pilot's chained slice; no reference implementation of call chaining exists."
   },
   {
    "id": "mandate.minting.termination-at-issuance",

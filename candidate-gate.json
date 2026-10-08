@@ -34,7 +34,7 @@
    "slugs": ["draft-mcguinness-mission-substrate"]
   },
   "705": {
-   "title": "Status: availability state vs terminal cause (active/suspended/terminal + reason)",
+   "title": "Status: availability state vs terminal cause (active/suspended/terminated + reason)",
    "slugs": ["draft-mcguinness-oauth-mission-status"]
   },
   "242": {
