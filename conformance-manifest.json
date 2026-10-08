@@ -29949,6 +29949,36 @@
    "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
   },
   {
+   "id": "core.self-exchange.approved-agent",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "self-exchange",
+   "text": "The AS MUST refuse a no-actor exchange with the `invalid_request` error code ({{Section 2.2.2 of RFC8693}}) unless the authenticated client is the Mission's approved agent (the Mission Record's `client_id`, {{mission-record}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the async-delegation exchange, a no-actor exchange, refuses invalid_request when the authenticated client is not the Mission Record's client_id, even when the presented token names that client"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "a no-actor exchange is open only to the Mission's approved agent (@spec mission#self-exchange rule 1, #1153 review, D353) > refuses invalid_request when the authenticated client is not the Mission Record's client_id, though the token names it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1153 review (D353). The AS never issues a Mission access token to another client without act, so the test changes the Mission Record's client_id under a real token."
+  },
+  {
    "id": "core.self-exchange.result-subset",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "self-exchange",
@@ -29964,10 +29994,10 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a no-actor exchange of the agent's own token (the async-delegation transport) issues a family no broader than the presented token: an absent request confines to the token's authority as the effective set narrows it, a request beyond the token is refused invalid_authorization_details though the Mission allows it, and a request within it is issued"
+    "normative": "a no-actor exchange of the agent's own token (the async-delegation transport) issues a family no broader than the presented token: an absent request confines to the token's authority as the effective set narrows it, a request beyond the token is refused invalid_authorization_details though the Mission allows it, a request within it is issued, and a retry recovers a recorded family (completed, or created before a crash) only within the token it presents; a token whose authority cannot be read is refused"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
@@ -29986,9 +30016,45 @@
      "name": "the presented token's own authority bounds the family (@spec mission#self-exchange rule 2, #825 PR 2c) > permits a request within the presented token's authority",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "a retry recovers a recorded family only within the presented token (@spec mission#self-exchange rule 2, #1153 review, D353) > refuses a narrower token recovering a broader family completed, with authorization_details omitted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "a retry recovers a recorded family only within the presented token (@spec mission#self-exchange rule 2, #1153 review, D353) > recovers a family completed with an equivalent replacement token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "a retry recovers a recorded family only within the presented token (@spec mission#self-exchange rule 2, #1153 review, D353) > refuses a narrower token recovering a broader family created before a crash, with authorization_details omitted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "a retry recovers a recorded family only within the presented token (@spec mission#self-exchange rule 2, #1153 review, D353) > recovers a family created before a crash with an equivalent replacement token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "presentedTokenAuthority reads a token's authority in full or not at all (@spec mission#self-exchange rule 2, #1153 review, D353) > returns the entries of a well-formed authorization_details",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "presentedTokenAuthority reads a token's authority in full or not at all (@spec mission#self-exchange rule 2, #1153 review, D353) > returns nothing for authorization_details that is %s",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#825 PR 2c (D312). The presented token is a real down-scoped token, a family's own access token, so the tests exercise the escalation path the gap allowed. Partial: the AS implements no separate self-exchange endpoint, so the rule is tested on the async-delegation transport, its one no-actor exchange; a token whose authority cannot be read is refused invalid_grant, a guard no AS path can reach because the AS never signs a Mission access token without authorization_details."
+   "notes": "#825 PR 2c (D312); the recovery path was closed after the owner's review (D353). The presented token in the tests is a real down-scoped token, a family's own access token. The AS's one no-actor exchange is the async-delegation transport; it has no separate self-exchange endpoint. The unreadable-authority guard is covered directly through presentedTokenAuthority, since the AS never signs a Mission access token without authorization_details. The child-grant bound is a separate follow-up (D353)."
   },
   {
    "id": "runtime.oauth.required-instance-attribution",
