@@ -40,6 +40,7 @@ import { randomUUID } from "node:crypto";
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey, type JWTVerifyGetKey } from "jose";
 import type {
+  AuthorityBound,
   DecisionEvidenceEmitter,
   DecisionEvidenceObject,
   RuntimeActionClass,
@@ -511,6 +512,15 @@ interface ClaimContext {
  * step 4b sets once the baseline Join succeeds, read only by the Decision
  * Evidence emitter. Never placed on the AuthZEN response context.
  */
+/**
+ * @spec authzen#evidence `authority_bound` (#825 PR 2b-ii): the authority
+ * bound that decided this evaluation's `out_of_authority` or
+ * `parameter_violation` deny, set only at the site where that bound refused.
+ */
+interface BoundTrace {
+  authority_bound?: AuthorityBound;
+}
+
 interface JoinTrace {
   viewId?: string;
 }
@@ -552,7 +562,8 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       const contributions = new Set<string>();
       const claim: ClaimContext = {};
       const join: JoinTrace = {};
-      const decision = await evaluateInner(req, opts, contributions, claim, join);
+      const bound: BoundTrace = {};
+      const decision = await evaluateInner(req, opts, contributions, claim, join, bound);
       span.setAttribute("mission.action", req.action.name);
       span.setAttribute("mission.decision", decision.decision);
       if (decision.context.denial_reason) {
@@ -564,7 +575,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       if (claim.retransmitted) return decision;
       try {
         if (opts.evidence) {
-          decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions, requestDigest, join);
+          decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions, requestDigest, join, bound);
         }
         // The single writer persists the whole decision before it returns,
         // so a crash after this point yields at most this same permit again.
@@ -601,6 +612,7 @@ async function emitDecisionEvidence(
   contributions: ReadonlySet<string>,
   requestDigest: string,
   join: Readonly<JoinTrace>,
+  bound: Readonly<BoundTrace>,
 ): Promise<DecisionEvidenceObject> {
   const { view } = opts;
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
@@ -655,6 +667,7 @@ async function emitDecisionEvidence(
     evaluation_id: decision.context.evaluation_id as string,
     evaluation_request_digest: requestDigest,
     decision: decision.decision ? "permit" : "deny",
+    ...(!decision.decision && bound.authority_bound !== undefined ? { authority_bound: bound.authority_bound } : {}),
     contributing_constraints: [...contributions],
     evaluated_at: opts.now().toISOString(),
     ...(req.context.action_class !== undefined
@@ -689,6 +702,7 @@ async function evaluateInner(
   contributions: Set<string>,
   claim: ClaimContext,
   join: JoinTrace,
+  bound: BoundTrace,
 ): Promise<Decision> {
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
@@ -751,10 +765,13 @@ async function evaluateInner(
   // member for the denial classification; `denial_reason` (the pre-existing
   // deployment field, also the Decision Evidence member name per
   // authzen#failure-condition-coverage) is kept alongside it, additive.
-  const deny = (denial_reason: DenialReason): Decision => ({
-    decision: false,
-    context: base({ denial_reason, reason: denial_reason }),
-  });
+  // @spec authzen#evidence `authority_bound`: a deny one of the two authority
+  // bounds decided names it here, at its own site; every other deny, including
+  // Resource policy's and a deployment declaration's, names none.
+  const deny = (denial_reason: DenialReason, authorityBound?: AuthorityBound): Decision => {
+    if (authorityBound !== undefined) bound.authority_bound = authorityBound;
+    return { decision: false, context: base({ denial_reason, reason: denial_reason }) };
+  };
 
   // @spec authzen#context-action-phase — "The PDP MUST reject a value outside
   // this set". A phase the PDP cannot place under any published compound-action
@@ -1136,7 +1153,7 @@ async function evaluateInner(
         e.actions.includes(req.action.name),
     );
     if (unrecognizedTypeMatch) return deny("unsupported_authorization_type");
-    return deny("out_of_authority");
+    return deny("out_of_authority", "mission");
   }
 
   // 5a. Containment overlay: the entry WAS approved (step 5 matched), but the
@@ -1262,7 +1279,7 @@ async function evaluateInner(
     ...(req.context.amount ? { amount: req.context.amount } : {}),
   };
   const credentialMatches = credentialAuthority.filter((c) => entryMatchesAction(c, credentialFacts));
-  if (credentialMatches.length === 0) return deny("out_of_authority");
+  if (credentialMatches.length === 0) return deny("out_of_authority", "credential");
   const credentialSatisfying: CredentialAuthorityEntry[] = [];
   for (const c of credentialMatches) {
     contributions.add(c.type);
@@ -1270,7 +1287,7 @@ async function evaluateInner(
     for (const key of gates.evaluated) contributions.add(key);
     if (gates.satisfied) credentialSatisfying.push(c);
   }
-  if (credentialSatisfying.length === 0) return deny("parameter_violation");
+  if (credentialSatisfying.length === 0) return deny("parameter_violation", "credential");
   let dischargedSource: string | undefined;
   const credentialCandidates = credentialSatisfying.filter((c) => {
     if (c.constraints?.terminal_when?.length) contributions.add("terminal_when");
@@ -1289,7 +1306,7 @@ async function evaluateInner(
         }),
       };
     }
-    return deny("out_of_authority");
+    return deny("out_of_authority", "credential");
   }
   const credentialRequiresApproval = credentialCandidates.every(
     (c) => c.constraints?.requires_action_approval === true,
@@ -1327,7 +1344,7 @@ async function evaluateInner(
   // appears in contributing_constraints and one never evaluated does not.
   if (entry.constraints?.vendors !== undefined) {
     contributions.add("vendors");
-    if (!vendorConstraintSatisfied(entry, vendorId)) return deny("parameter_violation");
+    if (!vendorConstraintSatisfied(entry, vendorId)) return deny("parameter_violation", "mission");
   }
   const tuples = deriveContextualTuples({
     view,
@@ -1344,7 +1361,7 @@ async function evaluateInner(
   // evolves, or a required tuple genuinely unavailable: the established
   // boundary reason (@spec authzen#failure-condition-coverage, "Action
   // outside the Authority Set ... or the request would broaden it").
-  if (tuples.length === 0) return deny("out_of_authority");
+  if (tuples.length === 0) return deny("out_of_authority", "mission");
   const allowed = await fga.checkWithContext(
     { user: `mission:${view.id}`, relation: mapping.relation, object: `${req.resource.type}:${req.resource.id}` },
     tuples,
@@ -1379,7 +1396,7 @@ async function evaluateInner(
         entry.constraints?.vendors !== undefined &&
         !vendorConstraintSatisfied(entry, memberVendorId)
       ) {
-        return deny("parameter_violation");
+        return deny("parameter_violation", "mission");
       }
       const memberTuples = deriveContextualTuples({
         view,
@@ -1387,7 +1404,7 @@ async function evaluateInner(
         target: { objectType: "vendor", objectId: memberVendorId, vendorId: memberVendorId },
         relation: mapping.relation,
       });
-      if (memberTuples.length === 0) return deny("out_of_authority");
+      if (memberTuples.length === 0) return deny("out_of_authority", "mission");
       const memberAllowed = await fga.checkWithContext(
         { user: `mission:${view.id}`, relation: mapping.relation, object: `vendor:${memberVendorId}` },
         memberTuples,
@@ -1421,7 +1438,7 @@ async function evaluateInner(
       !isValidAmount(cap.amount) ||
       compareAmounts(amt.amount, cap.amount) > 0
     ) {
-      return deny("parameter_violation");
+      return deny("parameter_violation", "mission");
     }
   }
 
