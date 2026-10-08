@@ -829,7 +829,11 @@ contain `parent_agent`.  One upstream token can support several
 downstream requests (Section 10.1.1 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}), so a hop is identified by
 both token references and the intermediary's agent identifier, never
-by the upstream token alone.  `tokens`, `upstream_token`, and
+by the upstream token alone.  In the example, the upstream token is an
+Auth Token the PS issued.  `tokens` lists the Auth Tokens issued or
+provided for the node's agent under the Mission; a `call_chain` node's
+`person_token` is the hop's own Person Token and is not repeated in
+`tokens`.  `tokens`, `upstream_token`, and
 `person_token` MAY be returned to a Person or authorized administrator
 and SHOULD be omitted from a response to an admitted Owning Agent
 unless required for that Agent's own revocation accounting;
