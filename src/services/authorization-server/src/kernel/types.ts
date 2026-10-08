@@ -24,7 +24,6 @@ export interface MissionIntent {
    *  task bounds (renamed from `constraints` so the name cannot collide
    *  with a Resource Access entry's enforced `constraints`). */
   task_bounds?: string[];
-  success_criteria?: string[];
   purpose?: string;
   /** @spec mission#derivation-issuance-policy — client-requested ceiling on
    *  derivations; the AS-established effective ceiling is

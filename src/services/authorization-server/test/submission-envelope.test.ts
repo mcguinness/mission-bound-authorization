@@ -184,6 +184,22 @@ describe("Submission envelope parse (@spec mission#submission-via-par)", () => {
     );
     expect(e.message).toContain("unknown top-level member: proposed_authority");
   });
+
+  it("the retired success_criteria member fails the inner closed top level with invalid_request (@spec mission#mission-intent)", () => {
+    // Control: the otherwise identical Intent is accepted, so the refusal
+    // below is attributable to success_criteria alone.
+    const accepted = validateMissionIntentSubmission(JSON.stringify({ intent: TASK_INTENT }));
+    expect(accepted.intent).toEqual(validateMissionIntent(JSON.stringify(TASK_INTENT)));
+    const e = refusal(() =>
+      validateMissionIntentSubmission(
+        JSON.stringify({
+          intent: { ...TASK_INTENT, success_criteria: ["All Q3 invoices reconciled."] },
+        }),
+      ),
+    );
+    expect(e.code).toBe("invalid_request");
+    expect(e.message).toContain("unknown top-level member: success_criteria");
+  });
 });
 
 describe("Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence)", () => {
