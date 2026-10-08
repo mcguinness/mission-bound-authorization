@@ -95,9 +95,43 @@ test("the terminate response without approved_at fails", () => {
 });
 
 test("a terminated status without token_residual fails", () => {
-  const t = mutate(DRAFT, '  "fresh_until": "2026-04-10T09:15:32Z",\n  "token_residual": {\n    "tracked": 4,\n    "revocation_attempted": 4,\n    "revocation_confirmed": 4,\n    "complete": true\n  }\n',
-    '  "fresh_until": "2026-04-10T09:15:32Z"\n');
+  const t = mutate(DRAFT, '  "latest_update_s256": "DCPMK1mFVV7rRr2gXYhuIoHABzG8_FrKIuAKTUuqYQA",\n  "token_residual": {\n    "tracked": 4,\n    "revocation_attempted": 4,\n    "revocation_confirmed": 4,\n    "complete": true\n  }\n',
+    '  "latest_update_s256": "DCPMK1mFVV7rRr2gXYhuIoHABzG8_FrKIuAKTUuqYQA"\n');
   assertFinding(t, /\[status-response\]: missing token_residual, REQUIRED when terminated/);
+});
+
+// The status example's accepted-update members (#965); anchored on its
+// unique fresh_until so the terminate example is left untouched.
+const STATUS_UPDATES = '  "fresh_until": "2026-04-10T09:15:32Z",\n  "accepted_updates": 2,\n  "latest_update_s256": "DCPMK1mFVV7rRr2gXYhuIoHABzG8_FrKIuAKTUuqYQA",\n';
+
+test("accepted_updates above zero without latest_update_s256 fails", () => {
+  const t = mutate(DRAFT, STATUS_UPDATES, '  "fresh_until": "2026-04-10T09:15:32Z",\n  "accepted_updates": 2,\n');
+  assertFinding(t, /\[status-response\]: accepted_updates is greater than zero but latest_update_s256 is absent/);
+});
+
+test("latest_update_s256 with zero accepted_updates fails", () => {
+  const t = mutate(DRAFT, STATUS_UPDATES, STATUS_UPDATES.replace('"accepted_updates": 2', '"accepted_updates": 0'));
+  assertFinding(t, /\[status-response\]: latest_update_s256 present with zero accepted_updates/);
+});
+
+test("latest_update_s256 without accepted_updates fails", () => {
+  const t = mutate(DRAFT, STATUS_UPDATES, STATUS_UPDATES.replace('  "accepted_updates": 2,\n', ""));
+  assertFinding(t, /\[status-response\]: latest_update_s256 without accepted_updates/);
+});
+
+test("a negative accepted_updates fails", () => {
+  const t = mutate(DRAFT, STATUS_UPDATES, STATUS_UPDATES.replace('"accepted_updates": 2', '"accepted_updates": -1'));
+  assertFinding(t, /\[status-response\]: accepted_updates is not a non-negative integer/);
+});
+
+test("a malformed latest_update_s256 fails", () => {
+  const t = mutate(DRAFT, STATUS_UPDATES, STATUS_UPDATES.replace("DCPMK1mFVV7rRr2gXYhuIoHABzG8_FrKIuAKTUuqYQA", "not-a-digest"));
+  assertFinding(t, /\[status-response\]: latest_update_s256 is not an unpadded base64url SHA-256 digest/);
+});
+
+test("zero accepted_updates with no digest passes", () => {
+  const t = mutate(DRAFT, STATUS_UPDATES, '  "fresh_until": "2026-04-10T09:15:32Z",\n  "accepted_updates": 0,\n');
+  assert.deepEqual(findings(t), []);
 });
 
 test("removing the metadata example fails as a missing kind", () => {

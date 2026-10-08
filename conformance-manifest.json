@@ -123,12 +123,12 @@
     "content_sha256": "b0fcb6a467d70b0348ba62d7ec2a567cf49101c94e5e39ad4f5c8490258f521e"
    },
    "draft-mcguinness-mission-aauth-management.md": {
-    "revision": "8a52c00cac783ebef32da8c60babacf3dea663f6",
-    "content_sha256": "f9d19f801a349372fe527943ccf42aea74965d3997707dc732ed48322b6fd0f6"
+    "revision": "82b9a7f5fee0fa1fc0620f6334896068c2c09d72",
+    "content_sha256": "53de224158cb22357ee0ead41a4fd40e378e7fcb8ef635ece641872291f2c6e9"
    },
    "draft-mcguinness-mission-aauth.md": {
-    "revision": "119142291c967bb1f3499833bca4bdfeb221d18c",
-    "content_sha256": "300f37982869ca23f2a7d2518c05130d8644b2397d4c9f4c26e59d21a03ad249"
+    "revision": "dc8aa2e7218b4284dc76ae5c9c09862624a5f41b",
+    "content_sha256": "c705294f243633f57355be7fda4ef2d81c73620b000246bb8ddcc5083d2a985f"
    }
   }
  },
@@ -260,7 +260,8 @@
    "expansion.adjudication",
    "expansion.interactive-completion",
    "aauth.supervision-server",
-   "aauth.supervision-proof"
+   "aauth.supervision-proof",
+   "aauth-management.update-position"
   ]
  },
  "profiles": [
@@ -32139,6 +32140,72 @@
    "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
   },
   {
+   "id": "aauth-management.status.accepted-updates-count",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "status",
+   "text": "A PS that supports them returns `accepted_updates` in every status response, as the number of `update` actions it has accepted for the mission",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.update-position"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every status and terminate response from a PS supporting the update position carries `accepted_updates`, a non-negative integer equal to the number of updates accepted for the mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). The examples are validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.status.latest-update-iff-nonzero",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "status",
+   "text": "returns `latest_update_s256`, the `s256` of the most recently accepted update, exactly when that number is greater than zero; with no accepted update, `accepted_updates` is `0` and `latest_update_s256` is absent.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.update-position"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`latest_update_s256` is present exactly when `accepted_updates` is above zero and equals the `s256` the PS returned for the most recently accepted update; with none, `accepted_updates` is 0 and `latest_update_s256` is absent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). The examples are validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
+   "id": "aauth-management.status.update-position-same-observation",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "status",
+   "text": "Both describe the same observation as `observed_at`.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth-management.update-position"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`accepted_updates` and `latest_update_s256` reflect the mission as of the response's `observed_at`; an update accepted after that instant appears in neither"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). The examples are validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
+  },
+  {
    "id": "aauth.mission-log.supervision-decider",
    "spec": "draft-mcguinness-mission-aauth.md",
    "anchor": "mission-log",
@@ -32271,6 +32338,91 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#967 (PR #1156). Native AAuth tests are scoped to the #836 pilot; no reference implementation of supervision-server routing exists."
+  },
+  {
+   "id": "aauth.reference.update-version",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "This binding therefore treats each accepted update as the approval of a new immutable version of the Approved Context ({{I-D.draft-mcguinness-mission-substrate}}): the blob plus the accepted updates through that one, in acceptance order.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each update the Supervisor accepts creates the next version of the Approved Context, the blob plus the accepted updates through it, at the next position in the accepted-update sequence (the original blob is position zero); the blob and `mission_s256` are unchanged, and the PS evaluates later requests against the latest version"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
+  },
+  {
+   "id": "aauth.reference.pending-rejected-no-version",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "A pending or rejected update is part of no version.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an update that is pending or rejected creates no version: the accepted-update position does not advance and the PS does not evaluate later requests against it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
+  },
+  {
+   "id": "aauth.lifecycle.broadening-update-needs-supervisor",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "lifecycle",
+   "text": "The PS MUST NOT accept an update that broadens the work without the Supervisor's acceptance.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an `update` that broadens the work is not accepted, returns no update `s256`, and creates no version unless the Supervisor accepted it: the person, or the deciding supervision server where one is configured for the agent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
+  },
+  {
+   "id": "aauth.lifecycle.update-under-supervision-server",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "lifecycle",
+   "text": "Under a deciding supervision server, the server's `allow` accepts the update and its `ask` requires the person's response",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.supervision-server"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with a deciding supervision server configured, the server's `allow` accepts an update and its `ask` holds the update until the person responds; the PS accepts no update on its own classification of broadening"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
   }
  ]
 }

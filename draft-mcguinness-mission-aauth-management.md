@@ -567,6 +567,8 @@ After authenticating and authorizing the caller, the PS returns:
   "termination_reason": "revoked",
   "observed_at": "2026-04-10T09:15:02Z",
   "fresh_until": "2026-04-10T09:15:32Z",
+  "accepted_updates": 2,
+  "latest_update_s256": "DCPMK1mFVV7rRr2gXYhuIoHABzG8_FrKIuAKTUuqYQA",
   "token_residual": {
     "tracked": 4,
     "revocation_attempted": 4,
@@ -594,6 +596,17 @@ REQUIRED when `mission_status` is `terminated` and MUST be absent while
 it is `active`; it reports the residual as of `observed_at`, which
 gives an authorized caller the current revocation state of a
 terminated mission.
+
+`accepted_updates` and `latest_update_s256` are OPTIONAL.  A PS that
+supports them returns `accepted_updates` in every status response, as
+the number of `update` actions it has accepted for the mission
+(Section 8.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}), and returns
+`latest_update_s256`, the `s256` of the most recently accepted update,
+exactly when that number is greater than zero; with no accepted
+update, `accepted_updates` is `0` and `latest_update_s256` is absent.
+Both describe the same observation as `observed_at`.  Together they
+identify the observed update position; they are not a commitment to
+the update history or a substitute for reading it.
 
 The response reports state as of `observed_at` and is reliable until
 `fresh_until`; it is not a promise that the state will remain active.
@@ -679,6 +692,8 @@ The PS returns `200 OK` with the full status representation
   "termination_reason": "revoked",
   "observed_at": "2026-04-10T09:12:44Z",
   "fresh_until": "2026-04-10T09:13:14Z",
+  "accepted_updates": 2,
+  "latest_update_s256": "DCPMK1mFVV7rRr2gXYhuIoHABzG8_FrKIuAKTUuqYQA",
   "token_residual": {
     "tracked": 4,
     "revocation_attempted": 4,
@@ -1261,6 +1276,12 @@ native choices.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Status gains optional `accepted_updates` and `latest_update_s256`:
+  the count of accepted updates and the latest one's `s256`, from the
+  same observation as `observed_at`, with the digest absent when the
+  count is zero. They identify the observed update position, not a
+  commitment to the update history (#965).
 
 - A supervision server is not a Management Principal by virtue of
   supervising; the PS may register its operator as a management
