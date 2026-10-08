@@ -418,11 +418,11 @@ proposal to the PS `mission_endpoint`.  The proposal contains the
 natural-language description and can contain requested tools as defined
 by AAuth.
 
-The PS MAY defer the response while the person or another appropriate
-decision-maker reviews the proposal.  AAuth clarification messages can
-ask the agent for missing context or negotiate changes.  The agent MUST
-NOT treat the proposal, a pending response, or a clarification exchange
-as approval.
+The PS MAY defer the response while the Supervisor ({{roles}}), by
+default the person, reviews the proposal.  AAuth clarification messages
+can ask the agent for missing context or negotiate changes.  The agent
+MUST NOT treat the proposal, a pending response, or a clarification
+exchange as approval.
 
 Approval occurs only when the PS returns the approval envelope: `s256`
 and the approved mission blob as the base64url-encoded `mission`
