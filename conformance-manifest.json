@@ -3,108 +3,108 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-control-plane.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "60d31c12bd9e5f725b3030b1fd04517aea7957d0ab167599f940b7471d20c093"
+    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
+    "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "62ca5c493b76ebf99ebcf9b04bba2ce501396cc29bc74a28c41f20e0a51bad52"
+    "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
+    "content_sha256": "879815f65295f326c74311451251815e13539153e8d1f9de5ba1e3cd496fcf0e"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "9b890b427ffd23c4c0b8c7f33118df6f4038219a",
-    "content_sha256": "fefdf0f9ed2e783ca2c16f7ec9eb88329079afcef44c962cf487bc0454b2f103"
+    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
+    "content_sha256": "d3d9adabb9a93b0ca5c6093e226e7fc55af3c8f070b8603566baa6fd89b04e4b"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "9b890b427ffd23c4c0b8c7f33118df6f4038219a",
     "content_sha256": "c1fb17ce0f9d37cc15c973fbac912fa4ef31a9e27ed81cbda8b7645d6ea4b37d"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "8ab87ab396665ac745402777e8a4783ee99acadf1169505f7e06719ac22cdfa1"
+    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
+    "content_sha256": "8fd969aba32757b674ea7137286bdce4f2cdd3ecb1d5c5769252f01b033f9434"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "86d7115e923c7b860dee2f9d035e84e6a03e995066587690d069abe2af4bf863"
+    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
+    "content_sha256": "b04d0ffcb8c296552afd6a19109608a7605bce9006cd2e4e5ecafaa2cc041577"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "4674e17b5206d3eb54dba9c939b61208d9bb985b4955289ab2c53279a9e3a255"
+    "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
+    "content_sha256": "544a843d5bfd57cff78271abd280050b85816f87de51c615e2911c805966f334"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "aef325527519d5b315b8b41a9a9f4c132ad90eee5c16358d18b25af1d8ba0f81"
+    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
+    "content_sha256": "4d8951b1b1177f6a4b04eb80e01099e16daa02c9e1d788c6e44504fd739b00e6"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
     "content_sha256": "567d56a9a8d82ae5a4495e3c0147ae4570470a6931b6a2cf4ca72c3eace6d961"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "69f0dedae0b7fbce2eff956e069fc6f519a6d185eda9923f2310098a15ad79f3"
+    "revision": "6bd08d8a5b7f30d59dfbba56c6b7e80fa16371d4",
+    "content_sha256": "cb0e3b0cb189dada58ea0eebac2cefbcf74dcaaa8cc9583bd763f6bd7677821d"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "58f7481453f3e7f94f93fb2a8a2b951bf1dbf11e",
-    "content_sha256": "4ffa3d5f41152987dcaa565d30b77f6e17e151586d80da1179f3140c85d9dd39"
+    "revision": "e6d514ce5ebf4ae47dee9bad3eaff6c2544ae64e",
+    "content_sha256": "59f5bb1554f7f4d60be297ba66c33a5df756983e22eb1c5ebb361d3b9c34d18e"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
-    "content_sha256": "6c20b08bbe97595d0223d7c3c4e082cf4e9c8b3081196a942214b4e6dea7113e"
+    "revision": "eecf22076356a14f7f797e410d708f4ae98cef6a",
+    "content_sha256": "b003fdb0e919729c8b4ba20dda56b31ecdb99dae3ea8c0bd77a715863dba0e18"
    },
    "draft-mcguinness-oauth-mission-management.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "9201cdc83aa8e79a1a2615bf25f69c9ff8fac11424be6336c8f5052ba1f24b5b"
+    "revision": "5bc15030b4a95624b7cd3567076c069211b42ab4",
+    "content_sha256": "1a44eedfe6f5a91b0dea8bd392da5b8bcc3d23bdf1b9fae416f5aa6d93f04cfa"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
-    "content_sha256": "435652531b159beb785f5867c9e09da1fad63263586b4a9cbfef79b9b63b9b1f"
+    "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
+    "content_sha256": "a1ca451cfc406d792f4db8f942dc42745652d23863703cb77c9e761077ec5c46"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "58f7481453f3e7f94f93fb2a8a2b951bf1dbf11e",
-    "content_sha256": "c0cea30579bc94d809565c019b91672b64862e23e871da81893abc123dd2cb46"
+    "revision": "ccddd9e88c6445332e4c5807e8000f03685ddbfe",
+    "content_sha256": "0b78fc15c33129d6c530f9726b5d3ec9a54515b37e5b39a0c2cd2ec3e6001ec6"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
     "content_sha256": "1929eef4d3128482f7ce4ed5cff9f79b63eef818262e15f8ecb3d155d3dc64b7"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "72d16463993b55af9238d7374a0a39764b6a8086935515180fa4841344510119"
+    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
+    "content_sha256": "468cc194eed433fd9d5afcdae54cb0727226f165f6c2580d0e91e3fd5c5a04e7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
-    "content_sha256": "81de7af0ad94b3a39a6ec8067377ac39b9884a4705cd14c24cd712c9f090a5f1"
+    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
+    "content_sha256": "fde328e1de5cc5d286402164d12f799916c15b7b804348484ca941d943208740"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "2d348d6ca191d1122ae288d6ddc455b10f78ec267a5ad228c4af52a10b619015"
+    "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
+    "content_sha256": "7378469e21e6268fe0aca8fe62b1e6901b29efde8a7f9c0b05cb8c518fb68279"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
     "content_sha256": "9d17b521502210144da5a492ef3109138621627cc495b474b4db771775a0daf8"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "7568a8d708beb6ea9c3906b13d4d3a0e12482e43",
-    "content_sha256": "ec63c9707af35ecd0fac6bca50df29edb07a5307bc50e334eaae4ed6c0383afb"
+    "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
+    "content_sha256": "2825d7ecba19859737d4d31a0b07485c45616db1d4fca50f2f31e41aa9442e44"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "5ad0d29770d9598408397835f9ecf5b2ad147830",
-    "content_sha256": "5be7ff2eda5a6c1b20cb10b2fa6791d4b05dc06b609d8f43b850214ef33a9aa2"
+    "revision": "e6d514ce5ebf4ae47dee9bad3eaff6c2544ae64e",
+    "content_sha256": "f47ce123511fcb11509c380b8cd5e3131a5c7782739b9b19f2410a32dbcadadb"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
-    "content_sha256": "cb10f822787bc00906fc6250622e11f5b3510527123e441f194dfcea77505fec"
+    "revision": "e6d514ce5ebf4ae47dee9bad3eaff6c2544ae64e",
+    "content_sha256": "0818fcd69f0ad54f83ab03603e393f4a563c143b4a45d5259b6ae6a40a00fcac"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "c74a85acc97dc6ba157b26721f18767d76085b80",
@@ -127,8 +127,12 @@
     "content_sha256": "f9d19f801a349372fe527943ccf42aea74965d3997707dc732ed48322b6fd0f6"
    },
    "draft-mcguinness-mission-aauth.md": {
-    "revision": "119142291c967bb1f3499833bca4bdfeb221d18c",
-    "content_sha256": "300f37982869ca23f2a7d2518c05130d8644b2397d4c9f4c26e59d21a03ad249"
+    "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
+    "content_sha256": "7bfd1f35a21fedcb340f30e9cdd3a7ee7dde1db1f77b10ddbb3c9a6de14baac9"
+   },
+   "draft-mcguinness-mission-mandate.md": {
+    "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
+    "content_sha256": "4f8b85890777de9b580a511bfcc15e31cba4284603f2438b152ef4aeb26840b9"
    }
   }
  },
@@ -4617,6 +4621,240 @@
      "name": "mission_error wire carriage: derivations_exhausted (@spec mission#error-mapping) > a Mission capped at requested_derivation_limit 1 refuses its second derivation with invalid_grant + mission_error=derivations_exhausted",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint) > the value is the observed termination reason, unprefixed: superseded and parent_terminated map, an unknown reason carries none (@spec mission#termination)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "core.termination.present-exactly-when-terminated",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "termination",
+   "text": "A Mission whose `state` is `terminated` carries a `termination` object, in the Mission Record and wherever its state is reported with it; a Mission in any other state carries none.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a terminated Mission carries `termination` (its `reason`, `terminated_at`, and every member its reason requires) on the record, the Status response, introspection and the lifecycle commit; a Mission in any other state carries none on any of them"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "termination on every emitter (#705 witnesses 1 and 2) > reports only active, suspended or terminated, with termination present exactly when terminated and carrying every member its reason requires",
+     "level": "unit",
+     "surface": "introspection"
+    }
+   ]
+  },
+  {
+   "id": "core.termination.written-once-cause-preserved",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "termination",
+   "text": "The issuer writes `termination` once, atomically with the transition to `terminated`, and never changes it: an expiry, or any later event, does not replace the reason or references of a Mission already terminated.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission terminated for one reason keeps that reason and its references after its `expires_at` passes or an ancestor terminates, at every gate, including the continuation exchange's refusal"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "an earlier recorded cause is preserved (#705 witness 5) > a Mission terminated revoked keeps its reason after expires_at passes, at every gate",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "an earlier recorded cause is preserved (#705 witness 5) > a Mission terminated completed keeps its reason after expires_at passes, at every gate",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "an earlier recorded cause is preserved (#705 witness 5) > a terminated child keeps its own reason when its parent later terminates",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b4a) a Mission terminated revoked before its expires_at passed reports revoked, never expired (@spec mission#termination)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "core.termination.retained-facts-only",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "termination",
+   "text": "such a termination exposes only the facts its record retained and omits a member it has no retained value for, `terminated_at` included, rather than inventing one.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a record terminated under a retired state value reads as `terminated` with that reason and only the references its record retained (no invented `terminated_at` or `version`); an unrecognized state, a malformed termination or a stray termination reads fail closed, never `active`"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "legacy rows read fail closed and normalized (#705 witness 3) > reads each legacy terminal state as terminated with that reason, folding retained references and inventing no member",
+     "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "legacy rows read fail closed and normalized (#705 witness 3) > reads an unrecognized state, a malformed termination and a stray termination fail closed, never active",
+     "level": "unit",
+     "surface": "introspection"
+    }
+   ]
+  },
+  {
+   "id": "core.termination.unrecognized-reason-still-terminated",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "termination",
+   "text": "A consumer that receives such a termination, or a `reason` it does not recognize, still treats the Mission as terminated: it stops work governed by the Mission, follows no absent reference, and infers no cause-specific action.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer shown `terminated` with an unrecognized, malformed or absent reason treats the Mission as non-active and stops governed work, follows no successor the termination does not name, and never leaves an earlier `active` in place"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/agent/test/mediated-harness.test.ts",
+     "name": "harness termination: terminated with any reason is non-active (@spec mission#termination) > refuses mission_not_active:terminated for every termination reason, an unknown one, a malformed one and none, before the channel",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/agent/test/mediated-harness.test.ts",
+     "name": "harness supersession continuity keys on termination.reason (@spec harness#supersession-continuity) > names the successor only for a terminated Mission whose termination.reason is superseded with a string successor",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > a missing or malformed termination never refuses a terminated event: an earlier active is never left in place",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "core.termination.verify-original-bytes-before-normalizing",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "termination",
+   "text": "it verifies a signed artifact over its original bytes, which it retains, before reading it this way.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a signed artifact carrying a retired state value (retained Carryover Evidence, a lifecycle-change SET) is verified over its stored bytes before it is read as `terminated` with that reason, and an unverifiable one is never normalized"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > verifies a retained legacy Carryover Evidence envelope carrying cascaded over its stored bytes, and normalizes only after verification",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > normalizes a legacy SET's state only after its signature verifies, reading no top-level successor or carried_to",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#705 (D359). The Signals receiver verifies before normalizing but keeps only its derived cache, not the SET bytes; the issuer side retains its Carryover Evidence JWS byte for byte."
+  },
+  {
+   "id": "core.lifecycle.computed-expiry-before-materialization",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lifecycle",
+   "text": "From `expires_at`, a Mission whose stored state is still `active` is `terminated` with reason `expired` for every such decision, whether or not that transition is persisted, including when persisting it fails.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an `active` Mission at or past its `expires_at` is observed `terminated` with reason `expired` at every gate (derivation, Status, introspection, the Status List) before the expiry is persisted and while the persisting write throws"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "computed expiry (#705 witness 4) > an active Mission at its expires_at is terminated expired at every gate before materialization, and when the materializing write throws",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "computed expiry (#705 witness 4) > maps an expired participant INVALID on the Status List while its expiry write fails",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ]
   },
@@ -5457,13 +5695,13 @@
     },
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
-     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused mission_expired and saves no family refresh token (@spec mission#mission-bound-tokens)",
+     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused with mission_error expired and saves no family refresh token (@spec mission#mission-bound-tokens)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
-     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused mission_expired with no refresh token saved (@spec mission#mission-bound-tokens)",
+     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -6077,13 +6315,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
-     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state revoked, NO top-level or mission authorization_details",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details",
      "level": "endpoint",
      "surface": "introspection"
     },
     {
      "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
-     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > Mission-expired composite: active:false with state expired",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > Mission-expired composite: active:false with state terminated, termination expired",
      "level": "endpoint",
      "surface": "introspection"
     }
@@ -7207,7 +7445,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Both later-delivery shapes are covered: a SIBLING condition of the same entry and the SAME condition under a different event_id, each acknowledged already_discharged with prior_version equal to current_version, no second latch row, and no second increment. An already_discharged delivery is itself recorded in the event store so a later replay of that occurrence reports the versions it saw rather than a version some unrelated transition has since advanced."
+   "notes": "Both later-delivery shapes are covered: a SIBLING condition of the same entry and the SAME condition under a different event_id, each acknowledged already_discharged with prior_version equal to new_version, no second latch row, and no second increment. An already_discharged delivery is itself recorded in the event store so a later replay of that occurrence reports the versions it saw rather than a version some unrelated transition has since advanced."
   },
   {
    "id": "status.discharge.terminal-noop",
@@ -7244,7 +7482,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "A revoked Mission answers terminal_noop with prior_version equal to current_version, no latch row, and no version increment; the expiry clock runs first (as `contain` does), so a clock-expired Mission reaches the same acknowledgement rather than latching."
+   "notes": "A Mission terminated with reason revoked answers terminal_noop with prior_version equal to new_version, no latch row, and no version increment; the expiry clock runs first (as `contain` does), so a clock-expired Mission reaches the same acknowledgement rather than latching."
   },
   {
    "id": "status.discharge.suspended-applies",
@@ -7327,6 +7565,12 @@
      "file": "src/services/authorization-server/test/discharge.test.ts",
      "name": "the discharge operation on the lifecycle endpoint > condition selectors (#898 fix 1) > never adds a digest to the result of a selector-form request",
      "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge latch: outcomes, versions, and visibility > the Discharge Result pairs prior_version with new_version, on the first commit and on an event replay, and never carries current_version (@spec discharge#discharge-result, #705)",
+     "level": "unit",
      "surface": "lifecycle-endpoint"
     }
    ],
@@ -7808,7 +8052,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "discharge_result echoes targetFormOf(the request): a selector-form request's signed result is exactly {condition_selector, event_id, outcome, prior_version, current_version}, asserted member for member."
+   "notes": "discharge_result echoes targetFormOf(the request): a selector-form request's signed result is exactly {condition_selector, event_id, outcome, prior_version, new_version}, asserted member for member."
   },
   {
    "id": "status.discharge.forward-to-replacement",
@@ -8334,7 +8578,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "`kernel.signedStatus` is the implementing surface: the test verifies the signed Status JWS under the issuer's key and asserts `carried_to` on the carried child's `cascaded` projection and its absence for an excluded child. The same assertion covers `introspectionProjection`."
+   "notes": "`kernel.signedStatus` is the implementing surface: the test verifies the signed Status JWS under the issuer's key and asserts `termination.carried_to` on the carried child's `parent_terminated` projection and its absence for an excluded child. The same assertion covers `introspectionProjection`."
   },
   {
    "id": "status.lifecycle.refresh-suspension-precheck",
@@ -8447,7 +8691,7 @@
     },
     {
      "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
-     "name": "mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint) > approval grant on a completed Mission: the refresh is refused invalid_grant with mission_completed",
+     "name": "mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint) > approval grant on a completed Mission: the refresh is refused invalid_grant with mission_error completed",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -8456,6 +8700,79 @@
      "name": "mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint) > the value names the Mission's own state: a lineage refusal while its own state is active carries none",
      "level": "unit",
      "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "status.response.termination-version",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "`version` is REQUIRED in every termination the Mission Issuer commits, and absent while an `expired` or `parent_terminated` termination is observed but not yet committed;",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a committed termination on the Status response carries `version` equal to its committing transition's state version; an observed but uncommitted `expired` termination carries none"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "termination on every emitter (#705 witnesses 1 and 2) > reports only active, suspended or terminated, with termination present exactly when terminated and carrying every member its reason requires",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "computed expiry (#705 witness 4) > a suspended Mission at its expires_at is terminated expired at every gate before materialization, and when the materializing write throws",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "status.idempotency.reason-aware-conflict",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "or `revoke` against one terminated with reason `completed`) is a conflict: the AS MUST refuse it with HTTP 409 and a JSON body whose error symbol is `conflict`, leaving the Mission state unchanged.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a repeated lifecycle operation is idempotent success only when its resulting state and termination reason both match the Mission's; `revoke` on a Mission terminated as `completed`, `complete` on one terminated as `revoked`, and `revoke` on an expired Mission are refused as a conflict with the Mission unchanged, while a byte-identical nonce replay still returns the stored response"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "idempotency compares the termination reason (#705 witness 8) > same state and reason is idempotent success; revoke on a completed termination and complete on a revoked one are conflicts",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "idempotency compares the termination reason (#705 witness 8) > revoke on an expired Mission is a conflict, whether or not the expiry was persisted",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > compares the termination reason: revoke replays byte for byte, a revoke retry with a fresh nonce is idempotent, and complete on the revoked Mission is a conflict (@spec status#idempotency, #705)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ]
   },
@@ -8933,6 +9250,27 @@
    "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: arm schedules on some members through the lifecycle endpoint, then bulk suspend the set without schedule members and read each member's schedule and committing party."
   },
   {
+   "id": "management.bulk.already-terminal-no-revocation",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "manifest",
+   "text": "`already_terminal` never reports a committed transition: a `revoke` member already terminated with reason `completed` is not revoked, and its recorded `termination` is unchanged.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a bulk `revoke` member already terminated with reason `completed` reports `already_terminal`, is not revoked, and keeps its recorded termination"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#705 (D359). The reference implementation has no Management bulk endpoint."
+  },
+  {
    "id": "signals.discharge.authority-changed-rematerialize",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "consumer-behavior",
@@ -9187,7 +9525,41 @@
      "surface": "signals"
     }
    ],
-   "notes": "Asserted on the DELIVERED SET bytes captured off the emitter's own delivery sink, driven by a real carryover completion transaction, not a hand-built payload. The excluded sibling's SET carries the same `cascaded` state with no correlation, and the replacement's activation SET carries none either."
+   "notes": "Asserted on the DELIVERED SET bytes captured off the emitter's own delivery sink, driven by a real carryover completion transaction, not a hand-built payload. The excluded sibling's SET carries the same `parent_terminated` termination with no correlation, and the replacement's activation SET carries none either."
+  },
+  {
+   "id": "signals.lifecycle-event.termination-member",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "lifecycle-event",
+   "text": "present exactly when `state` is `terminated`: the Mission's `termination`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a lifecycle-change SET carries `termination` exactly beside `state` `terminated`, with no top-level `successor` or `carried_to`, and its receiver reads `termination` from the event body"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > the SET builder emits only active, suspended or terminated, with termination exactly beside terminated and no top-level successor or carried_to",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > the receiver reads termination from the event body beside terminated only, and carries it to the harness lease",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ]
   },
   {
    "id": "cross-org.chain.presentation-closed",
@@ -20097,7 +20469,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "Same gateActiveLineage predicate as active-predicate-and-outcome above, on the Controller (AS kernel), not the resource-side PDP. The cited test sweeps every recognized non-active MissionState (suspended, revoked, expired, completed, superseded, cascaded), persisting each directly on the record before asserting both gateActive and gateDerivation throw GateError, never a positive decision."
+   "notes": "Same gateActiveLineage predicate as active-predicate-and-outcome above, on the Controller (AS kernel), not the resource-side PDP. The cited test sweeps every recognized non-active MissionState (`suspended`, and `terminated` with each of the reasons `revoked`, `expired`, `completed`, `superseded` and `parent_terminated`), persisting each directly on the record before asserting both gateActive and gateDerivation throw GateError, never a positive decision."
   },
   {
    "id": "substrate.basic-gate.unrecognized-fails-closed",
@@ -20616,13 +20988,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
-     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state revoked, NO top-level or mission authorization_details",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details",
      "level": "endpoint",
      "surface": "introspection"
     },
     {
      "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
-     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > Mission-expired composite: active:false with state expired",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > Mission-expired composite: active:false with state terminated, termination expired",
      "level": "endpoint",
      "surface": "introspection"
     }
@@ -29524,7 +29896,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "The committed `carried_to` correlation is carried on the old child's `cascaded` observation on both deployed surfaces, and omitted where no replacement committed. A batch map does not replace ordinary Child Evidence: each replacement's Child Evidence keeps `parent`, `child`, `attenuation`, `fanout` and `decision` and adds `creation_mode`, the qualified `carried_from`, `manifest_hash` and an authenticated reference to the retained map."
+   "notes": "The committed `carried_to` correlation is carried in the `termination` of the old child's `parent_terminated` observation on both deployed surfaces, and omitted where no replacement committed. A batch map does not replace ordinary Child Evidence: each replacement's Child Evidence keeps `parent`, `child`, `attenuation`, `fanout` and `decision` and adds `creation_mode`, the qualified `carried_from`, `manifest_hash` and an authenticated reference to the retained map."
   },
   {
    "id": "child-delegation.carryover.out-of-order-recovery",
@@ -29749,6 +30121,72 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1118 (D326) specification slice. Unconditional: the clause binds every Child-Mission-capable Mission Issuer on either basis, and carves out carryover replacements itself. The reference AS copies the parent's authority_source verbatim (child-delegation.ts); the candidate witness 'a Child Mission carries the parent's source verbatim' in src/services/authorization-server/test/authority-source.test.ts is not mapped or mutation-proved under this row."
+  },
+  {
+   "id": "child-delegation.child-state.own-expiry-precedence",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-state",
+   "text": "the child is `terminated` with reason `expired`, not `parent_terminated`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child whose own `expires_at` is at or before its parent's terminal cascade terminates with reason `expired`, not `parent_terminated`, on the ordinary cascade and on the Child Mission Carryover path"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "a child's own expiry outranks its parent's termination (#705 witness 6, ordinary cascade) > a child whose expires_at coincides with its parent's revocation terminates expired, not parent_terminated",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "a child's own expiry outranks its parent's termination (#705 witness 6, ordinary cascade) > a child whose expires_at equals its parent's terminates expired when the parent's expiry materializes",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > a rendered excluded child whose own expires_at arrives at completion terminates expired, not parent_terminated, in its record and in the authenticated map",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "child-delegation.child-state.projection-before-materialization",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-state",
+   "text": "This ancestor-termination projection holds at every decision, whether or not a descendant's own transition has been persisted, including when persisting it fails or rolls back.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a descendant of a terminated parent reads `terminated` with reason `parent_terminated` before its own transition commits and while that write fails, and committing it keeps the projected cause"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "the ancestor-termination projection (#705 witness 7) > a child reads terminated parent_terminated before its cascade commits and while that write fails, and materializing keeps the cause",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ]
   },
   {
    "id": "child-delegation.source.commit-check",
@@ -32271,6 +32709,27 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#967 (PR #1156). Native AAuth tests are scoped to the #836 pilot; no reference implementation of supervision-server routing exists."
+  },
+  {
+   "id": "mandate.minting.termination-at-issuance",
+   "spec": "draft-mcguinness-mission-mandate.md",
+   "anchor": "minting",
+   "text": "When that state is `terminated`, `termination_at_issuance` MUST equal the Mission's `termination` at `iat`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mandate minted for a Mission terminated at `iat` carries `termination_at_issuance` equal to that Mission's `termination` at `iat`, and none otherwise"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#705 (D359). No Mandate minting code exists in the reference implementation."
   }
  ]
 }
