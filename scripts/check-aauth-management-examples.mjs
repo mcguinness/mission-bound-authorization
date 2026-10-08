@@ -23,8 +23,10 @@
 //   terminate request: action, reason, request_id REQUIRED;
 //     replacement_s256 REQUIRED when reason is superseded.
 //   delegation-tree response: mission_s256, as_of, nodes, complete REQUIRED;
-//     each node has agent and relationship; a non-root node has parent_agent;
-//     next_cursor is present exactly when complete is false.
+//     each node has agent and relationship; a sub_agent node has
+//     parent_agent; a call_chain node has no parent_agent and carries
+//     upstream_token and person_token ({iss, jti} objects) together or not
+//     at all; next_cursor is present exactly when complete is false.
 //   metadata: issuer, mission_control_endpoint and
 //     mission_control_actions_supported, which MUST contain status and
 //     terminate.
@@ -186,7 +188,16 @@ const CHECKS = {
     for (const [k, n] of (o.nodes || []).entries()) {
       if (!n.agent) err(`node ${k} missing agent`);
       if (!RELATIONSHIPS.includes(n.relationship)) err(`node ${k} relationship ${n.relationship} is not defined`);
-      if (n.relationship && n.relationship !== "root" && !n.parent_agent) err(`node ${k} is non-root without parent_agent`);
+      if (n.relationship === "sub_agent" && !n.parent_agent) err(`node ${k} is sub_agent without parent_agent`);
+      if (n.relationship === "call_chain") {
+        if ("parent_agent" in n) err(`node ${k} is call_chain with parent_agent; a hop is identified by its token references`);
+        const refs = ["upstream_token", "person_token"].filter((m) => m in n);
+        if (refs.length === 1) err(`node ${k} is call_chain with only ${refs[0]}; upstream_token and person_token are returned together`);
+        for (const m of refs) {
+          const r = n[m];
+          if (typeof r !== "object" || r === null || typeof r.iss !== "string" || typeof r.jti !== "string") err(`node ${k} ${m} is not an {iss, jti} object`);
+        }
+      }
     }
   },
   "metadata": (o, err) => {

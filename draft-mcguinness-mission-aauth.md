@@ -674,6 +674,23 @@ four-party access) copies the same flat `mission_s256` claim onward
 from the resource token (Section 9.4.1 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}).
 
+A resource that calls a downstream resource for its caller acts as an
+intermediary: an agent with its own agent identifier and key (Section
+10.1.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  It requests a
+person token for the downstream resource, presenting the token its
+caller presented as `upstream_token`.  When that upstream token carries
+`mission_s256`, the PS evaluates the request against that mission and
+copies `mission_s256` into the person token it issues; the
+intermediary does not send `mission_s256` of its own (Sections 7.1 and
+10.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  The copied
+`mission_s256` names the mission, not a version of its Approved
+Context ({{reference}}); the PS evaluates each chained request against
+the mission's current version when it decides.  A chained hop is
+therefore PS-governed derivation under the same Mission, not a child
+mission: the Mission's `agent` stays the root actor, the intermediary
+is a separate actor ({{mission-substrate}}), and the hop's supervision
+decision follows {{roles}}.
+
 This binding adds no member alongside that claim.  The approving PS
 that scopes it is named as {{reference}} describes.  Receivers MUST NOT
 require `mission_id`,
@@ -1082,11 +1099,15 @@ The contextual-governance kernel maps as follows:
    governance state, and the mission log ({{roles}}).  Consumers
    establish its identity and keys from AAuth's published PS metadata
    and key set ({{I-D.draft-hardt-oauth-aauth-protocol}}).
-3. **Actor binding**: the blob's `agent` member names the AAuth agent
-   identifier, authenticated by its agent token and HTTP message
-   signatures; parent-mediated and call-chaining relationships are
-   the only delegations, and the identifier maps to no OAuth
-   `client_id` ({{blob}}, {{roles}}).
+3. **Actor binding**: the blob's `agent` member names the root actor,
+   the AAuth agent identifier authenticated by its agent token and
+   HTTP message signatures; parent-mediated and call-chaining
+   relationships are the only delegations, and the identifier maps to
+   no OAuth `client_id` ({{blob}}, {{roles}}).  The holder of a chained
+   person token is the intermediary, a separate actor whose agent
+   identity the PS establishes from the intermediary's authenticated
+   agent token and its own records; the token's `cnf` binds the key,
+   not the identity ({{ref-propagation}}).
 4. **Approved Context**: the private approved mission blob, delivered
    as the approval envelope's base64url `mission` member and immutable
    under the exact-byte `s256` commitment over its decoded bytes, and
@@ -1119,9 +1140,11 @@ The contextual-governance kernel maps as follows:
    Expiry {{I-D.draft-mcguinness-aauth-mission-expiry}} profiles the
    member this binding relies on.
 8. **Context propagation**: the signed `mission_s256` claim, carried
-   by person, resource, and auth tokens, carries governance context;
-   the blob itself never propagates; coverage varies by access mode
-   ({{ref-propagation}}, {{access-modes}}).
+   by person, resource, and auth tokens, carries governance context,
+   including on a person token the PS issues to an intermediary on an
+   upstream token, where the PS copies the claim and the intermediary
+   never supplies it; the blob itself never propagates; coverage varies
+   by access mode ({{ref-propagation}}, {{access-modes}}).
 9. **Governance record**: the PS mission log is the ordered
    governance record, scoped to PS-observed operations with
    agent-reported local activity distinguished, and with the
@@ -1180,6 +1203,13 @@ incremental deployment remain distinct concerns.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A chained hop is PS-governed derivation under the same Mission: the
+  Mission's `agent` is the root actor, the holder of a chained person
+  token is the intermediary, whose identity the PS establishes from its
+  authenticated agent token and its records (`cnf` binds only the key),
+  and the PS copies `mission_s256` from the upstream token, which the
+  intermediary never supplies (#966).
 
 - An accepted update approves a new immutable version of the Approved
   Context, identified by the Mission Reference and its position in the
