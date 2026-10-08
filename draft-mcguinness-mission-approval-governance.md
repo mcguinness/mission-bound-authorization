@@ -323,7 +323,7 @@ plus the integrity `envelope` {{envelope}} defines.
       the authentication context of the assertion. For a `policy`
       assertion, the deciding policy's identifier and version, and
       `approved_at`: the family's provenance chain for non-human
-      approval, in which the policy approves the instance because a
+      adjudication, in which the policy decides the instance because a
       human approved the policy. For a `service` assertion, the
       identifier and version of the logic that produced the decision,
       including the model's identifier and version where a model
@@ -428,10 +428,13 @@ These rules are the record's security core.
   negative assertion misrepresents the decision.
 - Exactly one assertion MUST match the Mission record's accountable
   `approver` and carry an `approve` decision; the record supports
-  the approval it claims to govern or it does not commit. A
-  policy-authority Approver satisfies this with a `policy` assertion
-  carrying its provenance chain, subject to the high-risk-class
-  restriction of {{policy-approval-recency}}. The matching
+  the approval it claims to govern or it does not commit. Where the
+  accountable approver's approval is exercised through an authorized
+  deterministic policy, the matching assertion is a `policy`
+  assertion carrying that policy's provenance chain: the policy is the
+  decision mechanism and the matched principal stays the accountable
+  approver, subject to the high-risk-class restriction of
+  {{policy-approval-recency}}. The matching
   assertion's `kind` MUST be `human` or `policy`: a `service`
   assertion, including one a model produced, is a contributing
   governance input, never the accountable approver's assertion. A
@@ -1319,6 +1322,11 @@ version before treating the evaluation as re-checked
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Assertion Requirements and the `authority` member name a `policy`
+  assertion's policy as the decision mechanism; the principal it
+  matches stays the accountable approver. The policy assertion path,
+  provenance and recency checks are unchanged (#1084).
 
 - The accountable approver's assertion is `human` or `policy`, never
   `service`, and `authority` is defined for a `service` assertion,
