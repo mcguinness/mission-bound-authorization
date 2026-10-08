@@ -59,8 +59,8 @@
     "content_sha256": "9201cdc83aa8e79a1a2615bf25f69c9ff8fac11424be6336c8f5052ba1f24b5b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "fd935e96fc5069a89ba676c3748820c6d8ac66be",
-    "content_sha256": "3777606e2cf8670ade9109ef217994ab980a625f4327c9ed9936134b6b0ac09c"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "435652531b159beb785f5867c9e09da1fad63263586b4a9cbfef79b9b63b9b1f"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -79,8 +79,8 @@
     "content_sha256": "72d16463993b55af9238d7374a0a39764b6a8086935515180fa4841344510119"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "afea606f3b955198867531dd37c68921907f29be",
-    "content_sha256": "c3a1a76468ca3bb889530928e25375f3001999571a31fa9437c9c89f9f006769"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "81de7af0ad94b3a39a6ec8067377ac39b9884a4705cd14c24cd712c9f090a5f1"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -103,12 +103,12 @@
     "content_sha256": "5be7ff2eda5a6c1b20cb10b2fa6791d4b05dc06b609d8f43b850214ef33a9aa2"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "b8109b0c3ad8216fc6c3ef3488a03b98d344a576",
-    "content_sha256": "4005ab62f0ad304e30982923ce4a1670d00783f236baa526091dd64ff0adf5e4"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "cb10f822787bc00906fc6250622e11f5b3510527123e441f194dfcea77505fec"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "4f46dda7206399ad63f6e59303fc673a8668ab9a12c0120b328ea99135d7d909"
+    "revision": "c74a85acc97dc6ba157b26721f18767d76085b80",
+    "content_sha256": "ae693e62093b5de105aabc0df10b335856e3f16b6af189e646bf8451dce2d33e"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
