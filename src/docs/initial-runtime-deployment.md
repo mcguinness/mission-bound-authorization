@@ -260,9 +260,11 @@ to a configured store and model, or, as a development operation, bootstraps
 one and provisions `config/seed/resource-policy.json`:
 [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > a stored entitlement permits; an external revocation of only that entitlement denies resource_policy on the next decision with signed evidence; restoring it permits`.
 Remaining under #828: the live witnesses run only in CI; no policy requires
-a client; `lookup_vendor` and an unconstrained `list_invoices` name no
-enumerable target, so the policy refuses them; the payments Operation Profile
-and the Enforcement Scope Statement do not yet declare the policy.
+a client; `lookup_vendor` names the vendor the store resolved (D324), but a
+vendor the store does not hold keeps the server target, and an unconstrained
+`list_invoices` names the unscoped vendor object, so the policy refuses both;
+the payments Operation Profile and the Enforcement Scope Statement do not yet
+declare the policy.
 
 Deployment-administered gates that do exist: the action-bound approval for
 `payments:remittance.send` (§3), the action-to-relation map (`out_of_authority`,
@@ -444,9 +446,15 @@ service, with no MAS join route. It mints no ordinary token. It prints the
 issuer, the AS capability set, the resource audience and the PDP mode, and
 needs only `pnpm setup` and `docker compose up -d` (OpenFGA).
 
-Its configuration is the OpenFGA connection and the PDP mode from the
-environment, and nothing else (`asNativeLaunchOptions`, `demo/src/as-native.ts:22`).
-A value that is set but unusable, an unreachable OpenFGA or a port already in
+Its configuration is the OpenFGA connection, the Resource-policy store and
+the PDP mode from the environment, and nothing else (`asNativeLaunchOptions`,
+`demo/src/as-native.ts:22`). With `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID`
+set it attaches to that store and model, verifying the model and creating
+nothing; with neither it bootstraps a development store seeded from
+`config/seed/resource-policy.json` and prints its ids (#828):
+`the as-native launcher in process, OpenFGA client stubbed (D332) > attaches to a configured Resource-policy store and model: it reads the model back and creates, writes and seeds nothing (#828)`.
+A value that is set but unusable, one of the two store variables without
+the other, an unreachable OpenFGA or a port already in
 use fails startup with one `as-native: startup failed:` line and exit status
 1, and a failed startup releases what it opened. SIGINT, SIGTERM or SIGHUP
 closes every listener and both store files and exits 0. The launcher refuses
