@@ -957,7 +957,8 @@ export async function handleAsyncDelegationExchange(
     return;
   }
   // Confine the requested authorization_details to a subset of the ACTIVE Authority
-  // Set. Absent -> the full active set (the Mission's authority is the ceiling).
+  // Set and of the presented token's own authority. Absent -> the presented
+  // token's authority as the active set narrows it (the Mission is the ceiling).
   // Containment: the ceiling (and the absent-case default) is the EFFECTIVE set,
   // so a contained capability cannot ride an async-delegation family.
   // @spec issuance-grant#effective-set-projection (#617 review 1) — resolved
@@ -975,10 +976,36 @@ export async function handleAsyncDelegationExchange(
     }
     throw e;
   }
+  // @spec mission#self-exchange rule 2, runtime#input-authority (#825 PR 2c,
+  // D312) — this is a no-actor exchange of the agent's own token, so the family
+  // is bounded by the presented token's own authority as well as the Mission's:
+  // a down-scoped token never opens a family broader than itself. A Mission
+  // access token whose authority cannot be read is refused, never replaced by
+  // the Mission's.
+  const presentedRaw = baseClaims.authorization_details;
+  const wellFormed = (e: unknown): boolean => {
+    if (typeof e !== "object" || e === null || Array.isArray(e)) return false;
+    const entry = e as Record<string, unknown>;
+    return (
+      typeof entry.type === "string" &&
+      typeof entry.resource === "string" &&
+      Array.isArray(entry.actions) &&
+      entry.actions.every((a) => typeof a === "string")
+    );
+  };
+  if (!Array.isArray(presentedRaw) || presentedRaw.length === 0 || !presentedRaw.every(wellFormed)) {
+    txError(ctx, 400, "invalid_grant", "subject_token carries no readable authorization_details");
+    return;
+  }
+  const presentedAuthority = presentedRaw as AuthorityEntry[];
   let confinedSubset: AuthorityEntry[];
   if (requestedSubset === undefined) {
-    confinedSubset = effective;
+    confinedSubset = projectThroughEffective(presentedAuthority, effective);
   } else {
+    if (!isSubsetSetIgnoringCapabilitySources(requestedSubset, presentedAuthority)) {
+      txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the presented token's authority");
+      return;
+    }
     if (!isSubsetSetIgnoringCapabilitySources(requestedSubset, effective)) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority");
       return;
