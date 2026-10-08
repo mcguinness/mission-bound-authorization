@@ -740,8 +740,8 @@ Four assumptions hold across the whole model:
   method ({{I-D.draft-mcguinness-oauth-id-assertion-framework}},
   {{I-D.draft-mcguinness-oauth-domain-authorized-issuer}}) are
   concrete publication and evaluation mechanisms for such policy.
-- **Authority does not move on inert input.** `success_criteria`
-  and disclosure-only audit material are inert and cannot derive,
+- **Authority does not move on inert input.** `task_bounds` and
+  disclosure-only audit material are inert and cannot derive,
   widen, or gate authority; `goal` shapes authority only through the
   pre-approval derivation whose result the Approver reads and
   consents to, and is inert once the Mission is approved. `purpose`
@@ -959,7 +959,7 @@ Compromised or injected agent acts beyond its task:
 
 Prompt injection tries to widen authority:
 : Addressed by the same approval-time commitment: the Intent's prose
-  members (`goal`, `constraints`, `success_criteria`) are inert at
+  members (`goal`, `task_bounds`) are inert at
   derivation, never parsed for machine semantics; authority enters as
   the structured proposal the AS only narrows, and the Approver
   consents to the derived result ({{I-D.draft-mcguinness-oauth-mission}}). Residual:
@@ -1522,6 +1522,11 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Prose-member references follow the OAuth binding, which removed
+  `success_criteria`: the inert-input assumption names `task_bounds`,
+  and the prompt-injection entry names `goal` and `task_bounds`
+  (replacing the retired `constraints`).
 
 - The inert-input assumption separates `purpose` from inert material:
   it selects candidate authority only as a configured-mapping lookup
