@@ -1387,9 +1387,9 @@ the member definitions in the surrounding text are authoritative.<a href="#secti
 <p id="section-3-1">Without entry discharge, a Mission granted authority to release a
 record "for this enrollment" keeps deriving that authority after the
 enrollment closes, until a clock or a revoke stops it. The Intent's
-<code>success_criteria</code> describe when the task is complete, but the
-issuance profile keeps them inert: they are rendered and committed,
-and carry no machine effect (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3-1" class="pilcrow">¶</a></p>
+prose can say when the task is complete, but the issuance profile
+keeps it inert: it is rendered and committed, and carries no machine
+effect (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">Three properties make discharge safe inside the Mission model, and
 this section requires all three:<a href="#section-3-2" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1425,8 +1425,7 @@ and on its Mission Resource Access Profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), and is not
 implementable alone. It reuses, without restating, the issuance
 profile's Mission, Authority Set, subset rule, integrity anchors,
-lifecycle states, and issuance gating, and the inert <code>success_criteria</code>
-member of the Mission Intent; and the Mission Resource Access
+lifecycle states, and issuance gating; and the Mission Resource Access
 Profile's <code>mission_resource_access</code> entry and Common Constraints
 registry. It uses Mission, Mission Issuer, Authority Set, and
 derivation as the issuance profile defines them, and the
@@ -1499,10 +1498,11 @@ operation (<a href="#discharge-operation" class="auto internal xref">Section 4.3
 of the single condition object, in the issuance profile's encoded
 form: the same canonical form the registration's no-duplicate rule
 above already fixes as condition identity (<a href="#iana-terminal-when" class="auto internal xref">Section 7.1</a>).<a href="#section-3.2-4" class="pilcrow">¶</a></p>
-<p id="section-3.2-5"><code>terminal_when</code> is the enforceable counterpart of the inert
-<code>success_criteria</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), which
-remains inert: <code>success_criteria</code> describe completion for the Approver,
-<code>terminal_when</code> acts on it. It is distinct from a cumulative
+<p id="section-3.2-5"><code>terminal_when</code> is the enforceable statement of when one entry is
+complete. It says nothing about whether the task as a whole
+succeeded, and the Intent's prose stays inert
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It is distinct from a
+cumulative
 consumption bound, which meters volume;
 a <code>terminal_when</code> condition is a single external event.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
 </section>
@@ -2792,16 +2792,23 @@ entry carrying a <code>terminal_when</code> constraint it does not understand
 <p id="section-9-1">[[ To be removed from the final specification ]]<a href="#section-9-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-2.1">
-          <p id="section-9-2.1.1">Discharge Commit (<a href="#discharge-commit" class="auto internal xref">Section 4.1</a>): a committed discharge places
+          <p id="section-9-2.1.1">The Mission Intent no longer carries <code>success_criteria</code>, following
+the OAuth binding. <code>terminal_when</code> is described as the enforceable
+statement of one entry's completion, not of the task's success, and
+the Introduction says the Intent's prose stays inert. No requirement
+changed.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.2">
+          <p id="section-9-2.2.1">Discharge Commit (<a href="#discharge-commit" class="auto internal xref">Section 4.1</a>): a committed discharge places
 a restriction on the Mission's expansion chain, retained across later
 successors and cleared only for the authority a fresh human approval
 explicitly restores with the discharged entry and its condition
-disclosed. The discharge itself never reverts.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+disclosed. The discharge itself never reverts.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.2">
-          <p id="section-9-2.2.1">Relationship to Runtime Enforcement (<a href="#runtime" class="auto internal xref">Section 3.7</a>): issuance-only
+        <li class="normal" id="section-9-2.3">
+          <p id="section-9-2.3.1">Relationship to Runtime Enforcement (<a href="#runtime" class="auto internal xref">Section 3.7</a>): issuance-only
 discharge stays conforming; where the runtime profile runs, its PDP
-refuses a discharged entry.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+refuses a discharged entry.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

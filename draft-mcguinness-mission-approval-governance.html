@@ -1523,7 +1523,7 @@ principal was authorized to decide. For a <code>human</code> assertion,
 the authentication context of the assertion. For a <code>policy</code>
 assertion, the deciding policy's identifier and version, and
 <code>approved_at</code>: the family's provenance chain for non-human
-approval, in which the policy approves the instance because a
+adjudication, in which the policy decides the instance because a
 human approved the policy. For a <code>service</code> assertion, the
 identifier and version of the logic that produced the decision,
 including the model's identifier and version where a model
@@ -1655,10 +1655,13 @@ negative assertion misrepresents the decision.<a href="#section-5-2.4.1" class="
         <li class="normal" id="section-5-2.5">
           <p id="section-5-2.5.1">Exactly one assertion <span class="bcp14">MUST</span> match the Mission record's accountable
 <code>approver</code> and carry an <code>approve</code> decision; the record supports
-the approval it claims to govern or it does not commit. A
-policy-authority Approver satisfies this with a <code>policy</code> assertion
-carrying its provenance chain, subject to the high-risk-class
-restriction of <a href="#policy-approval-recency" class="auto internal xref">Section 7</a>. The matching
+the approval it claims to govern or it does not commit. Where the
+accountable approver's approval is exercised through an authorized
+deterministic policy, the matching assertion is a <code>policy</code>
+assertion carrying that policy's provenance chain: the policy is the
+decision mechanism and the matched principal stays the accountable
+approver, subject to the high-risk-class restriction of
+<a href="#policy-approval-recency" class="auto internal xref">Section 7</a>. The matching
 assertion's <code>kind</code> <span class="bcp14">MUST</span> be <code>human</code> or <code>policy</code>: a <code>service</code>
 assertion, including one a model produced, is a contributing
 governance input, never the accountable approver's assertion. A
@@ -3019,23 +3022,29 @@ version before treating the evaluation as re-checked
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The accountable approver's assertion is <code>human</code> or <code>policy</code>, never
+          <p id="appendix-A-2.1.1">Assertion Requirements and the <code>authority</code> member name a <code>policy</code>
+assertion's policy as the decision mechanism; the principal it
+matches stays the accountable approver. The policy assertion path,
+provenance and recency checks are unchanged (#1084).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">The accountable approver's assertion is <code>human</code> or <code>policy</code>, never
 <code>service</code>, and <code>authority</code> is defined for a <code>service</code> assertion,
 naming the model's identifier and version where a model produced
 the decision. A model-backed judge contributes as a governance input
-and never becomes the accountable approver. This adds a requirement.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+and never becomes the accountable approver. This adds a requirement.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">The Approval Context Manifest copies a recorded <code>ceiling_hash</code>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">The Approval Context Manifest copies a recorded <code>ceiling_hash</code>
 verbatim, so the Progressive profile is an informative reference,
 meeting the maturity bound of the reference classification
 convention (a Standards-Track draft never lists an Experimental
 draft as normative). The manifest's members and both <code>ceiling_hash</code>
-presence requirements are unchanged.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+presence requirements are unchanged.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Clarified that the direct-human degenerate case presumes resolution by
-that human, not agent-invokable approval on the human's behalf (#759).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Clarified that the direct-human degenerate case presumes resolution by
+that human, not agent-invokable approval on the human's behalf (#759).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

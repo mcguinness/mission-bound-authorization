@@ -1236,6 +1236,9 @@ Mission is unaffected by this document.<a href="#section-abstract-1" class="pilc
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
                 <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-successor-expiry" class="internal xref">Successor expiry</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
+                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-successor-subject-and-autho" class="internal xref">Successor Subject and authority source</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
@@ -2282,6 +2285,25 @@ carryover remains bounded by the old child and its new parent's effective
 expiry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-5.5-4" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="successor-source">
+<section id="section-5.6">
+        <h3 id="name-successor-subject-and-autho">
+<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-successor-subject-and-autho" class="section-name selfRef">Successor Subject and authority source</a>
+        </h3>
+<p id="section-5.6-1">A successor's <code>subject</code> and <code>authority_source</code> <span class="bcp14">MUST</span> equal the
+predecessor's, whichever completion mode or approval basis creates it;
+an approval that would establish another Subject or source creates no
+successor. Work for another Subject or source continues under a
+separately approved Mission, outside succession
+(<a href="#independent-continuation" class="auto internal xref">Section 9</a>).<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+<p id="section-5.6-2">In the commit that activates the successor, the Mission Issuer <span class="bcp14">MUST</span>
+verify that the source still applies to the Subject and that the
+successor Authority Set lies within the source's ceiling as it stands
+at that commit. On failure it creates no successor and leaves the
+predecessor <code>active</code>. The same commit rechecks the effective expiry
+(<a href="#successor-expiry" class="auto internal xref">Section 5.5</a>).<a href="#section-5.6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="predecessor-member">
@@ -3264,19 +3286,24 @@ deferred token response or the interactive handoff
 (<a href="#successor-expiry" class="auto internal xref">Section 5.5</a>);<a href="#section-14-4.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-4.6">
-          <p id="section-14-4.6.1">record the <code>predecessor</code> member on the successor's <code>mission</code> claim
-and Mission record (<a href="#predecessor-member" class="auto internal xref">Section 6</a>);<a href="#section-14-4.6.1" class="pilcrow">¶</a></p>
+          <p id="section-14-4.6.1">keep the predecessor's <code>subject</code> and <code>authority_source</code> on the
+successor and verify that source in the activating commit
+(<a href="#successor-source" class="auto internal xref">Section 5.6</a>);<a href="#section-14-4.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-4.7">
-          <p id="section-14-4.7.1">activate the successor and transition the predecessor to <code>superseded</code>
+          <p id="section-14-4.7.1">record the <code>predecessor</code> member on the successor's <code>mission</code> claim
+and Mission record (<a href="#predecessor-member" class="auto internal xref">Section 6</a>);<a href="#section-14-4.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-4.8">
+          <p id="section-14-4.8.1">activate the successor and transition the predecessor to <code>superseded</code>
 atomically when the successor's authority is issued, leaving the
 predecessor <code>active</code> until then, re-verifying predecessor state at
 completion (<a href="#deferred-window" class="auto internal xref">Section 5.4</a>), and refuse further derivation under
-a <code>superseded</code> Mission (<a href="#superseded-state" class="auto internal xref">Section 7</a>); and<a href="#section-14-4.7.1" class="pilcrow">¶</a></p>
+a <code>superseded</code> Mission (<a href="#superseded-state" class="auto internal xref">Section 7</a>); and<a href="#section-14-4.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-14-4.8">
-          <p id="section-14-4.8.1">serialize concurrent expansions against the same predecessor with the
-reconciliation semantics of <a href="#reconciliation" class="auto internal xref">Section 10</a>.<a href="#section-14-4.8.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-14-4.9">
+          <p id="section-14-4.9.1">serialize concurrent expansions against the same predecessor with the
+reconciliation semantics of <a href="#reconciliation" class="auto internal xref">Section 10</a>.<a href="#section-14-4.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-14-5">An expansion-capable Mission Issuer is also a conforming issuance-profile
@@ -4008,33 +4035,41 @@ composition with the issuance flow.<a href="#section-18-1" class="pilcrow">¶</a
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Interactive completion has a defined handoff: the token exchange
+          <p id="appendix-A-2.1.1">Successor Subject and authority source: every successor keeps the
+predecessor's <code>subject</code> and <code>authority_source</code>, whatever approval
+basis creates it; another Subject or source needs a separately
+approved Mission outside succession, and the activating commit
+verifies that the source applies and that its current ceiling covers
+the successor (#1118).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Interactive completion has a defined handoff: the token exchange
 answers <code>mission_interaction_required</code> with a <code>mission_continuation</code>
 handle, the client pushes an RFC 9126 request carrying it, and code
 redemption activates the successor; the handle names the durable
-operation and each <code>request_uri</code> is a temporary reference.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">An in-ceiling drawdown under the progressive authorization companion
-completes synchronously in the token-exchange response, a third
-issuance point; fresh-consent expansion still completes deferred or
-interactively.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+operation and each <code>request_uri</code> is a temporary reference.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Successor activation's compare-and-set also rechecks the complete
-successor Authority Set against current containment and discharge
-restrictions, refusing with <code>authority_restricted_since_approval</code>
-when narrowing landed after adjudication.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.3.1">An in-ceiling drawdown under the progressive authorization companion
+completes synchronously in the token-exchange response, a third
+issuance point; fresh-consent expansion still completes deferred or
+interactively.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">A fresh-consent restoration of authority under a discharge
-restriction authorizes that authority explicitly and discloses the
-discharged entry and its condition; the consent also surfaces the
-chain's outstanding containment restrictions.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.4.1">Successor activation's compare-and-set also rechecks the complete
+successor Authority Set against current containment and discharge
+restrictions, refusing with <code>authority_restricted_since_approval</code>
+when narrowing landed after adjudication.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Added explicitly approved carryover hooks for disclosure, atomic completion,
-and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.5.1">A fresh-consent restoration of authority under a discharge
+restriction authorizes that authority explicitly and discloses the
+discharged entry and its condition; the consent also surfaces the
+chain's outstanding containment restrictions.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">Added explicitly approved carryover hooks for disclosure, atomic completion,
+and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

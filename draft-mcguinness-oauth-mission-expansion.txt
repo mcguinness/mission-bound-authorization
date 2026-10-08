@@ -97,6 +97,7 @@ Table of Contents
      5.3.  Interactive handoff
      5.4.  The deferred window
      5.5.  Successor expiry
+     5.6.  Successor Subject and authority source
    6.  The Predecessor Mission Reference
    7.  The Superseded Predecessor State
      7.1.  No implicit rollback
@@ -890,6 +891,21 @@ Table of Contents
    parent's effective expiry
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
 
+5.6.  Successor Subject and authority source
+
+   A successor's subject and authority_source MUST equal the
+   predecessor's, whichever completion mode or approval basis creates
+   it; an approval that would establish another Subject or source
+   creates no successor.  Work for another Subject or source continues
+   under a separately approved Mission, outside succession (Section 9).
+
+   In the commit that activates the successor, the Mission Issuer MUST
+   verify that the source still applies to the Subject and that the
+   successor Authority Set lies within the source's ceiling as it stands
+   at that commit.  On failure it creates no successor and leaves the
+   predecessor active.  The same commit rechecks the effective expiry
+   (Section 5.5).
+
 6.  The Predecessor Mission Reference
 
    The successor records a lineage link to the predecessor as a
@@ -1654,6 +1670,10 @@ Table of Contents
       Section 5.3) and enforcing the successor-expiry rule
       (Section 5.5);
 
+   *  keep the predecessor's subject and authority_source on the
+      successor and verify that source in the activating commit
+      (Section 5.6);
+
    *  record the predecessor member on the successor's mission claim and
       Mission record (Section 6);
 
@@ -2273,6 +2293,13 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Successor Subject and authority source: every successor keeps the
+      predecessor's subject and authority_source, whatever approval
+      basis creates it; another Subject or source needs a separately
+      approved Mission outside succession, and the activating commit
+      verifies that the source applies and that its current ceiling
+      covers the successor (#1118).
 
    *  Interactive completion has a defined handoff: the token exchange
       answers mission_interaction_required with a mission_continuation

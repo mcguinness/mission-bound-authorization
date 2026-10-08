@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-08T00:07:15Z
-Source repository commit: 113bb296619e6258459834206881d2726da74f1f
+Generated: 2026-10-08T03:59:06Z
+Source repository commit: 241f808b424f003bb678282d3f17d8f478c597d6
 Member count: 9
 
 Reading order:
@@ -1387,18 +1387,23 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
    Who holds the deciding side is a spectrum, not a species.  The
-   approval event requires an accountable principal deciding against
-   committed inputs before any authority exists, and the proposer is
-   never the approver.
+   approval event requires a decision against committed inputs before
+   any authority exists, made by the accountable principal or by a
+   policy that principal authorized, and the proposer is never the
+   approver.
 
-   A deterministic, versioned policy can approve at machine speed within
-   a ceiling a human consented to (the template, policy_drawdown, and
-   ceiling_drawdown authorization bases that companion profiles define
-   on the OAuth binding's extension point; see Authorization bases in
-   Section 8).  Policy approves the instance because a human approved
-   the policy or the template; policy_version keeps that chain re-
-   checkable.  Derivation fixes the authority, the adjudicator (a human
-   or such a policy) decides activation, and a human is accountable.
+   A deterministic, versioned policy can adjudicate activation at
+   machine speed within a ceiling a human consented to (the template,
+   policy_drawdown, and ceiling_drawdown authorization bases that
+   companion profiles define on the OAuth binding's extension point; see
+   Authorization bases in Section 8).  The policy is the instance's
+   adjudication mechanism; the human or human-accountable principal who
+   consented to the policy or the template stays the accountable
+   Approver (consent_principal), and policy_version keeps that chain re-
+   checkable.  A policy artifact, a model's output, or the actor that
+   triggered the instance never becomes that principal.  Derivation
+   fixes the authority, the adjudicator (a human or such a policy)
+   decides activation, and a human is accountable.
 
    A model's judgment, over risk signals or enterprise context, enters
    adjudication only as a recorded input to the policy: it can refuse or
@@ -2016,12 +2021,11 @@ Table of Contents
    Derivation is mechanical: the Mission Issuer narrows a submitted
    authority proposal to policy, or looks up candidate entries in a
    configured mapping keyed on structured Intent members and narrows
-   those.  The prose members (goal, task_bounds, success_criteria) never
-   change what is derived; they bound authority through disclosure,
-   since the Approver refuses authority the words do not support.
-   Translating a user's words into structure is the shaper's job, before
-   admission and outside the trust boundary
-   ([I-D.draft-mcguinness-mission-shaping]).
+   those.  The prose members (goal, task_bounds) never change what is
+   derived; they bound authority through disclosure, since the Approver
+   refuses authority the words do not support.  Translating a user's
+   words into structure is the shaper's job, before admission and
+   outside the trust boundary ([I-D.draft-mcguinness-mission-shaping]).
 
    Derivation policy stays local: what the Mission Issuer narrows to,
    and what its mappings contain.  The consequence is a trust boundary:
@@ -5399,6 +5403,15 @@ Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  The Approve and Record discussion names the authorized policy as
+      an instance's adjudication mechanism and the human who consented
+      to the policy or template as the accountable Approver
+      (consent_principal); no policy artifact, model output or
+      triggering actor becomes that principal (#1084).
+
+   *  The prose members are goal and task_bounds, following the OAuth
+      binding's removal of success_criteria.
+
    *  Revocation is possession-independent points at the Security
       Model's statement that revocation does not prohibit equivalent
       authority under a separately approved Mission.  No profile's
@@ -7882,13 +7895,13 @@ Table of Contents
    The client writes every member; how it produces them, for example
    through a Mission Shaper working from a natural-language instruction,
    is out of scope (Appendix B.3).  The prose members (goal,
-   task_bounds, success_criteria) bound authority only through
-   disclosure: the Approver refuses authority the words do not support
-   (Section 5).  An AS that makes no use of an optional member still
-   accepts it and records it with the Intent (Section 4.4).  The
-   smallest Intent carries only the three required members, as in the
-   Submission envelope example (Section 4.1).  The following summary is
-   informative; the member definitions after it are authoritative.
+   task_bounds) bound authority only through disclosure: the Approver
+   refuses authority the words do not support (Section 5).  An AS that
+   makes no use of an optional member still accepts it and records it
+   with the Intent (Section 4.4).  The smallest Intent carries only the
+   three required members, as in the Submission envelope example
+   (Section 4.1).  The following summary is informative; the member
+   definitions after it are authoritative.
 
      +==================+==========+=================================+
      | Member           | Required | What the AS does with it        |
@@ -7908,10 +7921,6 @@ Table of Contents
      |                  |          | the Approver as inert text;     |
      |                  |          | never interprets it             |
      +------------------+----------+---------------------------------+
-     | success_criteria | no       | Records it and renders it to    |
-     |                  |          | the Approver as inert text;     |
-     |                  |          | never interprets it             |
-     +------------------+----------+---------------------------------+
      | purpose          | no       | Records it; can key a           |
      |                  |          | configured mapping; in any      |
      |                  |          | other decision can only lead to |
@@ -7927,17 +7936,19 @@ Table of Contents
    The Mission Intent members are:
 
    goal:  REQUIRED.  A string.  A human-readable statement of the task,
-      for rendering to the Approver.  Maximum 4096 characters.  Prose
-      here persists on the record and can carry personal data about
-      third parties (Section 20.4).
+      for rendering to the Approver.  It can describe the outcomes that
+      show the task is complete; like the rest of the prose, that
+      description carries no machine semantics (Section 5).  Maximum
+      4096 characters.  Prose here persists on the record and can carry
+      personal data about third parties (Section 20.4).
 
    goal_lang:  OPTIONAL.  A string.  A BCP 47 language tag [RFC5646]
       declaring the language of the Intent's human-readable members
-      (goal, task_bounds, success_criteria).  It is disclosure metadata
-      for rendering, committed by intent_hash like every Intent member,
-      and carries no machine semantics (Section 5).  At submission
-      acceptance, the AS MUST refuse a goal_lang that is not a well-
-      formed language tag with invalid_request (Section 21).
+      (goal, task_bounds).  It is disclosure metadata for rendering,
+      committed by intent_hash like every Intent member, and carries no
+      machine semantics (Section 5).  At submission acceptance, the AS
+      MUST refuse a goal_lang that is not a well-formed language tag
+      with invalid_request (Section 21).
 
    target_resources:  REQUIRED.  An array of strings.  A client-
       requested Intent ceiling on the task's target resources, each an
@@ -7955,12 +7966,6 @@ Table of Contents
       the derived Authority Set (Section 6), and carry no machine
       semantics (Section 5); a machine-enforceable bound enters as
       structure instead.
-
-   success_criteria:  OPTIONAL.  An array of strings.  Human-readable
-      observable outcomes that indicate the task is complete.  These are
-      disclosure and audit material only: they are rendered to the
-      Approver and committed by intent_hash (Section 8.1) and carry no
-      machine semantics (Section 5).
 
    purpose:  OPTIONAL.  A string.  A URI identifying the purpose of the
       task, recorded for disclosure and audit.  Its semantics are
@@ -8006,10 +8011,6 @@ Table of Contents
      "task_bounds": [
        "Read only invoices issued in 2026-Q3.",
        "Post journal entries under $500."
-     ],
-     "success_criteria": [
-       "All Q3 invoices reconciled.",
-       "Each posted adjustment references a source invoice."
      ],
      "purpose": "urn:example:purpose:reconcile",
      "expires_at": "2026-12-31T23:59:59Z"
@@ -8362,14 +8363,13 @@ Table of Contents
    (the Approver refuses authority the words do not support), and none
    widens.
 
-   The goal, task_bounds, and success_criteria members are human-
-   readable disclosure and audit context.  The AS MUST derive the same
-   Authority Set, under the same policy, for two submissions that differ
-   only in goal, goal_lang, task_bounds, or success_criteria, and MUST
-   NOT gate issuance on those members, whether in derivation, in an
-   adjudicating policy, or through a model input to either; translating
-   a user's words into structure is the shaper's job, before admission
-   and outside the trust boundary
+   The goal and task_bounds members are human-readable disclosure and
+   audit context.  The AS MUST derive the same Authority Set, under the
+   same policy, for two submissions that differ only in goal, goal_lang,
+   or task_bounds, and MUST NOT gate issuance on those members, whether
+   in derivation, in an adjudicating policy, or through a model input to
+   either; translating a user's words into structure is the shaper's
+   job, before admission and outside the trust boundary
    ([I-D.draft-mcguinness-mission-shaping]).
 
    A client-proposed constraint on an individual Authority Set entry
@@ -8682,8 +8682,7 @@ Table of Contents
           agent may do, not the goal or Mission Intent: derivation is
           local policy, and nothing commits that the derived authority
           reflects the goal the Approver read.  An approval surface that
-          renders only the goal, success_criteria, or Mission Intent
-          does not conform.
+          renders only the goal or Mission Intent does not conform.
 
        *  When the Approver is not the Subject, the rendering MUST
           identify the Subject the authority is granted for.
@@ -8736,8 +8735,8 @@ Table of Contents
 
    The consent rendering is hardened against client text:
 
-   *  Client-supplied strings (goal, task_bounds, success_criteria) MUST
-      be rendered as inert text and MUST NOT be interpreted as markup.
+   *  Client-supplied strings (goal, task_bounds) MUST be rendered as
+      inert text and MUST NOT be interpreted as markup.
 
    *  The AS SHOULD mitigate Unicode direction-override and confusable-
       character presentation in them.
@@ -11510,11 +11509,10 @@ Table of Contents
    the resources the approved task needs, and per-task Missions
    (Section 1.2) further limit the effect of a compromise.
 
-   Against the untrusted-content leg, it contributes one thing:
-   success_criteria is inert, granting, widening, and gating no
-   authority, purpose supplies candidate authority only as a lookup key
-   of the pre-approval derivation whose result the Approver reads and
-   consents to and otherwise can only refuse or tighten, and goal bounds
+   Against the untrusted-content leg, it contributes one thing: purpose
+   supplies candidate authority only as a lookup key of the pre-approval
+   derivation whose result the Approver reads and consents to and
+   otherwise can only refuse or tighten, and goal and task_bounds bound
    it only through that disclosure (Section 4, Section 5).  Authority is
    fixed at the approval event, so injected text cannot expand an
    approved Mission.
@@ -11882,8 +11880,7 @@ Table of Contents
    Third-party personal data can enter through any Intent, proposal,
    authority, or recorded-evidence member:
 
-   *  the prose members (goal, task_bounds, success_criteria) and
-      purpose;
+   *  the prose members (goal, task_bounds) and purpose;
 
    *  target_resources and any explicit member a companion profile
       defines (for example, the metering companion's consumption bounds,
@@ -11930,10 +11927,10 @@ Table of Contents
 
 21.  Internationalization Considerations
 
-   Mission Intent prose (goal, task_bounds, success_criteria) is human-
-   readable disclosure. goal_lang (Section 4) declares the language of
-   that prose as a BCP 47 language tag [RFC5646], so an approval surface
-   can render, translate, or route it without guessing the language.
+   Mission Intent prose (goal, task_bounds) is human-readable
+   disclosure. goal_lang (Section 4) declares the language of that prose
+   as a BCP 47 language tag [RFC5646], so an approval surface can
+   render, translate, or route it without guessing the language.
 
    Three rules apply to the declaration:
 
@@ -12677,10 +12674,6 @@ A.2.  Stage 1: Mission Creation
        "task_bounds": [
          "Read only invoices issued in 2026-Q3.",
          "Post journal entries under $500."
-       ],
-       "success_criteria": [
-         "All Q3 invoices reconciled.",
-         "Each posted adjustment references a source invoice."
        ],
        "purpose": "urn:example:purpose:reconcile",
        "expires_at": "2026-12-31T23:59:59Z"
@@ -13743,6 +13736,17 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Mission Intent: success_criteria is removed.  It carried no
+      machine authorization semantics; goal can describe the outcomes
+      that show the task is complete, as human-readable and unenforced
+      prose, and Entry Discharge's terminal_when is the typed per-entry
+      completion condition.  A submission whose Intent carries
+      success_criteria is refused under the closed top level.  A Mission
+      created earlier keeps its recorded Intent and intent_hash
+      unchanged.  The prose-invariance rule, the inert-text rendering
+      rule and the approval-surface conformance sentence keep their
+      force over the remaining prose members.
 
    *  Editorial, family-wide (#876, D337): generic role nouns are
       lowercase ("authorization server", "resource server") in prose;
@@ -21833,10 +21837,14 @@ Table of Contents
       before any decision request, including a delegation instance whose
       authority has been withdrawn, which is distinct from a credential
       that failed validation), request_unsupported (the enforcement
-      surface implements no such action), target_unresolvable (the
-      request names a target object the enforcement surface cannot
-      resolve), capability_source_unresolvable (the capability
-      definition the PEP must present could not be resolved),
+      surface implements no such action), request_invalid (the PEP
+      established the action, and the supplied arguments fail its
+      required input schema, including an unknown or authoritative
+      member, a missing required member, a wrong type, or a pattern
+      failure), target_unresolvable (the request names a target object
+      the enforcement surface cannot resolve),
+      capability_source_unresolvable (the capability definition the PEP
+      must present could not be resolved),
       decision_evidence_unverifiable (the Decision Evidence for a permit
       was absent or did not verify, so no decision the PEP can rely on
       was obtained), channel_failure, pdp_unreachable, or
@@ -23785,6 +23793,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Refusal Record's PEP denial_reason set adds request_invalid:
+      the PEP established the action, and the supplied arguments fail
+      its required input schema. request_unsupported keeps its meaning,
+      an action the enforcement surface does not implement (#1106).
 
    *  join_view_id is a coordinated Decision Evidence extension member,
       registered and owned by the Mission Authority Server: the joined-
@@ -26020,6 +26033,11 @@ Table of Contents
    |implements no such   |Record     |                                 |
    |action               |           |                                 |
    +---------------------+-----------+---------------------------------+
+   |Supplied arguments   |Refusal    |request_invalid                  |
+   |fail the PEP-        |Record     |                                 |
+   |established action's |           |                                 |
+   |required input schema|           |                                 |
+   +---------------------+-----------+---------------------------------+
    |Named target object  |Refusal    |target_unresolvable              |
    |not resolvable at the|Record     |                                 |
    |enforcement surface  |           |                                 |
@@ -26989,6 +27007,10 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The failure-condition table maps supplied arguments that fail the
+      PEP-established action's required input schema to the Refusal
+      Record's request_invalid (#1106).
 
    *  context.credential carries authority, the verified credential's
       own authorization_details, on every decision; the PDP enforces it

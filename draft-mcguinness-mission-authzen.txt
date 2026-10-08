@@ -2199,6 +2199,11 @@ Table of Contents
    |implements no such   |Record     |                                 |
    |action               |           |                                 |
    +---------------------+-----------+---------------------------------+
+   |Supplied arguments   |Refusal    |request_invalid                  |
+   |fail the PEP-        |Record     |                                 |
+   |established action's |           |                                 |
+   |required input schema|           |                                 |
+   +---------------------+-----------+---------------------------------+
    |Named target object  |Refusal    |target_unresolvable              |
    |not resolvable at the|Record     |                                 |
    |enforcement surface  |           |                                 |
@@ -3168,6 +3173,10 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The failure-condition table maps supplied arguments that fail the
+      PEP-established action's required input schema to the Refusal
+      Record's request_invalid (#1106).
 
    *  context.credential carries authority, the verified credential's
       own authorization_details, on every decision; the PDP enforces it

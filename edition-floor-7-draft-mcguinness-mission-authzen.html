@@ -3896,6 +3896,13 @@ carrier's extensibility rule.<a href="#section-7.8-1" class="pilcrow">¶</a></p>
 </td>
             </tr>
             <tr>
+              <td class="text-left" rowspan="1" colspan="1">Supplied arguments fail the PEP-established action's required input schema</td>
+              <td class="text-left" rowspan="1" colspan="1">Refusal Record</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>request_invalid</code>
+</td>
+            </tr>
+            <tr>
               <td class="text-left" rowspan="1" colspan="1">Named target object not resolvable at the enforcement surface</td>
               <td class="text-left" rowspan="1" colspan="1">Refusal Record</td>
               <td class="text-left" rowspan="1" colspan="1">
@@ -5037,41 +5044,46 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1"><code>context.credential</code> carries <code>authority</code>, the verified credential's
+          <p id="appendix-A-2.1.1">The failure-condition table maps supplied arguments that fail the
+PEP-established action's required input schema to the Refusal
+Record's <code>request_invalid</code> (#1106).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1"><code>context.credential</code> carries <code>authority</code>, the verified credential's
 own <code>authorization_details</code>, on every decision; the PDP enforces it
 as the credential authority bound, independently of the matched
 Mission entry, and denies <code>credential_invalid</code> when it is absent or
 not evaluable (#825). An action no credential entry names is
 <code>out_of_authority</code>; one whose parameters violate a constraint on
-every entry that names it is <code>parameter_violation</code>.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">The RAR remediation grain cites the working-group successor
-draft-ietf-oauth-rar-metadata-remediation and defers its routing to
-the issuance profile's remediation routing instead of restating it.
-No requirement changed.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+every entry that names it is <code>parameter_violation</code>.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Mission-to-Policy Materialization describes the materialized policy
+          <p id="appendix-A-2.3.1">The RAR remediation grain cites the working-group successor
+draft-ietf-oauth-rar-metadata-remediation and defers its routing to
+the issuance profile's remediation routing instead of restating it.
+No requirement changed.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Mission-to-Policy Materialization describes the materialized policy
 view as one evaluation path: a PDP that evaluates the Mission's
 recorded authority directly meets the runtime profile's authority
 input without a view and omits <code>policy_view_id</code>. The PDP-side
 consistency checks compare the request against the loaded view or
 the directly evaluated Mission record, and the <code>policy_view_id</code>
-check applies only where a view is used.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Defined the input to <code>evaluation_request_digest</code>: the complete
-request body as submitted, extension members included, before any
-default or enrichment, with header fields and transport framing
-excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+check applies only where a view is used.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
+          <p id="appendix-A-2.5.1">Defined the input to <code>evaluation_request_digest</code>: the complete
+request body as submitted, extension members included, before any
+default or enrichment, with header fields and transport framing
+excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
 form of a Mission Status Response's <code>iat</code>, which <code>freshness_at</code>
 precedes by no more than the published maximum clock skew, and
 <code>mission_status_expires_at</code> and the state valid-through are its
-<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

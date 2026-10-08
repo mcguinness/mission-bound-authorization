@@ -1638,39 +1638,50 @@ ceiling, the
 dispatch policy, the allowed dispatchers and recipients, and the
 bounds, and the approval commits them under <code>template_hash</code>
 (<a href="#template-hash" class="auto internal xref">Section 4.1</a>), the anchor over the object consented to.<a href="#section-5-1" class="pilcrow">¶</a></p>
-<p id="section-5-2">Where Consent Evidence is claimed, the template-creation approval's
+<p id="section-5-2">Template consent also establishes the authority source the template's
+instances draw on, under the issuance profile's rules: from trusted
+configuration or authenticated governance state, never from client
+assertion, with the consenting human authorized to activate it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Approval").
+The Mission Issuer <span class="bcp14">MUST</span> retain that source, including an
+<code>organizational</code> source's <code>policy</code> reference, with its authenticated
+record of the consent to that exact <code>template_version</code>. Like a
+Mission's <code>authority_source</code>, it is provenance outside
+<code>template_hash</code>; using another source or policy version takes a new
+<code>template_version</code> and a fresh human approval.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">Where Consent Evidence is claimed, the template-creation approval's
 disclosure is committed as that profile commits any disclosure
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>). The template
 is consented before any Mission exists, so, as the Consent Evidence
 profile already handles for an approval that commits no Mission, the
 disclosure and its evidence carry the Mission Issuer's <code>issuer</code> and the
-committed anchor and no Mission <code>id</code>.<a href="#section-5-2" class="pilcrow">¶</a></p>
-<p id="section-5-3">The consent disclosure <span class="bcp14">MUST</span> render, at minimum:<a href="#section-5-3" class="pilcrow">¶</a></p>
+committed anchor and no Mission <code>id</code>.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">The consent disclosure <span class="bcp14">MUST</span> render, at minimum:<a href="#section-5-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5-4.1">
-          <p id="section-5-4.1.1">the Template Ceiling, as the maximum authority any dispatched Mission
-may reach;<a href="#section-5-4.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-5-5.1">
+          <p id="section-5-5.1.1">the Template Ceiling, as the maximum authority any dispatched Mission
+may reach;<a href="#section-5-5.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-5-4.2">
-          <p id="section-5-4.2.1">that instances issue at machine speed, by policy, with no
-per-instance human approval; and<a href="#section-5-4.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-5-5.2">
+          <p id="section-5-5.2.1">that instances issue at machine speed, by policy, with no
+per-instance human approval; and<a href="#section-5-5.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-5-4.3">
-          <p id="section-5-4.3.1">that the high-consequence classes (<a href="#prohibited-classes" class="auto internal xref">Section 7</a>) are never
-dispatched by policy and still require a fresh human decision.<a href="#section-5-4.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-5-5.3">
+          <p id="section-5-5.3.1">that the high-consequence classes (<a href="#prohibited-classes" class="auto internal xref">Section 7</a>) are never
+dispatched by policy and still require a fresh human decision.<a href="#section-5-5.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-5-5">A consent that does not render these is standing dispatch authority
+<p id="section-5-6">A consent that does not render these is standing dispatch authority
 obtained by omission. A template the human did not knowingly consent to
-is not a Mission Template under this document.<a href="#section-5-5" class="pilcrow">¶</a></p>
-<p id="section-5-6">A Mission Template's consent is standing consent, and standing consent
+is not a Mission Template under this document.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<p id="section-5-7">A Mission Template's consent is standing consent, and standing consent
 decays. The Mission Issuer <span class="bcp14">MUST NOT</span> dispatch from a template whose most
 recent human approval is older than the published <code>review_cadence</code>
 (<a href="#the-mission-template" class="auto internal xref">Section 4</a>): dispatch stops until a fresh human approval
 re-consents, or narrows, the template. The review approval is an
 ordinary template-creation approval; its disclosure <span class="bcp14">SHOULD</span> render the
 template's dispatch record since the prior review, so the reviewer sees
-the cycle they renew.<a href="#section-5-6" class="pilcrow">¶</a></p>
+the cycle they renew.<a href="#section-5-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="dispatch">
@@ -1744,11 +1755,17 @@ instance's Mission-Issuer-established Subject or its selected Agent
 falls outside <code>allowed_recipients</code> (<a href="#the-mission-template" class="auto internal xref">Section 4</a>).<a href="#section-6-4.7.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-6-4.8">
-          <p id="section-6-4.8.1"><strong>Commit the instance.</strong> Commit an ordinary Mission whose Authority
-Set is the surviving set and whose:<a href="#section-6-4.8.1" class="pilcrow">¶</a></p>
+          <p id="section-6-4.8.1"><strong>Check the authority source.</strong> Verify that the source retained for
+this <code>template_version</code> (<a href="#template-consent" class="auto internal xref">Section 5</a>) applies to the
+instance's Subject and that the surviving set lies within that
+source's ceiling. Refuse the Dispatch otherwise.<a href="#section-6-4.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-4.9">
+          <p id="section-6-4.9.1"><strong>Commit the instance.</strong> Commit an ordinary Mission whose Authority
+Set is the surviving set and whose:<a href="#section-6-4.9.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6-4.8.2.1">
-              <p id="section-6-4.8.2.1.1"><code>approver</code> is the template's human approver, the accountable
+<li class="normal" id="section-6-4.9.2.1">
+              <p id="section-6-4.9.2.1.1"><code>approver</code> is the template's human approver, the accountable
 principal (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The Dispatcher
 is not the approver. The instance is rooted in the
 <code>approval_basis</code> authorization basis the issuance profile defines
@@ -1771,37 +1788,43 @@ Dispatch, never from the Dispatch request. The <code>template</code> lineage mem
 absent on an ordinarily approved one, remains the claim-carried
 record of which template and Dispatch Policy adjudicated the
 instance; <code>approval_basis</code> is the structured authorization-basis
-record, and the two are consistent by construction;<a href="#section-6-4.8.2.1.1" class="pilcrow">¶</a></p>
+record, and the two are consistent by construction;<a href="#section-6-4.9.2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6-4.8.2.2">
-              <p id="section-6-4.8.2.2.1"><code>approval_event_id</code> identifies this Dispatch, never the template's
+            <li class="normal" id="section-6-4.9.2.2">
+              <p id="section-6-4.9.2.2.1"><code>approval_event_id</code> identifies this Dispatch, never the template's
 approval: a unique value the Mission Issuer allocates when it
 creates the Dispatch's <code>(authenticated client, dispatch_event_id)</code>
 reservation (below) and retains with the committed instance. A
 retry recovers it; a reservation created after that key's
-tombstone expires receives a new one;<a href="#section-6-4.8.2.2.1" class="pilcrow">¶</a></p>
+tombstone expires receives a new one;<a href="#section-6-4.9.2.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6-4.8.2.3">
-              <p id="section-6-4.8.2.3.1"><code>subject</code> is established as the issuance profile requires, never
+            <li class="normal" id="section-6-4.9.2.3">
+              <p id="section-6-4.9.2.3.1"><code>subject</code> is established as the issuance profile requires, never
 taken from Dispatcher input, and is an entry of
 <code>allowed_recipients</code> <code>subjects</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-6-4.8.2.3.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-6-4.9.2.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6-4.8.2.4">
-              <p id="section-6-4.8.2.4.1"><code>client_id</code> is the Agent selected from <code>allowed_recipients</code>
+            <li class="normal" id="section-6-4.9.2.4">
+              <p id="section-6-4.9.2.4.1"><code>authority_source</code> is the source retained for this
+<code>template_version</code> (<a href="#template-consent" class="auto internal xref">Section 5</a>), read from the Mission
+Issuer's retained template record, never from the Dispatch request
+and never a source or policy version substituted after consent;<a href="#section-6-4.9.2.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6-4.9.2.5">
+              <p id="section-6-4.9.2.5.1"><code>client_id</code> is the Agent selected from <code>allowed_recipients</code>
                 <code>agents</code> (<a href="#the-mission-template" class="auto internal xref">Section 4</a>), never taken from Dispatcher
 input. The selection is part of the committed instance: a retried
 or recovered Dispatch returns the committed Agent and does not
-select again;<a href="#section-6-4.8.2.4.1" class="pilcrow">¶</a></p>
+select again;<a href="#section-6-4.9.2.5.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6-4.8.2.5">
-              <p id="section-6-4.8.2.5.1"><code>intent_hash</code> and <code>authority_hash</code> are computed over the instance's
+            <li class="normal" id="section-6-4.9.2.6">
+              <p id="section-6-4.9.2.6.1"><code>intent_hash</code> and <code>authority_hash</code> are computed over the instance's
 own Intent and final Authority Set, never over the template; the
 template commits the ceiling under <code>template_hash</code>
-(<a href="#template-hash" class="auto internal xref">Section 4.1</a>);<a href="#section-6-4.8.2.5.1" class="pilcrow">¶</a></p>
+(<a href="#template-hash" class="auto internal xref">Section 4.1</a>);<a href="#section-6-4.9.2.6.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6-4.8.2.6">
-              <p id="section-6-4.8.2.6.1"><code>expires_at</code> is the effective Mission expiry of the issuance
+            <li class="normal" id="section-6-4.9.2.7">
+              <p id="section-6-4.9.2.7.1"><code>expires_at</code> is the effective Mission expiry of the issuance
 profile's requested-versus-effective rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): the minimum of the
 dispatch intent's requested <code>expires_at</code>, the committed Mission
@@ -1812,21 +1835,25 @@ recomputation is exact. These are the complete expiry inputs for
 Dispatch: a deployment that needs a tighter standing-consent
 lifetime records it in <code>instance_lifetime</code> or the template's
 <code>expires_at</code> under a newly consented <code>template_version</code>, rather
-than applying an undisclosed fourth clamp; and<a href="#section-6-4.8.2.6.1" class="pilcrow">¶</a></p>
+than applying an undisclosed fourth clamp; and<a href="#section-6-4.9.2.7.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6-4.8.2.7">
-              <p id="section-6-4.8.2.7.1"><code>template</code> lineage member is set (<a href="#template-member" class="auto internal xref">Section 6.1</a>).<a href="#section-6-4.8.2.7.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-6-4.9.2.8">
+              <p id="section-6-4.9.2.8.1"><code>template</code> lineage member is set (<a href="#template-member" class="auto internal xref">Section 6.1</a>).<a href="#section-6-4.9.2.8.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </li>
       </ol>
-<p id="section-6-5">A Dispatch <span class="bcp14">MUST</span> be idempotent per <code>dispatch_event_id</code>. The Dispatcher
+<p id="section-6-5">The Mission Issuer <span class="bcp14">MUST</span> make the step 8 check, and verify that the
+effective <code>expires_at</code> is strictly later than the committed
+<code>created_at</code>, atomically with the commit, against the source as it
+stands at that commit; on failure no Mission is created.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">A Dispatch <span class="bcp14">MUST</span> be idempotent per <code>dispatch_event_id</code>. The Dispatcher
 supplies a <code>dispatch_event_id</code> with the request, adopting the
 expansion profile's creation idempotency apparatus by reference
 under its own domain-separating <code>op</code> value, <code>dispatch</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "Creation
-Idempotency").<a href="#section-6-5" class="pilcrow">¶</a></p>
-<p id="section-6-6">The identifier and reservation key are <code>(authenticated client,
+Idempotency").<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-7">The identifier and reservation key are <code>(authenticated client,
 dispatch_event_id)</code>, the Dispatcher being the authenticated client of
 <a href="#grant-type" class="auto internal xref">Section 6.2</a>. In the operation fingerprint, <code>op</code> is <code>dispatch</code>;
 <code>iss</code> and <code>client</code> are as the expansion profile defines them;
@@ -1844,8 +1871,8 @@ source. A dispatch-specific parameter affecting derivation, approval,
 output, or side effects extends the fingerprint the same way an
 extension parameter would under the expansion profile's own rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "The
-operation fingerprint").<a href="#section-6-6" class="pilcrow">¶</a></p>
-<p id="section-6-7">The reservation, its <code>(client, dispatch_event_id)</code> uniqueness, and
+operation fingerprint").<a href="#section-6-7" class="pilcrow">¶</a></p>
+<p id="section-6-8">The reservation, its <code>(client, dispatch_event_id)</code> uniqueness, and
 the fingerprint-comparison outcomes on a repeated presentation are
 the expansion profile's, applied by reference: same fingerprint and
 completed, recover it; same fingerprint and reserved or pending,
@@ -1859,8 +1886,8 @@ part of that same atomic commit: the Mission Issuer atomically
 commits the evidence record, or a durable outbox entry for it, with
 Mission creation, and delivers or publishes it idempotently
 afterward, since external emission cannot generally participate in
-the datastore transaction.<a href="#section-6-7" class="pilcrow">¶</a></p>
-<p id="section-6-8">A revalidated retry's obligations depend on whether the original
+the datastore transaction.<a href="#section-6-8" class="pilcrow">¶</a></p>
+<p id="section-6-9">A revalidated retry's obligations depend on whether the original
 operation already committed creation. For a <strong>completed</strong> operation,
 the Mission Issuer <span class="bcp14">MUST</span> verify the recorded template identity,
 <code>template_version</code>, and fingerprint; the requester's continued
@@ -1878,8 +1905,8 @@ the retry exactly as a fresh Dispatch: current <code>allowed_dispatchers</code>
 membership, possession of <code>cnf</code>, and current template applicability
 all apply, since no Mission yet exists for the retry to recover
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section
-"Revalidation and lookup order").<a href="#section-6-8" class="pilcrow">¶</a></p>
-<p id="section-6-9">Recovery is delivery of the already-dispatched Mission, never a
+"Revalidation and lookup order").<a href="#section-6-9" class="pilcrow">¶</a></p>
+<p id="section-6-10">Recovery is delivery of the already-dispatched Mission, never a
 second instantiation and never a second count against <code>max_active</code> or
 <code>dispatch_rate</code>. A retry recovered while the original access token
 remains valid returns that token; a retry recovered after it has
@@ -1892,7 +1919,7 @@ is delivery"). Tombstone retention follows the expansion profile's
 rule, against the deployment's published retry horizon
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "Tombstone
 retention"). This makes retry safe at machine speed and keeps
-<code>max_active</code> and <code>dispatch_rate</code> accounting exact.<a href="#section-6-9" class="pilcrow">¶</a></p>
+<code>max_active</code> and <code>dispatch_rate</code> accounting exact.<a href="#section-6-10" class="pilcrow">¶</a></p>
 <div id="template-member">
 <section id="section-6.1">
         <h3 id="name-the-template-lineage-member">
@@ -2355,34 +2382,41 @@ own Intent and Authority Set;<a href="#section-13-2.2.1" class="pilcrow">¶</a><
 <code>root_commitment</code> the <code>template_hash</code> (<a href="#dispatch" class="auto internal xref">Section 6</a>);<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.4">
-          <p id="section-13-2.4.1">refuse a Dispatch outside the ceiling with <code>out_of_template_ceiling</code>
-and a Dispatch of a prohibited class with <code>dispatch_prohibited_class</code>
-(<a href="#denial-reasons" class="auto internal xref">Section 8</a>);<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-13-2.4.1">record on every dispatched Mission the authority source retained at
+template consent for its <code>template_version</code>, checking at the
+creation commit that it applies to the instance's Subject and covers
+the instance Authority Set, and that the effective expiry is later
+than the creation instant (<a href="#template-consent" class="auto internal xref">Section 5</a>, <a href="#dispatch" class="auto internal xref">Section 6</a>);<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.5">
-          <p id="section-13-2.5.1">make every Dispatch idempotent per <code>dispatch_event_id</code>, adopting the
+          <p id="section-13-2.5.1">refuse a Dispatch outside the ceiling with <code>out_of_template_ceiling</code>
+and a Dispatch of a prohibited class with <code>dispatch_prohibited_class</code>
+(<a href="#denial-reasons" class="auto internal xref">Section 8</a>);<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.6">
+          <p id="section-13-2.6.1">make every Dispatch idempotent per <code>dispatch_event_id</code>, adopting the
 expansion profile's creation idempotency apparatus by reference
 under <code>op: dispatch</code>, with the <code>(client, dispatch_event_id)</code>
 reservation, fingerprint, revalidation, and delivery-as-recovery
-bindings of <a href="#dispatch" class="auto internal xref">Section 6</a>;<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-13-2.6">
-          <p id="section-13-2.6.1">answer a Dispatch in one authenticated back-channel round trip, using
-no PAR, no interactive consent surface, and never
-<code>authorization_pending</code> (<a href="#dispatch" class="auto internal xref">Section 6</a>);<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
+bindings of <a href="#dispatch" class="auto internal xref">Section 6</a>;<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.7">
-          <p id="section-13-2.7.1">record the <code>template</code> lineage member on the dispatched Mission
-(<a href="#template-member" class="auto internal xref">Section 6.1</a>);<a href="#section-13-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-13-2.7.1">answer a Dispatch in one authenticated back-channel round trip, using
+no PAR, no interactive consent surface, and never
+<code>authorization_pending</code> (<a href="#dispatch" class="auto internal xref">Section 6</a>);<a href="#section-13-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.8">
-          <p id="section-13-2.8.1">stop dispatch past the published <code>review_cadence</code> until a fresh human
-approval (<a href="#template-consent" class="auto internal xref">Section 5</a>); and<a href="#section-13-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-13-2.8.1">record the <code>template</code> lineage member on the dispatched Mission
+(<a href="#template-member" class="auto internal xref">Section 6.1</a>);<a href="#section-13-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.9">
-          <p id="section-13-2.9.1">publish the bounds and the action-class mapping in the Mission
+          <p id="section-13-2.9.1">stop dispatch past the published <code>review_cadence</code> until a fresh human
+approval (<a href="#template-consent" class="auto internal xref">Section 5</a>); and<a href="#section-13-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.10">
+          <p id="section-13-2.10.1">publish the bounds and the action-class mapping in the Mission
 Deployment Profile (<a href="#the-mission-template" class="auto internal xref">Section 4</a>, <a href="#prohibited-classes" class="auto internal xref">Section 7</a>)
-and retain the audit linkage of <a href="#audit-linkage" class="auto internal xref">Section 10</a>.<a href="#section-13-2.9.1" class="pilcrow">¶</a></p>
+and retain the audit linkage of <a href="#audit-linkage" class="auto internal xref">Section 10</a>.<a href="#section-13-2.10.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-13-3">A resource server requires no new behavior: it enforces a dispatched
@@ -2585,53 +2619,63 @@ object by that value.<a href="#section-14-8.4.1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Template Consent: creating a Mission Template is a human approval
-that creates no Mission, so it is the standing consent each
-dispatched instance's approval event is decided under, not an
-approval event itself (#1078).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Template Consent and Dispatch: template consent establishes the
+authority source its instances draw on, retained with the consent to
+that exact <code>template_version</code>. Each instance carries that source,
+never Dispatcher input or a substituted policy. A new step 8 checks
+that the source applies to the instance's Subject and covers the
+instance Authority Set, and the creation commit makes that check
+against the source as it stands then, with the effective-expiry
+check (#1118).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Dispatch: a dispatched instance's <code>approval_event_id</code> identifies the
+          <p id="appendix-A-2.2.1">Template Consent: creating a Mission Template is a human approval
+that creates no Mission, so it is the standing consent each
+dispatched instance's approval event is decided under, not an
+approval event itself (#1078).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Dispatch: a dispatched instance's <code>approval_event_id</code> identifies the
 Dispatch, never the template's approval: a unique value allocated
 with the Dispatch's reservation and retained with the instance, so a
 retry recovers it and reuse of the key after its tombstone expires
-receives a new one (#1017).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+receives a new one (#1017).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">The Mission Issuer selects a dispatched instance's Agent from
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">The Mission Issuer selects a dispatched instance's Agent from
 <code>allowed_recipients</code> <code>agents</code> under the Dispatch Policy, never from
 Dispatcher input: one listed Agent is selected directly, and several
 need the Dispatch Policy's selection rule. The selection is recorded
 at commit, kept on retries, and separate from Dispatcher
-authentication and the token's presenter binding (#970).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+authentication and the token's presenter binding (#970).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1"><code>dispatch_policy</code> is an activation policy reference (<code>id</code>,
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1"><code>dispatch_policy</code> is an activation policy reference (<code>id</code>,
 <code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
 Bases, replacing the <span class="bcp14">SHOULD</span> to commit the policy body. Dispatch
 verifies it as a new step 3 and refuses a mismatch with the new
 <code>dispatch_policy_changed</code> reason; the <code>template</code> lineage member and
-each Dispatch record carry the digest.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">The consumption-bound rationale under Prohibited Classes states
-that dispatch multiplies an instance's bound by <code>max_active</code> and
-<code>dispatch_rate</code>, and that the template consent renders that product
-under the metering profile.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+each Dispatch record carry the digest.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1"><code>allowed_dispatchers</code> lists <code>client_id</code> strings, and
-<code>allowed_recipients</code> is an object of <code>subjects</code> (<code>iss</code> and <code>sub</code>)
-and <code>agents</code> (<code>client_id</code>), each checked separately at Dispatch, so
-any listed Agent may serve any listed Subject.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.6.1">The consumption-bound rationale under Prohibited Classes states
+that dispatch multiplies an instance's bound by <code>max_active</code> and
+<code>dispatch_rate</code>, and that the template consent renders that product
+under the metering profile.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">The dispatch bounds have stated encodings. <code>instance_lifetime</code> and
+          <p id="appendix-A-2.7.1"><code>allowed_dispatchers</code> lists <code>client_id</code> strings, and
+<code>allowed_recipients</code> is an object of <code>subjects</code> (<code>iss</code> and <code>sub</code>)
+and <code>agents</code> (<code>client_id</code>), each checked separately at Dispatch, so
+any listed Agent may serve any listed Subject.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">The dispatch bounds have stated encodings. <code>instance_lifetime</code> and
 <code>review_cadence</code> are positive integer seconds, the latter measured
 from the approval's <code>approved_at</code>; <code>max_active</code> is a positive
 integer; <code>dispatch_rate</code> is a <code>limit</code> of committed instantiations per
 trailing <code>window</code> of seconds, counting neither refused Dispatches nor
-recovered retries; and <code>expires_at</code> is an RFC 3339 date-time.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+recovered retries; and <code>expires_at</code> is an RFC 3339 date-time.<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -182,9 +182,9 @@ Table of Contents
    Without entry discharge, a Mission granted authority to release a
    record "for this enrollment" keeps deriving that authority after the
    enrollment closes, until a clock or a revoke stops it.  The Intent's
-   success_criteria describe when the task is complete, but the issuance
-   profile keeps them inert: they are rendered and committed, and carry
-   no machine effect ([I-D.draft-mcguinness-oauth-mission]).
+   prose can say when the task is complete, but the issuance profile
+   keeps it inert: it is rendered and committed, and carries no machine
+   effect ([I-D.draft-mcguinness-oauth-mission]).
 
    Three properties make discharge safe inside the Mission model, and
    this section requires all three:
@@ -215,9 +215,8 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-resource-access]), and is not
    implementable alone.  It reuses, without restating, the issuance
    profile's Mission, Authority Set, subset rule, integrity anchors,
-   lifecycle states, and issuance gating, and the inert success_criteria
-   member of the Mission Intent; and the Mission Resource Access
-   Profile's mission_resource_access entry and Common Constraints
+   lifecycle states, and issuance gating; and the Mission Resource
+   Access Profile's mission_resource_access entry and Common Constraints
    registry.  It uses Mission, Mission Issuer, Authority Set, and
    derivation as the issuance profile defines them, and the
    mission_resource_access entry as the Mission Resource Access Profile
@@ -272,12 +271,12 @@ Table of Contents
    form: the same canonical form the registration's no-duplicate rule
    above already fixes as condition identity (Section 7.1).
 
-   terminal_when is the enforceable counterpart of the inert
-   success_criteria ([I-D.draft-mcguinness-oauth-mission]), which
-   remains inert: success_criteria describe completion for the Approver,
-   terminal_when acts on it.  It is distinct from a cumulative
-   consumption bound, which meters volume; a terminal_when condition is
-   a single external event.
+   terminal_when is the enforceable statement of when one entry is
+   complete.  It says nothing about whether the task as a whole
+   succeeded, and the Intent's prose stays inert
+   ([I-D.draft-mcguinness-oauth-mission]).  It is distinct from a
+   cumulative consumption bound, which meters volume; a terminal_when
+   condition is a single external event.
 
 3.3.  Discharge and Issuance Gating
 
@@ -1304,6 +1303,12 @@ Table of Contents
 9.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Mission Intent no longer carries success_criteria, following
+      the OAuth binding. terminal_when is described as the enforceable
+      statement of one entry's completion, not of the task's success,
+      and the Introduction says the Intent's prose stays inert.  No
+      requirement changed.
 
    *  Discharge Commit (Section 4.1): a committed discharge places a
       restriction on the Mission's expansion chain, retained across

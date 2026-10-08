@@ -2058,10 +2058,14 @@ authority does not cover the request, as the PEP establishes it
 before any decision request, including a delegation instance whose
 authority has been withdrawn, which is distinct from a credential
 that failed validation), <code>request_unsupported</code> (the
-enforcement surface implements no such action), <code>target_unresolvable</code>
-(the request names a target object the enforcement surface cannot
-resolve), <code>capability_source_unresolvable</code> (the capability
-definition the PEP must present could not be resolved),
+enforcement surface implements no such action), <code>request_invalid</code>
+(the PEP established the action, and the supplied arguments fail its
+required input schema, including an unknown or authoritative member,
+a missing required member, a wrong type, or a pattern failure),
+<code>target_unresolvable</code> (the request names a target object the
+enforcement surface cannot resolve), <code>capability_source_unresolvable</code>
+(the capability definition the PEP must present could not be
+resolved),
 <code>decision_evidence_unverifiable</code> (the Decision Evidence for a permit
 was absent or did not verify, so no decision the PEP can rely on was
 obtained), <code>channel_failure</code>, <code>pdp_unreachable</code>, or
@@ -4514,27 +4518,33 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1"><code>join_view_id</code> is a coordinated Decision Evidence extension member,
+          <p id="appendix-A-2.1.1">The Refusal Record's PEP <code>denial_reason</code> set adds <code>request_invalid</code>:
+the PEP established the action, and the supplied arguments fail its
+required input schema. <code>request_unsupported</code> keeps its meaning, an
+action the enforcement surface does not implement (#1106).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1"><code>join_view_id</code> is a coordinated Decision Evidence extension member,
 registered and owned by the Mission Authority Server: the
 joined-view commitment of a decision reached over a successful
 Mission Join (#972 item 27a). The list of commonly carried
-coordinated members also names <code>principal_mapping</code>.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+coordinated members also names <code>principal_mapping</code>.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
 PDP evaluates through a materialized policy view; a PDP that
 evaluates the Mission's recorded authority directly omits it and
 records <code>authority_hash</code> and the new <code>pdp_policy_version</code>, following
 the runtime profile's two evaluation paths; the Mission Receipt's
-<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1"><code>evaluation_request_digest</code> covers the evaluation request as the
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1"><code>evaluation_request_digest</code> covers the evaluation request as the
 decision-API profile defines it or, for a Refusal Record emitted
 before any request, a defined pre-request input; the Refusal Record
 member <code>request_digest_input</code> names which. The digest is no longer
 described as privacy-preserving: it commits to its input and does
-not hide an input a party can guess (#971).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+not hide an input a party can guess (#971).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
