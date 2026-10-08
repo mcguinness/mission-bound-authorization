@@ -337,28 +337,39 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
 `state` (string, required):
 : the new lifecycle state. The value space is the Mission lifecycle
   state space defined by the issuance profile
-  {{I-D.draft-mcguinness-oauth-mission}} (`active`, `revoked`,
-  `expired`), as extended by whichever lifecycle profiles a deployment
-  also runs: `suspended` and `completed`
-  ({{I-D.draft-mcguinness-oauth-mission-status}}), `superseded`
-  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and `cascaded`
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). A Mission
-  Issuer that runs a profile defining an additional state emits that
-  state here on the corresponding transition (for example,
-  `superseded` when a predecessor is superseded by an expansion
-  successor).
+  {{I-D.draft-mcguinness-oauth-mission}} (`active`, `terminated`), as
+  extended by whichever lifecycle profiles a deployment also runs,
+  such as `suspended` ({{I-D.draft-mcguinness-oauth-mission-status}}).
+  A Mission Issuer that runs a profile defining an additional state
+  emits that state here on the corresponding transition.
 
 `prior_state` (string, conditional):
-: the state immediately before the transition, drawn from the same
-  value space. REQUIRED on a transition emission; absent only on the
+: the state immediately before the transition: `active` or
+  `suspended`, since a `terminated` Mission admits no further
+  transition. REQUIRED on a transition emission; absent only on the
   approval-event emission, where there is no prior state. A supersede
-  transition emits `prior_state` of `active` and `state` of
-  `superseded`.
+  transition emits `prior_state` of `active`, `state` of `terminated`,
+  and a `termination` with reason `superseded`.
 
-`carried_to` (string, conditional):
-: A deployment implementing Child Mission Carryover MUST include the
-  committed replacement Mission identifier on the old child's `cascaded`
-  event, and MUST omit it when no replacement was committed. The identifier
+`termination` (object, conditional):
+: present exactly when `state` is `terminated`: the Mission's
+  `termination` ({{I-D.draft-mcguinness-oauth-mission}}, Section
+  "Mission Termination"), with its `reason`, its `terminated_at`, the
+  members its reason defines, and the Status profile's `version` of the
+  committing transition ({{I-D.draft-mcguinness-oauth-mission-status}},
+  Section "Response"), which equals this event's `version`. The reasons
+  defined across the suite are `revoked` and `expired`
+  ({{I-D.draft-mcguinness-oauth-mission}}), `completed`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}), `superseded`, whose
+  `termination` carries the `successor` that replaced the Mission
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and
+  `parent_terminated`
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+
+  A deployment implementing Child Mission Carryover MUST include the
+  committed replacement Mission identifier as `termination.carried_to` on
+  the old child's `parent_terminated` event, and MUST omit it when no
+  replacement was committed. The identifier
   is qualified by the event's Mission issuer. A receiver does not assume
   that replacement creation was delivered first; it pairs or resynchronizes
   under the child profile's Carryover Evidence and Observation rules
@@ -400,12 +411,8 @@ claim of a SET {{RFC8417}}, alongside the SET's own `iss`, `aud`,
   that do.
 
 `reason` (string, optional):
-: a human-readable reason, for audit.
-
-`successor` (string, optional):
-: the successor `mission_id`. Present only when `state` is
-  `superseded`, giving the successor that replaced the Mission
-  ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+: a human-readable reason, for audit, distinct from
+  `termination.reason`.
 
 `containment_version` (integer, conditional):
 : the Mission's containment overlay version at this event's commit.
@@ -447,10 +454,14 @@ Following the issuance profile's forward-compatibility rule, an event
 consumer MUST treat every `state` value other than `active` as
 non-deriving, including a value it does not recognize.
 
-The `expired` event MAY be emitted lazily. Because expiry is driven by
-the clock reaching the Mission's `expires_at` rather than an explicit
-request, a Mission Issuer emits the `expired` event at or after the
-Mission's `expires_at`, when it observes the transition. A consumer
+The event for an `expired` termination MAY be emitted lazily. Because
+expiry is driven by the clock reaching the Mission's `expires_at`
+rather than an explicit request, a Mission Issuer emits that event at
+or after the Mission's `expires_at`, when it commits the transition.
+A termination observed but not yet committed, a computed `expired` or
+a Child Mission's projected `parent_terminated`
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), has no
+event; its event is emitted when the transition commits. A consumer
 does not depend on prompt emission: it already fails safe on the
 Mission's `expires_at` carried with cached Mission status
 ({{I-D.draft-mcguinness-oauth-mission-status}}).
@@ -474,7 +485,12 @@ Example SET (decoded), for a revocation:
         "issuer": "https://as.example.com"
       },
       "prior_state": "active",
-      "state": "revoked",
+      "state": "terminated",
+      "termination": {
+        "reason": "revoked",
+        "terminated_at": "2026-11-02T09:06:40Z",
+        "version": 2
+      },
       "version": 2,
       "committed_at": "2026-11-02T09:06:40Z",
       "expires_at": "2026-12-31T23:59:59Z",
@@ -512,7 +528,8 @@ Mission (`version` 1, no `prior_state`):
 }
 ~~~
 
-Example SET (decoded), for a supersession, carrying `successor`:
+Example SET (decoded), for a supersession, whose `termination` carries
+`successor`:
 
 ~~~ json
 {
@@ -531,11 +548,16 @@ Example SET (decoded), for a supersession, carrying `successor`:
         "issuer": "https://as.example.com"
       },
       "prior_state": "active",
-      "state": "superseded",
+      "state": "terminated",
+      "termination": {
+        "reason": "superseded",
+        "terminated_at": "2026-11-02T09:40:00Z",
+        "successor": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
+        "version": 2
+      },
       "version": 2,
       "committed_at": "2026-11-02T09:40:00Z",
-      "expires_at": "2026-12-31T23:59:59Z",
-      "successor": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX"
+      "expires_at": "2026-12-31T23:59:59Z"
     }
   }
 }
@@ -759,7 +781,8 @@ purposes independent of any consumer's enforcement posture.
 A partner ERP (`erp.partner.example.com`) consumes Mission lifecycle
 signals so it can stop honoring a Mission promptly rather than wait out
 token lifetimes. `alice` cancels her Q3 reconciliation Mission. The
-Mission Issuer commits the `revoked` transition and pushes a SET to the
+Mission Issuer commits the transition to `terminated` with reason
+`revoked` and pushes a SET to the
 consumer's receiver ({{RFC8935}}). Decoded SET:
 
 ~~~ json
@@ -778,7 +801,12 @@ consumer's receiver ({{RFC8935}}). Decoded SET:
         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
         "issuer": "https://as.example.com"
       },
-      "state": "revoked",
+      "state": "terminated",
+      "termination": {
+        "reason": "revoked",
+        "terminated_at": "2026-11-02T09:00:00Z",
+        "version": 7
+      },
       "prior_state": "active",
       "version": 7,
       "committed_at": "2026-11-02T09:00:00Z",
@@ -791,7 +819,8 @@ consumer's receiver ({{RFC8935}}). Decoded SET:
 
 The consumer verifies the SET signature, `iss`, `aud`, and `jti`, sees
 `version` 7 is newer than any state it holds, and records the Mission as
-`revoked`. Because `revoked` is non-`active`, the consumer stops relying
+`terminated` with reason `revoked`. Because `terminated` is
+non-`active`, the consumer stops relying
 on the Mission: the next attempt to use a token bound to
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` is refused, seconds after the
 cancellation, well inside the token's remaining lifetime. Had a stale
@@ -841,7 +870,7 @@ covers threats specific to event propagation.
 
 ## Forged or Replayed Events
 
-A forged event could suppress a Mission (a spurious `revoked`) or, more
+A forged event could suppress a Mission (a spurious `terminated`) or, more
 dangerously, mask a revocation (a spurious `active`). SET signing
 ({{set-protection}}) binds each event to the Mission Issuer: the
 consumer's verification of the signature, the `iss`, and its own `aud`
@@ -849,7 +878,7 @@ per {{set-protection}} rejects a forged event, and the same section's
 duplicate suppression handles a redelivered `jti` without reprocessing
 it. The `version` ordering rule
 ({{consumer-behavior}}) prevents an old `active` event from overriding
-a newer `revoked` one, whether the old event is a forgery, a replay, or
+a newer `terminated` one, whether the old event is a forgery, a replay, or
 an at-least-once duplicate.
 
 ## Missed Events Are Not Fail-Open
@@ -919,14 +948,14 @@ the author-controlled `schemas.karlmcguinness.com` namespace:
   claims: `mission` (carrying `id` and `issuer`), `state`, `version`,
   `committed_at`, `expires_at`. Conditional event-body claims:
   `prior_state` (required on transition emissions, absent on the
-  approval-event emission), `suspend_until` with `on_expiry` (present
+  approval-event emission), `termination` (present exactly when
+  `state` is `terminated`), `suspend_until` with `on_expiry` (present
   only on a transition to `suspended` under a deadline), and
   `authority_changed` (required true on any event whose commit
   narrows effective authority without changing `state`, the discharge
   commit being the current case, delivery subject to the gate of
   {{discharge-compatibility}}; optional and defaulting to false
-  otherwise). Optional event-body claims: `tenant`, `reason`, and
-  `successor` (present only on a `superseded` transition). See
+  otherwise). Optional event-body claims: `tenant` and `reason`. See
   {{lifecycle-event}} for the schema.
 
 This event type uses the OpenID Shared Signals Framework {{OIDC-SSF}}
@@ -953,6 +982,11 @@ IETF; Reference this document, {{as-metadata}}.
 
 \[\[ To be removed from the final specification ]]
 
+- The lifecycle-change event reports `state` `terminated` with a
+  `termination` beside `state`, `prior_state` and `version`, whose
+  `version` equals the event's; `prior_state` is `active` or
+  `suspended`; `successor` and `carried_to` live in `termination`; and
+  a termination observed but not committed has no event (#705).
 - Added carryover cascade correlation and out-of-order recovery semantics;
   event delivery remains non-atomic and may reorder (#576).
 
