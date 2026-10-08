@@ -996,10 +996,10 @@ Mission Issuer role and only when it contains a Mission. A conforming
 A containment-capable Mission Issuer is also a conforming
 issuance-profile Mission Issuer
 ({{I-D.draft-mcguinness-oauth-mission}}). Containment gives every
-Resource Server the Baseline property with no change to the Resource
-Server; the Runtime-Enforced property additionally requires it to
+resource server the Baseline property with no change to the resource
+server; the Runtime-Enforced property additionally requires it to
 consult a fresh state source ({{containment-properties}}). "No new
-behavior" holds only for a Resource Server that relies on Baseline: a
+behavior" holds only for a resource server that relies on Baseline: a
 token issued after the contain transition never carries contained
 capability, and a token issued before the transition can still carry
 it until that token's own expiry ({{containment-properties}}).

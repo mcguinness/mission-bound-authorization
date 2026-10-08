@@ -11,7 +11,19 @@
  * that domain: one durable, single-writer SQLite file named in configuration
  * (`topology.json` `stores.pepWriteReservations.file`), owned by this PEP. It
  * shares no file, table or transaction with the PDP's claim domain (#917),
- * with D28 redemption (`transaction.ts`) or with the payments store.
+ * with the transaction tier's D28 redemption (`transaction.ts`) or with the
+ * payments store.
+ *
+ * @spec runtime#single-use-identifiers (#1080, D317): the same file holds the
+ * consumed-identifier record for a single-use permit on the unkeyed write path,
+ * a `consequential_write` that elects no key control. Its own table, keyed on
+ * the permit's `evaluation_id` and taken by one atomic insert
+ * ({@link WriteReservationStore.consumePermit}), so it survives a restart
+ * with the rest of the file. A keyed write whose permit carries `use_limit`
+ * is metered in the same table, inside its reservation's transaction
+ * ({@link WriteReservationStore.reserve}), and a retrieval of a retained
+ * result takes that permit's single use with one `consumePermit` insert
+ * before anything is disclosed (D342).
  *
  * The reversible effect itself, a payment schedule, lives in the same file,
  * so the effect and its completed reservation and result commit in ONE local
@@ -28,10 +40,11 @@ import { canonicalIdempotencyScope, type IdempotencyScope } from "@mission/core"
 import { type Database, openDurableStore, withTransaction } from "@mission/store";
 
 /**
- * Schema version 1. A `completed` row carries its result and its retention
- * bound; a `reserved` row is a reservation whose effect is not known to have
- * committed (a two-phase, non-local effect), which no tool here produces and
- * which time never purges.
+ * Schema version 1: the reservations and the schedules. A `completed` row
+ * carries its result and its retention bound; a `reserved` row is a
+ * reservation whose effect is not known to have committed (a two-phase,
+ * non-local effect), which no tool here produces and which time never purges.
+ * Version 2 adds the consumed single-use identifiers.
  */
 const MIGRATIONS: readonly string[] = [
   `
@@ -70,7 +83,31 @@ CREATE TABLE payment_schedules (
 ) STRICT;
 CREATE UNIQUE INDEX one_active ON payment_schedules (mission_issuer, mission_id, invoice_id) WHERE state = 'scheduled';
 `,
+  // Version 2 (#1080, D317): the unkeyed write path's consumed single-use
+  // decision identifiers. One row per redeemed `evaluation_id`, kept until
+  // `retain_until_ms`, which is never earlier than the end of the permit's
+  // acceptance window.
+  `
+CREATE TABLE consumed_permits (
+  evaluation_id TEXT PRIMARY KEY,
+  action TEXT NOT NULL,
+  execution_id TEXT NOT NULL,
+  consumed_at_ms INTEGER NOT NULL,
+  retain_until_ms INTEGER NOT NULL
+) STRICT;
+`,
 ];
+
+/**
+ * @spec runtime#single-use-identifiers (#1080, D317): "record consumed
+ * identifiers for at least the permit lifetime". This PEP accepts a permit
+ * only while its own clock reads at or before `valid_until` (no skew
+ * allowance), so the acceptance window ends at `valid_until`. A consumed
+ * identifier is retained until `valid_until` plus this margin, 30 s (the
+ * authorization server's default clock-skew allowance), so a backward step of
+ * the PEP's clock within it cannot reopen a permit whose record was swept.
+ */
+export const CONSUMED_PERMIT_RETENTION_MARGIN_MS = 30_000;
 
 export type WriteReservationState = "reserved" | "completed";
 
@@ -101,6 +138,13 @@ export interface WriteReservationRequest {
   executionId: string;
   /** The published retention for this operation, in milliseconds. */
   retentionMs: number;
+  /**
+   * @spec runtime#single-use-identifiers (#1136 review, D317, D333): present
+   * when the permit carries `use_limit: 1`. Its `evaluationId` is metered in
+   * the same transaction as the effect, and its consumed record is kept until
+   * `retainUntilMs`.
+   */
+  singleUse?: { retainUntilMs: number };
 }
 
 /**
@@ -115,7 +159,9 @@ export type ReserveOutcome =
   /** The pair was already held, by an earlier attempt or a concurrent winner: no effect. */
   | { kind: "existing"; reservation: WriteReservation }
   /** The effect refused (no such schedule, one already active): nothing committed. */
-  | { kind: "refused"; refusal: string };
+  | { kind: "refused"; refusal: string }
+  /** The permit carries `use_limit: 1` and its identifier is already consumed: no effect. */
+  | { kind: "consumed" };
 
 export interface PaymentSchedule {
   schedule_id: string;
@@ -224,6 +270,13 @@ export class WriteReservationStore {
    * effect, and the rest read its completed record. `inside` is a failpoint
    * for tests: a throw from it rolls the effect and the reservation back
    * together.
+   *
+   * @spec runtime#single-use-identifiers (#1136 review, D317): a permit
+   * carrying `use_limit: 1` is metered here, in the same transaction. A free
+   * pair whose permit identifier is already consumed reads `consumed` and runs
+   * no effect; otherwise the identifier is recorded consumed only with an
+   * effect that ran, so the consumed record, the effect and the completed
+   * reservation commit together, and an effect that refuses burns nothing.
    */
   reserve(
     request: WriteReservationRequest,
@@ -244,8 +297,21 @@ export class WriteReservationStore {
         .prepare("SELECT * FROM write_reservations WHERE scope_digest = ? AND idempotency_key = ?")
         .get(request.scopeDigest, request.idempotencyKey) as ReservationRow | undefined;
       if (prior) return { kind: "existing", reservation: fromRow(prior) };
+      if (request.singleUse && this.permitConsumed(request.evaluationId)) return { kind: "consumed" };
       const outcome = effect(nowMs);
       if (!outcome.ok) return { kind: "refused", refusal: outcome.refusal };
+      if (
+        request.singleUse &&
+        !this.consumePermit({
+          evaluationId: request.evaluationId,
+          action: request.action,
+          executionId: request.executionId,
+          retainUntilMs: request.singleUse.retainUntilMs,
+        })
+      ) {
+        // Unreachable under the single writer: read free above, in this transaction.
+        throw new Error("the permit identifier was consumed inside its own transaction");
+      }
       this.db
         .prepare(
           `INSERT INTO write_reservations (scope_digest, idempotency_key, scope_json, action, operation_identity,
@@ -365,6 +431,60 @@ export class WriteReservationStore {
     return this.db
       .prepare("DELETE FROM write_reservations WHERE state = 'completed' AND retain_until_ms < ?")
       .run(this.now().getTime()).changes;
+  }
+
+  /**
+   * @spec runtime#single-use-identifiers (#1080, D317): take the single use
+   * of one permit. `true` exactly once per `evaluation_id`; every later
+   * presentation, concurrent or after a restart on the same file, reads
+   * `false`. One statement (the `redeemOnce` pattern of `@mission/store`, over
+   * a table that also carries the retention bound), so two presentations can
+   * never both insert. The check is not time-conditional: a record past its
+   * retention still refuses until {@link sweepConsumedPermits} removes it.
+   * A store that cannot be written throws, and the caller refuses.
+   */
+  consumePermit(input: { evaluationId: string; action: string; executionId: string; retainUntilMs: number }): boolean {
+    return (
+      this.db
+        .prepare(
+          `INSERT INTO consumed_permits (evaluation_id, action, execution_id, consumed_at_ms, retain_until_ms)
+           VALUES (?, ?, ?, ?, ?) ON CONFLICT(evaluation_id) DO NOTHING`,
+        )
+        .run(input.evaluationId, input.action, input.executionId, this.now().getTime(), input.retainUntilMs).changes ===
+      1
+    );
+  }
+
+  /**
+   * Whether a permit's single use is already taken: read-only, and like
+   * {@link consumePermit} not time-conditional.
+   */
+  permitConsumed(evaluationId: string): boolean {
+    return this.db.prepare("SELECT 1 FROM consumed_permits WHERE evaluation_id = ?").get(evaluationId) !== undefined;
+  }
+
+  /** Every consumed single-use identifier, oldest first. */
+  consumedPermits(): Array<{ evaluationId: string; action: string; executionId: string; retainUntilMs: number }> {
+    return (
+      this.db
+        .prepare("SELECT evaluation_id, action, execution_id, retain_until_ms FROM consumed_permits ORDER BY rowid")
+        .all() as Array<{ evaluation_id: string; action: string; execution_id: string; retain_until_ms: number }>
+    ).map((r) => ({
+      evaluationId: r.evaluation_id,
+      action: r.action,
+      executionId: r.execution_id,
+      retainUntilMs: r.retain_until_ms,
+    }));
+  }
+
+  /**
+   * Purge every consumed identifier past its retention, which is past its
+   * permit's acceptance window, so the permit it names is refused
+   * `permit_expired` before any redemption is attempted. Nothing schedules
+   * this sweep, like {@link sweep}.
+   */
+  sweepConsumedPermits(): number {
+    return this.db.prepare("DELETE FROM consumed_permits WHERE retain_until_ms < ?").run(this.now().getTime()).changes;
   }
 
   close(): void {

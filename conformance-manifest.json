@@ -3,116 +3,120 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-control-plane.md": {
-    "revision": "909a3ee7371452ad969554d57c4ae9941a4caf36",
-    "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "60d31c12bd9e5f725b3030b1fd04517aea7957d0ab167599f940b7471d20c093"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "98445ffc2dcdaac18e6c701e63e382eb6e60c596",
-    "content_sha256": "bac0c0baea183b6e594d4adc7b9fee19791d9e5e6c7490004da921889eac3f8d"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "62ca5c493b76ebf99ebcf9b04bba2ce501396cc29bc74a28c41f20e0a51bad52"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "6f10361ef7fae0c457e78b003860587fb773ac4f",
-    "content_sha256": "37d43c72d0ca7ebba7e3e2495460b125128ed61d60317542b473904ddab13cf0"
+    "revision": "9b890b427ffd23c4c0b8c7f33118df6f4038219a",
+    "content_sha256": "fefdf0f9ed2e783ca2c16f7ec9eb88329079afcef44c962cf487bc0454b2f103"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "40705c1d1bab1ee18d0a5345f3071aaaa30d2031",
-    "content_sha256": "ea9be2ae2bb1b15bd13e30d8a9bdf328bfcbb89f15621f6cf31bf75eb400fca3"
+    "revision": "9b890b427ffd23c4c0b8c7f33118df6f4038219a",
+    "content_sha256": "c1fb17ce0f9d37cc15c973fbac912fa4ef31a9e27ed81cbda8b7645d6ea4b37d"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "0c7ba9c38604240dbfbaa2b95586a235ed2dc0ca",
-    "content_sha256": "070186541b4e7296f2fc96dd5a5ed3c01beac8498e4a058e809d89a28044d8a0"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "8ab87ab396665ac745402777e8a4783ee99acadf1169505f7e06719ac22cdfa1"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "2b422bf1c54a64ae5cdf4440f041a0d27f2a0e05",
-    "content_sha256": "dc736dd837d52eb258039dfaa393dedfb3c41852f1c171fcb776af3f72196aec"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "86d7115e923c7b860dee2f9d035e84e6a03e995066587690d069abe2af4bf863"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "0ddf5037f33a71d77b4ccbf1a8ba5c210074d931",
-    "content_sha256": "5488bd571ad351f0e17675a52a18200b6fed96bd503d4029e84bb0a8f964578c"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "4674e17b5206d3eb54dba9c939b61208d9bb985b4955289ab2c53279a9e3a255"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "72e61f7bcca5c697221bdeb738d1880c5dfa88d1",
-    "content_sha256": "815cbcde45ab0b9fe6e5391596f158d4b282b390b40aa1299e9a8431614bcbae"
+    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
+    "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "02014aa318f3548918be53c3faa41137b9331b81",
-    "content_sha256": "3207f14f575336e0fd1b4b3ab4eee30d143dab3fd4f44be8b5c69f3db290d0a4"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "aef325527519d5b315b8b41a9a9f4c132ad90eee5c16358d18b25af1d8ba0f81"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "0a93cdc3a8c5598bf85b1b693c5985a477929131",
-    "content_sha256": "3d4ebfad6d323a7e4626bab4caf52d474647cdc0e6b74fc6179b9e800ff636e6"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "567d56a9a8d82ae5a4495e3c0147ae4570470a6931b6a2cf4ca72c3eace6d961"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
-    "content_sha256": "e06bc60196934a5b5475d51884dd5627bf263cce0fa18973fd49a63f529b77f8"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "69f0dedae0b7fbce2eff956e069fc6f519a6d185eda9923f2310098a15ad79f3"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "5421debe04e26cdce67553b40da55a824f2c8e0e",
-    "content_sha256": "544fd9439ba95abcfb530d84a834dd1532c136bce3ec5c32ea61bc152250cbcb"
+    "revision": "58f7481453f3e7f94f93fb2a8a2b951bf1dbf11e",
+    "content_sha256": "4ffa3d5f41152987dcaa565d30b77f6e17e151586d80da1179f3140c85d9dd39"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "60552344e0c4184a6dca034ace9d424bbb6b4965",
-    "content_sha256": "262319038b786c962e4decbb1d68102cd09c6242378bcf8f85541204d0b3c37b"
+    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
+    "content_sha256": "6c20b08bbe97595d0223d7c3c4e082cf4e9c8b3081196a942214b4e6dea7113e"
+   },
+   "draft-mcguinness-oauth-mission-management.md": {
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "9201cdc83aa8e79a1a2615bf25f69c9ff8fac11424be6336c8f5052ba1f24b5b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "6f2300ed1ac42c92c63b46f41915b500cc3901ce",
-    "content_sha256": "3f8b638b51f87739e7a93eb1948fe57eb70b0fe2288a295cda20276c50d0ad50"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "435652531b159beb785f5867c9e09da1fad63263586b4a9cbfef79b9b63b9b1f"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "091f1ffd5e6b77d47f8f189797bfdb0cf64ea328",
-    "content_sha256": "76ae8710dc0faf41220e947e05a4dc4a79440c0039746089a4b24e486c1d06de"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "5d16ac66488253e626adf6504c37892c25ca054d",
-    "content_sha256": "028d9bd108bcf795eaa01bd2a15f987f2a2c8cc6c5e5eebf9afb6d30332c56a1"
+    "revision": "58f7481453f3e7f94f93fb2a8a2b951bf1dbf11e",
+    "content_sha256": "c0cea30579bc94d809565c019b91672b64862e23e871da81893abc123dd2cb46"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
-    "content_sha256": "bf4b09b73adfdbf647f9740ef2451862b87212aaa7424496aa865b99d2a2a46d"
+    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
+    "content_sha256": "1929eef4d3128482f7ce4ed5cff9f79b63eef818262e15f8ecb3d155d3dc64b7"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "c969e70ad8aaeaf376730d9d98b23f4181b3819f",
-    "content_sha256": "799c3addb5bf932850706473c3b49491f91c551762041b5770f2f155d5543e96"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "72d16463993b55af9238d7374a0a39764b6a8086935515180fa4841344510119"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "6a648aadc87ebdb72235d9afb707898a356d6d5b",
-    "content_sha256": "b8e8c0e073d7ad6fcd57faa536c3baea9fc701ec065e408629333c79d1d602cc"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "81de7af0ad94b3a39a6ec8067377ac39b9884a4705cd14c24cd712c9f090a5f1"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "bc498b14258afa19a5f311310f5710722b5ae67c778d9ddbd299123d054246ad"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "2d348d6ca191d1122ae288d6ddc455b10f78ec267a5ad228c4af52a10b619015"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
-    "revision": "175c6252b65d8fdca0347d3f214dd0282d6615fc",
-    "content_sha256": "0ca8901a662c12afc19ed590685652dfe3604d0907364ccfe819a88d584499f9"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "9d17b521502210144da5a492ef3109138621627cc495b474b4db771775a0daf8"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "367e69e46a32d3ae652feea03036d2e4bfea394c",
-    "content_sha256": "88374fb1cbcaee0d11bc3241f3743618ed542e3e86b18bd9f25d5e8617042962"
+    "revision": "7568a8d708beb6ea9c3906b13d4d3a0e12482e43",
+    "content_sha256": "ec63c9707af35ecd0fac6bca50df29edb07a5307bc50e334eaae4ed6c0383afb"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "aec5ef67087d7cebce0787dd3ea83b6dcbba193e",
-    "content_sha256": "41d16c43d4e29769a790ea33393bfc300f8b96875a99c614d6039c689cc3fadb"
+    "revision": "5ad0d29770d9598408397835f9ecf5b2ad147830",
+    "content_sha256": "5be7ff2eda5a6c1b20cb10b2fa6791d4b05dc06b609d8f43b850214ef33a9aa2"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "2c649d379a6823ca5403a41fef456edffc81ca07",
-    "content_sha256": "f33605fc71c5ae2f2e18b637616f1b271d16c9d515082e97a7300bea96983f97"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "cb10f822787bc00906fc6250622e11f5b3510527123e441f194dfcea77505fec"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "2b93b1b39b6868c93caf475887d31bf21891b1cc",
-    "content_sha256": "741b7d7273317b93feaae9e2142e7fabaa1dd33bd98dc00eb0ae3461b693f064"
+    "revision": "c74a85acc97dc6ba157b26721f18767d76085b80",
+    "content_sha256": "ae693e62093b5de105aabc0df10b335856e3f16b6af189e646bf8451dce2d33e"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
-    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
-    "content_sha256": "7098f04b5cc6e3a633f0eb3003a112af720ba414d9f45f45ce9dbbcc166f9200"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "ee397db8cc220f7cfd6995e4d701cf05235a63744f58954173723cdbaeb54132"
    },
    "draft-mcguinness-oauth-mission-submission-evidence.md": {
-    "revision": "dd16dd544da103729cc5380bb11e860796a95643",
-    "content_sha256": "78fa453b80921a5898aa47c2453be8c86cf81d74a5a5a87e95ed0c2a4a06637e"
+    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
+    "content_sha256": "5fbf37a2efff433ecf5edea08be32bba1e17357ddc2ef32cfcece02ddef78f59"
    },
    "draft-mcguinness-oauth-mission-request-provenance.md": {
     "revision": "77aa582c9ac6588eaa2bcf0ab6f1d298308f3f3b",
@@ -237,6 +241,7 @@
    "child-delegation.carryover",
    "child-delegation.subtree-rendering",
    "child-delegation.policy-drawdown",
+   "child-delegation.direct-approval",
    "core.instance-context",
    "core.delegation",
    "runtime.instance-context",
@@ -248,6 +253,7 @@
    "submission-evidence.verification",
    "request-provenance.verification",
    "request-provenance.intake",
+   "expansion.adjudication",
    "expansion.interactive-completion"
   ]
  },
@@ -2851,6 +2857,43 @@
    "tests": []
   },
   {
+   "id": "core.submission.closed-top-levels",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "The AS MUST reject a submission with the `invalid_request` error code if the Submission envelope contains a top-level member other than `intent` and `evidence`, or if the `intent` contains a top-level member that neither this document nor a companion profile the AS implements defines",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Submission envelope member other than intent and evidence is refused invalid_request; an Intent top-level member that neither the binding nor an implemented companion defines (the retired success_criteria) is refused invalid_request, while the otherwise identical Intent is accepted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Submission envelope parse (@spec mission#submission-via-par) > closed envelope top level: an unknown submission member is refused",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Submission envelope parse (@spec mission#submission-via-par) > the retired success_criteria member fails the inner closed top level with invalid_request (@spec mission#mission-intent)",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "Both clauses are asserted on the registered invalid_request code. The Intent clause uses the retired success_criteria member with an accepted control; re-adding the member to the TOP_LEVEL allowlist fails the test. Acceptance of companion-defined members is not claimed by this row."
+  },
+  {
    "id": "core.commitment.duplicate-members",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "commitment-mechanisms",
@@ -4443,6 +4486,98 @@
    "notes": "#963 ruling (2026-10-01), parallel to the #885 async-family disclosure. No implementation witness yet."
   },
   {
+   "id": "derivation-limits.rendering.standing-consent-rule",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "approval-rendering",
+   "text": "At the human approval of a standing consent under which policy can create Missions, the AS MUST render the rule that establishes each such Mission's `derivation_limit`, and either the rule's maximum or that no finite maximum is guaranteed",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "at the human approval of a standing consent that admits policy-created Missions, the rendering carries the rule that establishes each admitted Mission's derivation_limit and either its finite maximum or an explicit statement that no finite maximum is guaranteed, taken from the exact consented version and the committed policy state the AS retains; no consent rendering or human approval is attributed to an admitted Mission's own creation",
+    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
+   "id": "derivation-limits.rendering.standing-consent-scope",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "approval-rendering",
+   "text": "the rendering MUST also state that the maximum is local to each Mission, as {{effective-limit}} counts it, and is not a budget across the Missions the consent admits, their descendants, or their lifetimes",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the standing-consent rendering states that its maximum bounds each admitted Mission locally (with the carryover and ceiling-drawdown counts as Effective Limit defines them), not a budget shared by the admitted Missions, their descendants, or their lifetimes, and carries the async-family and Mission Issuance Grant counting statements where the deployment supports those transports",
+    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
+   "id": "derivation-limits.rendering.standing-consent-evidence",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "approval-rendering",
+   "text": "the Consent Disclosure object of that approval MUST carry this rendering in `mission_summary`, so `consent_rendering_hash` commits it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where Consent Evidence is recorded, the standing consent's Consent Disclosure object carries the rendered rule and maximum, or the no-finite-maximum statement, in mission_summary, and consent_rendering_hash recomputed over that object commits it; no Consent Disclosure or Consent Evidence is recorded for an admitted Mission's own creation",
+    "local": "requires the deployment to also record Consent Evidence (draft-mcguinness-oauth-mission-consent-evidence), and requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
+   "id": "derivation-limits.effective.standing-consent-ceiling",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "effective-limit",
+   "text": "Where that maximum is finite, the AS MUST NOT establish a `derivation_limit` above it, nor leave `derivation_limit` absent, for such a Mission",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with a finite maximum M rendered at the standing consent, every Mission created under that consented version records a derivation_limit of at most M and never leaves it absent; a stricter applicable policy or requested limit yields the stricter value; after the AS policy ceiling is raised or removed, a Mission newly created under the same consent still records at most M until a fresh human approval of the standing consent; each admitted Mission counts its own derivations except under the carryover and ceiling-drawdown exceptions",
+    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
    "id": "core.lifecycle.mission-error-diagnostic",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "lifecycle",
@@ -4527,6 +4662,54 @@
     }
    ],
    "notes": "Both refusal arms (unparseable and already-past) are invalid_request at submission acceptance, judged against the kernel clock. The requested value is never rewritten forward. Row replaces the pre-#525 invalid_authorization_details behavior."
+  },
+  {
+   "id": "core.intent.purpose-restrictive-use",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-intent",
+   "text": "In any other decision, `purpose` MAY contribute only to a refusal or to stricter treatment",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "outside the configured-mapping lookup, an AS may refuse, or apply stricter treatment to, a submission on its purpose, and that is the only effect purpose has on the decision; a runner never fails an AS for refusing or tightening on purpose"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No purpose decision path in the reference AS: kernel/intent.ts only validates purpose as a string, and deriveAuthoritySet (kernel/derive.ts) keys configured-mapping mode on target_resources and never reads purpose. Planned surface: derivation (deriveAuthoritySet) and the authorization decision, once deployment policy can refuse or tighten on purpose."
+  },
+  {
+   "id": "core.intent.purpose-never-widens",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-intent",
+   "text": "its value, its absence, or a substituted value MUST NOT supply, widen, relax, or refresh authority, or replace a check that applies independently of it",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "outside the configured-mapping lookup, submissions that differ only in purpose (a value, a different value, or none) receive no wider Authority Set, no relaxed or refreshed authority, and no skipped check; any difference purpose makes is a refusal or stricter treatment"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "A prohibition every AS meets; the reference AS meets it trivially. No purpose decision path in the reference AS: kernel/intent.ts only validates purpose as a string, and deriveAuthoritySet (kernel/derive.ts) keys configured-mapping mode on target_resources and never reads purpose. Planned test surface: derivation, an output-bound invariance test over deriveAuthoritySet (kernel.test.ts) with Intents differing only in purpose, once a purpose path exists. Runtime decision points are covered by the runtime.classification purpose rows."
   },
   {
    "id": "core.record.effective-not-later-than-requested",
@@ -4810,7 +4993,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "two submissions that differ only in goal, goal_lang, task_bounds, or success_criteria receive the same issuance outcome, refused or issued, under derivation and under any adjudicating policy, including one that takes a model's output as an input"
+    "normative": "two submissions that differ only in goal, goal_lang, or task_bounds receive the same issuance outcome, refused or issued, under derivation and under any adjudicating policy, including one that takes a model's output as an input"
    },
    "level": "unit",
    "coverage": "todo",
@@ -5991,7 +6174,7 @@
    "id": "core.introspection.caller-authorization",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "caller-authorization-and-minimization",
-   "text": "MUST return Mission data only to a caller authorized to receive it, in particular a Resource Server that is an audience of the token",
+   "text": "MUST return Mission data only to a caller authorized to receive it, in particular a resource server that is an audience of the token",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -8397,6 +8580,353 @@
    "notes": "The reference AS authenticates Status and Lifecycle callers with a deployment service token, not mTLS or private_key_jwt, so it has no direct-client-authentication path to test. Todo (#972 item 18, #1099 review)."
   },
   {
+   "id": "status.lifecycle.scheduled-resume-authorization",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS MUST authorize it against both the caller's authorization for `suspend` and the authorization the deployment requires for a direct `resume` of that Mission, including when it sets or replaces the schedule of a Mission already `suspended`, whoever suspended it.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a suspend carrying on_expiry=resume is refused to a caller holding the authorization for suspend but not the deployment's direct-resume authorization for that Mission, both when it would arm a schedule on an active Mission and when it would set or replace the schedule of a Mission another party already suspended; a caller holding both succeeds"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint with a suspend-only caller and a suspend-plus-resume caller, each sending suspend with suspend_until and on_expiry=resume against an active Mission and against a Mission a different party suspended (with and without a recorded schedule)."
+  },
+  {
+   "id": "status.lifecycle.scheduled-resume-refusal-no-change",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS checks both before any change and refuses a caller lacking either as an unauthorized lifecycle request (below), leaving the Mission's state and schedule unchanged.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the refused scheduled-resume request leaves the Mission's state, its recorded suspend_until and on_expiry, and that schedule's committing party unchanged, and is answered with the not-found response shape of an unauthorized lifecycle request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the refusal cases of status.lifecycle.scheduled-resume-authorization, asserting state, version, recorded schedule and committing party before and after, and the not_found response body."
+  },
+  {
+   "id": "status.lifecycle.schedule-committing-party-recorded",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS MUST record with each committed schedule its committing party, the acting party of the request that committed it; an authorized replacement records its own.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each committed schedule is recorded with the acting party of the request that committed it, and an authorized replacement records the replacing request's acting party in place of the earlier one"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the AS's schedule and audit record read after arming a schedule and after an authorized replacement by a different acting party; no wire member carries the committing party."
+  },
+  {
+   "id": "status.lifecycle.schedule-applied-at-deadline",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "When the `suspend_until` of a current schedule passes, the AS MUST apply `on_expiry` (transition to `active` for `resume`, or to `revoked` for `revoke`) and emit the corresponding transition, without a further request.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "once a current schedule's suspend_until passes before expires_at, the Mission is reported active (on_expiry resume) or revoked (on_expiry revoke) with the corresponding transition emitted, without any further lifecycle request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: a controllable clock driving a suspended Mission past suspend_until for each on_expiry value, observed through the Mission Status endpoint."
+  },
+  {
+   "id": "status.lifecycle.schedule-grant-loss-not-cancel",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "a later expiry or withdrawal of the committing party's grant does not by itself cancel it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a resume schedule whose committing party's resume authorization is withdrawn or expires after the commit still applies at its deadline; the deadline performs no grant re-check"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, withdraw the committing caller's lifecycle grant, advance the clock past suspend_until, and observe the Mission active."
+  },
+  {
+   "id": "status.lifecycle.schedule-superseded-never-fires",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "The AS MUST NOT apply a schedule that is no longer current, so an earlier deadline never acts on a later suspension.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after a scheduled resume is superseded, by a direct resume followed by a new suspend or by an authorized replacement, its original deadline passing leaves the Mission suspended with its current schedule, if any, and that schedule's committing party unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, then (a) resume and suspend again with no schedule or a later one, and (b) replace it with a later or revoke schedule; advance the clock past the original suspend_until and observe state, schedule and committing party."
+  },
+  {
+   "id": "status.lifecycle.schedule-no-terminal-change",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "A deadline applies only a transition legal from the Mission's current state",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a deadline passing for a Mission that has reached a terminal state changes nothing: a resume schedule never makes a revoked, completed, expired or companion-terminal Mission active"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, revoke or complete the Mission, advance the clock past suspend_until, and observe the terminal state unchanged with no transition emitted."
+  },
+  {
+   "id": "status.lifecycle.schedule-expiry-governs",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "legal-transitions",
+   "text": "When a schedule's `suspend_until` is at or after the Mission's `expires_at`, expiry governs: the Mission becomes `expired` at `expires_at`, and the AS MUST NOT apply that schedule's `on_expiry`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with suspend_until equal to or later than expires_at, the Mission reaches expired at expires_at and is never observed active from the scheduled resume (nor revoked from a revoke schedule)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: a controllable clock with suspend_until equal to expires_at and later than expires_at, for both on_expiry values, observing every Status read across the boundary."
+  },
+  {
+   "id": "status.lifecycle.schedule-replacement",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "the AS MUST update the recorded values and their committing party, emitting the corresponding transition-metadata change and reporting the updated values in the response",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorized suspend against a suspended Mission carrying a valid suspend_until and on_expiry pair that differs from the recorded schedule, or arming one where none is recorded, updates the recorded pair and its committing party, emits the metadata change, and reports the new values in the signed response"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint: suspend, then suspend again with a different valid pair from a different authorized caller; assert the response values, the incremented version, the emitted change and the recorded committing party."
+  },
+  {
+   "id": "status.lifecycle.schedule-omission-preserves",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "A `suspend` that omits both members leaves the recorded schedule, if any, and its committing party unchanged: omission never clears a deadline.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a suspend omitting both suspend_until and on_expiry against a suspended Mission leaves the recorded pair and its committing party unchanged, whoever sends it, and the deadline still applies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint: arm a schedule, send a plain suspend from another authorized caller, and assert the reported pair, version and committing party unchanged."
+  },
+  {
+   "id": "status.lifecycle.schedule-incomplete-pair-invalid",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "A `suspend` carrying only one of the two remains invalid",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a suspend carrying suspend_until without on_expiry, or on_expiry without suspend_until, is refused as malformed and changes neither state nor any recorded schedule"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint against an active and a suspended Mission, each incomplete pair, asserting refusal and unchanged state and schedule."
+  },
+  {
+   "id": "management.bulk.scheduled-resume-grant-dry-run",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "dry-run",
+   "text": "Before evaluating the filter for a `suspend` whose `on_expiry` is `resume`, the AS MUST verify that the caller holds the `resume` grant of {{blast-radius}}, and MUST refuse a caller that lacks it with `forbidden` ({{management-errors}}), issuing no bulk token.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a dry run of a bulk suspend with on_expiry=resume from a Management Client lacking the distinct or elevated resume grant is refused forbidden with no bulk token issued and no membership evaluated, while the same dry run with on_expiry=revoke, or from a caller holding the grant, succeeds"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint, dry run of a bulk suspend with each on_expiry value from callers with and without the resume grant."
+  },
+  {
+   "id": "management.bulk.scheduled-resume-grant-execute",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "For a `suspend` whose `on_expiry` is `resume`, the AS MUST verify again that the caller holds the `resume` grant of {{blast-radius}}, and MUST refuse a caller that no longer holds it with `forbidden`, executing nothing; the bulk token never substitutes for this check.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an execute of a bulk suspend with on_expiry=resume, presenting a bulk token from a dry run the caller passed while holding the resume grant, is refused forbidden when the grant has since been withdrawn, and no member's state or schedule changes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run with the resume grant, withdraw the grant, execute with the valid bulk token, and assert the refusal and every pinned member unchanged."
+  },
+  {
+   "id": "management.bulk.schedule-values-bound",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "An execute whose `operation`, `filter`, `suspend_until`, or `on_expiry` differs from what the token pins MUST be refused with `invalid_bulk_token`, executing nothing.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an execute of a bulk suspend whose suspend_until or on_expiry differs from the values its bulk token pins (including omitting them, or changing revoke to resume) is refused invalid_bulk_token and changes no member"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run a bulk suspend with a schedule, then execute with a changed suspend_until, a changed on_expiry, and both omitted."
+  },
+  {
+   "id": "management.bulk.schedule-committing-party",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "The caller is the committing party of every schedule a bulk `suspend` commits.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every schedule a bulk suspend commits, armed on an active member or replacing an already-suspended member's schedule, is recorded with the executing Management Client as its committing party"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: bulk suspend with a schedule over active and already-suspended members, then read each member's schedule record."
+  },
+  {
+   "id": "management.bulk.schedule-omission-preserves",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "on a member already `suspended`, a request that omits `suspend_until` and `on_expiry` leaves the member's recorded schedule and its committing party unchanged",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a bulk suspend without suspend_until and on_expiry leaves each already-suspended member's recorded schedule and committing party unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: arm schedules on some members through the lifecycle endpoint, then bulk suspend the set without schedule members and read each member's schedule and committing party."
+  },
+  {
    "id": "signals.discharge.authority-changed-rematerialize",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "consumer-behavior",
@@ -9300,7 +9830,7 @@
    "id": "mas.join.claim-isolation",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "enterprise-profile",
-   "text": "The Enterprise claim is made per covered Authorization Server, resource, and action path; a mixed estate's weaker paths never inherit it from the deployment's name.",
+   "text": "The Enterprise claim is made per covered authorization server, resource, and action path; a mixed estate's weaker paths never inherit it from the deployment's name.",
    "role": "Controller",
    "strength": "stated",
    "applicability": {
@@ -9820,13 +10350,13 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#557. Moved partial -> tested by #557 stage C2's outside-the-Mission negative: this reference implementation's ordinary credentials carry no authorization_details member, so the substitution is attempted through the credential-authority evaluator instead (the acting credential's own authority names the action, the Mission does not), which is the same claim the clause makes. The composed-stack entry shows the positive over the shipped configuration and auto-skips without OpenFGA; the unit negative always runs."
+   "notes": "#557. Moved partial -> tested by #557 stage C2's outside-the-Mission negative: this reference implementation's ordinary credentials carry no authorization_details member, so the substitution is attempted through the credential-authority evaluator instead (the acting credential's own authority names the action, the Mission does not), which is the same claim the clause makes. The composed-stack entry shows the positive over the shipped configuration and auto-skips without OpenFGA; the unit negative always runs. #825 PR 2b (D312): the ordinary credential's own authority (the resolver's entries) also reaches the PDP as `context.credential.authority`, a second bound the PDP enforces; the joined decision's authority still traces to the Mission's authority_set, and the credential's own coverage never substitutes for it."
   },
   {
    "id": "mas.baseline-join.three-bound-intersection",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A permit under a join never exceeds any of three independently evaluated bounds: the authority the acting credential itself carries (the token as issued, enforced at the Resource Server or gateway), the Mission's approved authority, and current Resource policy.",
+   "text": "A permit under a join never exceeds any of three independently evaluated bounds: the authority the acting credential itself carries (the token as issued, enforced at the resource server or gateway), the Mission's approved authority, and current Resource policy.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -9837,7 +10367,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "each of the three bounds denies ON ITS OWN with the other two satisfied, and all three satisfied permits, which is what makes them independently evaluated rather than one check wearing three names. Bound 1 is the acting credential's own authority (PepDeps.masJoin.resolveOrdinaryAuthority), intersected against the joined Mission authority by resource+action before the PDP runs; absent, it cannot be honestly evaluated, so the joined route fails closed with out_of_authority rather than treating an unconfigured bound as unbounded. Bound 2 is the Mission's approved authority, matched by evaluate() against the joined authority set. Bound 3 is current Resource policy, the existing fga.checkWithContext call, which denies out_of_authority with both other bounds satisfied. The demo supplies a real bound-1 evaluator (src/demo/src/stack.ts): the credential's verified scope claim mapped through config/mas-join.json's scope_actions, so it models the token AS ISSUED and a narrower token yields a narrower permit for the same client",
+    "normative": "each of the three bounds denies ON ITS OWN with the other two satisfied, and all three satisfied permits, which is what makes them independently evaluated rather than one check wearing three names. Bound 1 is the acting credential's own authority (PepDeps.masJoin.resolveOrdinaryAuthority), checked on the facts the PEP establishes (resource, action, vendors, amount) before the PDP runs and carried to it as context.credential.authority; the joined Mission's view reaches the PDP unfiltered (D340), so a Mission entry broader than the credential still permits what the credential covers; absent, it cannot be honestly evaluated, so the joined route fails closed with out_of_authority rather than treating an unconfigured bound as unbounded. Bound 2 is the Mission's approved authority, matched by evaluate() against the joined authority set. Bound 3 is current Resource policy, the existing fga.checkWithContext call, which denies out_of_authority with both other bounds satisfied. The demo supplies a real bound-1 evaluator (src/demo/src/stack.ts): the credential's verified scope claim mapped through config/mas-join.json's scope_actions, so it models the token AS ISSUED and a narrower token yields a narrower permit for the same client",
     "local": "bound 3's independence is shown by evaluation, not by an independent policy SOURCE: the contextual tuples the FGA check runs against are themselves derived from the matched Mission authority entry's own constraints (policy-view.ts, 'authority + constraint -> ephemeral grant'). A deployment whose resource policy is authored separately from the Mission would exercise the same call with a genuinely independent input; this one does not, and the row does not claim it does"
    },
    "level": "unit",
@@ -9890,9 +10420,21 @@
      "name": "shipped config/mas-join.json authorizes a joined read of its own demo (#557) > a shipped scope covers a shipped-derived Authority Set entry, so rule 8's first bound leaves something to permit",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: the PDP decides over the Mission's own view, never one filtered by the credential (D340) > permits the action a narrower ordinary credential covers under a broader Mission entry, deciding over the whole entry",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: the PDP decides over the Mission's own view, never one filtered by the credential (D340) > still refuses an action the Mission entry covers but the narrower credential does not, before the PDP",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. Moved partial -> tested by #557 stage C2, which SUPERSEDES this row's earlier recorded ruling (\"Kept partial per review ... This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it\"). That ruling is overridden deliberately, not resolved: no Mission-agnostic resource-policy source exists in this deployment yet, and observation.local records that it does not. What changed is the other half. A deployment-side bound-1 evaluator now exists (the demo's scope-to-authority map over config/mas-join.json, with a shipped-config test that the map covers a derived Authority Set entry, so a configuration that could never permit its own demo fails CI), and each bound now has its own denial with the other two satisfied plus an all-three-satisfied permit, so no denial is attributable to the wrong bound. Bound 3's denial is driven by a refusing Fga stub: it proves the call site is reached and its result honored, not that the policy behind it is authored independently of the Mission. #557 step 14 rules that per-bound denials plus a configured evaluator satisfy the quoted clause's \"independently evaluated\" claim, which is about evaluation order, not about where a deployment sources its resource policy."
+   "notes": "#557. Moved partial -> tested by #557 stage C2, which SUPERSEDES this row's earlier recorded ruling (\"Kept partial per review ... This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it\"). That ruling is overridden deliberately, not resolved: no Mission-agnostic resource-policy source exists in this deployment yet, and observation.local records that it does not. What changed is the other half. A deployment-side bound-1 evaluator now exists (the demo's scope-to-authority map over config/mas-join.json, with a shipped-config test that the map covers a derived Authority Set entry, so a configuration that could never permit its own demo fails CI), and each bound now has its own denial with the other two satisfied plus an all-three-satisfied permit, so no denial is attributable to the wrong bound. Bound 3's denial is driven by a refusing Fga stub: it proves the call site is reached and its result honored, not that the policy behind it is authored independently of the Mission. #557 step 14 rules that per-bound denials plus a configured evaluator satisfy the quoted clause's \"independently evaluated\" claim, which is about evaluation order, not about where a deployment sources its resource policy. D340: the PEP no longer filters the joined view by the credential (a filter dropped a Mission entry broader than the credential, refusing an action it covers, and broke D335's full-set proof); bound 1 refuses on its own facts instead."
   },
   {
    "id": "mas.baseline-join.join-view-commitment",
@@ -11311,6 +11853,52 @@
    "notes": "Misfit for a PDP-only unit test: classification assignment (whether purpose or deployment policy lowers an action's class) happens in the PEP's static action-to-class map (mcp-payments/src/pep.ts), never inside evaluate(), which receives action_class as an already-decided opaque label and has no classifier or floor table of its own. No lowering mechanism exists in evaluate.ts to exercise."
   },
   {
+   "id": "runtime.classification.purpose-may-raise",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "A Mission's `purpose`, or deployment policy, MAY raise an action to a stricter class.",
+   "role": "PDP",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP whose policy raises an action's class on the Mission's purpose applies the stricter class's gating to that action; raising is the only classification effect purpose has"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No purpose path: the PEP's static action-to-class map (mcp-payments/src/pep.ts) and evaluate() (services/pdp) never read purpose, and the PDP's Mission view carries no purpose member. Planned surface: decision-request, a PDP classification test once policy can key a class raise on the approved Mission's purpose."
+  },
+  {
+   "id": "runtime.classification.purpose-from-approved-mission",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "The `purpose` consulted is the approved Mission's, from its Mission state or a validated projection of it ({{I-D.draft-mcguinness-oauth-mission}}), never a value the request asserts.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the purpose a PDP's classification consults is the approved Mission's; a decision request that carries a different purpose, or none, gets the same classification, and no class falls below the floor"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No purpose path: the PEP's static action-to-class map (mcp-payments/src/pep.ts) and evaluate() (services/pdp) never read purpose, and the PDP's Mission view carries no purpose member. Planned surface: decision-request, a PDP test that a request-asserted purpose differing from the Mission's changes no classification, once the PDP reads the Mission's purpose."
+  },
+  {
    "id": "runtime.classification.no-evasion-and-write-floor",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "classification",
@@ -12059,7 +12647,7 @@
    "id": "runtime.rs-profile.must-publish",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "rs-runtime-profile",
-   "text": "A Resource Server that claims conformance to this runtime profile MUST publish or otherwise make available a Resource Server runtime profile for the protected resources and operations in scope.",
+   "text": "A resource server that claims conformance to this runtime profile MUST publish or otherwise make available a Resource Server runtime profile for the protected resources and operations in scope.",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -12103,7 +12691,7 @@
    "id": "runtime.rs-profile.no-claim-without-pep",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "rs-runtime-profile",
-   "text": "A Resource Server MUST NOT claim this runtime profile for an operation unless the operation's consequential effects pass through a PEP that can refuse the operation after credential validation and before execution.",
+   "text": "A resource server MUST NOT claim this runtime profile for an operation unless the operation's consequential effects pass through a PEP that can refuse the operation after credential validation and before execution.",
    "role": "RS",
    "strength": "MUST NOT",
    "applicability": {
@@ -12203,9 +12791,33 @@
      "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/key-roles.test.ts",
+     "name": "each token class verifies only under its own role's keys (@spec runtime-oauth#token-validation, #825, D312) > refuses an access token signed by %s, on both transports",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/key-roles.test.ts",
+     "name": "each token class verifies only under its own role's keys (@spec runtime-oauth#token-validation, #825, D312) > refuses an attenuation root signed by the access-token key, and verifies the root key's signature",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/key-roles.test.ts",
+     "name": "each token class verifies only under its own role's keys (@spec runtime-oauth#token-validation, #825, D312) > refuses a transaction token signed by the access-token key, though that key is in the transaction key set",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/key-roles.test.ts",
+     "name": "each token class verifies only under its own role's keys (@spec runtime-oauth#token-validation, #825, D312) > refuses a token whose header names no kid, even with one key in the role",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class."
+   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class. Validity includes the signing key's role (#825 PR 2a, D312): each token class verifies only under the kids locally pinned to it, so a token signed by a key this resource trusts for another class (or naming no kid) is refused like an untrusted key, before any claim is used; key-roles.test.ts proves it for access tokens on both transports, attenuation roots and transaction tokens."
   },
   {
    "id": "runtime.token-validation.audience-and-pop",
@@ -12621,7 +13233,7 @@
     "normative": "an action outside the applicable entry of the credential authority, or outside the Mission's current effective authority, is refused"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
@@ -12634,9 +13246,87 @@
      "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > an action absent from the policy's action-to-relation map fails closed (out_of_authority), never reaching the FGA check",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > refuses an action the allowing Mission and policy permit but the narrower credential omits",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > applies both bounds: a Mission narrowed after issuance refuses what the broader credential covers",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > holds the credential's vendor constraint for one object and for every member of a collection",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > holds the credential's amount cap, by exact decimal comparison and currency",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > matches one whole entry: an action from one entry never combines with another entry's coverage",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor, so both bounds evaluate it (@spec authzen#context-credential, authzen#runtime-denial-classification, D324) > sends the PDP the vendor the store resolved, as the vendor object the read targets",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor, so both bounds evaluate it (@spec authzen#context-credential, authzen#runtime-denial-classification, D324) > permits a vendor both the constrained credential and the Mission allow",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor, so both bounds evaluate it (@spec authzen#context-credential, authzen#runtime-denial-classification, D324) > refuses a vendor the credential excludes, before the PDP",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor, so both bounds evaluate it (@spec authzen#context-credential, authzen#runtime-denial-classification, D324) > refuses a vendor the Mission excludes though the credential allows it: parameter_violation, in the response and the signed record",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor to both bounds and to resource policy (live OpenFGA, D324) > permits a vendor both the constrained credential and the Mission allow",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor to both bounds and to resource policy (live OpenFGA, D324) > refuses a vendor the credential excludes",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor to both bounds and to resource policy (live OpenFGA, D324) > refuses a vendor the Mission excludes though the credential allows it, parameter_violation",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Partial (#846): the cited tests witness the current-effective-authority bound only (an action outside the Mission's approved set is refused). The credential-authority bound, a credential narrowed below its Mission evaluated at its own narrower entry, is unwitnessed: #825 demonstrated that the resource path drops authorization_details and evaluates the Mission's broader set. The endpoint-level test needs live OpenFGA and sandbox-skip locally; the unit-level test runs unconditionally against a stub Fga and proves the same 'no applicable entry -> refused' rule for an action absent from the policy's action map entirely, so this row has non-skipping local coverage too. 'vendor outside the constraint -> deny parameter_violation (entry matched, constraint fails)' (same file) is no longer cited here (#801): a vendors constraint that excludes the target is a matched entry whose constraint fails, not an entry falling outside this row's resource/actions match, so it no longer supports this row's claim."
+   "notes": "#825 PR 2b (D312): both bounds are witnessed at the PDP itself, with the PEP pre-check bypassed. The credential bound arrives as `context.credential.authority` and is matched whole-entry, independently of the Mission entry: a narrower credential refuses an action the allowing Mission and policy permit, including its vendor (one object or every collection member) and amount constraints, embedded and over the remote channel. The current-effective-authority bound keeps its witnesses: a Mission narrowed after issuance refuses what the broader credential covers. The PEP still refuses, before any decision request, what it can establish itself (resource, action, vendors, amount). A vendor read carries the vendor the store resolved, as the vendor object it targets, so both bounds evaluate that target (D324); the live OpenFGA tests cover the same three outcomes against resource policy."
   },
   {
    "id": "runtime.decision-inputs.no-substitute-approved-set",
@@ -12657,9 +13347,28 @@
     "normative": "a credential narrowed below its Mission's approved set is refused an action the Mission allows but the credential's own authority omits"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#846 specification slice. The implementation defect is #825: the resource path drops the token's authorization_details and evaluates the Mission's broader authority_set, so no test can witness this row until that fix lands."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > refuses an action the allowing Mission and policy permit but the narrower credential omits",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a decision that carries no credential authority, never falling back to the Mission",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#825 PR 2b (D312): the PDP evaluates the credential's own authority (`context.credential.authority`) and never the approved set in its place. A credential narrowed below its Mission is refused an action the Mission allows (embedded and remote), and a decision that carries no credential authority is refused `credential_invalid` rather than evaluated against the Mission's set."
   },
   {
    "id": "runtime.decision-inputs.containment-narrowing-source",
@@ -12792,9 +13501,21 @@
      "name": "discharged entries are excluded from the PDP's authority input > denies out_of_authority when the view is materialized from the effective set",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > keys discharge by the committed entry, though the loader adds join_delegation (#1133 re-review P1)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/committed-entry-identity.test.ts",
+     "name": "the canonical Mission loader preserves the committed entry identity (D335) > reproduces the committed authority_hash and each entry's issuer digest, though it adds join_delegation",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "MissionView gains a `discharged` DELTA (the discharged entries' commitments) and evaluateInner denies the new `authority_discharged` reason at step 5b, after the entry match and the containment overlay, keyed by the same `entry_digest` a permit already carries. The delta shape mirrors containment's for the same reason: it tells approved-then-completed from never-approved. Both materialization paths are tested: the delta path (authority_discharged) and the effective-set path, where the entry is absent because Mission Status and the introspection projection omit it (@spec status#visibility) and the action denies out_of_authority. The AS side exposes `MissionKernel.dischargedEntryDigests(record)` for a view builder; the demo stack's own loadView is not rewired, so no deployed PEP in this repo populates the delta yet."
+   "notes": "MissionView gains a `discharged` DELTA (the discharged entries' commitments) and evaluateInner denies the new `authority_discharged` reason at step 5b, after the entry match and the containment overlay, keyed by the same `entry_digest` a permit already carries. The delta shape mirrors containment's for the same reason: it tells approved-then-completed from never-approved. Both materialization paths are tested: the delta path (authority_discharged) and the effective-set path, where the entry is absent because Mission Status and the introspection projection omit it (@spec status#visibility) and the action denies out_of_authority. The AS side exposes `MissionKernel.dischargedEntryDigests(record)` for a view builder; the demo stack's own loadView is not rewired, so no deployed PEP in this repo populates the delta yet. The PDP keys the delta by the committed entry digest, the materialized entry without its PDP-local members (the canonical loader adds join_delegation); the demo test proves the loader's view reproduces the issuer's digests and authority_hash (D335). The demo loader does not yet supply the delta itself (#1144)."
   },
   {
    "id": "runtime.decision-inputs.containment-excludes-authority",
@@ -13786,7 +14507,7 @@
     "normative": "a reversible consequential write's permit carries either a single-use decision identifier or a short validity window plus an idempotency key"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
@@ -13811,9 +14532,27 @@
      "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the permit never outlives its reservation's retention (@spec runtime#permit-binding, #1028 review) > with a 30 s permit maximum and a 60 s retention, the original permit replayed after the record expired is refused permit_expired and nothing executes",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "a reversible write that elects no key control defaults to single use (@spec runtime#permit-binding, #1080) > the prepare-phase hold (payments:payment.execute, no key control) is permitted with use_limit: 1, with or without a key, and no claim; a keyed write carries none; a class-wide key control removes the default",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > at the resource operation, the hold_transfer permit carries use_limit: 1, and the keyed writes keep the key control with no use_limit",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the statement's permit-lifetime controls, discriminated on permit_lifetime_control (@spec runtime#permit-binding, runtime#single-use-identifiers, #1080, D333) > selects the most specific declaration before the class default, and returns a key declaration only when that selection is the key control: a less-specific key default never covers an operation that elects single use",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Partial (#918). Witnessed for the reversible writes the statement declares under the idempotency-key control (schedule_payment, cancel_scheduled_payment): the PDP refuses a request carrying no well-formed idempotency_key parameter_violation, and permits a keyed one with the short validity window and no use_limit, making no claim; the window is the operation's published permit_validity_max_seconds, which caps valid_until (30 s under a 30 s maximum, 300 s as shipped; #1028 review), so a permit replayed after its reservation's shorter-than-retention record expired is refused permit_expired and executes nothing; the PEP reserves the key (runtime.idempotency.reversible-write-pep-reserve-and-retain). Not witnessed: hold_transfer, the prepare phase of payments:payment.execute, is a consequential_write since #1015 and its permit carries neither control (no use_limit and no key), so the row's observation does not hold for every reversible consequential write the deployment serves. The cited tests are unit-level PDP tests; no endpoint-level mapping at the resource operation is cited."
+   "notes": "Tested (#918, #1080, D333). Every reversible consequential write the deployment serves is witnessed at the resource operation: hold_transfer, the prepare phase of payments:payment.execute, resolves to the statement's consequential_write class default, single_use_decision_identifier, and its permit carries use_limit: 1 (D317, D333); schedule_payment and cancel_scheduled_payment resolve to their own validity_window_plus_idempotency_key declarations, a keyless request is refused by the PDP parameter_violation (and, at the resource operation, earlier at intake invalid_request with no PDP call, since the served schema requires the key; D316), and a keyed one is permitted under the short validity window (at most the published permit_validity_max_seconds, 300 s as shipped, 30 s under a 30 s maximum; #1028 review) with no use_limit and no claim. The PDP-level tests show the control follows the selected declaration, not the action name: an operation's own declaration is selected before the class default, so a class-wide key control removes the default, and an operation electing single use under a class-wide key default is permitted with use_limit: 1 and no key. The Enforcement Scope Statement publishes single_use_decision_identifier as the consequential_write class default (D333). The PEP consumes the single-use identifier on the unkeyed write path and reserves the key on the keyed path (runtime.idempotency.reversible-write-pep-reserve-and-retain); its refusal of a consumed identifier, on admission or retrieval under any key (D342), is runtime.single-use.reversible-write-refuse-second-presentation."
   },
   {
    "id": "runtime.single-use.record-and-refuse-second-presentation",
@@ -13848,6 +14587,91 @@
      "surface": "evidence-emission"
     }
    ]
+  },
+  {
+   "id": "runtime.single-use.reversible-write-refuse-second-presentation",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "single-use-identifiers",
+   "text": "The enforcing component MUST refuse, fail closed, any second presentation of a consumed identifier.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "replay",
+   "observation": {
+    "normative": "on a reversible-write path, a single-use decision identifier the PEP has consumed is refused, fail closed, on any second presentation, under any idempotency key, and the refusal releases nothing",
+    "local": "the reference meters a carried use_limit on both reversible-write paths and counts releasing a retained result as a use of the permit (D333, D342); a store that cannot record the consumption refuses consumption_unavailable; permit_consumed is the decision-API binding's classification"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > a second presentation of one hold_transfer Decision is refused permit_consumed, releases no second hold, and records the suppression against the same evaluation_id",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "a use_limit a keyed write's permit carries is metered, never ignored (@spec runtime#single-use-identifiers, #1136 review, D317) > the review's probe: scheduled under a use_limit: 1 permit, cancelled under a fresh Decision, the original permit replayed under another key is refused permit_consumed and schedules nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "a use_limit a keyed write's permit carries is metered, never ignored (@spec runtime#single-use-identifiers, #1136 review, D317) > the consumed permit replayed under its own key is refused permit_consumed before the retained result is disclosed; a keyed effect that refuses consumes nothing; a use_limit other than 1 is refused condition_unrecognized",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "a use_limit a keyed write's permit carries is metered, never ignored (@spec runtime#single-use-identifiers, #1136 review, D317) > a keyed presentation refused before admission's transaction burns nothing, and two concurrent presentations of that use_limit: 1 Decision under different keys schedule once",
+     "level": "concurrency",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > two retrievals under one identifier: the first releases the retained result and consumes the permit, the second is refused permit_consumed and discloses nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > a retrieval followed by admission under another key: the permit the retrieval consumed is refused permit_consumed and schedules nothing, even after a separately authorized cancellation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > two concurrent retrievals of one unconsumed single-use Decision, held after their permit-use checks, release the retained result once",
+     "level": "concurrency",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > the concurrent-existing fallback consumes the losing permit: two single-use Decisions under one new key, both admitted, schedule once, and the loser's permit, though it only retrieved, is refused permit_consumed under another key",
+     "level": "concurrency",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > replay after a store reopen: a permit a retrieval consumed is refused permit_consumed by a new server on the same file, under its own key and under another",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/single-use-unkeyed-write.test.ts",
+     "name": "retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > a consumed-identifier store that cannot be written refuses the retrieval consumption_unavailable and discloses nothing: no retained result and no retained-record disposition",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Tested on the reversible-write paths (#1080, D317, D333, D342). The clause applies wherever a single-use decision identifier is used; in this deployment that is every consequential_write the statement does not key (the published single_use_decision_identifier class default) and any keyed write whose permit carries use_limit. A consumed identifier is refused permit_consumed on the unkeyed path, on keyed admission under any key, and on retrieval of a retained result, which is itself a use (D342), also after a store reopen and under concurrency; a store that cannot record the consumption refuses and discloses nothing. A fresh Decision still retrieves the original result, and a permit with no use_limit keeps the key control: retrieval is a use of a single-use permit (@spec runtime#single-use-identifiers, #1080, D342) > a fresh Decision still retrieves the original result and repeats no effect: a fresh single-use one after the first is consumed, and one with no use limit keeps the key control and consumes nothing. The transaction tier's own refusal is runtime.single-use.record-and-refuse-second-presentation."
   },
   {
    "id": "runtime.single-use.store-durability-and-multi-instance-sharing",
@@ -13911,12 +14735,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
-     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > a keyed tool called without a key is refused by the PDP and executes nothing",
+     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > a keyed tool called without a key, or with a malformed one, is refused invalid_request at intake before any PDP call, and executes nothing",
      "level": "endpoint",
      "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed (#917): every tool the Operation Profile places in a high-consequence class (execute_wire_transfer, send_remittance_email) defines an idempotency key and its served schema requires idempotency_key in the Operation Profile format (16 to 128 characters of ALPHA / DIGIT / \"-\" / \"_\"); the PDP refuses a missing or malformed key with parameter_violation in all three classes, privileged administration through a fixture statement and action because the shipped deployment offers none."
+   "notes": "Witnessed (#917): every tool the Operation Profile places in a high-consequence class (execute_wire_transfer, send_remittance_email) defines an idempotency key and its served schema requires idempotency_key in the Operation Profile format (16 to 128 characters of ALPHA / DIGIT / \"-\" / \"_\"); the PDP refuses a missing or malformed key with parameter_violation in all three classes, privileged administration through a fixture statement and action because the shipped deployment offers none. At the resource's tool boundary, intake (D316) refuses a missing or malformed key invalid_request before any PDP call; the PDP check stays as defense for a key that reaches it directly."
   },
   {
    "id": "runtime.idempotency.atomic-claim-and-linearizable-consumption",
@@ -15730,7 +16554,7 @@
    "id": "runtime.inspection-controls.advisory-signal-no-widen",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "inspection-controls",
-   "text": "Such a signal MAY contribute to a denial; it MUST NOT widen, grant, or refresh authority, consistent with the inert treatment of `goal` and `purpose` in the issuance profile",
+   "text": "Such a signal MAY contribute to a denial; it MUST NOT widen, grant, or refresh authority, consistent with the issuance profile's treatment of `goal` as inert and of `purpose` as restrictive outside its configured-mapping lookup",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -16521,6 +17345,420 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "authzen.context-credential.authority-supplied",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "REQUIRED. An array of `authorization_details` entries: the authority the verified credential itself carries, the credential authority of {{I-D.draft-mcguinness-mission-runtime}}.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every decision request carries the verified credential's own authority in context.credential.authority: a Mission-bound token's own entries, or an ordinary joined token's resolved authority"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > forwards a credential's approval requirement to the PDP, which decides it (D312)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: rule 8, bound 1 (acting credential authority) > carries the ordinary credential's own authority to the PDP as context.credential.authority, so a remote PDP enforces it too (@spec authzen#context-credential, #825 PR 2b)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-credential.authority-whole-entry",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "The action MUST fall within one entry of `authority` as a whole: its resource, its actions, and every constraint it carries.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action is permitted only if one credential entry covers its resource, action, every vendor reached and its amount; constraints satisfied by different entries never combine, so an action whose matching entries each fail one constraint is refused (parameter_violation)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > holds the credential's vendor constraint for one object and for every member of a collection",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > holds the credential's amount cap, by exact decimal comparison and currency",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > matches one whole entry: an action from one entry never combines with another entry's coverage",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > honors a discharge condition its source Mission entry carries, so that entry's discharge state governs it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > refuses a discharge condition no Mission entry it derives from carries: the PDP holds no state for it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > requires the action-bound approval a credential entry demands, though neither the Mission nor the deployment does",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > never combines constraints from two entries: each failing one gate is parameter_violation, one satisfying both permits",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-credential.failure-classification",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "An action that no entry of `authority` names by resource and action is denied `out_of_authority`. An action that entries name, but whose parameters violate a constraint on each of them, is denied `parameter_violation`, as on the matched Mission entry",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no credential entry naming the resource and action answers out_of_authority; credential entries that name them, none of which satisfies its vendor and amount constraints, answer parameter_violation, for a credential mirroring the Mission entry and for an independently narrower one alike, in the response and the signed Decision Evidence, which lists only the constraint gates reached"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > refuses an action the allowing Mission and policy permit but the narrower credential omits",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > holds the credential's vendor constraint for one object and for every member of a collection",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > holds the credential's amount cap, by exact decimal comparison and currency",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > matches one whole entry: an action from one entry never combines with another entry's coverage",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers out_of_authority when no credential entry names the resource and action, recording no credential gate",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers a mirrored credential's failure with %s as the Mission's own constraint does: parameter_violation",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers an independently narrower credential's failure with %s as parameter_violation, listing only the gates reached",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "D324 extends #801's split to the credential bound: reordering it after the Mission's own checks alone was declined, since a narrower credential's identical constraint failure would still be classified differently. Discharge and approval keep their dedicated handling (unestablished-condition, context-approval)."
+  },
+  {
+   "id": "authzen.evidence.authority-bound-required",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "evidence",
+   "text": "It is REQUIRED on an `out_of_authority` or `parameter_violation` deny that one of those two bounds decided, and absent on every other decision, including a permit and a deny by Resource policy",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an out_of_authority or parameter_violation deny records authority_bound naming the bound that decided it (credential where the credential's own authority refused, mission where the Mission's own entry did), and no other decision carries it: a permit, a Resource-policy (FGA) deny, a missing relation mapping, a request fault, a lifecycle deny; the emitter refuses the member on a permit, on any other reason, or outside the two values"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > names the credential bound where it refused: no entry names the action, its constraint fails, its discharge condition cannot be established",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > names the Mission bound where the Mission's own entry refused: no entry names the action, its vendors, a collection member, its amount cap",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > names no bound on any other decision: Resource policy, a missing relation mapping, a request fault, a lifecycle deny, a permit",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > refuses to sign authority_bound on a permit, on another denial reason, or with a value outside the two bounds",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "D322 kept D312's evidence requirement and moved it here (2b-ii); D324 extended it to parameter_violation; D340 ported #1134's authority_bound. A Resource-policy deny is out_of_authority on main and carries no bound; #1135 gives it its own reason, resource_policy."
+  },
+  {
+   "id": "authzen.evidence.authority-bound-evaluation-order",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "evidence",
+   "text": "When both bounds exclude the action, the PDP records the one it evaluated first",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a credential mirroring the Mission entry's vendor constraint fails at the credential bound first, so its deny records authority_bound credential"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > names the bound evaluated first when both exclude the action: a mirrored credential's constraint is the credential's",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-credential.authority-no-substitute",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "The PDP MUST NOT substitute the Mission's Authority Set, or any other record of Mission authority, for `authority`.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with an allowing Mission and policy, a narrower credential authority still refuses the actions it omits, embedded and over the remote channel"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > refuses an action the allowing Mission and policy permit but the narrower credential omits",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > applies both bounds: a Mission narrowed after issuance refuses what the broader credential covers",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-credential.unestablished-condition",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "A condition on that entry that the PDP cannot establish from its own state does not permit",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a credential entry's terminal_when is read through the Mission entries it can derive from (no broader than the entry, carrying exactly its conditions by canonical identity), whose discharge state the PDP holds by committed entry digest, and only on a view that proves it holds the full committed Authority Set (authority_hash recomputed over the committed entries); an effective-set view, or no such entry, refuses out_of_authority, and any such entry discharged refuses authority_discharged, whatever the entry order"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > honors a discharge condition its source Mission entry carries, so that entry's discharge state governs it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > refuses a discharge condition no Mission entry it derives from carries: the PDP holds no state for it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > never borrows another Mission entry's live state: any discharged source refuses, whatever the entry order (#1133 review P1)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > refuses a credential discharge condition unless the view proves it holds the committed Authority Set (#1133 re-review P1)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Discharge state is kept per Mission entry digest, never per condition, so two entries carrying one condition can differ in state; the credential entry is therefore resolved to every entry it could derive from, and one discharged among them refuses even when another is live, since the PDP cannot tell which one the credential derives from (#1133 review P1). A view built from an effective set (Status and introspection omit discharged entries) need not hold every entry the credential could derive from, so it cannot establish the condition; a PDP fed such a view refuses every discharge-conditioned credential entry, the fail-closed reading (#1133 re-review, D335). The proof covers the set, not the discharge delta, whose completeness stays the loader's obligation (#1144)."
+  },
+  {
+   "id": "authzen.context-credential.authority-no-fallback",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "the PDP MUST NOT fall back to the Mission's authority.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a decision request with no credential authority, or one carrying an entry the PDP cannot evaluate in full, is refused credential_invalid, never evaluated against the Mission's authority"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a decision that carries no credential authority, never falling back to the Mission",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a credential authority with %s",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a discharge condition carrying a member the profile does not define, though the Mission entry carries it without one (#1133 review P2)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.pdp-request.credential-expiry",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "When `context.credential.expires_at` is present, it has not passed; otherwise the PDP returns `credential_invalid`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a credential whose expires_at has passed, or cannot be read, is refused credential_invalid"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a credential whose expiry has passed or cannot be read",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
   },
   {
    "id": "authzen.parameter-digest.parameters-must-be-normalized-object",
@@ -17824,7 +19062,7 @@
    "id": "authzen.decision-id-propagation.no-treat-as-permit",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "decision-id-propagation",
-   "text": "a Resource Server MUST NOT treat it as a permit; the permit-binding rules above govern.",
+   "text": "a resource server MUST NOT treat it as a permit; the permit-binding rules above govern.",
    "role": "RS",
    "strength": "MUST NOT",
    "applicability": {
@@ -20656,6 +21894,30 @@
      "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a delegate narrowing failure records the loaded entry types without inventing checks of their constraints",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers out_of_authority when no credential entry names the resource and action, recording no credential gate",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers an independently narrower credential's failure with %s as parameter_violation, listing only the gates reached",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > never combines constraints from two entries: each failing one gate is parameter_violation, one satisfying both permits",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > records a credential entry's discharge and approval keys only where those checks run (D324)",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
    "notes": "The PDP-owned evaluation trace records only inspected entry types and reached constraint gates, including delegate narrowing, before signing; no outcomes are inferred for unvisited entries. The identifiers are authorization_details entry types and constraints keys, as the member's definition and its worked example require, not per-entry instance identifiers; a permit's individual entry stays identified by authorizing_entry or entry_digest. The evaluated key is recorded whichever reason the deny carries, so a target excluded by a vendors constraint records vendors under parameter_violation (out_of_authority before #801)."
@@ -20728,6 +21990,18 @@
      "name": "Mission Receipt build + verify > an unknown denial reason remains a deny and can never become an execution authorization",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers a mirrored credential's failure with %s as the Mission's own constraint does: parameter_violation",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a credential's constraint failure is classified as the Mission's is (@spec authzen#runtime-denial-classification, #801, D324) > answers an independently narrower credential's failure with %s as parameter_violation, listing only the gates reached",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
    "notes": "The wire response and the signed evidence both carry parameter_violation when the PDP evaluated a constraint and the request's parameters violated it (the max_amount cap, including an absent, malformed or incomparable amount), and the failing keys stay in contributing_constraints rather than in denial_reason. A constraint that excludes the target withholds the contextual relationship entirely and keeps the established boundary reason out_of_authority (@spec authzen#failure-condition-coverage), so the two reasons remain distinct enum values rather than one reason carrying constraint keys. The deployment carries no constraint_exceeded code. The real receipt verifier preserves a future denial code as denial and refuses an execution join."
@@ -20764,6 +22038,18 @@
      "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > refuses an inconsistent binding or unbounded high-consequence permit before signing",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the credential's discharge and approval conditions are decided at the PDP (D312) > honors a discharge condition its source Mission entry carries, so that entry's discharge state governs it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/committed-entry-identity.test.ts",
+     "name": "the canonical Mission loader preserves the committed entry identity (D335) > reproduces the committed authority_hash and each entry's issuer digest, though it adds join_delegation",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
    "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
@@ -20950,7 +22236,7 @@
    "id": "evidence.refusal.denial-reason-enum-and-boundary",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
+   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `request_invalid` (the PEP established the action, and the supplied arguments fail its required input schema, including an unknown or authoritative member, a missing required member, a wrong type, or a pattern failure), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -20962,7 +22248,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
+    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
    "coverage": "partial",
@@ -21014,9 +22300,15 @@
      "name": "a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-profile-intake.test.ts",
+     "name": "intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > the signed Refusal Record names request_invalid for arguments outside the schema, request_unsupported for an unknown tool and capability_source_unresolvable for an unreadable schema, each with no PDP call and no effect",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, and decision_evidence_unverifiable. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; token_invalid, mission_claim_missing and mission_reference_conflict have no assertion on the signed value yet, and remain #594 wave 4. This is not full Refusal Record conformance."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, and decision_evidence_unverifiable. Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; token_invalid, mission_claim_missing and mission_reference_conflict have no assertion on the signed value yet, and remain #594 wave 4. This is not full Refusal Record conformance."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
@@ -25130,6 +26422,29 @@
    "notes": "Each observation clause has its own test: same-Dispatcher retry recovers (RETRY), a different dispatch_event_id never resolves to it (TWO), a different Dispatcher never resolves to it (OTHER), and a reservation after the tombstone expires receives a new value (EXPIRY, a 60 s retention and the injected clock). Mutation-proved: deriving the value from dispatch_event_id fails TWO, OTHER and EXPIRY; keying the reservation without the Dispatcher fails OTHER; disabling recovery fails RETRY; ignoring the store's retention fails EXPIRY."
   },
   {
+   "id": "template.dispatch.derivation-limit-within-dispatch-policy",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "is established afresh for this instance as that document's Effective Limit section states, never above the Dispatch Policy's maximum",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where Mission Derivation Limits is adopted, each dispatched instance's derivation_limit is established at its own Dispatch with its own count, at or below the maximum the committed Dispatch Policy states; a later raise or removal of the deployment's general policy ceiling does not lift a dispatched instance above that maximum",
+    "local": "requires the deployment to also adopt Mission Derivation Limits"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
    "id": "template.grant-type.agent-separate-from-presenter",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
@@ -25225,6 +26540,117 @@
     }
    ],
    "notes": "The reference implementation measures from the template's created_at, which every instance records as approval_basis.approved_at. Its refusal reason review_overdue is implementation-local on access_denied (D205); the draft registers none."
+  },
+  {
+   "id": "template.consent.derivation-limit-rendering",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "template-consent",
+   "text": "The consent disclosure MUST render them as that document's Approval Rendering section requires, beside `max_active` and `dispatch_rate`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where Mission Derivation Limits is adopted, the template-creation approval's disclosure renders the per-instance derivation-limit rule and maximum the Dispatch Policy states (committed under template_hash through dispatch_policy.digest), or that no finite maximum is guaranteed, beside max_active and dispatch_rate",
+    "local": "requires the deployment to also adopt Mission Derivation Limits"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
+   "id": "template.consent.source-retained-per-version",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "template-consent",
+   "text": "The Mission Issuer MUST retain that source, including an `organizational` source's `policy` reference, with its authenticated record of the consent to that exact `template_version`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the authority source established at template consent, including an organizational source's policy id, version and digest, is retained with the authenticated consent record for that exact template_version, so every instance dispatched under that version carries it even after the source's configuration or governed policy changes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. The reference AS establishes the template's authority_source at template consent and keeps it outside template_hash (src/services/authorization-server/src/kernel/template.ts); no test is mapped or mutation-proved under this row."
+  },
+  {
+   "id": "template.dispatch.source-check",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "Verify that the source retained for this `template_version` ({{template-consent}}) applies to the instance's Subject and that the surviving set lies within that source's ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch whose retained authority source does not apply to the instance's established Subject, or whose surviving instance Authority Set exceeds that source's ceiling, is refused and creates no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. The reference AS re-asserts the inherited source's ceiling and subject discipline at Dispatch (kernel assertInheritedAuthoritySource and assertInheritedSubjectDiscipline, template.ts); candidate witnesses in src/services/authorization-server/test/authority-source.test.ts are not mapped or mutation-proved under this row. No denial reason is pinned: the draft names none."
+  },
+  {
+   "id": "template.dispatch.source-inherited",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "`authority_source` is the source retained for this `template_version` ({{template-consent}}), read from the Mission Issuer's retained template record, never from the Dispatch request and never a source or policy version substituted after consent",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a dispatched Mission's authority_source equals the source retained at consent to its template_version, member for member; Dispatch request content and a change to the source's configuration or governed policy after consent do not alter it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. The reference AS copies the template's authority_source onto each instance (template.ts); the candidate witness 'a template instance carries the template's source verbatim' in authority-source.test.ts is not mapped or mutation-proved under this row."
+  },
+  {
+   "id": "template.dispatch.commit-rechecks-source-and-expiry",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "The Mission Issuer MUST make the step 8 check, and verify that the effective `expires_at` is strictly later than the committed `created_at`, atomically with the commit, against the source as it stands at that commit",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch whose retained source, as it stands at the commit, no longer applies to the Subject or covers the instance Authority Set, or whose effective expires_at is at or before the committed created_at, creates no Mission and counts nothing against max_active or dispatch_rate"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. No test is mapped or mutation-proved under this row; the expiry facet needs a dispatch intent whose requested expires_at has already passed."
   },
   {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
@@ -25427,7 +26853,7 @@
    "id": "progressive.drawdown-derivation.limit-never-raised",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Where the predecessor has a `derivation_limit`, the successor's `derivation_limit` MUST NOT exceed it: a stricter AS-policy ceiling or `requested_derivation_limit` narrows it further, and omitting or raising the request neither removes nor raises it",
+   "text": "Where the predecessor has a `derivation_limit`, the successor's `derivation_limit` MUST NOT exceed it: a stricter authorization-server policy ceiling or `requested_derivation_limit` narrows it further, and omitting or raising the request neither removes nor raises it",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -25576,6 +27002,50 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1079 (D296) specification slice. Gated on progressive.drawdown-derivation-limits: a deployment that runs Progressive ceiling drawdown and also adopts Mission Derivation Limits. No Progressive implementation yet (#985/#1017), so todo; witnesses cover D296's examples, concurrency, rollback and recovery, and must fail with the guard disabled."
+  },
+  {
+   "id": "progressive.drawdown-derivation.ceiling-consent-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "MUST state this inheritance, as Mission Derivation Limits' Approval Rendering section requires of a standing consent: policy-adjudicated successors carry forward the Mission's derivation count and never exceed its rendered `derivation_limit`, or, where the Mission has none, no finite limit is guaranteed for them",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.drawdown-derivation-limits"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the ceiling consent's disclosure states that policy-adjudicated successors carry the Mission's derivation count forward and never exceed its rendered derivation_limit; for a Mission with no derivation_limit it states that no finite limit is guaranteed for its successors"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
+   "id": "progressive.in-ceiling.successor-subject-source",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "The successor's `subject` and `authority_source` are the predecessor's, and the commit that activates it checks that source's ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a ceiling_drawdown successor records the predecessor's subject and authority_source unchanged, and a drawdown whose successor Authority Set exceeds that source's ceiling as it stands at the activating commit activates no successor and supersedes nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice: the drawdown facet of the expansion profile's Successor Subject and authority source rule (expansion.successor.* rows). Not implemented: the reference AS has no ceiling_drawdown activation."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
@@ -28152,6 +29622,29 @@
    "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
   },
   {
+   "id": "child-delegation.policy-drawdown.per-child-derivation-limit-ceiling",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "derivation-budget",
+   "text": "Each child created under the entry establishes and counts its own limit, never above a finite rendered figure, and a figure rendered as unlimited guarantees no finite maximum",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.policy-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy_drawdown child's derivation_limit is at most the per-child derivation limit the Parent Mission's approval rendered, read from the entry's child_creation_policy snapshot or the policy the Parent Mission's policy_version identifies, with the child's own count; after the deployment raises or removes its per-child policy ceiling, a newly policy-created child under the same entry is still at or below the rendered figure; a stricter policy narrows it",
+    "local": "requires the deployment to also adopt Mission Derivation Limits"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
    "id": "child-delegation.record.policy-drawdown-approval-event-id",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "record-requirements",
@@ -28185,6 +29678,92 @@
     }
    ],
    "notes": "Both forms: without and with a child_creation_policy, the record's approval_event_id equals activation.activation_event_id and differs from the Parent Mission's approval_event_id. Proved by recording the parent's approval_event_id on the child (both tests fail). Scoped to child-delegation.policy-drawdown: a direct human-approved child records activation.approval_event_id, not an activation_event_id, so this requirement never applies to it."
+  },
+  {
+   "id": "child-delegation.subject.policy-drawdown-parent-subject",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "Under `policy_drawdown`, it MUST equal the Parent Mission's `subject`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.policy-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Child Mission created on a policy_drawdown basis records the Parent Mission's subject unchanged, the same iss and sub"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. The reference AS copies the parent's subject onto policy_drawdown children (src/services/authorization-server/src/kernel/child-delegation.ts); no test is mapped or mutation-proved under this row yet."
+  },
+  {
+   "id": "child-delegation.subject.direct-default",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "Under `direct`, it is the Parent Mission's `subject` unless the human approval event establishes another Subject through the issuance profile's Subject and authority-source establishment in full",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.direct-approval"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Child Mission created on a direct basis records the Parent Mission's subject unless its human approval event established another Subject through the authenticated approval surface, with the Approver authorized to approve for that Subject and to activate the child's authority source; no child-creation request parameter selects the Subject, and the child stays within every parent bound"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. New capability child-delegation.direct-approval (the deployment creates children at a human approval event, approval_basis direct), following D292's per-basis gating: this clause binds only directly approved children, and no existing capability names that basis. The reference AS creates only policy_drawdown children (carryover replacements follow the Carryover rules), so the capability is unclaimed."
+  },
+  {
+   "id": "child-delegation.source.inherited-from-parent",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "A Child Mission's `authority_source` MUST equal the Parent Mission's, including an `organizational` source's `policy` reference",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Child Mission other than a carryover replacement records an authority_source equal to the Parent Mission's, member for member, including an organizational source's policy id, version and digest"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. Unconditional: the clause binds every Child-Mission-capable Mission Issuer on either basis, and carves out carryover replacements itself. The reference AS copies the parent's authority_source verbatim (child-delegation.ts); the candidate witness 'a Child Mission carries the parent's source verbatim' in src/services/authorization-server/test/authority-source.test.ts is not mapped or mutation-proved under this row."
+  },
+  {
+   "id": "child-delegation.source.commit-check",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "at the creation commit, the Mission Issuer MUST verify that the source applies to the child's `subject` and that the child Authority Set lies within the source's ceiling as it stands at that commit, as well as within the parent's ({{strict-subset}}), and MUST refuse the creation otherwise",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child creation whose inherited source does not apply to the child's subject, or whose child Authority Set exceeds that source's ceiling as it stands at the creation commit (including a ceiling narrowed after the parent's approval or while the creation was pending), is refused and creates no Child Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. Unconditional, as for child-delegation.source.inherited-from-parent. The reference AS re-asserts the inherited source's ceiling against the root's current declaration before computing the child's anchors (kernel assertInheritedAuthoritySource); the candidate witness 'a drawdown refuses access_denied when the source narrowed since approval' in authority-source.test.ts is not mapped or mutation-proved under this row, and the reference AS has no deferred child creation to exercise the pending window. No error code is pinned: the draft names none."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
@@ -30129,6 +31708,72 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.successor.subject-source-preserved",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-source",
+   "text": "A successor's `subject` and `authority_source` MUST equal the predecessor's, whichever completion mode or approval basis creates it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every successor, whether a fresh human approval or a policy drawdown adjudicates it, records the predecessor's subject and authority_source unchanged, member for member"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice. New capability expansion.adjudication: the deployment adjudicates expansion, Conformance's expansion-capable Mission Issuer target. No existing capability fits: expansion.interactive-completion covers only the interactive mode, progressive.ceiling-drawdown only the policy drawdown, and unconditional would also bind the related_to correlation target, to which only Independent Continuation applies. The reference AS copies the predecessor's subject but re-establishes the successor's authority_source at its approval event without comparing it with the predecessor's (src/services/authorization-server/src/kernel/expansion.ts)."
+  },
+  {
+   "id": "expansion.successor.other-subject-or-source-refused",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-source",
+   "text": "an approval that would establish another Subject or source creates no successor",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion whose approval event would establish a Subject or authority_source different from the predecessor's activates no successor and leaves the predecessor active; another Subject or source is reachable only through a separately approved Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice; capability as for expansion.successor.subject-source-preserved. No error code is pinned: the draft names none beyond the verification order's generic refusal."
+  },
+  {
+   "id": "expansion.successor.source-commit-check",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-source",
+   "text": "In the commit that activates the successor, the Mission Issuer MUST verify that the source still applies to the Subject and that the successor Authority Set lies within the source's ceiling as it stands at that commit",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion completion whose source no longer applies to the Subject, or whose successor Authority Set exceeds the source's ceiling as it stands at the activating commit (including a ceiling narrowed after adjudication), activates no successor and leaves the predecessor active"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1118 (D326) specification slice; capability as for expansion.successor.subject-source-preserved. The reference AS asserts the successor's set against the source it establishes before computing anchors (expansion.ts), but no test is mapped or mutation-proved under this row and no completion exercises a narrowing that lands between adjudication and activation."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",

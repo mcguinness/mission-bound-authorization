@@ -112,13 +112,16 @@ class HeldEvidenceStore extends EvidenceStore {
 /**
  * The shipped statement with a 30 s permit maximum and a 60 s retention for
  * both keyed writes: a valid configuration (retention longer than the
- * permit), the one the #1028 review reproduced against.
+ * permit), the one the #1028 review reproduced against. The single-use class
+ * default (D333) has neither member and is left as shipped.
  */
 function shortWindowStatement(): RuntimePosture {
   const statement = structuredClone(RUNTIME_POSTURE) as unknown as {
     extensions: { reversible_write_idempotency: Array<Record<string, unknown>> };
   };
-  for (const d of statement.extensions.reversible_write_idempotency) {
+  for (const d of statement.extensions.reversible_write_idempotency.filter(
+    (x) => x.permit_lifetime_control === "validity_window_plus_idempotency_key",
+  )) {
     d.permit_validity_max_seconds = 30;
     d.retention_horizon = "PT60S";
   }
@@ -170,6 +173,7 @@ function harness(o: { file?: string; statement?: RuntimePosture } = {}) {
     payments,
     loadView,
     jwks: { keys: [] },
+    keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
     transaction: { engine, connectors, evidence },
     writeReservations: store,
@@ -293,10 +297,11 @@ describe("the PEP's reservation and retention for keyed reversible writes (@spec
       expect(() => openWriteReservationStore({ file: undefined, owner: OWNER })).toThrow(/no store file is configured/);
       expect(() => openWriteReservationStore({ file: ":memory:", owner: OWNER })).toThrow(/in-memory store is not durable/);
       expect(() => openWriteReservationStore({ file, owner: "mcp-payments-pdp" })).toThrow(/owned by mcp-payments-pep/);
-      // A build that migrated this file one version further.
+      // A build that migrated this file one version further than this
+      // build's two (the reservations, then the consumed identifiers, #1080).
       const newer = tempFile();
       openWriteReservationStore({ file: newer, owner: OWNER }).close();
-      openDurableStore({ file: newer, owner: OWNER, migrations: ["SELECT 1", "SELECT 1"] }).close();
+      openDurableStore({ file: newer, owner: OWNER, migrations: ["SELECT 1", "SELECT 1", "SELECT 1"] }).close();
       expect(() => openWriteReservationStore({ file: newer, owner: OWNER })).toThrow(/newer than this build/);
       // The statement names mcp-payments-pep as the reservation owner.
       const foreign = openEphemeralWriteReservationStore({ owner: "another-pep" });
@@ -307,6 +312,7 @@ describe("the PEP's reservation and retention for keyed reversible writes (@spec
             payments: new PaymentsStore(),
             loadView: () => undefined,
             jwks: { keys: [] },
+            keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
             issuer: ISSUER,
             writeReservations: foreign,
           }),

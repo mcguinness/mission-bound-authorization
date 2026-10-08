@@ -41,6 +41,7 @@ import {
   createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   operationKey,
   PaymentsStore,
   Pep,
@@ -172,10 +173,12 @@ async function harness(o: HarnessOptions = {}) {
     now,
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,
     jwks: { keys: [] },
+    keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     issuer: "https://as.test",
     transaction: { engine, connectors, evidence },
   });
@@ -506,11 +509,32 @@ describe("the Operation Profile defines an idempotency key for every non-idempot
     }
   });
 
-  it("a keyed tool called without a key is refused by the PDP and executes nothing", async () => {
+  // @spec operation-profile-payments-v1 (D316): the served schema requires
+  // the key in the published format, so intake refuses a missing or malformed
+  // one before any decision work.
+  it("a keyed tool called without a key, or with a malformed one, is refused invalid_request at intake before any PDP call, and executes nothing", async () => {
     const h = await harness();
-    const keyless = await h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
-    expect(keyless.ok).toBe(false);
-    expect(keyless.denial_reason).toBe("parameter_violation");
+    for (const args of [{ invoice_id: "inv-1" }, { invoice_id: "inv-1", idempotency_key: "too-short" }]) {
+      const refused = await h.server.callTransactionTool("execute_wire_transfer", args, TOKEN);
+      expect(refused, JSON.stringify(args)).toEqual({ ok: false, refusal_reason: "invalid_request" });
+    }
+    expect(h.lastDecision()).toBeUndefined();
+    expect(h.evidence.all().map((e) => [e.kind, (e.content as { denial_reason?: string }).denial_reason])).toEqual([
+      ["refusal", "request_invalid"],
+      ["refusal", "request_invalid"],
+    ]);
+    expect(h.connectors.ledgerEntries()).toHaveLength(0);
+    await h.close();
+  });
+
+  // The PDP keeps its own key check (D316): a malformed key that reaches it
+  // past the tool boundary is still refused.
+  it("a malformed key handed to the PEP past intake is still refused parameter_violation by the PDP", async () => {
+    const h = await harness();
+    const res = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: "too-short" }, TOKEN);
+    expect(res.permitted).toBe(false);
+    expect(res.denial_reason).toBe("parameter_violation");
+    expect(h.lastDecision()?.denial_reason).toBe("parameter_violation");
     expect(h.connectors.ledgerEntries()).toHaveLength(0);
     await h.close();
   });

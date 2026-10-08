@@ -219,7 +219,7 @@ an agent derives. It is, by design, a minimum-viable issuance layer.
 It gates derivation on Mission state, carries the `mission` claim on
 every derived token, and offers only OPTIONAL token introspection
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission State via
-Token Introspection") as a way for a Resource Server to observe
+Token Introspection") as a way for a resource server to observe
 Mission state. It names this profile for the canonical Mission Status
 surface (keyed by `mission_id`) and its signed status evidence, and
 defers a standardized management endpoint for lifecycle transitions to
@@ -247,7 +247,7 @@ that build on the issuance profile. The capabilities are:
   ({{revocation-enforcement-classes}}): a `mission_max_stale_seconds`
   bound and how to size token lifetimes to the propagation mechanisms
   in use.
-- **Authorization Server metadata** members
+- **authorization server metadata** members
   ({{as-metadata}}) advertising the endpoints above.
 
 Each capability is independently optional. An implementation states
@@ -272,7 +272,7 @@ referenced, not re-specified, here.
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}}, in particular Mission,
 Mission Issuer (the Mission `issuer`: in this document's OAuth binding
-the Authorization Server; a standalone Mission Issuer, the Mission
+the authorization server; a standalone Mission Issuer, the Mission
 Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
 serves these surfaces with the same semantics; the AAuth Person
 Server plays the same role for its native missions through its own
@@ -330,11 +330,12 @@ the issuance profile defers. Unlike token introspection
 token's authorization still good," the Mission Status operation answers
 "what is the state of this Mission" keyed by the `mission_id` alone. Any
 consumer holding a `mission_id` (including an auditor or a
-cross-domain Resource AS) resolves it without holding a token the AS
+cross-domain Resource AS) resolves it without holding a token the
+authorization server (AS)
 issued.
 
 The Mission Issuer publishes its Mission Status endpoint URL in
-Authorization Server metadata ({{as-metadata}}) as
+authorization server metadata ({{as-metadata}}) as
 `mission_status_endpoint`, which a consumer resolves from a
 credential's `mission.issuer`. The endpoint MUST be served over TLS
 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of
@@ -353,12 +354,13 @@ The request is an HTTPS POST with an
 `audience`:
 : CONDITIONAL. A string. The audience identifier of the
   requesting consumer, or of another audience the Mission Issuer
-  authorizes that consumer to request (below). An authorized non-RS
-  consumer (for example an auditor or a cross-domain Resource AS) that
+  authorizes that consumer to request (below). An authorized consumer
+  that is not a resource
+  server (for example an auditor or a cross-domain Resource AS) that
   needs only Mission state,
   not audience-scoped authority, MAY omit `audience`; the response is
   then state-only and carries no `authorization_details`
-  ({{mission-status-response}}). A Resource Server resolving authority
+  ({{mission-status-response}}). A resource server resolving authority
   for a specific audience MUST send it.
 
 `nonce`:
@@ -937,8 +939,8 @@ the richer `suspend`, `resume`, and `complete` operations
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation"). This
 section standardizes that management surface.
 
-The AS publishes its Mission Lifecycle endpoint URL in Authorization
-Server metadata ({{as-metadata}}) as `mission_lifecycle_endpoint`,
+The AS publishes its Mission Lifecycle endpoint URL in authorization
+server metadata ({{as-metadata}}) as `mission_lifecycle_endpoint`,
 distinct from {{RFC7009}} token revocation. The endpoint MUST be
 served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
 recommendations of {{RFC9325}}.
@@ -1045,13 +1047,24 @@ result shape completely. The Entry Discharge companion registers
 fired, discharging a Mission-record entry, and is defined in full by
 that companion ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
-A `suspend` MAY carry `suspend_until` with a REQUIRED `on_expiry`. When
-`suspend_until` passes, the AS MUST apply `on_expiry` (transition to
+A `suspend` MAY carry `suspend_until` with a REQUIRED `on_expiry`; the
+pair is the Mission's schedule. When the `suspend_until` of a current
+schedule passes, the AS MUST apply `on_expiry` (transition to
 `active` for `resume`, or to `revoked` for `revoke`) and emit the
 corresponding transition, without a further request. While the Mission
 is `suspended` under a deadline, both `suspend_until` and `on_expiry`
 surface in the signed Mission Status Response ({{mission-status-response}})
 so a consumer sees the pending outcome.
+
+The AS authorizes a schedule when it commits it
+({{lifecycle-authorization}}) and does not re-authorize it at the
+deadline: a later expiry or withdrawal of the committing party's grant
+does not by itself cancel it. A schedule is current until its
+suspension ends or an authorized replacement supersedes it
+({{idempotency}}). The AS MUST NOT apply a schedule that is no longer
+current, so an earlier deadline never acts on a later suspension. A
+deadline applies only a transition legal from the Mission's current
+state ({{legal-transitions}}) and never changes a terminal Mission.
 
 ## Legal Transitions {#legal-transitions}
 
@@ -1088,7 +1101,10 @@ idempotent success, with the `resume` exception above. Any other
 operation not legal from the current state, including `resume` on a
 Mission that is not `suspended`, is refused as a conflict. A Mission
 that reaches its `expires_at` transitions to `expired` independently of
-this endpoint, from `active` or `suspended`.
+this endpoint, from `active` or `suspended`. When a schedule's
+`suspend_until` is at or after the Mission's `expires_at`, expiry
+governs: the Mission becomes `expired` at `expires_at`, and the AS
+MUST NOT apply that schedule's `on_expiry`.
 
 ## Consolidated State Machine {#state-machine}
 
@@ -1128,8 +1144,10 @@ other state is non-deriving.
 
 `revoke` and the Mission's `expires_at` both apply in `suspended` as
 well as `active`, so a suspended Mission can still be terminated or
-expire. The `superseded` and `cascaded` rows are companion-defined and
-shown here for reference:
+expire. A `suspend_until` row fires only for a current schedule whose
+deadline falls before `expires_at` ({{mission-lifecycle-endpoint}},
+Operations; {{legal-transitions}}). The `superseded` and `cascaded`
+rows are companion-defined and shown here for reference:
 `superseded` is committed by the expansion profile and requires an
 `active` predecessor
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}); `cascaded` is
@@ -1169,7 +1187,7 @@ scope, exactly as a companion-registered extension operation such as
 `discharge` does
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
-## Authorization
+## Authorization {#lifecycle-authorization}
 
 This section governs `revoke`, `suspend`, `resume`, and `complete`; a
 companion-registered extension operation such as `discharge` has its
@@ -1222,6 +1240,20 @@ the containment a `suspend` established, a deployment SHOULD require a
 distinct or elevated authorization for `resume`, mirroring the
 treatment of bulk `resume` in Mission Management
 ({{I-D.draft-mcguinness-oauth-mission-management}}).
+
+A `suspend` whose `on_expiry` is `resume` schedules a later `resume`.
+The AS MUST authorize it against both the caller's authorization for
+`suspend` and the authorization the deployment requires for a direct
+`resume` of that Mission, including when it sets or replaces the
+schedule of a Mission already `suspended`, whoever suspended it. The
+AS checks both before any change and refuses a caller lacking either
+as an unauthorized lifecycle request (below), leaving the Mission's
+state and schedule unchanged. A `suspend` whose `on_expiry` is
+`revoke` needs only the authorization for `suspend`.
+
+The AS MUST record with each committed schedule its committing party,
+the acting party of the request that committed it; an authorized
+replacement records its own.
 
 The AS MUST refuse an unauthorized lifecycle request with the
 not-found response shape of {{mission-status-errors}}, so the endpoint
@@ -1401,11 +1433,17 @@ the baseline a Mission holds before any suspension, so `resume` on an
 terminal Mission is not idempotent success but a conflict.
 
 One idempotent case carries metadata. A `suspend` against a
-`suspended` Mission whose `suspend_until` or `on_expiry` differ from
-the recorded values MUST update the recorded values, emitting the
-corresponding transition-metadata change and reporting the updated
-values in the response; silent acceptance without effect is not
-conforming.
+`suspended` Mission that carries a `suspend_until` and `on_expiry`
+pair differing from the recorded schedule, or where none is recorded,
+replaces the schedule once authorized ({{lifecycle-authorization}}):
+the AS MUST update the recorded values and their committing party,
+emitting the corresponding transition-metadata change and reporting
+the updated values in the response; silent acceptance without effect
+is not conforming. A `suspend` that omits both members leaves the
+recorded schedule, if any, and its committing party unchanged:
+omission never clears a deadline. A `suspend` carrying only one of
+the two remains invalid ({{mission-lifecycle-endpoint}}, Operations)
+and changes nothing.
 
 ## Relationship to RFC 7009
 
@@ -1456,7 +1494,7 @@ separate posture list:
   before the token expires, discovered from `introspection_endpoint`
   and `introspection_signing_alg_values_supported`;
 - the Mission Status operation ({{mission-status}}) for per-request
-  state checks by high-assurance Resource Servers, discovered from
+  state checks by high-assurance resource servers, discovered from
   `mission_status_endpoint`; and
 - event-driven propagation of state changes over a Shared Signals
   stream ({{I-D.draft-mcguinness-oauth-mission-signals}}), discovered
@@ -1530,7 +1568,7 @@ member, availability target, or replication protocol is defined here.
 
 This section is OPTIONAL and applies only to a deployment that adopts
 one or more of the extensions above. An AS advertises the surfaces it
-supports through the following members of its Authorization Server
+supports through the following members of its authorization server
 metadata document {{RFC8414}}, in addition to the issuance profile's
 `mission_bound_authorization_supported`
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization Server
@@ -1890,6 +1928,15 @@ Authorization work for feedback that shaped these extensions.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A `suspend` whose `on_expiry` is `resume` needs the authorization
+  the deployment requires for a direct `resume` as well as for
+  `suspend`, including when it replaces the schedule of a Mission
+  already suspended, and the AS records each schedule's committing
+  party. Omitting both schedule members preserves the recorded
+  schedule. A schedule applies only while current, never to a later
+  suspension, and expiry governs a `suspend_until` at or after
+  `expires_at` (#1002).
 
 - Authentication failures at the Status and Lifecycle endpoints: a
   failed access token gets a 401 `WWW-Authenticate` challenge in its

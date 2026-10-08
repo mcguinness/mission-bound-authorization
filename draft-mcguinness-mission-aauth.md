@@ -389,8 +389,8 @@ The AAuth roles map to the Mission Context model as follows:
 | Resource | Defines and enforces its resource authorization; copies `mission_s256` unchanged from the presented token into each resource token it issues, as AAuth requires. |
 | Access Server | Evaluates resource policy and issues auth tokens in federated access; it does not evaluate the private mission blob. |
 
-No AAuth party becomes an OAuth client, Authorization Server, or Resource
-Server merely by implementing this binding.
+No AAuth party becomes an OAuth client, authorization server, or resource
+server merely by implementing this binding.
 
 ## Proposal, Clarification, and Approval {#approval}
 

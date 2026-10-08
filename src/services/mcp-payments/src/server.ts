@@ -22,7 +22,6 @@ import {
 } from "@mission/core";
 import {
   calculateJwkThumbprint,
-  createLocalJWKSet,
   decodeProtectedHeader,
   type JWK,
   type JWTPayload,
@@ -34,6 +33,7 @@ import {
   executionLeaseMs,
   loadRuntimePosture,
   REVERSIBLE_WRITE_CLASS,
+  reversibleWriteControlFor,
   reversibleWriteDeclarationFor,
   reversibleWriteRetentionSeconds,
   RUNTIME_POSTURE,
@@ -63,6 +63,7 @@ import {
 } from "./pep.js";
 import { type DpopPresentation, verifyDpopProof } from "./dpop.js";
 import { readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
+import { type KeyResolver, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
 import {
   openTxnStores,
   type TxnConsumeOutcome,
@@ -75,7 +76,12 @@ import type { EvidenceStore, ExecutionEvidence, ExecutionEvidenceInput } from ".
 import { operationKey, type TransactionEngine } from "./transaction.js";
 import { recordRedeemingAttempt } from "./redemption-status.js";
 import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
-import type { WriteEffectOutcome, WriteReservation, WriteReservationStore } from "./write-reservations.js";
+import {
+  CONSUMED_PERMIT_RETENTION_MARGIN_MS,
+  type WriteEffectOutcome,
+  type WriteReservation,
+  type WriteReservationStore,
+} from "./write-reservations.js";
 
 /** Called only after this path's signature, issuer/chain and expiry checks. */
 function verifiedCredentialRef(payload: JWTPayload): { issuer?: string; expires_at?: string } {
@@ -108,6 +114,39 @@ function refuseTransactionToken(accessToken: string): void {
  */
 function permitConditions(decision: Decision | undefined): Record<string, unknown> | undefined {
   return decision?.context.conditions as Record<string, unknown> | undefined;
+}
+
+/**
+ * @spec runtime#single-use-identifiers, authzen#response-context `use_limit`
+ * (#1080, #1136 review, D317): what a permit's `use_limit` asks of the write
+ * path, resolved once for the unkeyed and the keyed write alike, so neither
+ * can ignore a limit it receives. `undefined` when the permit carries none;
+ * `error` names the Execution Evidence `error` that refuses it; otherwise the
+ * single use is metered and its consumed record kept until `retainUntilMs`.
+ *
+ * | Case | Result |
+ * |---|---|
+ * | no `use_limit` | `undefined` |
+ * | `use_limit` other than 1 (this PEP meters single use only) | `condition_unrecognized` |
+ * | `use_limit: 1` with no resolvable `valid_until` | `permit_expired` |
+ * | `use_limit: 1` | `valid_until` plus {@link CONSUMED_PERMIT_RETENTION_MARGIN_MS} |
+ */
+function singleUseCondition(
+  attempt: ExecutionAttempt,
+  decision: Decision | undefined,
+): { error: string } | { retainUntilMs: number } | undefined {
+  const useLimit = permitConditions(decision)?.use_limit;
+  if (useLimit === undefined) return undefined;
+  if (useLimit !== 1) return { error: "condition_unrecognized" };
+  const validUntilMs =
+    typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : Number.NaN;
+  if (!Number.isFinite(validUntilMs)) return { error: "permit_expired" };
+  return { retainUntilMs: validUntilMs + CONSUMED_PERMIT_RETENTION_MARGIN_MS };
+}
+
+/** The caller-visible reason for a single-use refusal's Execution Evidence `error`. */
+function singleUseRefusalReason(error: string): string {
+  return error === "condition_unrecognized" ? "unrecognized_condition" : error;
 }
 
 export interface ToolDef {
@@ -228,6 +267,45 @@ const REVERSIBLE_WRITE_EFFECTS: Record<
 export const REVERSIBLE_WRITE_TOOLS: readonly string[] = Object.keys(REVERSIBLE_WRITE_EFFECTS);
 
 /**
+ * @spec runtime#permit-binding, runtime#idempotency, runtime#single-use-identifiers
+ * (#918, #1080, D333): every `consequential_write` this server serves is
+ * covered by a permit-lifetime control the statement selects for it
+ * ({@link reversibleWriteControlFor}), a control this server enforces on the
+ * tool's own write path, with the enforcing store configured and owned by the
+ * declared owner. Anything else is an unsafe topology, refused at startup
+ * rather than discovered at the first duplicate or replay:
+ *
+ * | Selected control | Supported where | Owner the store must have |
+ * |---|---|---|
+ * | `validity_window_plus_idempotency_key` | a keyed tool with a declared reversible effect | `reservation_owner` |
+ * | `single_use_decision_identifier` | an unkeyed tool | `consumed_identifier_owner` |
+ */
+function assertPermitLifetimeCoverage(statement: RuntimePosture, store: WriteReservationStore | undefined): void {
+  for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
+    if (mapping.actionClass !== REVERSIBLE_WRITE_CLASS) continue;
+    const control = reversibleWriteControlFor(statement, mapping.actionClass, mapping.action);
+    if (!control) throw new Error(`no permit-lifetime control declaration covers ${tool}`);
+    const keyed = mapping.idempotencyKey === true;
+    if (keyed !== (control.permit_lifetime_control === "validity_window_plus_idempotency_key")) {
+      throw new Error(
+        `${tool} is served on the ${keyed ? "keyed" : "unkeyed"} write path, which does not enforce ${control.permit_lifetime_control}`,
+      );
+    }
+    if (!store) throw new Error(`${tool}'s ${control.permit_lifetime_control} control has no configured enforcing store`);
+    if (control.permit_lifetime_control === "validity_window_plus_idempotency_key") {
+      if (control.reservation_owner !== store.owner) {
+        throw new Error(`${tool}'s reservation domain is owned by ${control.reservation_owner}, not ${store.owner}`);
+      }
+      if (!REVERSIBLE_WRITE_EFFECTS[tool]) throw new Error(`no reversible effect is declared for tool ${tool}`);
+    } else if (control.consumed_identifier_owner !== store.owner) {
+      throw new Error(
+        `${tool}'s consumed-identifier domain is owned by ${control.consumed_identifier_owner}, not ${store.owner}`,
+      );
+    }
+  }
+}
+
+/**
  * @spec runtime-evidence#execution-evidence-object `error`: deployment-
  * defined values for the refusals a keyed reversible write makes before any
  * effect: the two its effect makes before it changes anything, and
@@ -249,10 +327,14 @@ export const REVERSIBLE_WRITE_REFUSAL_ERRORS: Readonly<Record<string, string>> =
  * reverification, where concurrent in-process attempts interleave after each
  * found the pair free; inside the one local transaction (a throw rolls the
  * effect and the reservation back together); and after its commit but before
- * the response.
+ * the response. The unkeyed write path (#1080) honors `atReverification` alone,
+ * where concurrent presentations of one single-use permit interleave after
+ * admission and before its redemption. `atRetrieval` (D342) holds a retrieval
+ * after its permit-use check and before it consumes a single-use permit.
  */
 export interface ReversibleWriteFailpoints {
   atReverification?: () => Promise<void>;
+  atRetrieval?: () => Promise<void>;
   insideTransaction?: () => void;
   afterCommit?: () => void;
 }
@@ -295,6 +377,14 @@ export interface McpServerDeps {
   payments: PaymentsStore;
   loadView: (ref: MissionReference) => LoadedView | undefined;
   jwks: { keys: Record<string, unknown>[] };
+  /**
+   * @spec runtime-oauth#token-validation (#825, D312) — the `kid`s trusted
+   * for each token class, configured locally. Access tokens and attenuation
+   * roots resolve from `jwks`, transaction tokens from `txnTokenJwks`, each
+   * only among its own role's keys. Never defaulted: a shared JWKS and
+   * distinct `typ` strings do not enforce key purpose.
+   */
+  keyRoles: KeyRoles;
   issuer: string;
   /** Transaction-assurance tier (M5); omit for a core-tier-only server. */
   transaction?: { engine: TransactionEngine; connectors: Connectors; evidence: EvidenceStore };
@@ -338,9 +428,12 @@ export interface McpServerDeps {
   /**
    * @spec runtime#idempotency (#918): this PEP's reservation and retention
    * store for keyed reversible writes, a durable single-writer file named in
-   * configuration. Never defaulted: absent, every keyed reversible write is
-   * refused `consumption_unavailable` and executes nothing, since without the
-   * store exactly-once cannot be established.
+   * configuration. @spec runtime#single-use-identifiers (#1080): the same
+   * file records the consumed identifiers of single-use permits. Never
+   * defaulted, and REQUIRED (D333): the server does not start without it,
+   * since every served `consequential_write` needs its control's enforcing
+   * store ({@link assertPermitLifetimeCoverage}). A store that later cannot be
+   * written refuses `consumption_unavailable` and executes nothing.
    */
   writeReservations?: WriteReservationStore;
 }
@@ -385,8 +478,12 @@ export interface TransactionToolResult {
 
 export class McpPaymentsServer {
   get capabilityCatalog() { return this.deps.pep.capabilityCatalog; }
-  private readonly resolveKey;
-  private readonly resolveTxnKey?: ReturnType<typeof createLocalJWKSet>;
+  /** Keys pinned to the access-token role (@spec runtime-oauth#token-validation, D312). */
+  private readonly resolveAccessKey: KeyResolver;
+  /** Keys pinned to the attenuation-root role. */
+  private readonly resolveRootKey: KeyResolver;
+  /** Keys pinned to the transaction-token role; absent when the txn tier is off. */
+  private readonly resolveTxnKey?: KeyResolver;
   /** @spec txn-authorization#offline-verification — the retained pending operations. */
   private readonly txnPending: TxnPendingStore;
   /** @spec txn-authorization#offline-verification — the `txn` consumption domain. */
@@ -395,30 +492,18 @@ export class McpPaymentsServer {
   private readonly dpopReplay: DpopProofReplay;
   constructor(private readonly deps: McpServerDeps) {
     if (deps.enforcementScopeStatement) deps.enforcementScopeStatement = loadRuntimePosture(deps.enforcementScopeStatement);
-    this.resolveKey = createLocalJWKSet(deps.jwks as never);
-    if (deps.txnTokenJwks) this.resolveTxnKey = createLocalJWKSet(deps.txnTokenJwks as never);
+    const pinned = roleKeyResolvers(deps.keyRoles, {
+      jwks: deps.jwks,
+      txnTokenJwks: deps.txnTokenJwks,
+    });
+    this.resolveAccessKey = pinned.accessToken;
+    this.resolveRootKey = pinned.attenuationRoot;
+    if (deps.txnTokenJwks) this.resolveTxnKey = pinned.transactionToken;
     const stores = deps.txnStores ?? openTxnStores();
     this.txnPending = stores.pending;
     this.txnConsumption = stores.consumption;
     this.dpopReplay = deps.dpopReplay ?? newDpopProofReplay();
-    // @spec runtime#idempotency (#918): a reservation store this statement
-    // does not publish as the domain of every keyed reversible write it
-    // serves is an unsafe topology, refused at startup rather than discovered
-    // at the first duplicate.
-    if (deps.writeReservations) {
-      const statement = deps.enforcementScopeStatement ?? RUNTIME_POSTURE;
-      for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
-        if (!mapping.idempotencyKey || mapping.actionClass !== REVERSIBLE_WRITE_CLASS) continue;
-        const declared = reversibleWriteDeclarationFor(statement, mapping.actionClass, mapping.action);
-        if (!declared) throw new Error(`no reversible-write idempotency declaration covers ${tool}`);
-        if (declared.reservation_owner !== deps.writeReservations.owner) {
-          throw new Error(
-            `${tool}'s reservation domain is owned by ${declared.reservation_owner}, not ${deps.writeReservations.owner}`,
-          );
-        }
-        if (!REVERSIBLE_WRITE_EFFECTS[tool]) throw new Error(`no reversible effect is declared for tool ${tool}`);
-      }
-    }
+    assertPermitLifetimeCoverage(deps.enforcementScopeStatement ?? RUNTIME_POSTURE, deps.writeReservations);
   }
 
   /**
@@ -490,7 +575,7 @@ export class McpPaymentsServer {
     htm: string,
   ): Promise<{ payload: JWTPayload; typ: unknown; cnfJkt: string }> {
     refuseTransactionToken(accessToken);
-    const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveKey, {
+    const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveAccessKey, {
       issuer: this.deps.issuer,
       audience: CANONICAL_RESOURCE,
     });
@@ -647,7 +732,7 @@ export class McpPaymentsServer {
    */
   async validateMissionToken(accessToken: string): Promise<MissionBoundTokenFacts> {
     refuseTransactionToken(accessToken);
-    const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveKey, {
+    const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveAccessKey, {
       issuer: this.deps.issuer,
       audience: CANONICAL_RESOURCE,
     });
@@ -850,10 +935,11 @@ export class McpPaymentsServer {
   ): Promise<MissionBoundTokenFacts> {
     if (chain.length === 0) throw new Error("empty attenuation chain");
 
-    // Root: under the AS JWKS, audience-scoped, the `aat+jwt` profile with its
+    // Root: under the AS keys pinned to the attenuation-root role, audience-
+    // scoped, the `aat+jwt` profile with its
     // typed claim set (@spec runtime-oauth#token-validation, #825), and
     // iss == mission.issuer.
-    const { payload: rootPayload, protectedHeader: rootHeader } = await jwtVerify(chain[0] as string, this.resolveKey, {
+    const { payload: rootPayload, protectedHeader: rootHeader } = await jwtVerify(chain[0] as string, this.resolveRootKey, {
       issuer: this.deps.issuer,
       audience: CANONICAL_RESOURCE,
       algorithms: ["ES256"],
@@ -974,7 +1060,17 @@ export class McpPaymentsServer {
     // @spec runtime#idempotency (#918): a keyed reversible write's effect is
     // reachable only through its reservation, so a caller that sends one down
     // the read path is served by the write path, never by an unreserved effect.
-    if (this.isKeyedReversibleWrite(tool)) return this.callWriteTool(tool, args, token, beforeReverify, signals);
+    // @spec runtime#single-use-identifiers (#1080): so is every other
+    // reversible write, whose single-use permit only the write path redeems.
+    // The write path runs its own intake.
+    if (this.deps.pep.toolAction(tool)?.actionClass === REVERSIBLE_WRITE_CLASS) {
+      return this.callWriteTool(tool, args, token, beforeReverify, signals);
+    }
+    // @spec operation-profile-payments-v1 intake (D316): every later step,
+    // execution included, uses the normalized arguments.
+    const intake = await this.deps.pep.intake(tool, args, token);
+    if (!intake.ok) return { ok: false, refusal_reason: intake.refusal_reason };
+    args = intake.args;
     const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
     if (!res.permitted) {
       return {
@@ -1055,6 +1151,10 @@ export class McpPaymentsServer {
     failpoints?: ReversibleWriteFailpoints,
   ): Promise<WriteToolResult> {
     if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
+    // @spec operation-profile-payments-v1 intake (D316), as in callReadTool.
+    const intake = await this.deps.pep.intake(tool, args, token);
+    if (!intake.ok) return { ok: false, refusal_reason: intake.refusal_reason };
+    args = intake.args;
     const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
     if (!res.permitted || !res.effective || !res.decision) {
       return {
@@ -1073,6 +1173,7 @@ export class McpPaymentsServer {
     const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
     beforeReverify?.();
+    await failpoints?.atReverification?.();
     // A moved catalog snapshot is its own error, not a parameter mismatch:
     // check it first so the caller-visible reason matches the record.
     const capability = await this.deps.pep.reverifyCapability(
@@ -1089,7 +1190,56 @@ export class McpPaymentsServer {
     // Operation Profile can have moved during the reads above.
     const live = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!live.ok) return { ok: false, refusal_reason: live.error };
+    // @spec runtime#single-use-identifiers (#1080, D317): a single-use permit
+    // is redeemed last, after every check that could refuse it, so an earlier
+    // refusal never burns it; redemption and release are synchronous, with no
+    // await between them.
+    const singleUse = this.takeSingleUse(attempt, res.decision);
+    if (singleUse !== undefined) return this.refuseSingleUse(attempt, singleUse);
     return { ok: true, result: this.execute(tool, args) };
+  }
+
+  /**
+   * @spec runtime#single-use-identifiers, authzen#response-context `use_limit`
+   * (#1080, D317): "the PEP owns the consumed-identifier store and refuses a
+   * re-presented consumed `evaluation_id`". Where the permit carries
+   * `use_limit`, take its single use in this PEP's durable store and return
+   * nothing; otherwise return the Execution Evidence `error` that refuses it:
+   *
+   * | Case | `error` |
+   * |---|---|
+   * | `use_limit` other than 1 (this PEP meters single use only) | `condition_unrecognized` |
+   * | no store configured, or the store cannot be written | `consumption_unavailable` |
+   * | the identifier is already consumed | `permit_consumed` |
+   *
+   * A permit with no `use_limit` returns nothing and touches no store. The
+   * record is retained until the permit's `valid_until` plus
+   * {@link CONSUMED_PERMIT_RETENTION_MARGIN_MS}. Synchronous, so the caller
+   * releases the effect with no await after the redemption.
+   */
+  private takeSingleUse(attempt: ExecutionAttempt, decision: Decision): string | undefined {
+    const condition = singleUseCondition(attempt, decision);
+    if (condition === undefined) return undefined;
+    if ("error" in condition) return condition.error;
+    const store = this.deps.writeReservations;
+    if (!store) return "consumption_unavailable";
+    try {
+      const first = store.consumePermit({
+        evaluationId: attempt.evaluationId,
+        action: attempt.action,
+        executionId: attempt.executionId,
+        retainUntilMs: condition.retainUntilMs,
+      });
+      return first ? undefined : "permit_consumed";
+    } catch {
+      return "consumption_unavailable";
+    }
+  }
+
+  /** A single-use refusal, through the one post-permit writer: nothing executes. */
+  private async refuseSingleUse(attempt: ExecutionAttempt, error: string): Promise<WriteToolResult> {
+    await this.deps.pep.suppressExecution(attempt, error);
+    return { ok: false, refusal_reason: singleUseRefusalReason(error) };
   }
 
   /**
@@ -1097,6 +1247,11 @@ export class McpPaymentsServer {
    * its Decision. Retrieval first, read-only: a retained record of the
    * (scope, key) pair is resolved by {@link releaseRetained} and admits
    * nothing. With none, the attempt goes to admission and the effect.
+   *
+   * @spec runtime#single-use-identifiers (#1136 review, D317, D342): a permit
+   * carrying a `use_limit` this PEP cannot meter is refused before either;
+   * `use_limit: 1` is consumed by whichever of retrieval or admission the
+   * attempt reaches.
    */
   private async callKeyedReversibleWrite(
     tool: string,
@@ -1107,6 +1262,8 @@ export class McpPaymentsServer {
   ): Promise<WriteToolResult> {
     const attempt = res.attempt;
     if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
+    const singleUse = singleUseCondition(attempt, res.decision);
+    if (singleUse && "error" in singleUse) return this.refuseSingleUse(attempt, singleUse.error);
     if (res.writeReservationUnkeyable) return this.actorUnkeyable(attempt);
     const pair = this.reservationPair(res);
     if (!pair) return this.reservationUnavailable(attempt);
@@ -1116,7 +1273,15 @@ export class McpPaymentsServer {
     } catch {
       return this.reservationUnavailable(attempt);
     }
-    if (found) return this.releaseRetained(attempt, pair.scope, found);
+    if (found) {
+      return this.releaseRetained(
+        attempt,
+        pair.scope,
+        found,
+        singleUse ? { store: pair.store, retainUntilMs: singleUse.retainUntilMs } : undefined,
+        failpoints,
+      );
+    }
     return this.admitReversibleWrite(tool, token, res, beforeReverify, failpoints);
   }
 
@@ -1196,14 +1361,42 @@ export class McpPaymentsServer {
    * nothing, not the retained result and not which kind of record the key
    * holds. Its one disposition is already recorded, so that last comparison
    * records nothing further.
+   *
+   * @spec runtime#single-use-identifiers (#1080, D342): retrieval is a use of
+   * a single-use permit. A permit carrying `use_limit: 1` names, in
+   * `singleUse`, the store admission meters it in and the retention of its
+   * record. After the permit-use check and before the disposition or
+   * anything else is disclosed, its identifier is consumed there in one
+   * atomic insert: one already consumed, by an effect or by an earlier
+   * retrieval, is refused `permit_consumed`, and a store that cannot be
+   * written refuses `consumption_unavailable`; neither discloses the record.
+   * A later retrieval takes a fresh Decision. Retrieval still admits no
+   * operation and runs no effect.
    */
   private async releaseRetained(
     attempt: ExecutionAttempt,
     scope: WriteReservationScope,
     retained: WriteReservation,
+    singleUse: { store: WriteReservationStore; retainUntilMs: number } | undefined,
+    failpoints: ReversibleWriteFailpoints | undefined,
   ): Promise<WriteToolResult> {
     const current = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!current.ok) return { ok: false, refusal_reason: current.error };
+    if (failpoints?.atRetrieval) await failpoints.atRetrieval();
+    if (singleUse) {
+      let first: boolean;
+      try {
+        first = singleUse.store.consumePermit({
+          evaluationId: attempt.evaluationId,
+          action: attempt.action,
+          executionId: attempt.executionId,
+          retainUntilMs: singleUse.retainUntilMs,
+        });
+      } catch {
+        return this.reservationUnavailable(attempt);
+      }
+      if (!first) return this.refuseSingleUse(attempt, "permit_consumed");
+    }
     const conflict = retained.operationIdentity !== scope.operationIdentity;
     await this.deps.pep.suppressExecution(attempt, conflict ? "operation_identity_conflict" : "operation_already_claimed");
     const atRelease = this.deps.pep.permitUseFailure(attempt);
@@ -1228,6 +1421,13 @@ export class McpPaymentsServer {
    *
    * Public as the effect step's own seam: it is what an attempt replayed past
    * its Decision reaches, and it re-checks everything that attempt needs.
+   *
+   * @spec runtime#single-use-identifiers (#1136 review, D317): a `use_limit`
+   * the permit carries is metered here, never ignored. One this PEP cannot
+   * meter is refused first; `use_limit: 1` is taken inside the reservation's
+   * transaction, as the last check before the effect
+   * ({@link WriteReservationStore.reserve}), so a consumed identifier, under
+   * any idempotency key, is refused `permit_consumed` and runs no effect.
    */
   async admitReversibleWrite(
     tool: string,
@@ -1242,6 +1442,8 @@ export class McpPaymentsServer {
     if (!effect) throw new Error(`no reversible effect is declared for tool ${tool}`);
     const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
+    const singleUse = singleUseCondition(attempt, res.decision);
+    if (singleUse && "error" in singleUse) return this.refuseSingleUse(attempt, singleUse.error);
     if (res.writeReservationUnkeyable) return this.actorUnkeyable(attempt);
     const pair = this.reservationPair(res);
     if (!pair) return this.reservationUnavailable(attempt);
@@ -1276,6 +1478,7 @@ export class McpPaymentsServer {
           evaluationId: attempt.evaluationId,
           executionId: attempt.executionId,
           retentionMs: pair.retentionMs,
+          ...(singleUse ? { singleUse } : {}),
         },
         (nowMs) =>
           effect({ store: pair.store, attempt, token, effective, invoiceVersion, parameterDigest: digest, nowMs }),
@@ -1284,7 +1487,19 @@ export class McpPaymentsServer {
     } catch {
       return this.reservationUnavailable(attempt);
     }
-    if (outcome.kind === "existing") return this.releaseRetained(attempt, pair.scope, outcome.reservation);
+    if (outcome.kind === "existing") {
+      // @spec runtime#single-use-identifiers (D342): the concurrent-existing
+      // fallback consumes the permit too; the reservation read above it in the
+      // transaction consumed nothing.
+      return this.releaseRetained(
+        attempt,
+        pair.scope,
+        outcome.reservation,
+        singleUse ? { store: pair.store, retainUntilMs: singleUse.retainUntilMs } : undefined,
+        failpoints,
+      );
+    }
+    if (outcome.kind === "consumed") return this.refuseSingleUse(attempt, "permit_consumed");
     if (outcome.kind === "refused") {
       await this.deps.pep.suppressExecution(
         attempt,
@@ -1312,6 +1527,13 @@ export class McpPaymentsServer {
   ): Promise<TransactionToolResult> {
     const tx = this.deps.transaction;
     if (!tx) throw new Error("transaction tier not configured");
+
+    // @spec operation-profile-payments-v1 intake (D316), before the
+    // transaction-token check below reads `invoice_id`, so the challenged
+    // operation's digest is recomputed from the normalized arguments too.
+    const intake = await this.deps.pep.intake(tool, args, token);
+    if (!intake.ok) return { ok: false, refusal_reason: intake.refusal_reason };
+    args = intake.args;
 
     // @spec txn-authorization#offline-verification — where the credential IS a
     // transaction token, it is matched against the operation THIS resource

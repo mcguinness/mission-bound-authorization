@@ -924,6 +924,22 @@ An approved successor extension MUST NOT extend a carried child's expiry:
 carryover remains bounded by the old child and its new parent's effective
 expiry ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 
+## Successor Subject and authority source {#successor-source}
+
+A successor's `subject` and `authority_source` MUST equal the
+predecessor's, whichever completion mode or approval basis creates it;
+an approval that would establish another Subject or source creates no
+successor. Work for another Subject or source continues under a
+separately approved Mission, outside succession
+({{independent-continuation}}).
+
+In the commit that activates the successor, the Mission Issuer MUST
+verify that the source still applies to the Subject and that the
+successor Authority Set lies within the source's ceiling as it stands
+at that commit. On failure it creates no successor and leaves the
+predecessor `active`. The same commit rechecks the effective expiry
+({{successor-expiry}}).
+
 # The Predecessor Mission Reference {#predecessor-member}
 
 The successor records a lineage link to the predecessor as a
@@ -1685,6 +1701,9 @@ A conforming **expansion-capable Mission Issuer** MUST:
   deferred token response or the interactive handoff
   ({{adjudication}}, {{interactive-handoff}}) and enforcing the successor-expiry rule
   ({{successor-expiry}});
+- keep the predecessor's `subject` and `authority_source` on the
+  successor and verify that source in the activating commit
+  ({{successor-source}});
 - record the `predecessor` member on the successor's `mission` claim
   and Mission record ({{predecessor-member}});
 - activate the successor and transition the predecessor to `superseded`
@@ -1697,7 +1716,7 @@ A conforming **expansion-capable Mission Issuer** MUST:
 
 An expansion-capable Mission Issuer is also a conforming issuance-profile
 Mission Issuer ({{I-D.draft-mcguinness-oauth-mission}}); this document
-adds the expansion surface to that role. A Resource Server requires no
+adds the expansion surface to that role. A resource server requires no
 new behavior: it enforces a successor's tokens exactly as it enforces
 any Mission-bound token, and treats the `predecessor` member, if it
 reads it at all, as audit context it MUST NOT use to grant authority
@@ -1961,7 +1980,7 @@ Track document; a Specification Required reference that a Designated
 Expert can review against these criteria suffices.
 
 The registry covers values of the `mission_denial_reason` parameter
-only ({{denial-reasons}}); the Resource Server `WWW-Authenticate`
+only ({{denial-reasons}}); the resource server `WWW-Authenticate`
 `mission_denial` attribute
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server
 Enforcement") and AuthZEN decision-context denial reasons
@@ -2078,6 +2097,12 @@ composition with the issuance flow.
 
 \[\[ To be removed from the final specification ]]
 
+- Successor Subject and authority source: every successor keeps the
+  predecessor's `subject` and `authority_source`, whatever approval
+  basis creates it; another Subject or source needs a separately
+  approved Mission outside succession, and the activating commit
+  verifies that the source applies and that its current ceiling covers
+  the successor (#1118).
 - Interactive completion has a defined handoff: the token exchange
   answers `mission_interaction_required` with a `mission_continuation`
   handle, the client pushes an RFC 9126 request carrying it, and code

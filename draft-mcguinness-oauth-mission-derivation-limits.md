@@ -38,6 +38,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-consent-evidence:
+    title: "Mission Consent Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC8785:
@@ -129,7 +137,8 @@ Mission-Bound Authorization for OAuth 2.0
 derivation under a Mission on its lifecycle state, its Authority Set,
 and its expiry. It does not bound how many derivations the issuer
 performs. This document adds that bound: a derivation limit on the
-number of derivations the issuer AS performs under a Mission. The limit
+number of derivations the issuer authorization server (AS) performs
+under a Mission. The limit
 is an issuer-side operational control. It bounds counted issuance
 operations at the token endpoint, or at the Mission Authority
 Server's grant endpoint under the Mission Issuance Grant profile
@@ -157,7 +166,9 @@ none of its rules:
   Authorization and Minimization"); and
 - rendering of the established limit at the approval event
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-  Approval").
+  Approval"), and of a standing consent's per-Mission limit rule at
+  that consent's human approval ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Standing-Consent Bases").
 
 An AS that does not implement this document establishes no derivation
 limit, and its closed-top-level validation refuses a submitted
@@ -265,6 +276,19 @@ Otherwise each Mission Record's ceiling comes only from its own
 Intent's `requested_derivation_limit`, clamped by the deployment's
 policy for that Mission. A successor created by a fresh human
 approval and each distinct Template dispatch establish theirs afresh.
+
+A Mission created under a standing-consent basis
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+Bases") is also bounded by the maximum rendered at that standing
+consent's human approval ({{approval-rendering}}). Where that maximum
+is finite, the AS MUST NOT establish a `derivation_limit` above it,
+nor leave `derivation_limit` absent, for such a Mission. A stricter
+applicable policy or requested limit narrows the Mission's limit, but
+no change of policy raises or removes the maximum; only a fresh human
+approval of the standing consent replaces it. The maximum caps each
+Mission's own limit and is not a count those Missions share:
+establishment and counting otherwise follow the rules above,
+including both exceptions.
 
 ## Mission Record Member {#record-member}
 
@@ -433,9 +457,9 @@ The OAuth binding's caller authorization and minimization rules apply
 to it ({{I-D.draft-mcguinness-oauth-mission}}, Section "Caller
 Authorization and Minimization"), and its disclosure is member-scoped.
 `derivations_remaining` serves issuance-budget consumers, not
-Resource Server enforcement, and the AS MUST disclose it only to a
+resource server enforcement, and the AS MUST disclose it only to a
 caller the deployment has granted that member's disclosure privilege.
-By default, an audience-authorized Resource Server receives the
+By default, an audience-authorized resource server receives the
 audience-filtered enforcement projection without it.
 
 An AS MUST NOT include `derivations_remaining` in an introspection
@@ -477,6 +501,29 @@ Issuance Grant profile, the rendering MUST also state that the limit
 bounds the grants it issues, not the tokens consuming Authorization
 Servers issue from them ({{issuance-grant-counting}}).
 
+A Mission created under a standing-consent basis
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+Bases") has no human approval, and so no consent rendering, of its
+own. At the human approval of a standing consent under which policy
+can create Missions, the AS MUST render the rule that establishes
+each such Mission's `derivation_limit`, and either the rule's maximum
+or that no finite maximum is guaranteed. The rule and maximum are
+those of the exact version consented to and of the policy state it
+commits, which the AS retains; {{effective-limit}} bounds each
+Mission by them. The async delegation family and Mission Issuance
+Grant statements above, where they apply, are part of this rendering,
+and the rendering MUST also state that the maximum is local to each
+Mission, as {{effective-limit}} counts it, and is not a budget across
+the Missions the consent admits, their descendants, or their
+lifetimes ({{sec-composition}}).
+
+Where the deployment records Consent Evidence
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), the
+Consent Disclosure object of that approval MUST carry this rendering
+in `mission_summary`, so `consent_rendering_hash` commits it. A
+Mission the standing consent admits has no disclosure or Consent
+Evidence of its own.
+
 The rendered limit is one Mission's local bound ({{sec-composition}}).
 Where a deployment runs child delegation, that profile states what an
 approval interface discloses beside it
@@ -494,7 +541,7 @@ An AS conforming to this document MUST implement:
 - where it supports token introspection for Mission-bound tokens, the
   rules for `derivations_remaining` ({{introspection}}).
 
-A Resource Server does not need to understand this document to enforce
+A resource server does not need to understand this document to enforce
 Mission-bound tokens; `derivations_remaining` is not an enforcement
 input ({{introspection}}).
 
@@ -510,7 +557,7 @@ issuer performs; the refreshes of an async delegation family, and
 redemption and refresh at a Mission Issuance Grant consuming
 Authorization Server, are not counted ({{sec-async-family}},
 {{issuance-grant-counting}}). It does not narrow the Authority Set,
-shorten a token's lifetime, or bound the requests a Resource Server
+shorten a token's lifetime, or bound the requests a resource server
 honors under a token already issued: a derived token remains usable
 until its `exp`. A deployment that needs to bound use, rather than
 issuance, adopts a runtime control such as metering
@@ -545,7 +592,9 @@ that Mission alone; a Child Mission's own `derivation_limit` is
 independent of its parent's, and the parent's cap does not bound the
 child subtree by default. The derivations summed across an entire
 child subtree can therefore exceed what a single approval appears to
-bound at consent time.
+bound at consent time. Likewise, the maximum a standing consent
+renders bounds each Mission it admits, not their sum
+({{approval-rendering}}).
 
 For example, a child-delegation deployment
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) allowing
@@ -578,7 +627,10 @@ Mission's `policy_version` ({{I-D.draft-mcguinness-oauth-mission}},
 Section "Mission Authority") against the deployment's retained,
 versioned policy; a mismatch is a policy-application defect to
 investigate, not a Mission-record integrity failure, since neither
-integrity anchor commits `derivation_limit`.
+integrity anchor commits `derivation_limit`. For a Mission created
+under a standing consent, the auditor also checks the recorded value
+against the maximum of the consented version's retained policy state
+({{effective-limit}}).
 
 ## Concurrent Derivation {#sec-concurrency}
 
@@ -663,6 +715,14 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 
 -00
 
+- Approval Rendering and Effective Limit: the human approval of a
+  standing consent renders the rule that establishes each admitted
+  Mission's limit, with its maximum or a statement that no finite
+  maximum is guaranteed, from the consented version and its retained
+  policy state; a finite maximum caps each admitted Mission's limit,
+  and no policy change raises or removes it. Where Consent Evidence
+  is recorded, that approval's disclosure commits the rendering
+  (#1119).
 - Effective Limit and What Counts: a ceiling-drawdown successor
   carries forward its predecessor's committed derivation count and
   never exceeds its limit, alongside the carryover exception; its

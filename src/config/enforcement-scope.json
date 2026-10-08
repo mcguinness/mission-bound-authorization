@@ -76,6 +76,13 @@
         "idempotency_scope": ["mission", "subject", "actor", "audience", "action", "resource", "phase"],
         "retention_posture": "declared_horizon",
         "retention_horizon": "P7D"
+      },
+      {
+        "mediated_class_or_scope": "consequential_write",
+        "permit_lifetime_control": "single_use_decision_identifier",
+        "consumed_identifier_domain": "pep-local: mcp-payments-pep, durable single-writer SQLite",
+        "consumed_identifier_owner": "mcp-payments-pep",
+        "retention_posture": "permit_acceptance_window"
       }
     ],
     "outcome_reconciliation": {

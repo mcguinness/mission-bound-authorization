@@ -113,6 +113,7 @@ function buildStack(missionView: MissionView, fga: Fga) {
     payments,
     loadView,
     jwks: { keys: [] },
+    keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
     transaction: { engine, connectors, evidence },
     writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
@@ -323,10 +324,12 @@ describe("the PEP establishes token validity before using any of its claims as d
       instanceEpoch: "epoch-1",
     });
     const server = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
       pep,
       payments,
       loadView: () => undefined,
       jwks: { keys: [pubJwk] },
+      keyRoles: { accessToken: ["mission-key"], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
     });
     return { server, evidence };

@@ -10,7 +10,7 @@
 
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
-import { CANONICAL_RESOURCE, dpopProofFor, McpPaymentsServer, PaymentsStore, type DpopKeys } from "../src/index.js";
+import { CANONICAL_RESOURCE, dpopProofFor, McpPaymentsServer, openEphemeralWriteReservationStore, PaymentsStore, type DpopKeys } from "../src/index.js";
 
 const ISSUER = "https://as.test";
 const HTU = CANONICAL_RESOURCE;
@@ -44,10 +44,12 @@ beforeAll(async () => {
   dpopKeys = await generateKeyPair("ES256", { extractable: true });
   cnfJkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
   server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep: undefined as never, // never invoked by token validation alone
     payments: new PaymentsStore(),
     loadView: () => undefined,
     jwks: { keys: [pubJwk as never] },
+    keyRoles: { accessToken: ["as-key"], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
   });
 });

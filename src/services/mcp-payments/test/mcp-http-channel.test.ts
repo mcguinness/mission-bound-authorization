@@ -35,6 +35,7 @@ import {
   EvidenceStore,
   type HttpMediatedClient,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   type TokenFacts,
@@ -180,10 +181,12 @@ async function build(): Promise<{
     instanceEpoch: "epoch-1",
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,
     jwks: { keys: [pubJwk] },
+    keyRoles: { accessToken: ["mission-key"], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
     transaction: { engine, connectors, evidence },
   });
@@ -254,10 +257,12 @@ d("HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTT
 
   // Each adversarial input runs twice on fresh stacks -- once over the direct PEP
   // method, once over HTTP -- to prove the channel enforces IDENTICALLY.
+  // Every case carries a well-formed key, so intake (D316) admits it and the
+  // refusal under test is the one each name describes.
   const adversarial: { name: string; tool: string; args: Record<string, unknown> }[] = [
-    { name: "over-cap wire (inv-2, 900 > 500)", tool: "execute_wire_transfer", args: { invoice_id: "inv-2" } },
-    { name: "wrong-vendor wire (inv-3, globex)", tool: "execute_wire_transfer", args: { invoice_id: "inv-3" } },
-    { name: "ungranted tool (send_remittance_email)", tool: "send_remittance_email", args: { invoice_id: "inv-1" } },
+    { name: "over-cap wire (inv-2, 900 > 500)", tool: "execute_wire_transfer", args: { invoice_id: "inv-2", idempotency_key: idem() } },
+    { name: "wrong-vendor wire (inv-3, globex)", tool: "execute_wire_transfer", args: { invoice_id: "inv-3", idempotency_key: idem() } },
+    { name: "ungranted tool (send_remittance_email)", tool: "send_remittance_email", args: { invoice_id: "inv-1", idempotency_key: idem() } },
   ];
 
   for (const c of adversarial) {
@@ -569,10 +574,12 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
       },
     });
     const server = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
       pep,
       payments,
       loadView,
       jwks: { keys: [pubJwk] },
+      keyRoles: { accessToken: ["mission-key"], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
     });
     const channel = await createHttpMcpChannel(server, { masGoverned: true });

@@ -18,6 +18,7 @@ import {
   EvidenceStore,
   type ExecutionEvidence,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   parameterDigest,
   PaymentsStore,
   Pep,
@@ -190,17 +191,28 @@ function build(
     ...(opts.challengeSigner ? { challengeSigner: opts.challengeSigner } : {}),
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,
     jwks: opts.jwks ?? { keys: [] },
+    // Each class verifies only under its own role's keys (D312): the
+    // transaction key, wherever else it is published, is never an
+    // access-token key.
+    keyRoles: {
+      accessToken: (opts.jwks?.keys ?? [])
+        .map((k) => String(k.kid))
+        .filter((kid) => !(opts.txnTokenJwks?.keys ?? []).some((t) => t.kid === kid)),
+      attenuationRoot: [],
+      transactionToken: (opts.txnTokenJwks?.keys ?? []).map((k) => String(k.kid)),
+    },
     issuer: "https://as.test",
     transaction: { engine, connectors, evidence },
     ...(opts.txnTokenJwks ? { txnTokenJwks: opts.txnTokenJwks } : {}),
     ...(opts.asIssuer ? { asIssuer: opts.asIssuer } : {}),
     ...(opts.txnStores ? { txnStores: opts.txnStores } : {}),
   });
-  return { payments, evidence, connectors, engine, server };
+  return { payments, evidence, connectors, engine, server, pep };
 }
 
 // AROP Transaction Challenge (phase 2) test helpers.
@@ -504,32 +516,33 @@ d("M5 transaction-assurance tier", () => {
   it("derives the challenge's mission, parameter_digest and cnf itself, never from the client's arguments (@spec txn-authorization#resource-challenge)", async () => {
     const { generateKeyPair } = await import("jose");
     const rsTxn = await generateKeyPair("ES256", { extractable: true });
-    const { server, payments } = build({
+    const { server, payments, pep } = build({
       challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
     });
 
     // The client supplies its own `mission`, `parameter_digest` and `cnf`
     // alongside the operation's real argument. All three are the resource's to
     // derive from the request and the VERIFIED token, so none is reflected.
-    const res = await server.callTransactionTool(
-      "send_remittance_email",
-      {
-        invoice_id: "inv-1",
-        mission: {
-          id: "msn_supplied",
-          issuer: "https://elsewhere.test",
-          authority_hash: "sha-256:supplied",
-          expires_at: "2100-01-01T00:00:00Z",
-          approval_basis: { type: "direct" },
-        },
-        parameter_digest: "sha-256:client-supplied",
-        cnf: { jkt: "jkt-client-supplied" },
+    const supplied = {
+      invoice_id: "inv-1",
+      mission: {
+        id: "msn_supplied",
+        issuer: "https://elsewhere.test",
+        authority_hash: "sha-256:supplied",
+        expires_at: "2100-01-01T00:00:00Z",
+        approval_basis: { type: "direct" },
       },
-      TOKEN,
-      undefined,
-      ACCEPT_CHALLENGE,
-    );
-    const claims = decodeJwt(res.transaction_challenge as string);
+      parameter_digest: "sha-256:client-supplied",
+      cnf: { jkt: "jkt-client-supplied" },
+    };
+    // Intake (D316) refuses the undeclared members at the tool boundary, so
+    // no challenge is issued for them there.
+    expect(
+      await server.callTransactionTool("send_remittance_email", { ...supplied, idempotency_key: idem() }, TOKEN, undefined, ACCEPT_CHALLENGE),
+    ).toEqual({ ok: false, refusal_reason: "invalid_request" });
+    // The PEP, handed them past that boundary, still derives all three itself.
+    const res = await pep.enforce("send_remittance_email", supplied, TOKEN, undefined, ACCEPT_CHALLENGE);
+    const claims = decodeJwt(res.challenge?.transaction_challenge as string);
     expect((claims.mission as { id: string }).id).toBe("msn_m5");
     expect((claims.mission as { issuer: string }).issuer).toBe("https://as.test");
     expect(claims.parameter_digest).toBe(digestFor(payments));
@@ -970,11 +983,14 @@ d("M5 transaction-assurance tier", () => {
     const { generateKeyPair, exportJWK, SignJWT } = await import("jose");
     const asTxn = await generateKeyPair("ES256", { extractable: true });
     const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
-    // The resource's ORDINARY credential JWKS is this AS's: a transaction
-    // token's issuer, audience, `cnf` and `mission` claim would all satisfy
-    // ordinary token validation, so its `typ` is the only thing keeping it out.
+    const asToken = await generateKeyPair("ES256", { extractable: true });
+    const asTokenPub = { ...(await exportJWK(asToken.publicKey)), kid: "as-token", alg: "ES256" };
+    // The resource's ORDINARY credential JWKS is this AS's, transaction key
+    // included: a transaction token's issuer, audience, `cnf` and `mission`
+    // claim would all satisfy ordinary token validation. Its `typ` refuses it,
+    // and its key is pinned to the transaction role only (D312).
     const { server, payments } = build({
-      jwks: { keys: [asTxnPub] },
+      jwks: { keys: [asTokenPub, asTxnPub] },
       txnTokenJwks: { keys: [asTxnPub] },
       asIssuer: AS_ISSUER,
       gateRemittance: true,
@@ -992,23 +1008,31 @@ d("M5 transaction-assurance tier", () => {
     // general tool call can be derived from it at all.
     await expect(server.validateMissionToken(txnToken)).rejects.toThrow(/not a Mission-bound access token/);
 
-    // The same claims under an ordinary access token's typ do validate, so the
-    // refusal above is the token's class and nothing incidental.
-    const ordinary = await new SignJWT({
-      sub: "alice",
-      client_id: "ap-agent",
-      cnf: { jkt: TOKEN.cnfJkt },
-      mission: TOKEN.missionClaim,
-      authorization_details: [...ALL_ACTIONS_CREDENTIAL],
-    })
-      .setProtectedHeader({ alg: "ES256", kid: "as-txn", typ: "at+jwt" })
-      .setIssuer(AS_ISSUER)
-      .setAudience(CANONICAL_RESOURCE)
-      .setIssuedAt()
-      .setJti(crypto.randomUUID())
-      .setExpirationTime("5m")
-      .sign(asTxn.privateKey);
-    expect((await server.validateMissionToken(ordinary)).mission.id).toBe("msn_m5");
+    // The same claims as an ordinary access token under the access-token key
+    // do validate, so the refusal above is the token's class and nothing
+    // incidental. Under the transaction key they refuse: that key is trusted
+    // for transaction tokens only (D312).
+    const ordinaryUnder = (kid: string, key: typeof asTxn.privateKey) =>
+      new SignJWT({
+        sub: "alice",
+        client_id: "ap-agent",
+        cnf: { jkt: TOKEN.cnfJkt },
+        mission: TOKEN.missionClaim,
+        authorization_details: [...ALL_ACTIONS_CREDENTIAL],
+      })
+        .setProtectedHeader({ alg: "ES256", kid, typ: "at+jwt" })
+        .setIssuer(AS_ISSUER)
+        .setAudience(CANONICAL_RESOURCE)
+        .setIssuedAt()
+        .setJti(crypto.randomUUID())
+        .setExpirationTime("5m")
+        .sign(key);
+    expect((await server.validateMissionToken(await ordinaryUnder("as-token", asToken.privateKey))).mission.id).toBe(
+      "msn_m5",
+    );
+    await expect(server.validateMissionToken(await ordinaryUnder("as-txn", asTxn.privateKey))).rejects.toThrow(
+      /no applicable key/,
+    );
   });
 
   it("executes once across two replicas sharing a consumption domain, whatever token jti carries the txn", async () => {

@@ -104,13 +104,13 @@ informative:
 --- abstract
 
 Mission-Bound Authorization for OAuth 2.0 derives delegated authority
-through the Authorization Server: each narrowing is a derivation at
+through the authorization server: each narrowing is a derivation at
 the issuer. For deep sub-agent fan-out, the common agent topology, that
-puts the Authorization Server in the hot path as a latency and
+puts the authorization server in the hot path as a latency and
 availability dependency. This document defines an optional Mission
 Offline Attenuation profile. It profiles Attenuating Agent Tokens so a
 Mission-bound token holder can mint a narrower child token offline, with
-no Authorization Server round-trip, carrying the same `mission` claim.
+no authorization server round-trip, carrying the same `mission` claim.
 The Mission Issuer derives the attenuation root from the Mission's
 approved Authority Set under a normative mapping; the narrowing is
 verifiable from the carried token chain, and the Mission kill switch is
@@ -126,12 +126,12 @@ alongside, not instead of, Authorization-Server-mediated delegation.
 
 Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") narrows
-authority through the Authorization Server: a delegated or narrowed
+authority through the authorization server: a delegated or narrowed
 token is derived at the issuer, and cross-domain projection is a Token
 Exchange ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). For an
 agent that fans out to many
 sub-agents, each needing a slice of the Mission's authority, that makes
-the Authorization Server a per-delegation latency and availability
+the authorization server a per-delegation latency and availability
 dependency on the execution hot path. At machine speed that
 dependency is the bottleneck: a swarm forking sub-agents per subtask
 cannot afford an issuer round trip per fork, and localized, offline,
@@ -158,7 +158,7 @@ substrate"), in which a token holder mints a narrower child token
 offline by signing it with the key the parent token's `cnf` binds, and
 the child commits to its parent by hash. A Mission-bound token can be an
 attenuation-substrate root; its holder then derives narrower children
-for sub-agents with no Authorization Server contact.
+for sub-agents with no authorization server contact.
 
 Three things make this safe within the Mission model, and this document
 requires all three ({{mission-binding-check}}, {{kill-switch}}):
@@ -176,7 +176,7 @@ requires all three ({{mission-binding-check}}, {{kill-switch}}):
 This document is optional and experimental: adopt it for
 evaluation, not as a stable interface. A deployment that narrows
 authority only
-through the Authorization Server is fully conformant to the issuance
+through the authorization server is fully conformant to the issuance
 profile and is unaffected by this document. It places no new requirement
 on the issuance profile, and it does not replace
 Authorization-Server-mediated delegation; a deployment offers offline
@@ -259,7 +259,7 @@ The root's `iss` MUST equal its
 `mission.issuer`: only the Mission Issuer mints a Mission-bound root,
 and it signs the root with its own keys. It MUST carry `aud` per the
 issuance profile's token rules ({{I-D.draft-mcguinness-oauth-mission}}),
-identifying the Resource Server(s) authorized to consume its authority.
+identifying the resource server(s) authorized to consume its authority.
 
 A Mission-bound attenuation root is one shape of Mission-bound token. A
 deployment MAY also issue ordinary `mission_resource_access` tokens for
@@ -551,7 +551,7 @@ actor representations. A materialized nested `act` projection
 ({{RFC8693}}, shaped per the Actor Profile,
 {{I-D.draft-mcguinness-oauth-actor-profile}}) is constructed from the
 validated chain at a consuming boundary, a PDP, an introspection
-responder, or a destination Authorization Server; it is not carried
+responder, or a destination authorization server; it is not carried
 on the artifacts.
 
 The root actor is asserted by the Mission Issuer and bound to the
@@ -619,10 +619,10 @@ The root's `erp.invoices.read` and `erp.journal-entries.write` tools map
 to the `invoices.read` and `journal-entries.write` actions on
 `https://erp.example.com`, and the `amount_usd` argument maps to the
 Mission Common Constraint `max_amount` ({{root-mapping}}); its `aud`
-names that Resource Server.
+names that resource server.
 
 The orchestrator spawns a read-only extraction sub-agent and, with no
-Authorization Server contact, mints a child that drops the write tool
+authorization server contact, mints a child that drops the write tool
 and keeps only the Q3 invoice read. It signs the child with the key the
 root's `cnf` binds, sets `iss` to that key's thumbprint, increments
 `del_depth`, and commits the parent by `par_hash` (the `iss` value
@@ -800,7 +800,7 @@ Mission-bound authority is out of scope and deferred.
 
 Because the child carries the parent chain, every consumer of a leaf
 sees each ancestor's full authority, not only the leaf's narrowed slice.
-A leaf presented to one Resource Server therefore discloses the broader
+A leaf presented to one resource server therefore discloses the broader
 authority of every token above it. To minimize that disclosure, a
 deployment SHOULD mint narrowly scoped, per-subtree roots rather than one
 broad root fanned out across unrelated subtrees, so a leaf reveals only

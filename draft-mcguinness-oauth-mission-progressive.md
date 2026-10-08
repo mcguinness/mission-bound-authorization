@@ -340,7 +340,11 @@ in-ceiling case only.
 
 The successor is created as the expansion profile requires: its
 Authority Set freshly derived and bound by the ceiling, its
-`predecessor` member set, the predecessor superseded. An in-ceiling
+`predecessor` member set, the predecessor superseded. The successor's
+`subject` and `authority_source` are the predecessor's, and the commit
+that activates it checks that source's ceiling
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Successor
+Subject and authority source"). An in-ceiling
 successor MUST carry the predecessor's `authority_ceiling` and
 `drawdown_policy` unchanged or narrowed, committed under the same
 or, when narrowed, a recomputed `ceiling_hash`. Any change to either
@@ -427,7 +431,8 @@ replenish the predecessor's allowance of counted derivations:
 - The successor MUST carry forward the predecessor's committed
   derivation count. Where the predecessor has a `derivation_limit`,
   the successor's `derivation_limit` MUST NOT exceed it: a stricter
-  AS-policy ceiling or `requested_derivation_limit` narrows it
+  authorization-server policy ceiling or `requested_derivation_limit`
+  narrows it
   further, and omitting or raising the request neither removes nor
   raises it. A predecessor without a `derivation_limit` has no finite
   limit to pass on, and the successor's is established as Mission
@@ -453,6 +458,13 @@ replenish the predecessor's allowance of counted derivations:
   issuance ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section
   "Recovery is delivery"), counted against and gated by the
   successor's `derivation_limit`.
+
+The ceiling consent's disclosure ({{progressive-authorization}}) MUST
+state this inheritance, as Mission Derivation Limits' Approval
+Rendering section requires of a standing consent: policy-adjudicated
+successors carry forward the Mission's derivation count and never
+exceed its rendered `derivation_limit`, or, where the Mission has
+none, no finite limit is guaranteed for them.
 
 A successor created by a fresh human approval establishes its limit
 afresh, as Mission Derivation Limits states. This bounds counted
@@ -844,6 +856,15 @@ convention, none of which require registration.
 
 -01
 
+- In-ceiling expansion: a `ceiling_drawdown` successor keeps its
+  predecessor's `subject` and `authority_source`, and its activating
+  commit checks that source's ceiling, as the expansion profile
+  requires of every successor (#1118).
+- In-ceiling expansion: where Mission Derivation Limits is also
+  adopted, the ceiling consent's disclosure states that
+  policy-adjudicated successors carry the Mission's derivation count
+  and limit forward, or that no finite limit is guaranteed where the
+  Mission has none (#1119).
 - In-ceiling expansion: where Mission Derivation Limits is also
   adopted, a policy drawdown carries its predecessor's committed
   derivation count and limit forward (a stricter ceiling can narrow

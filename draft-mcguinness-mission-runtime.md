@@ -378,7 +378,7 @@ no one approved; the approved boundary bounds composition, with the
 cumulative bounds and `exclusive` latch of the metering companion
 where deployed ({{metering}},
 {{I-D.draft-mcguinness-mission-metering}}). The PEP is whatever component can
-actually prevent the action: a Resource Server, an MCP server, an
+actually prevent the action: a resource server, an MCP server, an
 egress proxy, a workflow engine, or the orchestrator itself
 ({{pep-placement}}). The PDP's placement is a deployment choice
 ({{decision}}). A deployment whose acting tokens carry no `mission`
@@ -841,9 +841,9 @@ identity remain out of scope ({{deferred}}).
 
 The runtime decision MUST include any applicable Resource policy. A
 Mission-bound credential and runtime permit are an upper bound on
-authority, not a command for the Resource Server to perform the
-action. Resource policy MAY be evaluated by the PDP, by the Resource
-Server or PEP as a composed local authorization step, or by both.
+authority, not a command for the resource server to perform the
+action. Resource policy MAY be evaluated by the PDP, by the resource
+server or PEP as a composed local authorization step, or by both.
 The action MUST fail closed unless both Mission authority and
 Resource policy permit it. Resource policy includes object-level
 authorization, tenant configuration, legal holds, service
@@ -1192,7 +1192,7 @@ record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 {::boilerplate bcp14-tagged}
 
 This specification defines its own architectural roles (PEP, PDP,
-Resource Server, Resource policy) rather than importing them from a
+resource server, Resource policy) rather than importing them from a
 credential binding, so that the contract it states is readable without
 reference to any one binding's wire format. It uses the Mission, Mission
 Intent, Mission Issuer, and Authority Set terminology of
@@ -1204,7 +1204,7 @@ Mapping".
 Policy Enforcement Point (PEP):
 : The component that can prevent a consequential action and that
   obtains and enforces a decision before the action runs. Depending
-  on the action this is a Resource Server, an MCP server, an egress
+  on the action this is a resource server, an MCP server, an egress
   proxy, a workflow engine, or the orchestrator itself.
 
 Policy Decision Point (PDP):
@@ -1212,13 +1212,13 @@ Policy Decision Point (PDP):
   Mission and returns permit or deny. Its placement is a deployment
   choice ({{decision}}).
 
-Resource Server:
+Resource server:
 : The component that hosts the protected resources an action targets
   and applies Resource policy to them, whichever credential type it
   accepts.
 
 Resource policy:
-: Local policy of the Resource Server or protected resource, including
+: Local policy of the resource server or protected resource, including
   object-level authorization, tenant configuration, legal holds,
   service invariants, and risk decisions. Mission authority is an
   upper bound and does not override Resource policy.
@@ -1273,9 +1273,9 @@ Operation Profile:
   deployment publishes; defined in full in {{parameter-binding}}.
 
 Resource Server runtime profile:
-: A deployment's Resource Server-facing conformance statement for this
+: A deployment's resource server-facing conformance statement for this
   profile. It defines which protected resources and operations the
-  Resource Server enforces, where the PEP sits, how local Resource
+  resource server enforces, where the PEP sits, how local Resource
   policy composes with Mission authority, and which Operation Profiles
   apply.
 
@@ -1384,7 +1384,7 @@ issuer alone. Three things conform, at different granularities: the
 profile** for the protected resources it mediates
 ({{rs-runtime-profile}}), and the **PEP/PDP decision path** for each
 consequential action ({{decision}}). Conformance is not global to a
-product, credential issuer, Resource Server, or PDP: a deployment
+product, credential issuer, resource server, or PDP: a deployment
 conforms to this profile only for the resources, action classes,
 execution paths, and authority-entry types named in its enforcement
 scope.
@@ -1572,7 +1572,7 @@ class**. Assigning an action to a class is deployment policy, bounded
 by the floor below and by any Resource-policy minimum
 ({{decision}}): the profile does not require every read to reach a PDP.
 A read that is already fully constrained by the token's audience,
-resource, and the Resource Server's object-level authorization, and
+resource, and the resource server's object-level authorization, and
 that does not materially affect the resource set or disclosure risk,
 need not be classified a consequential read, and is then not
 separately PDP-gated by this profile. A deployment MUST NOT, however,
@@ -1629,7 +1629,10 @@ by its predicate is not a basis to leave the invocation ungated.
    **privileged administration** classes MUST be treated as
    consequential and gated.
 2. A Mission's `purpose`, or deployment policy, MAY raise an action
-   to a stricter class.
+   to a stricter class. The `purpose` consulted is the approved
+   Mission's, from its Mission state or a validated projection of it
+   ({{I-D.draft-mcguinness-oauth-mission}}), never a value the request
+   asserts.
 3. A Mission's `purpose` or deployment policy MUST NOT lower an
    action below any minimum classification the Resource policy
    ({{decision}}) sets for it, including a floor the resource owner
@@ -1730,7 +1733,7 @@ per-action moment, and both compose here rather than compete. The
 transaction authorization challenge
 ({{I-D.draft-rosomakho-oauth-txn-challenge}}) has the protected
 resource return a signed challenge that the client presents to the
-AS, which obtains approval and issues a token whose
+authorization server, which obtains approval and issues a token whose
 `authorization_details` describe the approved operation; under a
 Mission, the approval event is the policy behind that challenge, the
 Authority Set bounds what any challenge can be approved into, and
@@ -1758,21 +1761,21 @@ action. A deployment claiming this profile MUST observe these rules:
   action. A permit checked further upstream does not survive
   parameter changes, retries, or routing that happen after the check.
 - A credential-issuance decision does not replace execution-time
-  authorization. A Resource Server that only validates credentials
+  authorization. A resource server that only validates credentials
   cannot claim runtime enforcement; the issuance gate is governance, the
   runtime gate is enforcement.
 - A tool-catalog filter does not replace per-call authorization.
   Filtering a tool list by the caller's authority is exposure
   control; every consequential tool call MUST still pass the runtime
   gate.
-- An orchestrator's internal check does not replace a Resource
-  Server's PEP. Defense in depth is permitted; substitution is not.
+- An orchestrator's internal check does not replace a resource
+  server's PEP. Defense in depth is permitted; substitution is not.
 - If no PEP can prevent the action for a given class, the deployment
   MUST NOT claim runtime enforcement for that class, and MUST name the
   action classes and execution paths it does mediate.
 
 The boundary varies by action: an OAuth-protected API call is gated at
-the Resource Server; a consequential MCP `tools/call` at the MCP
+the resource server; a consequential MCP `tools/call` at the MCP
 server; a local tool invocation, file write, or payment at the
 orchestrator or whatever component drives the call; external egress at
 an egress proxy. Where an action can be reached by an unmediated path
@@ -2069,7 +2072,7 @@ never replaces per-action authorization.
 
 # Resource Server Runtime Profile {#rs-runtime-profile}
 
-A Resource Server that claims conformance to this runtime
+A resource server that claims conformance to this runtime
 profile MUST publish or otherwise make available a Resource Server
 runtime profile for the protected resources and operations in scope.
 The Resource Server runtime profile is a deployment conformance
@@ -2085,8 +2088,8 @@ The Resource Server runtime profile is a delta over the deployment's
 Enforcement Scope Statement ({{runtime-conformance}}): it inherits
 the enforcement-scope items and records only what is specific to its
 protected operations, restating an inherited item only where its
-per-operation value differs. An independently operated Resource
-Server MAY instead carry the full statement as a separable annex. It
+per-operation value differs. An independently operated resource
+server MAY instead carry the full statement as a separable annex. It
 MUST define:
 
 - the endpoint families, methods, tools, or operation identifiers in
@@ -2112,15 +2115,15 @@ MUST define:
   is detectable and two independent implementations can name the same
   adapter contract.
 
-A Resource Server MUST NOT claim this runtime profile for an operation
+A resource server MUST NOT claim this runtime profile for an operation
 unless the operation's consequential effects pass through a PEP that
 can refuse the operation after credential validation and before
-execution. A Resource Server that only validates the acting credential
+execution. A resource server that only validates the acting credential
 and checks static authorization claims on it, without a per-action
 PDP decision, does not implement this runtime profile.
 
-The Resource Server runtime profile MAY be documented in Resource
-Server configuration, resource-server metadata defined elsewhere, a
+The Resource Server runtime profile MAY be documented in resource
+server configuration, resource-server metadata defined elsewhere, a
 contractual deployment profile, or another deployment-specific
 mechanism. This document does not define a discovery document,
 registry, or wire format for publishing it.
@@ -2173,7 +2176,7 @@ obligations, ARAP composition, and its transient-denial members
 ({{authzen}}).
 
 The PDP's placement is a deployment choice (co-located with the
-Mission's `issuer`, embedded in the Resource Server, a tenant-scoped
+Mission's `issuer`, embedded in the resource server, a tenant-scoped
 service, or a shared service); this document does not mandate one. The
 requirement is only that a PEP at each consequential boundary can
 reach an applicable PDP.
@@ -2603,7 +2606,7 @@ The metering companion applies the same two profiles to its counters
   `permit_consumed` classification
   ({{I-D.draft-mcguinness-mission-authzen}}).
 
-**Operation idempotency (Resource Server / Operation Profile)**:
+**Operation idempotency (resource server / Operation Profile)**:
 : The resource, not the PDP, owns the key's lifecycle and the prior
   result once an operation completes: for a COMPLETED duplicate the
   resource returns the prior operation result under the Operation
@@ -2866,7 +2869,7 @@ the evidence is missing.
 | `isolation_boundary`: the execution environment separates the agent component from the mediating PEP, approval service, and rendering component, and credential material stays out of the agent ({{compromise-resistant}}, {{trifecta-containment}}, {{custody}}) | EAT ({{RFC9711}}) | The boundary between the agent component and each isolated component | The relying party, against the attester identity and appraisal policy the statement selects for this row | The freshness rule the statement selects for this row, current at the session the claim covers | Absent, stale, or unverifiable evidence, or a missing selection this row requires, makes the claim unavailable |
 | `workload_measurement`: the attested component runs the software the Enforcement Scope Statement declares ({{compromise-resistant}}, {{runtime-conformance}}) | EAT ({{RFC9711}}) | Each component the statement names as isolated or mediating | The relying party, against the attester identity, appraisal policy, and reference values the statement selects for this row | The freshness rule the statement selects for this row, current at attestation time | Absent, stale, or unverifiable evidence, or a missing selection this row requires, makes the claim unavailable |
 | `approval_policy`: each action in the claimed classes requires action-bound approval ({{compromise-resistant}}, {{action-approval}}) | Signed configuration, or independent service evidence from the approval service | The approval service's enforcement over the classes claimed | The auditor reading the configuration, against the approval service's operator key | Current with the approval service's active policy version | Unknown or unverifiable configuration makes the claim unavailable |
-| `rendering_independence`: the disclosure is derived from the bound normalized parameters, never composed by the agent ({{compromise-resistant}}, {{action-approval}}) | Independent service evidence, the committed Consent Evidence where available | The rendering component's output for the approval event claimed | The party evaluating the evidence, against the rendering component's or Consent Evidence signer's key | Per approval event | An approval event lacking this evidence cannot be counted toward the claim; a class with no such event verified does not carry the claim |
+| `rendering_independence`: the disclosure is derived from the bound normalized parameters, never composed by the agent ({{compromise-resistant}}, {{action-approval}}) | Independent service evidence, the committed Consent Evidence where available | The rendering component's output for the action-bound approval claimed | The party evaluating the evidence, against the rendering component's or Consent Evidence signer's key | Per action-bound approval | An action-bound approval lacking this evidence cannot be counted toward the claim; a class with no such approval verified does not carry the claim |
 | `freshness_sourcing`: the Mission state source is an active freshness mechanism, not token-lifetime expiry ({{compromise-resistant}}, {{state-freshness}}) | Signed configuration naming the state source and its staleness bound ({{I-D.draft-mcguinness-mission-architecture}}), or independent evidence from the state source | The state source used for the classes claimed | The auditor reading the Deployment Profile, against the state source's operator key | The published staleness bound | A stale or unverifiable state source makes the claim unavailable |
 | `path_completeness`: no unmediated path reaches the mediated classes or a fresh usable credential for them ({{compromise-resistant}}) | Negative tests ({{negative-conformance}}) and organizational topology audit | Every path to the classes claimed, deployment-wide | The auditor who ran or reviewed the tests and audit, an organizational anchor | Per the deployment's stated audit cadence | Untested, stale, or a found unmediated path makes the claim unavailable |
 | `least_exposure`: the context surfaced to the agent (prompts, retrieved documents, memory, tool catalogs, schemas, and downstream responses) is scoped to the active Mission ({{trifecta-containment}}, {{least-exposure}}) | Signed configuration naming the exposure-scoping rule for the classes claimed, and negative tests demonstrating out-of-Mission context is withheld | The exposure-scoping rule's coverage over the classes claimed | The auditor reading the configuration, against the deployment's operator key | Current with the deployment's active exposure-scoping configuration version | Unknown, stale, or unverifiable configuration, or a found unscoped exposure, makes the claim unavailable |
@@ -3147,7 +3150,7 @@ Three properties govern how this profile scales.
 **Token lifetime trades against the enforcement layer.** The
 issuance profile recommends short-lived tokens because, in an
 issuance-only deployment, token expiry is the revocation cutoff
-wherever a Resource Server does not introspect.
+wherever a resource server does not introspect.
 Where this profile's enforcement covers the high-consequence classes
 with an active-freshness state source, the PDP is the cutoff for the
 actions that matter, and a deployment MAY extend token lifetimes for
@@ -3476,8 +3479,9 @@ A semantic intent-alignment signal, for example a judgment that a
 requested tool fits the task extracted from the conversation, MAY be
 supplied to the PDP as advisory decision input. Such a signal MAY
 contribute to a denial; it MUST NOT widen, grant, or refresh authority,
-consistent with the inert treatment of `goal` and `purpose` in the
-issuance profile ({{I-D.draft-mcguinness-oauth-mission}}). Gating
+consistent with the issuance profile's treatment of `goal` as inert and
+of `purpose` as restrictive outside its configured-mapping lookup
+({{I-D.draft-mcguinness-oauth-mission}}). Gating
 authority on intent inference is out of scope: verifying an agent's
 declared reasoning against the task is an attestation problem outside
 both layers, and intent inference is not reliable enough to be
@@ -3519,7 +3523,7 @@ unchanged ({{I-D.draft-mcguinness-mission-shaping}}).
 ## Resource Policy Remains Authoritative
 
 Mission authority is a maximum authority envelope. It does not force a
-Resource Server to perform an action, bypass local authorization, or
+resource server to perform an action, bypass local authorization, or
 override object ACLs, tenant configuration, legal holds, service
 invariants, or risk policy. A runtime deployment that treats a
 Mission-bound permit as sufficient without Resource policy evaluation
@@ -3575,14 +3579,14 @@ was not issued for.
 
 ## Decision Channel and Credential Disclosure
 
-A separate PDP becomes part of the Resource Server's trusted
+A separate PDP becomes part of the resource server's trusted
 authorization path for the operations in its enforcement scope, which
 is why mutual authentication, integrity protection, and authorization
 for the declared scope are baseline requirements on that channel
 ({{decision-channel}}), not deployment advice. Passing full credentials
-to a PDP also extends credential exposure beyond the Resource Server
+to a PDP also extends credential exposure beyond the resource server
 boundary; a deployment that does so needs the same credential handling,
-retention, and disclosure controls it applies at the Resource Server.
+retention, and disclosure controls it applies at the resource server.
 
 General OAuth security guidance {{RFC9700}} applies to the underlying
 OAuth credentials, where the binding is OAuth
@@ -3775,6 +3779,18 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Action Classification: the `purpose` that may raise a class is the
+  approved Mission's, from its Mission state or a validated
+  projection, never a value the request asserts. The semantic
+  intent-alignment signal's bound cites the issuance profile's
+  treatment of `purpose` as restrictive outside its configured-mapping
+  lookup rather than as inert. The rule 2 statement adds a
+  requirement; the signal's requirement is unchanged (#1102).
+
+- The `rendering_independence` assurance row names the action-bound
+  approval it is evaluated per; "approval event" is reserved for the
+  Mission's creation (#1120).
 
 - Mission State and Freshness states credential expiry and the
   state-gated refresh cycle as one Credential-lifetime freshness

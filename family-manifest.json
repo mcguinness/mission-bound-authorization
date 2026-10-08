@@ -34,14 +34,14 @@
   "lab-best-effort"
  ],
  "reference_stacks": {
-  "$comment": "A transcription of the Architecture's four cumulative reference stacks ({#reference-architecture} in draft-mcguinness-mission-architecture) in their OAuth realization: the Architecture itself frames the protocol core as 'the OAuth realization of Baseline Issuance' and the reference stack as presuming an authority-bearing binding, so these stacks pin the OAuth binding and the binding decision stays separate (the README's binding table). Other bindings realize the levels per their own documents: standalone MAS has no issuance gate unless the Issuance Grant is composed; AAuth reports native capabilities rather than claiming the levels, and the Person Server's contextual gate is its per-action analogue on PS-mediated paths; UMA and GNAP are experimental sketches. The Architecture is authoritative and this object must change only when {#reference-architecture} does; each stack's architecture_name is tripwired against that document's text in CI. `freshness_one_of`: the Runtime-Enforced level requires one freshness source; a `core:` entry names a facility of the binding rather than a separate document. Adoption closure beyond a stack follows each draft's `adoption_requires` edges. One recorded reading: `adds` includes draft-mcguinness-mission-runtime-evidence, which {#reference-architecture}'s three-item sentence omits but the Document Map groups under runtime enforcement and the Runtime-Enforced level's evidence obligation presumes. Provisional until v0 proper passes its publication gate. The OAuth pin is an infrastructure choice, never a maturity ranking: no production Mission deployment is known today, and Missions on OAuth still require the changes the OAuth binding defines.",
+  "$comment": "A transcription of the Architecture's four cumulative reference stacks ({#reference-architecture} in draft-mcguinness-mission-architecture) in their OAuth realization: the Architecture itself frames the OAuth issuance binding as 'the OAuth realization of Baseline Issuance' and the reference stack as presuming an authority-bearing binding, so these stacks pin the OAuth binding and the binding decision stays separate (the README's binding table). Other bindings realize the levels per their own documents: standalone MAS has no issuance gate unless the Issuance Grant is composed; AAuth reports native capabilities rather than claiming the levels, and the Person Server's contextual gate is its per-action analogue on PS-mediated paths; UMA and GNAP are experimental sketches. The Architecture is authoritative and this object must change only when {#reference-architecture} does; each stack's architecture_name is tripwired against that document's text in CI. `freshness_one_of`: the Runtime-Enforced level requires one freshness source; a `core:` entry names a facility of the binding rather than a separate document. Adoption closure beyond a stack follows each draft's `adoption_requires` edges. One recorded reading: `adds` includes draft-mcguinness-mission-runtime-evidence, which {#reference-architecture}'s three-item sentence omits but the Document Map groups under runtime enforcement and the Runtime-Enforced level's evidence obligation presumes. Provisional until v0 proper passes its publication gate. The OAuth pin is an infrastructure choice, never a maturity ranking: no production Mission deployment is known today, and Missions on OAuth still require the changes the OAuth binding defines.",
   "protocol-core": {
    "level": "Baseline Issuance",
    "contains": null,
    "binding": "draft-mcguinness-oauth-mission",
    "adds": [],
    "summary": "The OAuth issuance profile alone: approved, anchored, state-gated Missions with no per-action control.",
-   "architecture_name": "Protocol core"
+   "architecture_name": "OAuth issuance binding"
   },
   "reference-security-architecture": {
    "level": "Runtime-Enforced",
@@ -1656,6 +1656,12 @@
      "requires": [
       "draft-mcguinness-oauth-mission-submission-evidence"
      ]
+    },
+    {
+     "when": "a policy_drawdown entry's children establish a derivation_limit",
+     "requires": [
+      "draft-mcguinness-oauth-mission-derivation-limits"
+     ]
     }
    ],
    "references": [
@@ -1665,6 +1671,7 @@
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
+    "draft-mcguinness-oauth-mission-approved-set-verification",
     "draft-mcguinness-oauth-mission-attenuation",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
@@ -2323,6 +2330,7 @@
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-submission-evidence"
    ],
@@ -2343,6 +2351,7 @@
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-submission-evidence"
@@ -2352,6 +2361,12 @@
      "when": "the submission carries Intent Submission Evidence or policy requires it",
      "requires": [
       "draft-mcguinness-oauth-mission-submission-evidence"
+     ]
+    },
+    {
+     "when": "the deployment also adopts Mission Derivation Limits",
+     "requires": [
+      "draft-mcguinness-oauth-mission-derivation-limits"
      ]
     }
    ]
@@ -2415,6 +2430,7 @@
     "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-security-model",
     "draft-mcguinness-mission-shaping",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission-approval",
@@ -2452,16 +2468,25 @@
    "summary": "Bounds how many derivations the issuer performs under a Mission: an optional requested ceiling, an AS-established effective limit, atomic counting across code exchange, refresh, and Token Exchange (the refreshes of an async delegation family are not counted), refusal at the cap, and remaining-count disclosure through introspection.",
    "pull_when": "A deployment wants a cap on counted derivations under one Mission, independent of authority and lifetime; the refreshes of an async delegation family are not counted.",
    "normative_references": [
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-consent-evidence"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"
    ],
-   "requires_when": [],
+   "requires_when": [
+    {
+     "when": "Consent Evidence is recorded",
+     "requires": [
+      "draft-mcguinness-oauth-mission-consent-evidence"
+     ]
+    }
+   ],
    "references": [
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",

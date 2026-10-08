@@ -152,7 +152,7 @@ an extension `operation` value on the Status profile's Mission
 Lifecycle endpoint, authenticated and authorized independently of
 that endpoint's other operations, that commits a condition's firing.
 When a condition is met, the entry is **discharged**: the
-Authorization Server no longer derives a token carrying that entry
+authorization server no longer derives a token carrying that entry
 ({{discharge}}), exactly as it refuses derivation for a non-`active`
 Mission. {{completion}} states the properties this mechanism requires
 and the threat analysis, including why a prompt-injected agent cannot
@@ -178,7 +178,7 @@ any Mission Assurance Level; its details may change.
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}}, in particular Mission, Mission
 Issuer (the Mission `issuer`: in this document's OAuth binding the
-Authorization Server), Authority Set, and `mission_id`; the
+authorization server), Authority Set, and `mission_id`; the
 `mission_resource_access` authorization details type and Common
 Constraints defined in its Mission Resource Access Profile
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}); and the
@@ -194,9 +194,9 @@ the member definitions in the surrounding text are authoritative.
 Without entry discharge, a Mission granted authority to release a
 record "for this enrollment" keeps deriving that authority after the
 enrollment closes, until a clock or a revoke stops it. The Intent's
-`success_criteria` describe when the task is complete, but the
-issuance profile keeps them inert: they are rendered and committed,
-and carry no machine effect ({{I-D.draft-mcguinness-oauth-mission}}).
+prose can say when the task is complete, but the issuance profile
+keeps it inert: it is rendered and committed, and carries no machine
+effect ({{I-D.draft-mcguinness-oauth-mission}}).
 
 Three properties make discharge safe inside the Mission model, and
 this section requires all three:
@@ -226,8 +226,7 @@ and on its Mission Resource Access Profile
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), and is not
 implementable alone. It reuses, without restating, the issuance
 profile's Mission, Authority Set, subset rule, integrity anchors,
-lifecycle states, and issuance gating, and the inert `success_criteria`
-member of the Mission Intent; and the Mission Resource Access
+lifecycle states, and issuance gating; and the Mission Resource Access
 Profile's `mission_resource_access` entry and Common Constraints
 registry. It uses Mission, Mission Issuer, Authority Set, and
 derivation as the issuance profile defines them, and the
@@ -263,7 +262,8 @@ Access Profile's naming convention ({{iana}}).
   `discharge_authority`:
   : OPTIONAL. A string, `1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )`
     {{RFC5234}}, opaque. It names the authority approved to assert
-    this condition, which the AS resolves to its discharge-authority
+    this condition, which the authorization server (AS) resolves to its
+    discharge-authority
     mapping ({{discharge-authority}}).
 
 The `terminal_when` array is part of the entry's `constraints` and so of
@@ -286,17 +286,18 @@ of the single condition object, in the issuance profile's encoded
 form: the same canonical form the registration's no-duplicate rule
 above already fixes as condition identity ({{iana-terminal-when}}).
 
-`terminal_when` is the enforceable counterpart of the inert
-`success_criteria` ({{I-D.draft-mcguinness-oauth-mission}}), which
-remains inert: `success_criteria` describe completion for the Approver,
-`terminal_when` acts on it. It is distinct from a cumulative
+`terminal_when` is the enforceable statement of when one entry is
+complete. It says nothing about whether the task as a whole
+succeeded, and the Intent's prose stays inert
+({{I-D.draft-mcguinness-oauth-mission}}). It is distinct from a
+cumulative
 consumption bound, which meters volume;
 a `terminal_when` condition is a single external event.
 
 ## Discharge and Issuance Gating {#discharge}
 
 When a condition in an entry's `terminal_when` has been met, the entry is
-discharged. The Authorization Server MUST NOT derive a token carrying a
+discharged. The authorization server MUST NOT derive a token carrying a
 discharged entry, at the token endpoint, on refresh, or on Token
 Exchange, exactly as issuance is refused for a non-`active` Mission
 ({{I-D.draft-mcguinness-oauth-mission}}). A derivation that would carry
@@ -369,7 +370,7 @@ change discharges earlier or later from opaque `event_type` values.
 ## Forward Compatibility {#forward-compat}
 
 Because `terminal_when` is a `constraints` member, a consumer that does
-not recognize it fails closed by the issuance profile's Resource Server
+not recognize it fails closed by the issuance profile's resource server
 enforcement rule directly: a consumer MUST fail closed on any
 `constraints` key it does not understand, or understands but cannot
 enforce, refusing the request rather than granting access while ignoring
@@ -378,14 +379,14 @@ load-bearing narrowing, so ignoring `terminal_when` would silently widen
 the grant. That enforcement rule is the honest basis of discharge's
 safety: an unrecognized `terminal_when` is refused, never dropped.
 
-An Authorization Server that does not implement this capability simply
+An authorization server that does not implement this capability simply
 does not emit `terminal_when`, and is unaffected. The fail-closed rule
 binds a consumer that encounters the constraint without implementing
 it.
 
 ## Derivation Guidance {#derivation-guidance}
 
-This guidance is non-normative. When the Authorization Server derives an
+This guidance is non-normative. When the authorization server derives an
 entry from the Mission Intent, a reviewable rule governs what each
 element of the Intent becomes:
 
@@ -1057,21 +1058,21 @@ condition: the close-management system's workload identity, not
 ({{discharge-authority}}). The agent cannot drive its own discharge: it
 holds no `mission_discharge` authorization for that `event_type`.
 
-While the period is open, the Authorization Server derives both entries.
+While the period is open, the authorization server derives both entries.
 When the finance team finalizes the Q3 close, the close-management
 system calls `discharge` on the Mission Lifecycle endpoint, naming the
 write entry's `entry_digest`, this condition's `condition_digest`,
 `event_type` `accounting-period-closed`, and an `event_id` for its own
-occurrence record. The Authorization Server authenticates the caller
+occurrence record. The authorization server authenticates the caller
 against the resolved `discharge_authority` mapping, commits the latch,
 and returns a signed `discharge_result` of outcome `discharged`
-({{discharge-result}}). A Resource Server that holds a token for the
+({{discharge-result}}). A resource server that holds a token for the
 write entry, and so cannot compute the record entry's digest, names
 the same target by the condition selector it reads from introspection
 ({{condition-selectors}}).
 
 From then on the
-Authorization Server refuses to derive the write entry: a refresh
+authorization server refuses to derive the write entry: a refresh
 returns a token carrying only the read entry. The Mission stays
 `active`, so the agent can still read the ledger to finish its
 reconciliation report, but it can no longer post journal entries. No
@@ -1112,7 +1113,8 @@ The completion capability ({{completion}}) adds the following:
   This is not a fail-closed property: a deployment requiring
   cannot-determine-means-no-issuance runs a synchronous status or
   policy check outside this baseline.
-- RS enforcement honesty. A stateless Resource Server cannot evaluate
+- Resource server enforcement honesty. A stateless resource server
+  cannot evaluate
   issuer-held discharge state from the token alone; it honors the
   issued token until expiry. Prompt cutoff on a discharged entry
   requires the Status profile's Mission Status operation or
@@ -1248,7 +1250,7 @@ profile.
 
 ## Completion Conformance {#completion-conformance}
 
-An Authorization Server claiming the completion capability MUST:
+An authorization server claiming the completion capability MUST:
 
 - treat an entry whose `terminal_when` has been discharged as
   discharged and refuse to derive it ({{discharge}});
@@ -1282,6 +1284,12 @@ entry carrying a `terminal_when` constraint it does not understand
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Mission Intent no longer carries `success_criteria`, following
+  the OAuth binding. `terminal_when` is described as the enforceable
+  statement of one entry's completion, not of the task's success, and
+  the Introduction says the Intent's prose stays inert. No requirement
+  changed.
 
 - Discharge Commit ({{discharge-commit}}): a committed discharge places
   a restriction on the Mission's expansion chain, retained across later

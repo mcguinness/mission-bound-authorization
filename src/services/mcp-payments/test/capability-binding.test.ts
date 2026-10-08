@@ -28,7 +28,7 @@ function fixture(source: () => string = () => text) {
   const pep = new Pep({ payments, evidence, capabilityCatalog: catalog, decide: async (...args) => {
     requests.push(args[0]); return keys.decide(...args);
   }, fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test", loadView, instanceEpoch: "epoch" });
-  const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: token.mission.issuer, writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }) });
+  const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] }, issuer: token.mission.issuer, writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }) });
   return { pep, server, evidence, requests, catalog, view, payments };
 }
 

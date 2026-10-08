@@ -88,7 +88,7 @@ Runtime owns point-of-use bounded reliance
 {::boilerplate bcp14-tagged}
 
 "Mission Issuer" identifies the authority owning the Mission record, not
-necessarily an OAuth Authorization Server. "Canonical tuple" means the
+necessarily an OAuth authorization server. "Canonical tuple" means the
 binding-established issuer identity and Mission identifier, not caller-chosen
 aliases. State versions and PDP policy-view identifiers inhabit different
 identifier spaces and are not compared for raw equality.

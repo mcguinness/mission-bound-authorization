@@ -35,6 +35,7 @@ import {
   createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   TransactionEngine,
@@ -148,10 +149,12 @@ async function build(): Promise<{ server: McpPaymentsServer; connectors: Connect
     instanceEpoch: "epoch-1",
   });
   const server = new McpPaymentsServer({
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep,
     payments,
     loadView,
     jwks: { keys: [pubJwk] },
+    keyRoles: { accessToken: ["mission-key"], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
     transaction: { engine, connectors, evidence },
   });
