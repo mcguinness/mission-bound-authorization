@@ -59,8 +59,8 @@
     "content_sha256": "9201cdc83aa8e79a1a2615bf25f69c9ff8fac11424be6336c8f5052ba1f24b5b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "fd935e96fc5069a89ba676c3748820c6d8ac66be",
-    "content_sha256": "3777606e2cf8670ade9109ef217994ab980a625f4327c9ed9936134b6b0ac09c"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "435652531b159beb785f5867c9e09da1fad63263586b4a9cbfef79b9b63b9b1f"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -79,8 +79,8 @@
     "content_sha256": "72d16463993b55af9238d7374a0a39764b6a8086935515180fa4841344510119"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "afea606f3b955198867531dd37c68921907f29be",
-    "content_sha256": "c3a1a76468ca3bb889530928e25375f3001999571a31fa9437c9c89f9f006769"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "81de7af0ad94b3a39a6ec8067377ac39b9884a4705cd14c24cd712c9f090a5f1"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -103,12 +103,12 @@
     "content_sha256": "5be7ff2eda5a6c1b20cb10b2fa6791d4b05dc06b609d8f43b850214ef33a9aa2"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "b8109b0c3ad8216fc6c3ef3488a03b98d344a576",
-    "content_sha256": "4005ab62f0ad304e30982923ce4a1670d00783f236baa526091dd64ff0adf5e4"
+    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
+    "content_sha256": "cb10f822787bc00906fc6250622e11f5b3510527123e441f194dfcea77505fec"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "4f46dda7206399ad63f6e59303fc673a8668ab9a12c0120b328ea99135d7d909"
+    "revision": "c74a85acc97dc6ba157b26721f18767d76085b80",
+    "content_sha256": "ae693e62093b5de105aabc0df10b335856e3f16b6af189e646bf8451dce2d33e"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -4484,6 +4484,98 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#963 ruling (2026-10-01), parallel to the #885 async-family disclosure. No implementation witness yet."
+  },
+  {
+   "id": "derivation-limits.rendering.standing-consent-rule",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "approval-rendering",
+   "text": "At the human approval of a standing consent under which policy can create Missions, the AS MUST render the rule that establishes each such Mission's `derivation_limit`, and either the rule's maximum or that no finite maximum is guaranteed",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "at the human approval of a standing consent that admits policy-created Missions, the rendering carries the rule that establishes each admitted Mission's derivation_limit and either its finite maximum or an explicit statement that no finite maximum is guaranteed, taken from the exact consented version and the committed policy state the AS retains; no consent rendering or human approval is attributed to an admitted Mission's own creation",
+    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
+   "id": "derivation-limits.rendering.standing-consent-scope",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "approval-rendering",
+   "text": "the rendering MUST also state that the maximum is local to each Mission, as {{effective-limit}} counts it, and is not a budget across the Missions the consent admits, their descendants, or their lifetimes",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the standing-consent rendering states that its maximum bounds each admitted Mission locally (with the carryover and ceiling-drawdown counts as Effective Limit defines them), not a budget shared by the admitted Missions, their descendants, or their lifetimes, and carries the async-family and Mission Issuance Grant counting statements where the deployment supports those transports",
+    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
+   "id": "derivation-limits.rendering.standing-consent-evidence",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "approval-rendering",
+   "text": "the Consent Disclosure object of that approval MUST carry this rendering in `mission_summary`, so `consent_rendering_hash` commits it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where Consent Evidence is recorded, the standing consent's Consent Disclosure object carries the rendered rule and maximum, or the no-finite-maximum statement, in mission_summary, and consent_rendering_hash recomputed over that object commits it; no Consent Disclosure or Consent Evidence is recorded for an admitted Mission's own creation",
+    "local": "requires the deployment to also record Consent Evidence (draft-mcguinness-oauth-mission-consent-evidence), and requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
+   "id": "derivation-limits.effective.standing-consent-ceiling",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "effective-limit",
+   "text": "Where that maximum is finite, the AS MUST NOT establish a `derivation_limit` above it, nor leave `derivation_limit` absent, for such a Mission",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with a finite maximum M rendered at the standing consent, every Mission created under that consented version records a derivation_limit of at most M and never leaves it absent; a stricter applicable policy or requested limit yields the stricter value; after the AS policy ceiling is raised or removed, a Mission newly created under the same consent still records at most M until a fresh human approval of the standing consent; each admitted Mission counts its own derivations except under the carryover and ceiling-drawdown exceptions",
+    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
   },
   {
    "id": "core.lifecycle.mission-error-diagnostic",
@@ -26330,6 +26422,29 @@
    "notes": "Each observation clause has its own test: same-Dispatcher retry recovers (RETRY), a different dispatch_event_id never resolves to it (TWO), a different Dispatcher never resolves to it (OTHER), and a reservation after the tombstone expires receives a new value (EXPIRY, a 60 s retention and the injected clock). Mutation-proved: deriving the value from dispatch_event_id fails TWO, OTHER and EXPIRY; keying the reservation without the Dispatcher fails OTHER; disabling recovery fails RETRY; ignoring the store's retention fails EXPIRY."
   },
   {
+   "id": "template.dispatch.derivation-limit-within-dispatch-policy",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "is established afresh for this instance as that document's Effective Limit section states, never above the Dispatch Policy's maximum",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where Mission Derivation Limits is adopted, each dispatched instance's derivation_limit is established at its own Dispatch with its own count, at or below the maximum the committed Dispatch Policy states; a later raise or removal of the deployment's general policy ceiling does not lift a dispatched instance above that maximum",
+    "local": "requires the deployment to also adopt Mission Derivation Limits"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+  },
+  {
    "id": "template.grant-type.agent-separate-from-presenter",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
@@ -26425,6 +26540,29 @@
     }
    ],
    "notes": "The reference implementation measures from the template's created_at, which every instance records as approval_basis.approved_at. Its refusal reason review_overdue is implementation-local on access_denied (D205); the draft registers none."
+  },
+  {
+   "id": "template.consent.derivation-limit-rendering",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "template-consent",
+   "text": "The consent disclosure MUST render them as that document's Approval Rendering section requires, beside `max_active` and `dispatch_rate`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where Mission Derivation Limits is adopted, the template-creation approval's disclosure renders the per-instance derivation-limit rule and maximum the Dispatch Policy states (committed under template_hash through dispatch_policy.digest), or that no finite maximum is guaranteed, beside max_active and dispatch_rate",
+    "local": "requires the deployment to also adopt Mission Derivation Limits"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
   },
   {
    "id": "template.consent.source-retained-per-version",
@@ -26864,6 +27002,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1079 (D296) specification slice. Gated on progressive.drawdown-derivation-limits: a deployment that runs Progressive ceiling drawdown and also adopts Mission Derivation Limits. No Progressive implementation yet (#985/#1017), so todo; witnesses cover D296's examples, concurrency, rollback and recovery, and must fail with the guard disabled."
+  },
+  {
+   "id": "progressive.drawdown-derivation.ceiling-consent-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "MUST state this inheritance, as Mission Derivation Limits' Approval Rendering section requires of a standing consent: policy-adjudicated successors carry forward the Mission's derivation count and never exceed its rendered `derivation_limit`, or, where the Mission has none, no finite limit is guaranteed for them",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.drawdown-derivation-limits"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the ceiling consent's disclosure states that policy-adjudicated successors carry the Mission's derivation count forward and never exceed its rendered derivation_limit; for a Mission with no derivation_limit it states that no finite limit is guaranteed for its successors"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
   },
   {
    "id": "progressive.in-ceiling.successor-subject-source",
@@ -29460,6 +29620,29 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+  },
+  {
+   "id": "child-delegation.policy-drawdown.per-child-derivation-limit-ceiling",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "derivation-budget",
+   "text": "Each child created under the entry establishes and counts its own limit, never above a finite rendered figure, and a figure rendered as unlimited guarantees no finite maximum",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.policy-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy_drawdown child's derivation_limit is at most the per-child derivation limit the Parent Mission's approval rendered, read from the entry's child_creation_policy snapshot or the policy the Parent Mission's policy_version identifies, with the child's own count; after the deployment raises or removes its per-child policy ceiling, a newly policy-created child under the same entry is still at or below the rendered figure; a stricter policy narrows it",
+    "local": "requires the deployment to also adopt Mission Derivation Limits"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
   },
   {
    "id": "child-delegation.record.policy-drawdown-approval-event-id",
