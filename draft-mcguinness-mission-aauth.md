@@ -316,6 +316,22 @@ commitments would create ambiguity about which object was approved and
 would require implementations to keep multiple canonicalizations in
 lockstep.
 
+`mission_s256` commits to the original approved blob and to nothing
+accepted after it.  An accepted `update` changes neither the blob nor
+`mission_s256`, but from its acceptance the mission's meaning is the
+blob plus its accepted updates (Section 8.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  This binding therefore
+treats each accepted update as the approval of a new immutable version
+of the Approved Context ({{I-D.draft-mcguinness-mission-substrate}}):
+the blob plus the accepted updates through that one, in acceptance
+order.  A version is identified by the Mission Reference together with
+its position in the accepted-update sequence, the original blob being
+position zero; the update's own `s256` is verification material for
+the entry at that position, not a unique identifier.  A pending or
+rejected update is part of no version.  Work that the original
+description no longer describes uses a successor mission, and the old
+mission terminates as `superseded`.
+
 The reference does not authenticate itself when copied outside a
 protected AAuth message.  It gains protocol integrity from the AAuth
 message signature or signed token that carries it.  Implementations MUST
