@@ -396,7 +396,7 @@ canonicalization, and integrity envelope a deployment emits.
     Consent-disclosure commitment:
     : OPTIONAL. Recorded when known.
 
-  These hashes are the issuing AS's
+  These hashes are the issuing authorization server's
   commitments cited as anchors; the PDP does not recompute them.
 
 `subject`:
