@@ -157,12 +157,14 @@ describe("single-use permits on the unkeyed write path (@spec runtime#single-use
     expect(holdPermit?.decision).toBe(true);
     expect(conditionsOf(holdPermit)?.use_limit).toBe(1);
 
-    // The keyed writes: a request without a key is refused by the PDP, and a
-    // keyed one is permitted under the short validity window and no use limit.
+    // The keyed writes: a request without a key is refused at intake, before
+    // any PDP call, since the served schema requires one (D316); the PDP's own
+    // keyless refusal is witnessed at the decision request. A keyed one is
+    // permitted under the short validity window and no use limit.
     for (const tool of ["schedule_payment", "cancel_scheduled_payment"]) {
       const keyless = await h.server.callWriteTool(tool, { invoice_id: "inv-1" }, TOKEN);
-      expect(keyless.ok, tool).toBe(false);
-      expect(keyless.denial_reason, tool).toBe("parameter_violation");
+      expect(keyless, tool).toEqual({ ok: false, refusal_reason: "invalid_request" });
+      expect(h.lastDecision(), tool).toBe(holdPermit);
     }
     for (const tool of ["schedule_payment", "cancel_scheduled_payment"]) {
       const res = await h.server.callWriteTool(tool, { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, TOKEN);

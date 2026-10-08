@@ -2286,6 +2286,7 @@ carrier's extensibility rule.
 | Mission state not establishable at the PEP | Refusal Record | `state_unavailable` |
 | Presented credential's own authority does not cover the request, established before any decision request | Refusal Record | `credential_authority_insufficient` |
 | Enforcement surface implements no such action | Refusal Record | `request_unsupported` |
+| Supplied arguments fail the PEP-established action's required input schema | Refusal Record | `request_invalid` |
 | Named target object not resolvable at the enforcement surface | Refusal Record | `target_unresolvable` |
 | Capability definition the PEP must present not resolvable before the decision request | Refusal Record | `capability_source_unresolvable` |
 | Decision Evidence for a permit absent or not verifiable, so no relied-upon decision was obtained | Refusal Record | `decision_evidence_unverifiable` |
@@ -2893,6 +2894,10 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The failure-condition table maps supplied arguments that fail the
+  PEP-established action's required input schema to the Refusal
+  Record's `request_invalid` (#1106).
 
 - `context.credential` carries `authority`, the verified credential's
   own `authorization_details`, on every decision; the PDP enforces it

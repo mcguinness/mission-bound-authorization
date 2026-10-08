@@ -1054,9 +1054,15 @@ export class McpPaymentsServer {
     // the read path is served by the write path, never by an unreserved effect.
     // @spec runtime#single-use-identifiers (#1080): so is every other
     // reversible write, whose single-use permit only the write path redeems.
+    // The write path runs its own intake.
     if (this.deps.pep.toolAction(tool)?.actionClass === REVERSIBLE_WRITE_CLASS) {
       return this.callWriteTool(tool, args, token, beforeReverify, signals);
     }
+    // @spec operation-profile-payments-v1 intake (D316): every later step,
+    // execution included, uses the normalized arguments.
+    const intake = await this.deps.pep.intake(tool, args, token);
+    if (!intake.ok) return { ok: false, refusal_reason: intake.refusal_reason };
+    args = intake.args;
     const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
     if (!res.permitted) {
       return {
@@ -1137,6 +1143,10 @@ export class McpPaymentsServer {
     failpoints?: ReversibleWriteFailpoints,
   ): Promise<WriteToolResult> {
     if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
+    // @spec operation-profile-payments-v1 intake (D316), as in callReadTool.
+    const intake = await this.deps.pep.intake(tool, args, token);
+    if (!intake.ok) return { ok: false, refusal_reason: intake.refusal_reason };
+    args = intake.args;
     const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
     if (!res.permitted || !res.effective || !res.decision) {
       return {
@@ -1509,6 +1519,13 @@ export class McpPaymentsServer {
   ): Promise<TransactionToolResult> {
     const tx = this.deps.transaction;
     if (!tx) throw new Error("transaction tier not configured");
+
+    // @spec operation-profile-payments-v1 intake (D316), before the
+    // transaction-token check below reads `invoice_id`, so the challenged
+    // operation's digest is recomputed from the normalized arguments too.
+    const intake = await this.deps.pep.intake(tool, args, token);
+    if (!intake.ok) return { ok: false, refusal_reason: intake.refusal_reason };
+    args = intake.args;
 
     // @spec txn-authorization#offline-verification — where the credential IS a
     // transaction token, it is matched against the operation THIS resource

@@ -496,13 +496,14 @@ appear in the Intent; it belongs in the Authority Proposal
 `goal`:
 : A concise summary in the form the Approver sees at consent. It
   preserves the requester's framing, so that the disclosure matches
-  the requester's understanding. The shaper SHOULD NOT quote verbatim
+  the requester's understanding. It can state the observable outcomes
+  that show the task is complete. The shaper SHOULD NOT quote verbatim
   prompt text that contains instructions or commands
   ({{prompt-injection}}).
 
 `goal_lang`:
-: The language tag of the Intent's human-readable members (`goal`,
-  `task_bounds`, and `success_criteria`), when the shaper knows it.
+: The language tag of the Intent's human-readable members (`goal`
+  and `task_bounds`), when the shaper knows it.
 
 `target_resources`:
 : The resources, datasets, tools, or domains the request referenced,
@@ -525,12 +526,6 @@ appear in the Intent; it belongs in the Authority Proposal
   Section "Mission Authority"). The shaper SHOULD NOT silently drop a
   user-expressed bound; it records the bound in `task_bounds` or in
   Shaping Evidence, or it requests clarification or refuses.
-
-`success_criteria`:
-: Free-text observable outcomes that show the task is complete,
-  phrased for the Approver. They are disclosure and audit material
-  only. The shaper SHOULD NOT encode authority in `success_criteria`,
-  which carries no machine semantics in the issuance profile.
 
 `purpose`:
 : If the client has registered purposes, the registered purpose URI
@@ -600,8 +595,8 @@ for audit only and is never an input to derivation.
 
 The shaper SHOULD apply a default-deny posture: its proposal contains
 only resources that have a positive basis in the request, context,
-capability sources, and shaping policy, and only the `task_bounds` and
-`success_criteria` the shaper can defend. It does not include a broad
+capability sources, and shaping policy, and only the `task_bounds` the
+shaper can defend. It does not include a broad
 resource class as a fallback for unresolved detail.
 
 When the concrete objects of an open-ended task are not known at
@@ -652,7 +647,7 @@ execution, the shaper SHOULD propose that fact in the Authority
 Proposal, recording the same fact in Shaping Evidence for audit only;
 the Mission Issuer narrows it when deriving `delegation`, or refuses.
 The shaper MAY also describe the desired delegation bound in
-`task_bounds` or `success_criteria`. The shaper SHOULD NOT infer
+`task_bounds`. The shaper SHOULD NOT infer
 delegated execution from the existence of a task graph or an agent
 harness: a child actor needs explicit authority derived by the Mission
 Issuer, not session ancestry.
@@ -1283,7 +1278,6 @@ client sends as the `intent` member of the Submission envelope:
     "Post journal entries of no more than $500.",
     "Tenant scope: acme-corp only."
   ],
-  "success_criteria": ["All Q3 invoices for acme-corp reconciled."],
   "purpose": "urn:example:purpose:reconcile",
   "expires_at": "2026-11-05T00:00:00Z"
 }
@@ -1389,6 +1383,13 @@ guessing ({{clarifications}}).
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Mission Intent no longer carries `success_criteria`, following
+  the OAuth binding. The shaper writes completion outcomes, where
+  useful, into `goal`; the default-deny posture and the
+  delegation-bound description name `task_bounds` only, and the
+  recommendation against encoding authority in `success_criteria`
+  goes with the member.
 
 - Model Output Is Not Authority points to the OAuth binding's
   issuer-side counterpart: a model enters adjudication only as a

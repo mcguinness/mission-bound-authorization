@@ -811,8 +811,8 @@ authentication (`services/pdp/src/decision-channel.ts:56-61`).
 `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret
 that is never configured, so it cannot cross processes as shipped (`:64-66`).
 The tests cited here drive the PEP (`enforce`), the in-process
-`mcp-payments` server methods or the PDP directly; none of them goes over the
-MCP transport. Tests marked
+`mcp-payments` server methods or the PDP directly; only the intake witnesses
+in §5.4 go over the in-process MCP channel. Tests marked
 [FGA] are skipped without a live OpenFGA. No test yet drives an AS-issued
 Mission-bound token through the assembled path (#1105).
 
@@ -821,8 +821,8 @@ Mission-bound token through the assembled path (#1105).
 | Credential validation | Yes. Credential authority at the PDP is not met: acceptance gate (#825) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport and PEP-level (§5.1) | The PDP neither receives nor evaluates the credential authority (#825 PRs 2a, 2b; D312); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
 | Independent Resource policy | Yes, not met: acceptance gate (#828) | The PDP's OpenFGA check and action-to-relation map (§5.2) | In the decision | None | Nothing durable; the tuple is injected per check | PDP-level, [FGA] (§5.2) | The shipped model cannot deny independently of Mission authority (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
-| Target and parameter binding | Yes | `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level, [FGA] (§5.4) | A single-record read re-derives no digest at use; the Operation Profile's intake rules are not implemented (#1106) (§5.4) |
-| Permit redemption | Transaction tier, keyed writes, and single-use permits on the unkeyed write path | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation; `takeSingleUse` (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction. An unkeyed-write redemption is one insert, immediately before the effect | None; settlement is awaited | Claim, reservation and consumed-identifier records survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | One redemption per operation key per process (§5.5) |
+| Target and parameter binding | Yes | `Pep.intake` (closed schema, NFC) before any decision work; `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level and MCP channel, [FGA] (§5.4) | A single-record read re-derives no digest at use (§5.4) |
+| Permit redemption | Transaction tier, keyed writes, and single-use permits on the unkeyed write path | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation; `takeSingleUse` (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction. An unkeyed-write redemption is one insert, immediately before the effect; a keyed retrieval's is one insert before anything is disclosed (D342) | None; settlement is awaited | Claim, reservation and consumed-identifier records survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | One redemption per operation key per process (§5.5) |
 | Evidence | Yes | The PDP's emitter; `recordRefusal`, `suppressExecution`; the executor's `completed` write (§5.6) | Synchronous in the request; Decision Evidence is verified before release | None | Retention is in memory and lost at restart | PEP-level (§5.6) | A failed `completed` write after a connector commit is silent (#1104); no Execution Evidence on a successful call outside the transaction tier (§5.6) |
 | Recovery and reconciliation | Declared by the Enforcement Scope Statement | `reconcileClaims`, `reconcile`, the reservation `sweep()` (§5.7) | None runs | Reconciliation would be the overlay's only asynchronous work | A prior process's claim closes `indeterminate` and its key stays refused (§5.7) | PEP-level restart witness (§5.7); the PDP crash boundary (§5.5) | No production caller and no alert (#1103) |
 
@@ -926,6 +926,15 @@ Mission-bound token through the assembled path (#1105).
 
 ### 5.4 Target and parameter binding
 
+- **Intake.** Every dispatch path first calls `Pep.intake` (`pep.ts`,
+  added after `01874fd5`): it NFC-normalizes the arguments and
+  validates them against the tool's served input schema, which is closed
+  (`admitArguments`, `services/mcp-payments/src/intake.ts:80-96`). A
+  violation is refused `invalid_request` with no PDP call and one Refusal
+  Record carrying `request_invalid` (D334). An unknown tool is refused
+  `unknown_tool` (`request_unsupported`), and a schema intake cannot read is
+  refused `capability_source_unresolvable`. Target lookup, the effective
+  parameters and the effect use the normalized arguments.
 - **Hook.** `buildEffectiveParams`
   (`services/mcp-payments/src/effective-params.ts:27-44`) builds the effective
   parameters from the payments store, never from tool arguments, and
@@ -974,12 +983,14 @@ Mission-bound token through the assembled path (#1105).
   - [FGA] `GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > a Mission-authority change landing in the decision->execute window is caught by reverification, never executed on the stale normalized scope (TOCTOU)` (list read)
   - `compound-action phases (@spec runtime#compound-actions) > compares the bound phase before any effect on all three dispatch paths` (phase)
   - `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting prepare's permit, zero connector effects` (phase)
+- **Tests (MCP channel):**
+  - `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > an argument member the served schema does not declare is refused invalid_request with no PDP call and one Refusal Record` (unknown member)
+  - `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > an authoritative member (D34) is refused invalid_request with no PDP call and one Refusal Record` (authoritative member)
+  - `intake NFC-normalizes strings before target lookup, effective parameters and execution (@spec operation-profile-payments-v1, D316) > NFC and NFD forms of one invoice_id resolve the same target, yield the same effective parameters, and execute with the normalized value` (normalization)
+  - `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > the signed Refusal Record names request_invalid for arguments outside the schema, request_unsupported for an unknown tool and capability_source_unresolvable for an unreadable schema, each with no PDP call and no effect` (the three signed values)
 - **Residual.** A single-record read re-derives no digest at use; its fresh
   decision is the binding. A transaction-tier refusal after redemption spends
-  the permit, and no test asserts the spent state. The payments Operation
-  Profile promises NFC normalization and refusal of unknown or authoritative
-  members at intake; neither is implemented, and its schema list differs from
-  the served catalog (#1106, pending a ruling).
+  the permit, and no test asserts the spent state.
 
 ### 5.5 Permit redemption
 
@@ -1193,8 +1204,7 @@ Runtime overlay:
   omits `idempotency_key`, so a repeat for an unchanged invoice is refused
   (§5.5); a failed `completed` write after a connector commit leaves the
   effect without Execution Evidence (§5.6; #1104); a successful call outside
-  the transaction tier has no Execution Evidence (§5.6); the Operation
-  Profile's intake rules are not implemented (§5.4; #1106).
+  the transaction tier has no Execution Evidence (§5.6).
 
 **No test yet.**
 
