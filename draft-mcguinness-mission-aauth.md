@@ -474,6 +474,19 @@ SHOULD preserve sufficient correlation data to associate each decision
 with its authenticated request and any issued token without recording
 raw credentials.
 
+For each supervision decision, the PS records the actual decider: the
+person acting directly, the deciding supervision server identified by
+its `issuer`, or the person answering after the server's `ask` or while
+the server is unavailable.  For an exchange with a supervision server,
+the log entry is the exchange itself under the PS-minted `sdi`, with
+any signatures preserved, and the person's later answer is recorded
+under the same `sdi` (Sections 7.3 and 9.4 of
+{{I-D.draft-hardt-aauth-supervision}}).  An unsigned response rests on
+the PS's own record; a response signed under the server's published
+`jwks_uri` is independently verifiable.  A deployment that claims to
+prove what its supervision server decided requires a server that
+signs.
+
 The PS MUST protect the mission log's integrity, MUST restrict read
 access to the person, the PS itself, and parties authorized under its
 administrative policy, and MUST retain the log for a declared period
