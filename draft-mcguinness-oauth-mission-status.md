@@ -199,9 +199,9 @@ defines the Mission state-management surfaces it defers: the Mission
 Status operation (keyed by `mission_id`) with signed responses, the
 Mission projection for token introspection, the Mission Lifecycle
 endpoint with `revoke`, `suspend`, `resume`, and `complete`
-operations, the `suspended` and `completed` states with the consolidated
-lifecycle state machine this profile owns, and revocation-propagation
-guidance. It defines an extension point through which a companion
+operations, the `suspended` state and the `completed` termination
+reason with the consolidated lifecycle state machine this profile
+owns, and revocation-propagation guidance. It defines an extension point through which a companion
 profile MAY add a fleet-scale Mission Status List or an entry-grain
 `discharge` operation without altering this profile's own surfaces.
 Each capability is independently optional; an implementation can adopt
@@ -611,19 +611,37 @@ The members are:
   - `state`: the current Mission lifecycle state. The authoritative
     state space is the issuance profile's
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
-    and Gating"): the issuance profile states `active`, `revoked`, `expired`, this
-    profile's `suspended` and `completed` when the Mission Lifecycle
-    endpoint ({{mission-lifecycle-endpoint}}) is deployed, and any
-    further state a companion profile defines and the deployment runs
-    (for example `superseded`, defined by the Mission Expansion profile
-    ({{I-D.draft-mcguinness-oauth-mission-expansion}}) for an expanded
-    predecessor, or `cascaded`, defined by the Mission Child Delegation
-    profile ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
-    for a cascade-terminated Child Mission). A consumer applies the
-    issuance profile's forward-compatibility rule: only `active` permits
-    reliance, and every other value, recognized or not, is non-active.
-    This profile's reliance behavior does not depend on recognizing
-    these companion-defined states; the fail-safe rule above governs.
+    and Gating"): `active` and `terminated`, this profile's `suspended`
+    when the Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}})
+    is deployed, and any further state a companion profile defines and
+    the deployment runs. A consumer applies the issuance profile's
+    forward-compatibility rule: only `active` permits reliance, and
+    every other value, recognized or not, is non-active. This
+    profile's reliance behavior does not depend on recognizing a
+    companion-defined state; the fail-safe rule above governs.
+  - `termination`: CONDITIONAL. Present exactly when `state` is
+    `terminated`: the Mission's `termination`
+    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+    Termination"), with its `reason` (`revoked` or `expired` from the
+    issuance profile, this profile's `completed`, or a reason a
+    companion profile registers, such as `superseded` for an expanded
+    predecessor ({{I-D.draft-mcguinness-oauth-mission-expansion}}) or
+    `parent_terminated` for a cascade-terminated Child Mission
+    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})), its
+    `terminated_at`, the members its reason defines, and `version`:
+    the state version (below) of the transition that committed the
+    termination. `version` is REQUIRED in every termination the
+    Mission Issuer commits, and absent while an `expired` or
+    `parent_terminated` termination is observed but not yet committed;
+    it can be lower than the response's current `version` when a later
+    metadata-only change commits. It is the audit reference for
+    `revoked` and `completed`. A deployment implementing Child Mission
+    Carryover MUST include `termination.carried_to` when reporting a
+    `parent_terminated` termination for which a replacement was
+    committed, and MUST omit it when none was; it is same-issuer
+    correlation, not authority
+    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+    "Carryover Evidence and Observation").
   - `expires_at`: the point at which the Mission itself expires, the
     Mission record's `expires_at`
     ({{I-D.draft-mcguinness-oauth-mission}}).
@@ -638,17 +656,6 @@ The members are:
     ({{mission-lifecycle-endpoint}}): the RFC 3339 {{RFC3339}}
     deadline, and the transition (`resume` or `revoke`) the AS applies
     when it passes.
-  - `successor`: OPTIONAL. A string, the successor `mission_id`. Present
-    only when `state` is `superseded`, giving the successor that
-    replaced this Mission, set atomically at supersession on the
-    predecessor's record
-    ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
-  - `carried_to`: CONDITIONAL string. A deployment implementing Child Mission
-    Carryover MUST include the committed replacement Mission identifier when
-    reporting the old child's `cascaded` state, and MUST omit it when no
-    replacement was committed. It is same-issuer correlation, not authority
-    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
-    "Carryover Evidence and Observation").
   - `version`: REQUIRED. The Mission's **state version**: a strictly
     monotonic per-Mission counter the Mission Issuer maintains,
     incremented on each committed lifecycle transition (the approval
@@ -666,7 +673,7 @@ The members are:
     ({{I-D.draft-mcguinness-mission-runtime-evidence}}), `prior_version`
     and `new_version` in Containment Evidence
     ({{I-D.draft-mcguinness-oauth-mission-containment}}), `prior_version`
-    and `current_version` in a Discharge Result
+    and `new_version` in a Discharge Result
     ({{I-D.draft-mcguinness-oauth-mission-discharge}}), and
     `expected_version` on a lifecycle request ({{idempotency}}).
   - Extension members: a companion profile MAY add further members to
@@ -765,22 +772,19 @@ Success outcomes (HTTP 200, signed Mission Status Response, described by
 |---|---|
 | `active` | Mission is active and permits reliance. |
 | `suspended` | Mission is suspended (non-terminal). |
-| `revoked`, `expired`, `completed`, `superseded`, `cascaded` | Mission is in a terminal, non-active state. |
+| `terminated` | Mission has ended; `mission.termination` gives the reason. |
 
-This document uses "terminated" in prose for any terminal
-non-`active` state; it is not itself a `mission.state` value, and the
-terminal set is not closed. The terminal row above and the list that
-follows enumerate the companion-defined states this suite currently
-runs, for the reader's reference; a deployment reports whichever it
-runs, and a consumer's reliance decision never depends on recognizing
-them. The terminal states currently defined across this suite are
-`revoked` and `expired` ({{I-D.draft-mcguinness-oauth-mission}}),
-`completed` (this document), `superseded`
-({{I-D.draft-mcguinness-oauth-mission-expansion}}), and `cascaded`
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The binding
-rule is the issuance profile's forward-compatibility rule: every value
-other than `active` is non-active, whether or not the consumer
-recognizes it.
+A `terminated` Mission's `mission.termination.reason` names how it
+ended, and the set of reasons is not closed: a deployment reports
+whichever reason its profiles define, and a consumer's reliance
+decision never depends on recognizing it. The reasons defined across
+this suite are `revoked` and `expired`
+({{I-D.draft-mcguinness-oauth-mission}}), `completed` (this document),
+`superseded` ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and
+`parent_terminated` ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+The binding rule is the issuance profile's forward-compatibility rule:
+every state other than `active` is non-active, whether or not the
+consumer recognizes it.
 
 Wire error codes (carried in the `error` member of a JSON body):
 
@@ -885,8 +889,8 @@ This projection and the dedicated Mission Status Response
 ({{mission-status-response}}) carry Mission facts in a `mission` object
 of the same shape: the open `mission` claim object of
 {{I-D.draft-mcguinness-oauth-mission}} (Section "The Mission Claim")
-with status members (`state`, `fresh_until`, any companion-defined
-extension member such as the Status List companion's `status_list`
+with status members (`state`, `termination`, `fresh_until`, any
+companion-defined extension member such as the Status List companion's `status_list`
 reference ({{I-D.draft-mcguinness-oauth-mission-status-list}}), and,
 on the dedicated response, `expires_at` and `version`) added. This
 projection populates the subset a token-holding consumer needs; the
@@ -947,16 +951,18 @@ recommendations of {{RFC9325}}.
 
 Adopting this endpoint extends the issuance profile's lifecycle state
 space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Lifecycle and Gating") with two additional states: `suspended` (a
-non-terminal paused Mission that derives no tokens until resumed) and
-`completed` (a terminal state recording successful completion).
+Lifecycle and Gating") with one additional state, `suspended` (a
+paused Mission that derives no tokens until resumed), and one
+termination reason, `completed` (the Mission completed
+successfully).
 Issuance gating treats any state other than `active` as
 non-deriving, exactly as the issuance profile gates on `active`.
 
-A transition to `suspended` or `completed` gates new derivation only.
+A transition to `suspended`, or to `terminated` with reason
+`completed`, gates new derivation only.
 Tokens already derived under the Mission remain valid until their own
 `exp`, exactly as in the issuance profile's revocation model and
-mirroring the treatment of `superseded`
+mirroring the treatment of a `superseded` termination
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}). A deployment that
 needs a prompt cutoff on outstanding tokens uses the propagation
 mechanisms of {{revocation-enforcement-classes}}.
@@ -980,16 +986,16 @@ independently.
 
 An error code alone does not tell a client whether a `resume` can
 lift a refusal. When the issuance profile's gating refuses a
-derivation because the Mission is `suspended` or `completed`, the AS
-SHOULD include, alongside `error`, the `mission_error`
-token-error-response member ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Issuance Gating") with the value `mission_suspended` or
-`mission_completed`, respectively. The issuance profile's rules for
-that member apply: it is diagnostic only, it grants nothing, an
+derivation because the Mission is `suspended`, or `terminated` with
+reason `completed`, the AS SHOULD include, alongside `error`, the
+`mission_error` token-error-response member
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating")
+with the value `suspended` or `completed`, respectively. The issuance
+profile's rules for that member apply: it is diagnostic only, it grants nothing, an
 unrecognized value is ignored, and it is returned only to the
 authenticated client presenting the Mission's grant.
-`mission_suspended` reports a refusal that a `resume` can lift;
-`mission_completed` reports a terminal one.
+`suspended` reports a refusal that a `resume` can lift; `completed`
+reports a terminal one.
 
 ## Operations
 
@@ -1034,10 +1040,12 @@ completely by the companion that registers it
 
 The base operations are:
 
-- `revoke`: terminate the Mission; transition to `revoked`.
+- `revoke`: terminate the Mission; transition to `terminated` with
+  reason `revoked`.
 - `suspend`: pause the Mission; transition to `suspended`.
 - `resume`: return a suspended Mission to `active`.
-- `complete`: mark the Mission completed; transition to `completed`.
+- `complete`: mark the Mission completed; transition to `terminated`
+  with reason `completed`.
 
 A companion profile MAY register a further `operation` value on this
 endpoint that changes no Mission-level state, provided it defines the
@@ -1050,8 +1058,9 @@ that companion ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 A `suspend` MAY carry `suspend_until` with a REQUIRED `on_expiry`; the
 pair is the Mission's schedule. When the `suspend_until` of a current
 schedule passes, the AS MUST apply `on_expiry` (transition to
-`active` for `resume`, or to `revoked` for `revoke`) and emit the
-corresponding transition, without a further request. While the Mission
+`active` for `resume`, or to `terminated` with reason `revoked` for
+`revoke`) and emit the corresponding transition, without a further
+request. While the Mission
 is `suspended` under a deadline, both `suspend_until` and `on_expiry`
 surface in the signed Mission Status Response ({{mission-status-response}})
 so a consumer sees the pending outcome.
@@ -1064,15 +1073,15 @@ suspension ends or an authorized replacement supersedes it
 ({{idempotency}}). The AS MUST NOT apply a schedule that is no longer
 current, so an earlier deadline never acts on a later suspension. A
 deadline applies only a transition legal from the Mission's current
-state ({{legal-transitions}}) and never changes a terminal Mission.
+state ({{legal-transitions}}) and never changes a `terminated` Mission.
 
 ## Legal Transitions {#legal-transitions}
 
-An operation is legal only from the source states below. A terminal
-state (`revoked`, `expired`, `completed`, or the companion-defined
-`superseded` and `cascaded`) admits no transition. An operation whose
-resulting state equals the current state, terminal or not, is
-idempotent success ({{idempotency}}). This table governs Mission-level
+An operation is legal only from the source states below. The
+`terminated` state admits no transition, whatever its termination
+reason. An operation whose resulting state and, for `terminated`,
+termination reason equal the current ones is idempotent success
+({{idempotency}}). This table governs Mission-level
 state; a companion-registered extension operation such as `discharge`
 produces no Mission-state transition and is not a row of it,
 following instead the entry-grain rules the Entry Discharge companion
@@ -1080,39 +1089,42 @@ defines ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
 `resume` is the sole exception: it is legal only from `suspended`
 (its resulting state, `active`, is also the baseline a Mission holds
-before any suspension), so `resume` on an `active` or terminal
+before any suspension), so `resume` on an `active` or `terminated`
 Mission is a conflict, not idempotent success.
 
-| Operation | Legal from | Resulting state |
-|---|---|---|
-| `revoke` | `active`, `suspended` | `revoked` |
-| `suspend` | `active` | `suspended` |
-| `resume` | `suspended` | `active` |
-| `complete` | `active`, `suspended` | `completed` |
+| Operation | Legal from | Resulting state | Termination reason |
+|---|---|---|---|
+| `revoke` | `active`, `suspended` | `terminated` | `revoked` |
+| `suspend` | `active` | `suspended` | |
+| `resume` | `suspended` | `active` | |
+| `complete` | `active`, `suspended` | `terminated` | `completed` |
 
 `complete` is legal from `suspended` as well as `active`: completion is
-a monotonic narrowing to a terminal state and needs no derivation
+a monotonic narrowing to `terminated` and needs no derivation
 window, so a suspended Mission need not first be resumed to be
 completed.
 
 Requests are adjudicated by the single rule of {{idempotency}}: an
-operation whose resulting state equals the Mission's current state is
-idempotent success, with the `resume` exception above. Any other
+operation whose resulting state and termination reason equal the
+Mission's current ones is idempotent success, with the `resume`
+exception above. Any other
 operation not legal from the current state, including `resume` on a
 Mission that is not `suspended`, is refused as a conflict. A Mission
-that reaches its `expires_at` transitions to `expired` independently of
-this endpoint, from `active` or `suspended`. When a schedule's
-`suspend_until` is at or after the Mission's `expires_at`, expiry
-governs: the Mission becomes `expired` at `expires_at`, and the AS
-MUST NOT apply that schedule's `on_expiry`.
+that reaches its `expires_at` from `active` or `suspended` is
+`terminated` with reason `expired` independently of this endpoint, at
+every decision whether or not the transition is persisted. When a
+schedule's `suspend_until` is at or after the Mission's `expires_at`,
+expiry governs: the Mission is `terminated` with reason `expired` at
+`expires_at`, and the AS MUST NOT apply that schedule's `on_expiry`.
 
 ## Consolidated State Machine {#state-machine}
 
 This profile owns the extension of the issuance profile's lifecycle
 state space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
 Lifecycle and Gating"). The table below is the authoritative view of
-that space: every state, every transition, and the source of the event
-that drives it.
+that space: every state, every transition, the source of the event
+that drives it, and the termination reason a transition to
+`terminated` records.
 
 Event sources are the lifecycle endpoint (an operation
 of {{mission-lifecycle-endpoint}}), the expiry clock (a deadline
@@ -1125,37 +1137,38 @@ lifecycle-endpoint operation that changes no Mission state and so is
 not a row of this table. Only `active` permits derivation; every
 other state is non-deriving.
 
-| From | Event | Event source | To |
-|---|---|---|---|
-| (none) | approval event | issuance profile | `active` |
-| `active` | `revoke` | lifecycle endpoint | `revoked` |
-| `suspended` | `revoke` | lifecycle endpoint | `revoked` |
-| `active` | `suspend` | lifecycle endpoint | `suspended` |
-| `suspended` | `resume` | lifecycle endpoint | `active` |
-| `active` | `complete` | lifecycle endpoint | `completed` |
-| `suspended` | `complete` | lifecycle endpoint | `completed` |
-| `active` | `expires_at` reached | expiry clock | `expired` |
-| `suspended` | `expires_at` reached | expiry clock | `expired` |
-| `suspended` | `suspend_until` reached, `on_expiry` = `resume` | expiry clock | `active` |
-| `suspended` | `suspend_until` reached, `on_expiry` = `revoke` | expiry clock | `revoked` |
-| `active` | successor activates | expansion profile | `superseded` |
-| `active` | parent reaches a terminal state | child-delegation profile | `cascaded` |
-| `suspended` | parent reaches a terminal state | child-delegation profile | `cascaded` |
+| From | Event | Event source | To | Reason |
+|---|---|---|---|---|
+| (none) | approval event | issuance profile | `active` | |
+| `active` | `revoke` | lifecycle endpoint | `terminated` | `revoked` |
+| `suspended` | `revoke` | lifecycle endpoint | `terminated` | `revoked` |
+| `active` | `suspend` | lifecycle endpoint | `suspended` | |
+| `suspended` | `resume` | lifecycle endpoint | `active` | |
+| `active` | `complete` | lifecycle endpoint | `terminated` | `completed` |
+| `suspended` | `complete` | lifecycle endpoint | `terminated` | `completed` |
+| `active` | `expires_at` reached | expiry clock | `terminated` | `expired` |
+| `suspended` | `expires_at` reached | expiry clock | `terminated` | `expired` |
+| `suspended` | `suspend_until` reached, `on_expiry` = `resume` | expiry clock | `active` | |
+| `suspended` | `suspend_until` reached, `on_expiry` = `revoke` | expiry clock | `terminated` | `revoked` |
+| `active` | successor activates | expansion profile | `terminated` | `superseded` |
+| `active` | parent terminates | child-delegation profile | `terminated` | `parent_terminated` |
+| `suspended` | parent terminates | child-delegation profile | `terminated` | `parent_terminated` |
 
 `revoke` and the Mission's `expires_at` both apply in `suspended` as
 well as `active`, so a suspended Mission can still be terminated or
 expire. A `suspend_until` row fires only for a current schedule whose
 deadline falls before `expires_at` ({{mission-lifecycle-endpoint}},
-Operations; {{legal-transitions}}). The `superseded` and `cascaded`
-rows are companion-defined and shown here for reference:
-`superseded` is committed by the expansion profile and requires an
-`active` predecessor
-({{I-D.draft-mcguinness-oauth-mission-expansion}}); `cascaded` is
-committed by the child-delegation profile only when a parent reaches a
-terminal state. A `suspended` parent holds a dependent Child Mission
-non-active reversibly rather than driving it to `cascaded`
+Operations; {{legal-transitions}}). The `superseded` and
+`parent_terminated` rows are companion-defined and shown here for
+reference: a `superseded` termination is committed by the expansion
+profile and requires an `active` predecessor
+({{I-D.draft-mcguinness-oauth-mission-expansion}}); a
+`parent_terminated` termination is committed by the child-delegation
+profile only when a parent terminates, and a child's own expiry takes
+precedence over it. A `suspended` parent holds a dependent Child
+Mission non-active reversibly rather than terminating it
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Neither
-companion state is produced by this profile's endpoint.
+companion reason is produced by this profile's endpoint.
 
 ## Authentication
 
@@ -1310,7 +1323,12 @@ Decoded JWS payload:
     "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-    "state": "revoked",
+    "state": "terminated",
+    "termination": {
+      "reason": "revoked",
+      "terminated_at": "2026-11-02T08:53:20Z",
+      "version": 7
+    },
     "version": 7,
     "expires_at":  "2026-12-31T23:59:59Z",
     "fresh_until": "2026-11-02T08:54:05Z"
@@ -1370,8 +1388,8 @@ and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
 ~~~
 
 When `suspend_until` passes without a `resume`, the AS applies
-`on_expiry` and transitions the Mission to `revoked` without a further
-request.
+`on_expiry` and transitions the Mission to `terminated` with reason
+`revoked` without a further request.
 
 ## Idempotency and Conflicts {#idempotency}
 
@@ -1413,13 +1431,16 @@ current state version differs. A deployment SHOULD require
 against duplicate delivery, one against stale decisions.
 
 Lifecycle operations that change Mission state follow one rule. An
-operation whose resulting state ({{legal-transitions}}) equals the
-Mission's current state is idempotent success, terminal or not: the AS
-returns the current Mission Status Response, with no state change and
-no event emitted. Any other operation not legal from the current state
-(for example `suspend` against a terminal state) is a conflict: the AS
-MUST refuse it with HTTP 409 and a JSON body whose error symbol is
-`conflict`, leaving the Mission state unchanged. A companion-registered
+operation whose resulting state ({{legal-transitions}}) and, for
+`terminated`, termination reason equal the Mission's current ones is
+idempotent success: the AS returns the current Mission Status
+Response, with no state change and no event emitted. Any other
+operation not legal from the current state (for example `suspend`
+against a `terminated` Mission, or `revoke` against one terminated
+with reason `completed`) is a conflict: the AS MUST refuse it with
+HTTP 409 and a JSON body whose error symbol is `conflict`, leaving
+the Mission state unchanged. The `nonce` replay and request-mismatch
+handling above applies independently of this rule. A companion-registered
 extension operation that changes no Mission state, such as `discharge`,
 is not bound by this rule; its own idempotency and outcome vocabulary
 are defined by the companion that registers it, for `discharge` by the
@@ -1430,7 +1451,7 @@ Entry Discharge companion
 legal only from `suspended`, and its resulting state `active` is also
 the baseline a Mission holds before any suspension, so `resume` on an
 `active` Mission (one never suspended, or already resumed) or on a
-terminal Mission is not idempotent success but a conflict.
+`terminated` Mission is not idempotent success but a conflict.
 
 One idempotent case carries metadata. A `suspend` against a
 `suspended` Mission that carries a `suspend_until` and `on_expiry`
@@ -1723,9 +1744,9 @@ An implementation claiming an extension MUST meet its requirements:
   as a {{RFC9701}}-signed response where end-to-end integrity is
   required.
 - **Mission Lifecycle**: serve the management endpoint
-  ({{mission-lifecycle-endpoint}}), gate the `suspended` and
-  `completed` states it introduces exactly as the issuance profile gates
-  on non-`active` state, and advertise `mission_lifecycle_endpoint` and
+  ({{mission-lifecycle-endpoint}}), gate the `suspended` state and the
+  `completed` termination it introduces exactly as the issuance profile
+  gates on non-`active` state, and advertise `mission_lifecycle_endpoint` and
   `mission_lifecycle_endpoint_auth_methods_supported`.
 - **Revocation propagation**: advertise `mission_max_stale_seconds`
   and size Mission-bound access-token TTLs to it
@@ -1849,7 +1870,7 @@ profile's privacy considerations.
 This document requests IANA actions for OAuth AS metadata members and
 a media type. It defines no new registry of its own: the endpoint
 authentication-method value space is a closed set defined inline
-({{as-metadata}}). `mission_suspended` and `mission_completed`
+({{as-metadata}}). `suspended` and `completed`
 ({{mission-lifecycle-endpoint}}) are values of the issuance profile's
 `mission_error` member, which has no IANA registry, so this document
 requests no registration for them. A companion profile MAY register further extension
@@ -1899,9 +1920,9 @@ IANA is requested to register one media type per {{RFC6838}}.
 - Intended usage: COMMON
 - Author/Change controller: IETF
 
-## Mission Lifecycle States Registrations {#iana-lifecycle-registrations}
+## Mission Lifecycle Registrations {#iana-lifecycle-registrations}
 
-This document requests registration of two states in the issuance
+This document requests registration of one state in the issuance
 profile's Mission Lifecycle States registry
 ({{I-D.draft-mcguinness-oauth-mission}}), under that registry's
 Specification Required policy:
@@ -1909,7 +1930,14 @@ Specification Required policy:
 | Value | Terminal | Semantics | Change Controller | Reference |
 |---|---|---|---|---|
 | `suspended` | no | A paused Mission that derives no tokens until resumed. | IETF | this document, {{mission-lifecycle-endpoint}} |
-| `completed` | yes | Records successful completion of the Mission. | IETF | this document, {{mission-lifecycle-endpoint}} |
+
+It also requests registration of one reason in the issuance profile's
+Mission Termination Reasons registry
+({{I-D.draft-mcguinness-oauth-mission}}), under the same policy:
+
+| Value | Semantics | Members | Change Controller | Reference |
+|---|---|---|---|---|
+| `completed` | The Mission completed successfully. | none | IETF | this document, {{mission-lifecycle-endpoint}} |
 
 ## Well-Known URI
 
@@ -1929,6 +1957,14 @@ Authorization work for feedback that shaped these extensions.
 
 \[\[ To be removed from the final specification ]]
 
+- Mission lifecycle: the states are `active`, `suspended` and
+  `terminated`. A terminated Mission's `mission.termination` carries
+  its reason, `terminated_at` and the `version` of the committing
+  transition; `completed` is a termination reason, `successor` and
+  `carried_to` live in `termination`, an operation is idempotent only
+  when its resulting state and reason both match, the `mission_error`
+  values are `suspended` and `completed`, and a Discharge Result
+  carries `new_version` (#705).
 - A `suspend` whose `on_expiry` is `resume` needs the authorization
   the deployment requires for a direct `resume` as well as for
   `suspend`, including when it replaces the schedule of a Mission
