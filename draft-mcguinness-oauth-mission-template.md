@@ -468,6 +468,18 @@ dispatch policy, the allowed dispatchers and recipients, and the
 bounds, and the approval commits them under `template_hash`
 ({{template-hash}}), the anchor over the object consented to.
 
+Template consent also establishes the authority source the template's
+instances draw on, under the issuance profile's rules: from trusted
+configuration or authenticated governance state, never from client
+assertion, with the consenting human authorized to activate it
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Approval").
+The Mission Issuer MUST retain that source, including an
+`organizational` source's `policy` reference, with its authenticated
+record of the consent to that exact `template_version`. Like a
+Mission's `authority_source`, it is provenance outside
+`template_hash`; using another source or policy version takes a new
+`template_version` and a fresh human approval.
+
 Where Consent Evidence is claimed, the template-creation approval's
 disclosure is committed as that profile commits any disclosure
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). The template
@@ -564,7 +576,11 @@ The Mission Issuer adjudicates a Dispatch in this order:
    `max_active` or `dispatch_rate`, if no Agent is selected, or if the
    instance's Mission-Issuer-established Subject or its selected Agent
    falls outside `allowed_recipients` ({{the-mission-template}}).
-8. **Commit the instance.** Commit an ordinary Mission whose Authority
+8. **Check the authority source.** Verify that the source retained for
+   this `template_version` ({{template-consent}}) applies to the
+   instance's Subject and that the surviving set lies within that
+   source's ceiling. Refuse the Dispatch otherwise.
+9. **Commit the instance.** Commit an ordinary Mission whose Authority
    Set is the surviving set and whose:
 
    - `approver` is the template's human approver, the accountable
@@ -601,6 +617,10 @@ The Mission Issuer adjudicates a Dispatch in this order:
      taken from Dispatcher input, and is an entry of
      `allowed_recipients` `subjects`
      ({{I-D.draft-mcguinness-oauth-mission}});
+   - `authority_source` is the source retained for this
+     `template_version` ({{template-consent}}), read from the Mission
+     Issuer's retained template record, never from the Dispatch request
+     and never a source or policy version substituted after consent;
    - `client_id` is the Agent selected from `allowed_recipients`
      `agents` ({{the-mission-template}}), never taken from Dispatcher
      input. The selection is part of the committed instance: a retried
@@ -627,6 +647,11 @@ The Mission Issuer adjudicates a Dispatch in this order:
      that document's Effective Limit section states, never above the
      Dispatch Policy's maximum ({{template-consent}}); and
    - `template` lineage member is set ({{template-member}}).
+
+The Mission Issuer MUST make the step 8 check, and verify that the
+effective `expires_at` is strictly later than the committed
+`created_at`, atomically with the commit, against the source as it
+stands at that commit; on failure no Mission is created.
 
 A Dispatch MUST be idempotent per `dispatch_event_id`. The Dispatcher
 supplies a `dispatch_event_id` with the request, adopting the
@@ -1052,6 +1077,11 @@ conforming issuance-profile Mission Issuer
   `activation` the template lineage and this Dispatch's
   `dispatch_event_id`, `activation_actor` the Dispatcher, and
   `root_commitment` the `template_hash` ({{dispatch}});
+- record on every dispatched Mission the authority source retained at
+  template consent for its `template_version`, checking at the
+  creation commit that it applies to the instance's Subject and covers
+  the instance Authority Set, and that the effective expiry is later
+  than the creation instant ({{template-consent}}, {{dispatch}});
 - refuse a Dispatch outside the ceiling with `out_of_template_ceiling`
   and a Dispatch of a prohibited class with `dispatch_prohibited_class`
   ({{denial-reasons}});
@@ -1150,6 +1180,15 @@ IANA action. Following the restraint of the sibling profiles:
   renders them beside `max_active` and `dispatch_rate`, and each
   instance establishes its own limit afresh, never above that
   maximum (#1119).
+
+- Template Consent and Dispatch: template consent establishes the
+  authority source its instances draw on, retained with the consent to
+  that exact `template_version`. Each instance carries that source,
+  never Dispatcher input or a substituted policy. A new step 8 checks
+  that the source applies to the instance's Subject and covers the
+  instance Authority Set, and the creation commit makes that check
+  against the source as it stands then, with the effective-expiry
+  check (#1118).
 
 - Template Consent: creating a Mission Template is a human approval
   that creates no Mission, so it is the standing consent each

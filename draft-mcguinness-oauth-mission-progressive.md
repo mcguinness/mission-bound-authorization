@@ -340,7 +340,11 @@ in-ceiling case only.
 
 The successor is created as the expansion profile requires: its
 Authority Set freshly derived and bound by the ceiling, its
-`predecessor` member set, the predecessor superseded. An in-ceiling
+`predecessor` member set, the predecessor superseded. The successor's
+`subject` and `authority_source` are the predecessor's, and the commit
+that activates it checks that source's ceiling
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Successor
+Subject and authority source"). An in-ceiling
 successor MUST carry the predecessor's `authority_ceiling` and
 `drawdown_policy` unchanged or narrowed, committed under the same
 or, when narrowed, a recomputed `ceiling_hash`. Any change to either
@@ -852,6 +856,10 @@ convention, none of which require registration.
 
 -01
 
+- In-ceiling expansion: a `ceiling_drawdown` successor keeps its
+  predecessor's `subject` and `authority_source`, and its activating
+  commit checks that source's ceiling, as the expansion profile
+  requires of every successor (#1118).
 - In-ceiling expansion: where Mission Derivation Limits is also
   adopted, the ceiling consent's disclosure states that
   policy-adjudicated successors carry the Mission's derivation count
