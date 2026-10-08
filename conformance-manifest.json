@@ -11,12 +11,12 @@
     "content_sha256": "62ca5c493b76ebf99ebcf9b04bba2ce501396cc29bc74a28c41f20e0a51bad52"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "678167584984ad8d791da70956947e7fd13895b0",
-    "content_sha256": "1141e52de1a2e7c0a1933c3f9e7e36d849587bde5b0be467773e317f9877f09d"
+    "revision": "6a1c23ed8f9280fe888b8c163be1b8c5fadefc7a",
+    "content_sha256": "0d4d7ba5c4453c5e8ed6da4e13189278ea3b6e350c4e209a2cdb52cb20f6d57c"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "3503f180fdecc4901d3aebec899a33b8926b4f5810ec380444e63ffa7d7e09ce"
+    "revision": "6a1c23ed8f9280fe888b8c163be1b8c5fadefc7a",
+    "content_sha256": "4fe095f30cd109c7468e5db7116d7096a11e82bbd549aaeb7d273db6d0c0dcb4"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -91,8 +91,8 @@
     "content_sha256": "9d17b521502210144da5a492ef3109138621627cc495b474b4db771775a0daf8"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "367e69e46a32d3ae652feea03036d2e4bfea394c",
-    "content_sha256": "88374fb1cbcaee0d11bc3241f3743618ed542e3e86b18bd9f25d5e8617042962"
+    "revision": "7568a8d708beb6ea9c3906b13d4d3a0e12482e43",
+    "content_sha256": "ec63c9707af35ecd0fac6bca50df29edb07a5307bc50e334eaae4ed6c0383afb"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
@@ -14632,12 +14632,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
-     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > a keyed tool called without a key is refused by the PDP and executes nothing",
+     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > a keyed tool called without a key, or with a malformed one, is refused invalid_request at intake before any PDP call, and executes nothing",
      "level": "endpoint",
      "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed (#917): every tool the Operation Profile places in a high-consequence class (execute_wire_transfer, send_remittance_email) defines an idempotency key and its served schema requires idempotency_key in the Operation Profile format (16 to 128 characters of ALPHA / DIGIT / \"-\" / \"_\"); the PDP refuses a missing or malformed key with parameter_violation in all three classes, privileged administration through a fixture statement and action because the shipped deployment offers none."
+   "notes": "Witnessed (#917): every tool the Operation Profile places in a high-consequence class (execute_wire_transfer, send_remittance_email) defines an idempotency key and its served schema requires idempotency_key in the Operation Profile format (16 to 128 characters of ALPHA / DIGIT / \"-\" / \"_\"); the PDP refuses a missing or malformed key with parameter_violation in all three classes, privileged administration through a fixture statement and action because the shipped deployment offers none. At the resource's tool boundary, intake (D316) refuses a missing or malformed key invalid_request before any PDP call; the PDP check stays as defense for a key that reaches it directly."
   },
   {
    "id": "runtime.idempotency.atomic-claim-and-linearizable-consumption",
@@ -22056,7 +22056,7 @@
    "id": "evidence.refusal.denial-reason-enum-and-boundary",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
+   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `request_invalid` (the PEP established the action, and the supplied arguments fail its required input schema, including an unknown or authoritative member, a missing required member, a wrong type, or a pattern failure), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -22068,7 +22068,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
+    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
    "coverage": "partial",
@@ -22120,9 +22120,15 @@
      "name": "a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-profile-intake.test.ts",
+     "name": "intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > the signed Refusal Record names request_invalid for arguments outside the schema, request_unsupported for an unknown tool and capability_source_unresolvable for an unreadable schema, each with no PDP call and no effect",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, and decision_evidence_unverifiable. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; token_invalid, mission_claim_missing and mission_reference_conflict have no assertion on the signed value yet, and remain #594 wave 4. This is not full Refusal Record conformance."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, and decision_evidence_unverifiable. Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; token_invalid, mission_claim_missing and mission_reference_conflict have no assertion on the signed value yet, and remain #594 wave 4. This is not full Refusal Record conformance."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
