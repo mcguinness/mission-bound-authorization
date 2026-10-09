@@ -1501,6 +1501,57 @@ surface. The high-consequence classes stay on a fresh human decision,
 per the progressive profile's prohibited set
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
+### Mission Creation Paths {#creation-paths}
+
+Each Mission's creation answers three questions: whose authority it
+draws on (`authority_source`), who decides and when
+(`approval_basis`), and how the request reaches the Mission Issuer.
+An agent acting on its own authority holds a `service_owned` or
+`organizational` Mission whose Subject is the agent's own principal,
+and no delegating user takes part. Client authentication or a
+workload identity system says who the agent is; the Mission records
+which task it may perform.
+
+| Situation (home) | Whose authority | Who decides | How the request arrives |
+| --- | --- | --- | --- |
+| A user approves an agent's task (`oauth-mission`) | the user's (`user_delegated`) | that user, at the approval event | the authorization endpoint |
+| An administrator approves an agent's own task (`oauth-mission` with `oauth-mission-approval`, or `mission-authority-server`) | the agent's (`service_owned`) or a governed policy's (`organizational`) | the administrator, at the approval event | the authorization endpoint, or a pending request resolved later with no user present |
+| A policy approves each run of a recurring task (`oauth-mission-template`, experimental) | the source retained at template consent | a dispatch policy, within a template a human consented to once | one token request from a listed dispatcher |
+| An agent starts a sub-agent (`oauth-mission-child-delegation`) | a strict subset of the Parent Mission's | a fresh human approval, or the parent's delegation policy (`policy_drawdown`) | a child-creation token exchange |
+{: #creation-paths-table title="Mission creation paths"}
+
+The administrator's authority to approve for that Subject and to
+activate that source is checked at approval steps 2 and 3 of the
+OAuth binding ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Mission Approval"). The record excerpt below, other members omitted,
+shows the administrator row: `subject` and `client_id` name the
+agent, and `consent_principal` names the administrator.
+
+~~~ json
+{
+  "subject": {
+    "iss": "https://login.example.com",
+    "sub": "agt_ledger_reconciler"
+  },
+  "client_id": "ledger-reconciler",
+  "authority_source": { "type": "service_owned" },
+  "approval_basis": {
+    "type": "direct",
+    "consent_principal": {
+      "iss": "https://login.example.com",
+      "sub": "adm_4Hq9Tz"
+    },
+    "activation": { "approval_event_id": "ape_2Lw7Kq9Rv4" },
+    "activation_actor": {
+      "iss": "https://login.example.com",
+      "sub": "adm_4Hq9Tz"
+    },
+    "root_commitment":
+      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQr"
+  }
+}
+~~~
+
 ## Govern
 
 Question:
