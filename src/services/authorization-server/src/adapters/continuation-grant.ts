@@ -109,6 +109,8 @@ export const TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token
 
 /** @spec RFC 8693 §3 — the access-token token type (the async-delegation subject_token). */
 export const ACCESS_TOKEN_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
+/** @spec cross-org-delegation#projection-exchange: the Chain Presentation subject_token_type. */
+const CHAIN_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:mission-delegation-chain";
 
 /** @spec RFC 8693 §3 — the JWT token type. The `requested_token_type` that selects
  *  the CHILD-CREATION exchange (a child-bound RFC 7523 JWT authorization grant is
@@ -359,15 +361,18 @@ export async function handleTokenExchangeGrant(
     return;
   }
 
-  // @spec continuation#transport-async (#1157, review P2) — `audience` selects
+  // @spec continuation#transport-async (#1157, review P2): `audience` selects
   // the delegation-handle request; the async transport takes `resource`, never
-  // `audience`. A request combining `audience` with another exchange's
-  // parameter is refused here, before routing, so it is never served as that
-  // exchange (no family, no reservation, no derivation count).
-  if (
-    params.audience !== undefined &&
-    (params.requested_token_type === ACCESS_TOKEN_TOKEN_TYPE || params.request_refresh_token !== undefined)
-  ) {
+  // `audience`. A request that would route to either and combines `audience`
+  // with another exchange's parameter is refused here, before routing, so it
+  // is never served as that exchange (no family, no reservation, no derivation
+  // count). The Chain Presentation exchange, which takes `audience` itself,
+  // is not one of them.
+  const asyncSelected = params.request_refresh_token === "true" || params.request_refresh_token === true;
+  const handleSelected =
+    params.requested_token_type === ACCESS_TOKEN_TOKEN_TYPE && params.subject_token_type !== CHAIN_TOKEN_TYPE;
+  if (params.audience !== undefined && (asyncSelected || handleSelected)) {
+    singleResource();
     const conflict = DELEGATION_HANDLE_CONFLICTS.find((p) => params[p] !== undefined);
     if (conflict) {
       txError(ctx, 400, "invalid_request", `audience (a delegation-handle request) cannot be combined with ${conflict}`);
@@ -375,8 +380,7 @@ export async function handleTokenExchangeGrant(
     }
   }
 
-  const requestRefresh = params.request_refresh_token;
-  if (requestRefresh === "true" || requestRefresh === true) {
+  if (asyncSelected) {
     singleResource();
     if (profileDisabled("async-delegation")) return;
     await handleAsyncDelegationExchange(opts, provider, ctx);
@@ -396,7 +400,7 @@ export async function handleTokenExchangeGrant(
   // subject_token forks BEFORE the requested_token_type forks: the chain
   // exchange also requests an access token, and the subject_token_type is the
   // discriminator RFC 8693 provides for exactly this.
-  if (params.subject_token_type === "urn:ietf:params:oauth:token-type:mission-delegation-chain") {
+  if (params.subject_token_type === CHAIN_TOKEN_TYPE) {
     singleResource();
     if (profileDisabled("cross-org")) return;
     await handleCrossOrgChainExchange(
@@ -421,7 +425,7 @@ export async function handleTokenExchangeGrant(
   }
   if (params.requested_token_type === ACCESS_TOKEN_TOKEN_TYPE) {
     singleResource();
-    // @spec continuation#transport-async (#1157, D358) — `audience` selects the
+    // @spec continuation#transport-async (#1157, D358): `audience` selects the
     // delegation-handle request (expansion never carries it); its conflicts
     // were refused above, before routing.
     if (params.audience !== undefined) {
@@ -1013,7 +1017,7 @@ export async function handleAsyncDelegationExchange(
     return;
   }
   // @spec draft-zhu-oauth-async-delegation-05 Section 4.3,
-  // continuation#transport-async (#1157, D358) — the subject_token is a
+  // continuation#transport-async (#1157, D358): the subject_token is a
   // delegation handle: its audience identifies the authenticated acting
   // client (a single-valued `aud` equal to its client_id; a resource-audienced
   // access token is refused), and the exchange enforces its sender constraint

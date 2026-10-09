@@ -371,7 +371,7 @@ export async function handleDispatchHandoffRedemption(
   let at: InstanceType<Provider["AccessToken"]>;
   try {
     // @spec mission-template#dispatch-handoff, continuation#transport-async
-    // (#1157, D358) — the redeemed token is the Agent's delegation handle: its
+    // (#1157, D358): the redeemed token is the Agent's delegation handle: its
     // audience is the Agent's own client_id (not a resource), and it is
     // sender-constrained to the Agent's key, so the Agent opens the async
     // delegation family as its approved agent.

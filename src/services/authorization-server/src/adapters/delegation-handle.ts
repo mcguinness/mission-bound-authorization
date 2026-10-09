@@ -1,5 +1,5 @@
 /**
- * @spec continuation#transport-async (#1157, D358) — the delegation-handle
+ * @spec continuation#transport-async (#1157, D358): the delegation-handle
  * request.
  *
  * draft-zhu-oauth-async-delegation-05 Section 4.3 takes as its `subject_token`
@@ -44,7 +44,7 @@ import {
 const LIFECYCLE_GATE_REASONS: ReadonlySet<string> = new Set(["mission_not_active", "mission_expired"]);
 
 /**
- * @spec mission#issuance-gating (#1154, D369) — a Token Exchange refused because
+ * @spec mission#issuance-gating (#1154, D369): a Token Exchange refused because
  * its Mission is not `active`: the Mission makes the subject token unacceptable
  * for the exchange, so the refusal is `invalid_request` (RFC 8693 Section
  * 2.2.2), keeping the `mission_error` diagnostic. A derivation-limit refusal
@@ -111,12 +111,12 @@ export async function handleDelegationHandleExchange(
     txError(ctx, 400, "invalid_grant", "subject_token was not issued to the requesting client");
     return;
   }
-  // @spec mission#self-exchange rule 1 — only the Mission's approved agent.
+  // @spec mission#self-exchange rule 1: only the Mission's approved agent.
   if (record.client_id !== client.clientId) {
     txError(ctx, 400, "invalid_request", "a no-actor exchange is open only to the Mission's approved agent");
     return;
   }
-  // @spec mission#self-exchange rule 2 — the presented token's own authority bounds the handle.
+  // @spec mission#self-exchange rule 2: the presented token's own authority bounds the handle.
   const presented = presentedTokenAuthority(claims);
   if (!presented) {
     txError(ctx, 400, "invalid_grant", "subject_token carries no readable authorization_details");
@@ -156,7 +156,7 @@ export async function handleDelegationHandleExchange(
   }
   const grantId = await oidcGrant.save();
   kernel.missionBoundGrants.record({ grantId, missionId: record.id, kind: "delegation-handle" });
-  // @spec mission#self-exchange rule 3, mission#issuance-gating — the one
+  // @spec mission#self-exchange rule 3, mission#issuance-gating: the one
   // counted derivation of this exchange; nothing is counted again at save.
   try {
     kernel.gateDerivation(record.id);

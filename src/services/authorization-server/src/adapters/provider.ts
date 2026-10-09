@@ -1000,7 +1000,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     },
   ): void {
     if (delegationHandles.has(token)) {
-      // @spec mission#scope-projection step 4 — a delegation handle's consumer
+      // @spec mission#scope-projection step 4: a delegation handle's consumer
       // is this AS's own async-delegation exchange, which reads
       // `authorization_details`: no `scope` is emitted (#1157).
       token.scope = undefined;
@@ -1899,7 +1899,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
 export const SCOPE_DECIDED_AT_SAVE = "";
 
 /**
- * @spec continuation#transport-async (#1157, D358) — the delegation handles
+ * @spec continuation#transport-async (#1157, D358): the delegation handles
  * this AS mints (the handle exchange and the Dispatch Handoff redemption): an
  * access token audienced to the acting client itself, which presents it back
  * to this AS's async-delegation exchange. That exchange consumes the handle's

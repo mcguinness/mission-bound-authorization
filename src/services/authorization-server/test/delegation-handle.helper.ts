@@ -1,5 +1,5 @@
 /**
- * @spec continuation#transport-async (#1157, D358) — the token-endpoint
+ * @spec continuation#transport-async (#1157, D358): the token-endpoint
  * parameters of a delegation-handle request: an RFC 8693 exchange of the
  * agent's own Mission access token for an access token audienced to the agent
  * itself, which the async-delegation transport takes as its subject_token.
