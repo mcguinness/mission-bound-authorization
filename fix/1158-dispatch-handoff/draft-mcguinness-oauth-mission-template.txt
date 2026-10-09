@@ -805,7 +805,10 @@ Table of Contents
    combined with a parameter that selects another exchange, such as
    request_refresh_token or a Child Mission creation parameter
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]); it never
-   treats such a request as another exchange.  It then MUST:
+   treats such a request as another exchange.  A
+   mission_dispatch_handoff sent without a value is treated as omitted
+   (Section 3.2 of [RFC6749]), not as a value other than true.  It then
+   MUST:
 
    1.  verify the subject token, and that the DPoP proof's key is the
        key the token is bound to;
@@ -827,7 +830,11 @@ Table of Contents
        authority is the subject token's authority narrowed by the
        Effective Authority Set.
 
-   A failure of steps 1 to 3 is refused with invalid_grant.
+   A failure of steps 1 or 2, or a Mission without the template lineage
+   member, is refused with invalid_grant.  A Mission that is not active
+   is refused with invalid_request (Section 2.2.2 of [RFC8693]),
+   carrying the mission_error member
+   ([I-D.draft-mcguinness-oauth-mission]).
 
    On success the response carries the handoff grant as access_token,
    with issued_token_type urn:ietf:params:oauth:token-type:jwt and
@@ -854,8 +861,9 @@ Table of Contents
 
    4.  consume the grant's jti atomically, and remember a consumed grant
        for as long as it would otherwise be accepted, clock skew
-       included, refusing any further presentation with invalid_grant;
-       and
+       included, refusing any further presentation with invalid_grant,
+       while a redemption that issues no token leaves the grant
+       unconsumed; and
 
    5.  issue the Agent a token for the instance, bound to the key of its
        DPoP proof, whose authority is the grant's narrowed by the
@@ -1306,6 +1314,10 @@ Table of Contents
    [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6749>.
 
    [RFC6755]  Campbell, B. and H. Tschofenig, "An IETF URN Sub-Namespace
               for OAuth", RFC 6755, DOI 10.17487/RFC6755, October 2012,

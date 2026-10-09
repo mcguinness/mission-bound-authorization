@@ -1543,14 +1543,28 @@ Mission's Authority Set; the family's absolute maximum delegation lifetime
 when the Mission reaches a terminal state, reusing that draft's
 family-revocation and reuse-detection rules with the Mission lifecycle as
 the trigger.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
-<p id="section-6.2-2">A dispatched Mission enters this transport through its selected Agent,
-which redeems the Template profile's Dispatch Handoff for a delegation
-handle of its own (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>).<a href="#section-6.2-2" class="pilcrow">¶</a></p>
-<p id="section-6.2-3">This is the "scheduled continuation roots in durable
+<p id="section-6.2-2">The exchange's <code>subject_token</code> is a delegation handle (Section 4.3 of
+<span>[<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>): an access token whose
+audience is the acting client's own <code>client_id</code>, sender-constrained to
+the acting client's key. A Mission Issuer <span class="bcp14">MUST</span> refuse a
+<code>subject_token</code> whose audience is not the authenticated acting client,
+including a Mission access token audienced to a resource, and <span class="bcp14">MUST</span>
+require proof of possession of the <code>subject_token</code>'s own confirmation
+key; client authentication never satisfies that sender constraint.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.2-3">An agent obtains its handle with a Token Exchange that presents its own
+Mission access token, proves possession of that token's key, and names
+its own <code>client_id</code> as <code>audience</code>. The handle keeps that key and
+carries the presented token's authority narrowed by the Mission's
+current effective authority. The exchange is a no-actor self-exchange
+under the issuance profile's Self-Exchange Down-Scoping rules
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A dispatched Mission's
+selected Agent instead redeems the Template profile's Dispatch Handoff
+for its handle (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>).<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4">This is the "scheduled continuation roots in durable
 authorization" case: the Mission is that durable authorization. Successive
 refreshes within one family are one delegation and are not counted again
-against <code>derivation_limit</code> (<a href="#authorization-continuity" class="auto internal xref">Section 4</a>).<a href="#section-6.2-3" class="pilcrow">¶</a></p>
-<p id="section-6.2-4">Establishing the family is a delegation-family-creating exchange, and a
+against <code>derivation_limit</code> (<a href="#authorization-continuity" class="auto internal xref">Section 4</a>).<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">Establishing the family is a delegation-family-creating exchange, and a
 client that loses the response retries with a fresh, valid proof; without
 an idempotency identifier that retry mints a second live refresh-token
 family. The exchange therefore carries <code>creation_request_id</code>, the
@@ -1563,41 +1577,40 @@ tombstone retention against the published retry horizon, and the
 revalidation rules are that profile's, applied by reference and not
 redefined here. A refresh-token family is not a Mission: its delivery
 and recovery are defined below, not by that profile's
-Mission-creation recovery.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
-<p id="section-6.2-5">In the operation fingerprint, <code>op</code> is <code>async-delegation</code>; <code>iss</code> and
+Mission-creation recovery.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+<p id="section-6.2-6">In the operation fingerprint, <code>op</code> is <code>async-delegation</code>; <code>iss</code> and
 <code>client</code> are as the expansion profile defines them; <code>source</code> is the
 <code>mission_id</code> of the base Mission resolved from <code>subject_token</code>, never
 the raw token; <code>cnf</code> is the acting client's verified confirmation,
-since this exchange deliberately re-binds the family to the acting
-key rather than proving possession of the subject token's own
-confirmation; <code>proposal</code> is the parsed <code>authorization_details</code> array
+which is the delegation handle's own key; <code>proposal</code> is the parsed
+<code>authorization_details</code> array
 naming the requested confined subset, when present; <code>resource</code> is the
 target the family is audienced to; and <code>request_refresh_token</code> is the
 parameter selecting this exchange. A repetition whose fingerprint
-differs is refused with <code>invalid_request</code>.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
-<p id="section-6.2-6">The operation passes through three states. It is reserved when the
+differs is refused with <code>invalid_request</code>.<a href="#section-6.2-6" class="pilcrow">¶</a></p>
+<p id="section-6.2-7">The operation passes through three states. It is reserved when the
 <code>(client, creation_request_id)</code> reservation is acquired, before any
 side effect; family-created once the family and its single derivation
 count exist, committed atomically, with the family's identity
 recorded on the reservation; and completed once the response is
 delivered. A derivation-gate rejection or creation failure
 invalidates the provisional family and records the refusal, replayed
-to a matching retry.<a href="#section-6.2-6" class="pilcrow">¶</a></p>
-<p id="section-6.2-7">Recovery is delivery of the recorded family, never a second family
+to a matching retry.<a href="#section-6.2-7" class="pilcrow">¶</a></p>
+<p id="section-6.2-8">Recovery is delivery of the recorded family, never a second family
 and never a second derivation count. A revalidated retry (the same
 authenticated client proving possession of the recorded <code>cnf</code>, with a
 matching fingerprint) recovers by state: a reserved operation yields
 a retryable in-progress result; a family-created operation resumes
 delivery, issuing the recorded family's initial tokens; a completed
 operation returns the stored response while the initial refresh
-token is unissued or unconsumed.<a href="#section-6.2-7" class="pilcrow">¶</a></p>
-<p id="section-6.2-8">Consumption of the initial refresh token proves delivery: the client
+token is unissued or unconsumed.<a href="#section-6.2-8" class="pilcrow">¶</a></p>
+<p id="section-6.2-9">Consumption of the initial refresh token proves delivery: the client
 held the response and rotated on it. Once it is consumed, the
 operation is delivered and creation recovery <span class="bcp14">MUST</span> be refused with
 <code>invalid_grant</code>; the client continues on the family's current refresh
 token. A rotating refresh-token family is a single lineage
 (<span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span>); recovery <span class="bcp14">MUST NOT</span> mint an independent sibling refresh
-token into it.<a href="#section-6.2-8" class="pilcrow">¶</a></p>
+token into it.<a href="#section-6.2-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transport-xdomain">
@@ -1868,6 +1881,14 @@ when the ancestry is incomplete (#960).<a href="#appendix-A-2.3.1" class="pilcro
           <p id="appendix-A-2.4.1">A dispatched Mission enters the async delegation transport through
 its selected Agent, which redeems the Template profile's Dispatch
 Handoff for a delegation handle of its own (#1158).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">The async delegation transport's <code>subject_token</code> is a delegation
+handle: its audience is the acting client and possession of its own
+key is proved at the exchange, as Section 4.3 of the async delegation
+draft requires, replacing the re-binding to the acting key. An agent
+obtains its handle with a no-actor self-exchange naming its own
+<code>client_id</code> as <code>audience</code> (#1157).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

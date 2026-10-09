@@ -742,9 +742,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-actor-profile]
               McGuinness, K., "OAuth Actor Profile for Delegation", Work
               in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
-              profile-00, 30 April 2026,
+              profile-01, 8 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-actor-profile-00>.
+              oauth-actor-profile-01>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth

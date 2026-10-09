@@ -1432,9 +1432,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-actor-receipts]
               McGuinness, K., "OAuth Actor Receipts for Delegation
               Provenance", Work in Progress, Internet-Draft, draft-
-              mcguinness-oauth-actor-receipts-00, 4 July 2026,
+              mcguinness-oauth-actor-receipts-01, 8 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-actor-receipts-00>.
+              oauth-actor-receipts-01>.
 
    [I-D.draft-mcguinness-oauth-domain-authorized-issuer]
               McGuinness, K., "OAuth Domain-Authorized Issuer Trust

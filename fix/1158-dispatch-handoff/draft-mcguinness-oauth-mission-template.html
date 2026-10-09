@@ -2123,7 +2123,9 @@ selects this operation. It <span class="bcp14">MAY</span> carry <code>authorizat
 combined with a parameter that selects another exchange, such as
 <code>request_refresh_token</code> or a Child Mission creation parameter
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>); it never
-treats such a request as another exchange. It then <span class="bcp14">MUST</span>:<a href="#section-6.3-3" class="pilcrow">¶</a></p>
+treats such a request as another exchange. A <code>mission_dispatch_handoff</code>
+sent without a value is treated as omitted (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-3.2" class="relref">Section 3.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>),
+not as a value other than <code>true</code>. It then <span class="bcp14">MUST</span>:<a href="#section-6.3-3" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-6.3-4">
 <li id="section-6.3-4.1">
             <p id="section-6.3-4.1.1">verify the subject token, and that the DPoP proof's key is the key
@@ -2151,7 +2153,11 @@ authority is the subject token's authority narrowed by the Effective
 Authority Set.<a href="#section-6.3-4.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-6.3-5">A failure of steps 1 to 3 is refused with <code>invalid_grant</code>.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
+<p id="section-6.3-5">A failure of steps 1 or 2, or a Mission without the <code>template</code> lineage
+member, is refused with <code>invalid_grant</code>. A Mission that is not <code>active</code>
+is refused with <code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>),
+carrying the <code>mission_error</code> member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.3-5" class="pilcrow">¶</a></p>
 <p id="section-6.3-6">On success the response carries the handoff grant as <code>access_token</code>,
 with <code>issued_token_type</code> <code>urn:ietf:params:oauth:token-type:jwt</code> and
 <code>token_type</code> <code>N_A</code> (<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>). The handoff grant is a JWT the
@@ -2180,7 +2186,8 @@ the instance's recorded <code>client_id</code> are one client;<a href="#section-
           <li id="section-6.3-8.4">
             <p id="section-6.3-8.4.1">consume the grant's <code>jti</code> atomically, and remember a consumed grant
 for as long as it would otherwise be accepted, clock skew included,
-refusing any further presentation with <code>invalid_grant</code>; and<a href="#section-6.3-8.4.1" class="pilcrow">¶</a></p>
+refusing any further presentation with <code>invalid_grant</code>, while a
+redemption that issues no token leaves the grant unconsumed; and<a href="#section-6.3-8.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.3-8.5">
             <p id="section-6.3-8.5.1">issue the Agent a token for the instance, bound to the key of its
@@ -2745,6 +2752,10 @@ object by that value.<a href="#section-14-10.4.1" class="pilcrow">¶</a></p>
 <dt id="RFC3339">[RFC3339]</dt>
         <dd>
 <span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC6755">[RFC6755]</dt>
         <dd>
