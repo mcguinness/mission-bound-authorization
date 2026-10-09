@@ -39,8 +39,8 @@
     "content_sha256": "aef325527519d5b315b8b41a9a9f4c132ad90eee5c16358d18b25af1d8ba0f81"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "567d56a9a8d82ae5a4495e3c0147ae4570470a6931b6a2cf4ca72c3eace6d961"
+    "revision": "79f1a35182270bb586eb25da5205cd965b0afbe7",
+    "content_sha256": "0574fcf44970c92f39e5b6f24b81d28e2d67a3c29355d248792f1c832affb7fe"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -59,8 +59,8 @@
     "content_sha256": "9201cdc83aa8e79a1a2615bf25f69c9ff8fac11424be6336c8f5052ba1f24b5b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "3d222f4cafe39e1b08ad7af9fac4c0d898a05a56",
-    "content_sha256": "435652531b159beb785f5867c9e09da1fad63263586b4a9cbfef79b9b63b9b1f"
+    "revision": "ccbe02df81eb64f2dd0e477f764a5cbef96b7a3c",
+    "content_sha256": "7869cd2a8c04add97600a3fbe195198e2931ba5d410b88a6b63f9e306f8353e5"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -26653,6 +26653,602 @@
    "notes": "#1118 (D326) specification slice. No test is mapped or mutation-proved under this row; the expiry facet needs a dispatch intent whose requested expires_at has already passed."
   },
   {
+   "id": "template.handoff.selector-refusal",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "The Mission Issuer MUST refuse with `invalid_request` a `mission_dispatch_handoff` with any value other than `true`, and one combined with a parameter that selects another exchange",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mission_dispatch_handoff value other than true is refused invalid_request, and so is one combined with request_refresh_token or any Child Mission creation parameter (mission_intent, child_actor, parent, creation_request_id, carryover_replacement, actor_token); a combined request is never routed to that exchange: it creates no child and counts no derivation"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the explicit selector (@spec mission-template#dispatch-handoff, D361) > a malformed selector value is refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the explicit selector (@spec mission-template#dispatch-handoff, D361) > every conflicting selector is refused invalid_request and never falls through to its own exchange",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the explicit selector (@spec mission-template#dispatch-handoff, D361) > the selector requires the jwt requested_token_type",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D361: the explicit selector, checked before every other exchange's selector. An empty value is not a selector: RFC 6749 Section 3.1 treats a parameter sent without a value as omitted, so `mission_dispatch_handoff=` is an ordinary request for whichever exchange its other parameters select. The jwt requested_token_type the request description names is also enforced (invalid_request). Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.exchange-possession",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "verify the subject token, and that the DPoP proof's key is the key the token is bound to",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a handoff whose DPoP proof is under any key but the subject token's cnf.jkt is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > wrong key: a DPoP proof under any key but the instance token's is refused invalid_grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D357 acceptance bar item 1 (the Dispatcher proves possession of the instance token's key). Shares the child and expansion exchanges' possession check. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.exchange-client",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "verify that the authenticated client is the client the subject token was issued to, the Dispatcher",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a client other than the subject token's client_id is refused invalid_grant, even presenting a proof under the token's key"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > wrong client: a client other than the one the token was issued to is refused invalid_grant, even with the key",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.exchange-instance",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "verify that the Mission carries the `template` lineage member ({{template-member}}) and is `active`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission without template lineage, and an instance no longer active, are refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > a Mission without template lineage is refused invalid_grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an instance no longer active is refused invalid_grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The lineage case presents an AS-signed token for an ordinary Mission (the test holds the AS token key). Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.recipient-from-record",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "take the recipient from the instance's recorded `client_id`, the selected Agent, never from the request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the handoff grant's client_id is the instance's recorded client_id (the selected Agent, not the Dispatcher that presents the token), and a request audience naming another client changes neither the grant's client_id nor its aud"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the recipient comes from the record, never the request: an `audience` naming another client changes nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D357 acceptance bar item 2 (the recipient is the instance's selected Agent). Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.authority-confined",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "confine the handed-off authority to the subject token's authority and the instance's current Effective Authority Set",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a requested authorization_details beyond the presented token's authority, or beyond the instance's current effective set, is refused invalid_authorization_details; a narrower request is honored; absent a request the grant carries the presented token's authority narrowed by the effective set; a subject token whose authority cannot be read is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > broader authority: a request beyond the presented token is refused invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > broader authority: a request beyond the current effective set is refused; absent, the grant is narrowed by it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > a narrower request is honored",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > a subject token without readable authority is refused invalid_grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D357 acceptance bar item 3 at the exchange (cannot exceed the presented token's or the current effective authority). The down-scoped and unreadable subject tokens are AS-signed by the test. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.grant-members",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "`aud` identifies its token endpoint, `client_id` names the selected Agent as the only redeemer",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the handoff grant is a JWT with typ mission-dispatch-handoff+jwt whose iss is the Mission Issuer, aud its token endpoint, client_id the selected Agent, sub the instance's Subject, mission the instance's mission claim, and authorization_details the handed-off authority; the response carries it as access_token with issued_token_type jwt and token_type N_A"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D361: aud identifies the redeeming AS, client_id the sole redeemer. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.grant-lifetime",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "Its lifetime is short and never outlasts the instance's `expires_at`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the handoff grant lives at most 300 seconds and its exp never passes the instance's expires_at"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "300 seconds is this implementation's bound (MAX_DISPATCH_HANDOFF_LIFETIME_S). Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.redemption-grant-validation",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "verify the grant's signature, `typ` and `exp`, and that its `aud` identifies its own token endpoint",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant whose aud is not this token endpoint, one that has expired, one from another issuer, one under a foreign signature, and one of another typ (a child grant's included) is refused; a grant missing its client_id, mission id or authorization_details is refused"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > wrong audience: a grant whose aud is not this token endpoint is refused (apart from #1157's handle audience)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > an expired grant, or one from another issuer, is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the handoff grant's own validation (unit) > refuses a foreign signature, the wrong typ (a child grant included), aud, iss, an expired grant, and missing members",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the handoff grant's own validation (unit) > accepts a well-formed grant and reads its members",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D361: the wrong-audience refusal at redemption is tested here, apart from #1157's delegation-handle audience check. Validation is the handoff grant's own (its typ, its verifier), distinct from the child grant's. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.redemption-one-client",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "verify that the grant's `client_id`, the authenticated client, and the instance's recorded `client_id` are one client",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a client the grant does not name is refused invalid_grant and the grant stays redeemable by its Agent; the Dispatcher, not registered for the JWT bearer grant, cannot present it; a grant naming a client other than the instance's recorded client_id, or for a Mission without template lineage, is refused even when the named client presents it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > wrong recipient: a client the grant does not name is refused, and the grant stays redeemable by the Agent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > the Dispatcher cannot redeem: it is not registered for the jwt-bearer grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > defence in depth: a grant naming a client that is not the instance's Agent, or a non-instance Mission, is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D357 acceptance bar item 5 (wrong recipient). The record comparison is defence in depth: the AS mints a handoff grant only for the recorded client_id, so its test presents grants the test signs with the AS token key. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.redemption-active",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "verify that the instance is `active`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a suspended instance refuses redemption with invalid_grant and mission_error mission_suspended, without consuming the grant, which redeems after resume"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > a suspended instance refuses redemption without consuming the grant; after resume it redeems",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The activity check precedes consumption, so a grant presented while its instance is suspended stays redeemable within its lifetime. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.single-use",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "consume the grant's `jti` atomically, and remember a consumed grant for as long as it would otherwise be accepted, clock skew included, refusing any further presentation with `invalid_grant`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a second redemption of a redeemed grant is refused invalid_grant and counts nothing, under another of the Agent's keys too; of two simultaneous redemptions exactly one succeeds and one derivation is counted; a consumed jti is still refused past the grant's exp through the skew allowance and is pruned only after it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > single use: a second redemption is refused invalid_grant and counts nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > single use under concurrency: of two simultaneous redemptions exactly one succeeds, counted once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the consumed-grant store (unit, @spec mission-template#dispatch-handoff single use) > consumes atomically and remembers a consumed jti through exp plus skew, then prunes it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D361: its own store (kernel/dispatch-handoff-store.ts), not the DPoP replay cache: one INSERT on the jti primary key, no eviction before exp plus skew. The store is in memory and built per boot like every AS store (D25/D27); the AS signing keys are per boot too, so no grant minted before a restart verifies after it, which is how a restart cannot revive a consumed grant here. A deployment with persistent signing keys needs this store durable. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.redemption-issue",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "issue the Agent a token for the instance, bound to the key of its DPoP proof, whose authority is the grant's narrowed by the instance's current Effective Authority Set",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the redeemed token names the Agent as client_id, its cnf.jkt is the Agent's own DPoP key and not the Dispatcher's, it carries the instance's mission claim, and its authority is the grant's narrowed by the effective set at redemption; a grant none of whose authority survives is refused invalid_grant; a redemption without a DPoP proof is refused"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > the redeemed authority is narrowed by the effective set at redemption; fully contained, it is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > a redemption without a DPoP proof is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D357 acceptance bar items 2 and 3 at redemption (the Agent bound to its own key; never beyond the current effective authority). Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.delegation-handle",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "its audience identifies the Agent and it is sender-constrained to the Agent's key",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the token issued at redemption is sender-constrained to the Agent's key and its audience identifies the Agent"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Partial by design (D361): the token is sender-constrained to the Agent's key, but its audience is the resource, an accepted intermediate step. The Agent-audienced delegation handle lands with #1157 (audience and sender-constraint enforcement at the async exchange)."
+  },
+  {
+   "id": "template.handoff.redemption-counted",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "The redemption is a derivation from the instance, gated and counted as the issuance profile requires",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a redemption increments the instance's derivation_count by exactly one while the handoff exchange counts nothing, a replayed or concurrently losing redemption counts nothing, a refused handoff request counts nothing, and the Dispatcher's grant stays the instance's own"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > single use: a second redemption is refused invalid_grant and counts nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > single use under concurrency: of two simultaneous redemptions exactly one succeeds, counted once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the explicit selector (@spec mission-template#dispatch-handoff, D361) > every conflicting selector is refused invalid_request and never falls through to its own exchange",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The Agent's token is minted under a provider Grant of its own, recorded in the Mission-bound grant index (kind dispatch-handoff) without moving the instance's grant_id; the redemption counts once (gateDerivation) and the save-time hook re-gates active state only. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+  },
+  {
+   "id": "template.handoff.agent-continues",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "the Agent continues the instance as its approved agent on the continuation profile's async delegation transport",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Agent's redeemed token opens an async delegation family and the Agent refreshes it; the Dispatcher's own exchange of the dispatched token stays refused as not the approved agent; a retried family creation recovers with an equivalent handed-off token and is refused with a narrower one"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher still cannot continue the instance itself: the async exchange stays open only to the approved agent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: recovery stays within the handed-off token (#1153 rule 2, D353) > a retried family creation recovers with an equivalent token and is refused with a narrower one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D357 acceptance bar item 4 and the recovery half of item 5, with #1153's self-exchange rules 1 and 2 in force. The shipped subagent-invoice-extractor registration (token exchange and refresh_token added by D361) is the Agent, and AAM step 3 runs the same path against the live stack."
+  },
+  {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
@@ -29974,9 +30570,15 @@
      "name": "a no-actor exchange is open only to the Mission's approved agent (@spec mission#self-exchange rule 1, #1153 review, D353) > refuses invalid_request when the authenticated client is not the Mission Record's client_id, though the token names it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher still cannot continue the instance itself: the async exchange stays open only to the approved agent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1153 review (D353). The AS never issues a Mission access token to another client without act, so the test changes the Mission Record's client_id under a real token."
+   "notes": "#1153 review (D353). The AS issues one Mission access token to a client other than the Mission Record's client_id: a Dispatch returns the instance's token to the Dispatcher while the instance's approved agent is the selected Agent. The Dispatcher's exchange of that token is refused (the dispatch-handoff test); the selected Agent reaches the transport through the Template profile's Dispatch Handoff (#1158). The async-delegation test changes the Mission Record's client_id under a real token."
   },
   {
    "id": "core.self-exchange.result-subset",
