@@ -39,8 +39,8 @@
     "content_sha256": "aef325527519d5b315b8b41a9a9f4c132ad90eee5c16358d18b25af1d8ba0f81"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "79f1a35182270bb586eb25da5205cd965b0afbe7",
-    "content_sha256": "0574fcf44970c92f39e5b6f24b81d28e2d67a3c29355d248792f1c832affb7fe"
+    "revision": "89ff20227732923f874f68f599ae8ae243dcffe7",
+    "content_sha256": "06c52baf9b732aa68e1d5ad8c96642f6ad093a6957df91dac69ae2dff644bad0"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -27246,7 +27246,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "D357 acceptance bar item 4 and the recovery half of item 5, with #1153's self-exchange rules 1 and 2 in force. The shipped subagent-invoice-extractor registration (token exchange and refresh_token added by D361) is the Agent, and AAM step 3 runs the same path against the live stack."
+   "notes": "D357 acceptance bar item 4 and the recovery half of item 5, with #1153's self-exchange rules 1 and 2 in force. The shipped subagent-invoice-extractor registration (token exchange per D361, and refresh_token for the family's refresh) is the Agent. AAM step 3 (aam-nightly-reconciliation.test.ts) runs the same path against the live stack in CI's impl-ci; it is skipped without OpenFGA."
   },
   {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
