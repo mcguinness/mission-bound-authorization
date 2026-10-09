@@ -911,10 +911,10 @@ proof under its own key. The Mission Issuer MUST:
    identifies its own token endpoint;
 2. verify that the grant's `client_id`, the authenticated client, and
    the instance's recorded `client_id` are one client;
-3. consume the grant's `jti` atomically, and remember a consumed grant
+3. verify that the instance is `active`;
+4. consume the grant's `jti` atomically, and remember a consumed grant
    for as long as it would otherwise be accepted, clock skew included,
-   refusing any further presentation with `invalid_grant`;
-4. verify that the instance is `active`; and
+   refusing any further presentation with `invalid_grant`; and
 5. issue the Agent a token for the instance, bound to the key of its
    DPoP proof, whose authority is the grant's narrowed by the
    instance's current Effective Authority Set.
