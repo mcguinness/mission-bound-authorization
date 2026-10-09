@@ -419,9 +419,24 @@ when the Mission reaches a terminal state, reusing that draft's
 family-revocation and reuse-detection rules with the Mission lifecycle as
 the trigger.
 
-A dispatched Mission enters this transport through its selected Agent,
-which redeems the Template profile's Dispatch Handoff for a delegation
-handle of its own ({{I-D.draft-mcguinness-oauth-mission-template}}).
+The exchange's `subject_token` is a delegation handle (Section 4.3 of
+{{I-D.draft-zhu-oauth-async-delegation}}): an access token whose
+audience is the acting client's own `client_id`, sender-constrained to
+the acting client's key. A Mission Issuer MUST refuse a
+`subject_token` whose audience is not the authenticated acting client,
+including a Mission access token audienced to a resource, and MUST
+require proof of possession of the `subject_token`'s own confirmation
+key; client authentication never satisfies that sender constraint.
+
+An agent obtains its handle with a Token Exchange that presents its own
+Mission access token, proves possession of that token's key, and names
+its own `client_id` as `audience`. The handle keeps that key and
+carries the presented token's authority narrowed by the Mission's
+current effective authority. The exchange is a no-actor self-exchange
+under the issuance profile's Self-Exchange Down-Scoping rules
+({{I-D.draft-mcguinness-oauth-mission}}). A dispatched Mission's
+selected Agent instead redeems the Template profile's Dispatch Handoff
+for its handle ({{I-D.draft-mcguinness-oauth-mission-template}}).
 
 This is the "scheduled continuation roots in durable
 authorization" case: the Mission is that durable authorization. Successive
