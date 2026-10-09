@@ -39,6 +39,7 @@
  *  - Mission-bound refresh tokens introspect under the SAME composite rule.
  */
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 import type { Server } from "node:http";
 import { DERIVATION_POLICY, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
@@ -91,6 +92,8 @@ interface FlowResult {
   missionId: string;
   jti: string;
   payload: Record<string, unknown>;
+  /** The DPoP key the flow's access token is bound to (#1157: its delegation handle keeps it). */
+  dpopKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
 }
 
 async function clientAssertion(): Promise<string> {
@@ -207,6 +210,7 @@ async function runFlow(input: {
     missionId: (payload.mission as { id: string }).id,
     jti: payload.jti as string,
     payload,
+    dpopKeys,
   };
 }
 
@@ -755,7 +759,9 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
 
 describe("individual revocation is grant/family-scoped, never Mission-scoped (@spec mission#introspection — issue #541 P1-2)", () => {
   it("destroying ONLY an async-delegation family leaves ITS tokens active:false while the Mission-grant token stays active", async () => {
-    const actingDpop = await generateKeyPair("ES256", { extractable: true });
+    // #1157: the family is opened through ap-agent's delegation handle, under
+    // the flow token's own key.
+    const actingDpop = flow5.dpopKeys;
     const actingPub = await exportJWK(actingDpop.publicKey);
     const dpopProof = async (extra: Record<string, unknown> = {}): Promise<string> =>
       new SignJWT({ htu: `${ISSUER}/token`, htm: "POST", ...extra })
@@ -764,6 +770,24 @@ describe("individual revocation is grant/family-scoped, never Mission-scoped (@s
         .setJti(crypto.randomUUID())
         .sign(actingDpop.privateKey);
 
+    const post = async (params: Record<string, string>, extra: Record<string, unknown> = {}): Promise<Response> =>
+      fetch(`${ISSUER}/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(extra) },
+        body: new URLSearchParams({
+          ...params,
+          client_assertion: await clientAssertion(),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        }).toString(),
+      });
+    const withNonce = async (params: Record<string, string>): Promise<Response> => {
+      const first = await post(params);
+      const n = first.headers.get("dpop-nonce");
+      return first.status === 400 && n ? post(params, { nonce: n }) : first;
+    };
+    const handleRes = await withNonce(delegationHandleParams(flow5.at, "ap-agent"));
+    const handleBody = (await handleRes.json()) as { access_token: string };
+    expect(handleRes.status, JSON.stringify(handleBody)).toBe(200);
     const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
       fetch(`${ISSUER}/token`, {
         method: "POST",
@@ -771,7 +795,7 @@ describe("individual revocation is grant/family-scoped, never Mission-scoped (@s
         body: new URLSearchParams({
           grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
           request_refresh_token: "true",
-          subject_token: flow5.at,
+          subject_token: handleBody.access_token,
           subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
           resource: PAYMENTS,
           creation_request_id: crypto.randomUUID(),

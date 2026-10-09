@@ -22,6 +22,7 @@ import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14787;
 const ISSUER = `http://localhost:${PORT}`;
@@ -140,6 +141,16 @@ async function issueCode(intentOver: Json = {}): Promise<{ code: string; mission
 }
 
 /** PAR, approval and the code exchange: an active Mission's access and refresh token. */
+/**
+ * The acting client's delegation handle for `base` (#1157, D358), the async
+ * transport's subject_token, requested under the base token's own key.
+ */
+async function handle(base: string, keys: Keys): Promise<string> {
+  const res = await token(delegationHandleParams(base, "ap-agent"), keys);
+  if (res.status !== 200) throw new Error(`delegation handle refused: ${res.status} ${JSON.stringify(res.body)}`);
+  return res.body.access_token as string;
+}
+
 async function issue(intentOver: Json = {}): Promise<{
   missionId: string;
   accessToken: string;
@@ -185,6 +196,9 @@ describe("a derivation that fails after admission (@spec mission#issuance-gating
   it("async-delegation creating exchange: a failure after the cap check, inside the commit, rolls the count back", async () => {
     const m = await issue();
     expect(derivations(m.missionId)).toBe(1); // the code exchange
+    // #1157: the delegation handle is requested first, its own counted derivation.
+    const subject = await handle(m.accessToken, m.keys);
+    expect(derivations(m.missionId)).toBe(2);
     // The exchange runs gateDerivation inside advanceReserved's transaction,
     // which also commits the family-created transition. Fail that transaction
     // after the gate has passed and counted.
@@ -197,12 +211,12 @@ describe("a derivation that fails after admission (@spec mission#issuance-gating
         throw new Error("injected: the family-created write fails after the gate");
       }),
     );
-    const acting = await newKeys();
+    const acting = m.keys;
     const res = await token(
       {
         grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
         request_refresh_token: "true",
-        subject_token: m.accessToken,
+        subject_token: subject,
         subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
         resource: RESOURCE,
         creation_request_id: crypto.randomUUID(),
@@ -212,7 +226,7 @@ describe("a derivation that fails after admission (@spec mission#issuance-gating
     expect(gated).toBe(true); // the cap check passed and the count ran
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.body.access_token).toBeUndefined();
-    expect(derivations(m.missionId)).toBe(1); // rolled back with the transaction
+    expect(derivations(m.missionId)).toBe(2); // rolled back with the transaction
   });
 
   it("residual: the provider access-token hook counts before signing, so a code exchange that fails after the count leaves the failed derivation counted (#250)", async () => {

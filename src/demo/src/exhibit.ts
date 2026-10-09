@@ -721,7 +721,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     body: {
       grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
       request_refresh_token: "true",
-      subject_token: "<the Agent's mission access token>",
+      subject_token: "<the Agent's delegation handle, audienced to the Agent>",
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       resource: CANONICAL_RESOURCE,
       creation_request_id: "<client-generated idempotency id>",

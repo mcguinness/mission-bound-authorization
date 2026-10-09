@@ -32,6 +32,7 @@ import {
 import {
   type AdapterOptions,
   gateErrorToMissionError,
+  markDelegationHandle,
   MissionGrantError,
   newResourceServer,
   resourceServerInfoFor,
@@ -379,7 +380,12 @@ export async function handleDispatchHandoffRedemption(
   let jwt: string;
   let at: InstanceType<Provider["AccessToken"]>;
   try {
-    const resource = authority[0]?.resource ?? opts.issuer;
+    // @spec mission-template#dispatch-handoff, continuation#transport-async
+    // (#1157, D358): the redeemed token is the Agent's delegation handle: its
+    // audience is the Agent's own client_id (not a resource), and it is
+    // sender-constrained to the Agent's key, so the Agent opens the async
+    // delegation family as its approved agent.
+    const handleAudience = record.client_id;
     const agentGrant = new provider.Grant({ accountId: record.subject.sub, clientId: record.client_id });
     for (const entry of authority) {
       (agentGrant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
@@ -390,7 +396,7 @@ export async function handleDispatchHandoffRedemption(
     const admitted = kernel.reserveDerivation(record.id, { operationId: `dispatch-handoff:${grant.jti}` });
     derivationReservation = admitted.reservation.reservation.reservationId;
 
-    const info = resourceServerInfoFor(resource, opts.accessTokenTTL ?? 300);
+    const info = resourceServerInfoFor(handleAudience, opts.accessTokenTTL ?? 300);
     info.accessTokenTTL = Math.min(
       info.accessTokenTTL,
       Math.max(1, Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000)),
@@ -403,8 +409,9 @@ export async function handleDispatchHandoffRedemption(
       rar: authority,
       scope: SCOPE_DECIDED_AT_SAVE,
     });
-    at.resourceServer = newResourceServer(provider, resource, info);
+    at.resourceServer = newResourceServer(provider, handleAudience, info);
     at.jkt = jkt; // sender-constrained to the Agent's own key
+    markDelegationHandle(at);
     ctx.oidc.entity("AccessToken", at);
     jwt = await at.save();
   } catch (e) {
@@ -434,7 +441,7 @@ export async function handleDispatchHandoffRedemption(
 }
 
 /** A kernel {@link GateError} as `invalid_grant`, with `mission_error` where a value applies. */
-function gateRefusal(opts: AdapterOptions, e: unknown, missionId: string): unknown {
+export function gateRefusal(opts: AdapterOptions, e: unknown, missionId: string): unknown {
   return e instanceof GateError
     ? new MissionGrantError(e.message, gateErrorToMissionError(e.reason, opts.kernel.get(missionId)?.state))
     : e;
