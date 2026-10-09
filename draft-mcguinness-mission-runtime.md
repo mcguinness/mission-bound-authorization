@@ -449,7 +449,11 @@ deployment establishes it in one of two modes:
 - **Credential-carried.** The acting credential's Mission reference
   identifies the Mission, under the binding's own credential
   representation (the OAuth realization is the `mission` claim,
-  {{I-D.draft-mcguinness-oauth-mission}}). The PEP takes the Mission
+  {{I-D.draft-mcguinness-oauth-mission}}; the AAuth realization is the
+  signed `mission_s256` claim on the access paths where the AAuth
+  binding supplies Credential-Bound, projected to the approving Person
+  Server and `s256` as that binding defines,
+  {{I-D.draft-mcguinness-mission-aauth}}). The PEP takes the Mission
   reference from the validated credential, after establishing the
   credential's validity for the protected resource and request under
   the binding's own credential-validation rules (the OAuth realization
@@ -460,13 +464,12 @@ deployment establishes it in one of two modes:
   MUST verify that reference against the acting credential under a
   join a binding profile defines; an unverified reference MUST NOT
   establish the Mission. The Mission Authority Server profile defines
-  the concrete join for this mode
-  ({{I-D.draft-mcguinness-mission-authority-server}}), and the AAuth
-  binding's reference propagation supplies the externally carried
-  reference for such a join
-  ({{I-D.draft-mcguinness-mission-aauth}}), as the MAS profile's
-  Mission Reference Propagation channel does in credential-less MAS
-  mode.
+  the concrete join for this mode, and its Mission Reference
+  Propagation channel carries the reference in credential-less MAS
+  mode ({{I-D.draft-mcguinness-mission-authority-server}}). The AAuth
+  binding defines no such join, so an AAuth Mission reference
+  establishes a Mission in this mode only under a separately specified
+  verified join ({{I-D.draft-mcguinness-mission-aauth}}).
 
 The mode each enforcement scope uses is part of its Enforcement
 Scope Statement ({{runtime-conformance}}). In either mode, the
@@ -912,8 +915,8 @@ credential-expiry check enforces the Mission's expiry transitively
 {{I-D.draft-mcguinness-mission-runtime-oauth}}). The Mission reference
 and its state source do not themselves surface `expires_at`; where a
 Mission state source does expose it (or reports the Mission
-`expired`), the PDP MUST refuse on it independent of the credential's
-own expiry.
+`terminated` with reason `expired`), the PDP MUST refuse on it
+independent of the credential's own expiry.
 
 The PDP sets the permit's validity window from these inputs. That
 the action actually executes within that window is the executing
@@ -3750,7 +3753,7 @@ A permit decision on the 423.50 USD journal entry of
 Mission, the authorizing `mission_resource_access` entry and its
 `max_amount` constraint, and the `parameter_digest` of
 {{parameter-digest-example}}, correlated by `evaluation_id`
-`dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ`. The companion's own worked example
+`dec_8K2nP4qV9rL3tY6sB1zN0eF7jB`. The companion's own worked example
 shows the concrete record
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
@@ -3780,6 +3783,15 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Mission Binding Establishment: names the AAuth realization of a
+  credential-carried Mission reference beside the OAuth one, limited
+  to the access paths where the AAuth binding supplies
+  Credential-Bound, and no longer says AAuth reference propagation
+  supplies an externally established reference: the AAuth binding
+  defines no join (#1169).
+- Time: a Mission state source reports an expired Mission as
+  `terminated` with reason `expired`; the refusal on it is unchanged
+  (#705).
 - Action Classification: the `purpose` that may raise a class is the
   approved Mission's, from its Mission state or a validated
   projection, never a value the request asserts. The semantic

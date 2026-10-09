@@ -704,7 +704,7 @@ describe("containment propagates entry-wise to existing children (@spec child-de
       childActor: { sub: "subagent-term", sub_profile: "ai_agent" },
     });
     kernel.transition(child.id, "revoke");
-    expect(kernel.get(child.id)?.state).toBe("revoked");
+    expect(kernel.get(child.id)?.termination?.reason).toBe("revoked");
 
     expect(() =>
       kernel.contain(parent.id, {
@@ -715,7 +715,7 @@ describe("containment propagates entry-wise to existing children (@spec child-de
 
     // Untouched: a terminal Mission cannot derive further, so nothing to propagate.
     const revokedChild = kernel.get(child.id) as NonNullable<ReturnType<MissionKernel["get"]>>;
-    expect(revokedChild.state).toBe("revoked");
+    expect(revokedChild.termination?.reason).toBe("revoked");
     expect(revokedChild.containment).toBeUndefined();
   });
 });

@@ -586,7 +586,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       // `lifecycle-revoke` is on.
       const revoke = await lifecycle("revoke");
       expect(revoke.status, await revoke.clone().text()).toBe(200);
-      expect(stack.kernel.get(spareId)?.state).toBe("revoked");
+      expect(stack.kernel.get(spareId)?.termination?.reason).toBe("revoked");
     },
 
     async everyDisabledCapability(): Promise<void> {
@@ -1032,6 +1032,30 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       await again.close();
     }
   });
+
+  // @spec runtime#evidence (outcome reconciliation) (#1103): `pnpm as-native`
+  // runs the declared reconciler for the target's lifetime.
+  it("starts the declared outcome reconciler at launch, a third of the PT15M window apart, and its first run raises no alert; close stops it before the claim domain closes, in co-resident and remote PDP mode", async () => {
+    for (const mode of ["co-resident", "remote"] as const) {
+      const stderr = vi.spyOn(process.stderr, "write");
+      const launched = await launchAsNative(launchOptions({ MISSION_PDP_MODE: mode }));
+      const stop = vi.spyOn(launched.stack.reconciler, "stop");
+      const closeClaims = vi.spyOn(launched.stack.pdpClaims, "close");
+      try {
+        expect(launched.stack.reconciler.started, mode).toBe(true);
+        expect(launched.stack.reconciler.intervalMs).toBe(5 * 60_000);
+        expect(launched.summary).toContain("  reconciliation     every 300 s (window 900 s), operator alerts on stderr");
+      } finally {
+        await launched.close();
+        stderr.mockRestore();
+      }
+      expect(launched.stack.reconciler.started, mode).toBe(false);
+      expect(stop).toHaveBeenCalledTimes(1);
+      expect(stop.mock.invocationCallOrder[0]).toBeLessThan(closeClaims.mock.invocationCallOrder[0] as number);
+      // close() awaited the launch-time run, which completed every step.
+      expect(stderr.mock.calls.map(([chunk]) => String(chunk)).filter((line) => line.includes("operator_alert")), mode).toEqual([]);
+    }
+  });
 });
 
 /** A stand-in OpenFGA answering the two calls `Fga.connect` makes, and recording each request. */
@@ -1161,6 +1185,7 @@ describe("the as-native launcher process, the entry pnpm as-native runs, against
       expect(run.stdout()).toContain("  dev ordinary token not served");
       expect(run.stdout()).toContain(`  resource audience  ${CANONICAL_RESOURCE}  (HTTP MCP, DPoP verified on every request)`);
       expect(run.stdout()).toContain("  MAS join route     not mounted");
+      expect(run.stdout()).toContain("  reconciliation     every 300 s (window 900 s), operator alerts on stderr");
       // It connected to the configured OpenFGA under the configured key.
       expect(fga.requests.map((r) => `${r.method} ${r.path} ${r.authorization}`)).toEqual([
         "POST /stores Bearer launch-test-key",

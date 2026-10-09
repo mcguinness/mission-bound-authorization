@@ -814,7 +814,7 @@ describe("individual revocation is grant/family-scoped, never Mission-scoped (@s
 });
 
 describe("composite non-active: active:false WITH mission.state (@spec mission#composite-active)", () => {
-  it("revoked Mission + valid token: only { active, mission }, state revoked, NO top-level or mission authorization_details", async () => {
+  it("revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details", async () => {
     as.kernel.transition(flow1.missionId, "revoke");
     const res = await introspect(flow1.at, { principal: RS_PAYMENTS });
     expect(res.status).toBe(200);
@@ -823,13 +823,20 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
     expect(Object.keys(res.body).sort()).toEqual(["active", "mission"]);
     expect(res.body.active).toBe(false);
     const mission = res.body.mission as Record<string, unknown>;
-    expect(mission.state).toBe("revoked");
+    expect(mission.state).toBe("terminated");
+    // @spec mission#introspection, mission#termination: `termination` beside
+    // `state`, with its reason, instant and committing version.
+    expect(mission.termination).toEqual({
+      reason: "revoked",
+      terminated_at: expect.any(String),
+      version: mission.version,
+    });
     expect(mission.id).toBe(flow1.missionId);
     expect("authorization_details" in mission).toBe(false);
     // The Mission-bound refresh token reports the SAME composite.
     const rt = await introspect(flow1.rt, { principal: RS_PAYMENTS, hint: "refresh_token" });
     expect(Object.keys(rt.body).sort()).toEqual(["active", "mission"]);
-    expect((rt.body.mission as { state: string }).state).toBe("revoked");
+    expect(rt.body.mission).toMatchObject({ state: "terminated", termination: { reason: "revoked" } });
   });
 
   it("the inactive response is member-scoped too: a privilege-less principal sees no budget or provenance metadata", async () => {
@@ -855,18 +862,21 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
     expect("proposal_hash" in mission).toBe(false);
     expect("authority_hash" in mission).toBe(false);
     expect("approval_basis" in mission).toBe(false);
-    expect(mission.state).toBe("revoked");
-    expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "version"]);
+    expect(mission.state).toBe("terminated");
+    expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "termination", "version"]);
   });
 
-  it("Mission-expired composite: active:false with state expired", async () => {
+  it("Mission-expired composite: active:false with state terminated, termination expired", async () => {
     as.kernel.db
       .prepare("UPDATE missions SET expires_at = ? WHERE id = ?")
       .run("2020-01-01T00:00:00.000Z", flow2.missionId);
     const res = await introspect(flow2.at, { principal: RS_PAYMENTS });
     expect(Object.keys(res.body).sort()).toEqual(["active", "mission"]);
     expect(res.body.active).toBe(false);
-    expect((res.body.mission as { state: string }).state).toBe("expired");
+    expect(res.body.mission).toMatchObject({
+      state: "terminated",
+      termination: { reason: "expired", terminated_at: "2020-01-01T00:00:00.000Z" },
+    });
   });
 });
 
@@ -928,7 +938,7 @@ describe("Mission-bound refresh tokens (@spec mission#introspection)", () => {
     as.kernel.transition(flow4.missionId, "revoke");
     const res = await introspect(flow4.at, { principal: RS_PAYMENTS });
     expect(Object.keys(res.body).sort()).toEqual(["active", "mission"]);
-    expect((res.body.mission as { state: string }).state).toBe("revoked");
+    expect(res.body.mission).toMatchObject({ state: "terminated", termination: { reason: "revoked" } });
   });
 });
 
@@ -994,7 +1004,7 @@ describe("discharge_selectors in the introspection projection (@spec discharge#c
       event_id: "close-q3-introspected",
       outcome: "discharged",
       prior_version: 1,
-      current_version: 2,
+      new_version: 2,
     });
     // The discharged entry leaves the projection, and so does its selector.
     const after = await introspect(flow6.at, { principal: RS_PAYMENTS });

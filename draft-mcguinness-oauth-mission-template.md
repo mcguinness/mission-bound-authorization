@@ -216,11 +216,11 @@ This document depends normatively on the issuance profile
 profile {{I-D.draft-mcguinness-oauth-mission-consent-evidence}}, and is
 not implementable alone. It reuses, without restating, the issuance
 profile's approval event, integrity-anchor envelope, subset rule,
-Authority Set derivation, Mission record, and `active`/`revoked`/`expired`
-lifecycle; and the Consent Evidence profile's rule that a consented
-object's disclosure is committed. It uses Agent, Subject, Approver,
-Mission Issuer, Mission Intent, Authority Set, and Mission as the
-issuance profile defines them.
+Authority Set derivation, Mission record, and `active`/`terminated`
+Mission lifecycle; and the Consent Evidence profile's rule that a
+consented object's disclosure is committed. It uses Agent, Subject,
+Approver, Mission Issuer, Mission Intent, Authority Set, and Mission
+as the issuance profile defines them.
 
 The runtime enforcement profile {{I-D.draft-mcguinness-mission-runtime}}
 is a normative dependency for its action classes, which the
@@ -438,8 +438,10 @@ template's anchor are never merged.
 
 ## Template lifecycle {#template-lifecycle}
 
-A Mission Template has the issuance profile's Mission lifecycle
-({{I-D.draft-mcguinness-oauth-mission}}), interpreted for a template:
+A Mission Template has its own lifecycle, distinct from the Mission
+lifecycle of the Missions it dispatches
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
+and Gating"). A template is in one of three states:
 
 - `active`: the template dispatches, subject to its bounds and review
   cadence;
@@ -583,13 +585,11 @@ The Mission Issuer adjudicates a Dispatch in this order:
 9. **Commit the instance.** Commit an ordinary Mission whose Authority
    Set is the surviving set and whose:
 
-   - `approver` is the template's human approver, the accountable
-     principal ({{I-D.draft-mcguinness-oauth-mission}}). The Dispatcher
-     is not the approver. The instance is rooted in the
-     `approval_basis` authorization basis the issuance profile defines
-     ({{I-D.draft-mcguinness-oauth-mission}}), with `type: "template"`:
-     `consent_principal` is the template's human approver (equal to
-     `approver`); `activation` carries the template's `id` (as
+   - `approval_basis` is the authorization basis the issuance profile
+     defines ({{I-D.draft-mcguinness-oauth-mission}}), with `type:
+     "template"`: `consent_principal` is the template's human
+     approver, the accountable principal; the Dispatcher is not the
+     approver. `activation` carries the template's `id` (as
      `template_id`, the same value the Dispatch grant names
      {{grant-type}}), `template_version`, and `template_hash` (the
      `template` lineage member's fields, {{template-member}}), plus
@@ -989,9 +989,10 @@ Mission an authorized auditor can:
   `created_at` plus `instance_lifetime`, and the template's
   `expires_at` ({{dispatch}}), and match it to the recorded value, so
   the granted lifetime is exactly the three-way clamp; and
-- verify that the instance's `approver` equals the template's approver
-  at the recorded `template_version`, so the accountable principal is
-  the human who consented to that version of the template.
+- verify that the instance's `approval_basis.consent_principal` equals
+  the template's approver at the recorded `template_version`, so the
+  accountable principal is the human who consented to that version of
+  the template.
 
 Each Dispatch MUST record the Dispatch Policy `id`, `version`, and
 `digest` that instantiated the Mission, and the dispatch event identifier
@@ -1069,9 +1070,8 @@ conforming issuance-profile Mission Issuer
   authorize the Dispatcher, derive the instance Authority Set,
   double-intersect it with the derivation-policy ceiling and the
   Template Ceiling, apply the prohibited-class check, enforce the
-  bounds, and commit an ordinary Mission whose `approver` is the
-  template's human approver and whose anchors are over the instance's
-  own Intent and Authority Set;
+  bounds, and commit an ordinary Mission whose anchors are over the
+  instance's own Intent and Authority Set;
 - record every dispatched Mission's `approval_basis` with `type:
   "template"`: `consent_principal` the template's human approver,
   `activation` the template lineage and this Dispatch's
@@ -1173,6 +1173,10 @@ IANA action. Following the restraint of the sibling profiles:
 
 \[\[ To be removed from the final specification ]]
 
+- A dispatched instance's accountable principal is its
+  `approval_basis.consent_principal`. The template keeps its own
+  `active`, `revoked`, and `expired` states, distinct from the
+  `active`/`terminated` Mission lifecycle (#705).
 - Template Consent, Dispatch and Conformance: where Mission
   Derivation Limits is adopted, the Dispatch Policy states the rule
   that establishes each instance's `derivation_limit` and its

@@ -101,12 +101,12 @@ export function vendorTestCases(revokedInstances: Set<string>): {
       case: {
         id: "vt-state",
         suite: "adversarial",
-        description: "Valid token, but the Mission is no longer active (revoked).",
+        description: "Valid token, but the Mission is no longer active (terminated: revoked).",
         tool: "execute_wire_transfer",
         args: { invoice_id: "inv-acme" },
         token: () => validToken(),
         expect: "deny",
-        // The view is swapped to a revoked state for this case (see runVendorTest).
+        // The view is swapped to a terminated state for this case (see runVendorTest).
         expectReason: "mission_inactive",
         consequential: true,
       },
@@ -124,7 +124,7 @@ export interface VendorTestRow {
 
 /**
  * Run the four-axis demonstration. `deps` composes the stack; the state axis
- * uses a revoked view, the delegation axis a per-instance revocation.
+ * uses a terminated view, the delegation axis a per-instance revocation.
  */
 export async function runVendorTest(deps: HarnessDeps & { revokedInstances: Set<string> }): Promise<{
   rows: VendorTestRow[];
@@ -134,8 +134,9 @@ export async function runVendorTest(deps: HarnessDeps & { revokedInstances: Set<
   for (const { axis, case: c } of vendorTestCases(deps.revokedInstances)) {
     const withRevoke = c as EvalCase & { _revoke?: () => void };
     withRevoke._revoke?.();
-    // The state axis needs a revoked view; every other axis uses the active one.
-    const view = axis === "state" ? { ...deps.view, state: "revoked" } : deps.view;
+    // The state axis needs a terminated view (@spec mission#lifecycle: the
+    // PDP keys only on exact `active`); every other axis uses the active one.
+    const view = axis === "state" ? { ...deps.view, state: "terminated" } : deps.view;
     const res = await runCase(c, { ...deps, view });
     rows.push({ axis, tool: c.tool, denied: res.outcome === "deny", ...(res.reason ? { reason: res.reason } : {}), tokenWasValid: true });
     deps.revokedInstances.clear();

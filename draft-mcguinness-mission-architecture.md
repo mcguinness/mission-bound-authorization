@@ -595,8 +595,8 @@ Under the OAuth binding, an operator gives an agent the task
    ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 7. **Stop.** Revocation or expiry turns every gate: issuance refuses
    at once, the PDP denies within its state source's staleness bound,
-   the harness pauses bound sessions and queues, and the orchestrator
-   unwinds in-flight work
+   the harness suppresses or terminates bound sessions and queues,
+   and the orchestrator unwinds in-flight work
    ({{I-D.draft-mcguinness-mission-harness}},
    {{I-D.draft-mcguinness-mission-orchestration}}); a token no
    state-aware gate reaches runs to its own expiry
@@ -732,21 +732,29 @@ Each anchor is computed over a domain-separated, issuer-bound envelope
 with fixed canonicalization, so an auditor can reproduce each digest
 from the record alone (the OAuth binding's Mission Approval, Integrity
 Anchors, and Canonicalization Rules sections). The record is immutable
-except for its state (the Mission Record section).
+except for its state and, written once when the Mission terminates,
+its `termination` (the Mission Record section).
 
-In the OAuth binding the lifecycle states are `active`, `revoked`,
-and `expired`, and only `active` permits issuance or a new positive
-governance decision. A non-active state stops further derivation and
-refresh at once. A credential already issued ends at the earliest of an
-applicable revocation, a state-aware or runtime check that reaches it,
-or its own expiry ({{validity-model}}).
+In the OAuth binding the lifecycle states are `active` and
+`terminated`, and only `active` permits issuance or a new positive
+governance decision. A terminated Mission's `termination` gives the
+reason: `revoked` or `expired` in the OAuth binding. A non-active
+state stops further derivation and refresh at once. A credential
+already issued ends at the earliest of an applicable revocation, a
+state-aware or runtime check that reaches it, or its own expiry
+({{validity-model}}).
 
-Companions add states (`suspended`, `completed`, `superseded`,
-`cascaded`). One rule keeps these additions safe without a registry: a
-consumer treats every state other than the exact value `active`,
-including one it does not recognize, as non-active, so an unrecognized
-state fails safe (the OAuth binding's Mission Lifecycle and Gating
-section).
+Mission Status adds the reversible `suspended` state. A companion
+that defines a further way for a Mission to end registers a
+termination reason, not a state (`completed`, `superseded`,
+`parent_terminated`); the OAuth binding's Mission Lifecycle States
+and Mission Termination Reasons registries hold both. One rule keeps
+these additions safe: a consumer treats every state other than the
+exact value `active`, including one it does not recognize, as
+non-active, so an unrecognized state fails safe, and a reason it does
+not recognize still leaves the Mission terminated (the OAuth
+binding's Mission Lifecycle and Gating and Mission Termination
+sections).
 
 AAuth has its own counterparts to the OAuth commitment and lifecycle.
 Its exact-byte `s256` commits the private approved mission blob. The
@@ -762,8 +770,13 @@ ordered mission log; scopes, resource tokens, Resource and Access
 Server policy, and optionally AAuth Rich Resource Requests
 (R3, {{I-D.draft-hardt-aauth-r3}}) carry deterministic resource
 authorization. AAuth does not add the OAuth Authority Set or its two
-anchors, and its native lifecycle remains exactly `active` or
-`terminated`.
+anchors. Its native lifecycle is `active` or `terminated`, with no
+`suspended` state, and it records why a mission ended in flat
+`termination_reason` and `terminated_at` members from its own open
+reason set, which includes `administrative`; the OAuth binding nests
+a registered reason in a `termination` object. The AAuth binding
+maps the two reason sets
+({{I-D.draft-mcguinness-mission-aauth}}).
 
 ## The Authority Path {#mission-authority-path}
 
@@ -4083,9 +4096,10 @@ by a stable document absorbing a dependency.
 
 Within Lifecycle, Status is the OAuth lifecycle suite's root
 document, with Signals (the push channel) and Management (the
-operator plane) as its satellites; AAuth keeps its native two-state
-lifecycle, served by `mission-aauth-management`, with the expiry
-bound profiled by `aauth-mission-expiry`.
+operator plane) as its satellites; AAuth keeps its native lifecycle,
+with no `suspended` state and its own termination reasons, served by
+`mission-aauth-management`, with the expiry bound profiled by
+`aauth-mission-expiry`.
 
 **Architecture mappings:**
 
@@ -4123,7 +4137,7 @@ bound profiled by `aauth-mission-expiry`.
 
 | Document | Role |
 |---|---|
-| `oauth-mission-status` | The signed pull surface and lifecycle endpoint, with `suspended` and `completed`. |
+| `oauth-mission-status` | The signed pull surface and lifecycle endpoint, with the `suspended` state and the `completed` termination reason. |
 | `oauth-mission-status-list` | A signed, compressed Status List read locally per action instead of per-Mission status reads. |
 | `oauth-mission-discharge` | Per-entry discharge via `terminal_when`, an extension operation on the Status lifecycle endpoint. |
 | `oauth-mission-signals` | A signed event per lifecycle transition, push or poll. |
@@ -4191,6 +4205,13 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Approval and Lifecycle states the OAuth lifecycle as `active`,
+  Mission Status's `suspended`, and `terminated` with a reason from
+  the Mission Termination Reasons registry; the record's mutable
+  members are its state and `termination`; and the AAuth contrast
+  names AAuth's flat reason members and its lack of a `suspended`
+  state (#705).
 
 - The Approve and Record discussion names the authorized policy as an
   instance's adjudication mechanism and the human who consented to

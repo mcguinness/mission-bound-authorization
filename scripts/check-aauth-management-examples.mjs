@@ -12,7 +12,10 @@
 // The rules restate the draft's own requirements and are kept beside it:
 //   status / terminate response: mission_s256, mission_status, approved_at,
 //     observed_at, fresh_until REQUIRED; terminated_at, termination_reason,
-//     token_residual REQUIRED when terminated and absent when active.
+//     token_residual REQUIRED when terminated and absent when active;
+//     accepted_updates, when present, a non-negative integer, with
+//     latest_update_s256 (an unpadded base64url SHA-256 digest) present
+//     exactly when accepted_updates is greater than zero and never without it.
 //   token_residual: tracked, revocation_attempted, revocation_confirmed
 //     (non-negative integers) and complete (boolean) REQUIRED;
 //     residual_until a date-time when present.
@@ -20,8 +23,10 @@
 //   terminate request: action, reason, request_id REQUIRED;
 //     replacement_s256 REQUIRED when reason is superseded.
 //   delegation-tree response: mission_s256, as_of, nodes, complete REQUIRED;
-//     each node has agent and relationship; a non-root node has parent_agent;
-//     next_cursor is present exactly when complete is false.
+//     each node has agent and relationship; a sub_agent node has
+//     parent_agent; a call_chain node has no parent_agent and carries
+//     upstream_token and person_token ({iss, jti} objects) together or not
+//     at all; next_cursor is present exactly when complete is false.
 //   metadata: issuer, mission_control_endpoint and
 //     mission_control_actions_supported, which MUST contain status and
 //     terminate.
@@ -128,6 +133,17 @@ function checkStatusRepresentation(obj, err) {
   }
   const observed = instant(obj.observed_at), fresh = instant(obj.fresh_until);
   if (!Number.isNaN(observed) && !Number.isNaN(fresh) && fresh < observed) err("fresh_until precedes observed_at");
+  if ("accepted_updates" in obj && (!Number.isInteger(obj.accepted_updates) || obj.accepted_updates < 0)) {
+    err("accepted_updates is not a non-negative integer");
+  }
+  if ("latest_update_s256" in obj) {
+    if (!("accepted_updates" in obj)) err("latest_update_s256 without accepted_updates");
+    if (!S256.test(obj.latest_update_s256)) err("latest_update_s256 is not an unpadded base64url SHA-256 digest");
+  }
+  if (Number.isInteger(obj.accepted_updates)) {
+    if (obj.accepted_updates > 0 && !("latest_update_s256" in obj)) err("accepted_updates is greater than zero but latest_update_s256 is absent");
+    if (obj.accepted_updates === 0 && "latest_update_s256" in obj) err("latest_update_s256 present with zero accepted_updates");
+  }
   const conditional = ["terminated_at", "termination_reason", "token_residual"];
   if (obj.mission_status === "terminated") {
     for (const m of conditional) if (!(m in obj)) err(`missing ${m}, REQUIRED when terminated`);
@@ -172,7 +188,16 @@ const CHECKS = {
     for (const [k, n] of (o.nodes || []).entries()) {
       if (!n.agent) err(`node ${k} missing agent`);
       if (!RELATIONSHIPS.includes(n.relationship)) err(`node ${k} relationship ${n.relationship} is not defined`);
-      if (n.relationship && n.relationship !== "root" && !n.parent_agent) err(`node ${k} is non-root without parent_agent`);
+      if (n.relationship === "sub_agent" && !n.parent_agent) err(`node ${k} is sub_agent without parent_agent`);
+      if (n.relationship === "call_chain") {
+        if ("parent_agent" in n) err(`node ${k} is call_chain with parent_agent; a hop is identified by its token references`);
+        const refs = ["upstream_token", "person_token"].filter((m) => m in n);
+        if (refs.length === 1) err(`node ${k} is call_chain with only ${refs[0]}; upstream_token and person_token are returned together`);
+        for (const m of refs) {
+          const r = n[m];
+          if (typeof r !== "object" || r === null || typeof r.iss !== "string" || typeof r.jti !== "string") err(`node ${k} ${m} is not an {iss, jti} object`);
+        }
+      }
     }
   },
   "metadata": (o, err) => {

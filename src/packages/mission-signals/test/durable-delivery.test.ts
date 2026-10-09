@@ -33,12 +33,23 @@ const AUD = "https://erp.consumer.test";
 
 const T0 = Date.parse("2026-08-02T12:00:00Z");
 
+/** A revoke commit (`terminated`, reason `revoked`) unless `over` names another state. */
 function commitFixture(over: Partial<LifecycleCommit> = {}): LifecycleCommit {
+  const state = over.state ?? "terminated";
   return {
     id: "msn_durable_0000000000000001",
     issuer: ISS,
     prior_state: "active",
-    state: "revoked",
+    state,
+    ...(state === "terminated"
+      ? {
+          termination: {
+            reason: "revoked",
+            terminated_at: "2026-08-02T12:00:00Z",
+            version: over.version ?? 2,
+          },
+        }
+      : {}),
     version: 2,
     committed_at: "2026-08-02T12:00:00Z",
     expires_at: "2027-01-01T00:00:00Z",
@@ -86,14 +97,20 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     });
     try {
       const a = commitFixture({ state: "active", version: 1, event_id: "same-event" });
-      const b = { ...a, issuer: secondIssuer, state: "revoked" as const };
+      const b: LifecycleCommit = {
+        ...a,
+        issuer: secondIssuer,
+        state: "terminated",
+        termination: { reason: "revoked", terminated_at: "2026-08-02T12:00:00Z", version: 1 },
+      };
       emitter.onCommit(a);
       emitter.onCommit(b);
       await emitter.drain();
       expect(delivered).toHaveLength(2);
       expect(delivered.map((set) => decodeJwt(set).jti)).toEqual(["same-event", "same-event"]);
       expect(first.viewState(a.id)?.state).toBe("active");
-      expect(second.viewState(a.id)?.state).toBe("revoked");
+      expect(second.viewState(a.id)?.state).toBe("terminated");
+      expect(second.viewState(a.id)?.termination?.reason).toBe("revoked");
       emitter.onCommit(a);
       emitter.onCommit(b);
       await emitter.drain();
@@ -114,7 +131,8 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
       events: {
         [LIFECYCLE_CHANGE_EVENT_URI]: {
           mission: { id: missionId, issuer: "https://second-issuer.test" },
-          state: "revoked",
+          state: "terminated",
+          termination: { reason: "revoked", terminated_at: "2026-08-02T12:00:00Z", version: 2 },
           prior_state: "active",
           version: 2,
           committed_at: "2026-08-02T12:00:00Z",
@@ -168,7 +186,7 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     // byte-identical redelivery, same jti
     expect(seen[1]).toBe(seen[0]);
     expect(decodeJwt(seen[1] ?? "").jti).toBe(decodeJwt(seen[0] ?? "").jti);
-    expect(receiver.viewState(commitFixture().id)?.state).toBe("revoked");
+    expect(receiver.viewState(commitFixture().id)?.state).toBe("terminated");
     emitter.close();
   });
 
@@ -228,7 +246,7 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     expect(after.pending()).toBe(0);
     // the persisted bytes, not a re-signed sibling: identical SET, same jti
     expect(redelivered).toEqual([attempted[0]]);
-    expect(receiver.viewState(commitFixture().id)?.state).toBe("revoked");
+    expect(receiver.viewState(commitFixture().id)?.state).toBe("terminated");
     after.close();
   });
 
@@ -315,7 +333,7 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     clock += 100;
     await emitter.drain();
     expect(emitter.pending()).toBe(0);
-    expect(receiver.viewState(commitFixture().id)?.state).toBe("revoked");
+    expect(receiver.viewState(commitFixture().id)?.state).toBe("terminated");
     emitter.close();
   });
 
@@ -380,7 +398,7 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     emitter.startDispatcher(5);
     emitter.onCommit(commitFixture());
     await vi.waitFor(() => {
-      expect(receiver.viewState(commitFixture().id)?.state).toBe("revoked");
+      expect(receiver.viewState(commitFixture().id)?.state).toBe("terminated");
     });
     expect(emitter.pending()).toBe(0);
     emitter.close();
@@ -460,5 +478,109 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     expect(emitter.pending()).toBe(0);
     emitter.close();
     kernel.db.close();
+  });
+
+  it("signs a job journaled before the termination vocabulary in it, and redelivers a legacy SET already signed byte for byte (@spec mission#termination)", async () => {
+    const { privateKey, jwks } = await statusKeyPair();
+    const emitter = new MissionSignalEmitter({
+      key: privateKey,
+      kid: "as-status",
+      consumers: [{ audience: AUD }],
+    });
+    const receiver = makeReceiver(jwks);
+    const seen: string[] = [];
+    emitter.onDeliver(AUD, async (set) => {
+      seen.push(set);
+      await receiver.verifyAndApply(set);
+    });
+    const db = (emitter as unknown as { db: Database }).db;
+    const journal = (commit: Record<string, unknown>, setJwt: string | null) =>
+      db
+        .prepare(
+          "INSERT INTO signal_outbox (event_id, audience, commit_json, set_jwt) VALUES (?, ?, ?, ?)",
+        )
+        .run(JSON.stringify([ISS, commit.event_id]), AUD, JSON.stringify(commit), setJwt);
+    const legacyCommit = (id: string, event_id: string, over: Record<string, unknown>) => ({
+      id,
+      issuer: ISS,
+      prior_state: "active",
+      version: 1,
+      committed_at: "2026-08-02T12:00:00Z",
+      expires_at: "2027-01-01T00:00:00Z",
+      event_id,
+      ...over,
+    });
+
+    // A job whose SET was never signed: it is signed in the termination vocabulary.
+    journal(
+      legacyCommit("msn_legacy_superseded", "set_legacy_unsigned", {
+        state: "superseded",
+        successor: "msn_successor",
+      }),
+      null,
+    );
+    // A job whose legacy SET was already signed: its stored bytes are redelivered unchanged.
+    const signedLegacy = await new SignJWT({
+      sub_id: { format: "opaque", id: "msn_legacy_cascaded" },
+      events: {
+        [LIFECYCLE_CHANGE_EVENT_URI]: {
+          mission: { id: "msn_legacy_cascaded", issuer: ISS },
+          state: "cascaded",
+          prior_state: "active",
+          version: 1,
+          committed_at: "2026-08-02T12:00:00Z",
+          expires_at: "2027-01-01T00:00:00Z",
+          carried_to: "msn_replacement",
+        },
+      },
+    })
+      .setProtectedHeader({ alg: "ES256", kid: "as-status", typ: SET_TYP })
+      .setIssuer(ISS)
+      .setAudience(AUD)
+      .setIssuedAt()
+      .setJti("set_legacy_signed")
+      .sign(privateKey);
+    journal(
+      legacyCommit("msn_legacy_cascaded", "set_legacy_signed", {
+        state: "cascaded",
+        carried_to: "msn_replacement",
+      }),
+      signedLegacy,
+    );
+
+    await emitter.drain();
+    expect(emitter.pending()).toBe(0);
+    expect(seen).toHaveLength(2);
+    const fresh = seen.find((set) => decodeJwt(set).jti === "set_legacy_unsigned") as string;
+    const event = (decodeJwt(fresh).events as Record<string, Record<string, unknown>>)[
+      LIFECYCLE_CHANGE_EVENT_URI
+    ];
+    expect(event?.state).toBe("terminated");
+    // The facts the journaled commit retained: its version, its reference,
+    // and its commit time, which a supersession's commit is the effect of.
+    const superseded = {
+      reason: "superseded",
+      terminated_at: "2026-08-02T12:00:00Z",
+      version: 1,
+      successor: "msn_successor",
+    };
+    expect(event?.termination).toEqual(superseded);
+    expect(event).not.toHaveProperty("successor");
+    expect(seen).toContain(signedLegacy); // never re-signed
+
+    // The receiver verified the legacy bytes, then read them as terminated
+    // with the facts they retained, and keeps the bytes it read them from.
+    expect(receiver.viewState("msn_legacy_superseded")).toMatchObject({
+      state: "terminated",
+      termination: superseded,
+    });
+    expect(receiver.viewState("msn_legacy_cascaded")).toEqual({
+      state: "terminated",
+      termination: { reason: "parent_terminated", version: 1, carried_to: "msn_replacement" },
+      version: 1,
+      expires_at: "2027-01-01T00:00:00Z",
+    });
+    expect(receiver.retainedSet("msn_legacy_cascaded")).toBe(signedLegacy);
+    emitter.close();
   });
 });

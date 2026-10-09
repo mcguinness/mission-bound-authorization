@@ -8,6 +8,7 @@ import { KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
   type ApprovalContextManifestInput,
   authorityHash,
+  COMMIT_IS_EFFECT_REASONS,
   intentHash,
   proposalHash,
 } from "@mission/core";
@@ -154,7 +155,9 @@ import {
   type TemplateRef,
   TERMINAL_STATES,
   type TerminalWhenCondition,
+  type Termination,
 } from "./types.js";
+import { normalizeStoredLifecycle, observeExpiry, parentTerminatedTermination } from "./termination.js";
 
 /**
  * @spec status#as-metadata, discharge#discharge-receipt — the JWS algorithm
@@ -212,7 +215,8 @@ CREATE TABLE IF NOT EXISTS missions (
   projected_from TEXT,
   containment_json TEXT,
   discharged_json TEXT,
-  submission_evidence_json TEXT
+  submission_evidence_json TEXT,
+  termination_json TEXT
 ) STRICT;
 `;
 
@@ -238,6 +242,14 @@ function migrateMissions(db: Database): void {
   }
   if (!columns.has("carried_to")) {
     db.exec("ALTER TABLE missions ADD COLUMN carried_to TEXT");
+  }
+  // @spec mission#termination: the `termination` object, written once in
+  // the same statement that sets `state = 'terminated'` and never updated.
+  // Nullable with no default: a row that predates it is normalized on read
+  // (rowToRecord) from its legacy state and the `successor` / `carried_to`
+  // columns, which stay readable for exactly those rows.
+  if (!columns.has("termination_json")) {
+    db.exec("ALTER TABLE missions ADD COLUMN termination_json TEXT");
   }
 }
 
@@ -815,7 +827,11 @@ export class MissionKernel {
       ...(fresh.proposal_hash ? { proposal_hash: fresh.proposal_hash } : {}),
       authority_hash: fresh.authority_hash,
       subject: fresh.subject,
-      approver: fresh.approver,
+      // @spec approval-governance#approval-context-manifest (#705): the
+      // closed v1 manifest keeps its `approver` member; its value is the
+      // Approver, `approval_basis.consent_principal`, the identical value the
+      // retired record alias held, so every committed digest stands.
+      approver: fresh.approval_basis.consent_principal,
       client_id: fresh.client_id,
       created_at: fresh.created_at,
       expires_at: fresh.expires_at,
@@ -1061,7 +1077,6 @@ export class MissionKernel {
       ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
       authority_hash: authorityHashValue,
       subject: input.subject,
-      approver: input.approver,
       approval_basis: approvalBasis,
       // @spec mission#authority-sources: whose authority this approval draws
       // on, established above from trusted configuration and immutable.
@@ -1221,8 +1236,11 @@ export class MissionKernel {
           record.authority_hash,
           record.subject.iss,
           record.subject.sub,
-          record.approver.iss,
-          record.approver.sub,
+          // @spec mission#approval-basis: the NOT NULL `approver_*` columns
+          // hold the Approver, `approval_basis.consent_principal` (the
+          // identical value); they are never read back into the record.
+          record.approval_basis.consent_principal.iss,
+          record.approval_basis.consent_principal.sub,
           // @spec mission#approval-basis: fixed at creation, immutable (like
           // `parent`/`template`), so it is written only here.
           JSON.stringify(record.approval_basis),
@@ -1353,8 +1371,9 @@ export class MissionKernel {
 
   /**
    * @spec expansion#superseded-state: on the successor's first grant
-   * redemption, the successor stays active and the predecessor enters
-   * `superseded` atomically. Returns false if already superseded.
+   * redemption, the successor stays active and the predecessor is
+   * `terminated` with reason `superseded` atomically. Returns false if
+   * already terminated.
    */
   supersedeOnRedemption(successorId: string): boolean {
     return withTransaction(this.db, () => this.supersedeInCallerTx(successorId) !== undefined);
@@ -1376,8 +1395,17 @@ export class MissionKernel {
    * rolled back, and a crash before publication redelivers every one of those
    * events (the predecessor's AND each cascaded descendant's) from the outbox
    * instead of losing the descendants' committed transitions.
+   *
+   * @spec mission#termination: the predecessor's `termination` is
+   * `{reason: "superseded", terminated_at, successor, version}`, written in
+   * the same statement as the state. `terminatedAt` lets a caller that
+   * already cascaded the subtree at one instant (Child Mission Carryover)
+   * record that same instant here.
    */
-  supersedeInCallerTx(successorId: string): { predecessorId: string } | undefined {
+  supersedeInCallerTx(
+    successorId: string,
+    opts: { terminatedAt?: string } = {},
+  ): { predecessorId: string } | undefined {
     const successor = this.get(successorId);
     if (!successor?.predecessor) return undefined;
     const pred = this.get(successor.predecessor);
@@ -1386,17 +1414,26 @@ export class MissionKernel {
     // transition is never materialized here; lazy materialization stays with
     // the ordinary gates, and an effectively expired predecessor simply
     // refuses supersession.
-    if (!pred || pred.state !== "active" || Date.parse(pred.expires_at) <= this.now().getTime()) {
+    if (!pred || pred.state !== "active" || this.observe(pred).state !== "active") {
       return undefined;
     }
+    const committedAt = this.now().toISOString();
+    const termination: Termination = {
+      reason: "superseded",
+      terminated_at: opts.terminatedAt ?? committedAt,
+      successor: successorId,
+      version: pred.version + 1,
+    };
     // This raw UPDATE bypasses setState (the only funnel that skips it); the
-    // CAS on state='active' is the belt under the check above.
+    // CAS on (version, state='active') is the belt under the check above.
     const res = this.db
-      .prepare("UPDATE missions SET state = 'superseded', successor = ?, version = version + 1 WHERE id = ? AND state = 'active'")
-      .run(successorId, pred.id);
+      .prepare(
+        "UPDATE missions SET state = 'terminated', termination_json = ?, version = version + 1 WHERE id = ? AND version = ? AND state = 'active'",
+      )
+      .run(JSON.stringify(termination), pred.id, pred.version);
     if (res.changes !== 1) return undefined;
     const fresh = this.get(pred.id);
-    if (fresh) this.emitCommit(fresh, "active", successorId);
+    if (fresh) this.emitCommit(fresh, "active", false, false, committedAt);
     // @spec child-delegation#cascade — `superseded` is a TERMINAL cascade
     // trigger; the successor does NOT inherit the predecessor's children (their
     // strict-subset proof was against the predecessor's Authority Set). This
@@ -1466,18 +1503,26 @@ export class MissionKernel {
 
   /**
    * @spec child-delegation#cascade — cascade a TERMINAL parent transition to its
-   * transitive descendants: each dependent Child Mission enters the terminal
-   * `cascaded` state. Invoked from the terminal-commit path (the gate at the end
-   * of {@link setState}, which covers `transition(revoke/complete)` and
-   * `applyExpiry`) and from {@link supersedeOnRedemption} (which bypasses
+   * transitive descendants: each dependent Child Mission is `terminated` with
+   * reason `parent_terminated`. Invoked from the terminal-commit path (the gate
+   * at the end of {@link setState}, which covers `transition(revoke/complete)`
+   * and `applyExpiry`) and from {@link supersedeOnRedemption} (which bypasses
    * setState). Because each child transition flows through `setState -> emitCommit`,
-   * the Status List republisher and Mission Signals propagate the `cascaded`
-   * commit for free (`stateToBit` already maps `cascaded` -> INVALID).
+   * the Status List republisher and Mission Signals propagate the child's
+   * commit for free (`stateToBit` maps `terminated` -> INVALID).
    *
-   * Transitivity is carried by setState's own terminal gate: setting a child to
-   * the terminal `cascaded` state re-enters this method for its children, in
-   * generation order (@spec child-delegation#cascade: "in generation order").
-   * This method therefore does NOT self-recurse.
+   * @spec child-delegation#cascade, mission#termination: the child's
+   * termination carries `parent` (this immediate parent), the parent's own
+   * `terminated_at` (one instant for the whole cascade, never each
+   * generation's commit time), and `origin` / `origin_reason` naming the
+   * ancestor whose termination started it. Precedence: the child is observed
+   * first, and a child whose own `expires_at` has passed terminates with its
+   * own cause, `expired`, never `parent_terminated`.
+   *
+   * Transitivity is carried by setState's own terminal gate: terminating a
+   * child re-enters this method for its children, in generation order
+   * (@spec child-delegation#cascade: "in generation order"). This method
+   * therefore does NOT self-recurse.
    *
    * A descendant NOT in `active`/`suspended` is skipped: `setState` throws
    * {@link LifecycleConflictError} on an already-terminal source, so an
@@ -1494,10 +1539,25 @@ export class MissionKernel {
    * terminal triggers cascade here.
    */
   cascadeChildren(parentId: string): void {
-    for (const child of this.findChildren(parentId)) {
-      if (child.state === "active" || child.state === "suspended") {
-        this.setState(child, "cascaded");
-      }
+    const children = this.findChildren(parentId).filter(
+      (child) => child.state === "active" || child.state === "suspended",
+    );
+    if (children.length === 0) return;
+    const parent = this.get(parentId);
+    if (!parent) return;
+    const nowMs = this.now().getTime();
+    // The parent's recorded termination, or (a cascade recovered for a parent
+    // whose own termination is only observed) the one its observation gives.
+    const terminated = parent.state === "terminated" ? parent : this.observe(parent);
+    if (terminated.state !== "terminated") return;
+    for (const child of children) {
+      const own = observeExpiry(child, nowMs);
+      this.setState(child, "terminated", {
+        termination:
+          own.state === "terminated" && own.termination
+            ? own.termination
+            : parentTerminatedTermination(terminated),
+      });
     }
   }
 
@@ -1545,32 +1605,55 @@ export class MissionKernel {
    * explicit whole-subtree traversal owns the generation-ordered descent and no
    * terminal intermediate can hide a live descendant.
    *
-   * It is not a second emission mechanism: the state write, its `carried_to`
+   * It is not a second emission mechanism: the state write, its `termination`
    * write, its durable outbox row and its terminal tombstone all go through
    * {@link emitCommit} in the CALLER's transaction, exactly as `setState` does.
    * An ALREADY-terminal row keeps its state and gets NO second transition
    * (@spec child-delegation#carryover-cas), returning `undefined`.
+   *
+   * @spec child-delegation#cascade, child-delegation#carryover-records: the
+   * row's termination is `parent_terminated` with its immediate `parent`, the
+   * cascade's one instant and `origin` (`cascade`, the ancestor whose
+   * supersession started it), plus `carried_to` exactly when `carriedTo` names
+   * a committed replacement. Precedence: the row is observed first, and one
+   * whose own `expires_at` has passed terminates `expired`, its own cause.
    */
   carryTerminalInCallerTx(
     record: MissionRecord,
-    outcome: { carriedTo?: string } = {},
+    outcome: {
+      carriedTo?: string;
+      cascade: { terminatedAt: string; origin: string; originReason: string };
+    },
   ): MissionRecord | undefined {
     if (!this.db.inTransaction) {
       throw new Error("a carried terminal transition must run inside the completion transaction");
     }
     if (TERMINAL_STATES.has(record.state)) return undefined;
+    const own = observeExpiry(record, this.now().getTime());
+    const termination: Termination =
+      own.state === "terminated" && own.termination
+        ? { ...own.termination }
+        : {
+            reason: "parent_terminated",
+            terminated_at: outcome.cascade.terminatedAt,
+            ...(record.parent ? { parent: record.parent.id } : {}),
+            origin: outcome.cascade.origin,
+            origin_reason: outcome.cascade.originReason,
+            ...(outcome.carriedTo ? { carried_to: outcome.carriedTo } : {}),
+          };
+    termination.version = record.version + 1;
     // setState's guarded CAS, verbatim: the transition is admitted from the
     // stored row, never the caller's snapshot.
     const changed = this.db
       .prepare(
-        "UPDATE missions SET state = 'cascaded', version = version + 1, carried_to = ? WHERE id = ? AND version = ? AND state = ?",
+        "UPDATE missions SET state = 'terminated', termination_json = ?, version = version + 1 WHERE id = ? AND version = ? AND state = ?",
       )
-      .run(outcome.carriedTo ?? null, record.id, record.version, record.state);
+      .run(JSON.stringify(termination), record.id, record.version, record.state);
     if (changed.changes !== 1) {
       throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
     }
     const fresh = this.get(record.id);
-    if (fresh) this.emitCommit(fresh, record.state, undefined, false, false, outcome.carriedTo);
+    if (fresh) this.emitCommit(fresh, record.state);
     return fresh;
   }
 
@@ -1635,11 +1718,16 @@ export class MissionKernel {
    * to `suspended` re-enters this method for ITS active children. This method
    * therefore does NOT self-recurse. It is the reversible counterpart to
    * {@link cascadeChildren}, invoked only from the non-terminal `suspended` gate.
+   *
+   * @spec mission#lifecycle: a child already past its own `expires_at` is
+   * observed `terminated` (`expired`), not `active`, so it is not suspended:
+   * no write lands on an effectively expired Mission.
    */
   private projectSuspendedChildren(parentId: string): void {
+    const nowMs = this.now().getTime();
     for (const child of this.findChildren(parentId)) {
-      if (child.state === "active") {
-        this.setState(child, "suspended", "active");
+      if (child.state === "active" && observeExpiry(child, nowMs).state === "active") {
+        this.setState(child, "suspended", { projectedFrom: "active" });
       }
     }
   }
@@ -1655,8 +1743,9 @@ export class MissionKernel {
    *
    * @spec child-delegation#child-state (expiry precedence) — the expiry clock is
    * applied FIRST: a child whose `expires_at` passed during the suspension ends
-   * `expired` (a terminal commit that itself cascades) and is NOT restored to
-   * `active`. Only a still-held child is set back to its stored `projected_from`;
+   * `terminated` with reason `expired` (a terminal commit that itself cascades)
+   * and is NOT restored to `active`. Only a still-held child is set back to its
+   * stored `projected_from`;
    * setState's `to === "active"` rule then clears the marker.
    */
   private restoreProjectedChildren(parentId: string): void {
@@ -1664,7 +1753,7 @@ export class MissionKernel {
       const held = this.get(found.id);
       if (!held || held.state !== "suspended" || held.projected_from === undefined) continue;
       const priorState = held.projected_from; // narrowed to MissionState by the guard
-      // Expiry precedence: an expired-during-suspension child ends `expired`.
+      // Expiry precedence: an expired-during-suspension child ends terminated `expired`.
       const child = this.applyExpiry(held);
       if (child.state !== "suspended") continue; // expired (now terminal) -> not restored
       this.setState(child, priorState);
@@ -1692,7 +1781,7 @@ export class MissionKernel {
     const record = this.applyExpiry(existing);
     if (record.state !== "active") {
       throw new LifecycleConflictError(
-        `mission ${id} must be active to join the status list (is ${record.state})`,
+        `mission ${id} must be active to join the status list (is ${describeLifecycle(record)})`,
       );
     }
     for (let attempt = 0; attempt < STATUS_INDEX_MAX_ATTEMPTS; attempt++) {
@@ -1712,11 +1801,12 @@ export class MissionKernel {
 
   /**
    * @spec status-list#status-list — the participating set as packed entries, expiry
-   * applied. Latent-bug fix: enumerating raw rows would publish VALID for a
-   * Mission already past its `expires_at`; applyExpiry commits the `expired`
-   * transition first (and fires the commit hook), so the list reflects true
-   * state. supersedeOnRedemption transitions are likewise reflected because the
-   * rows are re-read here.
+   * applied. Enumerating raw rows would publish VALID for a Mission already
+   * past its `expires_at`; each bit maps the OBSERVED state (applyExpiry also
+   * tries to commit the `expired` transition and fire the commit hook, and a
+   * failed commit leaves the observed `terminated` bit unchanged).
+   * supersedeOnRedemption transitions are likewise reflected because the rows
+   * are re-read here.
    */
   statusListEntries(): StatusEntry[] {
     const rows = this.db
@@ -1757,21 +1847,32 @@ export class MissionKernel {
   }
 
   /**
-   * @spec status#legal-transitions — idempotent success when the resulting
-   * state equals the current state, except `resume`, which is legal only
-   * from `suspended`; anything else is a conflict.
+   * @spec status#legal-transitions, status#idempotency: idempotent success
+   * only when the resulting state AND, for `terminated`, the termination
+   * reason equal the current ones, except `resume`, which is legal only from
+   * `suspended`; anything else is a conflict. So `revoke` on a Mission
+   * terminated `revoked` is idempotent, while `revoke` on one terminated
+   * `completed` (or `expired`), and `complete` on one terminated `revoked`,
+   * are conflicts: the recorded cause never changes.
    */
   transition(id: string, op: LifecycleOperation): MissionRecord {
     // @spec control-plane#serialization — the expiry clock may materialize a
     // terminal transition here, so the legality check reads the record that
-    // materialization left behind, never the pre-expiry snapshot.
+    // materialization left behind (or, when that write fails, the observed
+    // `expired` termination), never the pre-expiry snapshot.
     const record = this.applyExpiry(this.mustGet(id));
     const rule = LEGAL_TRANSITIONS[op];
-    if (record.state === rule.to && op !== "resume") return record;
-    if (!rule.from.includes(record.state)) {
-      throw new LifecycleConflictError(`${op} is not legal from ${record.state}`);
+    if (
+      op !== "resume" &&
+      record.state === rule.to &&
+      (rule.to !== "terminated" || record.termination?.reason === rule.reason)
+    ) {
+      return record;
     }
-    return this.setState(record, rule.to);
+    if (!rule.from.includes(record.state)) {
+      throw new LifecycleConflictError(`${op} is not legal from ${describeLifecycle(record)}`);
+    }
+    return this.setState(record, rule.to, rule.reason ? { termination: { reason: rule.reason } } : {});
   }
 
   /**
@@ -1840,7 +1941,7 @@ export class MissionKernel {
   ): { record: MissionRecord; evidence: ContainmentEvidence } {
     const record = this.applyExpiry(this.mustGet(id));
     if (TERMINAL_STATES.has(record.state)) {
-      throw new LifecycleConflictError(`contain is not legal from ${record.state}`);
+      throw new LifecycleConflictError(`contain is not legal from ${describeLifecycle(record)}`);
     }
     if (!Array.isArray(input.remove) || input.remove.length === 0) {
       throw new Error("contain requires a non-empty remove list");
@@ -1940,7 +2041,7 @@ export class MissionKernel {
         .run(JSON.stringify(next), record.id);
       const committed = this.get(record.id);
       if (!committed) throw new Error(`unknown mission: ${id}`);
-      this.emitCommit(committed, committed.state, undefined, authorityChanged, true);
+      this.emitCommit(committed, committed.state, authorityChanged, true);
       return committed;
     });
     // @spec child-delegation#child-state — containment propagates entry-wise to
@@ -2140,7 +2241,7 @@ export class MissionKernel {
         ...selectors,
         outcome: recorded.outcome,
         prior_version: recorded.priorVersion,
-        current_version: recorded.currentVersion,
+        new_version: recorded.newVersion,
       };
       if (resolved && resolved.missionId !== record.id) {
         const described = this.get(resolved.missionId);
@@ -2271,7 +2372,7 @@ export class MissionKernel {
         ...selectors,
         outcome: "terminal_noop",
         prior_version: record.version,
-        current_version: record.version,
+        new_version: record.version,
         ...forwarded,
       };
       // Recorded like `already_discharged` below (@spec
@@ -2293,7 +2394,7 @@ export class MissionKernel {
         ...selectors,
         outcome: "already_discharged",
         prior_version: record.version,
-        current_version: record.version,
+        new_version: record.version,
         ...forwarded,
       };
       // Recorded even though it commits no latch: a later replay of THIS
@@ -2318,7 +2419,7 @@ export class MissionKernel {
           ...selectors,
           outcome: "discharged",
           prior_version: record.version,
-          current_version: committed.version,
+          new_version: committed.version,
           ...forwarded,
         };
         // In the SAME transaction as the latch and the version increment
@@ -2333,13 +2434,15 @@ export class MissionKernel {
    * @spec discharge#discharge-carryover, child-delegation#carryover-evidence —
    * the carried row Carryover Evidence records for this old child: its
    * replacement and the per-entry pairing. `undefined` when the record was not
-   * carried (no committed `carried_to`, or no retained map naming it), and on a
-   * deployment that never ran carryover (no carryover tables exist).
+   * carried (no committed `termination.carried_to`, or no retained map naming
+   * it), and on a deployment that never ran carryover (no carryover tables
+   * exist).
    */
   private carriedRowOf(
     record: MissionRecord,
   ): { replacementId: string; pairs: CarryoverEntryPair[] } | undefined {
-    if (!record.carried_to) return undefined;
+    const carriedTo = record.termination?.carried_to;
+    if (!carriedTo) return undefined;
     const tables = this.db
       .prepare(
         "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name IN ('carryover_replacements', 'carryover_results')",
@@ -2352,13 +2455,13 @@ export class MissionKernel {
          JOIN carryover_results r ON r.plan_id = p.plan_id
          WHERE p.issuer = ? AND p.replacement_id = ? AND p.old_child_id = ?`,
       )
-      .get(record.issuer, record.carried_to, record.id) as { map_json: string } | undefined;
+      .get(record.issuer, carriedTo, record.id) as { map_json: string } | undefined;
     if (!row) return undefined;
     const map = JSON.parse(row.map_json) as CarryoverMap;
     for (const r of map) {
       if (r.outcome !== "carried") continue;
       if (r.old_child.issuer !== record.issuer || r.old_child.mission_id !== record.id) continue;
-      if (r.replacement_id !== record.carried_to) return undefined;
+      if (r.replacement_id !== carriedTo) return undefined;
       return { replacementId: r.replacement_id, pairs: r.entry_pairs ?? [] };
     }
     return undefined;
@@ -2482,7 +2585,7 @@ export class MissionKernel {
       // Inside the unit deliberately: the signal enqueue commits with the latch
       // (@spec discharge#discharge-commit, "Atomicity"). Nothing after the
       // fan-out can fail the transaction, so the hook cannot fire on a rollback.
-      this.emitCommit(committed, committed.state, undefined, authorityChanged);
+      this.emitCommit(committed, committed.state, authorityChanged);
       return committed;
     });
     // @spec discharge#discharge-commit ("Atomicity", "Propagation") — entry-wise propagation to
@@ -2691,15 +2794,63 @@ export class MissionKernel {
     return out;
   }
 
-  /** @spec status#state-machine — expiry clock: active/suspended -> expired. */
+  /**
+   * @spec mission#lifecycle, child-delegation#child-state: the record as
+   * every decision sees it, with no write. Its own expiry first: from
+   * `expires_at`, an `active` or `suspended` record is `terminated` with
+   * reason `expired` (no `version` until committed). Otherwise the
+   * ancestor-termination projection: a child whose parent is (recorded or
+   * observed) `terminated` is itself `terminated` with reason
+   * `parent_terminated` before its own cascade commits. A record already
+   * `terminated` is returned unchanged, so neither expiry nor an ancestor
+   * ever replaces a recorded cause or its references, and a child's own
+   * expiry takes precedence over its parent's termination.
+   */
+  observe(record: MissionRecord): MissionRecord {
+    return this.observeAt(record, this.now().getTime(), 0);
+  }
+
+  private observeAt(record: MissionRecord, nowMs: number, depth: number): MissionRecord {
+    const own = observeExpiry(record, nowMs);
+    if (own.state === "terminated" || !record.parent?.id || depth > 64) return own;
+    const stored = this.get(record.parent.id);
+    if (!stored) return own;
+    const parent = this.observeAt(stored, nowMs, depth + 1);
+    if (parent.state !== "terminated") return own;
+    return { ...own, state: "terminated", termination: parentTerminatedTermination(parent) };
+  }
+
+  /** The observed record for `id` ({@link observe}), or undefined when unknown. */
+  observedRecord(id: string): MissionRecord | undefined {
+    const record = this.get(id);
+    return record ? this.observe(record) : undefined;
+  }
+
+  /**
+   * @spec mission#lifecycle, status#state-machine: the expiry clock (and the
+   * ancestor-termination projection): {@link observe} the record, and when
+   * the observation is a termination the record has not committed, try to
+   * persist it (a first observer may). Materialization is best-effort and
+   * keeps the cause the observation established, its references included.
+   * Its failure or rollback never changes the result: the caller still gets
+   * the observed termination, re-observed from the current row when that can
+   * be read.
+   */
   applyExpiry(record: MissionRecord): MissionRecord {
-    if (
-      (record.state === "active" || record.state === "suspended") &&
-      Date.parse(record.expires_at) <= this.now().getTime()
-    ) {
-      return this.setState(record, "expired");
+    const observed = this.observe(record);
+    if (observed.state !== "terminated" || record.state === "terminated" || !observed.termination) {
+      return observed;
     }
-    return record;
+    try {
+      return this.setState(record, "terminated", { termination: observed.termination });
+    } catch {
+      try {
+        const current = this.get(record.id);
+        return current ? this.observe(current) : observed;
+      } catch {
+        return observed;
+      }
+    }
   }
 
   /**
@@ -2733,9 +2884,11 @@ export class MissionKernel {
    */
   private gateActiveLineage(id: string): MissionRecord {
     const record = this.applyExpiry(this.mustGet(id));
-    if (record.state === "expired") throw new GateError("mission_expired", `mission ${id} is expired`);
+    if (record.state === "terminated" && record.termination?.reason === "expired") {
+      throw new GateError("mission_expired", `mission ${id} is terminated (expired)`);
+    }
     if (record.state !== "active") {
-      throw new GateError("mission_not_active", `mission ${id} is ${record.state}`);
+      throw new GateError("mission_not_active", `mission ${id} is ${describeLifecycle(record)}`);
     }
     // @spec child-delegation#child-state — the ancestor-active gate: action
     // under a Child Mission is refused while ANY ancestor is non-active. This is
@@ -2749,7 +2902,7 @@ export class MissionKernel {
       if (fresh.state !== "active") {
         throw new GateError(
           "mission_not_active",
-          `mission ${id} has a non-active ancestor ${fresh.id} (${fresh.state})`,
+          `mission ${id} has a non-active ancestor ${fresh.id} (${describeLifecycle(fresh)})`,
         );
       }
       ancestor = fresh.parent;
@@ -3042,6 +3195,9 @@ export class MissionKernel {
       // nothing: the source rides beside `approval_basis`.
       authority_source: fresh.authority_source,
       state: fresh.state,
+      // @spec mission#introspection, mission#termination: beside `state`,
+      // present exactly when it is `terminated`.
+      ...(fresh.termination ? { termination: fresh.termination } : {}),
       version: fresh.version,
       // @spec mission#introspection — issuer-only, like `state`: when the
       // Mission records an authority proposal, its `proposal_hash` is surfaced
@@ -3084,6 +3240,11 @@ export class MissionKernel {
     return {
       ...this.missionClaim(fresh),
       state: fresh.state,
+      // @spec mission#introspection, status#introspection-projection: the
+      // `termination` beside `state`, present exactly when it is `terminated`;
+      // a carried child's `carried_to` rides inside it, never top-level
+      // (@spec child-delegation#carryover-evidence).
+      ...(fresh.termination ? { termination: fresh.termination } : {}),
       version: fresh.version,
       ...(caller.disclose.has("budget") && fresh.derivation_limit !== null
         ? { derivations_remaining: Math.max(0, fresh.derivation_limit - fresh.derivation_count) }
@@ -3121,13 +3282,6 @@ export class MissionKernel {
         : {}),
       ...(fresh.containment
         ? { containment_version: fresh.containment.containment_version }
-        : {}),
-      // @spec child-delegation#carryover-evidence — the committed replacement
-      // correlation, present exactly when a replacement committed with this
-      // child's carried cascade and absent otherwise (an excluded child's
-      // `cascaded` state carries none).
-      ...(fresh.state === "cascaded" && fresh.carried_to
-        ? { carried_to: fresh.carried_to }
         : {}),
       ...(caller.disclose.has("status_list") ? this.statusListRef(fresh) : {}),
     };
@@ -3213,17 +3367,19 @@ export class MissionKernel {
         // Status response.
         authority_hash: record.authority_hash,
         state: record.state,
+        // @spec status#mission-status-response: CONDITIONAL `termination`,
+        // present exactly when `state` is `terminated`: its `reason`,
+        // `terminated_at`, the members its reason defines (`successor`;
+        // `parent`, and `carried_to` exactly when a Carryover replacement
+        // committed) and `version`, the committing transition's state version,
+        // absent only while an `expired` or `parent_terminated` termination is
+        // observed but not yet committed.
+        ...(record.termination ? { termination: record.termination } : {}),
         version: record.version,
         expires_at: record.expires_at,
         fresh_until: new Date((nowS + freshness) * 1000).toISOString(),
         ...(record.containment
           ? { containment_version: record.containment.containment_version }
-          : {}),
-        // @spec status#mission-status-response — CONDITIONAL `carried_to`: the
-        // committed replacement identifier when reporting an old child's
-        // `cascaded` state, omitted when no replacement was committed.
-        ...(record.state === "cascaded" && record.carried_to
-          ? { carried_to: record.carried_to }
           : {}),
         ...this.statusListRef(record),
       },
@@ -3307,7 +3463,7 @@ export class MissionKernel {
       forwarded_from: _forwardedFrom,
       outcome: _outcome,
       prior_version: _prior,
-      current_version: _current,
+      new_version: _new,
       ...echo
     } = opts.result;
     return {
@@ -3336,21 +3492,53 @@ export class MissionKernel {
       .sign(this.opts.statusKey);
   }
 
-  private setState(record: MissionRecord, to: MissionState, projectedFrom?: MissionState): MissionRecord {
+  private setState(
+    record: MissionRecord,
+    to: MissionState,
+    opts: { projectedFrom?: MissionState; termination?: Termination } = {},
+  ): MissionRecord {
+    const { projectedFrom } = opts;
     // @spec control-plane#serialization — state/version and descendant
     // projection commit together, and the CAS on (version, state) admits the
     // transition from the stored row rather than the caller's snapshot.
     // emitCommit queues publication until the OUTERMOST transaction commits.
     return withTransaction(this.db, () => {
       if (TERMINAL_STATES.has(record.state)) {
-        throw new LifecycleConflictError(`mission ${record.id} is terminal (${record.state})`);
+        throw new LifecycleConflictError(`mission ${record.id} is ${describeLifecycle(record)}`);
       }
-      // @spec child-delegation#child-state — the `projected_from` marker records a
-      // child's pre-suspension state while it is held under a suspended parent. It
-      // is SET when a suspend projection passes `projectedFrom` (always the held-from
-      // `active`), and CLEARED (`NULL`) whenever a Mission returns to `active` (a
-      // resume or a restore), so it is present only for the duration of the hold.
-      if (projectedFrom !== undefined || to === "active") {
+      const committedAt = this.now().toISOString();
+      if (to === "terminated") {
+        if (!opts.termination) throw new Error(`a transition of ${record.id} to terminated needs its termination`);
+        // @spec mission#termination: written once, in the SAME statement
+        // that sets the state, and never updated afterwards. `version` is the
+        // committing transition's state version (the CAS pins the source
+        // version, so it is that plus one); `terminated_at` is the cause's
+        // own instant when it has one (`expires_at`, the parent's
+        // `terminated_at`), else this commit's, but only for a reason whose
+        // commit IS its effect. A `parent_terminated` termination under a
+        // parent recorded without `terminated_at` keeps it unknown: the
+        // materialization time is this commit's `committed_at`, never the
+        // termination's effective instant (#705 review P2).
+        const effectiveAt =
+          opts.termination.terminated_at ??
+          (COMMIT_IS_EFFECT_REASONS.has(opts.termination.reason) ? committedAt : undefined);
+        const termination: Termination = {
+          ...opts.termination,
+          ...(effectiveAt !== undefined ? { terminated_at: effectiveAt } : {}),
+          version: record.version + 1,
+        };
+        const changed = this.db
+          .prepare(
+            "UPDATE missions SET state = 'terminated', termination_json = ?, version = version + 1 WHERE id = ? AND version = ? AND state = ?",
+          )
+          .run(JSON.stringify(termination), record.id, record.version, record.state);
+        if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
+      } else if (projectedFrom !== undefined || to === "active") {
+        // @spec child-delegation#child-state: the `projected_from` marker records a
+        // child's pre-suspension state while it is held under a suspended parent. It
+        // is SET when a suspend projection passes `projectedFrom` (always the held-from
+        // `active`), and CLEARED (`NULL`) whenever a Mission returns to `active` (a
+        // resume or a restore), so it is present only for the duration of the hold.
         const changed = this.db
           .prepare("UPDATE missions SET state = ?, version = version + 1, projected_from = ? WHERE id = ? AND version = ? AND state = ?")
           .run(to, projectedFrom ?? null, record.id, record.version, record.state);
@@ -3364,12 +3552,12 @@ export class MissionKernel {
       // Commit from the persisted row, not the in-memory spread: transition()
       // discards applyExpiry()'s return, so the spread `version` can be off by one.
       const fresh = this.get(record.id);
-      if (fresh) this.emitCommit(fresh, record.state);
+      if (fresh) this.emitCommit(fresh, record.state, false, false, committedAt);
       // @spec child-delegation#cascade — a terminal transition cascades to
       // dependent Child Missions. Gating here (inside the transaction) covers every
       // terminal funnel that flows through setState: transition(revoke/complete)
-      // and applyExpiry(-> expired). It also carries cascade transitivity: setting
-      // a child to `cascaded` re-enters this gate for the grandchildren.
+      // and applyExpiry(-> expired). It also carries cascade transitivity:
+      // terminating a child re-enters this gate for the grandchildren.
       if (TERMINAL_STATES.has(to)) {
         this.cascadeChildren(record.id);
       } else if (to === "suspended") {
@@ -3487,21 +3675,28 @@ export class MissionKernel {
    * proving the effective set strictly narrowed. Rides the wire
    * absent-means-false, mirroring `containment_version`'s absent-means-none
    * convention.
+   *
+   * @spec mission#termination, signals#lifecycle-event: a terminal commit
+   * carries the `termination` it wrote (read from the persisted row, so its
+   * `version` is this commit's `version`), and with it every reference the
+   * termination holds (`successor`, `parent`, `carried_to`); a commit carries
+   * no top-level reference member. `committedAt` is the instant the caller
+   * already stamped on the termination, so the two never drift.
    */
   private emitCommit(
     record: MissionRecord,
     prior?: MissionState,
-    successor?: string,
     authorityChanged = false,
     containmentAdvanced = false,
-    carriedTo?: string,
+    committedAt?: string,
   ): void {
     const event: LifecycleCommit = {
       id: record.id,
       issuer: record.issuer,
       state: record.state,
+      ...(record.state === "terminated" && record.termination ? { termination: record.termination } : {}),
       version: record.version,
-      committed_at: this.now().toISOString(),
+      committed_at: committedAt ?? this.now().toISOString(),
       expires_at: record.expires_at,
       // @spec control-plane#fanout — creation facts on the PAYLOAD, so a
       // subscriber acting on the activating commit never re-reads live state
@@ -3509,13 +3704,6 @@ export class MissionKernel {
       created_at: record.created_at,
       client_id: record.client_id,
       ...(prior ? { prior_state: prior } : {}),
-      ...(successor ? { successor } : {}),
-      // @spec child-delegation#carryover-evidence, status#mission-status-response,
-      // signals#lifecycle-event — the committed replacement identifier rides the
-      // old child's carried cascade. Supplied ONLY by
-      // {@link carryTerminalInCallerTx}, and only when a replacement committed in
-      // the same transaction: an excluded child's cascade carries nothing.
-      ...(carriedTo ? { carried_to: carriedTo } : {}),
       ...(authorityChanged ? { authority_changed: true } : {}),
       // @spec signals#discharge-compatibility — provenance, set ONLY by the
       // one funnel that advances containment_version (`contain`); the Signals
@@ -3531,6 +3719,7 @@ export class MissionKernel {
         issuer: record.issuer,
         missionId: record.id,
         terminalState: record.state,
+        ...(record.termination ? { terminationReason: record.termination.reason } : {}),
         finalVersion: record.version,
         transitionAt: persisted.committed_at,
         commitEventId: persisted.event_id,
@@ -3545,11 +3734,41 @@ export class MissionKernel {
   }
 }
 
+/** A record's lifecycle for a message: its state, with the reason when terminated. */
+function describeLifecycle(record: Pick<MissionRecord, "state" | "termination">): string {
+  return record.state === "terminated" ? `terminated (${record.termination?.reason ?? "unknown"})` : record.state;
+}
+
+/**
+ * Hydrate a stored row. @spec mission#lifecycle, mission#termination: the
+ * lifecycle is normalized ON READ, fail closed, and never rewritten in place
+ * ({@link normalizeStoredLifecycle}): a legacy terminal state reads as
+ * `terminated` with that reason, folding the legacy `successor` /
+ * `carried_to` columns (and, for `cascaded`, the lineage `parent.id`) into
+ * the termination, and inventing no member the row never retained; an
+ * unrecognized state reads `terminated` with that value as its reason; a
+ * malformed `termination_json` reads `terminated` with reason `unknown`.
+ * Persisted truth only: no clock is applied here ({@link MissionKernel.observe}).
+ * The `approver_*` columns are never read: the Approver is
+ * `approval_basis.consent_principal`.
+ */
 function rowToRecord(row: Record<string, unknown>): MissionRecord {
+  const lifecycle = normalizeStoredLifecycle({
+    state: row.state,
+    terminationJson: row.termination_json,
+    successor: row.successor,
+    carriedTo: row.carried_to,
+    parentId: row.parent_id,
+    // A terminated row admits no further transition, so its version is the
+    // committing transition's; `expires_at` is an `expired` row's instant.
+    version: row.version,
+    expiresAt: row.expires_at,
+  });
   return {
     id: row.id as string,
     issuer: row.issuer as string,
-    state: row.state as MissionState,
+    state: lifecycle.state,
+    ...(lifecycle.termination ? { termination: lifecycle.termination } : {}),
     intent: JSON.parse(row.intent_json as string) as MissionIntent,
     ...(row.proposed_authority_json
       ? { proposed_authority: JSON.parse(row.proposed_authority_json as string) as AuthorityEntry[] }
@@ -3566,7 +3785,6 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
       : {}),
     authority_hash: row.authority_hash as string,
     subject: { iss: row.subject_iss as string, sub: row.subject_sub as string },
-    approver: { iss: row.approver_iss as string, sub: row.approver_sub as string },
     approval_basis: JSON.parse(row.approval_basis_json as string) as ApprovalBasis,
     // @spec mission#mission-record, mission#lifecycle — fail closed on
     // hydration: a stored row carrying an unrecognized `authority_source.type`
@@ -3587,12 +3805,12 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     status_list_idx: (row.status_list_idx as number | null) ?? null,
     ...(row.predecessor ? { predecessor: row.predecessor as string } : {}),
     ...(row.related_to ? { related_to: row.related_to as string } : {}),
-    ...(row.carried_to ? { carried_to: row.carried_to as string } : {}),
     ...(row.parent_json ? { parent: JSON.parse(row.parent_json as string) as ParentRef } : {}),
     ...(row.template_json
       ? { template: JSON.parse(row.template_json as string) as TemplateRef }
       : {}),
-    ...(row.projected_from ? { projected_from: row.projected_from as MissionState } : {}),
+    // Only the held-from `active` is ever recorded; anything else is dropped.
+    ...(row.projected_from === "active" ? { projected_from: "active" as const } : {}),
     // Absent means no containment was ever applied; written only by contain().
     ...(row.containment_json
       ? { containment: JSON.parse(row.containment_json as string) as MissionContainment }

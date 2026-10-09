@@ -1425,7 +1425,7 @@ that conflicts with the PEP's recorded binding:
 {
   "decision": false,
   "context": {
-    "evaluation_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
+    "evaluation_id": "dec_sKvVoQNDRBaEO9rQ9V8Mqd6yzt0j",
     "reason": "mission_reference_conflict"
   }
 }
@@ -1909,11 +1909,13 @@ reference:
   `denied` with the code in the status response.
 - **Supersession atomicity.** In one atomic operation on the MAS's
   records, the successor activates with its `predecessor` member set,
-  and the predecessor transitions to `superseded` with its `successor`
-  member set. The `successor` and `related_to` members carry that
+  and the predecessor transitions to `terminated` with reason
+  `superseded`, its `termination.successor` naming the successor. The
+  `termination.successor` and `related_to` members carry that
   profile's semantics and surface through the MAS's Mission Status
-  responses. The `superseded` state enters the state space the MAS
-  reports ({{lifecycle-and-state}}).
+  responses, `termination.successor` inside `mission.termination`. The
+  `superseded` reason enters the termination reasons the MAS reports
+  ({{lifecycle-and-state}}).
 - **Denial reasons.** That profile's Mission Denial Reasons registry
   applies, including this document's `subject_mismatch`
   ({{native-binding}}); the code rides in `mission_denial_reason` per
@@ -1957,8 +1959,9 @@ reference:
 - **Cascade.** Cascade applies with one simplification: the MAS owns
   its state store, so cascade transitions are native lifecycle
   transitions on its own records. The MAS implements that profile's
-  `immediate` mode, and the `cascaded` state surfaces through Mission
-  Status ({{lifecycle-and-state}}).
+  `immediate` mode, and a cascade-terminated child surfaces through
+  Mission Status as `terminated` with reason `parent_terminated` in
+  `mission.termination` ({{lifecycle-and-state}}).
 - **Denial reasons.** That profile's closed denial-reason set applies;
   the code rides in `mission_denial_reason` per {{native-carriage}}.
   The `parent_mismatch` reason has no analog on this surface: with no
@@ -2354,7 +2357,8 @@ following obligations:
   separation-of-duty rule is evaluated, or validating an assertion
   requires authority standing outside the Mission record. The Mission
   record still carries
-  exactly one accountable `approver`, the only principal any
+  exactly one accountable principal,
+  `approval_basis.consent_principal`, the only principal any
   projection or enforcement consumes. Direct self-approval by one
   authenticated human remains the degenerate case, which the Mission
   record represents completely.
@@ -3232,9 +3236,10 @@ shows the decision.
 An authorized party revokes the Mission at the Mission Lifecycle
 endpoint ({{lifecycle-and-state}}). The agent's token remains valid
 OAuth ({{limitations}}). Once the PDP's state check observes the
-revocation, within the published staleness bound, it reports
-`revoked`, and the PDP denies the agent's next consequential action
-with the AuthZEN profile's `mission_inactive` reason
+revocation, within the published staleness bound, it reports the
+Mission `terminated` with reason `revoked`, and the PDP denies the
+agent's next consequential action with the AuthZEN profile's
+`mission_inactive` reason
 ({{I-D.draft-mcguinness-mission-authzen}}). The following example
 shows the denial:
 
@@ -3251,6 +3256,13 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission lifecycle (#705). A superseded predecessor is `terminated`
+  with reason `superseded` and names its successor in
+  `termination.successor`, and a cascade-terminated child reports
+  reason `parent_terminated`; both surface in the Mission Status
+  response's `mission.termination`. The record's accountable
+  principal is `approval_basis.consent_principal`.
 
 - Mission Approval and the Substrate Statement name the OAuth
   binding's approval steps by content instead of by number, adding

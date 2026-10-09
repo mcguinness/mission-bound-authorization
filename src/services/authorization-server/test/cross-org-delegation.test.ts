@@ -335,7 +335,7 @@ describe("negative matrix (@spec cross-org-delegation#conformance)", () => {
   it("refuses a revoked Mission", async () => {
     const { chain, creds } = await buildChain();
     await expect(
-      verifyCrossOrgChain({ federation: fed, presentation: present(chain, creds), nowS, stateSource: () => ({ state: "revoked", observedAtS: nowS }) }),
+      verifyCrossOrgChain({ federation: fed, presentation: present(chain, creds), nowS, stateSource: () => ({ state: "terminated", observedAtS: nowS }) }),
     ).rejects.toThrow(/not active/);
   });
 });

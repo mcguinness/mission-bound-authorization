@@ -112,12 +112,14 @@ describe("Actor context: a malformed act chain entry is refused (@spec runtime#i
 });
 
 describe("Time input: a Mission state source reporting the Mission expired refuses (@spec runtime#input-time)", () => {
-  it("a Mission state of expired refuses the action; evaluate() has no token-exp input to depend on in the first place", async () => {
+  it("a Mission state of terminated (reason expired) refuses the action; evaluate() has no token-exp input to depend on in the first place", async () => {
     // EvaluationRequest carries no token-expiry field at all (see evaluate.ts's
     // context type), so this outcome cannot be reached through a token exp
     // check; it is the Mission active-state gate (step 2) firing on the
-    // deployment's own state-source report, independent by construction.
-    const dec = await evaluate(req(), optsWith({ checkWithContext: async () => true } as unknown as Fga, view({ state: "expired" })));
+    // deployment's own state-source report, independent by construction. An
+    // expired Mission is reported `terminated` with reason `expired`; the
+    // view carries the state only, and the gate keys on exactly `active`.
+    const dec = await evaluate(req(), optsWith({ checkWithContext: async () => true } as unknown as Fga, view({ state: "terminated" })));
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("mission_inactive");
   });

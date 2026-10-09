@@ -13,8 +13,8 @@ child fanout admission with insertion, and expansion deferral retirement with
 successor activation, predecessor supersession and durable publication work.
 Each of those writes is admitted from the stored row, not from the caller's
 snapshot: a lifecycle transition compares and sets on `(version, state)`, and
-a transition whose expiry clock materialized `expired` first is refused rather
-than overwritten.
+a transition whose expiry clock materialized the expiry (`terminated`, reason
+`expired`) first is refused rather than overwritten.
 
 Every committed transition writes one immutable event row on the kernel handle
 in the same transaction as the state write, with its event identity assigned

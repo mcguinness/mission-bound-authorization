@@ -166,7 +166,7 @@ describe("child mission creation (@spec child-delegation#child-creation, #parent
     commits.length = 0;
     expect(() => withTransaction(kernel.db, () => {
       kernel.transition(parent.id, "revoke");
-      expect(kernel.get(child.id)?.state).toBe("cascaded");
+      expect(kernel.get(child.id)?.termination?.reason).toBe("parent_terminated");
       expect(commits).toEqual([]);
       throw new Error("outer cascade fault");
     })).toThrow("outer cascade fault");
@@ -174,7 +174,10 @@ describe("child mission creation (@spec child-delegation#child-creation, #parent
     expect(kernel.get(child.id)).toEqual(child);
     expect(commits).toEqual([]);
     kernel.transition(parent.id, "revoke");
-    expect(commits.map(c => [c.id, c.state])).toEqual([[parent.id, "revoked"], [child.id, "cascaded"]]);
+    expect(commits.map(c => [c.id, c.state, c.termination?.reason])).toEqual([
+      [parent.id, "terminated", "revoked"],
+      [child.id, "terminated", "parent_terminated"],
+    ]);
   });
   it("creates an active child scoped to a subset, with parent lineage and a fresh actor", () => {
     const parent = approveParent();
@@ -250,15 +253,29 @@ describe("child mission creation (@spec child-delegation#child-creation, #parent
 });
 
 describe("cascade revocation (@spec child-delegation#cascade)", () => {
-  it("revoke -> child cascaded -> derivation denied, and the commit hook observed it", () => {
+  it("revoke -> child terminated parent_terminated -> derivation denied, and the commit hook observed it", () => {
     const parent = approveParent();
     const { child } = createChild(parent.id, ["payments:invoice.read"]);
     const before = commits.length;
 
-    kernel.transition(parent.id, "revoke");
+    const revoked = kernel.transition(parent.id, "revoke");
 
-    // The child row is terminal `cascaded` (distinct from revoked/expired).
-    expect(kernel.get(child.id)?.state).toBe("cascaded");
+    // @spec child-delegation#cascade, mission#termination: the child row is
+    // `terminated` with reason `parent_terminated` (distinct from its own
+    // revocation or expiry), naming its immediate parent and carrying the
+    // parent's own `terminated_at` (one instant for the cascade), with the
+    // origin of the cascade as provenance and its own committing version.
+    expect(kernel.get(child.id)).toMatchObject({
+      state: "terminated",
+      termination: {
+        reason: "parent_terminated",
+        parent: parent.id,
+        terminated_at: revoked.termination?.terminated_at,
+        origin: parent.id,
+        origin_reason: "revoked",
+        version: 2,
+      },
+    });
     // Derivation under the cascaded child is refused.
     expect(() => kernel.gateDerivation(child.id)).toThrow(GateError);
     try {
@@ -272,10 +289,12 @@ describe("cascade revocation (@spec child-delegation#cascade)", () => {
     // what makes the Status List republisher and Mission Signals propagate.
     const childCommit = commits
       .slice(before)
-      .find((c) => c.id === child.id && c.state === "cascaded");
+      .find((c) => c.id === child.id && c.termination?.reason === "parent_terminated");
     expect(childCommit).toBeDefined();
+    expect(childCommit?.state).toBe("terminated");
     expect(childCommit?.prior_state).toBe("active");
     expect(childCommit?.version).toBe(2);
+    expect(childCommit?.termination?.version).toBe(childCommit?.version);
   });
 
   it("cascade is transitive: a grandchild also cascades (in generation order)", () => {
@@ -291,9 +310,21 @@ describe("cascade revocation (@spec child-delegation#cascade)", () => {
     });
     expect(grandchild.parent?.depth).toBe(2);
 
-    kernel.transition(parent.id, "revoke");
-    expect(kernel.get(child.id)?.state).toBe("cascaded");
-    expect(kernel.get(grandchild.id)?.state).toBe("cascaded");
+    const revoked = kernel.transition(parent.id, "revoke");
+    expect(kernel.get(child.id)?.termination?.reason).toBe("parent_terminated");
+    // The grandchild names its IMMEDIATE parent (the child), reports the one
+    // instant the cascade started at, and keeps the originating ancestor and
+    // its reason as provenance.
+    expect(kernel.get(grandchild.id)).toMatchObject({
+      state: "terminated",
+      termination: {
+        reason: "parent_terminated",
+        parent: child.id,
+        terminated_at: revoked.termination?.terminated_at,
+        origin: parent.id,
+        origin_reason: "revoked",
+      },
+    });
   });
 
   it("an already-terminal grandchild does not abort the cascade", () => {
@@ -309,14 +340,15 @@ describe("cascade revocation (@spec child-delegation#cascade)", () => {
     });
     // Terminate the grandchild directly first.
     kernel.transition(grandchild.id, "revoke");
-    expect(kernel.get(grandchild.id)?.state).toBe("revoked");
+    expect(kernel.get(grandchild.id)?.termination?.reason).toBe("revoked");
 
     // Revoking the parent must still cascade the child despite the terminal
     // grandchild (setState would throw on an already-terminal source; the skip
     // guard prevents that from aborting the whole cascade).
     kernel.transition(parent.id, "revoke");
-    expect(kernel.get(child.id)?.state).toBe("cascaded");
-    expect(kernel.get(grandchild.id)?.state).toBe("revoked"); // unchanged, skipped
+    expect(kernel.get(child.id)?.termination?.reason).toBe("parent_terminated");
+    // unchanged, skipped: the recorded cause is never replaced
+    expect(kernel.get(grandchild.id)?.termination?.reason).toBe("revoked");
   });
 });
 
@@ -528,7 +560,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
     // the termination so the re-create below can only pass because the bucket
     // dropped to 4 (not because the cap silently failed to enforce).
     kernel.transition(kids[0]!.id, "revoke");
-    expect(kernel.get(kids[0]!.id)?.state).toBe("revoked");
+    expect(kernel.get(kids[0]!.id)?.termination?.reason).toBe("revoked");
     const { child, evidence } = createChild(parent.id, ["payments:invoice.read"], {
       childActor: { sub: "subagent-7", sub_profile: "ai_agent" },
     });
@@ -610,7 +642,6 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       intent_hash: "sha-256:d-intent",
       authority_hash: "sha-256:d-authority",
       subject: { iss: ISS, sub: "alice" },
-      approver: { iss: ISS, sub: "bob" },
       approval_basis: {
         type: "direct",
         consent_principal: { iss: ISS, sub: "bob" },
@@ -836,8 +867,9 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
       .activation_event_id;
     expect(persisted?.approval_event_id).toBe(activationEventId);
     expect(persisted?.approval_event_id).not.toBe(parent.approval_event_id);
-    // approver IS approval_basis.consent_principal (D48/O-38 convergence).
-    expect(persisted?.approver).toEqual(persisted?.approval_basis.consent_principal);
+    // The Approver IS approval_basis.consent_principal (D48/O-38
+    // convergence); the record carries no separate `approver` alias (#705).
+    expect(persisted).not.toHaveProperty("approver");
     expect(persisted?.approval_basis.activation_actor).not.toEqual(
       persisted?.approval_basis.consent_principal,
     );
