@@ -113,12 +113,14 @@ export const TERMINATION_REASONS: ReadonlySet<string> = new Set<TerminationReaso
  * reported. Written once, atomically with the transition to `terminated`,
  * and never changed.
  *
- * `terminated_at` and `version` are set on every termination this kernel
- * commits. They are optional here only for a termination read from a record
- * committed before this vocabulary (which exposes only the facts it
- * retained, never an invented member) and for an `expired` or
- * `parent_terminated` termination observed before it is committed (no
- * `version` yet). `successor` is required for `superseded`, `parent` for
+ * `version` is set on every termination this kernel commits, and
+ * `terminated_at` on every one whose effective instant is known. They are
+ * optional here for a termination read from a record committed before this
+ * vocabulary (which exposes only the facts it retained, never an invented
+ * member), for a `parent_terminated` termination under such a parent (its
+ * instant stays unknown; the commit's own time is its `committed_at`), and
+ * for an `expired` or `parent_terminated` termination observed before it is
+ * committed (no `version` yet). `successor` is required for `superseded`, `parent` for
  * `parent_terminated`; `origin` and `origin_reason` are provenance only, and
  * `carried_to` is present exactly when Child Mission Carryover committed a
  * replacement.

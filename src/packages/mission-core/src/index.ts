@@ -72,6 +72,8 @@ export {
   withoutCapabilitySources,
 } from "./authority-subset.js";
 export {
+  COMMIT_IS_EFFECT_REASONS,
+  type LegacyRetainedFacts,
   type MissionBinding,
   type MissionStatusLease,
   type MissionTermination,

@@ -8,6 +8,7 @@ import { KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
   type ApprovalContextManifestInput,
   authorityHash,
+  COMMIT_IS_EFFECT_REASONS,
   intentHash,
   proposalHash,
 } from "@mission/core";
@@ -1555,7 +1556,7 @@ export class MissionKernel {
         termination:
           own.state === "terminated" && own.termination
             ? own.termination
-            : parentTerminatedTermination(terminated, new Date(nowMs).toISOString()),
+            : parentTerminatedTermination(terminated),
       });
     }
   }
@@ -3513,10 +3514,17 @@ export class MissionKernel {
         // committing transition's state version (the CAS pins the source
         // version, so it is that plus one); `terminated_at` is the cause's
         // own instant when it has one (`expires_at`, the parent's
-        // `terminated_at`), else this commit's.
+        // `terminated_at`), else this commit's, but only for a reason whose
+        // commit IS its effect. A `parent_terminated` termination under a
+        // parent recorded without `terminated_at` keeps it unknown: the
+        // materialization time is this commit's `committed_at`, never the
+        // termination's effective instant (#705 review P2).
+        const effectiveAt =
+          opts.termination.terminated_at ??
+          (COMMIT_IS_EFFECT_REASONS.has(opts.termination.reason) ? committedAt : undefined);
         const termination: Termination = {
           ...opts.termination,
-          terminated_at: opts.termination.terminated_at ?? committedAt,
+          ...(effectiveAt !== undefined ? { terminated_at: effectiveAt } : {}),
           version: record.version + 1,
         };
         const changed = this.db
@@ -3751,6 +3759,10 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     successor: row.successor,
     carriedTo: row.carried_to,
     parentId: row.parent_id,
+    // A terminated row admits no further transition, so its version is the
+    // committing transition's; `expires_at` is an `expired` row's instant.
+    version: row.version,
+    expiresAt: row.expires_at,
   });
   return {
     id: row.id as string,

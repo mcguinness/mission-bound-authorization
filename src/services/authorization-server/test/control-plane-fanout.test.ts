@@ -538,11 +538,17 @@ describe("durable lifecycle fan-out", () => {
       // termination vocabulary: their bytes are copied as written and tagged
       // with the legacy payload version, and a subscriber receives them
       // normalized in memory (`superseded` reads as `terminated` with that
-      // reason), never a legacy state value.
+      // reason and the facts the commit retained: its version, and its commit
+      // time, which a supersession's commit is the effect of), never a legacy
+      // state value.
       expect(reopened.commits[1]).toMatchObject({
         state: "terminated",
-        termination: { reason: "superseded" },
         prior_state: "active",
+      });
+      expect(reopened.commits[1]?.termination).toEqual({
+        reason: "superseded",
+        terminated_at: T0,
+        version: 2,
       });
       expect(
         reopened.kernel.db

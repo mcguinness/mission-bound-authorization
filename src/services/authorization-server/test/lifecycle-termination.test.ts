@@ -234,25 +234,34 @@ describe("legacy rows read fail closed and normalized (#705 witness 3)", () => {
     const superseded = approve();
     const parent = approve();
     const cascaded = childOf(parent.id);
-    raw(revoked.id, "state = 'revoked'");
-    raw(expired.id, "state = 'expired'");
-    raw(completed.id, "state = 'completed'");
-    raw(superseded.id, "state = 'superseded', successor = ?", "msn_legacy_successor");
-    raw(cascaded.id, "state = 'cascaded', carried_to = ?", "msn_legacy_replacement");
+    // A legacy terminal transition bumped the state version, as a real one did.
+    raw(revoked.id, "state = 'revoked', version = 2");
+    raw(expired.id, "state = 'expired', version = 2");
+    raw(completed.id, "state = 'completed', version = 2");
+    raw(superseded.id, "state = 'superseded', successor = ?, version = 2", "msn_legacy_successor");
+    raw(cascaded.id, "state = 'cascaded', carried_to = ?, version = 2", "msn_legacy_replacement");
 
-    // No retained instant or version: none is invented, `terminated_at` included.
-    expect(kernel.get(revoked.id)?.termination).toEqual({ reason: "revoked" });
-    expect(kernel.get(expired.id)?.termination).toEqual({ reason: "expired" });
-    expect(kernel.get(completed.id)?.termination).toEqual({ reason: "completed" });
+    // Retained facts only (#705 owner rulings): the committing transition's
+    // `version`, and for `expired` the record's own `expires_at`. A row
+    // retains no commit time, so no other `terminated_at` is filled in.
+    expect(kernel.get(revoked.id)?.termination).toEqual({ reason: "revoked", version: 2 });
+    expect(kernel.get(expired.id)?.termination).toEqual({
+      reason: "expired",
+      terminated_at: expired.expires_at,
+      version: 2,
+    });
+    expect(kernel.get(completed.id)?.termination).toEqual({ reason: "completed", version: 2 });
     expect(kernel.get(superseded.id)?.termination).toEqual({
       reason: "superseded",
       successor: "msn_legacy_successor",
+      version: 2,
     });
     // `cascaded` reads as `parent_terminated`, its parent from the lineage.
     expect(kernel.get(cascaded.id)?.termination).toEqual({
       reason: "parent_terminated",
       parent: parent.id,
       carried_to: "msn_legacy_replacement",
+      version: 2,
     });
     for (const record of [revoked, expired, completed, superseded, cascaded]) {
       const read = kernel.get(record.id) as MissionRecord;
@@ -262,7 +271,9 @@ describe("legacy rows read fail closed and normalized (#705 witness 3)", () => {
       // Fail closed at the gate, and every surface reports the normalized view.
       expect(() => kernel.gateActive(record.id)).toThrow(GateError);
       expect(statusMission(record.id)).toMatchObject({ state: "terminated", termination: read.termination });
-      expect(statusMission(record.id).termination).not.toHaveProperty("version");
+    }
+    for (const record of [revoked, completed, superseded, cascaded]) {
+      expect(kernel.get(record.id)?.termination).not.toHaveProperty("terminated_at");
     }
     // A read-side view: the stored rows are never rewritten.
     expect(storedState(revoked.id)).toBe("revoked");
@@ -486,6 +497,51 @@ describe("the ancestor-termination projection (#705 witness 7)", () => {
       parent: child.id,
       version: grandchild.version + 1,
     });
+  });
+});
+
+describe("a cascade under a legacy parent invents no effective time (#705 review P2)", () => {
+  const legacyRevoked = (id: string) =>
+    kernel.db.prepare("UPDATE missions SET state = 'revoked', version = 2 WHERE id = ?").run(id);
+
+  it("materializing a cascade under a legacy parent with no retained instant keeps terminated_at unknown and records its commit time on the commit", () => {
+    const parent = approve();
+    const cascaded = childOf(parent.id);
+    const readPath = childOf(parent.id);
+    legacyRevoked(parent.id);
+    commits = [];
+
+    // Observed before materialization: the parent's instant is unknown, so the child's is too.
+    const observed = kernel.observe(kernel.get(cascaded.id) as MissionRecord);
+    expect(observed).toMatchObject({ state: "terminated", termination: { reason: "parent_terminated", parent: parent.id } });
+    expect(observed.termination).not.toHaveProperty("terminated_at");
+
+    // Materialized by the cascade and, for the other child, by a read path.
+    kernel.cascadeChildren(parent.id);
+    kernel.applyExpiry(kernel.get(readPath.id) as MissionRecord);
+    for (const child of [cascaded, readPath]) {
+      const stored = kernel.get(child.id) as MissionRecord;
+      expect(stored.state).toBe("terminated");
+      expect(stored.termination).toMatchObject({
+        reason: "parent_terminated",
+        parent: parent.id,
+        origin: parent.id,
+        origin_reason: "revoked",
+        version: stored.version,
+      });
+      expect(stored.termination).not.toHaveProperty("terminated_at");
+      // The materialization time is recorded separately, on the commit.
+      const commit = commits.find((c) => c.id === child.id && c.state === "terminated");
+      expect(typeof commit?.committed_at).toBe("string");
+      expect(commit?.termination).toEqual(stored.termination);
+    }
+  });
+
+  it("a direct revoke still records its commit as the effective instant", () => {
+    const record = approve();
+    const revoked = kernel.transition(record.id, "revoke");
+    const commit = commits.find((c) => c.id === record.id && c.state === "terminated");
+    expect(revoked.termination?.terminated_at).toBe(commit?.committed_at);
   });
 });
 
