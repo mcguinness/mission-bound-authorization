@@ -39,8 +39,8 @@
     "content_sha256": "aef325527519d5b315b8b41a9a9f4c132ad90eee5c16358d18b25af1d8ba0f81"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "89ff20227732923f874f68f599ae8ae243dcffe7",
-    "content_sha256": "06c52baf9b732aa68e1d5ad8c96642f6ad093a6957df91dac69ae2dff644bad0"
+    "revision": "4469c9bf1e57b95d9285e624e4667544fc40174f",
+    "content_sha256": "76dfcb657478434b0a71bf39f72d9176c4818432a160fde30a4e335f024fa230"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -254,7 +254,8 @@
    "request-provenance.verification",
    "request-provenance.intake",
    "expansion.adjudication",
-   "expansion.interactive-completion"
+   "expansion.interactive-completion",
+   "continuation.async-transport"
   ]
  },
  "profiles": [
@@ -27149,7 +27150,7 @@
     "normative": "the token issued at redemption is sender-constrained to the Agent's key and its audience identifies the Agent"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
@@ -27158,7 +27159,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Partial by design (D361): the token is sender-constrained to the Agent's key, but its audience is the resource, an accepted intermediate step. The Agent-audienced delegation handle lands with #1157 (audience and sender-constraint enforcement at the async exchange)."
+   "notes": "#1157 completes it: the redeemed token's aud is the Agent's client_id (the cited test asserts it) and it is sender-constrained to the Agent's key; disabling the Agent audience fails the cited test."
   },
   {
    "id": "template.handoff.redemption-counted",
@@ -28301,6 +28302,158 @@
      "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "continuation.async-transport.handle-audience",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-async",
+   "text": "A Mission Issuer MUST refuse a `subject_token` whose audience is not the authenticated acting client, including a Mission access token audienced to a resource,",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.async-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the async-delegation exchange refuses a subject_token whose aud is not the authenticated acting client's client_id, including the agent's own resource-audienced Mission access token, before any family, reservation or derivation count; a retry under a recorded creation_request_id presenting such a token recovers nothing"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the async-delegation subject_token is a delegation handle (@spec continuation#transport-async, draft-zhu-oauth-async-delegation-05 Section 4.3, #1157) > refuses a resource-audienced Mission access token: its audience is not the acting client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the async-delegation subject_token is a delegation handle (@spec continuation#transport-async, draft-zhu-oauth-async-delegation-05 Section 4.3, #1157) > recovery revalidates the handle: a retry presenting the raw token or another key never retrieves the recorded family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body)."
+  },
+  {
+   "id": "continuation.async-transport.handle-possession",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-async",
+   "text": "and MUST require proof of possession of the `subject_token`'s own confirmation key; client authentication never satisfies that sender constraint.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.async-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the async-delegation exchange refuses a delegation handle presented with a DPoP proof under any key other than the handle's own cnf.jkt, though the client authenticates, and a recovery retry under another key retrieves nothing"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the async-delegation subject_token is a delegation handle (@spec continuation#transport-async, draft-zhu-oauth-async-delegation-05 Section 4.3, #1157) > refuses a handle presented under another key: client authentication never satisfies its sender constraint",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the async-delegation subject_token is a delegation handle (@spec continuation#transport-async, draft-zhu-oauth-async-delegation-05 Section 4.3, #1157) > recovery revalidates the handle: a retry presenting the raw token or another key never retrieves the recorded family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body)."
+  },
+  {
+   "id": "continuation.async-transport.handle-request",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-async",
+   "text": "An agent obtains its handle with a Token Exchange that presents its own Mission access token, proves possession of that token's key, and names its own `client_id` as `audience`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.async-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Token Exchange presenting the agent's own Mission access token, with a DPoP proof of that token's key and audience equal to the agent's client_id, yields an access token whose aud is that client_id; an audience naming anything else, or a proof under another key, is refused"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358) > mints a handle audienced to the requesting client, under the presented token's key, with its authority and no scope, as one counted derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358) > refuses an audience other than the requesting client's own client_id",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358) > refuses a DPoP proof under a key other than the presented token's",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body)."
+  },
+  {
+   "id": "continuation.async-transport.handle-key-and-authority",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-async",
+   "text": "The handle keeps that key and carries the presented token's authority narrowed by the Mission's current effective authority.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.async-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the issued handle's cnf.jkt is the presented token's key, and its authorization_details are the presented token's authority (never the Mission's broader authority) narrowed by the Mission's current effective set; nothing surviving is refused"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358) > mints a handle audienced to the requesting client, under the presented token's key, with its authority and no scope, as one counted derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358) > bounds the handle by the presented token's own authority, never the Mission's (rule 2)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358) > narrows the handle by the Mission's current effective set, and refuses when nothing survives",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body)."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",
