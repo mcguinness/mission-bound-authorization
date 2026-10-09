@@ -33150,7 +33150,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces."
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
   },
   {
    "id": "aauth.reference.auth-token-ps-no-iss-fallback",
@@ -33172,7 +33172,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces."
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
   },
   {
    "id": "aauth.reference.namespace-separation",
@@ -33194,7 +33194,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces."
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
   },
   {
    "id": "aauth.reference.unusable-input-no-reference",
@@ -33216,7 +33216,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces."
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
   },
   {
    "id": "aauth.lifecycle.broadening-update-needs-supervisor",
@@ -33365,7 +33365,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces."
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
   },
   {
    "id": "mandate.minting.termination-at-issuance",
