@@ -323,6 +323,32 @@ afterAll(() => {
   asServer?.close();
 });
 
+describe("expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154)", () => {
+  for (const transition of ["revoke", "suspend"] as const) {
+    it(`a ${transition === "revoke" ? "revoked" : "suspended"} predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation`, async () => {
+      const pred = await issuePredecessor(["payments:invoice.read"]);
+      as.kernel.transition(pred.missionId, transition);
+      const missionCountBefore = as.kernel.allMissions().length;
+      const derivationCountBefore = as.kernel.get(pred.missionId)?.derivation_count;
+      const res = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+        "payments:invoice.read",
+        "payments:remittance.send",
+      ]);
+      const body = (await res.json()) as { error?: string; access_token?: string; deferral_code?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      // A Token Exchange refuses a Mission that is not active with
+      // invalid_request (RFC 8693 Section 2.2.2); a predecessor cross-check
+      // mismatch keeps invalid_grant.
+      expect(body.error).toBe("invalid_request");
+      expect(body.access_token).toBeUndefined();
+      expect(body.deferral_code).toBeUndefined();
+      expect(as.kernel.allMissions().length).toBe(missionCountBefore);
+      expect(as.kernel.get(pred.missionId)?.derivation_count).toBe(derivationCountBefore);
+      expect(as.kernel.get(pred.missionId)?.termination?.successor).toBeUndefined();
+    });
+  }
+});
+
 describe("expansion wire: NON-WIDENING request is REFUSED (@spec expansion#nothing-to-expand)", () => {
   it("a pure subset request refuses (invalid_request + nothing_to_expand): predecessor stays active, nothing created or reserved, no derivation consumed", async () => {
     const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);

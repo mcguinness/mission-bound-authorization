@@ -959,7 +959,8 @@ export async function handleAsyncDelegationExchange(
   // Step 3: require the Mission ACTIVE, an intra-domain target, and a confined subset.
   const active = kernel.applyExpiry(record);
   if (active.state !== "active") {
-    txError(ctx, 400, "invalid_grant", `mission ${missionId} is ${active.state}`);
+    // @spec mission#issuance-gating (#1154): a Token Exchange refuses a Mission that is not active with invalid_request.
+    txError(ctx, 400, "invalid_request", `mission ${missionId} is ${active.state}`);
     return;
   }
   // Intra-domain only: the target MUST be served by this issuer. A cross-domain
@@ -1086,7 +1087,10 @@ export async function handleAsyncDelegationExchange(
     if (e instanceof GateError) {
       familyStore.invalidate(grantId);
       await (grant as unknown as { destroy: () => Promise<void> }).destroy();
-      const body = { error: "invalid_grant", error_description: e.message };
+      // @spec mission#issuance-gating (#1154): a lifecycle refusal on this
+      // exchange is invalid_request; the derivation cap stays invalid_grant.
+      const lifecycle = e.reason === "mission_not_active" || e.reason === "mission_expired";
+      const body = { error: lifecycle ? "invalid_request" : "invalid_grant", error_description: e.message };
       idem.failReserved(client.clientId, creationRequestId, { status: 400, body });
       ctx.status = 400;
       ctx.body = body;
@@ -1307,7 +1311,7 @@ async function recoverAsyncDelegation(
   }
   const active = opts.kernel.applyExpiry(record);
   if (active.state !== "active") {
-    txError(ctx, 400, "invalid_grant", `recorded mission is ${active.state}`);
+    txError(ctx, 400, "invalid_request", `recorded mission is ${active.state}`);
     return;
   }
   if (!grantId || !target || !opts.familyStore?.resolve(grantId)) {
@@ -1752,7 +1756,7 @@ async function retrieveCarryoverResult(
   // Ordinary current lifecycle check before any credential is minted.
   const state = opts.kernel.applyExpiry(retrieved.replacement).state;
   if (state !== "active") {
-    txError(ctx, 400, "invalid_grant", `replacement mission is ${state}`);
+    txError(ctx, 400, "invalid_request", `replacement mission is ${state}`);
     return;
   }
   if (!opts.childGrantKey || !opts.childGrantKid || !opts.childGrantAlg) {
@@ -2071,7 +2075,7 @@ async function recoverChildCreation(
   }
   const state = opts.kernel.applyExpiry(child).state;
   if (state !== "active") {
-    txError(ctx, 400, "invalid_grant", `recorded child mission is ${state}`);
+    txError(ctx, 400, "invalid_request", `recorded child mission is ${state}`);
     return;
   }
   const stored = op.delivery as { assertion?: string; exp?: number } | undefined;
@@ -2261,7 +2265,8 @@ export async function handleExpansionExchange(
   // The predecessor MUST be active at request time.
   const active = opts.kernel.applyExpiry(resolved.record);
   if (active.state !== "active") {
-    txError(ctx, 400, "invalid_grant", `predecessor mission is ${active.state}`);
+    // @spec expansion#predecessor-active (#1154): invalid_request on the expansion exchange.
+    txError(ctx, 400, "invalid_request", `predecessor mission is ${active.state}`);
     return;
   }
 
@@ -2556,7 +2561,7 @@ async function recoverExpansion(
   }
   const state = opts.kernel.applyExpiry(successor).state;
   if (state !== "active") {
-    txError(ctx, 400, "invalid_grant", `recorded successor mission is ${state}`);
+    txError(ctx, 400, "invalid_request", `recorded successor mission is ${state}`);
     return;
   }
   const stored = op.delivery as { access_token?: string; exp?: number } | undefined;
