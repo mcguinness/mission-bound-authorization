@@ -287,6 +287,7 @@ import type {
   MissionRecord,
 } from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
+import { DISPATCH_HANDOFF_TYP, handleDispatchHandoffRedemption } from "./dispatch-handoff.js";
 import type { CrossOrgOptions } from "./cross-org-grant.js";
 import {
   type ContinuationReplay,
@@ -680,7 +681,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
   const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
   const grantEnabled = new Map<string, boolean>([
     [DEFERRED_GRANT_TYPE, enabled("deferred")],
-    [CHILD_JWT_BEARER_GRANT_TYPE, enabled("child-delegation")],
+    // The RFC 7523 grant redeems a child grant and a Dispatch Handoff grant.
+    [CHILD_JWT_BEARER_GRANT_TYPE, enabled("child-delegation") || enabled("templates")],
     [MISSION_DISPATCH_GRANT_TYPE, enabled("templates")],
     [TOKEN_EXCHANGE_GRANT_TYPE, TOKEN_EXCHANGE_CAPABILITIES.some(enabled)],
   ]);
@@ -1649,10 +1651,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // and so a child client that lists this grant type is not rejected as
   // invalid_client_metadata. `assertion` is declared in the params set or the
   // token endpoint strips it; client_assertion/_type are auth params and survive.
+  // @spec mission-template#dispatch-handoff (#1158) — the same grant type
+  // redeems a Dispatch Handoff grant, selected by the assertion's own `typ`;
+  // each branch verifies its own `typ`, so neither accepts the other's grant.
   if (grantEnabled.get(CHILD_JWT_BEARER_GRANT_TYPE)) {
     provider.registerGrantType(
       CHILD_JWT_BEARER_GRANT_TYPE,
-      (ctx) => handleChildJwtBearerGrant(opts, provider, ctx),
+      (ctx) => handleJwtBearerGrant(opts, provider, ctx),
       // `scope` (@spec mission#scope-projection) narrows the projected scope.
       new Set(["assertion", "scope"]),
     );
@@ -1734,6 +1739,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // @spec mission#scope-projection — declared so an exchange's requested
         // `scope` is honored or refused, never stripped unseen.
         "scope",
+        // @spec mission-template#dispatch-handoff — the handoff selector.
+        "mission_dispatch_handoff",
       ]),
       // @spec id-continuation-assertion — the ICA continuation exchange takes
       // zero or more `resource` (ICA -02 5.5.3 rule 1), so it is the one
@@ -2105,6 +2112,23 @@ async function mintDeferredToken(
  * equal the authenticated client, which is what makes conveying the assertion
  * through the parent safe (the parent, a different client, cannot redeem it).
  */
+async function handleJwtBearerGrant(opts: AdapterOptions, provider: Provider, ctx: KoaContextWithOIDC): Promise<void> {
+  const assertion = (ctx.oidc.params as Record<string, unknown>).assertion;
+  let typ: unknown;
+  try {
+    typ = typeof assertion === "string" ? decodeProtectedHeader(assertion).typ : undefined;
+  } catch {
+    typ = undefined;
+  }
+  if (typ === DISPATCH_HANDOFF_TYP) {
+    if (!capabilityEnabled(opts, "templates")) throw new errors.InvalidGrant("invalid dispatch handoff grant");
+    await handleDispatchHandoffRedemption(opts, provider, ctx, assertion as string);
+    return;
+  }
+  if (!capabilityEnabled(opts, "child-delegation")) throw new errors.InvalidGrant("invalid child-bound grant assertion");
+  await handleChildJwtBearerGrant(opts, provider, ctx);
+}
+
 async function handleChildJwtBearerGrant(
   opts: AdapterOptions,
   provider: Provider,

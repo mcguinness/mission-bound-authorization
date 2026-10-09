@@ -81,6 +81,11 @@ import {
 } from "../kernel/types.js";
 import { mintChildGrant } from "./child-grant.js";
 import {
+  DISPATCH_HANDOFF_CONFLICTS,
+  DISPATCH_HANDOFF_PARAM,
+  handleDispatchHandoffExchange,
+} from "./dispatch-handoff.js";
+import {
   childErrorCode,
   gateErrorToMissionError,
   intentErrorToOidc,
@@ -145,7 +150,7 @@ export function defaultSubjectResolver(issuer: string): SubjectResolver {
  *  `invalid_target`, `invalid_dpop_proof`) and for the `invalid_grant` returns
  *  whose distinct `error_description` the invalid_grant renderer would
  *  otherwise overwrite. */
-function txError(ctx: KoaContextWithOIDC, status: number, error: string, description: string): void {
+export function txError(ctx: KoaContextWithOIDC, status: number, error: string, description: string): void {
   ctx.status = status;
   ctx.body = { error, error_description: description };
   ctx.set("cache-control", "no-store");
@@ -259,6 +264,31 @@ export async function handleTokenExchangeGrant(
   // ICA param hard-checks below, so the ICA continuation path is byte-for-byte
   // unchanged whenever the flag is absent. The familyStore lookup (NOT a gty string)
   // is the discriminator on every subsequent hop.
+  // @spec mission-template#dispatch-handoff (#1158, D361) — the explicit
+  // handoff selector, checked FIRST: a malformed value, or one combined with
+  // another exchange's selector, is refused here and never falls through to
+  // that exchange (child creation included).
+  const handoff = params[DISPATCH_HANDOFF_PARAM];
+  if (handoff !== undefined) {
+    singleResource();
+    if (handoff !== "true" && handoff !== true) {
+      txError(ctx, 400, "invalid_request", `${DISPATCH_HANDOFF_PARAM} must be true`);
+      return;
+    }
+    const conflict = DISPATCH_HANDOFF_CONFLICTS.find((p) => params[p] !== undefined);
+    if (conflict) {
+      txError(ctx, 400, "invalid_request", `${DISPATCH_HANDOFF_PARAM} cannot be combined with ${conflict}`);
+      return;
+    }
+    if (params.requested_token_type !== JWT_TOKEN_TYPE) {
+      txError(ctx, 400, "invalid_request", `${DISPATCH_HANDOFF_PARAM} requires the jwt requested_token_type`);
+      return;
+    }
+    if (profileDisabled("templates")) return;
+    await handleDispatchHandoffExchange(opts, ctx);
+    return;
+  }
+
   const requestRefresh = params.request_refresh_token;
   if (requestRefresh === "true" || requestRefresh === true) {
     singleResource();
@@ -1267,7 +1297,7 @@ function projectRarThroughEffective(
  * the injected source, else the local kernel. Read per call (never captured at
  * build time) so provider.ts and this file always agree on the source.
  */
-function authoritySource(opts: AdapterOptions): EffectiveAuthoritySource {
+export function authoritySource(opts: AdapterOptions): EffectiveAuthoritySource {
   return opts.authoritySource ?? opts.kernel;
 }
 
@@ -1452,7 +1482,7 @@ async function recoverAsyncDelegation(
 // ===========================================================================
 
 /** A resolved, possession-verified subject Mission (verification order steps 1-3). */
-interface ResolvedSubject {
+export interface ResolvedSubject {
   record: MissionRecord;
   /** The verified presenter jkt (== the subject_token's own cnf.jkt). */
   jkt: string;
@@ -1472,7 +1502,7 @@ interface ResolvedSubject {
  * ({@link freshProofJti}) like every other manual DPoP block here.
  * Returns null after setting the ctx error body; the caller returns immediately.
  */
-async function verifySubjectPossession(
+export async function verifySubjectPossession(
   opts: AdapterOptions,
   ctx: KoaContextWithOIDC,
 ): Promise<ResolvedSubject | null> {

@@ -40,7 +40,7 @@ CREATE TABLE mission_bound_grants (
 `;
 
 /** How the grant became Mission-bound (audit only; both fail closed alike). */
-export type MissionBoundGrantKind = "approval" | "delegation-family";
+export type MissionBoundGrantKind = "approval" | "delegation-family" | "dispatch-handoff";
 
 export interface MissionBoundGrant {
   missionId: string;
