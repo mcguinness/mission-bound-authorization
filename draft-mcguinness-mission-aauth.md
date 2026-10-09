@@ -324,16 +324,56 @@ token, or the PS a request is made to; the blob carries no member
 naming it.  On the wire the reference is the `mission_s256` claim or
 parameter.
 
-A consumer that names a Mission by an issuer and an identifier, such as
-the Runtime's `mission.issuer` and `mission.id`
-({{I-D.draft-mcguinness-mission-runtime}}) or the `issuer` and `id` of
-the AuthZEN profile's `context.mission`
-({{I-D.draft-mcguinness-mission-authzen}}), uses the approving PS's
-identifier as the issuer and `s256` as the identifier.  The consumer
-MUST take the PS from the `iss` of a person token or the `ps` claim of
-a resource or auth token, and MUST NOT take it from the `iss` of an
-auth token, which names the Access Server in four-party access (Section
-9.4.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
+When a consumer represents an AAuth Mission Reference with `issuer`
+and `id`, such as the Runtime's `mission.issuer` and `mission.id`
+({{I-D.draft-mcguinness-mission-runtime}}) or the AuthZEN profile's
+`context.mission` ({{I-D.draft-mcguinness-mission-authzen}}), `issuer`
+is the approving PS's server identifier and `id` is the unchanged
+`s256` value.  The consumer obtains both from native context it has
+validated, as the following table maps them, and adds no algorithm
+prefix, rehashes nothing, and introduces no OAuth `mission_id`.
+
+| Validated native context | `issuer` | `id` |
+| --- | --- | --- |
+| Person token | the token's `iss` | the token's `mission_s256` |
+| Resource token | the token's `ps` | the token's `mission_s256` |
+| Auth token, three-party or four-party | the token's `ps` | the token's `mission_s256` |
+| Approval envelope, or an authenticated mission-scoped PS request | the PS's server identifier, established for that endpoint through its metadata and protocol validation | the validated approval's `s256`, or the request's native mission reference |
+{: title="Mission Reference projection"}
+
+The PS's server identifier is its metadata `issuer`, never its
+`mission_endpoint`, a per-mission URL, a token audience, or a host the
+consumer infers, and it is compared exactly (Section 11.1.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  For an auth token, the
+consumer MUST take `issuer` from `ps` and MUST NOT fall back to `iss`,
+which names the Access Server in four-party access (Section 9.4.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}); AAuth's own checks still
+apply, including that a PS-issued auth token names itself in `ps`.  A
+missing, malformed, or unverified component establishes no Mission
+Reference, and AAuth's failure ordering and responses are unchanged.
+The same `s256` under two PS identifiers is two Mission References.
+An accepted `update` leaves the pair unchanged: its position, not the
+pair, identifies the current Approved Context version, and the pair
+alone proves neither current state nor current version.
+
+For example, a validated four-party auth token with `iss`
+`https://as.example`, `ps` `https://ps.example`, and `mission_s256`
+`dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk` projects as follows.  The
+fragment shows only the projected members, not a complete token or
+decision request; the credential's own issuer stays in the credential
+context:
+
+~~~ json
+{
+  "mission": {
+    "issuer": "https://ps.example",
+    "id": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+  },
+  "credential": {
+    "issuer": "https://as.example"
+  }
+}
+~~~
 
 The PS's approval envelope carries `s256` alongside a `mission` member
 that is the base64url encoding, without padding, of the exact bytes it
@@ -708,6 +748,11 @@ issued in the mission context, its issuer (the PS, or the AS in
 four-party access) copies the same flat `mission_s256` claim onward
 from the resource token (Section 9.4.1 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}).
+
+Projecting a reference into `issuer` and `id` ({{reference}}) adds no
+member to an AAuth token or mission blob, fetches no blob, and computes
+no new digest: a consumer projects only a reference it has already
+validated, and no AAuth party carries an OAuth field for it.
 
 A resource that calls a downstream resource for its caller acts as an
 intermediary: an agent with its own agent identifier and key (Section
@@ -1265,11 +1310,14 @@ incremental deployment remain distinct concerns.
 
 \[\[ To be removed from the final specification ]]
 
-- Native Reference names an AAuth mission for a consumer that keys
-  Missions by issuer and identifier, such as the Runtime and the
-  AuthZEN profile: the approving PS and `s256`, with the PS taken from
-  a person token's `iss` or a resource or auth token's `ps`, never from
-  an auth token's `iss` (#1169).
+- Native Reference defines how a consumer that keys Missions by
+  `issuer` and `id`, such as the Runtime and the AuthZEN profile,
+  projects an AAuth Mission Reference: the approving PS's server
+  identifier and the unchanged `s256`, from each validated native
+  carrier, with `ps` on an auth token and no fallback to its `iss`.  A
+  four-party example separates the Mission's issuer from the
+  credential's.  Reference Propagation states that the projection adds
+  no AAuth wire member (#1169).
 
 - Lifecycle maps AAuth's `termination_reason` to the family's Mission
   Termination Reasons, including AAuth's `administrative`, the
