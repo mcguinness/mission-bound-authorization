@@ -1632,10 +1632,10 @@ bounds are:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
 <code>authorization_details</code> of the validated JWT or, for an opaque
 token, of its introspection response; for an ordinary token joined
 to a Mission under an externally established reference
-(<a href="#token-validation" class="auto internal xref">Section 3</a>), the authority that token carries as issued,
-established and enforced as the join profile defines (the Mission
-Authority Server enforces it at the resource server or gateway,
-<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>); and<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
+(<a href="#token-validation" class="auto internal xref">Section 3</a>), the authority that token carries as issued:
+the entries its verified <code>scope</code> maps to under the join profile's
+mapping contract (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>),
+which the PDP enforces as this bound; and<a href="#section-5.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.1-2.2">
             <p id="section-5.1-2.2.1">the current effective authority: the approved Authority Set,

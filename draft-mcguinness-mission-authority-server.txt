@@ -962,18 +962,28 @@ Table of Contents
        evaluates the action under the runtime profile's decision
        contract, drawing the Authority Set from the Mission (the
        audience-scoped Mission Status response or a materialized policy
-       view), since the credential carries none.  All other decision
-       inputs and invariants of [I-D.draft-mcguinness-mission-runtime]
-       apply unchanged.
+       view), never from the credential: the credential's own authority
+       is the separate bound of rule 8 and never substitutes for the
+       Mission's.  All other decision inputs and invariants of
+       [I-D.draft-mcguinness-mission-runtime] apply unchanged.
 
    8.  *The permit intersects three bounds.* A permit under a join never
        exceeds any of three independently evaluated bounds: the
-       authority the acting credential itself carries (the token as
-       issued, enforced at the resource server or gateway), the
-       Mission's approved authority, and current Resource policy.  The
-       join adds the Mission bound and MUST NOT widen either of the
-       other two.  A PEP MUST NOT treat a Mission permit as overriding
-       what the credential or the resource would refuse.
+       authority the acting credential itself carries, the Mission's
+       approved authority, and current Resource policy.  The
+       credential's authority is the token as issued: the
+       mission_resource_access entries that the scope the PEP verified
+       (from the JWT, or from the introspection response for an opaque
+       token) maps to under the mapping contract (Section 12.3).  The
+       PEP carries them as context.credential.authority, and the PDP
+       evaluates them as their own bound, never falling back to the
+       Mission's authority ([I-D.draft-mcguinness-mission-authzen]): an
+       empty array leaves every action outside the credential's
+       authority (out_of_authority), and an absent one is an unusable
+       credential (credential_invalid).  The join adds the Mission bound
+       and MUST NOT widen either of the other two.  A PEP MUST NOT treat
+       a Mission permit as overriding what the credential or the
+       resource would refuse.
 
    9.  *Joined-view evidence commitment.* The PDP MUST record a joined-
        view commitment, join_view_id, as a top-level member of the
@@ -1131,8 +1141,10 @@ Table of Contents
    in the AuthZEN profile.  The PEP supplies context.mission from its
    Mission binding, the Mission state it observed in the MAS's signed
    Mission Status response as context.mission_state_observation, the
-   authenticated client as context.actor.client_id, and the other
-   decision inputs per [I-D.draft-mcguinness-mission-authzen]:
+   authenticated client as context.actor.client_id, the entries the
+   token's scope maps to under the mapping contract as
+   context.credential.authority, and the other decision inputs per
+   [I-D.draft-mcguinness-mission-authzen]:
 
    {
      "subject": {
@@ -1161,14 +1173,27 @@ Table of Contents
          "freshness_at": "2026-11-02T08:14:00Z"
        },
        "actor": { "client_id": "client_erp-recon-agent" },
+       "credential": {
+         "issuer": "https://as.example.com",
+         "expires_at": "2026-11-02T09:14:00Z",
+         "authority": [
+           {
+             "type": "mission_resource_access",
+             "resource": "https://erp.example.com",
+             "actions": ["invoices.read"]
+           }
+         ]
+       },
        "mission_join": {}
      }
    }
 
    The credential's authenticated subject and client match the Mission's
-   subject.sub and client_id, so the join holds, and the PDP evaluates
-   the action under the Mission's Authority Set. The following example
-   shows the resulting permit:
+   subject.sub and client_id, so the join holds.  The PDP evaluates the
+   action under the Mission's Authority Set and, as a separate bound,
+   under the credential's own authority, here the read entry its
+   invoices.read scope maps to.  The following example shows the
+   resulting permit:
 
    {
      "decision": true,
@@ -2482,6 +2507,11 @@ Table of Contents
 
    *  the client namespace mapping (how a credential's client maps to
       the Mission's client_id);
+
+   *  the scope mapping: the mission_resource_access entries, by
+      resource and actions, that each scope value of an ordinary token
+      maps to, where a value the mapping does not cover maps to no
+      entry;
 
    *  the delegate policy applied to act-chain actors, which MUST state
       how the OAuth binding's per-entry delegation rules are evaluated

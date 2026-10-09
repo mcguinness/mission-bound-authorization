@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-09T17:22:17Z
-Source repository commit: e395d037c29e08e3370f20cc4bef9f3f9bb4eb14
+Generated: 2026-10-09T17:55:01Z
+Source repository commit: 92d304fc913ff8944a5ff73722ccf392e5a1b5ea
 Member count: 9
 
 Reading order:
@@ -22249,9 +22249,9 @@ Table of Contents
    For Decision Evidence emitted by a PDP, the emitter is the PDP.  For
    Execution Evidence emitted by a PEP or executor, the emitter is that
    PEP or executor.  For a Refusal Record, the emitter is the refusing
-   PEP.  This procedure applies wherever verification of the
-   evidence_envelope is described in this document, including for
-   Execution Evidence and Refusal Records.
+   component, the PEP or the PDP.  This procedure applies wherever
+   verification of the evidence_envelope is described in this document,
+   including for Execution Evidence and Refusal Records.
 
    The emitter constructs the record on its own emission path, from the
    state it holds, and signs it there.  A component that reconstructs a

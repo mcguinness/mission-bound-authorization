@@ -848,9 +848,9 @@ Table of Contents
    For Decision Evidence emitted by a PDP, the emitter is the PDP.  For
    Execution Evidence emitted by a PEP or executor, the emitter is that
    PEP or executor.  For a Refusal Record, the emitter is the refusing
-   PEP.  This procedure applies wherever verification of the
-   evidence_envelope is described in this document, including for
-   Execution Evidence and Refusal Records.
+   component, the PEP or the PDP.  This procedure applies wherever
+   verification of the evidence_envelope is described in this document,
+   including for Execution Evidence and Refusal Records.
 
    The emitter constructs the record on its own emission path, from the
    state it holds, and signs it there.  A component that reconstructs a
