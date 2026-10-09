@@ -54,6 +54,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-transaction-authorization:
     title: "Mission Transaction Authorization Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html
@@ -315,6 +323,17 @@ by the `iss` of a person token, the `ps` claim of a resource or auth
 token, or the PS a request is made to; the blob carries no member
 naming it.  On the wire the reference is the `mission_s256` claim or
 parameter.
+
+A consumer that names a Mission by an issuer and an identifier, such as
+the Runtime's `mission.issuer` and `mission.id`
+({{I-D.draft-mcguinness-mission-runtime}}) or the `issuer` and `id` of
+the AuthZEN profile's `context.mission`
+({{I-D.draft-mcguinness-mission-authzen}}), uses the approving PS's
+identifier as the issuer and `s256` as the identifier.  The consumer
+MUST take the PS from the `iss` of a person token or the `ps` claim of
+a resource or auth token, and MUST NOT take it from the `iss` of an
+auth token, which names the Access Server in four-party access (Section
+9.4.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 The PS's approval envelope carries `s256` alongside a `mission` member
 that is the base64url encoding, without padding, of the exact bytes it
@@ -1245,6 +1264,12 @@ incremental deployment remain distinct concerns.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Native Reference names an AAuth mission for a consumer that keys
+  Missions by issuer and identifier, such as the Runtime and the
+  AuthZEN profile: the approving PS and `s256`, with the PS taken from
+  a person token's `iss` or a resource or auth token's `ps`, never from
+  an auth token's `iss` (#1169).
 
 - Lifecycle maps AAuth's `termination_reason` to the family's Mission
   Termination Reasons, including AAuth's `administrative`, the

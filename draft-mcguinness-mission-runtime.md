@@ -449,7 +449,9 @@ deployment establishes it in one of two modes:
 - **Credential-carried.** The acting credential's Mission reference
   identifies the Mission, under the binding's own credential
   representation (the OAuth realization is the `mission` claim,
-  {{I-D.draft-mcguinness-oauth-mission}}). The PEP takes the Mission
+  {{I-D.draft-mcguinness-oauth-mission}}; the AAuth realization is the
+  signed `mission_s256` claim, whose issuer is the approving Person
+  Server, {{I-D.draft-mcguinness-mission-aauth}}). The PEP takes the Mission
   reference from the validated credential, after establishing the
   credential's validity for the protected resource and request under
   the binding's own credential-validation rules (the OAuth realization
@@ -3780,6 +3782,8 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Mission Binding Establishment: names the AAuth realization of a
+  credential-carried Mission reference beside the OAuth one (#1169).
 - Time: a Mission state source reports an expired Mission as
   `terminated` with reason `expired`; the refusal on it is unchanged
   (#705).
