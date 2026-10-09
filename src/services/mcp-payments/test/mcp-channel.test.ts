@@ -29,6 +29,7 @@ import {
   type ExecutionEvidence,
   type MediatedClient,
   McpPaymentsServer,
+  isPepRefusalDiagnostic,
   openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
@@ -286,7 +287,8 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
       // carries an enumerated value, never a deployment's own diagnostic
       // string"), so the two surfaces are compared through that mapping
       // rather than assumed identical.
-      const signed = signedDenialReason(mcpReason as string);
+      // A PDP denial reason is no Refusal Record diagnostic and maps to none.
+      const signed = isPepRefusalDiagnostic(mcpReason as string) ? signedDenialReason(mcpReason as string) : undefined;
       const recorded = mcp.evidence
         .all()
         .some(

@@ -18,7 +18,7 @@ import { randomUUID } from "node:crypto";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import type { Fga, MissionView } from "@mission/pdp";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   CANONICAL_RESOURCE,
   Connectors,
@@ -34,6 +34,7 @@ import {
   REFUSAL_RECORD_MEDIA_TYPE,
   type RefusalRecord,
   TransactionEngine,
+  UnmappedRefusalDiagnosticError,
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { admitArguments } from "../src/intake.js";
@@ -58,7 +59,7 @@ const VIEW: MissionView = {
     {
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
-      actions: ["payments:invoice.read", "payments:invoice.list", "payments:payment.execute"],
+      actions: ["payments:invoice.read", "payments:invoice.list", "payments:payment.execute", "payments:payment.schedule"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ],
@@ -97,8 +98,9 @@ async function build(catalogSource?: () => string) {
     ...(catalogSource ? { capabilityCatalog: new PaymentsToolCatalog(catalogSource) } : {}),
   });
   const kp = await generateKeyPair("ES256", { extractable: true });
+  const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
   const server = new McpPaymentsServer({
-    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
+    writeReservations,
     pep,
     payments,
     loadView,
@@ -122,7 +124,7 @@ async function build(catalogSource?: () => string) {
     .setJti(randomUUID())
     .setExpirationTime("5m")
     .sign(kp.privateKey);
-  return { client, jwt, evidence, connectors, pdpCalls };
+  return { client, jwt, evidence, connectors, pdpCalls, payments, writeReservations, pep, server };
 }
 
 type Built = Awaited<ReturnType<typeof build>>;
@@ -311,5 +313,76 @@ describe("intake NFC-normalizes strings before target lookup, effective paramete
     expect(wire.ok, JSON.stringify(wire)).toBe(true);
     expect(decisionsOf(h).at(-1)?.parameter_digest).toBe(first?.parameter_digest);
     expect(h.connectors.ledgerEntries().map((e) => e.invoice_id)).toEqual([NFC_ID]);
+  });
+});
+
+/** Everything a refused request must leave untouched: invoices and the vendor with their versions, schedules, reservations and consumed permits. */
+function businessState(h: Built) {
+  return {
+    invoices: h.payments.listInvoices(),
+    vendor: h.payments.getVendor("acme"),
+    schedules: h.writeReservations.schedules(),
+    reservations: h.writeReservations.reservations(),
+    consumedPermits: h.writeReservations.consumedPermits(),
+  };
+}
+
+describe("an intake refusal leaves the business stores untouched on reads and both write paths (@spec operation-profile-payments-v1, #1148, D379)", () => {
+  const cases = [
+    { tool: "get_invoice", action: "payments:invoice.read", args: () => ({ invoice_id: "inv-1" }) },
+    { tool: "hold_transfer", action: "payments:payment.execute", args: () => ({ invoice_id: "inv-1" }) },
+    { tool: "schedule_payment", action: "payments:payment.schedule", args: () => ({ invoice_id: "inv-1", idempotency_key: idem() }) },
+  ];
+
+  it("admitted, hold_transfer consumes its single-use permit and schedule_payment writes a schedule and a reservation, so the state comparison below can see an effect", async () => {
+    const hold = await build();
+    expect((await hold.client.callTool("hold_transfer", { invoice_id: "inv-1" }, hold.jwt)).ok).toBe(true);
+    expect(hold.writeReservations.consumedPermits()).toHaveLength(1);
+
+    const sched = await build();
+    expect((await sched.client.callTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: idem() }, sched.jwt)).ok).toBe(true);
+    expect(sched.writeReservations.schedules()).toHaveLength(1);
+    expect(sched.writeReservations.reservations()).toHaveLength(1);
+  });
+
+  for (const c of cases) {
+    it(`${c.tool} refused at intake changes no invoice, vendor or schedule, writes no reservation and consumes no permit, with no PDP call and one Refusal Record`, async () => {
+      const h = await build();
+      const before = businessState(h);
+      const res = await h.client.callTool(c.tool, { ...c.args(), note: "outside the schema" }, h.jwt);
+      expectIntakeRefusal(h, res, c.action, c.tool);
+      expect(businessState(h), c.tool).toEqual(before);
+      expect(h.writeReservations.reservations(), c.tool).toHaveLength(0);
+      expect(h.writeReservations.consumedPermits(), c.tool).toHaveLength(0);
+    });
+  }
+});
+
+describe("an unmapped refusal diagnostic is rejected before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379)", () => {
+  it("an unmapped diagnostic on the enforcement path rejects enforcement, with no signing call, no retained Refusal Record and no business effect", async () => {
+    // Control: the same request is refused unknown_invoice and signed target_unresolvable.
+    const control = await build();
+    const controlToken = await control.server.validateCredential(control.jwt);
+    const refused = await control.pep.enforce("schedule_payment", { invoice_id: "inv-missing", idempotency_key: idem() }, controlToken);
+    expect(refused).toMatchObject({ permitted: false, refusal_reason: "unknown_invoice" });
+    expect(control.evidence.all().map((r) => (r as RefusalRecord).content.denial_reason)).toEqual(["target_unresolvable"]);
+
+    const h = await build();
+    const token = await h.server.validateCredential(h.jwt);
+    // The refusal step receives a diagnostic the PEP has no mapping for.
+    const pep = h.pep as unknown as { refuse: (token: unknown, reason: string, ...rest: unknown[]) => Promise<unknown> };
+    const refuse = pep.refuse.bind(h.pep);
+    pep.refuse = (t, _reason, ...rest) => refuse(t, "invoice_not_found_here", ...rest);
+    const signing = vi.spyOn(h.evidence, "recordRefusal");
+    const before = businessState(h);
+
+    await expect(
+      h.pep.enforce("schedule_payment", { invoice_id: "inv-missing", idempotency_key: idem() }, token),
+    ).rejects.toBeInstanceOf(UnmappedRefusalDiagnosticError);
+    expect(signing).not.toHaveBeenCalled();
+    expect(h.evidence.all()).toHaveLength(0);
+    expect(businessState(h)).toEqual(before);
+    expect(h.pdpCalls).toHaveLength(0);
+    expect(h.connectors.ledgerEntries()).toHaveLength(0);
   });
 });
