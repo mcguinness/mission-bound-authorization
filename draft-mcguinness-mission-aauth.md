@@ -354,7 +354,11 @@ Reference, and AAuth's failure ordering and responses are unchanged.
 The same `s256` under two PS identifiers is two Mission References.
 An accepted `update` leaves the pair unchanged: its position, not the
 pair, identifies the current Approved Context version, and the pair
-alone proves neither current state nor current version.
+alone proves neither current state nor current version.  A projected
+reference identifies the Mission and nothing more: it carries no
+authority, establishes neither Structured Authority nor Runtime or
+AuthZEN conformance, and leaves a resource token a request artifact,
+never an execution credential.
 
 For example, a validated four-party auth token with `iss`
 `https://as.example`, `ps` `https://ps.example`, and `mission_s256`
@@ -1314,10 +1318,11 @@ incremental deployment remain distinct concerns.
   `issuer` and `id`, such as the Runtime and the AuthZEN profile,
   projects an AAuth Mission Reference: the approving PS's server
   identifier and the unchanged `s256`, from each validated native
-  carrier, with `ps` on an auth token and no fallback to its `iss`.  A
-  four-party example separates the Mission's issuer from the
-  credential's.  Reference Propagation states that the projection adds
-  no AAuth wire member (#1169).
+  carrier, with `ps` on an auth token and no fallback to its `iss`; a
+  projected reference carries no authority.  A four-party example
+  separates the Mission's issuer from the credential's.  Reference
+  Propagation states that the projection adds no AAuth wire member
+  (#1169).
 
 - Lifecycle maps AAuth's `termination_reason` to the family's Mission
   Termination Reasons, including AAuth's `administrative`, the
