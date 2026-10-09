@@ -1506,9 +1506,10 @@ per the progressive profile's prohibited set
 Each Mission's creation answers three questions: whose authority it
 draws on (`authority_source`), who decides and when
 (`approval_basis`), and how the request reaches the Mission Issuer.
-An agent acting on its own authority holds a `service_owned` or
-`organizational` Mission whose Subject is the agent's own principal,
-and no delegating user takes part. Client authentication or a
+An agent with no delegating user holds a `service_owned` Mission,
+drawing on its own provisioned authority, or an `organizational`
+Mission, drawing on a governed policy; its Subject is a workload or
+organizational principal, never a person. Client authentication or a
 workload identity system says who the agent is; the Mission records
 which task it may perform.
 
@@ -1517,7 +1518,7 @@ which task it may perform.
 | A user approves an agent's task (`oauth-mission`) | the user's (`user_delegated`) | that user, at the approval event | the authorization endpoint |
 | An administrator approves an agent's own task (`oauth-mission` with `oauth-mission-approval`, or `mission-authority-server`) | the agent's (`service_owned`) or a governed policy's (`organizational`) | the administrator, at the approval event | the authorization endpoint, or a pending request resolved later with no user present |
 | A policy approves each run of a recurring task (`oauth-mission-template`, experimental) | the source retained at template consent | a dispatch policy, within a template a human consented to once | one token request from a listed dispatcher |
-| An agent starts a sub-agent (`oauth-mission-child-delegation`) | a strict subset of the Parent Mission's | a fresh human approval, or the parent's delegation policy (`policy_drawdown`) | a child-creation token exchange |
+| An agent starts a sub-agent (`oauth-mission-child-delegation`) | the Parent Mission's | a fresh human approval, or the parent's delegation policy (`policy_drawdown`) | a child-creation token exchange |
 {: #creation-paths-table title="Mission creation paths"}
 
 The administrator's authority to approve for that Subject and to
