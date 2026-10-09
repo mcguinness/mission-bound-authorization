@@ -29,6 +29,7 @@ author:
 
 normative:
   RFC3339:
+  RFC6749:
   RFC6755:
   RFC6838:
   RFC7523:
@@ -872,7 +873,9 @@ The Mission Issuer MUST refuse with `invalid_request` a
 combined with a parameter that selects another exchange, such as
 `request_refresh_token` or a Child Mission creation parameter
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}); it never
-treats such a request as another exchange. It then MUST:
+treats such a request as another exchange. A `mission_dispatch_handoff`
+sent without a value is treated as omitted ({{Section 3.2 of RFC6749}}),
+not as a value other than `true`. It then MUST:
 
 1. verify the subject token, and that the DPoP proof's key is the key
    the token is bound to;
@@ -914,7 +917,8 @@ proof under its own key. The Mission Issuer MUST:
 3. verify that the instance is `active`;
 4. consume the grant's `jti` atomically, and remember a consumed grant
    for as long as it would otherwise be accepted, clock skew included,
-   refusing any further presentation with `invalid_grant`; and
+   refusing any further presentation with `invalid_grant`, while a
+   redemption that issues no token leaves the grant unconsumed; and
 5. issue the Agent a token for the instance, bound to the key of its
    DPoP proof, whose authority is the grant's narrowed by the
    instance's current Effective Authority Set.
