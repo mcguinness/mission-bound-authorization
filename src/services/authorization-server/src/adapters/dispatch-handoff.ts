@@ -188,9 +188,19 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
     txError(ctx, 400, "invalid_grant", "subject_token's Mission is not a dispatched instance");
     return;
   }
+  // @spec mission#issuance-gating (D369): an instance that is not active makes
+  // its token unacceptable for this exchange, so the refusal is
+  // invalid_request (RFC 8693 Section 2.2.2), carrying the mission_error value
+  // for the instance's state. The grant's JWT-bearer redemption keeps
+  // invalid_grant.
   const active = kernel.applyExpiry(record);
   if (active.state !== "active") {
-    txError(ctx, 400, "invalid_grant", `dispatched instance is ${active.state}`);
+    txError(ctx, 400, "invalid_request", `dispatched instance is ${active.state}`);
+    const missionError = gateErrorToMissionError(
+      active.state === "expired" ? "mission_expired" : "mission_not_active",
+      active.state,
+    );
+    if (missionError) (ctx.body as Record<string, unknown>).mission_error = missionError;
     return;
   }
   const presented = presentedTokenAuthority(resolved.claims);
