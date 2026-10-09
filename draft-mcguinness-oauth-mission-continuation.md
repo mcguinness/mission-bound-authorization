@@ -613,3 +613,6 @@ constrains their use and introduces none of its own.
   current actor, merging only consecutive equal actors, from the
   approved client at depth 0, with no reset, and with nothing issued
   when the ancestry is incomplete (#960).
+- A dispatched Mission enters the async delegation transport through
+  its selected Agent, which redeems the Template profile's Dispatch
+  Handoff for a delegation handle of its own (#1158).
