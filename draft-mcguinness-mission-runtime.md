@@ -449,7 +449,11 @@ deployment establishes it in one of two modes:
 - **Credential-carried.** The acting credential's Mission reference
   identifies the Mission, under the binding's own credential
   representation (the OAuth realization is the `mission` claim,
-  {{I-D.draft-mcguinness-oauth-mission}}). The PEP takes the Mission
+  {{I-D.draft-mcguinness-oauth-mission}}; the AAuth realization is the
+  signed `mission_s256` claim on the access paths where the AAuth
+  binding supplies Credential-Bound, projected to the approving Person
+  Server and `s256` as that binding defines,
+  {{I-D.draft-mcguinness-mission-aauth}}). The PEP takes the Mission
   reference from the validated credential, after establishing the
   credential's validity for the protected resource and request under
   the binding's own credential-validation rules (the OAuth realization
@@ -460,13 +464,12 @@ deployment establishes it in one of two modes:
   MUST verify that reference against the acting credential under a
   join a binding profile defines; an unverified reference MUST NOT
   establish the Mission. The Mission Authority Server profile defines
-  the concrete join for this mode
-  ({{I-D.draft-mcguinness-mission-authority-server}}), and the AAuth
-  binding's reference propagation supplies the externally carried
-  reference for such a join
-  ({{I-D.draft-mcguinness-mission-aauth}}), as the MAS profile's
-  Mission Reference Propagation channel does in credential-less MAS
-  mode.
+  the concrete join for this mode, and its Mission Reference
+  Propagation channel carries the reference in credential-less MAS
+  mode ({{I-D.draft-mcguinness-mission-authority-server}}). The AAuth
+  binding defines no such join, so an AAuth Mission reference
+  establishes a Mission in this mode only under a separately specified
+  verified join ({{I-D.draft-mcguinness-mission-aauth}}).
 
 The mode each enforcement scope uses is part of its Enforcement
 Scope Statement ({{runtime-conformance}}). In either mode, the
@@ -3780,6 +3783,12 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Mission Binding Establishment: names the AAuth realization of a
+  credential-carried Mission reference beside the OAuth one, limited
+  to the access paths where the AAuth binding supplies
+  Credential-Bound, and no longer says AAuth reference propagation
+  supplies an externally established reference: the AAuth binding
+  defines no join (#1169).
 - Time: a Mission state source reports an expired Mission as
   `terminated` with reason `expired`; the refusal on it is unchanged
   (#705).

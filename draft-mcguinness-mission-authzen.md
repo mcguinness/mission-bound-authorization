@@ -476,9 +476,12 @@ enforcement scope, high-consequence classes, parameter-bound, and the
 action-class names (consequential read, consequential write,
 irreversible action, external commitment, and privileged
 administration) are used as defined in
-{{I-D.draft-mcguinness-mission-runtime}}. The Mission claim
-(`id`, `issuer`) and the integrity anchors (`intent_hash`,
-`authority_hash`) are used as defined in
+{{I-D.draft-mcguinness-mission-runtime}}. A Mission reference (`id`,
+`issuer`) is a binding's Mission Reference identifier and Controller
+namespace, in the representation that binding defines; the OAuth
+realization is the Mission claim of
+{{I-D.draft-mcguinness-oauth-mission}}. The integrity anchors
+(`intent_hash`, `authority_hash`) are used as defined in
 {{I-D.draft-mcguinness-oauth-mission}}; `authorization_details`
 entries of type `mission_resource_access` are used as defined in its
 Mission Resource Access Profile
@@ -633,10 +636,16 @@ so a change in state never mints a new `policy_view_id`
 ({{mission-to-policy-materialization}}).
 
 `id`:
-: REQUIRED. A string. The Mission's `id`.
+: REQUIRED. A string. The Mission Reference identifier, in its
+  binding's representation (the OAuth realization is the Mission's
+  `id`).
 
 `issuer`:
-: REQUIRED. A string containing a URI. The Mission's `issuer`.
+: REQUIRED. A string containing a URI. The Mission Reference's
+  Controller namespace, in its binding's representation (the OAuth
+  realization is the Mission's `issuer`). It is not the credential's
+  issuer, which `context.credential.issuer` carries
+  ({{context-credential}}).
 
 `authority_hash`:
 : OPTIONAL. A string. The Authority Set integrity anchor, in the
@@ -2917,6 +2926,11 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 
 \[\[ To be removed from the final specification ]]
 
+- `context.mission`'s `id` and `issuer` are the binding's Mission
+  Reference identifier and Controller namespace in that binding's
+  representation, with the OAuth realization unchanged, and `issuer`
+  is distinct from `context.credential.issuer`. Terminology states the
+  same (#1169).
 - `mission_state_observation` gains an OPTIONAL `termination`, the
   Mission's `termination` when `state` is `terminated`. The PDP rule,
   which keys only on exact `active`, is unchanged (#705).

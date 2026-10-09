@@ -11,16 +11,16 @@
     "content_sha256": "e1ebd9ef6c7507368dbd25c46b984c1412d972f5b71cc76ca8c3be36238da60f"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "d055b3b94bea14920088842f43fa7684237dfacdff77e059961748bf0f31fb91"
+    "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
+    "content_sha256": "5e04dd5054c6fa6c1013df78220cfe55ae3f3f98b6cb673381f9cfd9f28b4f1d"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "9b890b427ffd23c4c0b8c7f33118df6f4038219a",
-    "content_sha256": "c1fb17ce0f9d37cc15c973fbac912fa4ef31a9e27ed81cbda8b7645d6ea4b37d"
+    "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
+    "content_sha256": "ca204b48002247b46fd13ee90188c10b70f61b217178a5465911012798da9a9e"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "bdf5e7fb6550c5fe72231c0acb4be6a6f4f8df136deeb2c7a6728462dab6bc09"
+    "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
+    "content_sha256": "89bf3dedc4144bf5aee77e79b8a2dc1a35c03a3ba1bf2a4f4170a52386c49310"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
@@ -127,8 +127,8 @@
     "content_sha256": "7a24c9a98ece9ae1ac533dde1a1158558a8e93c7d8419bbc39e4c1d33a4622fe"
    },
    "draft-mcguinness-mission-aauth.md": {
-    "revision": "ed06fb6e130d428ef4d630472529a46a930bbf07",
-    "content_sha256": "6712a25d57c20feb031d4c1ee0ce2ef361d3c405301fcce527761b9a20579123"
+    "revision": "c908bd3ed1638bdf994d615a5b65423fa6eebf7c",
+    "content_sha256": "0af450d300a722cd9a6e2ae480ecab221646d2d1b2e9a15b5b630f8d48b425e0"
    },
    "draft-mcguinness-mission-mandate.md": {
     "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
@@ -265,6 +265,7 @@
    "expansion.interactive-completion",
    "aauth.supervision-server",
    "aauth.supervision-proof",
+   "aauth.reference-projection",
    "aauth-management.update-position",
    "aauth-management.delegation-tree"
   ]
@@ -17751,7 +17752,7 @@
    "id": "authzen.context-mission.identity-members-required",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-mission",
-   "text": "REQUIRED. A string. The Mission's `id`.",
+   "text": "REQUIRED. A string. The Mission Reference identifier, in its binding's representation (the OAuth realization is the Mission's `id`).",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -33130,6 +33131,94 @@
    "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
   },
   {
+   "id": "aauth.reference.projection",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "`issuer` is the approving PS's server identifier and `id` is the unchanged `s256` value",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.reference-projection"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer representing an AAuth Mission Reference with `issuer` and `id` sets `issuer` to the approving PS's server identifier (its metadata `issuer`) and `id` to the `s256` exactly as validated: from a person token, its `iss` and `mission_s256`; from a resource token or an auth token, its `ps` and `mission_s256`; from an approval envelope or authenticated mission-scoped PS request, the PS identifier established for that endpoint and the validated `s256`; with no algorithm prefix, no rehash, and no OAuth `mission_id`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
+  },
+  {
+   "id": "aauth.reference.auth-token-ps-no-iss-fallback",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "For an auth token, the consumer MUST take `issuer` from `ps` and MUST NOT fall back to `iss`",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.reference-projection"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for an auth token the projected `issuer` is the token's `ps`; for a four-party auth token whose `iss` names the Access Server, the projected `issuer` is the PS and the Access Server stays only in the credential's issuer; an auth token missing `ps` yields no projected reference rather than one built from `iss`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
+  },
+  {
+   "id": "aauth.reference.namespace-separation",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "The same `s256` under two PS identifiers is two Mission References.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.reference-projection"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "two projected references with equal `id` and different `issuer` are treated as two Missions, never one; an accepted `update` leaves the projected pair unchanged, and no update digest replaces `id`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
+  },
+  {
+   "id": "aauth.reference.unusable-input-no-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "A missing, malformed, or unverified component establishes no Mission Reference",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.reference-projection"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a missing, malformed, or unverified `ps`, `iss`, `mission_s256`, or PS identifier yields no projected Mission Reference, and the request proceeds under AAuth's own failure ordering and responses with no reference manufactured"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
+  },
+  {
    "id": "aauth.lifecycle.broadening-update-needs-supervisor",
    "spec": "draft-mcguinness-mission-aauth.md",
    "anchor": "lifecycle",
@@ -33255,6 +33344,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#966 (D356, owner review). Native AAuth tests are scoped to the #836 pilot's chained slice; no reference implementation of call chaining exists."
+  },
+  {
+   "id": "aauth.ref-propagation.projection-no-wire-member",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "adds no member to an AAuth token or mission blob, fetches no blob, and computes no new digest",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.reference-projection"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "projecting a validated AAuth reference into `issuer` and `id` changes no AAuth token or mission blob, retrieves no mission blob, and computes no digest; no AAuth party is required to carry an OAuth field"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
   },
   {
    "id": "mandate.minting.termination-at-issuance",
