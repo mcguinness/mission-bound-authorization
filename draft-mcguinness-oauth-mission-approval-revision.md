@@ -558,7 +558,7 @@ worked disclosure and test vector:
         "actions": ["journal-entries.write"] }
     ]
   },
-  "policy_version": "approval-policy:v12",
+  "approval_policy_version": "approval-policy:v12",
   "sequence": 91427,
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
