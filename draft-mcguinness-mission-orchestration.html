@@ -1929,15 +1929,7 @@ established non-active state.<a href="#section-7-4" class="pilcrow">¶</a></p>
         <tbody>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
-              <code>revoked</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>
-</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>expired</code>
+              <code>terminated</code>
 </td>
             <td class="text-left" rowspan="1" colspan="1">
               <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>
@@ -1951,34 +1943,26 @@ established non-active state.<a href="#section-7-4" class="pilcrow">¶</a></p>
               <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>
 </td>
           </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>completed</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>
-</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>superseded</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>
-</td>
-          </tr>
         </tbody>
       </table>
-<p id="section-7-7">The orchestrator needs none of those companion profiles to be
+<p id="section-7-7">A <code>terminated</code> Mission's <code>termination.reason</code> records how it ended:
+<code>revoked</code> or <code>expired</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+<code>completed</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>),
+<code>superseded</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), or
+another reason a companion profile registers.<a href="#section-7-7" class="pilcrow">¶</a></p>
+<p id="section-7-8">The orchestrator needs none of those companion profiles to be
 conformant: per the issuance profile's forward-compatibility rule it
-treats any state other than <code>active</code> as non-active. A deployment <span class="bcp14">MAY</span>
-define different operator handling for each state, but none allows
-new governed execution without a fresh authority path.<a href="#section-7-7" class="pilcrow">¶</a></p>
-<p id="section-7-8">In particular, a <code>superseded</code> Mission's continued work <span class="bcp14">SHOULD</span> proceed
-under the successor Mission through a fresh derivation from the
-successor's grant, not by rebinding the predecessor's authority; the
-successor carries its own Authority Set
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-7-8" class="pilcrow">¶</a></p>
+treats any state other than <code>active</code> as non-active, and a
+<code>terminated</code> Mission as non-active whatever its termination reason. A
+deployment <span class="bcp14">MAY</span> define different operator handling for each state and
+termination reason, but none allows new governed execution without a
+fresh authority path.<a href="#section-7-8" class="pilcrow">¶</a></p>
+<p id="section-7-9">In particular, the continued work of a Mission <code>terminated</code> with
+<code>termination.reason</code> <code>superseded</code> <span class="bcp14">SHOULD</span> proceed under the successor
+Mission its <code>termination.successor</code> names, through a fresh derivation
+from the successor's grant, not by rebinding the predecessor's
+authority; the successor carries its own Authority Set
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-7-9" class="pilcrow">¶</a></p>
 <div id="authority-narrowing">
 <section id="section-7.1">
         <h3 id="name-authority-narrowing-behavio">
@@ -2062,8 +2046,8 @@ step this trigger denies, naming the step in <code>step_id</code>, with
         </ul>
 <p id="section-7.2-3">The orchestrator <span class="bcp14">MUST</span> record the trigger source in Orchestration
 Evidence. If two trigger sources disagree, the orchestrator <span class="bcp14">MUST</span> use
-the safer state until it can reconcile. For example, a signed <code>revoked</code>
-signal overrides a stale local <code>active</code> cache.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+the safer state until it can reconcile. For example, a signed
+<code>terminated</code> signal overrides a stale local <code>active</code> cache.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2174,8 +2158,8 @@ record links:<a href="#section-9-2" class="pilcrow">¶</a></p>
 (<code>compensates_evaluation_id</code>);<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-3.4">
-          <p id="section-9-3.4.1">the state transition that triggered compensation (<code>mission_state</code>
-and <code>reason</code>);<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+          <p id="section-9-3.4.1">the state transition that triggered compensation (<code>mission_state</code>,
+<code>mission_termination</code>, and <code>reason</code>);<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-3.5">
           <p id="section-9-3.5.1">the compensation action (<code>compensation_action</code>);<a href="#section-9-3.5.1" class="pilcrow">¶</a></p>
@@ -2326,142 +2310,151 @@ the Harness Evidence object uses
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-2.11">
-<code>state_source</code>:</dt>
+<code>mission_termination</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.12">
-          <p id="section-11-2.12.1"><span class="bcp14">REQUIRED</span>. A value from the shared <code>state_source</code> value space defined
+          <p id="section-11-2.12.1"><span class="bcp14">REQUIRED</span> when <code>mission_state</code> is <code>terminated</code> and the state source
+reported one; absent otherwise. The Mission's <code>termination</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Termination").<a href="#section-11-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.13">
+<code>state_source</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.14">
+          <p id="section-11-2.14.1"><span class="bcp14">REQUIRED</span>. A value from the shared <code>state_source</code> value space defined
 by the Harness profile (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>):
 <code>status</code>, <code>signal</code>, <code>runtime_decision</code>, <code>harness</code>, <code>operator</code>, or a
 deployment-defined source. This profile does not define its own; a
 trigger source from <a href="#trigger-sources" class="auto internal xref">Section 7.2</a> maps to the corresponding
 value (a harness stop decision to <code>harness</code>, an operator action to
-<code>operator</code>).<a href="#section-11-2.12.1" class="pilcrow">¶</a></p>
+<code>operator</code>).<a href="#section-11-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-11-2.13">
+<dt id="section-11-2.15">
 <code>orchestration_decision</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-11-2.14">
-          <p id="section-11-2.14.1"><span class="bcp14">REQUIRED</span>. One of <code>suppress</code>, <code>pause</code>, <code>cancel</code>,
+        <dd style="margin-left: 1.5em" id="section-11-2.16">
+          <p id="section-11-2.16.1"><span class="bcp14">REQUIRED</span>. One of <code>suppress</code>, <code>pause</code>, <code>cancel</code>,
 <code>continue_to_safe_point</code>, <code>compensate</code>, <code>human_review</code>, or
 <code>record_only</code>. An unwind plan's
-<code>pre_start_behavior</code>/<code>in_flight_behavior</code> values map to these:<a href="#section-11-2.14.1" class="pilcrow">¶</a></p>
+<code>pre_start_behavior</code>/<code>in_flight_behavior</code> values map to these:<a href="#section-11-2.16.1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11-2.14.2.1">
-              <p id="section-11-2.14.2.1.1">both <code>cancel_workflow</code> and <code>cancel_if_possible</code> record as
-<code>cancel</code>;<a href="#section-11-2.14.2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-11-2.16.2.1">
+              <p id="section-11-2.16.2.1.1">both <code>cancel_workflow</code> and <code>cancel_if_possible</code> record as
+<code>cancel</code>;<a href="#section-11-2.16.2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11-2.14.2.2">
-              <p id="section-11-2.14.2.2.1"><code>continue_to_safe_point</code> carries through unchanged;<a href="#section-11-2.14.2.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-11-2.16.2.2">
+              <p id="section-11-2.16.2.2.1"><code>continue_to_safe_point</code> carries through unchanged;<a href="#section-11-2.16.2.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11-2.14.2.3">
-              <p id="section-11-2.14.2.3.1"><code>wait_then_review</code> and a review queue record as <code>human_review</code>;
-and<a href="#section-11-2.14.2.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-11-2.16.2.3">
+              <p id="section-11-2.16.2.3.1"><code>wait_then_review</code> and a review queue record as <code>human_review</code>;
+and<a href="#section-11-2.16.2.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11-2.14.2.4">
-              <p id="section-11-2.14.2.4.1"><code>suppress</code> and <code>pause</code> carry through unchanged.<a href="#section-11-2.14.2.4.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-11-2.16.2.4">
+              <p id="section-11-2.16.2.4.1"><code>suppress</code> and <code>pause</code> carry through unchanged.<a href="#section-11-2.16.2.4.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </dd>
         <dd class="break"></dd>
-<dt id="section-11-2.15">
-<code>reason</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-11-2.16">
-          <p id="section-11-2.16.1"><span class="bcp14">REQUIRED</span>. A string naming the condition.<a href="#section-11-2.16.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
 <dt id="section-11-2.17">
-<code>occurred_at</code>:</dt>
+<code>reason</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.18">
-          <p id="section-11-2.18.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-11-2.18.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.18.1"><span class="bcp14">REQUIRED</span>. A string naming the condition.<a href="#section-11-2.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-2.19">
-<code>linked_evidence</code>:</dt>
+<code>occurred_at</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.20">
-          <p id="section-11-2.20.1"><span class="bcp14">OPTIONAL</span>. An array of runtime enforcement evidence records
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), Harness Evidence,
-or prior Orchestration Evidence identifiers. <span class="bcp14">REQUIRED</span> when
-<code>orchestration_decision</code> is <code>compensate</code>.<a href="#section-11-2.20.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.20.1"><span class="bcp14">REQUIRED</span>. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-11-2.20.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-2.21">
-<code>outcome_state</code>:</dt>
+<code>linked_evidence</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.22">
-          <p id="section-11-2.22.1"><span class="bcp14">OPTIONAL</span>. One of <code>not_dispatched</code>, <code>dispatched_not_committed</code>,
-<code>committed</code>, or <code>unknown</code>.<a href="#section-11-2.22.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.22.1"><span class="bcp14">OPTIONAL</span>. An array of runtime enforcement evidence records
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), Harness Evidence,
+or prior Orchestration Evidence identifiers. <span class="bcp14">REQUIRED</span> when
+<code>orchestration_decision</code> is <code>compensate</code>.<a href="#section-11-2.22.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-2.23">
-<code>unwind_plan_hash</code>:</dt>
+<code>outcome_state</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.24">
-          <p id="section-11-2.24.1"><span class="bcp14">REQUIRED</span> on the step's dispatch-time record or, where the hash was
-committed through Decision Evidence instead, on the step's first
-Orchestration Evidence record. The integrity anchor over the step's
-unwind plan, committed durably before dispatch
-(<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>).<a href="#section-11-2.24.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.24.1"><span class="bcp14">OPTIONAL</span>. One of <code>not_dispatched</code>, <code>dispatched_not_committed</code>,
+<code>committed</code>, or <code>unknown</code>.<a href="#section-11-2.24.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-2.25">
-<code>authority_basis</code>:</dt>
+<code>unwind_plan_hash</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.26">
-          <p id="section-11-2.26.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>; otherwise
-absent. One of <code>resource_policy</code> or <code>separate_mission</code>
-(<a href="#compensation-authority" class="auto internal xref">Section 9.1</a>).<a href="#section-11-2.26.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.26.1"><span class="bcp14">REQUIRED</span> on the step's dispatch-time record or, where the hash was
+committed through Decision Evidence instead, on the step's first
+Orchestration Evidence record. The integrity anchor over the step's
+unwind plan, committed durably before dispatch
+(<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>).<a href="#section-11-2.26.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-2.27">
-<code>compensation_action</code>:</dt>
+<code>authority_basis</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.28">
-          <p id="section-11-2.28.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>. The
-deployment-defined compensation action reference.<a href="#section-11-2.28.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.28.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>; otherwise
+absent. One of <code>resource_policy</code> or <code>separate_mission</code>
+(<a href="#compensation-authority" class="auto internal xref">Section 9.1</a>).<a href="#section-11-2.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-2.29">
-<code>compensation_outcome</code>:</dt>
+<code>compensation_action</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.30">
-          <p id="section-11-2.30.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>. The outcome
-of the compensation action.<a href="#section-11-2.30.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.30.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>. The
+deployment-defined compensation action reference.<a href="#section-11-2.30.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-2.31">
-<code>compensates_evaluation_id</code>:</dt>
+<code>compensation_outcome</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.32">
-          <p id="section-11-2.32.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>. The
+          <p id="section-11-2.32.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>. The outcome
+of the compensation action.<a href="#section-11-2.32.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.33">
+<code>compensates_evaluation_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.34">
+          <p id="section-11-2.34.1"><span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is <code>compensate</code>. The
 <code>evaluation_id</code> of the decision this compensation reverses, carrying
 the runtime profile's compensation link
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) so the compensating
 action reconciles against the specific evaluation it offsets.
 Distinct from <code>linked_evidence</code>: this member names the evaluation
-being reversed, never an evidence record identifier.<a href="#section-11-2.32.1" class="pilcrow">¶</a></p>
+being reversed, never an evidence record identifier.<a href="#section-11-2.34.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-11-2.33">
+<dt id="section-11-2.35">
 <code>evidence_envelope</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-11-2.34">
-          <p id="section-11-2.34.1">Integrity protection over the Orchestration Evidence object.
+        <dd style="margin-left: 1.5em" id="section-11-2.36">
+          <p id="section-11-2.36.1">Integrity protection over the Orchestration Evidence object.
 <span class="bcp14">OPTIONAL</span>, except <span class="bcp14">REQUIRED</span> when <code>orchestration_decision</code> is
 <code>compensate</code> and the compensated step's reversibility class is
 <code>irreversible_action</code>, <code>external_commitment</code>, or
 <code>privileged_administration</code>. Compensation in those classes is
 consequential work in its own right; its record does not rest on
-an unsigned self-report by the orchestrator that performed it.<a href="#section-11-2.34.1" class="pilcrow">¶</a></p>
-<p id="section-11-2.34.2">When present:<a href="#section-11-2.34.2" class="pilcrow">¶</a></p>
+an unsigned self-report by the orchestrator that performed it.<a href="#section-11-2.36.1" class="pilcrow">¶</a></p>
+<p id="section-11-2.36.2">When present:<a href="#section-11-2.36.2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11-2.34.3.1">
-              <p id="section-11-2.34.3.1.1">With <code>format</code> <code>jws-compact</code>, it is a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Compact
+<li class="normal" id="section-11-2.36.3.1">
+              <p id="section-11-2.36.3.1.1">With <code>format</code> <code>jws-compact</code>, it is a JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> Compact
 Serialization whose payload is the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical
-bytes of the object with <code>evidence_envelope</code> removed.<a href="#section-11-2.34.3.1.1" class="pilcrow">¶</a></p>
+bytes of the object with <code>evidence_envelope</code> removed.<a href="#section-11-2.36.3.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-11-2.34.3.2">
-              <p id="section-11-2.34.3.2.1">It <span class="bcp14">MUST</span> identify the signer. The JWS protected header <span class="bcp14">MUST</span> carry
+            <li class="normal" id="section-11-2.36.3.2">
+              <p id="section-11-2.36.3.2.1">It <span class="bcp14">MUST</span> identify the signer. The JWS protected header <span class="bcp14">MUST</span> carry
 <code>kid</code>, whose resolution under deployment policy identifies the
 issuer, <code>alg</code>, and <code>typ</code>, matching the suite's evidence-envelope
-convention (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-11-2.34.3.2.1" class="pilcrow">¶</a></p>
+convention (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-11-2.36.3.2.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-11-2.34.4">This document registers no media type; its two local-use type
+<p id="section-11-2.36.4">This document registers no media type; its two local-use type
 identifiers are <code>mission-orchestration-evidence</code>, which <code>typ</code>
 carries here, and <code>mission-unwind-plan</code>
-(<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>).<a href="#section-11-2.34.4" class="pilcrow">¶</a></p>
+(<a href="#unwind-plan-integrity" class="auto internal xref">Section 6.1</a>).<a href="#section-11-2.36.4" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2509,7 +2502,11 @@ decision's <code>evaluation_id</code> in <code>compensates_evaluation_id</code>,
   },
   "workflow_id": "wf_invoice_recon_2026q3",
   "step_id": "post_journal_entry",
-  "mission_state": "revoked",
+  "mission_state": "terminated",
+  "mission_termination": {
+    "reason": "revoked",
+    "terminated_at": "2026-11-02T08:30:00Z"
+  },
   "state_source": "status",
   "orchestration_decision": "compensate",
   "reason": "committed_step_reversed_after_review",
@@ -2815,7 +2812,14 @@ and avoid recording raw user content when identifiers are sufficient.<a href="#s
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Authority-Narrowing Behavior (<a href="#authority-narrowing" class="auto internal xref">Section 7.1</a>): a third
+          <p id="appendix-A-2.1.1">The non-active states are <code>terminated</code>, with its termination
+reason, and <code>suspended</code>. Orchestration Evidence carries
+<code>mission_termination</code> beside a <code>terminated</code> <code>mission_state</code>, and
+continued work after reason <code>superseded</code> proceeds under the
+<code>termination.successor</code> (#705).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Authority-Narrowing Behavior (<a href="#authority-narrowing" class="auto internal xref">Section 7.1</a>): a third
 State-Change Behavior trigger, independent of the non-active and
 staleness sequences, for a <code>mission.lifecycle-change</code> event's
 generic <code>authority_changed</code> true at unchanged <code>state</code>. The
@@ -2827,7 +2831,7 @@ is suppressed or paused, a denied <code>dispatched_not_committed</code> step
 follows its existing <code>in_flight_behavior</code>, and a <code>committed</code> step is
 never compensated on narrowing alone. <code>step_id</code> is <span class="bcp14">REQUIRED</span> on
 Orchestration Evidence reporting this trigger. Signals promoted from
-an informative to a normative reference (#670).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+an informative to a normative reference (#670).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

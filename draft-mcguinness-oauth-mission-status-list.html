@@ -1282,13 +1282,13 @@ already reads.<a href="#section-3-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-4.2">
           <p id="section-3-4.2.1"><strong>Mapping.</strong> VALID (0x00) reports <code>active</code>; SUSPENDED (0x02)
-reports <code>suspended</code>; INVALID (0x01) reports every terminal state.
-A consumer treats any other value as non-active, per the fail-safe
-rule. The list carries reliance bits only: which terminal state,
-the <code>successor</code>, and the state version stay on the Status
-profile's authoritative surfaces, and a consumer that observes a
-bit other than VALID re-establishes state there before any further
-reliance.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
+reports <code>suspended</code>; INVALID (0x01) reports <code>terminated</code>, with any
+termination reason. A consumer treats any other value as non-active,
+per the fail-safe rule. The list carries reliance bits only: which
+termination reason and its references, and the state version stay
+on the Status profile's authoritative surfaces, and a consumer that
+observes a bit other than VALID re-establishes state there before
+any further reliance.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-4.3">
           <p id="section-3-4.3.1"><strong>Freshness.</strong> The Status List Token's <code>ttl</code> and <code>exp</code> are a

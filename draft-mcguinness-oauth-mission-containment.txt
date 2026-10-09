@@ -460,9 +460,10 @@ Table of Contents
       answers it with the already-committed result.
 
    *  *Legal states.* A contain transition is legal from active and from
-      suspended, and MUST be refused in every terminal state.  A resume
-      does not clear the overlay: a Mission suspended, contained, and
-      resumed returns to active still contained.
+      suspended, and MUST be refused when the Mission is terminated,
+      with any termination reason.  A resume does not clear the overlay:
+      a Mission suspended, contained, and resumed returns to active
+      still contained.
 
    *  *No state change.* The transition changes no lifecycle state: a
       contained active Mission remains active.  Containment narrows what
@@ -893,8 +894,8 @@ Table of Contents
    rejection_reason:  CONDITIONAL.  A string.  REQUIRED when outcome is
       rejected: the reason the event was not applied (for example, an
       unverifiable signature, a source not trusted for the reported
-      event type, or a Mission the event does not name or that is in a
-      terminal state).  A deployment MAY define additional values, which
+      event type, or a Mission the event does not name or that is
+      terminated).  A deployment MAY define additional values, which
       MUST be collision-resistant names, following the Collision-
       Resistant Name guidance of [RFC7519] Section 4.2.
 
@@ -1179,6 +1180,10 @@ Table of Contents
 23.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Contain Transition (Section 7): a contain transition is
+      refused for a terminated Mission, whatever its termination reason
+      (#705).
 
    *  Visibility (Section 13): current-authority surfaces omit contained
       capability at action grain, keeping an entry's uncontained

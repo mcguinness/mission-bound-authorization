@@ -1324,7 +1324,7 @@ Each subsection identifies its enforcing subject.<a href="#section-4-1" class="p
 <a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-5-terminal-state-tombstones" class="section-name selfRef">5. Terminal-state tombstones</a>
         </h3>
 <p id="section-4.5-1">The Mission Issuer <span class="bcp14">MUST</span> retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
-<p id="section-4.5-2">A tombstone identifies the canonical issuer/Mission tuple, terminal state, final version, and transition time or commit reference. After detailed retention expires, the issuer <span class="bcp14">MUST</span> retain enough namespace state to prevent identifier reuse or a return to active. This composes retention horizons; it does not weaken the binding's existing identifier-nonreuse requirement.<a href="#section-4.5-2" class="pilcrow">¶</a></p>
+<p id="section-4.5-2">A tombstone identifies the canonical issuer/Mission tuple, the <code>terminated</code> state and its termination reason, final version, and transition time or commit reference. After detailed retention expires, the issuer <span class="bcp14">MUST</span> retain enough namespace state to prevent identifier reuse or a return to active. This composes retention horizons; it does not weaken the binding's existing identifier-nonreuse requirement.<a href="#section-4.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="partitions">
@@ -1588,11 +1588,15 @@ or action content into replication and queue keys.<a href="#section-9-1" class="
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Initial topology-neutral consistency foundation (#250): ten issuer
+          <p id="appendix-A-2.1.1">Terminal-state tombstones: a tombstone records the <code>terminated</code>
+state and its termination reason (#705).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Initial topology-neutral consistency foundation (#250): ten issuer
 invariant groups, the shared consistency and availability rule, the
 deployment declaration riding existing surfaces, and the fault
 conformance table. Implementation, multi-process claiming, and operator
-performance measurement are separate work.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+performance measurement are separate work.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

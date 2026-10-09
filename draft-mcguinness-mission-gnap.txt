@@ -610,36 +610,25 @@ Table of Contents
    rule governing every authorization-server surface and unrecognized
    states fail-safe non-active.
 
-           +===========+======================================+
-           | Family    | GNAP surface                         |
-           | state     |                                      |
-           +===========+======================================+
-           | active    | continuation, token issuance, and    |
-           |           | rotation served; introspection       |
-           |           | reports tokens by their own status   |
-           +-----------+--------------------------------------+
-           | completed | grant finalized; continuation        |
-           |           | refused (invalid_continuation);      |
-           |           | rotation refused (invalid_rotation); |
-           |           | introspection reports active: false  |
-           +-----------+--------------------------------------+
-           | revoked   | grant finalized; continuation        |
-           |           | refused (invalid_continuation);      |
-           |           | rotation refused (invalid_rotation); |
-           |           | introspection reports active: false  |
-           +-----------+--------------------------------------+
-           | expired   | grant finalized; continuation        |
-           |           | refused (invalid_continuation);      |
-           |           | rotation refused (invalid_rotation); |
-           |           | introspection reports active: false  |
-           +-----------+--------------------------------------+
-           | suspended | continuation defers: a continue      |
-           |           | object with wait and no new tokens;  |
-           |           | rotation refused (invalid_rotation); |
-           |           | introspection reports active: false  |
-           +-----------+--------------------------------------+
+    +==========================+======================================+
+    | Family state             | GNAP surface                         |
+    +==========================+======================================+
+    | active                   | continuation, token issuance, and    |
+    |                          | rotation served; introspection       |
+    |                          | reports tokens by their own status   |
+    +--------------------------+--------------------------------------+
+    | terminated (reason       | grant finalized; continuation        |
+    | revoked, expired,        | refused (invalid_continuation);      |
+    | completed, or any other) | rotation refused (invalid_rotation); |
+    |                          | introspection reports active: false  |
+    +--------------------------+--------------------------------------+
+    | suspended                | continuation defers: a continue      |
+    |                          | object with wait and no new tokens;  |
+    |                          | rotation refused (invalid_rotation); |
+    |                          | introspection reports active: false  |
+    +--------------------------+--------------------------------------+
 
-                                 Table 2
+                                  Table 2
 
    The projection is fail-safe: every non-active state projects to a
    non-permitting native signal.  The introspection projection is
@@ -658,8 +647,8 @@ Table of Contents
       introspection; a deployment that validates structured tokens
       without introspection needs the state surfaces below.
 
-   *  *Expiry.* When the record's expires_at passes, the Mission
-      transitions to expired without a request.
+   *  *Expiry.* When the record's expires_at passes, the Mission is
+      terminated with reason expired without a request.
 
    *  *Completion.* The client instance's DELETE of the continuation URI
       is grant cancellation: it always finalizes the grant, per
@@ -810,9 +799,11 @@ Table of Contents
 
    *  *Grant-response-carried*: the grant response carries a mission
       member (Section 16) giving the client instance the Mission
-      Reference, expires_at, and current state.  This surface informs
-      the Actor; it is correlation for the client, never proof for a
-      resource server.
+      Reference, expires_at, current state, and, for a terminated
+      Mission, its termination ([I-D.draft-mcguinness-oauth-mission],
+      Section "Mission Termination").  This surface informs the Actor;
+      it is correlation for the client, never proof for a resource
+      server.
 
    A token-carried claim verifies offline under keys the deployment
    distributes; an introspection-carried claim is asserted by the

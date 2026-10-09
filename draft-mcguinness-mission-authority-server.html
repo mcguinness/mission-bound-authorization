@@ -3552,11 +3552,13 @@ a pending submission overtaken by a concurrent expansion resolves to
           <li class="normal" id="section-9.3-2.3">
             <p id="section-9.3-2.3.1"><strong>Supersession atomicity.</strong> In one atomic operation on the MAS's
 records, the successor activates with its <code>predecessor</code> member set,
-and the predecessor transitions to <code>superseded</code> with its <code>successor</code>
-member set. The <code>successor</code> and <code>related_to</code> members carry that
+and the predecessor transitions to <code>terminated</code> with reason
+<code>superseded</code>, its <code>termination.successor</code> naming the successor. The
+<code>termination.successor</code> and <code>related_to</code> members carry that
 profile's semantics and surface through the MAS's Mission Status
-responses. The <code>superseded</code> state enters the state space the MAS
-reports (<a href="#lifecycle-and-state" class="auto internal xref">Section 5</a>).<a href="#section-9.3-2.3.1" class="pilcrow">¶</a></p>
+responses, <code>termination.successor</code> inside <code>mission.termination</code>. The
+<code>superseded</code> reason enters the termination reasons the MAS reports
+(<a href="#lifecycle-and-state" class="auto internal xref">Section 5</a>).<a href="#section-9.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-9.3-2.4">
             <p id="section-9.3-2.4.1"><strong>Denial reasons.</strong> That profile's Mission Denial Reasons registry
@@ -3615,8 +3617,9 @@ Status responses.<a href="#section-9.4-2.4.1" class="pilcrow">¶</a></p>
             <p id="section-9.4-2.5.1"><strong>Cascade.</strong> Cascade applies with one simplification: the MAS owns
 its state store, so cascade transitions are native lifecycle
 transitions on its own records. The MAS implements that profile's
-<code>immediate</code> mode, and the <code>cascaded</code> state surfaces through Mission
-Status (<a href="#lifecycle-and-state" class="auto internal xref">Section 5</a>).<a href="#section-9.4-2.5.1" class="pilcrow">¶</a></p>
+<code>immediate</code> mode, and a cascade-terminated child surfaces through
+Mission Status as <code>terminated</code> with reason <code>parent_terminated</code> in
+<code>mission.termination</code> (<a href="#lifecycle-and-state" class="auto internal xref">Section 5</a>).<a href="#section-9.4-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-9.4-2.6">
             <p id="section-9.4-2.6.1"><strong>Denial reasons.</strong> That profile's closed denial-reason set applies;
@@ -4105,7 +4108,8 @@ non-human assertion contributes, a threshold, veto, or
 separation-of-duty rule is evaluated, or validating an assertion
 requires authority standing outside the Mission record. The Mission
 record still carries
-exactly one accountable <code>approver</code>, the only principal any
+exactly one accountable principal,
+<code>approval_basis.consent_principal</code>, the only principal any
 projection or enforcement consumes. Direct self-approval by one
 authenticated human remains the degenerate case, which the Mission
 record represents completely.<a href="#section-12-4.8.1" class="pilcrow">¶</a></p>
@@ -5663,9 +5667,10 @@ shows the decision.<a href="#appendix-B.4-1" class="pilcrow">¶</a></p>
 <p id="appendix-B.5-1">An authorized party revokes the Mission at the Mission Lifecycle
 endpoint (<a href="#lifecycle-and-state" class="auto internal xref">Section 5</a>). The agent's token remains valid
 OAuth (<a href="#limitations" class="auto internal xref">Section 11</a>). Once the PDP's state check observes the
-revocation, within the published staleness bound, it reports
-<code>revoked</code>, and the PDP denies the agent's next consequential action
-with the AuthZEN profile's <code>mission_inactive</code> reason
+revocation, within the published staleness bound, it reports the
+Mission <code>terminated</code> with reason <code>revoked</code>, and the PDP denies the
+agent's next consequential action with the AuthZEN profile's
+<code>mission_inactive</code> reason
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). The following example
 shows the denial:<a href="#appendix-B.5-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-B.5-2">
@@ -5691,14 +5696,22 @@ shows the denial:<a href="#appendix-B.5-1" class="pilcrow">¶</a></p>
 <p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-C-2.1">
-          <p id="appendix-C-2.1.1">Mission Approval and the Substrate Statement name the OAuth
+          <p id="appendix-C-2.1.1">Mission lifecycle (#705). A superseded predecessor is <code>terminated</code>
+with reason <code>superseded</code> and names its successor in
+<code>termination.successor</code>, and a cascade-terminated child reports
+reason <code>parent_terminated</code>; both surface in the Mission Status
+response's <code>mission.termination</code>. The record's accountable
+principal is <code>approval_basis.consent_principal</code>.<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.2">
+          <p id="appendix-C-2.2.1">Mission Approval and the Substrate Statement name the OAuth
 binding's approval steps by content instead of by number, adding
 the authority-source and effective-expiry steps and the
 creation-commit expiry recheck, which resolves a failed commit to
-<code>denied</code> (#1116).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+<code>denied</code> (#1116).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.2">
-          <p id="appendix-C-2.2.1">Join evidence and the join-failure value (#972 items 27a, 27b,
+        <li class="normal" id="appendix-C-2.3">
+          <p id="appendix-C-2.3.1">Join evidence and the join-failure value (#972 items 27a, 27b,
 D289). The PDP records <code>join_view_id</code> as a top-level member of the
 signed Decision Evidence of every decision reached over a successful
 join, a later policy denial included, and the AuthZEN response
@@ -5706,16 +5719,16 @@ carries no view identifier. A failed join denies with the AuthZEN
 profile's <code>mission_binding_failed</code> in place of <code>mission_mismatch</code>,
 which this document no longer adds to that profile's denial-reason
 set; signed records made before the change are left as they are.
-The AuthZEN examples use the profile's request and response shapes.<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-2.3">
-          <p id="appendix-C-2.3.1">Authentication failures (#972 item 18, D289). A 401 from the
-submission or join-assertion endpoint carries the challenges Mission
-Status defines, and a failed direct client authentication receives
-400 <code>invalid_client</code>.<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
+The AuthZEN examples use the profile's request and response shapes.<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.4">
-          <p id="appendix-C-2.4.1">Assertion audience and submission outcomes (#972, D289). A Join
+          <p id="appendix-C-2.4.1">Authentication failures (#972 item 18, D289). A 401 from the
+submission or join-assertion endpoint carries the challenges Mission
+Status defines, and a failed direct client authentication receives
+400 <code>invalid_client</code>.<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.5">
+          <p id="appendix-C-2.5.1">Assertion audience and submission outcomes (#972, D289). A Join
 Assertion request names its consuming PDP in a required <code>audience</code>,
 limited to enrolled PDPs, and the assertion's <code>aud</code> is required and
 checked by that PDP. The assertion cache is keyed by Mission, token
@@ -5726,10 +5739,10 @@ type with 415 <code>unsupported_media_type</code> and a refused
 expansion Subject mismatch denies with <code>subject_mismatch</code>, registered
 in the Mission Denial Reasons registry. A missing required reference
 is refused with <code>mission_reference_conflict</code>, and every
-submission-status body carries <code>submission_id</code> and <code>status</code>.<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
+submission-status body carries <code>submission_id</code> and <code>status</code>.<a href="#appendix-C-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.5">
-          <p id="appendix-C-2.5.1">Reference and claim consistency (#972, D289). The reference tuple
+        <li class="normal" id="appendix-C-2.6">
+          <p id="appendix-C-2.6.1">Reference and claim consistency (#972, D289). The reference tuple
 and both carriages share one extension rule. Every deployment
 documents its mapping contract and an Enterprise MAS publishes it.
 High-Consequence Binding defines the Mission-bound credential
@@ -5738,10 +5751,10 @@ distinct; Acting Credentials points at the runtime profile's Custody
 rule. Join rule 1 names a trusted propagated reference, step 4
 compares identity only, Limitations points at the Statement, the
 credential-holding component validates Instance Context, and
-approval-surface authentication uses the published floor.<a href="#appendix-C-2.5.1" class="pilcrow">¶</a></p>
+approval-surface authentication uses the published floor.<a href="#appendix-C-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.6">
-          <p id="appendix-C-2.6.1">Submission polling and Join Assertion outcomes (#972). The 202 and
+        <li class="normal" id="appendix-C-2.7">
+          <p id="appendix-C-2.7.1">Submission polling and Join Assertion outcomes (#972). The 202 and
 <code>pending</code> status responses carry an <code>interval</code>; the client waits at
 least the interval in force (5 seconds by default) between status
 requests; the status request parameter is <code>submission_id</code>. The
@@ -5751,10 +5764,10 @@ body, <code>not_found</code> (404) for an unknown or invisible Mission, and
 <code>join_failed</code> (403) for a non-active Mission, an inactive or unbound
 token, or a failed join. Join Assertions are signed with an algorithm
 listed in <code>mission_status_signing_alg_values_supported</code>, and a PDP
-rejects <code>none</code> or an unlisted algorithm.<a href="#appendix-C-2.6.1" class="pilcrow">¶</a></p>
+rejects <code>none</code> or an unlisted algorithm.<a href="#appendix-C-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.7">
-          <p id="appendix-C-2.7.1">Join inputs on the wire (#972). Mission Status discloses the
+        <li class="normal" id="appendix-C-2.8">
+          <p id="appendix-C-2.8.1">Join inputs on the wire (#972). Mission Status discloses the
 Mission's <code>subject</code>, <code>client_id</code>, and entry <code>delegation</code> members to
 PDPs enrolled for its enforcement scope, and enrollment is
 deployment configuration. The <code>context.mission_join</code> decision-request
@@ -5762,10 +5775,10 @@ member carries the join inputs, including a Join Assertion with the
 presented credential's digest and thumbprint. The assertion carries
 the join result (<code>join</code>) the PDP narrows with, and supports
 certificate-bound tokens (<code>x5t#S256</code>). A Join Assertion that fails
-validation is denied, and <code>mission_max_stale_seconds</code> is required.<a href="#appendix-C-2.7.1" class="pilcrow">¶</a></p>
+validation is denied, and <code>mission_max_stale_seconds</code> is required.<a href="#appendix-C-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.8">
-          <p id="appendix-C-2.8.1">Density and OAuth register, with no change to the party, behavior,
+        <li class="normal" id="appendix-C-2.9">
+          <p id="appendix-C-2.9.1">Density and OAuth register, with no change to the party, behavior,
 or keyword of any requirement; two conditions the preceding sentence
 carried are stated in the requirement itself. The abstract opens
 "This specification defines" in 129 words; the
@@ -5775,10 +5788,10 @@ requirements use the active OAuth form; examples open with "The
 following"; the Statement's capability table is compacted, with its
 qualifications listed under it; Security and Privacy Considerations
 open with pointers to the OAuth binding, Mission Status, and the
-runtime profile; and persuasive and figurative wording is removed.<a href="#appendix-C-2.8.1" class="pilcrow">¶</a></p>
+runtime profile; and persuasive and figurative wording is removed.<a href="#appendix-C-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.9">
-          <p id="appendix-C-2.9.1">Reading order. A Protocol Overview with the MAS-mode flow figure
+        <li class="normal" id="appendix-C-2.10">
+          <p id="appendix-C-2.10.1">Reading order. A Protocol Overview with the MAS-mode flow figure
 opens the document. The Mission Join, Reference Propagation, and the
 Join Assertion follow Lifecycle and State; Expansion and Child
 Creation follow them; Metadata follows every endpoint it lists; and
@@ -5790,10 +5803,10 @@ table names the endpoints that return each code; Terminology defines
 the join vocabulary; Conformance adds the PEP role, the Join
 Assertion capability, and the Enterprise profile; Deployment is an
 appendix; and the end-to-end walkthrough points to the in-body
-examples and adds revocation.<a href="#appendix-C-2.9.1" class="pilcrow">¶</a></p>
+examples and adds revocation.<a href="#appendix-C-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.10">
-          <p id="appendix-C-2.10.1">Corrections. Cross-references name the right sections (the
+        <li class="normal" id="appendix-C-2.11">
+          <p id="appendix-C-2.11.1">Corrections. Cross-references name the right sections (the
 propagation tuple's state source, a client-instance section);
 Join Spoofing counts four residuals; IANA names both runtime denial
 reasons; the error table lists <code>join_failed</code> and <code>conflict</code>; RFC 8414
@@ -5803,25 +5816,25 @@ Mission-Reference request and classify reads as
 <code>consequential_read</code>; Estate Prerequisites name local RFC 9068
 validation; Progressive Adoption follows the architecture's
 Assurance Levels; and "the issuance profile" becomes "the OAuth
-binding" throughout.<a href="#appendix-C-2.10.1" class="pilcrow">¶</a></p>
+binding" throughout.<a href="#appendix-C-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.11">
-          <p id="appendix-C-2.11.1">Authentication discovery mirrors the Status draft: per-endpoint
+        <li class="normal" id="appendix-C-2.12">
+          <p id="appendix-C-2.12.1">Authentication discovery mirrors the Status draft: per-endpoint
 <code>*_auth_methods_supported</code> and <code>*_auth_signing_alg_values_supported</code>
 members for the submission, status, and lifecycle endpoints replace
 <code>mission_auth_methods_supported</code>, and the submission endpoint accepts
 all three Status mechanisms, including mTLS-bound access tokens. The
 join-assertion endpoint shares the submission methods but names its
-own token audience and Protected Resource Metadata.<a href="#appendix-C-2.11.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-2.12">
-          <p id="appendix-C-2.12.1">Specify the PEP/PDP responsibilities for required instance-bound joins
-and their refusal behavior. Join Assertions continue to carry no
-instance identifier and do not replace the instance association check;
-MAS evidence distinguishes participation from presenter attribution.<a href="#appendix-C-2.12.1" class="pilcrow">¶</a></p>
+own token audience and Protected Resource Metadata.<a href="#appendix-C-2.12.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.13">
-          <p id="appendix-C-2.13.1">Client-instance references follow their successors:
+          <p id="appendix-C-2.13.1">Specify the PEP/PDP responsibilities for required instance-bound joins
+and their refusal behavior. Join Assertions continue to carry no
+instance identifier and do not replace the instance association check;
+MAS evidence distinguishes participation from presenter attribution.<a href="#appendix-C-2.13.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.14">
+          <p id="appendix-C-2.14.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -5835,12 +5848,12 @@ instance from the Instance Context the PEP validated, and the MAS
 records the token's Instance Context in its join evidence where it
 received it;
 and the Enterprise instance-bound join applies where the acting
-credential carries validated Instance Context.<a href="#appendix-C-2.13.1" class="pilcrow">¶</a></p>
+credential carries validated Instance Context.<a href="#appendix-C-2.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.14">
-          <p id="appendix-C-2.14.1">Pointed MAS Availability at the Runtime and Status Operational
+        <li class="normal" id="appendix-C-2.15">
+          <p id="appendix-C-2.15.1">Pointed MAS Availability at the Runtime and Status Operational
 Considerations sections for the dependency-specific outage, ride-through,
-and recovery semantics (#310). No MAS requirement changed.<a href="#appendix-C-2.14.1" class="pilcrow">¶</a></p>
+and recovery semantics (#310). No MAS requirement changed.<a href="#appendix-C-2.15.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

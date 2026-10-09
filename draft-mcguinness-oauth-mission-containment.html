@@ -1692,9 +1692,10 @@ answers it with the already-committed result.<a href="#section-7-2.2.1" class="p
 </li>
         <li class="normal" id="section-7-2.3">
           <p id="section-7-2.3.1"><strong>Legal states.</strong> A contain transition is legal from <code>active</code> and
-from <code>suspended</code>, and <span class="bcp14">MUST</span> be refused in every terminal state. A
-<code>resume</code> does not clear the overlay: a Mission suspended, contained,
-and resumed returns to <code>active</code> still contained.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+from <code>suspended</code>, and <span class="bcp14">MUST</span> be refused when the Mission is
+<code>terminated</code>, with any termination reason. A <code>resume</code> does not clear
+the overlay: a Mission suspended, contained, and resumed returns to
+<code>active</code> still contained.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.4">
           <p id="section-7-2.4.1"><strong>No state change.</strong> The transition changes no lifecycle state: a
@@ -2264,7 +2265,7 @@ the Containment Evidence object the transition committed
           <p id="section-18-3.12.1">CONDITIONAL. A string. <span class="bcp14">REQUIRED</span> when <code>outcome</code> is <code>rejected</code>: the
 reason the event was not applied (for example, an unverifiable
 signature, a source not trusted for the reported event type, or a
-Mission the event does not name or that is in a terminal state). A
+Mission the event does not name or that is <code>terminated</code>). A
 deployment <span class="bcp14">MAY</span> define additional values, which <span class="bcp14">MUST</span> be
 collision-resistant names, following the Collision-Resistant Name
 guidance of <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2.<a href="#section-18-3.12.1" class="pilcrow">¶</a></p>
@@ -2666,17 +2667,22 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="section-23-1">[[ To be removed from the final specification ]]<a href="#section-23-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-23-2.1">
-          <p id="section-23-2.1.1">Visibility (<a href="#visibility" class="auto internal xref">Section 13</a>): current-authority surfaces omit
-contained capability at action grain, keeping an entry's uncontained
-remainder; an annotation no longer substitutes for exclusion.<a href="#section-23-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-23-2.1.1">The Contain Transition (<a href="#contain-transition" class="auto internal xref">Section 7</a>): a contain
+transition is refused for a <code>terminated</code> Mission, whatever its
+termination reason (#705).<a href="#section-23-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-23-2.2">
-          <p id="section-23-2.2.1">Restoration Through Expansion (<a href="#restoration" class="auto internal xref">Section 15</a>): containing
+          <p id="section-23-2.2.1">Visibility (<a href="#visibility" class="auto internal xref">Section 13</a>): current-authority surfaces omit
+contained capability at action grain, keeping an entry's uncontained
+remainder; an annotation no longer substitutes for exclusion.<a href="#section-23-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-23-2.3">
+          <p id="section-23-2.3.1">Restoration Through Expansion (<a href="#restoration" class="auto internal xref">Section 15</a>): containing
 capability places a restriction on the Mission's expansion chain,
 retained across later successors and surfaced in any later
 expansion consent whose authority overlaps it, until a fresh human
 approval explicitly restores that authority with its cause
-disclosed. A successor's overlay still starts empty.<a href="#section-23-2.2.1" class="pilcrow">¶</a></p>
+disclosed. A successor's overlay still starts empty.<a href="#section-23-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

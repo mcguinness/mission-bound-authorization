@@ -1524,9 +1524,10 @@ omit the discharged entries.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
 Mission therefore completes partially, one entry at a time, as each
 entry's task finishes. The issuance profile's Mission states are
 unchanged; a deployment that also tracks Mission-level completion <span class="bcp14">MAY</span>
-transition a Mission whose entries are all discharged to the
-<code>completed</code> state the Status profile's Mission Lifecycle endpoint
-defines (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), but this
+transition a Mission whose entries are all discharged to <code>terminated</code>
+with reason <code>completed</code>, the termination reason the Status profile's
+Mission Lifecycle endpoint defines
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), but this
 section does not require it. Such a transition is performed through
 the Status profile's <code>complete</code> operation, as an issuer-initiated
 lifecycle operation, so the consolidated state machine's event sources
@@ -1708,10 +1709,10 @@ equivalence-class rule
           <li class="normal" id="section-4.1-2.3">
             <p id="section-4.1-2.3.1"><strong>States.</strong> Discharge applies while the Mission is <code>active</code> or
 <code>suspended</code>: a suspended Mission still narrows monotonically. A
-discharge determined after the Mission reaches <code>completed</code>,
-<code>revoked</code>, <code>expired</code>, or another terminal state <span class="bcp14">MUST NOT</span> create a
-transition or a version increment. Discharge never changes
-Mission-level state; a deployment that also tracks all-entry
+discharge determined after the Mission is <code>terminated</code>, whatever its
+termination reason (<code>completed</code>, <code>revoked</code>, <code>expired</code>, or another),
+<span class="bcp14">MUST NOT</span> create a transition or a version increment. Discharge never
+changes Mission-level state; a deployment that also tracks all-entry
 completion invokes the Status profile's <code>complete</code> operation
 separately (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-4.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
@@ -2015,8 +2016,9 @@ replay (the same tuple and the same fingerprint) is handled first by
 the dedup rule of <a href="#discharge-idempotency" class="auto internal xref">Section 4.3.3</a>.<a href="#section-4.3-8.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.3-8.2">
-            <p id="section-4.3-8.2.1"><strong>Terminal Missions.</strong> A delivery reaching the endpoint after
-<code>completed</code>, <code>revoked</code>, <code>expired</code>, or another terminal state returns
+            <p id="section-4.3-8.2.1"><strong>Terminal Missions.</strong> A delivery reaching the endpoint after the
+Mission is <code>terminated</code>, with reason <code>completed</code>, <code>revoked</code>,
+<code>expired</code>, or another, returns
 an authenticated <code>terminal_noop</code> acknowledgement
 (<a href="#discharge-result" class="auto internal xref">Section 4.3.4</a>). The AS reaches this determination only after
 the selector and authorization validation of
@@ -2149,7 +2151,7 @@ fingerprint</strong> (defined below). The AS performs no state-changing
 work: no re-latch, no version increment. It issues a new signed
 envelope that echoes the new <code>nonce</code> and carries the stored
 operation result: the same <code>outcome</code> and resolved target, and the
-original <code>prior_version</code> and <code>current_version</code> the first commit
+original <code>prior_version</code> and <code>new_version</code> the first commit
 produced. The echoed target form and <code>event_id</code> are the current
 request's (<a href="#discharge-result" class="auto internal xref">Section 4.3.4</a>), so a selector-form retry of a
 digest-form original never receives digests.<a href="#section-4.3.3-3.2.1" class="pilcrow">¶</a></p>
@@ -2223,14 +2225,16 @@ fresh <code>already_discharged</code>.<a href="#section-4.3.4-2.4.1" class="pilc
 </dd>
             <dd class="break"></dd>
 <dt id="section-4.3.4-2.5">
-<code>prior_version</code>, <code>current_version</code>:</dt>
+<code>prior_version</code>, <code>new_version</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-4.3.4-2.6">
               <p id="section-4.3.4-2.6.1">the Mission's state version immediately before and after the
 commit this result reports. For a request that itself commits, that
 commit is this request's own. For the new-<code>nonce</code> fresh-envelope
 case of <a href="#discharge-idempotency" class="auto internal xref">Section 4.3.3</a>, which commits nothing, these are
 the versions the original commit produced, unchanged. They are equal
-for <code>already_discharged</code> and <code>terminal_noop</code>.<a href="#section-4.3.4-2.6.1" class="pilcrow">¶</a></p>
+for <code>already_discharged</code> and <code>terminal_noop</code>. An envelope that
+carries <code>current_version</code> in place of <code>new_version</code> verifies over its
+original bytes with that name.<a href="#section-4.3.4-2.6.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
 <dt id="section-4.3.4-2.7">
@@ -2792,23 +2796,30 @@ entry carrying a <code>terminal_when</code> constraint it does not understand
 <p id="section-9-1">[[ To be removed from the final specification ]]<a href="#section-9-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-2.1">
-          <p id="section-9-2.1.1">The Mission Intent no longer carries <code>success_criteria</code>, following
+          <p id="section-9-2.1.1">A Discharge Result carries <code>prior_version</code> and <code>new_version</code>, an
+envelope signed with <code>current_version</code> verifies over its original
+bytes, and completing an all-discharged Mission terminates it with
+reason <code>completed</code>; a terminated Mission answers <code>terminal_noop</code>
+whatever its reason (#705).<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.2">
+          <p id="section-9-2.2.1">The Mission Intent no longer carries <code>success_criteria</code>, following
 the OAuth binding. <code>terminal_when</code> is described as the enforceable
 statement of one entry's completion, not of the task's success, and
 the Introduction says the Intent's prose stays inert. No requirement
-changed.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+changed.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.2">
-          <p id="section-9-2.2.1">Discharge Commit (<a href="#discharge-commit" class="auto internal xref">Section 4.1</a>): a committed discharge places
+        <li class="normal" id="section-9-2.3">
+          <p id="section-9-2.3.1">Discharge Commit (<a href="#discharge-commit" class="auto internal xref">Section 4.1</a>): a committed discharge places
 a restriction on the Mission's expansion chain, retained across later
 successors and cleared only for the authority a fresh human approval
 explicitly restores with the discharged entry and its condition
-disclosed. The discharge itself never reverts.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+disclosed. The discharge itself never reverts.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.3">
-          <p id="section-9-2.3.1">Relationship to Runtime Enforcement (<a href="#runtime" class="auto internal xref">Section 3.7</a>): issuance-only
+        <li class="normal" id="section-9-2.4">
+          <p id="section-9-2.4.1">Relationship to Runtime Enforcement (<a href="#runtime" class="auto internal xref">Section 3.7</a>): issuance-only
 discharge stays conforming; where the runtime profile runs, its PDP
-refuses a discharged entry.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+refuses a discharged entry.<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

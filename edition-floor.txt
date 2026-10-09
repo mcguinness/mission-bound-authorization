@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-09T00:17:24Z
-Source repository commit: eb3dda4f43424a95abf76aa2956e1d0ff2fb7391
+Generated: 2026-10-09T03:34:00Z
+Source repository commit: 16f8084d62318b7ecd03e943fff747b24d9d16f4
 Member count: 7
 
 Reading order:
@@ -506,21 +506,27 @@ Table of Contents
    envelope with fixed canonicalization, so an auditor can reproduce
    each digest from the record alone (the OAuth binding's Mission
    Approval, Integrity Anchors, and Canonicalization Rules sections).
-   The record is immutable except for its state (the Mission Record
-   section).
+   The record is immutable except for its state and, written once when
+   the Mission terminates, its termination (the Mission Record section).
 
-   In the OAuth binding the lifecycle states are active, revoked, and
-   expired, and only active permits issuance or a new positive
-   governance decision.  A non-active state stops further derivation and
-   refresh at once.  A credential already issued ends at the earliest of
-   an applicable revocation, a state-aware or runtime check that reaches
-   it, or its own expiry (Section 10.4).
+   In the OAuth binding the lifecycle states are active and terminated,
+   and only active permits issuance or a new positive governance
+   decision.  A terminated Mission's termination gives the reason:
+   revoked or expired in the OAuth binding.  A non-active state stops
+   further derivation and refresh at once.  A credential already issued
+   ends at the earliest of an applicable revocation, a state-aware or
+   runtime check that reaches it, or its own expiry (Section 10.4).
 
-   Companions add states (suspended, completed, superseded, cascaded).
-   One rule keeps these additions safe without a registry: a consumer
-   treats every state other than the exact value active, including one
-   it does not recognize, as non-active, so an unrecognized state fails
-   safe (the OAuth binding's Mission Lifecycle and Gating section).
+   Mission Status adds the reversible suspended state.  A companion that
+   defines a further way for a Mission to end registers a termination
+   reason, not a state (completed, superseded, parent_terminated); the
+   OAuth binding's Mission Lifecycle States and Mission Termination
+   Reasons registries hold both.  One rule keeps these additions safe: a
+   consumer treats every state other than the exact value active,
+   including one it does not recognize, as non-active, so an
+   unrecognized state fails safe, and a reason it does not recognize
+   still leaves the Mission terminated (the OAuth binding's Mission
+   Lifecycle and Gating and Mission Termination sections).
 
    AAuth has its own counterparts to the OAuth commitment and lifecycle.
    Its exact-byte s256 commits the private approved mission blob.  The
@@ -536,8 +542,12 @@ Table of Contents
    Server policy, and optionally AAuth Rich Resource Requests (R3,
    [I-D.draft-hardt-aauth-r3]) carry deterministic resource
    authorization.  AAuth does not add the OAuth Authority Set or its two
-   anchors, and its native lifecycle remains exactly active or
-   terminated.
+   anchors.  Its native lifecycle is active or terminated, with no
+   suspended state, and it records why a mission ended in flat
+   termination_reason and terminated_at members from its own open reason
+   set, which includes administrative; the OAuth binding nests a
+   registered reason in a termination object.  The AAuth binding maps
+   the two reason sets ([I-D.draft-mcguinness-mission-aauth]).
 
 4.2.  The Authority Path
 
@@ -5039,9 +5049,10 @@ Appendix G.  Mission Document Map
 
    Within Lifecycle, Status is the OAuth lifecycle suite's root
    document, with Signals (the push channel) and Management (the
-   operator plane) as its satellites; AAuth keeps its native two-state
-   lifecycle, served by mission-aauth-management, with the expiry bound
-   profiled by aauth-mission-expiry.
+   operator plane) as its satellites; AAuth keeps its native lifecycle,
+   with no suspended state and its own termination reasons, served by
+   mission-aauth-management, with the expiry bound profiled by aauth-
+   mission-expiry.
 
    *Architecture mappings:*
 
@@ -5157,79 +5168,74 @@ Appendix G.  Mission Document Map
 
    *Lifecycle:*
 
-     +=================================+============================+
-     | Document                        | Role                       |
-     +=================================+============================+
-     | oauth-mission-status            | The signed pull surface    |
-     |                                 | and lifecycle endpoint,    |
-     |                                 | with suspended and         |
-     |                                 | completed.                 |
-     +---------------------------------+----------------------------+
-     | oauth-mission-status-list       | A signed, compressed       |
-     |                                 | Status List read locally   |
-     |                                 | per action instead of per- |
-     |                                 | Mission status reads.      |
-     +---------------------------------+----------------------------+
-     | oauth-mission-discharge         | Per-entry discharge via    |
-     |                                 | terminal_when, an          |
-     |                                 | extension operation on the |
-     |                                 | Status lifecycle endpoint. |
-     +---------------------------------+----------------------------+
-     | oauth-mission-signals           | A signed event per         |
-     |                                 | lifecycle transition, push |
-     |                                 | or poll.                   |
-     +---------------------------------+----------------------------+
-     | mission-control-plane           | Experimental: issuer       |
-     |                                 | consistency, durable       |
-     |                                 | transition publication,    |
-     |                                 | rollback resistance, and   |
-     |                                 | the availability boundary. |
-     +---------------------------------+----------------------------+
-     | oauth-mission-expansion         | Widening through an        |
-     |                                 | approved successor         |
-     |                                 | Mission.                   |
-     +---------------------------------+----------------------------+
-     | oauth-mission-containment       | Event-triggered monotonic  |
-     |                                 | narrowing of a live        |
-     |                                 | Mission's effective        |
-     |                                 | authority; restoration     |
-     |                                 | only by successor.         |
-     +---------------------------------+----------------------------+
-     | oauth-mission-derivation-limits | An issuer-enforced cap on  |
-     |                                 | derivations under one      |
-     |                                 | Mission, refused at        |
-     |                                 | issuance once reached.     |
-     +---------------------------------+----------------------------+
-     | oauth-mission-progressive       | Experimental: policy-      |
-     |                                 | adjudicated expansion      |
-     |                                 | within a pre-consented     |
-     |                                 | ceiling.                   |
-     +---------------------------------+----------------------------+
-     | mission-discovery               | Experimental: the open-    |
-     |                                 | world encounter as a       |
-     |                                 | governed operation, with   |
-     |                                 | identity pinning and       |
-     |                                 | adjudication floors.       |
-     +---------------------------------+----------------------------+
-     | oauth-mission-management        | Fleet enumeration and bulk |
-     |                                 | lifecycle operations for   |
-     |                                 | operators; dry-run-first,  |
-     |                                 | per-Mission semantics.     |
-     +---------------------------------+----------------------------+
-     | mission-aauth-management        | AAuth-native status,       |
-     |                                 | termination, optional      |
-     |                                 | expiry, and delegation-    |
-     |                                 | tree queries at the Person |
-     |                                 | Server.                    |
-     +---------------------------------+----------------------------+
-     | aauth-mission-expiry            | Profile of AAuth's         |
-     |                                 | expires_at lifetime bound: |
-     |                                 | precision, skew            |
-     |                                 | documentation, prompt      |
-     |                                 | termination.               |
-     +---------------------------------+----------------------------+
+    +=================================+===============================+
+    | Document                        | Role                          |
+    +=================================+===============================+
+    | oauth-mission-status            | The signed pull surface and   |
+    |                                 | lifecycle endpoint, with the  |
+    |                                 | suspended state and the       |
+    |                                 | completed termination reason. |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-status-list       | A signed, compressed Status   |
+    |                                 | List read locally per action  |
+    |                                 | instead of per-Mission status |
+    |                                 | reads.                        |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-discharge         | Per-entry discharge via       |
+    |                                 | terminal_when, an extension   |
+    |                                 | operation on the Status       |
+    |                                 | lifecycle endpoint.           |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-signals           | A signed event per lifecycle  |
+    |                                 | transition, push or poll.     |
+    +---------------------------------+-------------------------------+
+    | mission-control-plane           | Experimental: issuer          |
+    |                                 | consistency, durable          |
+    |                                 | transition publication,       |
+    |                                 | rollback resistance, and the  |
+    |                                 | availability boundary.        |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-expansion         | Widening through an approved  |
+    |                                 | successor Mission.            |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-containment       | Event-triggered monotonic     |
+    |                                 | narrowing of a live Mission's |
+    |                                 | effective authority;          |
+    |                                 | restoration only by           |
+    |                                 | successor.                    |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-derivation-limits | An issuer-enforced cap on     |
+    |                                 | derivations under one         |
+    |                                 | Mission, refused at issuance  |
+    |                                 | once reached.                 |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-progressive       | Experimental: policy-         |
+    |                                 | adjudicated expansion within  |
+    |                                 | a pre-consented ceiling.      |
+    +---------------------------------+-------------------------------+
+    | mission-discovery               | Experimental: the open-world  |
+    |                                 | encounter as a governed       |
+    |                                 | operation, with identity      |
+    |                                 | pinning and adjudication      |
+    |                                 | floors.                       |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-management        | Fleet enumeration and bulk    |
+    |                                 | lifecycle operations for      |
+    |                                 | operators; dry-run-first,     |
+    |                                 | per-Mission semantics.        |
+    +---------------------------------+-------------------------------+
+    | mission-aauth-management        | AAuth-native status,          |
+    |                                 | termination, optional expiry, |
+    |                                 | and delegation-tree queries   |
+    |                                 | at the Person Server.         |
+    +---------------------------------+-------------------------------+
+    | aauth-mission-expiry            | Profile of AAuth's expires_at |
+    |                                 | lifetime bound: precision,    |
+    |                                 | skew documentation, prompt    |
+    |                                 | termination.                  |
+    +---------------------------------+-------------------------------+
 
-                                 Table 21
+                                  Table 21
 
    *Cross-domain projection and continuity:*
 
@@ -5400,6 +5406,13 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Approval and Lifecycle states the OAuth lifecycle as active,
+      Mission Status's suspended, and terminated with a reason from the
+      Mission Termination Reasons registry; the record's mutable members
+      are its state and termination; and the AAuth contrast names
+      AAuth's flat reason members and its lack of a suspended state
+      (#705).
 
    *  The Approve and Record discussion names the authorized policy as
       an instance's adjudication mechanism and the human who consented
@@ -7186,15 +7199,15 @@ Appendix B.  Mission-Bound Authorization Family Use
    the binding's native ceremony, which can be a policy authority.  The
    family separates three roles that this one term can combine
    ([I-D.draft-mcguinness-oauth-mission], Section "Role Mapping"):
-   consent_principal, the accountable human recorded as approver;
-   activation_actor, who triggered the instance; and adjudication, the
-   mechanism that decided it.  For a direct approval, the kernel's
-   Approver is consent_principal.  Under a standing-consent basis,
-   consent_principal is the accountable owner whose earlier approval of
-   the standing consent roots the instance; the authorized policy
-   ceremony supplies the instance's decision, and adjudication, where
-   present, names that mechanism, whose activation policy commitment
-   makes the decision reproducible
+   consent_principal, the accountable human (the Mission record's
+   approval_basis.consent_principal); activation_actor, who triggered
+   the instance; and adjudication, the mechanism that decided it.  For a
+   direct approval, the kernel's Approver is consent_principal.  Under a
+   standing-consent basis, consent_principal is the accountable owner
+   whose earlier approval of the standing consent roots the instance;
+   the authorized policy ceremony supplies the instance's decision, and
+   adjudication, where present, names that mechanism, whose activation
+   policy commitment makes the decision reproducible
    ([I-D.draft-mcguinness-oauth-mission], Section "Standing-Consent
    Bases").  A family document never relabels a deciding policy or model
    as the family's human Approver.  This correspondence relaxes no
@@ -7219,6 +7232,10 @@ Appendix B.  Mission-Bound Authorization Family Use
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Family Use names the accountable human by the OAuth binding's
+      record member approval_basis.consent_principal, following that
+      binding's removal of the record's approver alias (#705).
 
    *  Family Use maps the kernel's Approver to the family's accountable
       owner (consent_principal) and, under a standing-consent basis, to
@@ -7362,8 +7379,9 @@ Table of Contents
      8.2.  Canonicalization Rules
      8.3.  Commitment Mechanisms
    9.  Mission Lifecycle and Gating
-     9.1.  Issuance Gating
-     9.2.  Revocation
+     9.1.  Mission Termination
+     9.2.  Issuance Gating
+     9.3.  Revocation
    10. Mission-Bound Access Tokens
      10.1.  Scope Projection
      10.2.  The Mission Claim
@@ -7421,7 +7439,8 @@ Table of Contents
      22.5.  OAuth Authorization Server Metadata Registration
      22.6.  OAuth Protected Resource Metadata Registration
      22.7.  Mission Lifecycle States Registry
-     22.8.  Mission Intent Members Registry
+     22.8.  Mission Termination Reasons Registry
+     22.9.  Mission Intent Members Registry
    23. References
      23.1.  Normative References
      23.2.  Informative References
@@ -7546,7 +7565,7 @@ Table of Contents
        Set (Section 5.1).
 
    6.  A Mission that is not active yields no further derivation
-       (Section 9.1).
+       (Section 9.2).
 
    Section 18 is the complete statement of roles and optional
    capabilities.  The starting path is one client, one authorization
@@ -7568,7 +7587,7 @@ Table of Contents
      | Issuer (AS)   | derive bounded authority,     | Section 5,   |
      |               | obtain approval, commit the   | Section 6,   |
      |               | Mission, and gate every       | Section 7,   |
-     |               | issuance and refresh on its   | Section 9.1  |
+     |               | issuance and refresh on its   | Section 9.2  |
      |               | state and limits              |              |
      +---------------+-------------------------------+--------------+
      | Mission-aware | Validate the credential and   | Section 11,  |
@@ -7814,11 +7833,12 @@ Table of Contents
    with the token; the resource server enforces the
    authorization_details statelessly and can check the mission claim
    (Section 11), with no callback to the AS required. (5) A management
-   revoke, or expires_at passing, moves the Mission to revoked or
-   expired, after which the AS refuses further issuance and refresh; a
-   deployment can also treat [RFC7009] revocation of the refresh token
-   as revoking the Mission (Section 9.2).  The end-to-end example
-   (Appendix A) walks this flow with concrete messages.
+   revoke, or expires_at passing, moves the Mission to terminated, with
+   reason revoked or expired, after which the AS refuses further
+   issuance and refresh; a deployment can also treat [RFC7009]
+   revocation of the refresh token as revoking the Mission
+   (Section 9.3).  The end-to-end example (Appendix A) walks this flow
+   with concrete messages.
 
 3.2.1.  One Mission from Approval to Revocation
 
@@ -7861,10 +7881,10 @@ Table of Contents
 
    5.  *Stop further issuance.* At 12:02 an authorized revocation makes
        the Mission non-active.  A subsequent refresh, if the AS issued a
-       refresh token, is refused with invalid_grant (Section 9.1).  The
+       refresh token, is refused with invalid_grant (Section 9.2).  The
        already-issued access token can still be honored on this
        stateless path until 12:05; revocation does not undo a completed
-       read (Section 9.2).
+       read (Section 9.3).
 
    An ERP that instead introspects on every request stops honoring the
    token on its next request after revocation, through the composite
@@ -8829,8 +8849,8 @@ Table of Contents
 
    The subject-representation discipline is the same in every source:
 
-   *  The accountable principal is the record's approver, equal to
-      approval_basis.consent_principal, in every source; it is never
+   *  The accountable principal is the record's
+      approval_basis.consent_principal in every source; it is never
       inferred from the token sub.
 
    *  sub carries a delegating person only in the user-delegated source.
@@ -9021,11 +9041,11 @@ Table of Contents
    binding.
 
    Non-active state gates every future derivation across every binding
-   this section defines (Section 9.1).  It does not itself revoke an
+   this section defines (Section 9.2).  It does not itself revoke an
    OAuth grant the same client or subject holds outside any Mission
    binding, and it does not recall an access token already issued before
    its exp absent a runtime state check the token's consumer performs
-   (Section 9.2, Section 13).
+   (Section 9.3, Section 13).
 
    An issuer that needs to cascade a lifecycle operation, or to
    enumerate a Mission's bound grant lineages and credentials, maintains
@@ -9041,10 +9061,10 @@ Table of Contents
 
    When the authorization code expires unredeemed, no derivation is
    possible under the Mission regardless of which lifecycle outcome
-   follows.  The deployment either revokes the Mission or lets it reach
-   expired at expires_at, and applies one choice consistently; both
-   outcomes are terminal (Section 9), so reprocessing the same timeout
-   changes nothing.
+   follows.  The deployment either revokes the Mission or lets it expire
+   at expires_at, and applies one choice consistently; both outcomes
+   terminate it (Section 9), so reprocessing the same timeout changes
+   nothing.
 
    A client learns its mission_id from the mission claim's id on each
    issued token (Section 10.2) or from the token response.  This
@@ -9076,9 +9096,9 @@ Table of Contents
 
 6.5.  Single Accountable Approver
 
-   This document records exactly one approver: the accountable principal
-   who approved the Mission.  Two richer patterns are outside the scope
-   of this document:
+   This document records exactly one accountable principal,
+   approval_basis.consent_principal: the principal who approved the
+   Mission.  Two richer patterns are outside the scope of this document:
 
    *  *Multi-party approval* (M-of-N or dual control), where more than
       one principal must approve.  The number of approvers does not
@@ -9106,8 +9126,10 @@ Table of Contents
 7.  Mission Record
 
    A Mission is the durable record created at the approval event.  Its
-   members are immutable after creation except for its state, and it is
-   identified by a Mission Identifier (Section 7.2).
+   members are immutable after creation except for its state and,
+   written once when the Mission terminates, its termination
+   (Section 9.1); it is identified by a Mission Identifier
+   (Section 7.2).
 
    Record members do not repeat the mission prefix, because the record
    itself is the Mission; prefixed names, such as the mission_intent
@@ -9123,8 +9145,9 @@ Table of Contents
    additional members set at creation using short names coordinated with
    it (for example, a lineage member linking the Mission to a
    predecessor or parent); any other extension MUST use collision-
-   resistant names.  The members below are the ones this document
-   defines:
+   resistant names.  A companion profile that registers a termination
+   reason defines that reason's termination members (Section 9.1).  The
+   members below are the ones this document defines:
 
    id:  REQUIRED.  A string.  The canonical Mission Identifier
       (Section 7.2).
@@ -9135,10 +9158,14 @@ Table of Contents
       approved the Mission even though the issuing iss differs
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
-   state:  REQUIRED.  A string.  The current lifecycle state: active,
-      revoked, or expired in this document, or an additional state
-      defined by a companion profile, subject to the forward-
-      compatibility rule of Section 9.
+   state:  REQUIRED.  A string.  The current lifecycle state: active or
+      terminated in this document, or an additional state defined by a
+      companion profile, subject to the forward-compatibility rule of
+      Section 9.
+
+   termination:  CONDITIONAL.  An object, present exactly when state is
+      terminated: the reason and instant the Mission terminated
+      (Section 9.1).
 
    intent:  REQUIRED.  An object.  The approved Mission Intent.
 
@@ -9196,20 +9223,15 @@ Table of Contents
    subject:  REQUIRED.  An object.  The Subject, an object with iss and
       sub.
 
-   approver:  REQUIRED.  An object with iss and sub.  DEPRECATED
-      compatibility alias for approval_basis.consent_principal (below),
-      the canonical accountability-root name; normatively equal to it in
-      every Mission this document produces.  MAY equal subject.
-
    approval_basis:  REQUIRED.  An object.  The authorization basis this
       Mission is rooted in: every Mission is rooted in an approved
       authorization basis, fixed at the approval event and immutable
-      thereafter, like approver and subject.  This document defines the
-      direct basis in full; a companion profile can define a standing-
-      consent basis (Section 7.1).  The members below apply to every
-      approval basis, with the presence each one states.  Their direct-
-      approval values are described here; standing-consent
-      specializations are defined in Section 7.1.
+      thereafter, like subject.  This document defines the direct basis
+      in full; a companion profile can define a standing-consent basis
+      (Section 7.1).  The members below apply to every approval basis,
+      with the presence each one states.  Their direct-approval values
+      are described here; standing-consent specializations are defined
+      in Section 7.1.
 
       type:  REQUIRED.  A string: direct, defined in full by this
          document, or a standing-consent value that a companion profile
@@ -9218,7 +9240,7 @@ Table of Contents
 
       consent_principal:  REQUIRED.  An object with iss and sub.  The
          accountable human (or human-accountable principal) who
-         consented; approver carries the same value.
+         consented.  MAY equal subject.
 
       activation:  REQUIRED.  An object naming what activated this
          Mission instance, shaped by type.  For direct:
@@ -9255,8 +9277,8 @@ Table of Contents
 
    authority_source:  REQUIRED.  An object.  The source of the authority
       the approval draws on (Section 6.2), established at the approval
-      event (Section 6) and immutable thereafter, like approver and
-      approval_basis.  Members:
+      event (Section 6) and immutable thereafter, like approval_basis.
+      Members:
 
       type:  REQUIRED.  A string: user_delegated, service_owned, or
          organizational, subject to the forward-compatibility rule of
@@ -9288,7 +9310,7 @@ Table of Contents
    created_at:  REQUIRED.  A string.  RFC 3339 timestamp of creation.
 
    expires_at:  REQUIRED.  A string.  An RFC 3339 date-time: the AS-
-      established effective Mission expiry (Section 9, Section 9.1).  It
+      established effective Mission expiry (Section 9, Section 9.2).  It
       MUST be later than created_at and MUST NOT be later than
       intent.expires_at, the requested ceiling (Section 4).  Shortening
       under applicable AS policy, or under an already-approved parent,
@@ -9299,8 +9321,8 @@ Table of Contents
 
    The *audit horizon* is the deployment-declared retention window for
    the Mission Record and its evidence: at least the Mission's lifetime
-   plus a declared post-expiry period.  A deployment retains a terminal
-   (revoked or expired) Mission's record for its audit horizon.
+   plus a declared post-expiry period.  A deployment retains a
+   terminated Mission's record for its audit horizon.
 
 7.1.  Standing-Consent Bases
 
@@ -9424,7 +9446,7 @@ Table of Contents
       (Section 6), including the creation commit of a deferred or
       relocated flow.  Recency is issuance-time eligibility only: a
       later change to a ceiling, or the passage of time past one, does
-      not terminate an active Mission (Section 9.2).
+      not terminate an active Mission (Section 9.3).
 
    *  The activating issuer MUST refuse an approved_at later than the
       evaluation instant by more than the deployment's declared, bounded
@@ -9506,8 +9528,6 @@ Table of Contents
      "proposal_hash":
        "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
      "subject": { "iss": "https://idp.example.com",
-       "sub": "user_3p2q8mN1a0kV7tR" },
-     "approver": { "iss": "https://idp.example.com",
        "sub": "user_3p2q8mN1a0kV7tR" },
      "approval_basis": {
        "type": "direct",
@@ -9736,33 +9756,36 @@ Table of Contents
 
 9.  Mission Lifecycle and Gating
 
-   A Mission is in one of three states:
+   A Mission is in one of two states:
 
    *  active: the only state in which the AS derives tokens.
 
-   *  revoked: terminated by the Subject, Approver, or policy.
-      Terminal.
-
-   *  expired: expires_at has passed.  Terminal.
+   *  terminated: the Mission has ended.  Terminal.  Its termination
+      member (Section 9.1) gives the reason: revoked when the Subject,
+      Approver, or policy terminated it, or expired when its expires_at
+      passed.
 
    The transitions are:
 
-                 +========+====================+=========+
-                 | From   | Event              | To      |
-                 +========+====================+=========+
-                 | (none) | approval event     | active  |
-                 +--------+--------------------+---------+
-                 | active | revoke             | revoked |
-                 +--------+--------------------+---------+
-                 | active | expires_at reached | expired |
-                 +--------+--------------------+---------+
+          +========+====================+============+=========+
+          | From   | Event              | To         | Reason  |
+          +========+====================+============+=========+
+          | (none) | approval event     | active     |         |
+          +--------+--------------------+------------+---------+
+          | active | revoke             | terminated | revoked |
+          +--------+--------------------+------------+---------+
+          | active | expires_at reached | terminated | expired |
+          +--------+--------------------+------------+---------+
 
-                                  Table 3
+                                 Table 3
 
    The Mission Lifecycle States registry (Section 22.7) holds these
-   states.  A companion profile MAY register an additional state for a
-   lifecycle it introduces (for example, a paused or superseded state);
-   only active permits issuance.
+   states, and the Mission Termination Reasons registry (Section 22.8)
+   holds the reasons.  A companion profile MAY register an additional
+   state for a lifecycle it introduces (for example, a paused state);
+   only active permits issuance.  A companion profile that defines a
+   further way for a Mission to end registers a termination reason, not
+   a state.
 
    Wherever a Mission state is reported, including the Mission Record
    and the introspection mission member, a consumer MUST treat only the
@@ -9773,12 +9796,58 @@ Table of Contents
 
    For every state-dependent decision this document defines, the AS MUST
    treat a Mission as active only when its stored state is active and
-   the decision time is strictly before expires_at.  Persisting the
-   expired transition, and emitting any lifecycle event a state-
-   distribution companion defines, can happen after the decision that
-   observed the boundary.
+   the decision time is strictly before expires_at.  From expires_at, a
+   Mission whose stored state is still active is terminated with reason
+   expired for every such decision, whether or not that transition is
+   persisted, including when persisting it fails.  Persisting the
+   transition, and emitting any lifecycle event a state-distribution
+   companion defines, can happen after the decision that observed the
+   boundary; persisting it never replaces a termination already
+   recorded.
 
-9.1.  Issuance Gating
+9.1.  Mission Termination
+
+   A Mission whose state is terminated carries a termination object, in
+   the Mission Record and wherever its state is reported with it; a
+   Mission in any other state carries none.  Its members are:
+
+   reason:  REQUIRED.  A string, a value of the Mission Termination
+      Reasons registry (Section 22.8): revoked or expired in this
+      document, or a reason a companion profile registers.
+
+   terminated_at:  REQUIRED.  A string.  An RFC 3339 [RFC3339] date-
+      time: the instant the termination took effect.  For expired, it is
+      the Mission's expires_at.
+
+   A companion profile that registers a reason defines that reason's
+   further members.  A profile that maintains a state version for the
+   Mission adds the version of the transition that committed the
+   termination as its audit reference.  The issuer writes termination
+   once, atomically with the transition to terminated, and never changes
+   it: an expiry, or any later event, does not replace the reason or
+   references of a Mission already terminated.
+
+   A termination carries every member its reason requires, except one
+   recorded before the reason defined that member, or derived from such
+   a termination: such a termination exposes only the facts its record
+   retained and omits a member it has no retained value for,
+   terminated_at included, rather than inventing one.  For expired, the
+   retained terminated_at is the Mission's expires_at; for another
+   reason, a retained commit time is its terminated_at only where that
+   commit was the termination's effect.  A consumer that receives such a
+   termination, or a reason it does not recognize, still treats the
+   Mission as terminated: it stops work governed by the Mission, follows
+   no absent reference, and infers no cause-specific action.  For a
+   transition period, a consumer of a report that still carries revoked,
+   expired, completed, superseded, or cascaded as a Mission's state MAY
+   read it as terminated with that reason (cascaded as
+   parent_terminated) and the facts the report retained; an emitter
+   never reports those values as a state.  That reading is local: the
+   consumer never re-emits or re-signs it, and it verifies a signed
+   artifact over its original bytes, which it retains, before reading it
+   this way.
+
+9.2.  Issuance Gating
 
    A derivation (defined below) passes these checks, each stated where
    cited:
@@ -9816,17 +9885,17 @@ Table of Contents
    invalid_grant alone does not tell a client which gate refused.  On a
    refusal under this section the AS SHOULD include, alongside error,
    the mission_error token-error-response member (Section 22) with one
-   of the values mission_revoked, mission_expired, or mission_superseded
-   (where a companion defines supersession).  The member is diagnostic
-   only: it grants nothing, an unrecognized value is ignored, and it is
-   returned only to the authenticated client presenting the Mission's
-   grant.
+   of the values revoked, expired, or superseded (where a companion
+   defines supersession), the Mission's termination reason
+   (Section 9.1).  The member is diagnostic only: it grants nothing, an
+   unrecognized value is ignored, and it is returned only to the
+   authenticated client presenting the Mission's grant.
 
-   Derived tokens SHOULD be short-lived so that a transition to revoked
-   or expired takes effect promptly without per-request revocation
+   Derived tokens SHOULD be short-lived so that a transition to
+   terminated takes effect promptly without per-request revocation
    checks.
 
-9.2.  Revocation
+9.3.  Revocation
 
    A Mission is revoked when the AS receives an authorized revocation
    for it.  A deployment MUST provide an authenticated means for the
@@ -9846,7 +9915,7 @@ Table of Contents
    documents that behavior.
 
    Token validity and Mission validity are distinct: an already-issued
-   access token remains valid until it expires (Section 9.1), so a token
+   access token remains valid until it expires (Section 9.2), so a token
    can outlive a transition of its Mission by at most the token
    lifetime.  Token introspection (Section 13) is a state-observable
    overlay that lets a resource server see Mission state per request and
@@ -10458,7 +10527,7 @@ Table of Contents
    normative statement of the base OAuth error for each failure it
    lists; a rule elsewhere in this document that names one of these
    codes (Section 4.1, Section 4.2, Section 4.3, Section 5, Section 6.3,
-   Section 9.1, Section 11, Section 14.2, Section 14.3) applies this
+   Section 9.2, Section 11, Section 14.2, Section 14.3) applies this
    mapping.
 
    +==========================================================+================================================+=================+
@@ -10508,9 +10577,9 @@ Table of Contents
    |max_age, or a well-formed request (including configured-  |                                                |applies          |
    |mapping mode) is refused by AS policy                     |                                                |                 |
    +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Token endpoint: the Mission is revoked, expired, or       |invalid_grant (Section 5.2 of [RFC6749]), or the|mission_error    |
-   |superseded                                                |code a Token Exchange profile assigns           |(Section 22)     |
-   |                                                          |(Section 9.1)                                   |                 |
+   |Token endpoint: the Mission is terminated (revoked,       |invalid_grant (Section 5.2 of [RFC6749]), or the|mission_error    |
+   |expired, superseded, or another termination reason)       |code a Token Exchange profile assigns           |(Section 22)     |
+   |                                                          |(Section 9.2)                                   |                 |
    +----------------------------------------------------------+------------------------------------------------+-----------------+
    |Token endpoint: the requested RAR subset exceeds the      |invalid_authorization_details (Section 6 of     |safe detail      |
    |Mission's granted authority                               |[RFC9396])                                      |                 |
@@ -10577,6 +10646,9 @@ Table of Contents
       space, including a state a deployed companion profile defines, and
       the consumer's forward-compatibility rule are those of Section 9.
 
+   *  termination: when state is terminated, the Mission's termination
+      (Section 9.1) (object).
+
    *  proposal_hash: when the Mission records an authority proposal, the
       Mission's proposal_hash (Section 7) (string).
 
@@ -10590,12 +10662,12 @@ Table of Contents
       carrying type and, for organizational, policy with id and version
       only, never the policy digest.
 
-   Only the Mission issuer reports state, proposal_hash, authority_hash,
-   approval_basis, and authority_source (Section 13.3). proposal_hash,
-   authority_hash, approval_basis, and authority_source are audit and
-   correlation signals.  None of these four members is an enforcement
-   input (Section 11), and each is disclosed only as Section 13.1
-   permits.
+   Only the Mission issuer reports state, termination, proposal_hash,
+   authority_hash, approval_basis, and authority_source (Section 13.3).
+   proposal_hash, authority_hash, approval_basis, and authority_source
+   are audit and correlation signals.  None of these four members is an
+   enforcement input (Section 11), and each is disclosed only as
+   Section 13.1 permits.
 
    For a malformed, unknown, individually expired, or otherwise
    unresolvable token, the AS responds per [RFC7662] (active: false)
@@ -10655,12 +10727,13 @@ Table of Contents
    presented, so active: true is not by itself evidence that the caller
    holds the bound key.
 
-   When the token is otherwise valid but the Mission is revoked or
-   expired, the AS MUST return active: false and include mission.state
-   giving the reason, so a resource server can distinguish a dead
-   Mission from a bad token.  A Mission transition does not by itself
-   revoke the token as an individual credential; introspection reports
-   the composite authorization as inactive.
+   When the token is otherwise valid but the Mission is terminated, the
+   AS MUST return active: false and include mission.state and
+   mission.termination, whose reason gives the cause, so a resource
+   server can distinguish a dead Mission from a bad token.  A Mission
+   transition does not by itself revoke the token as an individual
+   credential; introspection reports the composite authorization as
+   inactive.
 
    Reporting the mission member, mission.state included, for an inactive
    token deviates from the SHOULD NOT of Sections 2.2 and 4 of [RFC7662]
@@ -10670,12 +10743,13 @@ Table of Contents
 
 13.3.  Only the Issuer Reports Mission State
 
-   An AS MUST NOT include mission.state, proposal_hash, authority_hash,
-   approval_basis, or authority_source in an introspection response
-   unless it holds the Mission, that is, unless it is the Mission
-   issuer.  Introspection at a non-issuer Resource AS, which returns
-   only the claim-shape members, is specified by the cross-domain
-   companion ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+   An AS MUST NOT include mission.state, mission.termination,
+   proposal_hash, authority_hash, approval_basis, or authority_source in
+   an introspection response unless it holds the Mission, that is,
+   unless it is the Mission issuer.  Introspection at a non-issuer
+   Resource AS, which returns only the claim-shape members, is specified
+   by the cross-domain companion
+   ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
 13.4.  Introspected Token Consumption
 
@@ -10772,7 +10846,11 @@ Table of Contents
        "issuer": "https://as.example.com",
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-       "state": "revoked"
+       "state": "terminated",
+       "termination": {
+         "reason": "revoked",
+         "terminated_at": "2026-11-02T08:30:00Z"
+       }
      }
    }
 
@@ -10836,7 +10914,7 @@ Table of Contents
       replayed as the agent or as another actor in the chain.
 
    *  *Each delegation is gated.* Issuing a delegated token is a
-      derivation, refused unless the Mission is active (Section 9.1).
+      derivation, refused unless the Mission is active (Section 9.2).
 
    The act chain nests (act.act) for as long as, and only while,
    authority continues under the same approved Mission.  A new approval
@@ -10933,7 +11011,7 @@ Table of Contents
        (Section 10.2) and adds no act chain.
 
    3.  The exchange is a derivation, gated on the Mission being active
-       (Section 9.1).
+       (Section 9.2).
 
 14.3.  Delegation Constraints
 
@@ -11098,7 +11176,7 @@ Table of Contents
    *  *Mission Intent members.* The Mission Intent's top level
       (Section 4) is open to members a companion profile defines, under
       a short name it registers in the Mission Intent Members registry
-      (Section 22.8) before use, or under a collision-resistant name.
+      (Section 22.9) before use, or under a collision-resistant name.
       The owning specification defines, produces, and enforces each such
       member, and a recognized member never grants or widens authority
       beyond what that specification states.  Closed-top-level
@@ -11131,10 +11209,13 @@ Table of Contents
       coordinates with this document or under collision-resistant names,
       as Section 7 states.
 
-   *  *Lifecycle state.* The lifecycle state space (Section 9) is open
-      to additional states that companion profiles register in the
-      Mission Lifecycle States registry (Section 22.7) for lifecycles
-      they introduce.  Under the forward-compatibility rule of
+   *  *Lifecycle state and termination reason.* The lifecycle state
+      space (Section 9) is open to additional states that companion
+      profiles register in the Mission Lifecycle States registry
+      (Section 22.7) for lifecycles they introduce, and the termination
+      reasons (Section 9.1) are open to additional reasons that
+      companion profiles register in the Mission Termination Reasons
+      registry (Section 22.8).  Under the forward-compatibility rule of
       Section 9, only active permits issuance.
 
    *  *Approval-event sequencing.* The approval-event steps, their
@@ -11160,11 +11241,12 @@ Table of Contents
    *  *Registry-backed.* A namespace whose values determine fail-closed
       behavior and span multiple documents is backed by an IANA
       registry.  This document creates the Mission Lifecycle States
-      (Section 22.7) and Mission Intent Members (Section 22.8)
-      registries and seeds each with the values it defines; every
-      further document that defines a value requests that value's
-      registration, carrying any Internet-Draft reference as a
-      publication dependency under the registry's policy.
+      (Section 22.7), Mission Termination Reasons (Section 22.8), and
+      Mission Intent Members (Section 22.9) registries and seeds each
+      with the values it defines; every further document that defines a
+      value requests that value's registration, carrying any Internet-
+      Draft reference as a publication dependency under the registry's
+      policy.
 
    *  *Specification-defined.* A namespace with a defined fail-safe for
       unknown values and no registry, such as the mission claim members
@@ -11655,7 +11737,7 @@ Table of Contents
    only allowed_delegates bounds fan-out to many distinct depth-1
    delegates.  Binding each delegated token to the delegate's own key
    (Section 14) confines a compromised delegate to its own credential.
-   Short derived-token lifetimes (Section 9.1), and marking delegable
+   Short derived-token lifetimes (Section 9.2), and marking delegable
    only the entries that need delegation, keep this exposure small.
 
    Audience replay into the exchange is a distinct path.  A Mission-
@@ -11731,15 +11813,17 @@ Table of Contents
    two Missions that approve byte-identical authority (a successor that
    re-approves the same Authority Set, or an unrelated Mission with the
    same derived authority) share it while differing in intent_hash,
-   approver, and id, which is why Section 8.1 forbids its use as a
-   Mission Identifier or as a replay or idempotency key.
+   approval_basis.consent_principal, and id, which is why Section 8.1
+   forbids its use as a Mission Identifier or as a replay or idempotency
+   key.
 
    A consumer that needs to bind to or correlate a specific Mission uses
-   the Mission Identifier, and intent_hash and approver distinguish
-   Missions that share an Authority Set. Where a deployment discloses
-   authority_hash to a resource server, it is an audit correlator, not
-   an enforcement input, and not proof that the carried entries are a
-   subset of the approved set.
+   the Mission Identifier, and intent_hash and
+   approval_basis.consent_principal distinguish Missions that share an
+   Authority Set. Where a deployment discloses authority_hash to a
+   resource server, it is an audit correlator, not an enforcement input,
+   and not proof that the carried entries are a subset of the approved
+   set.
 
 19.5.3.  Composition and the Effective Ceiling
 
@@ -11756,7 +11840,7 @@ Table of Contents
 
    Child Delegation's max_children and max_child_depth limit the
    descendant Missions live at once, not those created over the root's
-   lifetime: a child that reaches a terminal state frees its slot
+   lifetime: a child that terminates frees its slot
    ([I-D.draft-mcguinness-oauth-mission-child-delegation];
    [I-D.draft-mcguinness-oauth-mission-derivation-limits] works an
    example).
@@ -11787,7 +11871,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]), or an offline
    attenuation root already minted and attenuating outside the issuer's
    reach, operates for its own remaining lifetime, the same residual
-   bound that revocation carries (Section 9.2).  Where containment needs
+   bound that revocation carries (Section 9.3).  Where containment needs
    to take effect quickly against already-materialized authority, short
    cross-domain grant and offline attenuation root lifetimes keep that
    residual window to one the next lease or re-mint closes.
@@ -12087,9 +12171,11 @@ Table of Contents
 
    *  a Value matching ^[a-z][a-z0-9_]*$ not already registered;
 
-   *  a Terminal designation of yes or no consistent with the
-      transitions the registrant's specification defines (a yes state
-      admits no further transition; a no state does); and
+   *  a Terminal designation of no consistent with the transitions the
+      registrant's specification defines (a no state admits a further
+      transition; terminated is the one terminal state, and a further
+      way for a Mission to end is a termination reason, Section 22.8);
+      and
 
    *  a Semantics sentence precise enough to distinguish the state from
       every registered state.
@@ -12121,29 +12207,85 @@ Table of Contents
 
    This document seeds the registry with the states it defines:
 
-   +=========+==========+====================+============+===========+
-   | Value   | Terminal | Semantics          | Change     | Reference |
-   |         |          |                    | Controller |           |
-   +=========+==========+====================+============+===========+
-   | active  | no       | The only state     | IETF       | this      |
-   |         |          | from which tokens  |            | document, |
-   |         |          | are derived.       |            | Section 9 |
-   +---------+----------+--------------------+------------+-----------+
-   | revoked | yes      | Terminated by the  | IETF       | this      |
-   |         |          | Subject, Approver, |            | document, |
-   |         |          | or policy.         |            | Section 9 |
-   +---------+----------+--------------------+------------+-----------+
-   | expired | yes      | The Mission's      | IETF       | this      |
-   |         |          | expires_at has     |            | document, |
-   |         |          | passed.            |            | Section 9 |
-   +---------+----------+--------------------+------------+-----------+
+   +============+==========+================+============+============+
+   | Value      | Terminal | Semantics      | Change     | Reference  |
+   |            |          |                | Controller |            |
+   +============+==========+================+============+============+
+   | active     | no       | The only state | IETF       | this       |
+   |            |          | from which     |            | document,  |
+   |            |          | tokens are     |            | Section 9  |
+   |            |          | derived.       |            |            |
+   +------------+----------+----------------+------------+------------+
+   | terminated | yes      | The Mission    | IETF       | this       |
+   |            |          | has ended; its |            | document,  |
+   |            |          | termination    |            | Section 9, |
+   |            |          | gives the      |            | Section    |
+   |            |          | reason.        |            | 9.1        |
+   +------------+----------+----------------+------------+------------+
 
                                  Table 7
 
    Each further document that defines a lifecycle state requests that
-   state's registration in its own IANA considerations.
+   state's registration in its own IANA considerations.  A Designated
+   Expert MUST reject a further state registered as terminal: a further
+   way for a Mission to end is a termination reason (Section 22.8).
 
-22.8.  Mission Intent Members Registry
+22.8.  Mission Termination Reasons Registry
+
+   IANA is requested to create the "Mission Termination Reasons"
+   registry.  The registration policy is Specification Required
+   [RFC8126].
+
+   A Designated Expert reviews a submission for:
+
+   *  a Value matching ^[a-z][a-z0-9_]*$ not already registered;
+
+   *  a Semantics sentence precise enough to distinguish the reason from
+      every registered reason; and
+
+   *  a Members list naming each further termination member the reason
+      defines (Section 9.1) with its presence (REQUIRED, CONDITIONAL, or
+      OPTIONAL).
+
+   A reason never makes a Mission available for reliance: every
+   terminated Mission is non-active, whatever its reason (Section 9).
+
+   Each registration records:
+
+   *  *Value*: the termination reason's string value.
+
+   *  *Semantics*: one sentence stating how the Mission ended.
+
+   *  *Members*: the further termination members, or "none".
+
+   *  *Change Controller*: IETF, or the registrant for any other
+      registration.
+
+   *  *Reference*: the specification defining the reason.
+
+   This document seeds the registry with the reasons it defines:
+
+    +=========+====================+=========+============+===========+
+    | Value   | Semantics          | Members | Change     | Reference |
+    |         |                    |         | Controller |           |
+    +=========+====================+=========+============+===========+
+    | revoked | The Subject,       | none    | IETF       | this      |
+    |         | Approver, or       |         |            | document, |
+    |         | policy terminated  |         |            | Section   |
+    |         | the Mission.       |         |            | 9.1       |
+    +---------+--------------------+---------+------------+-----------+
+    | expired | The Mission's      | none    | IETF       | this      |
+    |         | expires_at passed; |         |            | document, |
+    |         | terminated_at      |         |            | Section   |
+    |         | equals it.         |         |            | 9.1       |
+    +---------+--------------------+---------+------------+-----------+
+
+                                  Table 8
+
+   Each further document that defines a termination reason requests that
+   reason's registration in its own IANA considerations.
+
+22.9.  Mission Intent Members Registry
 
    IANA is requested to create the "Mission Intent Members" registry.
    The registration policy is Specification Required [RFC8126].
@@ -12215,7 +12357,7 @@ Table of Contents
     |                |      |                    |          |Section 4|
     +----------------+------+--------------------+----------+---------+
 
-                Table 8: Core-defined Mission Intent members
+                Table 9: Core-defined Mission Intent members
 
    Each further document that defines a Mission Intent member requests
    that member's registration in its own IANA considerations.
@@ -12808,7 +12950,7 @@ A.3.  Stage 2: Mission-Bound Token Issuance
    mission claim naming the Mission it was derived under.  Its
    300-second lifetime ends well before the Mission's expires_at.
    Revoking the Mission stops further derivation; this token remains
-   valid until its own exp (Section 9.2).
+   valid until its own exp (Section 9.3).
 
 A.4.  Stage 3: The Resource Server Enforces
 
@@ -12868,7 +13010,7 @@ B.2.  Relationship to Adjacent Work
    of consented authorization data.  It records consent to authority but
    carries no task, no integrity commitment, and no derivation gating; a
    deployment can surface Mission revocation through a grant-management-
-   style API (Section 9.2).
+   style API (Section 9.3).
 
    [I-D.draft-ietf-wimse-aims] names the agent's mission and leaves its
    translation into authorization requirements out of scope.  This
@@ -12911,7 +13053,7 @@ B.2.  Relationship to Adjacent Work
    that its issuer can revoke for the Mission's full lifetime, not a
    bearer credential whose only life is its caveats, so revoking the
    Mission still reaches everything derived from it that has not already
-   left the issuer's reach (Section 9.2).
+   left the issuer's reach (Section 9.3).
 
 B.3.  The Mission, the Plan, and Execution
 
@@ -13043,12 +13185,12 @@ B.5.  Non-Goals
       the Mission Lifecycle Signals profile
       ([I-D.draft-mcguinness-oauth-mission-signals]).
 
-   *  *Human-in-the-loop suspension.* The base lifecycle is active,
-      revoked, expired (Section 9).  A suspended state with resume/
-      complete transitions is defined as an optional extension by
-      Mission Status ([I-D.draft-mcguinness-oauth-mission-status]); a
-      pending-human-approval state and a holding-token pause-and-resume
-      protocol are future lifecycle work.
+   *  *Human-in-the-loop suspension.* The base lifecycle is active and
+      terminated (Section 9).  A suspended state with resume/complete
+      transitions is defined as an optional extension by Mission Status
+      ([I-D.draft-mcguinness-oauth-mission-status]); a pending-human-
+      approval state and a holding-token pause-and-resume protocol are
+      future lifecycle work.
 
    *  *Multi-hop cross-domain projection.* A single projection hop is
       specified by Cross-Domain Projection
@@ -13184,7 +13326,7 @@ Appendix C.  Role Mapping
    |                                                       |                   |                  |principal         |
    +-------------------------------------------------------+-------------------+------------------+------------------+
 
-                                  Table 9
+                                  Table 10
 
    Direct approval is the degenerate case where one human fills every
    role.  Where a profile or deployment does not populate adjudication
@@ -13344,7 +13486,7 @@ D.5.  Ownership and Operational Signals
     |                     | issuer policy |                          |
     +---------------------+---------------+--------------------------+
 
-                                 Table 10
+                                 Table 11
 
    Templates amortize authoring across Missions and do not bypass the
    ceilings.  The unmapped-resource rate, template-hit rate, and rule-
@@ -13576,15 +13718,16 @@ Appendix F.  OAuth Binding Mapping Assessment
 
    6.  The active predicate is stored state equal to active with the
        decision time strictly before the record's effective expires_at,
-       the issuer materializing the resulting expired transition lazily
-       where it chooses; any other stored value, recognized or not, is
-       non-active; transitions are authenticated lifecycle operations; a
-       non-active Mission refuses issuance and derivation.
+       the issuer materializing the resulting terminated transition,
+       reason expired, lazily where it chooses; any other stored value,
+       recognized or not, is non-active; transitions are authenticated
+       lifecycle operations; a non-active Mission refuses issuance and
+       derivation.
 
    7.  The reliance bound is the record's effective expires_at (never
        later than the requested ceiling), which caps every derived
        credential's exp; the maximum residual after a Mission becomes
-       non-active is the outstanding credential lifetime (Section 9.2).
+       non-active is the outstanding credential lifetime (Section 9.3).
 
    8.  The propagation and join surfaces are: the mission claim
        (artifact issuance under the Mission, authority derivation, and
@@ -13684,7 +13827,7 @@ Appendix F.  OAuth Binding Mapping Assessment
    |             |        |active        |                                                     |issuer-local|
    +-------------+--------+--------------+-----------------------------------------------------+------------+
 
-              Table 11: OAuth Mission binding capability table
+              Table 12: OAuth Mission binding capability table
 
    Temporal elements: every issued credential's exp is capped by the
    record's effective expires_at; state observations carry their
@@ -13734,6 +13877,17 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Mission lifecycle: the states are active and terminated, and a
+      terminated Mission carries a termination object whose reason comes
+      from a new Mission Termination Reasons registry, seeded with
+      revoked and expired; companions register further reasons, never
+      further terminal states.  The mission_error values drop the
+      mission_ prefix.  A termination recorded before a member existed,
+      or derived from one, keeps only its retained facts.  The record's
+      deprecated approver alias is removed;
+      approval_basis.consent_principal is the accountable principal
+      (#705).
 
    *  Mission Intent: success_criteria is removed.  It carried no
       machine authorization semantics; goal can describe the outcomes
@@ -14430,13 +14584,14 @@ Abstract
    operation (keyed by mission_id) with signed responses, the Mission
    projection for token introspection, the Mission Lifecycle endpoint
    with revoke, suspend, resume, and complete operations, the suspended
-   and completed states with the consolidated lifecycle state machine
-   this profile owns, and revocation-propagation guidance.  It defines
-   an extension point through which a companion profile MAY add a fleet-
-   scale Mission Status List or an entry-grain discharge operation
-   without altering this profile's own surfaces.  Each capability is
-   independently optional; an implementation can adopt any subset, and
-   one that adopts none remains a conforming issuance profile.
+   state and the completed termination reason with the consolidated
+   lifecycle state machine this profile owns, and revocation-propagation
+   guidance.  It defines an extension point through which a companion
+   profile MAY add a fleet-scale Mission Status List or an entry-grain
+   discharge operation without altering this profile's own surfaces.
+   Each capability is independently optional; an implementation can
+   adopt any subset, and one that adopts none remains a conforming
+   issuance profile.
 
 About This Document
 
@@ -14526,7 +14681,7 @@ Table of Contents
      12.1.  OAuth Authorization Server Metadata Registration
      12.2.  Media Type Registration
        12.2.1.  application/mission-status-response+jwt
-     12.3.  Mission Lifecycle States Registrations
+     12.3.  Mission Lifecycle Registrations
      12.4.  Well-Known URI
    Acknowledgments
    References
@@ -14931,21 +15086,38 @@ Table of Contents
       -  state: the current Mission lifecycle state.  The authoritative
          state space is the issuance profile's
          ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-         Lifecycle and Gating"): the issuance profile states active,
-         revoked, expired, this profile's suspended and completed when
-         the Mission Lifecycle endpoint (Section 5) is deployed, and any
-         further state a companion profile defines and the deployment
-         runs (for example superseded, defined by the Mission Expansion
-         profile ([I-D.draft-mcguinness-oauth-mission-expansion]) for an
-         expanded predecessor, or cascaded, defined by the Mission Child
-         Delegation profile
-         ([I-D.draft-mcguinness-oauth-mission-child-delegation]) for a
-         cascade-terminated Child Mission).  A consumer applies the
-         issuance profile's forward-compatibility rule: only active
-         permits reliance, and every other value, recognized or not, is
-         non-active.  This profile's reliance behavior does not depend
-         on recognizing these companion-defined states; the fail-safe
-         rule above governs.
+         Lifecycle and Gating"): active and terminated, this profile's
+         suspended when the Mission Lifecycle endpoint (Section 5) is
+         deployed, and any further state a companion profile defines and
+         the deployment runs.  A consumer applies the issuance profile's
+         forward-compatibility rule: only active permits reliance, and
+         every other value, recognized or not, is non-active.  This
+         profile's reliance behavior does not depend on recognizing a
+         companion-defined state; the fail-safe rule above governs.
+
+      -  termination: CONDITIONAL.  Present exactly when state is
+         terminated: the Mission's termination
+         ([I-D.draft-mcguinness-oauth-mission], Section "Mission
+         Termination"), with its reason (revoked or expired from the
+         issuance profile, this profile's completed, or a reason a
+         companion profile registers, such as superseded for an expanded
+         predecessor ([I-D.draft-mcguinness-oauth-mission-expansion]) or
+         parent_terminated for a cascade-terminated Child Mission
+         ([I-D.draft-mcguinness-oauth-mission-child-delegation])), its
+         terminated_at, the members its reason defines, and version: the
+         state version (below) of the transition that committed the
+         termination. version is REQUIRED in every termination the
+         Mission Issuer commits, and absent while an expired or
+         parent_terminated termination is observed but not yet
+         committed; it can be lower than the response's current version
+         when a later metadata-only change commits.  It is the audit
+         reference for revoked and completed.  A deployment implementing
+         Child Mission Carryover MUST include termination.carried_to
+         when reporting a parent_terminated termination for which a
+         replacement was committed, and MUST omit it when none was; it
+         is same-issuer correlation, not authority
+         ([I-D.draft-mcguinness-oauth-mission-child-delegation],
+         Section "Carryover Evidence and Observation").
 
       -  expires_at: the point at which the Mission itself expires, the
          Mission record's expires_at
@@ -14962,20 +15134,6 @@ Table of Contents
          Mission is suspended under a deadline (Section 5): the RFC 3339
          [RFC3339] deadline, and the transition (resume or revoke) the
          AS applies when it passes.
-
-      -  successor: OPTIONAL.  A string, the successor mission_id.
-         Present only when state is superseded, giving the successor
-         that replaced this Mission, set atomically at supersession on
-         the predecessor's record
-         ([I-D.draft-mcguinness-oauth-mission-expansion]).
-
-      -  carried_to: CONDITIONAL string.  A deployment implementing
-         Child Mission Carryover MUST include the committed replacement
-         Mission identifier when reporting the old child's cascaded
-         state, and MUST omit it when no replacement was committed.  It
-         is same-issuer correlation, not authority
-         ([I-D.draft-mcguinness-oauth-mission-child-delegation],
-         Section "Carryover Evidence and Observation").
 
       -  version: REQUIRED.  The Mission's *state version*: a strictly
          monotonic per-Mission counter the Mission Issuer maintains,
@@ -14995,7 +15153,7 @@ Table of Contents
          ([I-D.draft-mcguinness-mission-runtime-evidence]),
          prior_version and new_version in Containment Evidence
          ([I-D.draft-mcguinness-oauth-mission-containment]),
-         prior_version and current_version in a Discharge Result
+         prior_version and new_version in a Discharge Result
          ([I-D.draft-mcguinness-oauth-mission-discharge]), and
          expected_version on a lifecycle request (Section 5.7).
 
@@ -15100,34 +15258,30 @@ Table of Contents
    Success outcomes (HTTP 200, signed Mission Status Response, described
    by mission.state):
 
-       +==============================+===========================+
-       | mission.state                | Description               |
-       +==============================+===========================+
-       | active                       | Mission is active and     |
-       |                              | permits reliance.         |
-       +------------------------------+---------------------------+
-       | suspended                    | Mission is suspended      |
-       |                              | (non-terminal).           |
-       +------------------------------+---------------------------+
-       | revoked, expired, completed, | Mission is in a terminal, |
-       | superseded, cascaded         | non-active state.         |
-       +------------------------------+---------------------------+
+        +===============+=========================================+
+        | mission.state | Description                             |
+        +===============+=========================================+
+        | active        | Mission is active and permits reliance. |
+        +---------------+-----------------------------------------+
+        | suspended     | Mission is suspended (non-terminal).    |
+        +---------------+-----------------------------------------+
+        | terminated    | Mission has ended; mission.termination  |
+        |               | gives the reason.                       |
+        +---------------+-----------------------------------------+
 
-                                 Table 1
+                                  Table 1
 
-   This document uses "terminated" in prose for any terminal non-active
-   state; it is not itself a mission.state value, and the terminal set
-   is not closed.  The terminal row above and the list that follows
-   enumerate the companion-defined states this suite currently runs, for
-   the reader's reference; a deployment reports whichever it runs, and a
-   consumer's reliance decision never depends on recognizing them.  The
-   terminal states currently defined across this suite are revoked and
-   expired ([I-D.draft-mcguinness-oauth-mission]), completed (this
-   document), superseded
-   ([I-D.draft-mcguinness-oauth-mission-expansion]), and cascaded
+   A terminated Mission's mission.termination.reason names how it ended,
+   and the set of reasons is not closed: a deployment reports whichever
+   reason its profiles define, and a consumer's reliance decision never
+   depends on recognizing it.  The reasons defined across this suite are
+   revoked and expired ([I-D.draft-mcguinness-oauth-mission]), completed
+   (this document), superseded
+   ([I-D.draft-mcguinness-oauth-mission-expansion]), and
+   parent_terminated
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  The binding
    rule is the issuance profile's forward-compatibility rule: every
-   value other than active is non-active, whether or not the consumer
+   state other than active is non-active, whether or not the consumer
    recognizes it.
 
    Wire error codes (carried in the error member of a JSON body):
@@ -15259,13 +15413,14 @@ Table of Contents
    (Section 3.4) carry Mission facts in a mission object of the same
    shape: the open mission claim object of
    [I-D.draft-mcguinness-oauth-mission] (Section "The Mission Claim")
-   with status members (state, fresh_until, any companion-defined
-   extension member such as the Status List companion's status_list
-   reference ([I-D.draft-mcguinness-oauth-mission-status-list]), and, on
-   the dedicated response, expires_at and version) added.  This
-   projection populates the subset a token-holding consumer needs; the
-   dedicated response populates more.  Either way a consumer reads the
-   same fact from the same place.
+   with status members (state, termination, fresh_until, any companion-
+   defined extension member such as the Status List companion's
+   status_list reference
+   ([I-D.draft-mcguinness-oauth-mission-status-list]), and, on the
+   dedicated response, expires_at and version) added.  This projection
+   populates the subset a token-holding consumer needs; the dedicated
+   response populates more.  Either way a consumer reads the same fact
+   from the same place.
 
    Example [RFC9701]-signed introspection response (decoded payload),
    for a token whose Mission is active:
@@ -15319,16 +15474,17 @@ Table of Contents
 
    Adopting this endpoint extends the issuance profile's lifecycle state
    space ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-   Lifecycle and Gating") with two additional states: suspended (a non-
-   terminal paused Mission that derives no tokens until resumed) and
-   completed (a terminal state recording successful completion).
-   Issuance gating treats any state other than active as non-deriving,
-   exactly as the issuance profile gates on active.
+   Lifecycle and Gating") with one additional state, suspended (a paused
+   Mission that derives no tokens until resumed), and one termination
+   reason, completed (the Mission completed successfully).  Issuance
+   gating treats any state other than active as non-deriving, exactly as
+   the issuance profile gates on active.
 
-   A transition to suspended or completed gates new derivation only.
-   Tokens already derived under the Mission remain valid until their own
-   exp, exactly as in the issuance profile's revocation model and
-   mirroring the treatment of superseded
+   A transition to suspended, or to terminated with reason completed,
+   gates new derivation only.  Tokens already derived under the Mission
+   remain valid until their own exp, exactly as in the issuance
+   profile's revocation model and mirroring the treatment of a
+   superseded termination
    ([I-D.draft-mcguinness-oauth-mission-expansion]).  A deployment that
    needs a prompt cutoff on outstanding tokens uses the propagation
    mechanisms of Section 6.
@@ -15352,15 +15508,15 @@ Table of Contents
 
    An error code alone does not tell a client whether a resume can lift
    a refusal.  When the issuance profile's gating refuses a derivation
-   because the Mission is suspended or completed, the AS SHOULD include,
-   alongside error, the mission_error token-error-response member
-   ([I-D.draft-mcguinness-oauth-mission], Section "Issuance Gating")
-   with the value mission_suspended or mission_completed, respectively.
-   The issuance profile's rules for that member apply: it is diagnostic
-   only, it grants nothing, an unrecognized value is ignored, and it is
-   returned only to the authenticated client presenting the Mission's
-   grant. mission_suspended reports a refusal that a resume can lift;
-   mission_completed reports a terminal one.
+   because the Mission is suspended, or terminated with reason
+   completed, the AS SHOULD include, alongside error, the mission_error
+   token-error-response member ([I-D.draft-mcguinness-oauth-mission],
+   Section "Issuance Gating") with the value suspended or completed,
+   respectively.  The issuance profile's rules for that member apply: it
+   is diagnostic only, it grants nothing, an unrecognized value is
+   ignored, and it is returned only to the authenticated client
+   presenting the Mission's grant. suspended reports a refusal that a
+   resume can lift; completed reports a terminal one.
 
 5.1.  Operations
 
@@ -15401,13 +15557,15 @@ Table of Contents
 
    The base operations are:
 
-   *  revoke: terminate the Mission; transition to revoked.
+   *  revoke: terminate the Mission; transition to terminated with
+      reason revoked.
 
    *  suspend: pause the Mission; transition to suspended.
 
    *  resume: return a suspended Mission to active.
 
-   *  complete: mark the Mission completed; transition to completed.
+   *  complete: mark the Mission completed; transition to terminated
+      with reason completed.
 
    A companion profile MAY register a further operation value on this
    endpoint that changes no Mission-level state, provided it defines the
@@ -15420,11 +15578,11 @@ Table of Contents
    A suspend MAY carry suspend_until with a REQUIRED on_expiry; the pair
    is the Mission's schedule.  When the suspend_until of a current
    schedule passes, the AS MUST apply on_expiry (transition to active
-   for resume, or to revoked for revoke) and emit the corresponding
-   transition, without a further request.  While the Mission is
-   suspended under a deadline, both suspend_until and on_expiry surface
-   in the signed Mission Status Response (Section 3.4) so a consumer
-   sees the pending outcome.
+   for resume, or to terminated with reason revoked for revoke) and emit
+   the corresponding transition, without a further request.  While the
+   Mission is suspended under a deadline, both suspend_until and
+   on_expiry surface in the signed Mission Status Response (Section 3.4)
+   so a consumer sees the pending outcome.
 
    The AS authorizes a schedule when it commits it (Section 5.5) and
    does not re-authorize it at the deadline: a later expiry or
@@ -15434,62 +15592,66 @@ Table of Contents
    schedule that is no longer current, so an earlier deadline never acts
    on a later suspension.  A deadline applies only a transition legal
    from the Mission's current state (Section 5.2) and never changes a
-   terminal Mission.
+   terminated Mission.
 
 5.2.  Legal Transitions
 
-   An operation is legal only from the source states below.  A terminal
-   state (revoked, expired, completed, or the companion-defined
-   superseded and cascaded) admits no transition.  An operation whose
-   resulting state equals the current state, terminal or not, is
-   idempotent success (Section 5.7).  This table governs Mission-level
-   state; a companion-registered extension operation such as discharge
-   produces no Mission-state transition and is not a row of it,
-   following instead the entry-grain rules the Entry Discharge companion
-   defines ([I-D.draft-mcguinness-oauth-mission-discharge]).
+   An operation is legal only from the source states below.  The
+   terminated state admits no transition, whatever its termination
+   reason.  An operation whose resulting state and, for terminated,
+   termination reason equal the current ones is idempotent success
+   (Section 5.7).  This table governs Mission-level state; a companion-
+   registered extension operation such as discharge produces no Mission-
+   state transition and is not a row of it, following instead the entry-
+   grain rules the Entry Discharge companion defines
+   ([I-D.draft-mcguinness-oauth-mission-discharge]).
 
    resume is the sole exception: it is legal only from suspended (its
    resulting state, active, is also the baseline a Mission holds before
-   any suspension), so resume on an active or terminal Mission is a
+   any suspension), so resume on an active or terminated Mission is a
    conflict, not idempotent success.
 
-            +===========+===================+=================+
-            | Operation | Legal from        | Resulting state |
-            +===========+===================+=================+
-            | revoke    | active, suspended | revoked         |
-            +-----------+-------------------+-----------------+
-            | suspend   | active            | suspended       |
-            +-----------+-------------------+-----------------+
-            | resume    | suspended         | active          |
-            +-----------+-------------------+-----------------+
-            | complete  | active, suspended | completed       |
-            +-----------+-------------------+-----------------+
+     +===========+============+=================+====================+
+     | Operation | Legal from | Resulting state | Termination reason |
+     +===========+============+=================+====================+
+     | revoke    | active,    | terminated      | revoked            |
+     |           | suspended  |                 |                    |
+     +-----------+------------+-----------------+--------------------+
+     | suspend   | active     | suspended       |                    |
+     +-----------+------------+-----------------+--------------------+
+     | resume    | suspended  | active          |                    |
+     +-----------+------------+-----------------+--------------------+
+     | complete  | active,    | terminated      | completed          |
+     |           | suspended  |                 |                    |
+     +-----------+------------+-----------------+--------------------+
 
                                   Table 3
 
    complete is legal from suspended as well as active: completion is a
-   monotonic narrowing to a terminal state and needs no derivation
-   window, so a suspended Mission need not first be resumed to be
-   completed.
+   monotonic narrowing to terminated and needs no derivation window, so
+   a suspended Mission need not first be resumed to be completed.
 
    Requests are adjudicated by the single rule of Section 5.7: an
-   operation whose resulting state equals the Mission's current state is
-   idempotent success, with the resume exception above.  Any other
-   operation not legal from the current state, including resume on a
-   Mission that is not suspended, is refused as a conflict.  A Mission
-   that reaches its expires_at transitions to expired independently of
-   this endpoint, from active or suspended.  When a schedule's
-   suspend_until is at or after the Mission's expires_at, expiry
-   governs: the Mission becomes expired at expires_at, and the AS MUST
-   NOT apply that schedule's on_expiry.
+   operation whose resulting state and termination reason equal the
+   Mission's current ones is idempotent success, with the resume
+   exception above.  Any other operation not legal from the current
+   state, including resume on a Mission that is not suspended, is
+   refused as a conflict.  A Mission that reaches its expires_at from
+   active or suspended is terminated with reason expired independently
+   of this endpoint, at every decision whether or not the transition is
+   persisted.  When a schedule's suspend_until is at or after the
+   Mission's expires_at, expiry governs: the Mission is terminated with
+   reason expired at expires_at, and the AS MUST NOT apply that
+   schedule's on_expiry.
 
 5.3.  Consolidated State Machine
 
    This profile owns the extension of the issuance profile's lifecycle
    state space ([I-D.draft-mcguinness-oauth-mission], Section "Mission
    Lifecycle and Gating").  The table below is the authoritative view of
-   that space: every state, every transition, and the source of the
-   event that drives it.
+   that space: every state, every transition, the source of the event
+   that drives it, and the termination reason a transition to terminated
+   records.
 
    Event sources are the lifecycle endpoint (an operation of Section 5),
    the expiry clock (a deadline reached without a request), and
@@ -15501,66 +15663,75 @@ Table of Contents
    is not a row of this table.  Only active permits derivation; every
    other state is non-deriving.
 
-    +===========+====================+==================+============+
-    | From      | Event              | Event source     | To         |
-    +===========+====================+==================+============+
-    | (none)    | approval event     | issuance profile | active     |
-    +-----------+--------------------+------------------+------------+
-    | active    | revoke             | lifecycle        | revoked    |
-    |           |                    | endpoint         |            |
-    +-----------+--------------------+------------------+------------+
-    | suspended | revoke             | lifecycle        | revoked    |
-    |           |                    | endpoint         |            |
-    +-----------+--------------------+------------------+------------+
-    | active    | suspend            | lifecycle        | suspended  |
-    |           |                    | endpoint         |            |
-    +-----------+--------------------+------------------+------------+
-    | suspended | resume             | lifecycle        | active     |
-    |           |                    | endpoint         |            |
-    +-----------+--------------------+------------------+------------+
-    | active    | complete           | lifecycle        | completed  |
-    |           |                    | endpoint         |            |
-    +-----------+--------------------+------------------+------------+
-    | suspended | complete           | lifecycle        | completed  |
-    |           |                    | endpoint         |            |
-    +-----------+--------------------+------------------+------------+
-    | active    | expires_at reached | expiry clock     | expired    |
-    +-----------+--------------------+------------------+------------+
-    | suspended | expires_at reached | expiry clock     | expired    |
-    +-----------+--------------------+------------------+------------+
-    | suspended | suspend_until      | expiry clock     | active     |
-    |           | reached, on_expiry |                  |            |
-    |           | = resume           |                  |            |
-    +-----------+--------------------+------------------+------------+
-    | suspended | suspend_until      | expiry clock     | revoked    |
-    |           | reached, on_expiry |                  |            |
-    |           | = revoke           |                  |            |
-    +-----------+--------------------+------------------+------------+
-    | active    | successor          | expansion        | superseded |
-    |           | activates          | profile          |            |
-    +-----------+--------------------+------------------+------------+
-    | active    | parent reaches a   | child-delegation | cascaded   |
-    |           | terminal state     | profile          |            |
-    +-----------+--------------------+------------------+------------+
-    | suspended | parent reaches a   | child-delegation | cascaded   |
-    |           | terminal state     | profile          |            |
-    +-----------+--------------------+------------------+------------+
+    +=========+=============+==========+==========+===================+
+    |From     |Event        |Event     |To        | Reason            |
+    |         |             |source    |          |                   |
+    +=========+=============+==========+==========+===================+
+    |(none)   |approval     |issuance  |active    |                   |
+    |         |event        |profile   |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |active   |revoke       |lifecycle |terminated| revoked           |
+    |         |             |endpoint  |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |suspended|revoke       |lifecycle |terminated| revoked           |
+    |         |             |endpoint  |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |active   |suspend      |lifecycle |suspended |                   |
+    |         |             |endpoint  |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |suspended|resume       |lifecycle |active    |                   |
+    |         |             |endpoint  |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |active   |complete     |lifecycle |terminated| completed         |
+    |         |             |endpoint  |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |suspended|complete     |lifecycle |terminated| completed         |
+    |         |             |endpoint  |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |active   |expires_at   |expiry    |terminated| expired           |
+    |         |reached      |clock     |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |suspended|expires_at   |expiry    |terminated| expired           |
+    |         |reached      |clock     |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |suspended|suspend_until|expiry    |active    |                   |
+    |         |reached,     |clock     |          |                   |
+    |         |on_expiry =  |          |          |                   |
+    |         |resume       |          |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |suspended|suspend_until|expiry    |terminated| revoked           |
+    |         |reached,     |clock     |          |                   |
+    |         |on_expiry =  |          |          |                   |
+    |         |revoke       |          |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |active   |successor    |expansion |terminated| superseded        |
+    |         |activates    |profile   |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |active   |parent       |child-    |terminated| parent_terminated |
+    |         |terminates   |delegation|          |                   |
+    |         |             |profile   |          |                   |
+    +---------+-------------+----------+----------+-------------------+
+    |suspended|parent       |child-    |terminated| parent_terminated |
+    |         |terminates   |delegation|          |                   |
+    |         |             |profile   |          |                   |
+    +---------+-------------+----------+----------+-------------------+
 
-                                 Table 4
+                                  Table 4
 
    revoke and the Mission's expires_at both apply in suspended as well
    as active, so a suspended Mission can still be terminated or expire.
    A suspend_until row fires only for a current schedule whose deadline
    falls before expires_at (Section 5, Operations; Section 5.2).  The
-   superseded and cascaded rows are companion-defined and shown here for
-   reference: superseded is committed by the expansion profile and
-   requires an active predecessor
-   ([I-D.draft-mcguinness-oauth-mission-expansion]); cascaded is
-   committed by the child-delegation profile only when a parent reaches
-   a terminal state.  A suspended parent holds a dependent Child Mission
-   non-active reversibly rather than driving it to cascaded
+   superseded and parent_terminated rows are companion-defined and shown
+   here for reference: a superseded termination is committed by the
+   expansion profile and requires an active predecessor
+   ([I-D.draft-mcguinness-oauth-mission-expansion]); a parent_terminated
+   termination is committed by the child-delegation profile only when a
+   parent terminates, and a child's own expiry takes precedence over it.
+   A suspended parent holds a dependent Child Mission non-active
+   reversibly rather than terminating it
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  Neither
-   companion state is produced by this profile's endpoint.
+   companion reason is produced by this profile's endpoint.
 
 5.4.  Authentication
 
@@ -15707,7 +15878,12 @@ Table of Contents
        "issuer": "https://as.example.com",
        "authority_hash":
          "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-       "state": "revoked",
+       "state": "terminated",
+       "termination": {
+         "reason": "revoked",
+         "terminated_at": "2026-11-02T08:53:20Z",
+         "version": 7
+       },
        "version": 7,
        "expires_at":  "2026-12-31T23:59:59Z",
        "fresh_until": "2026-11-02T08:54:05Z"
@@ -15762,7 +15938,8 @@ Table of Contents
    }
 
    When suspend_until passes without a resume, the AS applies on_expiry
-   and transitions the Mission to revoked without a further request.
+   and transitions the Mission to terminated with reason revoked without
+   a further request.
 
 5.7.  Idempotency and Conflicts
 
@@ -15801,24 +15978,27 @@ Table of Contents
    stale decisions.
 
    Lifecycle operations that change Mission state follow one rule.  An
-   operation whose resulting state (Section 5.2) equals the Mission's
-   current state is idempotent success, terminal or not: the AS returns
-   the current Mission Status Response, with no state change and no
-   event emitted.  Any other operation not legal from the current state
-   (for example suspend against a terminal state) is a conflict: the AS
-   MUST refuse it with HTTP 409 and a JSON body whose error symbol is
-   conflict, leaving the Mission state unchanged.  A companion-
-   registered extension operation that changes no Mission state, such as
-   discharge, is not bound by this rule; its own idempotency and outcome
-   vocabulary are defined by the companion that registers it, for
-   discharge by the Entry Discharge companion
+   operation whose resulting state (Section 5.2) and, for terminated,
+   termination reason equal the Mission's current ones is idempotent
+   success: the AS returns the current Mission Status Response, with no
+   state change and no event emitted.  Any other operation not legal
+   from the current state (for example suspend against a terminated
+   Mission, or revoke against one terminated with reason completed) is a
+   conflict: the AS MUST refuse it with HTTP 409 and a JSON body whose
+   error symbol is conflict, leaving the Mission state unchanged.  The
+   nonce replay and request-mismatch handling above applies
+   independently of this rule.  A companion-registered extension
+   operation that changes no Mission state, such as discharge, is not
+   bound by this rule; its own idempotency and outcome vocabulary are
+   defined by the companion that registers it, for discharge by the
+   Entry Discharge companion
    ([I-D.draft-mcguinness-oauth-mission-discharge]).
 
    resume is the sole exception to the idempotent-success arm.  It is
    legal only from suspended, and its resulting state active is also the
    baseline a Mission holds before any suspension, so resume on an
    active Mission (one never suspended, or already resumed) or on a
-   terminal Mission is not idempotent success but a conflict.
+   terminated Mission is not idempotent success but a conflict.
 
    One idempotent case carries metadata.  A suspend against a suspended
    Mission that carries a suspend_until and on_expiry pair differing
@@ -16105,9 +16285,9 @@ Table of Contents
       signed response where end-to-end integrity is required.
 
    *  *Mission Lifecycle*: serve the management endpoint (Section 5),
-      gate the suspended and completed states it introduces exactly as
-      the issuance profile gates on non-active state, and advertise
-      mission_lifecycle_endpoint and
+      gate the suspended state and the completed termination it
+      introduces exactly as the issuance profile gates on non-active
+      state, and advertise mission_lifecycle_endpoint and
       mission_lifecycle_endpoint_auth_methods_supported.
 
    *  *Revocation propagation*: advertise mission_max_stale_seconds and
@@ -16226,13 +16406,13 @@ Table of Contents
    This document requests IANA actions for OAuth AS metadata members and
    a media type.  It defines no new registry of its own: the endpoint
    authentication-method value space is a closed set defined inline
-   (Section 8). mission_suspended and mission_completed (Section 5) are
-   values of the issuance profile's mission_error member, which has no
-   IANA registry, so this document requests no registration for them.  A
-   companion profile MAY register further extension members or Common
-   Constraints against a family registry; the Entry Discharge companion
-   registers terminal_when in the Mission Resource Access Profile's
-   Mission Common Constraints registry this way
+   (Section 8). suspended and completed (Section 5) are values of the
+   issuance profile's mission_error member, which has no IANA registry,
+   so this document requests no registration for them.  A companion
+   profile MAY register further extension members or Common Constraints
+   against a family registry; the Entry Discharge companion registers
+   terminal_when in the Mission Resource Access Profile's Mission Common
+   Constraints registry this way
    ([I-D.draft-mcguinness-oauth-mission-discharge]).
 
 12.1.  OAuth Authorization Server Metadata Registration
@@ -16301,9 +16481,9 @@ Table of Contents
 
    *  Author/Change controller: IETF
 
-12.3.  Mission Lifecycle States Registrations
+12.3.  Mission Lifecycle Registrations
 
-   This document requests registration of two states in the issuance
+   This document requests registration of one state in the issuance
    profile's Mission Lifecycle States registry
    ([I-D.draft-mcguinness-oauth-mission]), under that registry's
    Specification Required policy:
@@ -16317,13 +16497,23 @@ Table of Contents
    |           |          | tokens until     |            | Section 5 |
    |           |          | resumed.         |            |           |
    +-----------+----------+------------------+------------+-----------+
-   | completed | yes      | Records          | IETF       | this      |
-   |           |          | successful       |            | document, |
-   |           |          | completion of    |            | Section 5 |
-   |           |          | the Mission.     |            |           |
-   +-----------+----------+------------------+------------+-----------+
 
                                  Table 5
+
+   It also requests registration of one reason in the issuance profile's
+   Mission Termination Reasons registry
+   ([I-D.draft-mcguinness-oauth-mission]), under the same policy:
+
+     +===========+===============+=========+============+===========+
+     | Value     | Semantics     | Members | Change     | Reference |
+     |           |               |         | Controller |           |
+     +===========+===============+=========+============+===========+
+     | completed | The Mission   | none    | IETF       | this      |
+     |           | completed     |         |            | document, |
+     |           | successfully. |         |            | Section 5 |
+     +-----------+---------------+---------+------------+-----------+
+
+                                 Table 6
 
 12.4.  Well-Known URI
 
@@ -16546,6 +16736,15 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Mission lifecycle: the states are active, suspended and
+      terminated.  A terminated Mission's mission.termination carries
+      its reason, terminated_at and the version of the committing
+      transition; completed is a termination reason, successor and
+      carried_to live in termination, an operation is idempotent only
+      when its resulting state and reason both match, the mission_error
+      values are suspended and completed, and a Discharge Result carries
+      new_version (#705).
 
    *  A suspend whose on_expiry is resume needs the authorization the
       deployment requires for a direct resume as well as for suspend,
@@ -17439,8 +17638,9 @@ Table of Contents
    realization is the exp claim,
    [I-D.draft-mcguinness-mission-runtime-oauth]).  The Mission reference
    and its state source do not themselves surface expires_at; where a
-   Mission state source does expose it (or reports the Mission expired),
-   the PDP MUST refuse on it independent of the credential's own expiry.
+   Mission state source does expose it (or reports the Mission
+   terminated with reason expired), the PDP MUST refuse on it
+   independent of the credential's own expiry.
 
    The PDP sets the permit's validity window from these inputs.  That
    the action actually executes within that window is the executing
@@ -21046,6 +21246,10 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Time: a Mission state source reports an expired Mission as
+      terminated with reason expired; the refusal on it is unchanged
+      (#705).
 
    *  Action Classification: the purpose that may raise a class is the
       approved Mission's, from its Mission state or a validated
@@ -24717,6 +24921,10 @@ Table of Contents
          the PEP established from its Mission state source
          ([I-D.draft-mcguinness-mission-runtime]).
 
+      termination:  OPTIONAL.  An object.  The Mission's termination
+         ([I-D.draft-mcguinness-oauth-mission], Section "Mission
+         Termination") when state is terminated; absent otherwise.
+
       version:  OPTIONAL.  An integer.  The Mission's state version as
          the status profile defines it
          ([I-D.draft-mcguinness-oauth-mission-status]), populated where
@@ -27030,6 +27238,10 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  mission_state_observation gains an OPTIONAL termination, the
+      Mission's termination when state is terminated.  The PDP rule,
+      which keys only on exact active, is unchanged (#705).
 
    *  Decision Evidence gains authority_bound, registered by this
       profile: credential or mission, the authority bound that decided

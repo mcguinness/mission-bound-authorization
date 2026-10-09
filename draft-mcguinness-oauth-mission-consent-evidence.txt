@@ -813,8 +813,9 @@ Table of Contents
 
    approver:  REQUIRED.  An object identifying the authenticated
       Approver.  It MUST carry iss and sub, per the Mission record's
-      approver ([I-D.draft-mcguinness-oauth-mission]), so binding checks
-      and record correlation are mechanical.
+      approval_basis.consent_principal
+      ([I-D.draft-mcguinness-oauth-mission]), so binding checks and
+      record correlation are mechanical.
 
    subject:  REQUIRED when different from the Approver.  An object
       identifying the Subject.
@@ -1886,6 +1887,9 @@ Appendix B.  Worked Disclosure and Test Vector
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Consent Evidence approver correlates with the Mission record's
+      approval_basis.consent_principal (#705).
 
    *  Binding to Mission Approval and the conformance floor apply at
       each human approval: a Mission instance activated by policy under

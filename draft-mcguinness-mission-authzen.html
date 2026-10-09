@@ -2283,9 +2283,17 @@ established from its Mission state source
 </dd>
               <dd class="break"></dd>
 <dt id="section-6.8-1.4.2.3">
-<code>version</code>:</dt>
+<code>termination</code>:</dt>
               <dd style="margin-left: 1.5em" id="section-6.8-1.4.2.4">
-                <p id="section-6.8-1.4.2.4.1"><span class="bcp14">OPTIONAL</span>. An integer. The Mission's state version as the status
+                <p id="section-6.8-1.4.2.4.1"><span class="bcp14">OPTIONAL</span>. An object. The Mission's <code>termination</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Termination") when <code>state</code> is <code>terminated</code>; absent otherwise.<a href="#section-6.8-1.4.2.4.1" class="pilcrow">¶</a></p>
+</dd>
+              <dd class="break"></dd>
+<dt id="section-6.8-1.4.2.5">
+<code>version</code>:</dt>
+              <dd style="margin-left: 1.5em" id="section-6.8-1.4.2.6">
+                <p id="section-6.8-1.4.2.6.1"><span class="bcp14">OPTIONAL</span>. An integer. The Mission's state version as the status
 profile defines it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>),
 populated where the PEP holds it. It lets the PDP compare the
 PEP's observation against the PDP's own tracked Mission state
@@ -2294,53 +2302,53 @@ this response
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), and treat a
 mismatch as staleness; it is never compared against
 <code>policy_view_id</code>, which commits to authority only
-(<a href="#mission-to-policy-materialization" class="auto internal xref">Section 5</a>).<a href="#section-6.8-1.4.2.4.1" class="pilcrow">¶</a></p>
-</dd>
-              <dd class="break"></dd>
-<dt id="section-6.8-1.4.2.5">
-<code>mode</code>:</dt>
-              <dd style="margin-left: 1.5em" id="section-6.8-1.4.2.6">
-                <p id="section-6.8-1.4.2.6.1"><span class="bcp14">REQUIRED</span>. A string. One of <code>fresh</code>, <code>cached</code>, or <code>event_driven</code>
-(<a href="#mission-status-composition" class="auto internal xref">Section 9</a>).<a href="#section-6.8-1.4.2.6.1" class="pilcrow">¶</a></p>
+(<a href="#mission-to-policy-materialization" class="auto internal xref">Section 5</a>).<a href="#section-6.8-1.4.2.6.1" class="pilcrow">¶</a></p>
 </dd>
               <dd class="break"></dd>
 <dt id="section-6.8-1.4.2.7">
-<code>freshness_at</code>:</dt>
+<code>mode</code>:</dt>
               <dd style="margin-left: 1.5em" id="section-6.8-1.4.2.8">
-                <p id="section-6.8-1.4.2.8.1"><span class="bcp14">REQUIRED</span> in every mode. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp. When the
-PEP's view of the Mission state was current.<a href="#section-6.8-1.4.2.8.1" class="pilcrow">¶</a></p>
+                <p id="section-6.8-1.4.2.8.1"><span class="bcp14">REQUIRED</span>. A string. One of <code>fresh</code>, <code>cached</code>, or <code>event_driven</code>
+(<a href="#mission-status-composition" class="auto internal xref">Section 9</a>).<a href="#section-6.8-1.4.2.8.1" class="pilcrow">¶</a></p>
 </dd>
               <dd class="break"></dd>
 <dt id="section-6.8-1.4.2.9">
-<code>mission_status_issued_at</code>:</dt>
+<code>freshness_at</code>:</dt>
               <dd style="margin-left: 1.5em" id="section-6.8-1.4.2.10">
-                <p id="section-6.8-1.4.2.10.1"><span class="bcp14">REQUIRED</span> for <code>cached</code> and <code>event_driven</code>, <span class="bcp14">OPTIONAL</span> for <code>fresh</code>. An
+                <p id="section-6.8-1.4.2.10.1"><span class="bcp14">REQUIRED</span> in every mode. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp. When the
+PEP's view of the Mission state was current.<a href="#section-6.8-1.4.2.10.1" class="pilcrow">¶</a></p>
+</dd>
+              <dd class="break"></dd>
+<dt id="section-6.8-1.4.2.11">
+<code>mission_status_issued_at</code>:</dt>
+              <dd style="margin-left: 1.5em" id="section-6.8-1.4.2.12">
+                <p id="section-6.8-1.4.2.12.1"><span class="bcp14">REQUIRED</span> for <code>cached</code> and <code>event_driven</code>, <span class="bcp14">OPTIONAL</span> for <code>fresh</code>. An
 RFC 3339 timestamp. When the relied-on Mission state was issued:
 for a signed Mission Status Response, the RFC 3339 representation
 of its <code>iat</code>, a NumericDate
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). <code>freshness_at</code>
 can precede this value by no more than the published maximum
-clock skew (<a href="#clock-skew" class="auto internal xref">Section 6.16</a>).<a href="#section-6.8-1.4.2.10.1" class="pilcrow">¶</a></p>
-</dd>
-              <dd class="break"></dd>
-<dt id="section-6.8-1.4.2.11">
-<code>mission_status_expires_at</code>:</dt>
-              <dd style="margin-left: 1.5em" id="section-6.8-1.4.2.12">
-                <p id="section-6.8-1.4.2.12.1"><span class="bcp14">REQUIRED</span> for <code>cached</code> and <code>event_driven</code>, <span class="bcp14">OPTIONAL</span> for <code>fresh</code>. An
-RFC 3339 timestamp. When reliance on the observed Mission state
-ends: for a signed Mission Status Response, its
-<code>mission.fresh_until</code>, never its <code>exp</code>, or an earlier end
-deployment policy sets; for a lease, the lease's end.<a href="#section-6.8-1.4.2.12.1" class="pilcrow">¶</a></p>
+clock skew (<a href="#clock-skew" class="auto internal xref">Section 6.16</a>).<a href="#section-6.8-1.4.2.12.1" class="pilcrow">¶</a></p>
 </dd>
               <dd class="break"></dd>
 <dt id="section-6.8-1.4.2.13">
-<code>assertion</code>:</dt>
+<code>mission_status_expires_at</code>:</dt>
               <dd style="margin-left: 1.5em" id="section-6.8-1.4.2.14">
-                <p id="section-6.8-1.4.2.14.1"><span class="bcp14">OPTIONAL</span>. A string. The signed Mission Status Response
+                <p id="section-6.8-1.4.2.14.1"><span class="bcp14">REQUIRED</span> for <code>cached</code> and <code>event_driven</code>, <span class="bcp14">OPTIONAL</span> for <code>fresh</code>. An
+RFC 3339 timestamp. When reliance on the observed Mission state
+ends: for a signed Mission Status Response, its
+<code>mission.fresh_until</code>, never its <code>exp</code>, or an earlier end
+deployment policy sets; for a lease, the lease's end.<a href="#section-6.8-1.4.2.14.1" class="pilcrow">¶</a></p>
+</dd>
+              <dd class="break"></dd>
+<dt id="section-6.8-1.4.2.15">
+<code>assertion</code>:</dt>
+              <dd style="margin-left: 1.5em" id="section-6.8-1.4.2.16">
+                <p id="section-6.8-1.4.2.16.1"><span class="bcp14">OPTIONAL</span>. A string. The signed Mission Status Response
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span> the PEP obtained
 <code>state</code> and <code>version</code> from, when the PEP holds one, so the PDP
 can verify the snapshot instead of trusting an unsigned PEP
-assertion.<a href="#section-6.8-1.4.2.14.1" class="pilcrow">¶</a></p>
+assertion.<a href="#section-6.8-1.4.2.16.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
 </dl>
@@ -5061,51 +5069,56 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Decision Evidence gains <code>authority_bound</code>, registered by this
-profile: <code>credential</code> or <code>mission</code>, the authority bound that decided
-an <code>out_of_authority</code> or <code>parameter_violation</code> deny (#825).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1"><code>mission_state_observation</code> gains an <span class="bcp14">OPTIONAL</span> <code>termination</code>, the
+Mission's <code>termination</code> when <code>state</code> is <code>terminated</code>. The PDP rule,
+which keys only on exact <code>active</code>, is unchanged (#705).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">The failure-condition table maps supplied arguments that fail the
-PEP-established action's required input schema to the Refusal
-Record's <code>request_invalid</code> (#1106).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.2.1">Decision Evidence gains <code>authority_bound</code>, registered by this
+profile: <code>credential</code> or <code>mission</code>, the authority bound that decided
+an <code>out_of_authority</code> or <code>parameter_violation</code> deny (#825).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1"><code>context.credential</code> carries <code>authority</code>, the verified credential's
+          <p id="appendix-A-2.3.1">The failure-condition table maps supplied arguments that fail the
+PEP-established action's required input schema to the Refusal
+Record's <code>request_invalid</code> (#1106).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1"><code>context.credential</code> carries <code>authority</code>, the verified credential's
 own <code>authorization_details</code>, on every decision; the PDP enforces it
 as the credential authority bound, independently of the matched
 Mission entry, and denies <code>credential_invalid</code> when it is absent or
 not evaluable (#825). An action no credential entry names is
 <code>out_of_authority</code>; one whose parameters violate a constraint on
-every entry that names it is <code>parameter_violation</code>.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">The RAR remediation grain cites the working-group successor
-draft-ietf-oauth-rar-metadata-remediation and defers its routing to
-the issuance profile's remediation routing instead of restating it.
-No requirement changed.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+every entry that names it is <code>parameter_violation</code>.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Mission-to-Policy Materialization describes the materialized policy
+          <p id="appendix-A-2.5.1">The RAR remediation grain cites the working-group successor
+draft-ietf-oauth-rar-metadata-remediation and defers its routing to
+the issuance profile's remediation routing instead of restating it.
+No requirement changed.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">Mission-to-Policy Materialization describes the materialized policy
 view as one evaluation path: a PDP that evaluates the Mission's
 recorded authority directly meets the runtime profile's authority
 input without a view and omits <code>policy_view_id</code>. The PDP-side
 consistency checks compare the request against the loaded view or
 the directly evaluated Mission record, and the <code>policy_view_id</code>
-check applies only where a view is used.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Defined the input to <code>evaluation_request_digest</code>: the complete
-request body as submitted, extension members included, before any
-default or enrichment, with header fields and transport framing
-excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+check applies only where a view is used.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
+          <p id="appendix-A-2.7.1">Defined the input to <code>evaluation_request_digest</code>: the complete
+request body as submitted, extension members included, before any
+default or enrichment, with header fields and transport framing
+excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
 form of a Mission Status Response's <code>iat</code>, which <code>freshness_at</code>
 precedes by no more than the published maximum clock skew, and
 <code>mission_status_expires_at</code> and the state valid-through are its
-<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

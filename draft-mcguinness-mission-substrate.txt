@@ -1505,15 +1505,15 @@ Appendix B.  Mission-Bound Authorization Family Use
    the binding's native ceremony, which can be a policy authority.  The
    family separates three roles that this one term can combine
    ([I-D.draft-mcguinness-oauth-mission], Section "Role Mapping"):
-   consent_principal, the accountable human recorded as approver;
-   activation_actor, who triggered the instance; and adjudication, the
-   mechanism that decided it.  For a direct approval, the kernel's
-   Approver is consent_principal.  Under a standing-consent basis,
-   consent_principal is the accountable owner whose earlier approval of
-   the standing consent roots the instance; the authorized policy
-   ceremony supplies the instance's decision, and adjudication, where
-   present, names that mechanism, whose activation policy commitment
-   makes the decision reproducible
+   consent_principal, the accountable human (the Mission record's
+   approval_basis.consent_principal); activation_actor, who triggered
+   the instance; and adjudication, the mechanism that decided it.  For a
+   direct approval, the kernel's Approver is consent_principal.  Under a
+   standing-consent basis, consent_principal is the accountable owner
+   whose earlier approval of the standing consent roots the instance;
+   the authorized policy ceremony supplies the instance's decision, and
+   adjudication, where present, names that mechanism, whose activation
+   policy commitment makes the decision reproducible
    ([I-D.draft-mcguinness-oauth-mission], Section "Standing-Consent
    Bases").  A family document never relabels a deciding policy or model
    as the family's human Approver.  This correspondence relaxes no
@@ -1538,6 +1538,10 @@ Appendix B.  Mission-Bound Authorization Family Use
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Family Use names the accountable human by the OAuth binding's
+      record member approval_basis.consent_principal, following that
+      binding's removal of the record's approver alias (#705).
 
    *  Family Use maps the kernel's Approver to the family's accountable
       owner (consent_principal) and, under a standing-consent basis, to

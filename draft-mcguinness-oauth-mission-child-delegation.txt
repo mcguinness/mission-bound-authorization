@@ -187,10 +187,11 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-status]) and the Mission
    Expansion profile ([I-D.draft-mcguinness-oauth-mission-expansion])
    where a deployment runs them, because those profiles define the
-   suspended, completed, and superseded parent states the cascade rules
-   react to.  A deployment that runs neither still implements this
-   profile: under the issuance profile's forward-compatibility rule, the
-   cascade treats any non-active parent state as a terminal trigger.
+   suspended parent state and the completed and superseded termination
+   reasons the cascade rules react to.  A deployment that runs neither
+   still implements this profile: under the issuance profile's forward-
+   compatibility rule, the cascade treats any non-active parent state as
+   a terminal trigger.
 
    Containment propagation (Section 9.1) additionally depends on the
    Mission Containment profile
@@ -993,10 +994,10 @@ Table of Contents
 
    Where the deployment requires a human approval event for child
    creation (Section 5), that event meets the issuance profile's
-   approval-event requirements in full, its human Approver is the
-   record's approver, and approval_basis.type is direct:
+   approval-event requirements in full, and approval_basis.type is
+   direct:
 
-   *  consent_principal is that Approver;
+   *  consent_principal is that event's human Approver;
 
    *  activation is { approval_event_id };
 
@@ -1008,9 +1009,9 @@ Table of Contents
    Where creation is adjudicated by policy with no human interaction
    (Section 5.1), approval_basis.type is policy_drawdown:
 
-   *  consent_principal is the Parent Mission's own approver, the
-      accountable human standing behind the delegation that permits
-      child creation (Section 8);
+   *  consent_principal is the Parent Mission's own
+      approval_basis.consent_principal, the accountable human standing
+      behind the delegation that permits child creation (Section 8);
 
    *  activation_actor is the requesting parent agent, the Parent
       Mission's client_id, distinct from consent_principal; and
@@ -1035,8 +1036,8 @@ Table of Contents
    carries only the delegation event identifier as activation_event_id.
    In both forms the record's approval_event_id is that
    activation_event_id, never the Parent Mission's approval event.  The
-   record's approver is consent_principal: the Parent Mission's human
-   Approver, never the policy and never the requesting agent.
+   record's approval_basis.consent_principal is the Parent Mission's
+   human Approver, never the policy and never the requesting agent.
 
    approved_at (the issuance profile's standing-consent requirement) is
    the human approval instant of the consented root that root_commitment
@@ -1314,21 +1315,21 @@ Table of Contents
    any Parent Mission transition to a non-active state.  This profile
    distinguishes terminal triggers from the one reversible trigger.
 
-   Terminal triggers:  Parent revoked or expired
-      ([I-D.draft-mcguinness-oauth-mission]), completed
-      ([I-D.draft-mcguinness-oauth-mission-status]), superseded
-      ([I-D.draft-mcguinness-oauth-mission-expansion]), or cascaded
-      (Section 9.1, when the parent is itself a Child Mission that was
-      cascade-terminated).
+   Terminal triggers:  Parent terminated, whatever its termination
+      reason: revoked or expired ([I-D.draft-mcguinness-oauth-mission]),
+      completed ([I-D.draft-mcguinness-oauth-mission-status]),
+      superseded ([I-D.draft-mcguinness-oauth-mission-expansion]),
+      parent_terminated (Section 9.1, when the parent is itself a Child
+      Mission that was cascade-terminated), or another.
 
       On a terminal trigger the Mission Issuer MUST stop new derivation
       under dependent Child Missions and, under immediate cascade, MUST
-      transition each dependent child to the terminal cascaded state
-      (Section 9.1).
+      transition each dependent child to terminated with reason
+      parent_terminated (Section 9.1).
 
-      Cascade is transitive: the children of a cascaded parent cascade
-      in turn under the same mode, in generation order, so a terminal
-      trigger reaches every descendant.
+      Cascade is transitive: the children of a parent terminated with
+      reason parent_terminated cascade in turn under the same mode, in
+      generation order, so a terminal trigger reaches every descendant.
 
    Reversible trigger:  Parent suspended
       ([I-D.draft-mcguinness-oauth-mission-status]).
@@ -1341,9 +1342,9 @@ Table of Contents
       suspended is governed by Section 9.1.
 
    A superseded parent does not transfer its Child Missions to the
-   successor.  The Mission Issuer MUST treat superseded as a terminal
-   cascade trigger and MUST NOT silently re-bind children to the
-   successor.
+   successor.  The Mission Issuer MUST treat a superseded termination as
+   a terminal cascade trigger and MUST NOT silently re-bind children to
+   the successor.
 
    The reason is how successor authority is derived: the successor
    Mission carries a freshly derived Authority Set that does not inherit
@@ -1379,9 +1380,10 @@ Table of Contents
    Child Mission:
 
    immediate:  On a terminal trigger the Child Mission transitions to
-      the cascaded state when the parent transition commits.  On the
-      reversible trigger the child is held non-active while the parent
-      is suspended and restored to its prior state on parent resume.
+      terminated with reason parent_terminated when the parent
+      transition commits.  On the reversible trigger the child is held
+      non-active while the parent is suspended and restored to its prior
+      state on parent resume.
 
    Two consumer-verified cascade modes, bounded_staleness and
    status_required, which trade issuer-committed transitions for
@@ -1407,21 +1409,20 @@ Table of Contents
 
    The cascade behavior by trigger:
 
-      +=======================+============+=======================+
-      | Trigger               | Resulting  | Who observes          |
-      |                       | child      |                       |
-      |                       | state      |                       |
-      +=======================+============+=======================+
-      | Terminal (revoked,    | cascaded   | Mission Issuer sets   |
-      | expired, completed,   | (terminal) | it; consumers read it |
-      | superseded, cascaded) |            | from Mission Status   |
-      |                       |            | or a lifecycle event  |
-      +-----------------------+------------+-----------------------+
-      | Reversible            | reported   | Issuer reports it;    |
-      | (suspended)           | suspended; | consumers read it     |
-      |                       | restored   | (Section 9.1)         |
-      |                       | on resume  |                       |
-      +-----------------------+------------+-----------------------+
+     +==================+===================+=======================+
+     | Trigger          | Resulting child   | Who observes          |
+     |                  | state             |                       |
+     +==================+===================+=======================+
+     | Terminal (parent | terminated,       | Mission Issuer sets   |
+     | terminated, any  | reason            | it; consumers read it |
+     | reason)          | parent_terminated | from Mission Status   |
+     |                  |                   | or a lifecycle event  |
+     +------------------+-------------------+-----------------------+
+     | Reversible       | reported          | Issuer reports it;    |
+     | (suspended)      | suspended;        | consumers read it     |
+     |                  | restored on       | (Section 9.1)         |
+     |                  | resume            |                       |
+     +------------------+-------------------+-----------------------+
 
                                  Table 1
 
@@ -1429,22 +1430,49 @@ Table of Contents
 
    A Child Mission has its own state, drawn from the issuance profile's
    lifecycle state space ([I-D.draft-mcguinness-oauth-mission]).  This
-   profile defines one child-specific terminal state:
+   profile defines one child-specific termination reason
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission
+   Termination"):
 
-   cascaded:  A terminal state a Child Mission enters when a terminal
-      cascade trigger on its Parent Mission terminates it under
+   parent_terminated:  The reason a Child Mission is terminated when a
+      terminal cascade trigger on its Parent Mission terminates it under
       immediate cascade (Section 9).  It is distinct from revoked (the
       child itself was not revoked) and expired (the child's own expiry
       was not reached), so audit can tell a cascade-terminated child
       from a directly terminated one.
 
+      Its terminated_at is the Parent Mission's terminated_at: a cascade
+      propagates one instant, so every Child Mission one cascade
+      terminates reports the same terminated_at, whenever its own
+      transition commits.  Where the Parent Mission's termination
+      retained no terminated_at ([I-D.draft-mcguinness-oauth-mission],
+      Section "Mission Termination"), the child's has none either: the
+      child's commit time is its transition's, never its terminated_at.
+      Its termination carries these further members:
+
+      parent:  REQUIRED.  A string.  The Mission identifier of the
+         immediate Parent Mission, equal to the child's parent.id
+         (Section 6).
+
+      origin:  OPTIONAL.  A string.  The Mission identifier of the
+         ancestor whose termination started the cascade.  Provenance
+         only: parent remains the reference a consumer follows.
+
+      origin_reason:  OPTIONAL.  A string.  That ancestor's termination
+         reason.
+
+      carried_to:  CONDITIONAL.  A string.  The replacement Mission
+         identifier that Child Mission Carryover committed for this
+         child (Section 10.5), present exactly when a replacement was
+         committed.  Correlation, never authority.
+
       Following the issuance profile's forward-compatibility rule, a
-      consumer treats cascaded as non-active, as it treats any state
-      other than active.  Mission Status
-      ([I-D.draft-mcguinness-oauth-mission-status]) reports it among the
-      terminal states, and a Mission lifecycle-change event
-      ([I-D.draft-mcguinness-oauth-mission-signals]) carries it on the
-      cascade transition.
+      consumer treats a Child Mission terminated with this reason as
+      non-active, as it treats any state other than active.  Mission
+      Status ([I-D.draft-mcguinness-oauth-mission-status]) reports it as
+      terminated with its termination, and a Mission lifecycle-change
+      event ([I-D.draft-mcguinness-oauth-mission-signals]) carries it on
+      the cascade transition.
 
    A Child Mission also depends on ancestor state.  For derivation under
    a Child Mission, both conditions MUST hold:
@@ -1457,7 +1485,11 @@ Table of Contents
    If either condition fails, the Mission Issuer MUST refuse derivation.
    A cascade in progress (Section 9) opens no window: a descendant whose
    root ancestor is non-active is refused derivation even before its own
-   cascade transition commits.
+   cascade transition commits.  When the refused Child Mission is
+   terminated with reason parent_terminated, or reported so ahead of its
+   own transition (below), the refusal's mission_error value is
+   parent_terminated ([I-D.draft-mcguinness-oauth-mission],
+   Section "Issuance Gating").
 
    Where a deployment also runs the Entry Discharge companion's
    completion machinery
@@ -1485,8 +1517,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission-status]), and MUST restore the
    child's own state when the parent resumes to active.
 
-   A child whose own expires_at passes during the suspension is expired:
-   expiry takes precedence over the projected suspended state.
+   A child whose own expires_at passes during the suspension is
+   terminated with reason expired: expiry takes precedence over the
+   projected suspended state.
 
    Projection onset and lift are not silent.  Each is a committed
    metadata-only change on every affected child for the purposes of the
@@ -1498,30 +1531,41 @@ Table of Contents
    event is emitted for each affected child.
 
    Likewise, once a terminal cascade trigger (Section 9) commits at any
-   ancestor, the issuer MUST report each dependent descendant's state as
-   cascaded on every state-reporting surface (the Mission Status
-   operation and token introspection,
+   ancestor, the issuer MUST report each dependent descendant as
+   terminated with reason parent_terminated on every state-reporting
+   surface (the Mission Status operation and token introspection,
    [I-D.draft-mcguinness-oauth-mission-status]) from that commit, ahead
    of each descendant's own per-generation transition.
 
    The transitive transitions still commit in generation order
    (Section 9); this rule bounds only what a consumer reads, so a
    consumer keying on a descendant's own state never reads active mid-
-   cascade.
+   cascade.  This ancestor-termination projection holds at every
+   decision, whether or not a descendant's own transition has been
+   persisted, including when persisting it fails or rolls back.  Until
+   that transition commits, the reported termination carries no state
+   version ([I-D.draft-mcguinness-oauth-mission-status]); committing it
+   preserves the projected reason and references.  A descendant already
+   terminated when the trigger commits keeps its own termination.
 
-   Expiry takes precedence over cascaded as it does over the projected
-   suspended state: where a child's own expires_at coincides with a
-   terminal cascade of its parent (for example, a child whose expires_at
-   equals the parent's on parent expiry), the child's own expired state
-   wins and it is reported expired, not cascaded.  This matches the
-   cascaded state, which a child enters only when its own expiry was not
-   reached.
+   A child's own expiry takes precedence over parent_terminated as it
+   does over the projected suspended state: where a child's own
+   expires_at is at or before a terminal cascade of its parent (for
+   example, a child whose expires_at equals the parent's on parent
+   expiry), the child is terminated with reason expired, not
+   parent_terminated.  This matches parent_terminated, which a child
+   receives only when its own expiry was not reached.  The same
+   precedence applies on the Child Mission Carryover path
+   (Section 10.2).
 
    Mission Status for a Child Mission SHOULD also include a parent
    projection for authorized callers, as additional context:
 
    parent:  Object containing parent id, issuer, current parent state
-      when known, cascade_mode, and freshness information.
+      when known, the parent's termination
+      ([I-D.draft-mcguinness-oauth-mission], Section "Mission
+      Termination") when that state is terminated, cascade_mode, and
+      freshness information.
 
    Under immediate cascade a consumer needs no parent-state check of its
    own: it relies on the Mission Issuer's child state transition, read
@@ -1618,11 +1662,14 @@ Table of Contents
    replacement parent excludes every dependent descendant: no
    replacement attaches to a missing parent.  New descendants absent
    from the manifest are never carried; under disclosed-exclusions they
-   cascade and appear in the completion evidence.  Already-terminal old
-   children retain their terminal state and are recorded as excluded,
-   never transitioned again to cascaded.  Each final outcome is recorded
-   against its rendered row, not inferred from set equality over the
-   subtree.
+   cascade and appear in the completion evidence.  Already-terminated
+   old children retain their termination and are recorded as excluded,
+   never terminated again with reason parent_terminated.  An old child
+   whose own expires_at is at or before the completion commit is among
+   them: it is terminated with reason expired, whether or not that
+   transition has been persisted, never parent_terminated (Section 9.1).
+   Each final outcome is recorded against its rendered row, not inferred
+   from set equality over the subtree.
 
 10.3.  Generation-by-Generation Eligibility
 
@@ -1690,11 +1737,12 @@ Table of Contents
 
    The replacement records related_to as correlation with the qualified
    old child, under expansion's existing correlation semantics.  The old
-   child gains carried_to, a string containing the replacement Mission
-   identifier under the same issuer, only when its cascaded transition
-   and replacement commit. carried_to is immutable thereafter, absent
-   for excluded children, and grants nothing.  Neither pointer selects
-   authority or rebinds a credential.
+   child's termination carries carried_to (Section 9.1), a string
+   containing the replacement Mission identifier under the same issuer,
+   only when its parent_terminated transition and replacement commit.
+   carried_to is immutable thereafter, absent for excluded children, and
+   grants nothing.  Neither pointer selects authority or rebinds a
+   credential.
 
 10.6.  Atomic Records, Recoverable Delivery
 
@@ -1743,9 +1791,10 @@ Table of Contents
    discharge companion forwards a delayed discharge through these
    pairings ([I-D.draft-mcguinness-oauth-mission-discharge],
    Section "Discharge After Carryover").  For an excluded row the map
-   includes reason and observed terminal state or committed cascade.
-   Unrendered descendants are listed explicitly.  The map, not
-   related_to, is the normative record of replacement.
+   includes reason and the observed terminal state with its termination
+   reason, or the committed cascade.  Unrendered descendants are listed
+   explicitly.  The map, not related_to, is the normative record of
+   replacement.
 
    A replacement's ordinary Child Evidence object is extended with
    creation_mode set to carryover, carried_from (a qualified old-child
@@ -1755,8 +1804,8 @@ Table of Contents
    map does not replace ordinary Child Evidence or become authority.
 
    When Status or Signals is deployed, the issuer MUST carry the
-   committed carried_to correlation on the old child's cascaded
-   observation as defined by those profiles.
+   committed carried_to correlation in the termination of the old
+   child's parent_terminated observation as defined by those profiles.
 
    A consumer MUST NOT infer absence of a replacement from receiving a
    cascade before the replacement's creation event.
@@ -1943,7 +1992,8 @@ Table of Contents
    *  record the Child Mission's approval_basis (Section 6.1): direct
       for a human-approved child, with the child's human Approver as
       consent_principal, and policy_drawdown for one policy adjudicates,
-      with the Parent Mission's human approver as consent_principal;
+      with the Parent Mission's approval_basis.consent_principal as
+      consent_principal;
 
    *  record each child's subject per its basis and the parent's
       authority_source, verifying that source at the creation commit
@@ -2088,24 +2138,26 @@ Table of Contents
    reason of Section 5.10, each with its semantics as defined there,
    Change Controller IETF, and Reference this document, Section 5.10.
 
-   It requests registration of one state in the issuance profile's
-   Mission Lifecycle States registry
+   It requests registration of one reason in the issuance profile's
+   Mission Termination Reasons registry
    ([I-D.draft-mcguinness-oauth-mission]):
 
-    +==========+==========+==================+============+===========+
-    | Value    | Terminal | Semantics        | Change     | Reference |
-    |          |          |                  | Controller |           |
-    +==========+==========+==================+============+===========+
-    | cascaded | yes      | A terminal state | IETF       | this      |
-    |          |          | a Child Mission  |            | document, |
-    |          |          | enters when a    |            | Section   |
-    |          |          | terminal cascade |            | 9.1       |
-    |          |          | trigger on its   |            |           |
-    |          |          | Parent Mission   |            |           |
-    |          |          | terminates it    |            |           |
-    |          |          | under immediate  |            |           |
-    |          |          | cascade.         |            |           |
-    +----------+----------+------------------+------------+-----------+
+    +===================+==========+=============+==========+=========+
+    | Value             |Semantics |Members      |Change    |Reference|
+    |                   |          |             |Controller|         |
+    +===================+==========+=============+==========+=========+
+    | parent_terminated |A terminal|parent       |IETF      |this     |
+    |                   |cascade   |(REQUIRED),  |          |document,|
+    |                   |trigger on|origin       |          |Section  |
+    |                   |the Child |(OPTIONAL),  |          |9.1      |
+    |                   |Mission's |origin_reason|          |         |
+    |                   |Parent    |(OPTIONAL),  |          |         |
+    |                   |Mission   |carried_to   |          |         |
+    |                   |terminated|(CONDITIONAL)|          |         |
+    |                   |it under  |             |          |         |
+    |                   |immediate |             |          |         |
+    |                   |cascade.  |             |          |         |
+    +-------------------+----------+-------------+----------+---------+
 
                                   Table 2
 
@@ -2431,6 +2483,14 @@ Appendix A.  Experimental Consumer-Verified Cascade Modes
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Cascade terminates a Child Mission with reason parent_terminated,
+      registered in the Mission Termination Reasons registry, whose
+      termination names the immediate parent, takes the parent's
+      terminated_at (none where the parent's retained none), and carries
+      Carryover's carried_to; the child's own expiry takes precedence on
+      both paths, and the record's accountable human is
+      approval_basis.consent_principal (#705).
 
    *  Derivation Budget Is Not Inherited: for a policy_drawdown entry,
       the rendered per-child derivation limit is Mission Derivation

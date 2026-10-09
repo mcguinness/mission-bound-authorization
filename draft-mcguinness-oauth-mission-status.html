@@ -15,9 +15,9 @@ defines the Mission state-management surfaces it defers: the Mission
 Status operation (keyed by  mission_id ) with signed responses, the
 Mission projection for token introspection, the Mission Lifecycle
 endpoint with  revoke ,  suspend ,  resume , and  complete 
-operations, the  suspended  and  completed  states with the consolidated
-lifecycle state machine this profile owns, and revocation-propagation
-guidance. It defines an extension point through which a companion
+operations, the  suspended  state and the  completed  termination
+reason with the consolidated lifecycle state machine this profile
+owns, and revocation-propagation guidance. It defines an extension point through which a companion
 profile  MAY  add a fleet-scale Mission Status List or an entry-grain
  discharge  operation without altering this profile's own surfaces.
 Each capability is independently optional; an implementation can adopt
@@ -1105,9 +1105,9 @@ defines the Mission state-management surfaces it defers: the Mission
 Status operation (keyed by <code>mission_id</code>) with signed responses, the
 Mission projection for token introspection, the Mission Lifecycle
 endpoint with <code>revoke</code>, <code>suspend</code>, <code>resume</code>, and <code>complete</code>
-operations, the <code>suspended</code> and <code>completed</code> states with the consolidated
-lifecycle state machine this profile owns, and revocation-propagation
-guidance. It defines an extension point through which a companion
+operations, the <code>suspended</code> state and the <code>completed</code> termination
+reason with the consolidated lifecycle state machine this profile
+owns, and revocation-propagation guidance. It defines an extension point through which a companion
 profile <span class="bcp14">MAY</span> add a fleet-scale Mission Status List or an entry-grain
 <code>discharge</code> operation without altering this profile's own surfaces.
 Each capability is independently optional; an implementation can adopt
@@ -1316,7 +1316,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.3">
-                <p id="section-toc.1-1.12.2.3.1"><a href="#section-12.3" class="auto internal xref">12.3</a>.  <a href="#name-mission-lifecycle-states-re" class="internal xref">Mission Lifecycle States Registrations</a></p>
+                <p id="section-toc.1-1.12.2.3.1"><a href="#section-12.3" class="auto internal xref">12.3</a>.  <a href="#name-mission-lifecycle-registrat" class="internal xref">Mission Lifecycle Registrations</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.4">
                 <p id="section-toc.1-1.12.2.4.1"><a href="#section-12.4" class="auto internal xref">12.4</a>.  <a href="#name-well-known-uri" class="internal xref">Well-Known URI</a></p>
@@ -1821,57 +1821,62 @@ the issuance profile's baseline <code>mission</code> claim.<a href="#section-3.4
                 <p id="section-3.4-10.2.2.3.1"><code>state</code>: the current Mission lifecycle state. The authoritative
 state space is the issuance profile's
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Lifecycle
-and Gating"): the issuance profile states <code>active</code>, <code>revoked</code>, <code>expired</code>, this
-profile's <code>suspended</code> and <code>completed</code> when the Mission Lifecycle
-endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>) is deployed, and any
-further state a companion profile defines and the deployment runs
-(for example <code>superseded</code>, defined by the Mission Expansion profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>) for an expanded
-predecessor, or <code>cascaded</code>, defined by the Mission Child Delegation
-profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)
-for a cascade-terminated Child Mission). A consumer applies the
-issuance profile's forward-compatibility rule: only <code>active</code> permits
-reliance, and every other value, recognized or not, is non-active.
-This profile's reliance behavior does not depend on recognizing
-these companion-defined states; the fail-safe rule above governs.<a href="#section-3.4-10.2.2.3.1" class="pilcrow">¶</a></p>
+and Gating"): <code>active</code> and <code>terminated</code>, this profile's <code>suspended</code>
+when the Mission Lifecycle endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>)
+is deployed, and any further state a companion profile defines and
+the deployment runs. A consumer applies the issuance profile's
+forward-compatibility rule: only <code>active</code> permits reliance, and
+every other value, recognized or not, is non-active. This
+profile's reliance behavior does not depend on recognizing a
+companion-defined state; the fail-safe rule above governs.<a href="#section-3.4-10.2.2.3.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-3.4-10.2.2.4">
-                <p id="section-3.4-10.2.2.4.1"><code>expires_at</code>: the point at which the Mission itself expires, the
-Mission record's <code>expires_at</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3.4-10.2.2.4.1" class="pilcrow">¶</a></p>
+                <p id="section-3.4-10.2.2.4.1"><code>termination</code>: CONDITIONAL. Present exactly when <code>state</code> is
+<code>terminated</code>: the Mission's <code>termination</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Termination"), with its <code>reason</code> (<code>revoked</code> or <code>expired</code> from the
+issuance profile, this profile's <code>completed</code>, or a reason a
+companion profile registers, such as <code>superseded</code> for an expanded
+predecessor (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>) or
+<code>parent_terminated</code> for a cascade-terminated Child Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)), its
+<code>terminated_at</code>, the members its reason defines, and <code>version</code>:
+the state version (below) of the transition that committed the
+termination. <code>version</code> is <span class="bcp14">REQUIRED</span> in every termination the
+Mission Issuer commits, and absent while an <code>expired</code> or
+<code>parent_terminated</code> termination is observed but not yet committed;
+it can be lower than the response's current <code>version</code> when a later
+metadata-only change commits. It is the audit reference for
+<code>revoked</code> and <code>completed</code>. A deployment implementing Child Mission
+Carryover <span class="bcp14">MUST</span> include <code>termination.carried_to</code> when reporting a
+<code>parent_terminated</code> termination for which a replacement was
+committed, and <span class="bcp14">MUST</span> omit it when none was; it is same-issuer
+correlation, not authority
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section
+"Carryover Evidence and Observation").<a href="#section-3.4-10.2.2.4.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-3.4-10.2.2.5">
-                <p id="section-3.4-10.2.2.5.1"><code>fresh_until</code>: an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time giving the point
+                <p id="section-3.4-10.2.2.5.1"><code>expires_at</code>: the point at which the Mission itself expires, the
+Mission record's <code>expires_at</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3.4-10.2.2.5.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-3.4-10.2.2.6">
+                <p id="section-3.4-10.2.2.6.1"><code>fresh_until</code>: an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time giving the point
 until which the consumer <span class="bcp14">MAY</span> rely on the reported <code>state</code> without
 re-checking, governing caching (<a href="#mission-status-caching" class="auto internal xref">Section 3.5</a>). It is
 report-freshness metadata, carried in <code>mission</code> so it travels with
 <code>state</code> even on the introspection projection, which has no signed
-envelope to carry it (<a href="#introspection-projection" class="auto internal xref">Section 4</a>).<a href="#section-3.4-10.2.2.5.1" class="pilcrow">¶</a></p>
+envelope to carry it (<a href="#introspection-projection" class="auto internal xref">Section 4</a>).<a href="#section-3.4-10.2.2.6.1" class="pilcrow">¶</a></p>
 </li>
-              <li class="normal" id="section-3.4-10.2.2.6">
-                <p id="section-3.4-10.2.2.6.1"><code>suspend_until</code>, <code>on_expiry</code>: CONDITIONAL. Present only while the
+              <li class="normal" id="section-3.4-10.2.2.7">
+                <p id="section-3.4-10.2.2.7.1"><code>suspend_until</code>, <code>on_expiry</code>: CONDITIONAL. Present only while the
 Mission is <code>suspended</code> under a deadline
 (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>): the RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>
 deadline, and the transition (<code>resume</code> or <code>revoke</code>) the AS applies
-when it passes.<a href="#section-3.4-10.2.2.6.1" class="pilcrow">¶</a></p>
-</li>
-              <li class="normal" id="section-3.4-10.2.2.7">
-                <p id="section-3.4-10.2.2.7.1"><code>successor</code>: <span class="bcp14">OPTIONAL</span>. A string, the successor <code>mission_id</code>. Present
-only when <code>state</code> is <code>superseded</code>, giving the successor that
-replaced this Mission, set atomically at supersession on the
-predecessor's record
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-3.4-10.2.2.7.1" class="pilcrow">¶</a></p>
+when it passes.<a href="#section-3.4-10.2.2.7.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-3.4-10.2.2.8">
-                <p id="section-3.4-10.2.2.8.1"><code>carried_to</code>: CONDITIONAL string. A deployment implementing Child Mission
-Carryover <span class="bcp14">MUST</span> include the committed replacement Mission identifier when
-reporting the old child's <code>cascaded</code> state, and <span class="bcp14">MUST</span> omit it when no
-replacement was committed. It is same-issuer correlation, not authority
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section
-"Carryover Evidence and Observation").<a href="#section-3.4-10.2.2.8.1" class="pilcrow">¶</a></p>
-</li>
-              <li class="normal" id="section-3.4-10.2.2.9">
-                <p id="section-3.4-10.2.2.9.1"><code>version</code>: <span class="bcp14">REQUIRED</span>. The Mission's <strong>state version</strong>: a strictly
+                <p id="section-3.4-10.2.2.8.1"><code>version</code>: <span class="bcp14">REQUIRED</span>. The Mission's <strong>state version</strong>: a strictly
 monotonic per-Mission counter the Mission Issuer maintains,
 incremented on each committed lifecycle transition (the approval
 event is version 1) and each committed metadata-only change,
@@ -1888,16 +1893,16 @@ this same counter under their own member names:
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), <code>prior_version</code>
 and <code>new_version</code> in Containment Evidence
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), <code>prior_version</code>
-and <code>current_version</code> in a Discharge Result
+and <code>new_version</code> in a Discharge Result
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>), and
-<code>expected_version</code> on a lifecycle request (<a href="#idempotency" class="auto internal xref">Section 5.7</a>).<a href="#section-3.4-10.2.2.9.1" class="pilcrow">¶</a></p>
+<code>expected_version</code> on a lifecycle request (<a href="#idempotency" class="auto internal xref">Section 5.7</a>).<a href="#section-3.4-10.2.2.8.1" class="pilcrow">¶</a></p>
 </li>
-              <li class="normal" id="section-3.4-10.2.2.10">
-                <p id="section-3.4-10.2.2.10.1">Extension members: a companion profile <span class="bcp14">MAY</span> add further members to
+              <li class="normal" id="section-3.4-10.2.2.9">
+                <p id="section-3.4-10.2.2.9.1">Extension members: a companion profile <span class="bcp14">MAY</span> add further members to
 this object. For example, the Status List companion adds a
 <code>status_list</code> reference where the deployment publishes a Mission
 Status List
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status-list" class="cite xref">I-D.draft-mcguinness-oauth-mission-status-list</a>]</span>).<a href="#section-3.4-10.2.2.10.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status-list" class="cite xref">I-D.draft-mcguinness-oauth-mission-status-list</a>]</span>).<a href="#section-3.4-10.2.2.9.1" class="pilcrow">¶</a></p>
 </li>
             </ul>
 </li>
@@ -2048,26 +2053,23 @@ failure: the AS returns the matching HTTP status with a JSON object
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>revoked</code>, <code>expired</code>, <code>completed</code>, <code>superseded</code>, <code>cascaded</code>
+                <code>terminated</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">Mission is in a terminal, non-active state.</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission has ended; <code>mission.termination</code> gives the reason.</td>
             </tr>
           </tbody>
         </table>
-<p id="section-3.7-4">This document uses "terminated" in prose for any terminal
-non-<code>active</code> state; it is not itself a <code>mission.state</code> value, and the
-terminal set is not closed. The terminal row above and the list that
-follows enumerate the companion-defined states this suite currently
-runs, for the reader's reference; a deployment reports whichever it
-runs, and a consumer's reliance decision never depends on recognizing
-them. The terminal states currently defined across this suite are
-<code>revoked</code> and <code>expired</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
-<code>completed</code> (this document), <code>superseded</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and <code>cascaded</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). The binding
-rule is the issuance profile's forward-compatibility rule: every value
-other than <code>active</code> is non-active, whether or not the consumer
-recognizes it.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
+<p id="section-3.7-4">A <code>terminated</code> Mission's <code>mission.termination.reason</code> names how it
+ended, and the set of reasons is not closed: a deployment reports
+whichever reason its profiles define, and a consumer's reliance
+decision never depends on recognizing it. The reasons defined across
+this suite are <code>revoked</code> and <code>expired</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), <code>completed</code> (this document),
+<code>superseded</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and
+<code>parent_terminated</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).
+The binding rule is the issuance profile's forward-compatibility rule:
+every state other than <code>active</code> is non-active, whether or not the
+consumer recognizes it.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
 <p id="section-3.7-5">Wire error codes (carried in the <code>error</code> member of a JSON body):<a href="#section-3.7-5" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
           <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
@@ -2235,8 +2237,8 @@ token's own lifetime.<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
 (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>) carry Mission facts in a <code>mission</code> object
 of the same shape: the open <code>mission</code> claim object of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (Section "The Mission Claim")
-with status members (<code>state</code>, <code>fresh_until</code>, any companion-defined
-extension member such as the Status List companion's <code>status_list</code>
+with status members (<code>state</code>, <code>termination</code>, <code>fresh_until</code>, any
+companion-defined extension member such as the Status List companion's <code>status_list</code>
 reference (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status-list" class="cite xref">I-D.draft-mcguinness-oauth-mission-status-list</a>]</span>), and,
 on the dedicated response, <code>expires_at</code> and <code>version</code>) added. This
 projection populates the subset a token-holding consumer needs; the
@@ -2297,15 +2299,17 @@ served over TLS 1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>), f
 recommendations of <span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <p id="section-5-3">Adopting this endpoint extends the issuance profile's lifecycle state
 space (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
-Lifecycle and Gating") with two additional states: <code>suspended</code> (a
-non-terminal paused Mission that derives no tokens until resumed) and
-<code>completed</code> (a terminal state recording successful completion).
+Lifecycle and Gating") with one additional state, <code>suspended</code> (a
+paused Mission that derives no tokens until resumed), and one
+termination reason, <code>completed</code> (the Mission completed
+successfully).
 Issuance gating treats any state other than <code>active</code> as
 non-deriving, exactly as the issuance profile gates on <code>active</code>.<a href="#section-5-3" class="pilcrow">¶</a></p>
-<p id="section-5-4">A transition to <code>suspended</code> or <code>completed</code> gates new derivation only.
+<p id="section-5-4">A transition to <code>suspended</code>, or to <code>terminated</code> with reason
+<code>completed</code>, gates new derivation only.
 Tokens already derived under the Mission remain valid until their own
 <code>exp</code>, exactly as in the issuance profile's revocation model and
-mirroring the treatment of <code>superseded</code>
+mirroring the treatment of a <code>superseded</code> termination
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). A deployment that
 needs a prompt cutoff on outstanding tokens uses the propagation
 mechanisms of <a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>.<a href="#section-5-4" class="pilcrow">¶</a></p>
@@ -2327,16 +2331,16 @@ leaves refresh-token rotation and reuse detection intact, and a
 independently.<a href="#section-5-5" class="pilcrow">¶</a></p>
 <p id="section-5-6">An error code alone does not tell a client whether a <code>resume</code> can
 lift a refusal. When the issuance profile's gating refuses a
-derivation because the Mission is <code>suspended</code> or <code>completed</code>, the AS
-<span class="bcp14">SHOULD</span> include, alongside <code>error</code>, the <code>mission_error</code>
-token-error-response member (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
-Section "Issuance Gating") with the value <code>mission_suspended</code> or
-<code>mission_completed</code>, respectively. The issuance profile's rules for
-that member apply: it is diagnostic only, it grants nothing, an
+derivation because the Mission is <code>suspended</code>, or <code>terminated</code> with
+reason <code>completed</code>, the AS <span class="bcp14">SHOULD</span> include, alongside <code>error</code>, the
+<code>mission_error</code> token-error-response member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Issuance Gating")
+with the value <code>suspended</code> or <code>completed</code>, respectively. The issuance
+profile's rules for that member apply: it is diagnostic only, it grants nothing, an
 unrecognized value is ignored, and it is returned only to the
 authenticated client presenting the Mission's grant.
-<code>mission_suspended</code> reports a refusal that a <code>resume</code> can lift;
-<code>mission_completed</code> reports a terminal one.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<code>suspended</code> reports a refusal that a <code>resume</code> can lift; <code>completed</code>
+reports a terminal one.<a href="#section-5-6" class="pilcrow">¶</a></p>
 <div id="operations">
 <section id="section-5.1">
         <h3 id="name-operations">
@@ -2402,7 +2406,8 @@ completely by the companion that registers it
 <p id="section-5.1-4">The base operations are:<a href="#section-5.1-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.1-5.1">
-            <p id="section-5.1-5.1.1"><code>revoke</code>: terminate the Mission; transition to <code>revoked</code>.<a href="#section-5.1-5.1.1" class="pilcrow">¶</a></p>
+            <p id="section-5.1-5.1.1"><code>revoke</code>: terminate the Mission; transition to <code>terminated</code> with
+reason <code>revoked</code>.<a href="#section-5.1-5.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.1-5.2">
             <p id="section-5.1-5.2.1"><code>suspend</code>: pause the Mission; transition to <code>suspended</code>.<a href="#section-5.1-5.2.1" class="pilcrow">¶</a></p>
@@ -2411,7 +2416,8 @@ completely by the companion that registers it
             <p id="section-5.1-5.3.1"><code>resume</code>: return a suspended Mission to <code>active</code>.<a href="#section-5.1-5.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.1-5.4">
-            <p id="section-5.1-5.4.1"><code>complete</code>: mark the Mission completed; transition to <code>completed</code>.<a href="#section-5.1-5.4.1" class="pilcrow">¶</a></p>
+            <p id="section-5.1-5.4.1"><code>complete</code>: mark the Mission completed; transition to <code>terminated</code>
+with reason <code>completed</code>.<a href="#section-5.1-5.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-5.1-6">A companion profile <span class="bcp14">MAY</span> register a further <code>operation</code> value on this
@@ -2424,8 +2430,9 @@ that companion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" c
 <p id="section-5.1-7">A <code>suspend</code> <span class="bcp14">MAY</span> carry <code>suspend_until</code> with a <span class="bcp14">REQUIRED</span> <code>on_expiry</code>; the
 pair is the Mission's schedule. When the <code>suspend_until</code> of a current
 schedule passes, the AS <span class="bcp14">MUST</span> apply <code>on_expiry</code> (transition to
-<code>active</code> for <code>resume</code>, or to <code>revoked</code> for <code>revoke</code>) and emit the
-corresponding transition, without a further request. While the Mission
+<code>active</code> for <code>resume</code>, or to <code>terminated</code> with reason <code>revoked</code> for
+<code>revoke</code>) and emit the corresponding transition, without a further
+request. While the Mission
 is <code>suspended</code> under a deadline, both <code>suspend_until</code> and <code>on_expiry</code>
 surface in the signed Mission Status Response (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>)
 so a consumer sees the pending outcome.<a href="#section-5.1-7" class="pilcrow">¶</a></p>
@@ -2437,7 +2444,7 @@ suspension ends or an authorized replacement supersedes it
 (<a href="#idempotency" class="auto internal xref">Section 5.7</a>). The AS <span class="bcp14">MUST NOT</span> apply a schedule that is no longer
 current, so an earlier deadline never acts on a later suspension. A
 deadline applies only a transition legal from the Mission's current
-state (<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>) and never changes a terminal Mission.<a href="#section-5.1-8" class="pilcrow">¶</a></p>
+state (<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>) and never changes a <code>terminated</code> Mission.<a href="#section-5.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="legal-transitions">
@@ -2445,18 +2452,18 @@ state (<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>) 
         <h3 id="name-legal-transitions">
 <a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-legal-transitions" class="section-name selfRef">Legal Transitions</a>
         </h3>
-<p id="section-5.2-1">An operation is legal only from the source states below. A terminal
-state (<code>revoked</code>, <code>expired</code>, <code>completed</code>, or the companion-defined
-<code>superseded</code> and <code>cascaded</code>) admits no transition. An operation whose
-resulting state equals the current state, terminal or not, is
-idempotent success (<a href="#idempotency" class="auto internal xref">Section 5.7</a>). This table governs Mission-level
+<p id="section-5.2-1">An operation is legal only from the source states below. The
+<code>terminated</code> state admits no transition, whatever its termination
+reason. An operation whose resulting state and, for <code>terminated</code>,
+termination reason equal the current ones is idempotent success
+(<a href="#idempotency" class="auto internal xref">Section 5.7</a>). This table governs Mission-level
 state; a companion-registered extension operation such as <code>discharge</code>
 produces no Mission-state transition and is not a row of it,
 following instead the entry-grain rules the Entry Discharge companion
 defines (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>).<a href="#section-5.2-1" class="pilcrow">¶</a></p>
 <p id="section-5.2-2"><code>resume</code> is the sole exception: it is legal only from <code>suspended</code>
 (its resulting state, <code>active</code>, is also the baseline a Mission holds
-before any suspension), so <code>resume</code> on an <code>active</code> or terminal
+before any suspension), so <code>resume</code> on an <code>active</code> or <code>terminated</code>
 Mission is a conflict, not idempotent success.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
 <table class="center" id="table-3">
           <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
@@ -2465,6 +2472,7 @@ Mission is a conflict, not idempotent success.<a href="#section-5.2-2" class="pi
               <th class="text-left" rowspan="1" colspan="1">Operation</th>
               <th class="text-left" rowspan="1" colspan="1">Legal from</th>
               <th class="text-left" rowspan="1" colspan="1">Resulting state</th>
+              <th class="text-left" rowspan="1" colspan="1">Termination reason</th>
             </tr>
           </thead>
           <tbody>
@@ -2474,6 +2482,9 @@ Mission is a conflict, not idempotent success.<a href="#section-5.2-2" class="pi
 </td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>active</code>, <code>suspended</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>revoked</code>
@@ -2489,6 +2500,7 @@ Mission is a conflict, not idempotent success.<a href="#section-5.2-2" class="pi
               <td class="text-left" rowspan="1" colspan="1">
                 <code>suspended</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2500,6 +2512,7 @@ Mission is a conflict, not idempotent success.<a href="#section-5.2-2" class="pi
               <td class="text-left" rowspan="1" colspan="1">
                 <code>active</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2509,25 +2522,30 @@ Mission is a conflict, not idempotent success.<a href="#section-5.2-2" class="pi
                 <code>active</code>, <code>suspended</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>completed</code>
 </td>
             </tr>
           </tbody>
         </table>
 <p id="section-5.2-4"><code>complete</code> is legal from <code>suspended</code> as well as <code>active</code>: completion is
-a monotonic narrowing to a terminal state and needs no derivation
+a monotonic narrowing to <code>terminated</code> and needs no derivation
 window, so a suspended Mission need not first be resumed to be
 completed.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
 <p id="section-5.2-5">Requests are adjudicated by the single rule of <a href="#idempotency" class="auto internal xref">Section 5.7</a>: an
-operation whose resulting state equals the Mission's current state is
-idempotent success, with the <code>resume</code> exception above. Any other
+operation whose resulting state and termination reason equal the
+Mission's current ones is idempotent success, with the <code>resume</code>
+exception above. Any other
 operation not legal from the current state, including <code>resume</code> on a
 Mission that is not <code>suspended</code>, is refused as a conflict. A Mission
-that reaches its <code>expires_at</code> transitions to <code>expired</code> independently of
-this endpoint, from <code>active</code> or <code>suspended</code>. When a schedule's
-<code>suspend_until</code> is at or after the Mission's <code>expires_at</code>, expiry
-governs: the Mission becomes <code>expired</code> at <code>expires_at</code>, and the AS
-<span class="bcp14">MUST NOT</span> apply that schedule's <code>on_expiry</code>.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+that reaches its <code>expires_at</code> from <code>active</code> or <code>suspended</code> is
+<code>terminated</code> with reason <code>expired</code> independently of this endpoint, at
+every decision whether or not the transition is persisted. When a
+schedule's <code>suspend_until</code> is at or after the Mission's <code>expires_at</code>,
+expiry governs: the Mission is <code>terminated</code> with reason <code>expired</code> at
+<code>expires_at</code>, and the AS <span class="bcp14">MUST NOT</span> apply that schedule's <code>on_expiry</code>.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="state-machine">
@@ -2538,8 +2556,9 @@ governs: the Mission becomes <code>expired</code> at <code>expires_at</code>, an
 <p id="section-5.3-1">This profile owns the extension of the issuance profile's lifecycle
 state space (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
 Lifecycle and Gating"). The table below is the authoritative view of
-that space: every state, every transition, and the source of the event
-that drives it.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+that space: every state, every transition, the source of the event
+that drives it, and the termination reason a transition to
+<code>terminated</code> records.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
 <p id="section-5.3-2">Event sources are the lifecycle endpoint (an operation
 of <a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>), the expiry clock (a deadline
 reached without a request), and companion adjudication (a transition a
@@ -2558,6 +2577,7 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
               <th class="text-left" rowspan="1" colspan="1">Event</th>
               <th class="text-left" rowspan="1" colspan="1">Event source</th>
               <th class="text-left" rowspan="1" colspan="1">To</th>
+              <th class="text-left" rowspan="1" colspan="1">Reason</th>
             </tr>
           </thead>
           <tbody>
@@ -2568,6 +2588,7 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>active</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2577,6 +2598,9 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
                 <code>revoke</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">lifecycle endpoint</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>revoked</code>
 </td>
@@ -2589,6 +2613,9 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
                 <code>revoke</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">lifecycle endpoint</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>revoked</code>
 </td>
@@ -2604,6 +2631,7 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>suspended</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2616,6 +2644,7 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>active</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2625,6 +2654,9 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
                 <code>complete</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">lifecycle endpoint</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>completed</code>
 </td>
@@ -2638,6 +2670,9 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
 </td>
               <td class="text-left" rowspan="1" colspan="1">lifecycle endpoint</td>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>completed</code>
 </td>
             </tr>
@@ -2648,6 +2683,9 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>expires_at</code> reached</td>
               <td class="text-left" rowspan="1" colspan="1">expiry clock</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>expired</code>
 </td>
@@ -2659,6 +2697,9 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>expires_at</code> reached</td>
               <td class="text-left" rowspan="1" colspan="1">expiry clock</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>expired</code>
 </td>
@@ -2674,6 +2715,7 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>active</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2683,6 +2725,9 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
                 <code>suspend_until</code> reached, <code>on_expiry</code> = <code>revoke</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">expiry clock</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>revoked</code>
 </td>
@@ -2694,6 +2739,9 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">successor activates</td>
               <td class="text-left" rowspan="1" colspan="1">expansion profile</td>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>superseded</code>
 </td>
             </tr>
@@ -2701,20 +2749,26 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>active</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">parent reaches a terminal state</td>
+              <td class="text-left" rowspan="1" colspan="1">parent terminates</td>
               <td class="text-left" rowspan="1" colspan="1">child-delegation profile</td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>cascaded</code>
+                <code>terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>parent_terminated</code>
 </td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>suspended</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">parent reaches a terminal state</td>
+              <td class="text-left" rowspan="1" colspan="1">parent terminates</td>
               <td class="text-left" rowspan="1" colspan="1">child-delegation profile</td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>cascaded</code>
+                <code>terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>parent_terminated</code>
 </td>
             </tr>
           </tbody>
@@ -2723,16 +2777,17 @@ other state is non-deriving.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
 well as <code>active</code>, so a suspended Mission can still be terminated or
 expire. A <code>suspend_until</code> row fires only for a current schedule whose
 deadline falls before <code>expires_at</code> (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>,
-Operations; <a href="#legal-transitions" class="auto internal xref">Section 5.2</a>). The <code>superseded</code> and <code>cascaded</code>
-rows are companion-defined and shown here for reference:
-<code>superseded</code> is committed by the expansion profile and requires an
-<code>active</code> predecessor
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>); <code>cascaded</code> is
-committed by the child-delegation profile only when a parent reaches a
-terminal state. A <code>suspended</code> parent holds a dependent Child Mission
-non-active reversibly rather than driving it to <code>cascaded</code>
+Operations; <a href="#legal-transitions" class="auto internal xref">Section 5.2</a>). The <code>superseded</code> and
+<code>parent_terminated</code> rows are companion-defined and shown here for
+reference: a <code>superseded</code> termination is committed by the expansion
+profile and requires an <code>active</code> predecessor
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>); a
+<code>parent_terminated</code> termination is committed by the child-delegation
+profile only when a parent terminates, and a child's own expiry takes
+precedence over it. A <code>suspended</code> parent holds a dependent Child
+Mission non-active reversibly rather than terminating it
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Neither
-companion state is produced by this profile's endpoint.<a href="#section-5.3-4" class="pilcrow">¶</a></p>
+companion reason is produced by this profile's endpoint.<a href="#section-5.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authentication">
@@ -2895,7 +2950,12 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
     "issuer": "https://as.example.com",
     "authority_hash":
       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-    "state": "revoked",
+    "state": "terminated",
+    "termination": {
+      "reason": "revoked",
+      "terminated_at": "2026-11-02T08:53:20Z",
+      "version": 7
+    },
     "version": 7,
     "expires_at":  "2026-12-31T23:59:59Z",
     "fresh_until": "2026-11-02T08:54:05Z"
@@ -2954,8 +3014,8 @@ and <code>on_expiry</code> in <code>mission</code> alongside <code>state</code>.
 </pre><a href="#section-5.6-11" class="pilcrow">¶</a>
 </div>
 <p id="section-5.6-12">When <code>suspend_until</code> passes without a <code>resume</code>, the AS applies
-<code>on_expiry</code> and transitions the Mission to <code>revoked</code> without a further
-request.<a href="#section-5.6-12" class="pilcrow">¶</a></p>
+<code>on_expiry</code> and transitions the Mission to <code>terminated</code> with reason
+<code>revoked</code> without a further request.<a href="#section-5.6-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="idempotency">
@@ -2997,13 +3057,16 @@ current state version differs. A deployment <span class="bcp14">SHOULD</span> re
 <code>nonce</code> remains the replay key; the two guards are independent, one
 against duplicate delivery, one against stale decisions.<a href="#section-5.7-4" class="pilcrow">¶</a></p>
 <p id="section-5.7-5">Lifecycle operations that change Mission state follow one rule. An
-operation whose resulting state (<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>) equals the
-Mission's current state is idempotent success, terminal or not: the AS
-returns the current Mission Status Response, with no state change and
-no event emitted. Any other operation not legal from the current state
-(for example <code>suspend</code> against a terminal state) is a conflict: the AS
-<span class="bcp14">MUST</span> refuse it with HTTP 409 and a JSON body whose error symbol is
-<code>conflict</code>, leaving the Mission state unchanged. A companion-registered
+operation whose resulting state (<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>) and, for
+<code>terminated</code>, termination reason equal the Mission's current ones is
+idempotent success: the AS returns the current Mission Status
+Response, with no state change and no event emitted. Any other
+operation not legal from the current state (for example <code>suspend</code>
+against a <code>terminated</code> Mission, or <code>revoke</code> against one terminated
+with reason <code>completed</code>) is a conflict: the AS <span class="bcp14">MUST</span> refuse it with
+HTTP 409 and a JSON body whose error symbol is <code>conflict</code>, leaving
+the Mission state unchanged. The <code>nonce</code> replay and request-mismatch
+handling above applies independently of this rule. A companion-registered
 extension operation that changes no Mission state, such as <code>discharge</code>,
 is not bound by this rule; its own idempotency and outcome vocabulary
 are defined by the companion that registers it, for <code>discharge</code> by the
@@ -3013,7 +3076,7 @@ Entry Discharge companion
 legal only from <code>suspended</code>, and its resulting state <code>active</code> is also
 the baseline a Mission holds before any suspension, so <code>resume</code> on an
 <code>active</code> Mission (one never suspended, or already resumed) or on a
-terminal Mission is not idempotent success but a conflict.<a href="#section-5.7-6" class="pilcrow">¶</a></p>
+<code>terminated</code> Mission is not idempotent success but a conflict.<a href="#section-5.7-6" class="pilcrow">¶</a></p>
 <p id="section-5.7-7">One idempotent case carries metadata. A <code>suspend</code> against a
 <code>suspended</code> Mission that carries a <code>suspend_until</code> and <code>on_expiry</code>
 pair differing from the recorded schedule, or where none is recorded,
@@ -3374,9 +3437,9 @@ required.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-3.3">
           <p id="section-9-3.3.1"><strong>Mission Lifecycle</strong>: serve the management endpoint
-(<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>), gate the <code>suspended</code> and
-<code>completed</code> states it introduces exactly as the issuance profile gates
-on non-<code>active</code> state, and advertise <code>mission_lifecycle_endpoint</code> and
+(<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>), gate the <code>suspended</code> state and the
+<code>completed</code> termination it introduces exactly as the issuance profile
+gates on non-<code>active</code> state, and advertise <code>mission_lifecycle_endpoint</code> and
 <code>mission_lifecycle_endpoint_auth_methods_supported</code>.<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-3.4">
@@ -3545,7 +3608,7 @@ profile's privacy considerations.<a href="#section-11.2-1" class="pilcrow">¶</a
 <p id="section-12-1">This document requests IANA actions for OAuth AS metadata members and
 a media type. It defines no new registry of its own: the endpoint
 authentication-method value space is a closed set defined inline
-(<a href="#as-metadata" class="auto internal xref">Section 8</a>). <code>mission_suspended</code> and <code>mission_completed</code>
+(<a href="#as-metadata" class="auto internal xref">Section 8</a>). <code>suspended</code> and <code>completed</code>
 (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>) are values of the issuance profile's
 <code>mission_error</code> member, which has no IANA registry, so this document
 requests no registration for them. A companion profile <span class="bcp14">MAY</span> register further extension
@@ -3663,10 +3726,10 @@ Change Controller IETF; Reference this document, <a href="#as-metadata" class="a
 </div>
 <div id="iana-lifecycle-registrations">
 <section id="section-12.3">
-        <h3 id="name-mission-lifecycle-states-re">
-<a href="#section-12.3" class="section-number selfRef">12.3. </a><a href="#name-mission-lifecycle-states-re" class="section-name selfRef">Mission Lifecycle States Registrations</a>
+        <h3 id="name-mission-lifecycle-registrat">
+<a href="#section-12.3" class="section-number selfRef">12.3. </a><a href="#name-mission-lifecycle-registrat" class="section-name selfRef">Mission Lifecycle Registrations</a>
         </h3>
-<p id="section-12.3-1">This document requests registration of two states in the issuance
+<p id="section-12.3-1">This document requests registration of one state in the issuance
 profile's Mission Lifecycle States registry
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), under that registry's
 Specification Required policy:<a href="#section-12.3-1" class="pilcrow">¶</a></p>
@@ -3692,12 +3755,29 @@ Specification Required policy:<a href="#section-12.3-1" class="pilcrow">¶</a></
               <td class="text-left" rowspan="1" colspan="1">this document, <a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>
 </td>
             </tr>
+          </tbody>
+        </table>
+<p id="section-12.3-3">It also requests registration of one reason in the issuance profile's
+Mission Termination Reasons registry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), under the same policy:<a href="#section-12.3-3" class="pilcrow">¶</a></p>
+<table class="center" id="table-6">
+          <caption><a href="#table-6" class="selfRef">Table 6</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Value</th>
+              <th class="text-left" rowspan="1" colspan="1">Semantics</th>
+              <th class="text-left" rowspan="1" colspan="1">Members</th>
+              <th class="text-left" rowspan="1" colspan="1">Change Controller</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>completed</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">yes</td>
-              <td class="text-left" rowspan="1" colspan="1">Records successful completion of the Mission.</td>
+              <td class="text-left" rowspan="1" colspan="1">The Mission completed successfully.</td>
+              <td class="text-left" rowspan="1" colspan="1">none</td>
               <td class="text-left" rowspan="1" colspan="1">IETF</td>
               <td class="text-left" rowspan="1" colspan="1">this document, <a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>
 </td>
@@ -3920,58 +4000,68 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">A <code>suspend</code> whose <code>on_expiry</code> is <code>resume</code> needs the authorization
+          <p id="appendix-A-2.1.1">Mission lifecycle: the states are <code>active</code>, <code>suspended</code> and
+<code>terminated</code>. A terminated Mission's <code>mission.termination</code> carries
+its reason, <code>terminated_at</code> and the <code>version</code> of the committing
+transition; <code>completed</code> is a termination reason, <code>successor</code> and
+<code>carried_to</code> live in <code>termination</code>, an operation is idempotent only
+when its resulting state and reason both match, the <code>mission_error</code>
+values are <code>suspended</code> and <code>completed</code>, and a Discharge Result
+carries <code>new_version</code> (#705).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">A <code>suspend</code> whose <code>on_expiry</code> is <code>resume</code> needs the authorization
 the deployment requires for a direct <code>resume</code> as well as for
 <code>suspend</code>, including when it replaces the schedule of a Mission
 already suspended, and the AS records each schedule's committing
 party. Omitting both schedule members preserves the recorded
 schedule. A schedule applies only while current, never to a later
 suspension, and expiry governs a <code>suspend_until</code> at or after
-<code>expires_at</code> (#1002).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+<code>expires_at</code> (#1002).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Authentication failures at the Status and Lifecycle endpoints: a
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Authentication failures at the Status and Lifecycle endpoints: a
 failed access token gets a 401 <code>WWW-Authenticate</code> challenge in its
 scheme (<code>Bearer</code> or <code>DPoP</code>); a request with no credential gets a
 challenge for each accepted access-token scheme, always with
 <code>resource_metadata</code>; failed mTLS or private-key-JWT client
 authentication, or no credential where no access-token scheme is
-accepted, gets 400 <code>invalid_client</code> (#972 item 18).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">A derivation refused because the Mission is <code>suspended</code> or
-<code>completed</code> carries the <code>mission_error</code> value <code>mission_suspended</code> or
-<code>mission_completed</code>, so a client can tell a refusal that a <code>resume</code>
-lifts from a terminal one.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+accepted, gets 400 <code>invalid_client</code> (#972 item 18).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">A caller may request the projection for an audience other than its
+          <p id="appendix-A-2.4.1">A derivation refused because the Mission is <code>suspended</code> or
+<code>completed</code> carries the <code>mission_error</code> value <code>mission_suspended</code> or
+<code>mission_completed</code>, so a client can tell a refusal that a <code>resume</code>
+lifts from a terminal one.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">A caller may request the projection for an audience other than its
 own, such as each resource a Mission Issuance Grant consuming
 Authorization Server serves, only where the Mission Issuer's
 configuration authorizes it; the consumer checks <code>aud</code> against the
-<code>audience</code> its request named (#963).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">The mutual-TLS method value is <code>tls_client_auth</code>, the registered
-<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> spelling, and an absent endpoint auth-methods member is
-never read from token-endpoint metadata. The Mission Authority Server
-publishes the same per-endpoint members.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+<code>audience</code> its request named (#963).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">A refresh against a suspended Mission is checked, and refused, before
-its refresh token is consumed, so a <code>resume</code> restores refresh with the
-same token; issuance-time validation still governs a concurrent
-suspension (#914).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.6.1">The mutual-TLS method value is <code>tls_client_auth</code>, the registered
+<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> spelling, and an absent endpoint auth-methods member is
+never read from token-endpoint metadata. The Mission Authority Server
+publishes the same per-endpoint members.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">Added conditional carryover correlation on an old child's cascaded
-observation; no state or authority is inferred from the pointer (#576).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.7.1">A refresh against a suspended Mission is checked, and refused, before
+its refresh token is consumed, so a <code>resume</code> restores refresh with the
+same token; issuance-time validation still governs a concurrent
+suspension (#914).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.8">
-          <p id="appendix-A-2.8.1">Operational Considerations added (#310): recovery sizing for the
+          <p id="appendix-A-2.8.1">Added conditional carryover correlation on an old child's cascaded
+observation; no state or authority is inferred from the pointer (#576).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.9">
+          <p id="appendix-A-2.9.1">Operational Considerations added (#310): recovery sizing for the
 advertised propagation ceiling, the per-surface distribution posture,
 and the operator observations after a degraded surface recovers. No
-freshness window is extended and no member is added.<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+freshness window is extended and no member is added.<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

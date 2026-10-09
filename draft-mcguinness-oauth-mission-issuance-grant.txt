@@ -886,12 +886,11 @@ Table of Contents
 
    *  *Stop.* While the Mission stays out of the active state, neither a
       retry nor a fresh grant cures the refusal.  The AS SHOULD include
-      the issuance profile's mission_error member (mission_revoked,
-      mission_expired, or mission_superseded;
-      [I-D.draft-mcguinness-oauth-mission], Section "Issuance Gating").
-      A client that requests a fresh grant is refused at the MAS with
-      mission_not_active (Section 5.4), the authoritative signal to
-      stop.
+      the issuance profile's mission_error member (revoked, expired, or
+      superseded; [I-D.draft-mcguinness-oauth-mission],
+      Section "Issuance Gating").  A client that requests a fresh grant
+      is refused at the MAS with mission_not_active (Section 5.4), the
+      authoritative signal to stop.
 
 7.  Authorization Code Flow Carriage
 

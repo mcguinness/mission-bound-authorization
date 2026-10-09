@@ -2349,7 +2349,7 @@ fresh grant does not cure.<a href="#section-6.4-4.2.1" class="pilcrow">¶</a></p
             <p id="section-6.4-4.3.1"><strong>Stop.</strong> While the Mission stays out of the <code>active</code> state,
 neither a retry nor a fresh grant cures the refusal. The AS <span class="bcp14">SHOULD</span>
 include the issuance profile's <code>mission_error</code> member
-(<code>mission_revoked</code>, <code>mission_expired</code>, or <code>mission_superseded</code>;
+(<code>revoked</code>, <code>expired</code>, or <code>superseded</code>;
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Issuance Gating").
 A client that requests a fresh grant is refused at the MAS with
 <code>mission_not_active</code> (<a href="#minting-errors" class="auto internal xref">Section 5.4</a>), the authoritative signal

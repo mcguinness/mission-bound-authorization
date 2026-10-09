@@ -2241,7 +2241,8 @@ is not authority-bearing on its own.<a href="#section-7-2.4.4" class="pilcrow">�
 <code>approver</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.6">
           <p id="section-7-2.6.1"><span class="bcp14">REQUIRED</span>. An object identifying the authenticated Approver. It <span class="bcp14">MUST</span>
-carry <code>iss</code> and <code>sub</code>, per the Mission record's <code>approver</code>
+carry <code>iss</code> and <code>sub</code>, per the Mission record's
+<code>approval_basis.consent_principal</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so binding checks and record
 correlation are mechanical.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
 </dd>
@@ -3641,20 +3642,24 @@ encoding difference to resolve before interoperating.<a href="#appendix-B-9" cla
 <p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-C-2.1">
-          <p id="appendix-C-2.1.1">Binding to Mission Approval and the conformance floor apply at each
-human approval: a Mission instance activated by policy under a
-standing consent has no disclosure of its own (#1078).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.1.1">The Consent Evidence <code>approver</code> correlates with the Mission record's
+<code>approval_basis.consent_principal</code> (#705).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.2">
-          <p id="appendix-C-2.2.1">Defined and registered the <code>mission_shaping_evidence_hash</code> request
-parameter, which carries a client-supplied <code>shaping_evidence_hash</code>
-in the pushed authorization request into the Consent Disclosure
-object, as a commitment that is never provenance or authority.<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.2.1">Binding to Mission Approval and the conformance floor apply at each
+human approval: a Mission instance activated by policy under a
+standing consent has no disclosure of its own (#1078).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.3">
-          <p id="appendix-C-2.3.1">Removed the uncited Mission Deferred Approval reference; the
+          <p id="appendix-C-2.3.1">Defined and registered the <code>mission_shaping_evidence_hash</code> request
+parameter, which carries a client-supplied <code>shaping_evidence_hash</code>
+in the pushed authorization request into the Consent Disclosure
+object, as a commitment that is never provenance or authority.<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.4">
+          <p id="appendix-C-2.4.1">Removed the uncited Mission Deferred Approval reference; the
 Approval Governance Record is the cited home of approval-governance
-facts.<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
+facts.<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

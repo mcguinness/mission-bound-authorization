@@ -1891,11 +1891,12 @@ Table of Contents
 
    *  *Supersession atomicity.* In one atomic operation on the MAS's
       records, the successor activates with its predecessor member set,
-      and the predecessor transitions to superseded with its successor
-      member set.  The successor and related_to members carry that
-      profile's semantics and surface through the MAS's Mission Status
-      responses.  The superseded state enters the state space the MAS
-      reports (Section 5).
+      and the predecessor transitions to terminated with reason
+      superseded, its termination.successor naming the successor.  The
+      termination.successor and related_to members carry that profile's
+      semantics and surface through the MAS's Mission Status responses,
+      termination.successor inside mission.termination.  The superseded
+      reason enters the termination reasons the MAS reports (Section 5).
 
    *  *Denial reasons.* That profile's Mission Denial Reasons registry
       applies, including this document's subject_mismatch (Section 9.2);
@@ -1943,8 +1944,9 @@ Table of Contents
    *  *Cascade.* Cascade applies with one simplification: the MAS owns
       its state store, so cascade transitions are native lifecycle
       transitions on its own records.  The MAS implements that profile's
-      immediate mode, and the cascaded state surfaces through Mission
-      Status (Section 5).
+      immediate mode, and a cascade-terminated child surfaces through
+      Mission Status as terminated with reason parent_terminated in
+      mission.termination (Section 5).
 
    *  *Denial reasons.* That profile's closed denial-reason set applies;
       the code rides in mission_denial_reason per Section 9.1.  The
@@ -2338,10 +2340,10 @@ Table of Contents
       threshold, veto, or separation-of-duty rule is evaluated, or
       validating an assertion requires authority standing outside the
       Mission record.  The Mission record still carries exactly one
-      accountable approver, the only principal any projection or
-      enforcement consumes.  Direct self-approval by one authenticated
-      human remains the degenerate case, which the Mission record
-      represents completely.
+      accountable principal, approval_basis.consent_principal, the only
+      principal any projection or enforcement consumes.  Direct self-
+      approval by one authenticated human remains the degenerate case,
+      which the Mission record represents completely.
 
    The Join Assertion obligation is what distinguishes this profile from
    the conformance floor, whose join is the mapping join (Section 6).
@@ -3643,11 +3645,11 @@ B.5.  Revoke
    An authorized party revokes the Mission at the Mission Lifecycle
    endpoint (Section 5).  The agent's token remains valid OAuth
    (Section 11).  Once the PDP's state check observes the revocation,
-   within the published staleness bound, it reports revoked, and the PDP
-   denies the agent's next consequential action with the AuthZEN
-   profile's mission_inactive reason
-   ([I-D.draft-mcguinness-mission-authzen]).  The following example
-   shows the denial:
+   within the published staleness bound, it reports the Mission
+   terminated with reason revoked, and the PDP denies the agent's next
+   consequential action with the AuthZEN profile's mission_inactive
+   reason ([I-D.draft-mcguinness-mission-authzen]).  The following
+   example shows the denial:
 
    {
      "decision": false,
@@ -3660,6 +3662,13 @@ B.5.  Revoke
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Mission lifecycle (#705).  A superseded predecessor is terminated
+      with reason superseded and names its successor in
+      termination.successor, and a cascade-terminated child reports
+      reason parent_terminated; both surface in the Mission Status
+      response's mission.termination.  The record's accountable
+      principal is approval_basis.consent_principal.
 
    *  Mission Approval and the Substrate Statement name the OAuth
       binding's approval steps by content instead of by number, adding

@@ -2213,7 +2213,88 @@ revocation of the mission (Section 11.12.4 of
 <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), or by a control-plane
 operation at the <code>mission_control_endpoint</code>, which AAuth Mission
 Management <span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span> defines.<a href="#section-4.8-3" class="pilcrow">¶</a></p>
-<p id="section-4.8-4">An accepted <code>update</code> can narrow or broaden the work under the same
+<p id="section-4.8-4">AAuth carries the reason and time as the flat <code>termination_reason</code> and
+<code>terminated_at</code> members.  The OAuth binding nests them in a
+<code>termination</code> object whose <code>reason</code> is a value of its Mission
+Termination Reasons registry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Mission Termination Reasons Registry").  The two reason sets
+correspond as follows; on either side, a mission that is <code>terminated</code>
+is non-active whatever its reason:<a href="#section-4.8-4" class="pilcrow">¶</a></p>
+<span id="name-termination-reason-correspo"></span><table class="center" id="table-4">
+          <caption>
+<a href="#table-4" class="selfRef">Table 4</a>:
+<a href="#name-termination-reason-correspo" class="selfRef">Termination reason correspondence</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Family reason</th>
+              <th class="text-left" rowspan="1" colspan="1">AAuth termination_reason</th>
+              <th class="text-left" rowspan="1" colspan="1">Correspondence</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>revoked</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>revoked</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Same value.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>expired</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>expired</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Same value.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>completed</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>completed</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Same value.  AAuth records it only when the person accepts the agent's completion proposal; the family records it through the Mission Status <code>complete</code> operation.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>superseded</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>superseded</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Same value.  Each side names the replacement in its own member: the family in <code>termination.successor</code>, a Mission <code>id</code>; AAuth Mission Management in <code>replacement_s256</code>.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>parent_terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">none</td>
+              <td class="text-left" rowspan="1" colspan="1">The family records it for a Child Mission whose parent terminated.  AAuth defines no such reason and creates no child missions.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">none</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>administrative</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">AAuth records it when an authorized administrator ends the mission under local policy.  The family registers no such reason.</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">unrecognized</td>
+              <td class="text-left" rowspan="1" colspan="1">unrecognized</td>
+              <td class="text-left" rowspan="1" colspan="1">A family reader treats the Mission as terminated: it stops governed work, follows no absent reference, and infers no cause-specific action.  An AAuth Mission Management recipient retains <code>terminated</code> and treats the reason as an opaque audit value.</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-4.8-6">An AAuth reason the table pairs with no family reason has no family
+<code>termination</code>: a family report of the mission whose <code>termination</code> is
+optional omits it rather than substitute a reason such as <code>revoked</code>,
+and the native <code>termination_reason</code> stays in AAuth's own record.<a href="#section-4.8-6" class="pilcrow">¶</a></p>
+<p id="section-4.8-7">An accepted <code>update</code> can narrow or broaden the work under the same
 reference (<a href="#reference" class="auto internal xref">Section 3.2</a>).  The PS MUST NOT accept an update that
 broadens the work without the Supervisor's acceptance.  The Supervisor
 is the Person unless a deciding supervision server is configured for
@@ -2224,15 +2305,15 @@ person's response (Section 10.3 of
 broadening itself to decide whether to consult the server, so a
 configured server can authorize broadening without a fresh human
 decision.  The Supervisor's acceptance is the approval of the new
-version (<a href="#reference" class="auto internal xref">Section 3.2</a>).<a href="#section-4.8-4" class="pilcrow">¶</a></p>
-<p id="section-4.8-5">Every mission approved under this binding MUST carry AAuth's
+version (<a href="#reference" class="auto internal xref">Section 3.2</a>).<a href="#section-4.8-7" class="pilcrow">¶</a></p>
+<p id="section-4.8-8">Every mission approved under this binding MUST carry AAuth's
 <code>expires_at</code> member, and the PS MUST enforce it on every decision path
 as AAuth requires.  A proposal can request an expiry under AAuth
 Mission Expiry <span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" class="cite xref">I-D.draft-mcguinness-aauth-mission-expiry</a>]</span>; when it
 requests none, the PS MUST set one at approval under deployment policy,
 and that policy SHOULD prefer the shortest expiry consistent with the
-mission's purpose.<a href="#section-4.8-5" class="pilcrow">¶</a></p>
-<p id="section-4.8-6">Expiry transitions the mission to <code>terminated</code>; it adds no third
+mission's purpose.<a href="#section-4.8-8" class="pilcrow">¶</a></p>
+<p id="section-4.8-9">Expiry transitions the mission to <code>terminated</code>; it adds no third
 state.  The PS caps the person tokens and auth tokens it issues at
 <code>expires_at</code> (Sections 7.1.2 and 9.4.1 of
 <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), and the presented token
@@ -2248,12 +2329,14 @@ the <code>mission_terminated</code> error (Section 8.8 of
 error status.  An early completion, revocation, or administrative
 termination prevents new governed issuance; an outstanding person
 token or auth token remains usable until revocation or its own expiry,
-inside that bound.<a href="#section-4.8-6" class="pilcrow">¶</a></p>
-<p id="section-4.8-7">There is no suspended state in this binding.  A short wait uses AAuth's
-deferred-response mechanism.  A long or materially changed pause is
+inside that bound.<a href="#section-4.8-9" class="pilcrow">¶</a></p>
+<p id="section-4.8-10">There is no suspended state in this binding, unlike the OAuth binding
+with Mission Status, which adds a reversible <code>suspended</code> state
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).  A short wait uses
+AAuth's deferred-response mechanism.  A long or materially changed pause is
 handled by terminating the old mission and approving a new, appropriately
-scoped mission while retaining the old log for audit.<a href="#section-4.8-7" class="pilcrow">¶</a></p>
-<p id="section-4.8-8">Termination prevents new governed issuance and PS operations.  It does
+scoped mission while retaining the old log for audit.<a href="#section-4.8-10" class="pilcrow">¶</a></p>
+<p id="section-4.8-11">Termination prevents new governed issuance and PS operations.  It does
 not retroactively erase a previously issued credential or guarantee that
 all independently authorizing resources learn the state immediately.
 In the modes that present a person token, short token lifetimes bound
@@ -2263,7 +2346,7 @@ token (Section 11.12.5 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol"
 AAuth token revocation shortens the window where the token's recipient
 supports it (Section 11.12 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>);
 a resource needing stronger termination latency requires an additional
-event mechanism.<a href="#section-4.8-8" class="pilcrow">¶</a></p>
+event mechanism.<a href="#section-4.8-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2636,9 +2719,9 @@ of <a href="#mission-log" class="auto internal xref">Section 4.3</a>.<a href="#s
 every supplied row states its activation conditions, and its temporal
 and failure elements in its cells or by express inheritance of the
 Bounded Reliance floor (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>):<a href="#section-9-4" class="pilcrow">¶</a></p>
-<span id="name-aauth-mission-substrate-cap"></span><table class="center" id="table-4">
+<span id="name-aauth-mission-substrate-cap"></span><table class="center" id="table-5">
         <caption>
-<a href="#table-4" class="selfRef">Table 4</a>:
+<a href="#table-5" class="selfRef">Table 5</a>:
 <a href="#name-aauth-mission-substrate-cap" class="selfRef">AAuth Mission substrate capabilities</a>
         </caption>
 <thead>
@@ -2788,6 +2871,14 @@ metadata member, error code, capability value, or registry value.<a href="#secti
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-transaction-authorization">[I-D.draft-mcguinness-oauth-mission-transaction-authorization]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Transaction Authorization Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html</a>&gt;</span>. </dd>
@@ -2815,15 +2906,24 @@ incremental deployment remain distinct concerns.<a href="#appendix-A-1" class="p
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">A chained hop is PS-governed derivation under the same Mission: the
+          <p id="appendix-B-2.1.1">Lifecycle maps AAuth's <code>termination_reason</code> to the family's Mission
+Termination Reasons, including AAuth's <code>administrative</code>, the
+family's <code>parent_terminated</code>, and an unrecognized reason on either
+side, omits a family <code>termination</code> for a reason with no family
+counterpart, and notes that Mission Status's <code>suspended</code> state has
+no AAuth counterpart.  AAuth's states and members are unchanged
+(#705).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">A chained hop is PS-governed derivation under the same Mission: the
 Mission's <code>agent</code> is the root actor, the holder of a chained person
 token is the intermediary, whose identity the PS establishes from its
 authenticated agent token and its records (<code>cnf</code> binds only the key),
 and the PS copies <code>mission_s256</code> from the upstream token, which the
-intermediary never supplies (#966).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+intermediary never supplies (#966).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">An accepted update approves a new immutable version of the Approved
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">An accepted update approves a new immutable version of the Approved
 Context, identified by the Mission Reference and its position in the
 accepted-update sequence; <code>mission_s256</code> commits to the original
 blob only, and a pending or rejected update is part of no version.
@@ -2831,10 +2931,10 @@ The PS must not accept a broadening update without the Supervisor's
 acceptance; under a deciding supervision server, its <code>allow</code> accepts
 and its <code>ask</code> requires the person, so a configured server can
 authorize broadening without a fresh human decision. The Statement
-names the versions and disclaims any containment guarantee (#965).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+names the versions and disclaims any containment guarantee (#965).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Maps AAuth's Supervisor role and defines an agent's deciding
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">Maps AAuth's Supervisor role and defines an agent's deciding
 supervision server. A PS with one obtains that server's decision for
 supervision decisions and keeps verification, enforcement, issuance,
 and recording; management authorization and revocation are
@@ -2844,7 +2944,7 @@ acceptance. The mission log records the actual decider and, for a
 supervision-server exchange, the <code>sdi</code> and the exchange with any
 signatures; the deciding server is a log reader; a supervision server
 does not see the R3 proposal. AAuth Supervision is cited
-informatively, pinned at dickhardt/AAuth commit 70d67375 (#967).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+informatively, pinned at dickhardt/AAuth commit 70d67375 (#967).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

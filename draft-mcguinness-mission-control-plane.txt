@@ -206,12 +206,13 @@ Table of Contents
    skew, idempotency/retry horizon, child-cascade horizon, and audit-
    retention horizon.
 
-   A tombstone identifies the canonical issuer/Mission tuple, terminal
-   state, final version, and transition time or commit reference.  After
-   detailed retention expires, the issuer MUST retain enough namespace
-   state to prevent identifier reuse or a return to active.  This
-   composes retention horizons; it does not weaken the binding's
-   existing identifier-nonreuse requirement.
+   A tombstone identifies the canonical issuer/Mission tuple, the
+   terminated state and its termination reason, final version, and
+   transition time or commit reference.  After detailed retention
+   expires, the issuer MUST retain enough namespace state to prevent
+   identifier reuse or a return to active.  This composes retention
+   horizons; it does not weaken the binding's existing identifier-
+   nonreuse requirement.
 
 4.6.  6.  Authoritative mutation under partition
 
@@ -426,6 +427,9 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Terminal-state tombstones: a tombstone records the terminated
+      state and its termination reason (#705).
 
    *  Initial topology-neutral consistency foundation (#250): ten issuer
       invariant groups, the shared consistency and availability rule,

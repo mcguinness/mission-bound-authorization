@@ -3009,9 +3009,10 @@ source's authority.<a href="#appendix-B-5" class="pilcrow">¶</a></p>
 the binding's native ceremony, which can be a policy authority.  The
 family separates three roles that this one term can combine
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Role Mapping"):
-<code>consent_principal</code>, the accountable human recorded as <code>approver</code>;
-<code>activation_actor</code>, who triggered the instance; and <code>adjudication</code>,
-the mechanism that decided it.  For a direct approval, the kernel's
+<code>consent_principal</code>, the accountable human (the Mission record's
+<code>approval_basis.consent_principal</code>); <code>activation_actor</code>, who
+triggered the instance; and <code>adjudication</code>, the mechanism that
+decided it.  For a direct approval, the kernel's
 Approver is <code>consent_principal</code>.  Under a standing-consent basis,
 <code>consent_principal</code> is the accountable owner whose earlier approval
 of the standing consent roots the instance; the authorized policy
@@ -3046,14 +3047,19 @@ reference to it; no change is ever made solely to move words.<a href="#appendix-
 <p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-C-2.1">
-          <p id="appendix-C-2.1.1">Family Use maps the kernel's Approver to the family's accountable
+          <p id="appendix-C-2.1.1">Family Use names the accountable human by the OAuth binding's
+record member <code>approval_basis.consent_principal</code>, following that
+binding's removal of the record's <code>approver</code> alias (#705).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.2">
+          <p id="appendix-C-2.2.1">Family Use maps the kernel's Approver to the family's accountable
 owner (<code>consent_principal</code>) and, under a standing-consent basis, to
 the policy ceremony that decides an instance (<code>adjudication</code>), and
 maps the approval event to the creation of a Mission under any
-approval basis (#1078).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+approval basis (#1078).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.2">
-          <p id="appendix-C-2.2.1">Removed the normative dependency on the OAuth binding (#708): the
+        <li class="normal" id="appendix-C-2.3">
+          <p id="appendix-C-2.3.1">Removed the normative dependency on the OAuth binding (#708): the
 OAuth Binding Mapping Assessment moved to the OAuth binding's own
 text, which now publishes it about itself; the Family Use appendix
 is now informative throughout, with no assessment of its own; the
@@ -3061,7 +3067,7 @@ front matter's reference to the OAuth binding moved from normative
 to informative; and this document's Default Commitment Construction
 section gained its own neutral, binding-independent worked example
 so the construction no longer leans on the OAuth binding's vectors.
-No kernel or capability requirement changed.<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
+No kernel or capability requirement changed.<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

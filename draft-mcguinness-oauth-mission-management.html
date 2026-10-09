@@ -1570,7 +1570,7 @@ management-plane state associated with the record:<a href="#section-4-1" class="
         <dd style="margin-left: 1.5em" id="section-4-2.2">
           <p id="section-4-2.2.1">The accountable operator of the Mission's agent: an (<code>iss</code>, <code>sub</code>)
 principal or a group URI. Distinct from <code>subject</code>, whom the task is
-for, and <code>approver</code>, who approved it.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+for, and <code>approval_basis.consent_principal</code>, who approved it.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.3">
@@ -1646,9 +1646,20 @@ exactly.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
         <dd style="margin-left: 1.5em" id="section-5-2.6">
           <p id="section-5-2.6.1">An array of strings. Matches a Mission whose current lifecycle
 state equals any listed value, drawn from the issuance profile's
-open state space as extended by the profiles the deployment runs.
+open state space as extended by the profiles the deployment runs. A
+Mission at or past its <code>expires_at</code> is <code>terminated</code> with reason
+<code>expired</code> for this match and in its summary, whether or not that
+transition was persisted (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Mission Lifecycle and Gating").
 The AS <span class="bcp14">MUST NOT</span> refuse a filter for carrying a state value it does
-not produce; such a value matches no Mission.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+not produce; such a value matches no Mission, except that, for a
+transition period, <code>revoked</code>, <code>expired</code>, <code>completed</code>, <code>superseded</code>,
+or <code>cascaded</code> matches a Mission <code>terminated</code> with that termination
+reason (<code>cascaded</code> matching <code>parent_terminated</code>), the issuance
+profile's transition-period reading
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Termination"). A Mission matched this way is reported as
+<code>terminated</code> with its <code>termination</code>, never under the filter's value.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.7">
@@ -1761,12 +1772,16 @@ read-only and does not consume it.<a href="#section-6-2.8.1" class="pilcrow">¶<
 <code>missions</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-2.2">
             <p id="section-6.1-2.2.1"><span class="bcp14">REQUIRED</span>. An array of Mission summary objects, each carrying
-<code>id</code>, <code>state</code>, <code>version</code> (the Mission's state version,
+<code>id</code>, <code>state</code>, <code>termination</code> when <code>state</code> is <code>terminated</code> (the
+Mission's <code>termination</code> as the status profile's Mission Status
+Response reports it, with a superseded Mission's <code>successor</code> inside
+it),
+<code>version</code> (the Mission's state version,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), <code>subject</code> (an
 object with <code>iss</code> and <code>sub</code>),
 <code>client_id</code>, <code>created_at</code>, and <code>expires_at</code> from the Mission
-record, plus the lineage members <code>successor</code>, <code>predecessor</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and <code>parent</code>
+record, plus the lineage members <code>predecessor</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>) and <code>parent</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) where
 present on the record. A summary <span class="bcp14">MUST NOT</span> carry the Mission Intent,
 the Authority Set, or any member beyond these: enumeration answers
@@ -2060,7 +2075,7 @@ only, an <span class="bcp14">OPTIONAL</span> <code>detail</code> string.<a href=
               <td class="text-left" rowspan="1" colspan="1">
                 <code>already_terminal</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">The Mission already stood in a terminal state; when that state is the operation's own resulting state, this is the status profile's idempotent case, reported distinctly for operator clarity.</td>
+              <td class="text-left" rowspan="1" colspan="1">The Mission was already <code>terminated</code>, whatever its termination reason, and is unchanged; when that reason is the operation's own (<code>revoked</code> for <code>revoke</code>, <code>completed</code> for <code>complete</code>), this is the status profile's idempotent case, reported distinctly for operator clarity, and otherwise it is the status profile's conflict, reported here because the bulk objective is met.</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2076,10 +2091,14 @@ only, an <span class="bcp14">OPTIONAL</span> <code>detail</code> string.<a href=
             </tr>
           </tbody>
         </table>
-<p id="section-7.3-5">A Mission in any terminal state reports <code>already_terminal</code>, taking
-precedence over the idempotent reading of <code>applied</code>; it is reported
-distinctly from <code>error</code> because, for a terminating operation, an
-already-terminal member is a satisfied objective, not a failure. After
+<p id="section-7.3-5">A <code>terminated</code> Mission, whatever its termination reason, reports
+<code>already_terminal</code>, taking precedence over the idempotent reading of
+<code>applied</code>; it is reported distinctly from <code>error</code> because, for a
+terminating operation, an already-terminal member is a satisfied
+objective, not a failure. <code>already_terminal</code> never reports a
+committed transition: a <code>revoke</code> member already terminated with
+reason <code>completed</code> is not revoked, and its recorded <code>termination</code> is
+unchanged. After
 a partial failure the spent bulk token is not reusable; the caller
 remediates with a fresh dry run over the same filter and a new
 execute: members already transitioned then report <code>already_terminal</code>,
@@ -2127,8 +2146,9 @@ Mission for the compromised Subject in any state, so the filter omits
 </pre><a href="#section-7.4-4" class="pilcrow">¶</a>
 </div>
 <p id="section-7.4-5">The count is 3, more than the enumeration above: without <code>state</code> the
-filter also matches a suspended and a completed Mission (<code>revoke</code> is
-legal from <code>suspended</code>, so suspended Missions belong in the sweep).
+filter also matches a suspended Mission and one terminated with
+reason <code>completed</code> (<code>revoke</code> is legal from <code>suspended</code>, so suspended
+Missions belong in the sweep).
 The responder executes,
 re-sending the same <code>operation</code> and <code>filter</code> with <code>mode</code> of <code>execute</code>,
 the <code>bulk_token</code>, the same <code>reason</code>, and a fresh <code>nonce</code>
@@ -2157,7 +2177,8 @@ failure:<a href="#section-7.4-5" class="pilcrow">¶</a></p>
 </pre><a href="#section-7.4-6" class="pilcrow">¶</a>
 </div>
 <p id="section-7.4-7">One Mission was revoked, emitting its own lifecycle signal where
-signals run; the completed Mission needed nothing; one failed. The
+signals run; the completed Mission keeps its <code>completed</code> termination;
+one failed. The
 responder re-runs the dry run over the same filter, reviews the new
 count, and executes again: the revoked and completed members report
 <code>already_terminal</code> and only the failed one is retried.<a href="#section-7.4-7" class="pilcrow">¶</a></p>
@@ -2754,12 +2775,21 @@ this surface.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">A bulk <code>suspend</code> whose <code>on_expiry</code> is <code>resume</code> needs the distinct or
+          <p id="appendix-A-2.1.1">Mission summaries carry <code>termination</code> beside <code>state</code>, and a
+superseded Mission's <code>successor</code> inside it; for a transition period
+a terminal state value in <code>filter.state</code> matches a Mission
+terminated with that reason. <code>already_terminal</code> covers every
+terminated Mission and never reports a revocation or changes the
+recorded termination. The administrative <code>owner</code> is distinct from
+<code>approval_basis.consent_principal</code> (#705).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">A bulk <code>suspend</code> whose <code>on_expiry</code> is <code>resume</code> needs the distinct or
 elevated <code>resume</code> grant, checked at dry run and again at execute
 before any member changes. The caller is each committed schedule's
 committing party, an omitted schedule is preserved, and an execute
 must match the dry run's <code>suspend_until</code> as well as its <code>on_expiry</code>
-(#1002).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+(#1002).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

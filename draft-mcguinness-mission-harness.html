@@ -1832,9 +1832,18 @@ harness.<a href="#section-6-2.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.13">
-<code>state_source</code>:</dt>
+<code>termination</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.14">
-          <p id="section-6-2.14.1"><span class="bcp14">REQUIRED</span> when <code>state</code> is present. One of <code>status</code>, <code>signal</code>,
+          <p id="section-6-2.14.1"><span class="bcp14">REQUIRED</span> when <code>state</code> is <code>terminated</code> and the state source reported
+one; absent otherwise. The Mission's <code>termination</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Termination").<a href="#section-6-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.15">
+<code>state_source</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.16">
+          <p id="section-6-2.16.1"><span class="bcp14">REQUIRED</span> when <code>state</code> is present. One of <code>status</code>, <code>signal</code>,
 <code>runtime_decision</code>, <code>harness</code>, <code>operator</code>, or a deployment-defined
 source: <code>status</code> and <code>signal</code> name the Mission Status and Lifecycle
 Signals surfaces, <code>runtime_decision</code> a runtime enforcement decision,
@@ -1842,23 +1851,23 @@ Signals surfaces, <code>runtime_decision</code> a runtime enforcement decision,
 action. This enumeration is the shared <code>state_source</code> value space for
 Mission-aware execution evidence; the orchestration profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>) reuses it
-rather than defining its own.<a href="#section-6-2.14.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-6-2.15">
-<code>enforcement_scope</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.16">
-          <p id="section-6-2.16.1"><span class="bcp14">OPTIONAL</span>. A string or object identifying the runtime enforcement
-scope that applies to this session or node.<a href="#section-6-2.16.1" class="pilcrow">¶</a></p>
+rather than defining its own.<a href="#section-6-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.17">
-<code>stop_policy</code>:</dt>
+<code>enforcement_scope</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.18">
-          <p id="section-6-2.18.1"><span class="bcp14">REQUIRED</span> for governed work. The policy the harness applies when the
+          <p id="section-6-2.18.1"><span class="bcp14">OPTIONAL</span>. A string or object identifying the runtime enforcement
+scope that applies to this session or node.<a href="#section-6-2.18.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.19">
+<code>stop_policy</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.20">
+          <p id="section-6-2.20.1"><span class="bcp14">REQUIRED</span> for governed work. The policy the harness applies when the
 Mission is non-active or stale: one of the stop-behavior values
 <code>suppress</code>, <code>pause</code>, <code>terminate</code>, or <code>handoff</code> (<a href="#stop-behavior" class="auto internal xref">Section 13</a>),
-or a deployment-defined policy.<a href="#section-6-2.18.1" class="pilcrow">¶</a></p>
+or a deployment-defined policy.<a href="#section-6-2.20.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2450,9 +2459,10 @@ values when Harness Evidence is emitted.<a href="#section-12-3" class="pilcrow">
       <h2 id="name-stop-behavior">
 <a href="#section-13" class="section-number selfRef">13. </a><a href="#name-stop-behavior" class="section-name selfRef">Stop Behavior</a>
       </h2>
-<p id="section-13-1">When a Mission is <code>revoked</code>, <code>expired</code>, <code>suspended</code>, <code>completed</code>, or
-otherwise non-active under the deployment's lifecycle profile, the
-harness <span class="bcp14">MUST</span> stop governed continuation. The stop behavior is one of:<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-1">When a Mission is <code>terminated</code>, whatever its <code>termination.reason</code>,
+<code>suspended</code>, or otherwise non-active under the deployment's lifecycle
+profile, the harness <span class="bcp14">MUST</span> stop governed continuation. The stop
+behavior is one of:<a href="#section-13-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-13-2">
         <dt id="section-13-2.1">
 <code>suppress</code>:</dt>
@@ -2491,7 +2501,8 @@ state is non-active.<a href="#section-13-3" class="pilcrow">¶</a></p>
 <a href="#section-13.1" class="section-number selfRef">13.1. </a><a href="#name-stop-behavior-matrix" class="section-name selfRef">Stop-Behavior Matrix</a>
         </h3>
 <p id="section-13.1-1">The matrix below fixes the minimum stop behavior per Mission state
-and is a deployment's stop-behavior matrix as written. A deployment
+and, for <code>terminated</code>, per <code>termination.reason</code>, and is a deployment's
+stop-behavior matrix as written. A deployment
 <span class="bcp14">MUST</span> document each cell where it deviates; no other cell needs
 documentation. A deviation <span class="bcp14">MUST</span> be at least as strict as the minimum:<a href="#section-13.1-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-3">
@@ -2499,17 +2510,24 @@ documentation. A deviation <span class="bcp14">MUST</span> be at least as strict
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Mission state</th>
+              <th class="text-left" rowspan="1" colspan="1">termination.reason</th>
               <th class="text-left" rowspan="1" colspan="1">Minimum behavior</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>revoked</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">suppress or terminate</td>
             </tr>
             <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>expired</code>
 </td>
@@ -2519,9 +2537,13 @@ documentation. A deviation <span class="bcp14">MUST</span> be at least as strict
               <td class="text-left" rowspan="1" colspan="1">
                 <code>suspended</code>
 </td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
               <td class="text-left" rowspan="1" colspan="1">pause or suppress</td>
             </tr>
             <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>completed</code>
 </td>
@@ -2529,27 +2551,44 @@ documentation. A deviation <span class="bcp14">MUST</span> be at least as strict
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>superseded</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">suppress, or continue by rebinding to the successor (<a href="#supersession-continuity" class="auto internal xref">Section 13.2</a>)</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>cascaded</code>
+                <code>terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>parent_terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">suppress or terminate</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>terminated</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">another reason, or no <code>termination</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">suppress or terminate</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">unknown or stale</td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
               <td class="text-left" rowspan="1" colspan="1">suppress or pause</td>
             </tr>
           </tbody>
         </table>
-<p id="section-13.1-3">The non-core states in this matrix are defined by companion profiles a
-deployment may run: <code>suspended</code> and <code>completed</code> by Mission Status
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), <code>superseded</code> by Mission
-Expansion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and
-<code>cascaded</code> by Mission Child Delegation
+<p id="section-13.1-3">The non-core state and reasons in this matrix are defined by companion
+profiles a deployment may run: the state <code>suspended</code> and the reason
+<code>completed</code> by Mission Status
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), the reason
+<code>superseded</code> by Mission Expansion
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), and the reason
+<code>parent_terminated</code> by Mission Child Delegation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). The harness
 needs none of those profiles to be conformant: per the issuance
 profile's forward-compatibility rule, it treats any state other than
@@ -2571,10 +2610,12 @@ expansion (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite 
 running session should continue under the successor rather than
 restart. Suppressing the work and losing the task graph would defeat
 the point.<a href="#section-13.2-1" class="pilcrow">¶</a></p>
-<p id="section-13.2-2">For <code>superseded</code> a harness therefore <span class="bcp14">MAY</span>, instead of suppressing,
-<strong>continue by rebinding</strong>: it keeps the task graph, queue, and
-continuation point, and rebinds the affected item to the successor
-Mission. Continuation is not resumption of the old authority. Before
+<p id="section-13.2-2">For a Mission <code>terminated</code> with <code>termination.reason</code> <code>superseded</code> a
+harness therefore <span class="bcp14">MAY</span>, instead of suppressing, <strong>continue by
+rebinding</strong>: it keeps the task graph, queue, and continuation point,
+and rebinds the affected item to the successor Mission that
+<code>termination.successor</code> names. Continuation is not resumption of the
+old authority. Before
 dispatching any governed work under the successor the harness <span class="bcp14">MUST</span>:<a href="#section-13.2-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13.2-3.1">
@@ -2599,9 +2640,10 @@ authority, not a credential or a permit carried over from the
 predecessor. The harness records the rebinding as Harness Evidence
 with <code>event_type</code> <code>mission_superseded</code> (<a href="#harness-evidence" class="auto internal xref">Section 15</a>), naming
 both the predecessor and the successor, so the continuity is
-auditable. A harness that cannot establish the successor state, or for
-which the item's actions are not within the successor, suppresses per
-the matrix above.<a href="#section-13.2-4" class="pilcrow">¶</a></p>
+auditable. A harness that cannot establish the successor state, whose
+<code>superseded</code> termination names no <code>successor</code>, or for which the item's
+actions are not within the successor, suppresses per the matrix
+above.<a href="#section-13.2-4" class="pilcrow">¶</a></p>
 <p id="section-13.2-5">For irreversible actions, external commitments, and privileged
 administration, <code>handoff</code> or orchestration handling under a deployment
 unwind plan <span class="bcp14">SHOULD</span> be used when work may already be in flight.<a href="#section-13.2-5" class="pilcrow">¶</a></p>
@@ -2886,7 +2928,7 @@ copy);<a href="#section-15-3.2.1" class="pilcrow">¶</a></p>
           <p id="section-15-3.5.1">prior and resulting harness state;<a href="#section-15-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-3.6">
-          <p id="section-15-3.6.1">Mission state observed;<a href="#section-15-3.6.1" class="pilcrow">¶</a></p>
+          <p id="section-15-3.6.1">Mission state observed, with its termination when <code>terminated</code>;<a href="#section-15-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-3.7">
           <p id="section-15-3.7.1">status source and freshness;<a href="#section-15-3.7.1" class="pilcrow">¶</a></p>
@@ -2995,77 +3037,86 @@ continued under a <code>subagent_stopped</code> or <code>subagent_continued</cod
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.15">
-<code>prior_harness_state</code>, <code>resulting_harness_state</code>:</dt>
+<code>termination</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.16">
-            <p id="section-15.1-2.16.1"><span class="bcp14">OPTIONAL</span>. The harness execution state before and after the recorded
-decision, each a value from the harness execution states of
-<a href="#harness-states" class="auto internal xref">Section 12</a> (for example, <code>running</code> to <code>suppressed</code>).<a href="#section-15.1-2.16.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.16.1"><span class="bcp14">REQUIRED</span> when <code>state</code> is <code>terminated</code> and the state source reported
+one; absent otherwise. The Mission's <code>termination</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Termination").<a href="#section-15.1-2.16.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.17">
-<code>state_source</code>:</dt>
+<code>prior_harness_state</code>, <code>resulting_harness_state</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.18">
-            <p id="section-15.1-2.18.1"><span class="bcp14">REQUIRED</span>. A value from the single <code>state_source</code> enumeration of
-<a href="#mission-binding" class="auto internal xref">Section 6</a>.<a href="#section-15.1-2.18.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.18.1"><span class="bcp14">OPTIONAL</span>. The harness execution state before and after the recorded
+decision, each a value from the harness execution states of
+<a href="#harness-states" class="auto internal xref">Section 12</a> (for example, <code>running</code> to <code>suppressed</code>).<a href="#section-15.1-2.18.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.19">
-<code>freshness</code>:</dt>
+<code>state_source</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.20">
-            <p id="section-15.1-2.20.1"><span class="bcp14">OPTIONAL</span>. Object containing <code>checked_at</code> and <code>expires_at</code>.<a href="#section-15.1-2.20.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.20.1"><span class="bcp14">REQUIRED</span>. A value from the single <code>state_source</code> enumeration of
+<a href="#mission-binding" class="auto internal xref">Section 6</a>.<a href="#section-15.1-2.20.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.21">
-<code>decision</code>:</dt>
+<code>freshness</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.22">
-            <p id="section-15.1-2.22.1"><span class="bcp14">REQUIRED</span>. One of <code>continue</code>, <code>suppress</code>, <code>pause</code>, <code>terminate</code>, or
-<code>handoff</code>.<a href="#section-15.1-2.22.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.22.1"><span class="bcp14">OPTIONAL</span>. Object containing <code>checked_at</code> and <code>expires_at</code>.<a href="#section-15.1-2.22.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.23">
-<code>reason</code>:</dt>
+<code>decision</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.24">
-            <p id="section-15.1-2.24.1"><span class="bcp14">REQUIRED</span>. String reason.<a href="#section-15.1-2.24.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.24.1"><span class="bcp14">REQUIRED</span>. One of <code>continue</code>, <code>suppress</code>, <code>pause</code>, <code>terminate</code>, or
+<code>handoff</code>.<a href="#section-15.1-2.24.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.25">
-<code>review</code>:</dt>
+<code>reason</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.26">
-            <p id="section-15.1-2.26.1"><span class="bcp14">OPTIONAL</span>. An object for a <code>human_review_completed</code> event: the
-<code>outcome</code> (<code>approve</code>, <code>reject</code>, or <code>expire</code>), the reviewer
-identity, and the authority basis of the review
-(<a href="#review-outcomes" class="auto internal xref">Section 13.3</a>).<a href="#section-15.1-2.26.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.26.1"><span class="bcp14">REQUIRED</span>. String reason.<a href="#section-15.1-2.26.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.27">
-<code>termination_outcome</code>:</dt>
+<code>review</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.28">
-            <p id="section-15.1-2.28.1"><span class="bcp14">OPTIONAL</span>. For a <code>subagent_stopped</code> event: <code>acknowledged</code>,
-<code>timed_out</code>, or <code>unknown</code> (<a href="#subagent-stop" class="auto internal xref">Section 11.1</a>).<a href="#section-15.1-2.28.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.28.1"><span class="bcp14">OPTIONAL</span>. An object for a <code>human_review_completed</code> event: the
+<code>outcome</code> (<code>approve</code>, <code>reject</code>, or <code>expire</code>), the reviewer
+identity, and the authority basis of the review
+(<a href="#review-outcomes" class="auto internal xref">Section 13.3</a>).<a href="#section-15.1-2.28.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.29">
-<code>taint</code>:</dt>
+<code>termination_outcome</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.30">
-            <p id="section-15.1-2.30.1"><span class="bcp14">OPTIONAL</span>. An object for an <code>egress_downgraded</code> event: the tainting
-source class, the provenance basis (<code>parameter</code> or <code>session</code>), and
-the applied action (a fresh action-bound approval required, or the
-action suppressed) (<a href="#session-taint" class="auto internal xref">Section 14</a>).<a href="#section-15.1-2.30.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.30.1"><span class="bcp14">OPTIONAL</span>. For a <code>subagent_stopped</code> event: <code>acknowledged</code>,
+<code>timed_out</code>, or <code>unknown</code> (<a href="#subagent-stop" class="auto internal xref">Section 11.1</a>).<a href="#section-15.1-2.30.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.31">
-<code>egress</code>:</dt>
+<code>taint</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.32">
-            <p id="section-15.1-2.32.1"><span class="bcp14">OPTIONAL</span>. An object for an <code>egress_refused</code> event: the
-<code>channel_class</code> and <code>destination</code> of the refused egress and the
-<code>disposition</code> the statement declares for that channel
-(<a href="#mediated-egress" class="auto internal xref">Section 5</a>). <span class="bcp14">REQUIRED</span> for an <code>egress_refused</code> event.<a href="#section-15.1-2.32.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.32.1"><span class="bcp14">OPTIONAL</span>. An object for an <code>egress_downgraded</code> event: the tainting
+source class, the provenance basis (<code>parameter</code> or <code>session</code>), and
+the applied action (a fresh action-bound approval required, or the
+action suppressed) (<a href="#session-taint" class="auto internal xref">Section 14</a>).<a href="#section-15.1-2.32.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.33">
-<code>scope_statement_digest</code>:</dt>
+<code>egress</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.34">
-            <p id="section-15.1-2.34.1"><span class="bcp14">OPTIONAL</span>. A string. The integrity-anchor encoded digest
+            <p id="section-15.1-2.34.1"><span class="bcp14">OPTIONAL</span>. An object for an <code>egress_refused</code> event: the
+<code>channel_class</code> and <code>destination</code> of the refused egress and the
+<code>disposition</code> the statement declares for that channel
+(<a href="#mediated-egress" class="auto internal xref">Section 5</a>). <span class="bcp14">REQUIRED</span> for an <code>egress_refused</code> event.<a href="#section-15.1-2.34.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.1-2.35">
+<code>scope_statement_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.1-2.36">
+            <p id="section-15.1-2.36.1"><span class="bcp14">OPTIONAL</span>. A string. The integrity-anchor encoded digest
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) of the published
 Enforcement Scope Statement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
 or of this profile's execution-environment scope statement where
@@ -3074,13 +3125,13 @@ when this record was made, so a record can be joined to the
 published scope claim after the fact. It is a raw-octet digest
 over the referenced statement's exact published bytes, under the
 substrate's default commitment construction, which this document
-imports normatively (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-15.1-2.34.1" class="pilcrow">¶</a></p>
+imports normatively (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-15.1-2.36.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-15.1-2.35">
+<dt id="section-15.1-2.37">
 <code>occurred_at</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.1-2.36">
-            <p id="section-15.1-2.36.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-15.1-2.36.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-15.1-2.38">
+            <p id="section-15.1-2.38.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-15.1-2.38.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -3102,7 +3153,11 @@ it does not understand.<a href="#section-15.1-3" class="pilcrow">¶</a></p>
   },
   "session_id": "sess_agent_42",
   "work_item": "queue_invoice_retry_9",
-  "state": "revoked",
+  "state": "terminated",
+  "termination": {
+    "reason": "revoked",
+    "terminated_at": "2026-11-01T23:00:00Z"
+  },
   "state_source": "signal",
   "decision": "suppress",
   "reason": "mission_not_active",
@@ -3219,8 +3274,9 @@ matter.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="section-16-2">At 02:00 the job resumes a queued task graph. Before dispatching any
 governed work the harness re-reads Mission state (<a href="#resume-checks" class="auto internal xref">Section 7</a>).
 <code>alice</code> cancelled the Mission at 23:00, so the harness finds it
-<code>revoked</code>: it does not dispatch, marks cached ERP connections unusable
-(<a href="#cached-access" class="auto internal xref">Section 10</a>), and emits the suppress evidence shown above. The
+<code>terminated</code> with reason <code>revoked</code>: it does not dispatch, marks cached
+ERP connections unusable (<a href="#cached-access" class="auto internal xref">Section 10</a>), and emits the suppress
+evidence shown above. The
 session was fully recoverable; the authority that justified it was gone,
 and the harness let the Mission, not the session, decide.<a href="#section-16-2" class="pilcrow">¶</a></p>
 <p id="section-16-3">Earlier, while still active, the agent fetched a vendor email into its
@@ -3666,19 +3722,27 @@ exists.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Interaction with Mission Containment keys the residual on the
-action class's containment property, not on a deployment's level.
-No requirement changed.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.1.1">The Mission binding and Harness Evidence carry <code>termination</code> beside
+a <code>terminated</code> state. The stop-behavior matrix is keyed on
+<code>terminated</code> and <code>termination.reason</code>, with a row for an
+unrecognized or absent termination, and continuation by rebinding
+keys on reason <code>superseded</code> and follows <code>termination.successor</code>
+(#705).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1"><code>status_checked_at</code> is the harness's observation as its own clock
+          <p id="appendix-B-2.2.1">Interaction with Mission Containment keys the residual on the
+action class's containment property, not on a deployment's level.
+No requirement changed.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1"><code>status_checked_at</code> is the harness's observation as its own clock
 read it, preceding the relied-on status's <code>iat</code> by no more than the
 published maximum clock skew; <code>status_expires_at</code> is its reliance
 end, never later than a Mission Status Response's
-<code>mission.fresh_until</code>.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Client-instance references follow their successors:
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -3688,13 +3752,13 @@ Context's <code>iss</code> and <code>id</code>, instead of <code>agent_instance_
 instance <code>sub</code>. The retired profile's
 guarantee that sub-agent chains cannot shed identity now depends on
 the harness's own durable association between each sub-agent handle
-and its instance.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+and its instance.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Linked the limits of provenance-backed taint control to the Security
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">Linked the limits of provenance-backed taint control to the Security
 Model's Enforcement Perimeter and distinguished the per-channel
 egress disposition from the runtime profile's per-entry perimeter
-disposition; no taint requirement changed (#758).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+disposition; no taint requirement changed (#758).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

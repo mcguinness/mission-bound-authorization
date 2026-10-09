@@ -839,8 +839,9 @@ Table of Contents
    realization is the exp claim,
    [I-D.draft-mcguinness-mission-runtime-oauth]).  The Mission reference
    and its state source do not themselves surface expires_at; where a
-   Mission state source does expose it (or reports the Mission expired),
-   the PDP MUST refuse on it independent of the credential's own expiry.
+   Mission state source does expose it (or reports the Mission
+   terminated with reason expired), the PDP MUST refuse on it
+   independent of the credential's own expiry.
 
    The PDP sets the permit's validity window from these inputs.  That
    the action actually executes within that window is the executing
@@ -4446,6 +4447,10 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Time: a Mission state source reports an expired Mission as
+      terminated with reason expired; the refusal on it is unchanged
+      (#705).
 
    *  Action Classification: the purpose that may raise a class is the
       approved Mission's, from its Mission state or a validated

@@ -1898,22 +1898,7 @@ unrecognized states fail-safe non-active.<a href="#section-9-1" class="pilcrow">
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
-              <code>completed</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">grant finalized; continuation refused (<code>invalid_continuation</code>); rotation refused (<code>invalid_rotation</code>); introspection reports <code>active: false</code>
-</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>revoked</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">grant finalized; continuation refused (<code>invalid_continuation</code>); rotation refused (<code>invalid_rotation</code>); introspection reports <code>active: false</code>
-</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>expired</code>
-</td>
+              <code>terminated</code> (reason <code>revoked</code>, <code>expired</code>, <code>completed</code>, or any other)</td>
             <td class="text-left" rowspan="1" colspan="1">grant finalized; continuation refused (<code>invalid_continuation</code>); rotation refused (<code>invalid_rotation</code>); introspection reports <code>active: false</code>
 </td>
           </tr>
@@ -1947,7 +1932,7 @@ without introspection needs the state surfaces below.<a href="#section-9-4.1.1" 
 </li>
         <li class="normal" id="section-9-4.2">
           <p id="section-9-4.2.1"><strong>Expiry.</strong> When the record's <code>expires_at</code> passes, the Mission
-transitions to <code>expired</code> without a request.<a href="#section-9-4.2.1" class="pilcrow">¶</a></p>
+is <code>terminated</code> with reason <code>expired</code> without a request.<a href="#section-9-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-4.3">
           <p id="section-9-4.3.1"><strong>Completion.</strong> The client instance's <code>DELETE</code> of the continuation
@@ -2117,7 +2102,9 @@ responses only (<a href="#lifecycle" class="auto internal xref">Section 9</a>, <
           <li class="normal" id="section-10.1-2.3">
             <p id="section-10.1-2.3.1"><strong>Grant-response-carried</strong>: the grant response carries a <code>mission</code>
 member (<a href="#iana" class="auto internal xref">Section 16</a>) giving the client instance the Mission
-Reference, <code>expires_at</code>, and current <code>state</code>. This surface informs
+Reference, <code>expires_at</code>, current <code>state</code>, and, for a terminated
+Mission, its <code>termination</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Mission Termination"). This surface informs
 the Actor; it is correlation for the client, never proof for a
 resource server.<a href="#section-10.1-2.3.1" class="pilcrow">¶</a></p>
 </li>

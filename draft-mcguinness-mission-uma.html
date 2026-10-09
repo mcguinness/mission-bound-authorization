@@ -1771,21 +1771,8 @@ unrecognized states fail-safe non-active.<a href="#section-8-1" class="pilcrow">
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
-              <code>completed</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">token endpoint refuses (<code>request_denied</code>); introspection reports inactive</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>revoked</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">token endpoint refuses (<code>request_denied</code>); introspection reports inactive</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>expired</code>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">token endpoint refuses (<code>request_denied</code>); introspection reports inactive</td>
+              <code>terminated</code> (reason <code>revoked</code>, <code>expired</code>, <code>completed</code>, or any other)</td>
+            <td class="text-left" rowspan="1" colspan="1">token endpoint refuses (<code>request_denied</code>); introspection reports inactive, with <code>mission.termination</code> giving the reason</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
@@ -1798,8 +1785,9 @@ unrecognized states fail-safe non-active.<a href="#section-8-1" class="pilcrow">
 <p id="section-8-3">The projection is fail-safe: every non-<code>active</code> state projects to a
 non-permitting native signal. The family surfaces report the
 distinct state, and the introspection response's <code>mission.state</code>
-member carries it verbatim (<a href="#mission-claim" class="auto internal xref">Section 9.1</a>). This binding adds to
-UMA's model:<a href="#section-8-3" class="pilcrow">¶</a></p>
+member carries it verbatim, with <code>mission.termination</code> for a
+terminated Mission (<a href="#mission-claim" class="auto internal xref">Section 9.1</a>). This binding adds to UMA's
+model:<a href="#section-8-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8-4.1">
           <p id="section-8-4.1.1"><strong>Revocation.</strong> The authorization server <span class="bcp14">MUST</span> provide an
@@ -1813,13 +1801,13 @@ state surfaces below.<a href="#section-8-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-4.2">
           <p id="section-8-4.2.1"><strong>Expiry.</strong> When the record's <code>expires_at</code> passes, the Mission
-transitions to <code>expired</code> without a request.<a href="#section-8-4.2.1" class="pilcrow">¶</a></p>
+is <code>terminated</code> with reason <code>expired</code> without a request.<a href="#section-8-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-4.3">
-          <p id="section-8-4.3.1"><strong>Completion.</strong> The authorization server commits the Mission to
-<code>completed</code> with the semantics of the status profile's <code>complete</code>
-operation. UMA has no native completion wire, so the operation is
-a family surface.<a href="#section-8-4.3.1" class="pilcrow">¶</a></p>
+          <p id="section-8-4.3.1"><strong>Completion.</strong> The authorization server terminates the Mission
+with reason <code>completed</code>, with the semantics of the status profile's
+<code>complete</code> operation. UMA has no native completion wire, so the
+operation is a family surface.<a href="#section-8-4.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-4.4">
           <p id="section-8-4.4.1"><strong>Suspension.</strong> A deployment that adopts the status profile's
@@ -1958,9 +1946,10 @@ the claim in the token per the issuance profile.<a href="#section-9.1-2.1.1" cla
             <p id="section-9.1-2.2.1"><strong>Introspection-carried</strong>: a deployment issuing opaque RPTs
 carries the same object in the <code>mission</code> member of the
 introspection response, the member the issuance profile registers
-for <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>, with the <code>state</code> member per that profile's
-introspection section. FedAuthz's extended introspection object
-carries it beside <code>permissions</code> unchanged.<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
+for <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>, with the <code>state</code> member, and <code>termination</code> for a
+terminated Mission, per that profile's introspection section.
+FedAuthz's extended introspection object carries it beside
+<code>permissions</code> unchanged.<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-9.1-3">Both surfaces satisfy the credential primitive; they differ in who

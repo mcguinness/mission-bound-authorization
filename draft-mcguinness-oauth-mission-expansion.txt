@@ -25,8 +25,8 @@ Abstract
    possession of the predecessor's authority, and a fresh approval
    records a successor Mission.  The successor carries a predecessor
    member on its mission claim linking it to the Mission it replaces;
-   when the successor activates the predecessor enters a terminal
-   superseded state, so an expansion that never completes leaves the
+   when the successor activates the predecessor is terminated with
+   reason superseded, so an expansion that never completes leaves the
    predecessor active.  Expansion never widens authority without a new
    consent: the successor's authority comes only from its own approval.
    A deployment that never expands a Mission is unaffected by this
@@ -99,7 +99,7 @@ Table of Contents
      5.5.  Successor expiry
      5.6.  Successor Subject and authority source
    6.  The Predecessor Mission Reference
-   7.  The Superseded Predecessor State
+   7.  The Superseded Termination Reason
      7.1.  No implicit rollback
    8.  Replacement Expansion
    9.  Continuing Under an Independently Approved Mission
@@ -127,7 +127,7 @@ Table of Contents
      16.2.  Related-work correlation
      16.3.  Disclosure of the broadened task
    17. IANA Considerations
-     17.1.  Mission Lifecycle States Registration
+     17.1.  Mission Termination Reasons Registration
      17.2.  Mission Denial Reasons Registry
      17.3.  OAuth Extensions Error Registration
    Acknowledgments
@@ -167,9 +167,9 @@ Table of Contents
 
    This document adds exactly three things on top of the issuance
    profile: a way to bind an expansion request to the predecessor it
-   expands; a predecessor lineage member on the resulting Mission; and a
-   terminal superseded predecessor state with the reconciliation rules
-   that keep concurrent expansions consistent.
+   expands; a predecessor lineage member on the resulting Mission; and
+   the superseded termination reason for the predecessor, with the
+   reconciliation rules that keep concurrent expansions consistent.
 
 1.1.  Status: an optional extension
 
@@ -178,10 +178,11 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission] and never expands a Mission is
    fully conformant to that profile and is unaffected by this document:
    it issues no expansion request, records no predecessor member, and
-   never enters the superseded state this document introduces.  The
-   issuance profile's lifecycle (active, revoked, expired) is complete
-   without expansion; the superseded state defined here (Section 7) is
-   relevant only when expansion is used.
+   never terminates a Mission with the superseded reason this document
+   introduces.  The issuance profile's lifecycle (active, and terminated
+   with reason revoked or expired) is complete without expansion; the
+   superseded reason defined here (Section 7) is relevant only when
+   expansion is used.
 
    A Mission Issuer claims conformance to this document only when it
    adjudicates expansion; otherwise it remains a plain issuance-profile
@@ -212,7 +213,7 @@ Table of Contents
    *  the predecessor lineage member on the successor's mission claim
       and Mission record (Section 6);
 
-   *  the terminal superseded predecessor state and its transition
+   *  the predecessor's transition to terminated with reason superseded
       (Section 7);
 
    *  replacement expansion as the mode, with branch expansion deferred
@@ -315,9 +316,9 @@ Table of Contents
    widens nothing is refused (Section 5.1).  The successor's authority
    comes only from that consent.  Supersession is deferred to
    activation: the successor activates and the predecessor becomes
-   superseded atomically when the successor's authority is issued, so an
-   expansion that never completes leaves the predecessor active
-   (Section 7).
+   terminated with reason superseded atomically when the successor's
+   authority is issued, so an expansion that never completes leaves the
+   predecessor active (Section 7).
 
 3.2.  Eligibility
 
@@ -546,8 +547,8 @@ Table of Contents
    a reconciliation status (Section 10):
 
    *  if the predecessor made a terminal exit from active (it is
-      revoked, expired, or already superseded, Section 7), the status is
-      predecessor_state_changed;
+      terminated, with reason revoked, expired, already superseded
+      (Section 7), or another), the status is predecessor_state_changed;
 
    *  if the predecessor is in a non-terminal non-active state, for
       example suspended where the Mission Status profile
@@ -698,11 +699,11 @@ Table of Contents
    progressive authorization companion), creates the successor Mission
    record in the active state, with its predecessor member set
    (Section 6), atomically with the predecessor's transition to
-   superseded (Section 7).  Until the successor activates the
-   predecessor remains active; an expansion that never completes, whose
-   deferred approval lapses, or whose authorization code is never
-   redeemed or expires, creates no successor and leaves the predecessor
-   active.
+   terminated with reason superseded (Section 7).  Until the successor
+   activates the predecessor remains active; an expansion that never
+   completes, whose deferred approval lapses, or whose authorization
+   code is never redeemed or expires, creates no successor and leaves
+   the predecessor active.
 
    Whichever mode is selected, the exchange's creation_request_id
    reservation (Section 11) makes completion recoverable: a client that
@@ -930,7 +931,8 @@ Table of Contents
    Mission record so that the lineage is durable independently of any
    derived token.
 
-   This document defines two further lineage members:
+   This document defines a further lineage member, related_to, and the
+   successor member of a superseded termination:
 
    related_to:  OPTIONAL.  A string.  The mission_id of a Mission this
       Mission is related to by lineage without superseding it, used for
@@ -938,16 +940,19 @@ Table of Contents
       predecessor, its presence does not imply that the referenced
       Mission was superseded and it carries no lifecycle consequence.
 
-   successor:  OPTIONAL.  A string.  The mission_id of the successor
-      that superseded this Mission by expansion, recorded on the
-      superseded predecessor's Mission record at supersession
-      (Section 7).  It is the reverse of the successor's predecessor
+   successor:  REQUIRED in the termination of a Mission terminated with
+      reason superseded (Section 7); absent otherwise.  A string.  The
+      mission_id of the successor that superseded this Mission by
+      expansion, issued by the same Mission Issuer, written into the
+      predecessor's termination at supersession.  It appears only inside
+      termination.  It is the reverse of the successor's predecessor
       link, letting a consumer that holds a superseded predecessor
       discover its successor directly.  The Status profile surfaces it
       in the status response
       ([I-D.draft-mcguinness-oauth-mission-status]) and the Signals
-      profile in the superseded lifecycle event
-      ([I-D.draft-mcguinness-oauth-mission-signals]).
+      profile in the supersession's lifecycle event
+      ([I-D.draft-mcguinness-oauth-mission-signals]), each inside
+      termination.
 
    predecessor, related_to, and successor are lineage and audit context
    only.  Consistent with the issuance profile's open-mission-claim
@@ -972,8 +977,9 @@ Table of Contents
 
    *  *Immutability.* predecessor is set at the successor's approval
       event and MUST NOT change thereafter.  The Mission record is
-      immutable except for its state and the one-time successor link a
-      supersession sets on the predecessor (Section 7).
+      immutable except for its state and its termination, which a
+      supersession writes once on the predecessor with the successor
+      link (Section 7).
 
    *  *Origin.* The predecessor and successor share an issuer: an
       expansion is adjudicated by the predecessor's Mission Issuer.  A
@@ -990,37 +996,43 @@ Table of Contents
      }
    }
 
-7.  The Superseded Predecessor State
+7.  The Superseded Termination Reason
 
-   This document adds one terminal state to the issuance profile's
-   lifecycle, used only by expansion:
+   This document adds one termination reason to the issuance profile's
+   Mission Termination Reasons registry
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission Termination
+   Reasons Registry"), used only by expansion:
 
-   superseded:  A predecessor Mission that a successor has replaced
-      through a replacement expansion.  Terminal and non-active.
+   superseded:  The reason a predecessor Mission is terminated when a
+      successor replaces it through a replacement expansion.  The
+      predecessor is non-active, and its termination
+      ([I-D.draft-mcguinness-oauth-mission], Section "Mission
+      Termination") carries the successor member (Section 6).
 
-   A deployment that never expands a Mission never produces this state;
-   the issuance profile's active/revoked/expired lifecycle is unchanged
-   for it.  The transition is:
+   A deployment that never expands a Mission never produces this reason;
+   the issuance profile's lifecycle is unchanged for it.  The transition
+   is:
 
-            +========+==========================+============+
-            | From   | Event                    | To         |
-            +========+==========================+============+
-            | active | successor activates when | superseded |
-            |        | its authority is issued  |            |
-            +--------+--------------------------+------------+
+      +========+==========================+============+============+
+      | From   | Event                    | To         | Reason     |
+      +========+==========================+============+============+
+      | active | successor activates when | terminated | superseded |
+      |        | its authority is issued  |            |            |
+      +--------+--------------------------+------------+------------+
 
-                                 Table 1
+                                  Table 1
 
    The transition has these requirements:
 
    *  *Atomic with successor activation.* The successor activates, and
-      the predecessor enters superseded, in one atomic operation at the
-      point the successor's authority is issued (Section 5.2: the
-      resolving deferred poll or the interactive code redemption), not
-      at the approval decision that precedes it.  In that same operation
-      the Mission Issuer sets the predecessor's successor member to the
-      successor's mission_id (Section 6).  Until the successor activates
-      the predecessor remains active.
+      the predecessor becomes terminated with reason superseded, in one
+      atomic operation at the point the successor's authority is issued
+      (Section 5.2: the resolving deferred poll or the interactive code
+      redemption), not at the approval decision that precedes it.  In
+      that same operation the Mission Issuer writes the predecessor's
+      termination, once, with successor set to the successor's
+      mission_id (Section 6).  Until the successor activates the
+      predecessor remains active.
 
       -  An expansion that never completes, whose deferred approval
          lapses, or whose authorization code is never redeemed or
@@ -1045,8 +1057,10 @@ Table of Contents
       active, so the issuance profile's issuance gating refuses to
       derive any new token, refresh, token exchange, or cross-domain
       grant under it: derivation proceeds only from an active Mission
-      ([I-D.draft-mcguinness-oauth-mission]).  New authority for the
-      task flows through the successor.
+      ([I-D.draft-mcguinness-oauth-mission]).  The refusal's
+      mission_error value is superseded
+      ([I-D.draft-mcguinness-oauth-mission], Section "Issuance Gating").
+      New authority for the task flows through the successor.
 
    *  *Already-issued predecessor tokens.* Tokens already derived under
       the predecessor before it was superseded remain valid until their
@@ -1069,31 +1083,34 @@ Table of Contents
       through the same mechanisms that report a revoked or expired
       Mission.  Where the issuance profile's optional token
       introspection is offered, the composite active is false and, from
-      the issuer, the mission.state member gives superseded.  Where the
-      Mission Status profile [I-D.draft-mcguinness-oauth-mission-status]
-      is deployed, the dedicated Status operation reports superseded
-      among the terminal states and the Status Response mission.state
-      gives superseded.  A deployment that offers either surface and
-      this document MUST include superseded among the lifecycle states
-      its issuer may report.  Consumers rely on the issuance profile's
-      forward-compatibility rule: superseded, like any non-active state,
-      is non-deriving.
+      the issuer, the mission.state member gives terminated and
+      mission.termination.reason gives superseded.  Where the Mission
+      Status profile [I-D.draft-mcguinness-oauth-mission-status] is
+      deployed, the Status Response mission.state gives terminated and
+      its mission.termination carries reason superseded and the
+      successor.  A deployment that offers either surface and this
+      document MUST include superseded among the termination reasons its
+      issuer may report.  Consumers rely on the issuance profile's
+      forward-compatibility rule: a terminated Mission, whatever its
+      reason, is non-deriving.
 
 7.1.  No implicit rollback
 
    The Mission Issuer MUST NOT implicitly resurrect a superseded
    predecessor when its successor is later revoked, expired, or itself
-   superseded; superseded is terminal.  A deployment that needs "revert
-   to the predecessor's authority" semantics expresses that as a new
-   approval event creating a new Mission that carries the relevant
-   authority, with its own predecessor link preserving the lineage.  A
-   rollback is therefore a new governed Mission, not a state reversal.
+   superseded; terminated is terminal, whatever its reason.  A
+   deployment that needs "revert to the predecessor's authority"
+   semantics expresses that as a new approval event creating a new
+   Mission that carries the relevant authority, with its own predecessor
+   link preserving the lineage.  A rollback is therefore a new governed
+   Mission, not a state reversal.
 
 8.  Replacement Expansion
 
    A successful expansion is a *replacement*: the successor replaces the
-   predecessor, and the predecessor becomes superseded (Section 7).
-   Replacement is the only mode this document defines.
+   predecessor, and the predecessor becomes terminated with reason
+   superseded (Section 7).  Replacement is the only mode this document
+   defines.
 
    Under replacement, exactly one successor is created per predecessor,
    and the predecessor is no longer active once the successor activates.
@@ -1198,7 +1215,7 @@ Table of Contents
 
    2.  no other replacement expansion has already activated a successor
        for this predecessor (equivalently, the predecessor has not
-       already transitioned to superseded); and
+       already been terminated with reason superseded); and
 
    3.  the successor's complete Authority Set, including authority
        carried forward from the predecessor, overlaps in authority no
@@ -1221,17 +1238,18 @@ Table of Contents
    The reconciliation status codes are:
 
    superseded_by_concurrent_expansion:  A concurrent replacement
-      expansion has already produced a successor; the predecessor is now
-      superseded rather than active.  The client SHOULD discover the
-      existing successor and re-evaluate whether a further expansion is
-      still required (an expansion of the successor is a new expansion
-      against the successor as predecessor).
+      expansion has already produced a successor; the predecessor is
+      terminated with reason superseded rather than active.  The client
+      SHOULD discover the existing successor and re-evaluate whether a
+      further expansion is still required (an expansion of the successor
+      is a new expansion against the successor as predecessor).
 
    predecessor_state_changed:  The predecessor made a terminal exit from
-      active (to revoked, expired, or superseded) before this expansion
-      could complete, whether caught at request binding (Section 4.3) or
-      at the compare-and-set on successor activation (Section 10).  The
-      client MUST NOT retry the same expansion against this predecessor.
+      active (to terminated, with reason revoked, expired, superseded,
+      or another) before this expansion could complete, whether caught
+      at request binding (Section 4.3) or at the compare-and-set on
+      successor activation (Section 10).  The client MUST NOT retry the
+      same expansion against this predecessor.
 
    predecessor_not_active:  The predecessor is in a non-terminal non-
       active state (for example suspended under the Mission Status
@@ -1476,10 +1494,10 @@ Table of Contents
    The idempotency lookup occurs after client authentication and
    possession verification and before the predecessor lifecycle gate
    (Section 5.1).  The order is load-bearing: the retry worth recovering
-   is exactly the one whose predecessor transitioned to superseded when
-   the first attempt succeeded (Section 7), so re-running the
-   predecessor-active gate first would refuse the very recovery this
-   mechanism exists to serve.
+   is exactly the one whose predecessor was terminated with reason
+   superseded when the first attempt succeeded (Section 7), so re-
+   running the predecessor-active gate first would refuse the very
+   recovery this mechanism exists to serve.
 
 11.5.  Tombstone retention
 
@@ -1619,12 +1637,23 @@ Table of Contents
      }
    }
 
-   The predecessor is now superseded: it derives no new tokens, its
-   already-issued tokens run out their short lifetimes, and the task
-   continues under the successor.  The widening came only from alice's
-   fresh consent; the successor's authority_hash commits the widened
-   Authority Set it was actually approved for, not the predecessor's
-   plus a delta.
+   The predecessor is now terminated with reason superseded: it derives
+   no new tokens, its already-issued tokens run out their short
+   lifetimes, and the task continues under the successor.  Its record
+   carries (other members omitted):
+
+   {
+     "state": "terminated",
+     "termination": {
+       "reason": "superseded",
+       "terminated_at": "2026-11-02T09:40:00Z",
+       "successor": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX"
+     }
+   }
+
+   The widening came only from alice's fresh consent; the successor's
+   authority_hash commits the widened Authority Set it was actually
+   approved for, not the predecessor's plus a delta.
 
 14.  Conformance
 
@@ -1678,7 +1707,8 @@ Table of Contents
       Mission record (Section 6);
 
    *  activate the successor and transition the predecessor to
-      superseded atomically when the successor's authority is issued,
+      terminated with reason superseded, its termination carrying
+      successor, atomically when the successor's authority is issued,
       leaving the predecessor active until then, re-verifying
       predecessor state at completion (Section 5.4), and refuse further
       derivation under a superseded Mission (Section 7); and
@@ -1932,27 +1962,25 @@ Table of Contents
    that defines a value on the carrier requests its own registration in
    it.
 
-17.1.  Mission Lifecycle States Registration
+17.1.  Mission Termination Reasons Registration
 
-   This document requests registration of one state in the issuance
-   profile's Mission Lifecycle States registry
+   This document requests registration of one reason in the issuance
+   profile's Mission Termination Reasons registry
    ([I-D.draft-mcguinness-oauth-mission]), under that registry's
    Specification Required policy:
 
-   +============+==========+==================+============+===========+
-   | Value      | Terminal | Semantics        | Change     | Reference |
-   |            |          |                  | Controller |           |
-   +============+==========+==================+============+===========+
-   | superseded | yes      | A predecessor    | IETF       | this      |
-   |            |          | Mission that     |            | document, |
-   |            |          | a successor      |            | Section 7 |
-   |            |          | has replaced     |            |           |
-   |            |          | through a        |            |           |
-   |            |          | replacement      |            |           |
-   |            |          | expansion;       |            |           |
-   |            |          | terminal and     |            |           |
-   |            |          | non-active.      |            |           |
-   +------------+----------+------------------+------------+-----------+
+    +============+==============+============+============+===========+
+    | Value      | Semantics    | Members    | Change     | Reference |
+    |            |              |            | Controller |           |
+    +============+==============+============+============+===========+
+    | superseded | A successor  | successor  | IETF       | this      |
+    |            | Mission      | (REQUIRED) |            | document, |
+    |            | replaced the |            |            | Section 7 |
+    |            | predecessor  |            |            |           |
+    |            | through a    |            |            |           |
+    |            | replacement  |            |            |           |
+    |            | expansion.   |            |            |           |
+    +------------+--------------+------------+------------+-----------+
 
                                   Table 2
 
@@ -2293,6 +2321,12 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Supersession terminates the predecessor: it becomes terminated
+      with reason superseded, registered in the Mission Termination
+      Reasons registry, and its termination carries the REQUIRED
+      successor; the record's mutable members are state and termination,
+      and a refused derivation's mission_error is superseded (#705).
 
    *  Successor Subject and authority source: every successor keeps the
       predecessor's subject and authority_source, whatever approval

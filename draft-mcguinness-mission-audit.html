@@ -1617,7 +1617,7 @@ Mission's feed; a row registers nothing on its own.<a href="#section-5.3-3" clas
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Approval event</td>
-              <td class="text-left" rowspan="1" colspan="1">Mission record at creation, <code>state</code> excluded, canonicalized</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission record at creation, <code>state</code> and <code>termination</code> excluded, canonicalized</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>application/mission-approval-record+json</code>
 </td>
@@ -1931,7 +1931,8 @@ identifiers by the containment profile
 </li>
         </ul>
 <p id="section-5.3-12">The approval event's canonical bytes are the whole Mission record at
-creation with <code>state</code> excluded, canonicalized (<a href="#evidence-types" class="auto internal xref">Section 5.3</a>):
+creation with its mutable members, <code>state</code> and <code>termination</code>,
+excluded, canonicalized (<a href="#evidence-types" class="auto internal xref">Section 5.3</a>):
 every committed member is included, the record's own optional members
 where present (for example, <code>proposed_authority</code> and <code>proposal_hash</code>,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and members companion
@@ -1978,19 +1979,28 @@ transition as a minimal JSON object with these members, JCS-canonicalized
               <p id="section-5.3.1-2.3.1"><code>state</code> (string, required): the new lifecycle state.<a href="#section-5.3.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-5.3.1-2.4">
-              <p id="section-5.3.1-2.4.1"><code>prior_state</code> (string, optional): the state immediately before the
-transition.<a href="#section-5.3.1-2.4.1" class="pilcrow">¶</a></p>
+              <p id="section-5.3.1-2.4.1"><code>termination</code> (object, conditional): present exactly when <code>state</code> is
+<code>terminated</code>: the Mission's <code>termination</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Termination").<a href="#section-5.3.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-5.3.1-2.5">
-              <p id="section-5.3.1-2.5.1"><code>transitioned_at</code> (string, required): an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>
-date-time at which the transition was committed.<a href="#section-5.3.1-2.5.1" class="pilcrow">¶</a></p>
+              <p id="section-5.3.1-2.5.1"><code>prior_state</code> (string, optional): the state immediately before the
+transition, never <code>terminated</code> (for example <code>active</code>, or the status
+profile's <code>suspended</code>, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Mission Lifecycle States Registry"): a <code>terminated</code> Mission
+makes no further transition.<a href="#section-5.3.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-5.3.1-2.6">
-              <p id="section-5.3.1-2.6.1"><code>salt</code> (string, required): a random salt of at least 128 bits,
+              <p id="section-5.3.1-2.6.1"><code>transitioned_at</code> (string, required): an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>
+date-time at which the transition was committed.<a href="#section-5.3.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-5.3.1-2.7">
+              <p id="section-5.3.1-2.7.1"><code>salt</code> (string, required): a random salt of at least 128 bits,
 base64url-encoded, retained with the evidence. The object's other
 members are drawn from an enumerable space, so an unsalted
 commitment is confirmable by dictionary
-(<a href="#privacy-considerations" class="auto internal xref">Section 13</a>).<a href="#section-5.3.1-2.6.1" class="pilcrow">¶</a></p>
+(<a href="#privacy-considerations" class="auto internal xref">Section 13</a>).<a href="#section-5.3.1-2.7.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 <p id="section-5.3.1-3">Its media type is <code>application/mission-lifecycle-transition+json</code>
@@ -2010,7 +2020,11 @@ one per record:<a href="#section-5.3.1.1-1" class="pilcrow">¶</a></p>
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "issuer": "https://as.example.com",
   "salt": "q7hJ2mXv9pTzR4kW5nB8dQ",
-  "state": "revoked",
+  "state": "terminated",
+  "termination": {
+    "reason": "revoked",
+    "terminated_at": "2026-11-02T08:30:00Z"
+  },
   "transitioned_at": "2026-11-02T08:30:00Z"
 }
 </pre><a href="#section-5.3.1.1-2" class="pilcrow">¶</a>
@@ -2019,12 +2033,13 @@ one per record:<a href="#section-5.3.1.1-1" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-5.3.1.1-4">
 <pre>
 {"issuer":"https://as.example.com","mission_id":"msn_8RfX2Lqv9TqMv
-4z7sA2bN1k0YpEdHc9-","salt":"q7hJ2mXv9pTzR4kW5nB8dQ","state":"revo
-ked","transitioned_at":"2026-11-02T08:30:00Z"}
+4z7sA2bN1k0YpEdHc9-","salt":"q7hJ2mXv9pTzR4kW5nB8dQ","state":"term
+inated","termination":{"reason":"revoked","terminated_at":"2026-11
+-02T08:30:00Z"},"transitioned_at":"2026-11-02T08:30:00Z"}
 </pre><a href="#section-5.3.1.1-4" class="pilcrow">¶</a>
 </div>
 <p id="section-5.3.1.1-5">The committed digest is the SHA-256 of those bytes; its base64url
-form is <code>SD3SCb7vm3b_Ivsm19ENQAGAv7pjLS-mNWGcaXqslmc</code>. The Signed
+form is <code>n7MnMBoJTOuPTZvgNvb5Kp3-iwVkP25t-9VdMU_uQCY</code>. The Signed
 Statement carries the digest bytes inline as its payload, with this
 protected header (<a href="#hash-commitment" class="auto internal xref">Section 5.1</a>, <a href="#feed" class="auto internal xref">Section 7</a>):<a href="#section-5.3.1.1-5" class="pilcrow">¶</a></p>
 <div class="lang-cbor-diag sourcecode" id="section-5.3.1.1-6">
@@ -2624,10 +2639,11 @@ feed.<a href="#section-7-6" class="pilcrow">¶</a></p>
 nothing (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-7-7" class="pilcrow">¶</a></p>
 <p id="section-7-8">A Child Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)
 is its own Mission with its own <code>id</code> and <code>issuer</code>, so its evidence forms
-its own feed; its lifecycle events, including a <code>cascaded</code> transition,
-appear in that feed. The event that triggered the cascade is in the
-parent's feed. Lineage is navigable in both directions: the child's
-lineage to the parent is the <code>parent</code> member of its <code>mission</code> claim,
+its own feed; its lifecycle events, including a transition to
+<code>terminated</code> with reason <code>parent_terminated</code>, appear in that feed.
+The event that triggered the cascade is in the parent's feed.
+Lineage is navigable in both directions: the child's lineage to the
+parent is the <code>parent</code> member of its <code>mission</code> claim,
 which an auditor follows to the parent's <code>sub</code> to see that trigger,
 and the parent's children are enumerated by the Child Evidence
 records on the parent's feed (<a href="#evidence-types" class="auto internal xref">Section 5.3</a>), each carrying the
@@ -3298,7 +3314,14 @@ rather than registering a new identifier.<a href="#section-14-6" class="pilcrow"
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The Discovery Evidence, Containment evidence, Protected event
+          <p id="appendix-A-2.1.1">The Lifecycle Transition Object records a terminated Mission as
+<code>state</code> <code>terminated</code> with a <code>termination</code> object, and <code>prior_state</code>
+is never <code>terminated</code>; the computed example is regenerated.
+The approval event excludes both mutable record members, <code>state</code> and
+<code>termination</code> (#705).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">The Discovery Evidence, Containment evidence, Protected event
 receipt, and Work Product Binding front-matter references moved
 from normative to informative, meeting the reference
 classification convention's maturity bound (a Standards-Track
@@ -3312,15 +3335,15 @@ records. Containment's Portable Evidence forward-pointer corrected
 to match: Containment registers its own evidence media types.
 Discovery Evidence gained a self-hosted canonical-bytes definition
 and IANA media-type registration in its own profile, closing the
-one gap this document's citation had left undefined (#662).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+one gap this document's citation had left undefined (#662).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Editorial density pass: split several overlong paragraphs in the
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Editorial density pass: split several overlong paragraphs in the
 Mission Evidence Base (the evidence-type naming-layers discussion)
 and in Registration Policy and Authoritative Producers, for
 scannability. No wording changed and no BCP-14 keyword sentence
 moved outside its section; the Evidence Types table and the
-Verification Failures integrity-vs-audit split were left untouched.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+Verification Failures integrity-vs-audit split were left untouched.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

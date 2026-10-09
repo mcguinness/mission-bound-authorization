@@ -2376,11 +2376,12 @@ Section "Mission State via Token Introspection"). This section
 specifies the non-issuer half of that rule.<a href="#section-12-1" class="pilcrow">¶</a></p>
 <p id="section-12-2">A Resource AS that supports introspection for a local token it minted
 from a cross-domain grant returns the claim-shape members only: <code>id</code>,
-<code>issuer</code>, and <code>authority_hash</code>. It <span class="bcp14">MUST</span> omit <code>mission.state</code> rather
-than report a stale value as current. It holds the token, not the
-Mission: it knows the Mission state only as of grant validation and
-has no query to the issuer keyed by <code>mission_id</code> (neither this
-document nor the issuance profile defines one).<a href="#section-12-2" class="pilcrow">¶</a></p>
+<code>issuer</code>, and <code>authority_hash</code>. It <span class="bcp14">MUST</span> omit <code>mission.state</code> and
+<code>mission.termination</code> rather than report a stale value as current. It
+holds the token, not the Mission: it knows the Mission state only as
+of grant validation and has no query to the issuer keyed by
+<code>mission_id</code> (neither this document nor the issuance profile defines
+one).<a href="#section-12-2" class="pilcrow">¶</a></p>
 <p id="section-12-3"><code>authority_hash</code>, when included, is the issuer's commitment carried
 through the grant, not a value the Resource AS recomputes from its
 audience-scoped subset (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
@@ -3192,21 +3193,25 @@ exceeds the Mission's <code>expires_at</code>. The ID-JAG carried identity
 <p id="appendix-B-2">-01<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-3.1">
-          <p id="appendix-B-3.1.1">Issuing the Cross-Domain Grant: the comparison with the primary
-access token names the RFC 9700 recommendation the issuance profile
-adopts; the issuance profile sets no BCP 14 level of its own there.
-No requirement changed.<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.1.1">Introspection at a Resource AS: a non-issuer Resource AS omits
+<code>mission.termination</code> as well as <code>mission.state</code> (#705).<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.2">
-          <p id="appendix-B-3.2.1">Controls taxonomy retirement (#636): <code>max_derivations</code> renamed
+          <p id="appendix-B-3.2.1">Issuing the Cross-Domain Grant: the comparison with the primary
+access token names the RFC 9700 recommendation the issuance profile
+adopts; the issuance profile sets no BCP 14 level of its own there.
+No requirement changed.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.3">
+          <p id="appendix-B-3.3.1">Controls taxonomy retirement (#636): <code>max_derivations</code> renamed
 <code>derivation_limit</code> at its one normative reference (Issuing the
 Cross-Domain Grant). The Document History entry below is left
 unchanged: it is a historical record of the disclosure pattern this
 document mirrored at the time, under that pattern's then-current
-name.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+name.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.3">
-          <p id="appendix-B-3.3.1">Reshaped Per-Domain Delegation Depth's disclosure from a flat
+        <li class="normal" id="appendix-B-3.4">
+          <p id="appendix-B-3.4.1">Reshaped Per-Domain Delegation Depth's disclosure from a flat
 <span class="bcp14">SHOULD</span> to a conditional, interface-addressed <span class="bcp14">MUST</span>, mirroring the
 child delegation profile's <code>max_derivations</code> disclosure pattern,
 and corrected the composed-bound arithmetic: the disclosed bound is
@@ -3214,18 +3219,18 @@ the sum of each distinct Resource AS domain's applicable
 <code>max_depth</code> (or a conservative per-domain maximum), not one
 per-domain <code>max_depth</code> times a flat domain count, and domains are
 counted by distinct Resource AS from the resource-to-AS mapping,
-never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.4">
-          <p id="appendix-B-3.4.1">Editorial density pass: split several overlong paragraphs (no BCP-14
+        <li class="normal" id="appendix-B-3.5">
+          <p id="appendix-B-3.5.1">Editorial density pass: split several overlong paragraphs (no BCP-14
 keyword sentence changed) and merged a duplicated sentence in
 Per-Domain Delegation Depth (the unconditional "a Resource AS of
 this document begins its delegation depth at 0" restated what the
 preceding, correctly conditioned sentence already said; the
-citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
+citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.5">
-          <p id="appendix-B-3.5.1">Added an explicit Resource AS requirement to authenticate the
+        <li class="normal" id="appendix-B-3.6">
+          <p id="appendix-B-3.6.1">Added an explicit Resource AS requirement to authenticate the
 redeeming client at redemption, distinct from the cross-domain
 grant's sender-constraint, and restated local-token client
 identification as a property-level requirement bound to that
@@ -3235,7 +3240,7 @@ the RFC 9068 case) rather than naming <code>client_id</code> directly (S-12).
 Scoped the origin-identity-carriage sentence to the Origin
 Principal profile when claimed, and separately barred reinterpreting
 the cross-domain grant's own <code>client_id</code> claim as the local
-identifier under any profile.<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
+identifier under any profile.<a href="#appendix-B-3.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -1545,10 +1545,11 @@ refuse actions past that instant without consulting a state source:
 the value is an immutable commitment and a ceiling only, carrying no
 liveness, so the runtime core's only-<code>active</code> rule and freshness
 requirements apply unchanged. Where a Mission state source separately
-reports the Mission <code>expired</code>, or exposes the Mission's <code>expires_at</code>,
-the PDP <span class="bcp14">MUST</span> refuse on it independent of the token's own <code>exp</code>: the
-baseline <code>mission</code> claim need not carry <code>expires_at</code>, and OAuth token
-introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> does not itself surface it. The issuance
+reports the Mission <code>terminated</code> with reason <code>expired</code>, or exposes
+the Mission's <code>expires_at</code>, the PDP <span class="bcp14">MUST</span> refuse on it independent of
+the token's own <code>exp</code>: the baseline <code>mission</code> claim need not carry
+<code>expires_at</code>, and OAuth token introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> does not
+itself surface it. The issuance
 profile caps the <code>exp</code> of every token the Mission Issuer derives at
 the Mission's <code>expires_at</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 Section "Mission-Bound Access Tokens"), so the <code>exp</code> check enforces
@@ -1753,7 +1754,7 @@ Lifecycle Signals (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" 
               <td class="text-left" rowspan="1" colspan="1">Status List Token TTL</td>
               <td class="text-left" rowspan="1" colspan="1">local bit read, plus one list fetch per window</td>
               <td class="text-left" rowspan="1" colspan="1">list publisher availability</td>
-              <td class="text-left" rowspan="1" colspan="1">terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface</td>
+              <td class="text-left" rowspan="1" colspan="1">the termination reason and its references; a non-VALID bit sends the consumer to the authoritative surface</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Lifecycle Signals</td>
@@ -2077,12 +2078,18 @@ action identifiers to minimum runtime action classes.<a href="#section-10.1-2.2.
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Establishing Validated Credential Context: the OAuth realization of
+          <p id="appendix-A-2.1.1">Runtime Input Mapping and Mission State Sources: a state source
+reports an expired Mission as <code>terminated</code> with reason <code>expired</code>,
+and the Status List cannot provide the termination reason or its
+references (#705).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Establishing Validated Credential Context: the OAuth realization of
 the runtime core's sender-constraint requirement for high-consequence
 actions: the <code>cnf</code> binding of the validated credential context (a
 JWT's claim, or an opaque token's introspection response), with a
 proof the PEP verified; a context with no binding is a bearer token.
-Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
