@@ -57,7 +57,12 @@ import {
   projectThroughEffective,
   SourceUnavailableError,
 } from "../kernel/derive.js";
-import { isSubsetSetIgnoringCapabilitySources, projectScope, splitScope } from "@mission/core";
+import {
+  DPOP_PROOF_REPLAY_WINDOW_S,
+  isSubsetSetIgnoringCapabilitySources,
+  projectScope,
+  splitScope,
+} from "@mission/core";
 import { UniqueViolationError } from "@mission/store";
 import {
   type CreationOperation,
@@ -228,6 +233,70 @@ export function continuationAuthorityFilter(
  */
 export function freshProofJti(opts: AdapterOptions, jti: unknown): boolean {
   return typeof jti === "string" && jti !== "" && opts.dpopProofReplay?.check(jti) === true;
+}
+
+/**
+ * How far in the future a token-endpoint DPoP proof's `iat` may lie (clock
+ * skew). The past bound is the replay window less this, so a proof's whole
+ * acceptance interval, `[iat - skew, iat + window - skew]`, fits inside the
+ * replay cache's memory of its `jti` (first seen plus the window): a replay is
+ * always refused by either the `iat` check or the cache, never neither.
+ */
+export const DPOP_PROOF_FUTURE_SKEW_S = 60;
+
+/**
+ * Private JWK members: a proof key carrying any of them is not a public key.
+ * `k` is a symmetric (`oct`) key's, so this also refuses a symmetric proof key.
+ */
+const PRIVATE_JWK_MEMBERS = ["d", "p", "q", "dp", "dq", "qi", "k"] as const;
+
+/** A verified token-endpoint DPoP proof: its public key and that key's thumbprint. */
+export interface VerifiedTokenEndpointProof {
+  jwk: JWK;
+  jkt: string;
+}
+
+/**
+ * @spec RFC 9449 Section 4.3 (#1163 review): the token endpoint's own DPoP
+ * proof checks, for the exchanges that verify a proof themselves rather than
+ * through oidc-provider. All REQUIRED, in order: a header `jwk` that is a
+ * public, asymmetric key (no private or symmetric members); a `dpop+jwt`
+ * signature under it; `htu` this token endpoint and `htm` POST; an `iat`
+ * inside the acceptance window ({@link DPOP_PROOF_FUTURE_SKEW_S}); and a `jti`
+ * not seen within the replay window. A previously unseen `jti` alone does not
+ * establish freshness. Returns the refusal's description on failure (the
+ * caller answers `invalid_dpop_proof`); the `jti` is recorded only once every
+ * other check has passed.
+ */
+export async function verifyTokenEndpointDpop(
+  opts: AdapterOptions,
+  proofJws: string,
+): Promise<{ ok: true; proof: VerifiedTokenEndpointProof } | { ok: false; description: string }> {
+  let jwk: JWK;
+  let jkt: string;
+  let payload: Record<string, unknown>;
+  try {
+    const header = decodeProtectedHeader(proofJws);
+    const candidate = header.jwk as (JWK & Record<string, unknown>) | undefined;
+    if (!candidate || PRIVATE_JWK_MEMBERS.some((m) => candidate[m] !== undefined)) {
+      return { ok: false, description: "invalid DPoP proof" };
+    }
+    jwk = candidate;
+    jkt = await calculateJwkThumbprint(jwk);
+    ({ payload } = (await jwtVerify(proofJws, jwk, { typ: "dpop+jwt" })) as { payload: Record<string, unknown> });
+  } catch {
+    return { ok: false, description: "invalid DPoP proof" };
+  }
+  if (payload.htu !== `${opts.issuer}/token` || payload.htm !== "POST") {
+    return { ok: false, description: "invalid DPoP proof" };
+  }
+  if (typeof payload.iat !== "number") return { ok: false, description: "DPoP proof has no iat" };
+  const nowS = Math.floor(Date.now() / 1000);
+  if (payload.iat > nowS + DPOP_PROOF_FUTURE_SKEW_S || payload.iat < nowS - (DPOP_PROOF_REPLAY_WINDOW_S - DPOP_PROOF_FUTURE_SKEW_S)) {
+    return { ok: false, description: "DPoP proof iat is outside the acceptance window" };
+  }
+  if (!freshProofJti(opts, payload.jti)) return { ok: false, description: "DPoP proof jti missing or replayed" };
+  return { ok: true, proof: { jwk, jkt } };
 }
 
 /**
@@ -1581,32 +1650,19 @@ export async function verifySubjectPossession(
     txError(ctx, 400, "invalid_grant", "subject_token is not sender-constrained (no cnf.jkt)");
     return null;
   }
-  // Step 3: POSSESSION — the presenter controls the subject_token's OWN cnf key.
+  // Step 3: POSSESSION. The presenter controls the subject_token's OWN cnf key,
+  // under a complete, fresh proof (@spec RFC 9449 Section 4.3, #1163 review).
   const proofJws = ctx.get("DPoP");
   if (!proofJws) {
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return null;
   }
-  let jkt: string;
-  let dpopJwk: JWK;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    txError(ctx, 400, "invalid_dpop_proof", verified.description);
     return null;
   }
-  if (!freshProofJti(opts, proofJti)) {
-    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
-    return null;
-  }
+  const { jkt, jwk: dpopJwk } = verified.proof;
   if (jkt !== cnfJkt) {
     txError(ctx, 400, "invalid_grant", "possession proof does not match the subject_token confirmation key");
     return null;

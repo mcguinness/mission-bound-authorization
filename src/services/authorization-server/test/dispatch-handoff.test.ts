@@ -31,7 +31,7 @@ import {
   type JWK,
   SignJWT,
 } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
@@ -46,12 +46,14 @@ import {
 } from "../src/adapters/dispatch-handoff.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { DISPATCH_HANDOFF_SKEW_MS, DispatchHandoffStore } from "../src/kernel/dispatch-handoff-store.js";
+import { GateError } from "../src/kernel/kernel.js";
 import type { AuthorityEntry } from "../src/kernel/types.js";
 import {
   ALL_PROVIDER_CAPABILITIES,
   buildAuthorizationServer,
   type BuiltAs,
   type ProviderCapability,
+  SourceUnavailableError,
 } from "../src/index.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
@@ -83,6 +85,8 @@ let otherDpop: Keys;
 let dispatcherJkt: string;
 let agentJkt: string;
 let seq = 0;
+/** The injected authority source's outage switch: set, every resolution raises the transient class. */
+let sourceOutage: string | undefined;
 
 async function clientAssertion(party: Party): Promise<string> {
   return new SignJWT({})
@@ -104,12 +108,29 @@ async function dpopProof(keys: Keys, extra: Record<string, unknown> = {}): Promi
     .sign(keys.privateKey);
 }
 
+/**
+ * A DPoP proof carrying exactly `claims` over the defaults (no automatic
+ * `iat`), under `keys`; `jwk` replaces the header key.
+ */
+async function rawProof(keys: Keys, claims: Record<string, unknown>, jwk?: JWK): Promise<string> {
+  return new SignJWT({ htu: TOKEN_ENDPOINT, htm: "POST", jti: crypto.randomUUID(), ...claims })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: jwk ?? (await exportJWK(keys.publicKey)) })
+    .sign(keys.privateKey);
+}
+
+const nowS = (): number => Math.floor(Date.now() / 1000);
+
 /** POST /token as `party` with a DPoP proof under `keys`, with the dpop-nonce retry. */
-async function tokenRequest(party: Party, keys: Keys, params: Record<string, string>): Promise<Response> {
+async function tokenRequest(
+  party: Party,
+  keys: Keys,
+  params: Record<string, string>,
+  proof: (extra: Record<string, unknown>) => Promise<string> = (extra) => dpopProof(keys, extra),
+): Promise<Response> {
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(TOKEN_ENDPOINT, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(keys, extra) },
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
       body: new URLSearchParams({
         ...params,
         client_assertion: await clientAssertion(party),
@@ -262,6 +283,12 @@ beforeAll(async () => {
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     testTokenSigningJwk: (await exportJWK(tokenKeys.privateKey)) as JWK,
+    authoritySource: {
+      effectiveAuthoritySet: (record) => {
+        if (sourceOutage !== undefined) throw new SourceUnavailableError(sourceOutage);
+        return as.kernel.effectiveAuthoritySet(record);
+      },
+    },
     testClients: [
       {
         client_id: INTRUDER_ID,
@@ -424,6 +451,20 @@ describe("Dispatch Handoff: the explicit selector (@spec mission-template#dispat
     expect(as.kernel.findChildren(instance.missionId)).toHaveLength(0);
     // Nothing was counted: no family, no child, no handoff redemption.
     expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before?.derivation_count);
+  });
+
+  it("a selector sent without a value is treated as omitted (RFC 6749 Section 3.2), never as a malformed value", async () => {
+    // The other parameters select child creation, which refuses for its own
+    // missing parameters; nothing is created and nothing is counted.
+    const instance = await dispatchInstance();
+    const before = as.kernel.get(instance.missionId)?.derivation_count;
+    const res = await err(await handoff(instance.token, { mission_dispatch_handoff: "" }));
+    expect(res.status).toBe(400);
+    expect(res.error).toBe("invalid_request");
+    expect(res.error_description).not.toContain("mission_dispatch_handoff");
+    expect(res.error_description).toContain("creation_request_id");
+    expect(as.kernel.findChildren(instance.missionId)).toHaveLength(0);
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before);
   });
 
   it("the selector requires the jwt requested_token_type", async () => {
@@ -604,8 +645,15 @@ describe("Dispatch Handoff: redemption refusals (@spec mission-template#dispatch
     const results = await Promise.all([redeem(grant), redeem(grant, "agent", otherDpop)]);
     const statuses = results.map((r) => r.status).sort();
     expect(statuses).toEqual([200, 400]);
+    // The loser met the winner's reservation (retryable) or its consumption.
     const loser = results.find((r) => r.status === 400) as Response;
-    expect(((await loser.json()) as { error_description?: string }).error_description).toContain("already redeemed");
+    expect(((await loser.json()) as { error_description?: string }).error_description).toMatch(
+      /in progress; retry|already redeemed/,
+    );
+    // Once the winner has its token, a retry is a replay.
+    const after = await err(await redeem(grant));
+    expect(after.error).toBe("invalid_grant");
+    expect(after.error_description).toContain("already redeemed");
     expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
   });
 
@@ -728,6 +776,157 @@ describe("Dispatch Handoff: recovery stays within the handed-off token (#1153 ru
     const recoveredBody = (await recovered.json()) as { refresh_token?: string };
     expect(recovered.status, JSON.stringify(recoveredBody)).toBe(200);
     expect(recoveredBody.refresh_token).toBe(firstBody.refresh_token);
+  });
+});
+
+describe("Dispatch Handoff: complete, fresh DPoP proofs on both legs (@spec RFC 9449 Section 4.3, #1163 review)", () => {
+  /** The refused proofs: no iat, a day old, past the 240 s past bound, and an hour ahead. */
+  const stale = () => [
+    { label: "no iat", claims: {}, description: "DPoP proof has no iat" },
+    { label: "a day old", claims: { iat: nowS() - 86_400 }, description: "outside the acceptance window" },
+    { label: "past the window", claims: { iat: nowS() - 260 }, description: "outside the acceptance window" },
+    { label: "an hour ahead", claims: { iat: nowS() + 3_600 }, description: "outside the acceptance window" },
+  ];
+
+  it("the exchange refuses an incomplete, stale or future-dated proof; a proof within the window succeeds", async () => {
+    const instance = await dispatchInstance();
+    const params = {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: instance.token,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      mission_dispatch_handoff: "true",
+    };
+    for (const { label, claims, description } of stale()) {
+      const res = await err(
+        await tokenRequest("dispatcher", dispatcherDpop, params, (extra) => rawProof(dispatcherDpop, { ...claims, ...extra })),
+      );
+      expect(res.status, label).toBe(400);
+      expect(res.error, label).toBe("invalid_dpop_proof");
+      expect(res.error_description, label).toContain(description);
+    }
+    const ok = await tokenRequest("dispatcher", dispatcherDpop, params, (extra) =>
+      rawProof(dispatcherDpop, { iat: nowS() - 200, ...extra }),
+    );
+    expect(ok.status, JSON.stringify(await ok.clone().json())).toBe(200);
+  });
+
+  it("the redemption refuses an incomplete, stale or future-dated proof, or a private or symmetric proof key, taking nothing; the grant then redeems", async () => {
+    const instance = await dispatchInstance();
+    const h = await handoff(instance.token);
+    const grant = ((await h.json()) as { access_token: string }).access_token;
+    const before = as.kernel.get(instance.missionId)?.derivation_count;
+    const params = { grant_type: CHILD_JWT_BEARER_GRANT_TYPE, assertion: grant };
+    for (const { label, claims, description } of stale()) {
+      const res = await err(
+        await tokenRequest("agent", agentDpop, params, (extra) => rawProof(agentDpop, { ...claims, ...extra })),
+      );
+      expect(res.status, label).toBe(400);
+      expect(res.error, label).toBe("invalid_dpop_proof");
+      expect(res.error_description, label).toContain(description);
+    }
+    const privateJwk = (await exportJWK(agentDpop.privateKey)) as JWK;
+    const leaked = await err(
+      await tokenRequest("agent", agentDpop, params, (extra) =>
+        rawProof(agentDpop, { iat: nowS(), ...extra }, privateJwk),
+      ),
+    );
+    expect(leaked.error).toBe("invalid_dpop_proof");
+    expect(leaked.error_description).toBe("invalid DPoP proof");
+    // A symmetric proof key: an HS256 proof under the `oct` key in its own header.
+    const secret = crypto.getRandomValues(new Uint8Array(32));
+    const octJwk = { kty: "oct", k: Buffer.from(secret).toString("base64url") };
+    const symmetric = await err(
+      await tokenRequest("agent", agentDpop, params, (extra) =>
+        new SignJWT({ htu: TOKEN_ENDPOINT, htm: "POST", jti: crypto.randomUUID(), iat: nowS(), ...extra })
+          .setProtectedHeader({ alg: "HS256", typ: "dpop+jwt", jwk: octJwk })
+          .sign(secret),
+      ),
+    );
+    expect(symmetric.error).toBe("invalid_dpop_proof");
+    expect(symmetric.error_description).toBe("invalid DPoP proof");
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before);
+    expect((await redeem(grant)).status).toBe(200);
+  });
+});
+
+describe("Dispatch Handoff: a redemption that issues no token leaves the grant redeemable (#1163 review)", () => {
+  async function grantOf(instance: Instance): Promise<string> {
+    const h = await handoff(instance.token);
+    const hb = (await h.json()) as { access_token: string };
+    expect(h.status, JSON.stringify(hb)).toBe(200);
+    return hb.access_token;
+  }
+
+  it("an authority-source outage before the grant is taken refuses 503; restored, the same grant redeems", async () => {
+    const instance = await dispatchInstance();
+    const grant = await grantOf(instance);
+    const before = as.kernel.get(instance.missionId)?.derivation_count ?? 0;
+    sourceOutage = "authority source unavailable";
+    let res: Awaited<ReturnType<typeof err>>;
+    try {
+      res = await err(await redeem(grant));
+    } finally {
+      sourceOutage = undefined;
+    }
+    expect(res.status).toBe(503);
+    expect(res.error).toBe("temporarily_unavailable");
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before);
+    const ok = await redeem(grant);
+    expect(ok.status, JSON.stringify(await ok.clone().json())).toBe(200);
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
+  });
+
+  /** The consumed-grant row for `grant`'s jti, if any. */
+  const takenRow = (grant: string) =>
+    as.kernel.dispatchHandoffs.db
+      .prepare("SELECT state FROM dispatch_handoff_consumed WHERE jti = ?")
+      .get(decodeJwt(grant).jti as string) as { state: string } | undefined;
+
+  it("a derivation refused after the grant is taken releases it; once derivable again, the same grant redeems", async () => {
+    const instance = await dispatchInstance();
+    const grant = await grantOf(instance);
+    as.kernel.db.prepare("UPDATE missions SET derivation_limit = derivation_count WHERE id = ?").run(instance.missionId);
+    const refused = await err(await redeem(grant));
+    expect(refused.error).toBe("invalid_grant");
+    expect(refused.mission_error).toBe("derivations_exhausted");
+    expect(takenRow(grant), "the reservation was released").toBeUndefined();
+    as.kernel.db.prepare("UPDATE missions SET derivation_limit = NULL WHERE id = ?").run(instance.missionId);
+    expect((await redeem(grant)).status).toBe(200);
+    expect(takenRow(grant)?.state).toBe("consumed");
+  });
+
+  it("an issuance failure after the derivation is reserved releases the grant; the retry redeems and counts it once", async () => {
+    const instance = await dispatchInstance();
+    const grant = await grantOf(instance);
+    const before = as.kernel.get(instance.missionId)?.derivation_count ?? 0;
+    // The token save re-gates the instance; fail the first such gate after
+    // the derivation was reserved (the count has moved), once.
+    const real = as.kernel.gateActive.bind(as.kernel);
+    let injected = false;
+    const spy = vi.spyOn(as.kernel, "gateActive").mockImplementation((id: string) => {
+      if (!injected && (as.kernel.get(id)?.derivation_count ?? 0) > before) {
+        injected = true;
+        throw new GateError("mission_not_active", "injected issuance failure");
+      }
+      return real(id);
+    });
+    let refused: Awaited<ReturnType<typeof err>>;
+    try {
+      refused = await err(await redeem(grant));
+    } finally {
+      spy.mockRestore();
+    }
+    expect(injected, "the issuance-time gate ran after the derivation was reserved").toBe(true);
+    expect(refused.status).toBe(400);
+    expect(refused.error).toBe("invalid_grant");
+    expect(takenRow(grant), "the reservation was released").toBeUndefined();
+    // The failed attempt reserved its derivation; the retry replays it.
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
+    const ok = await redeem(grant);
+    expect(ok.status, JSON.stringify(await ok.clone().json())).toBe(200);
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
+    expect((await err(await redeem(grant))).error_description).toContain("already redeemed");
   });
 });
 
@@ -913,20 +1112,29 @@ describe("the handoff grant's own validation (unit)", () => {
 });
 
 describe("the consumed-grant store (unit, @spec mission-template#dispatch-handoff single use)", () => {
-  it("consumes atomically and remembers a consumed jti through exp plus skew, then prunes it", () => {
+  it("reserves atomically, releases only an unconfirmed reservation, and remembers a consumed jti through exp plus skew", () => {
     let now = Date.parse("2026-10-08T00:00:00Z");
     const store = new DispatchHandoffStore(() => new Date(now));
     const expMs = now + 300_000;
-    expect(store.consume({ jti: "j1", missionId: "m", expMs })).toBe(true);
-    expect(store.consume({ jti: "j1", missionId: "m", expMs })).toBe(false);
+    const j1 = { jti: "j1", missionId: "m", expMs };
+    expect(store.reserve(j1)).toBe("reserved");
+    expect(store.reserve(j1)).toBe("in-progress");
+    // A reservation that issued nothing is released: the grant is redeemable again.
+    store.release("j1");
+    expect(store.reserve(j1)).toBe("reserved");
+    store.confirm("j1");
+    expect(store.reserve(j1)).toBe("consumed");
+    // A consumed grant is never released.
+    store.release("j1");
+    expect(store.reserve(j1)).toBe("consumed");
     // Past exp, within the skew allowance: still remembered.
     now = expMs + DISPATCH_HANDOFF_SKEW_MS - 1;
-    expect(store.consume({ jti: "j1", missionId: "m", expMs })).toBe(false);
+    expect(store.reserve(j1)).toBe("consumed");
     // Another jti meanwhile is independent.
-    expect(store.consume({ jti: "j2", missionId: "m", expMs: now + 1000 })).toBe(true);
+    expect(store.reserve({ jti: "j2", missionId: "m", expMs: now + 1000 })).toBe("reserved");
     // Past the horizon: pruned (the grant itself no longer verifies by then).
     now = expMs + DISPATCH_HANDOFF_SKEW_MS + 1;
-    store.consume({ jti: "j3", missionId: "m", expMs: now + 1000 });
+    store.reserve({ jti: "j3", missionId: "m", expMs: now + 1000 });
     const rows = store.db.prepare("SELECT jti FROM dispatch_handoff_consumed ORDER BY jti").all() as Array<{ jti: string }>;
     expect(rows.map((r) => r.jti)).toEqual(["j2", "j3"]);
   });

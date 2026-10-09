@@ -59,8 +59,8 @@
     "content_sha256": "9201cdc83aa8e79a1a2615bf25f69c9ff8fac11424be6336c8f5052ba1f24b5b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "ccbe02df81eb64f2dd0e477f764a5cbef96b7a3c",
-    "content_sha256": "7869cd2a8c04add97600a3fbe195198e2931ba5d410b88a6b63f9e306f8353e5"
+    "revision": "777368ed96be072b8cd997992cbd0164eb9466e9",
+    "content_sha256": "761e73c40c0fe5773adae4f493bbe0144bcb8755ab907b8c7353e21bb70a05bf"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -26692,7 +26692,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "D361: the explicit selector, checked before every other exchange's selector. An empty value is not a selector: RFC 6749 Section 3.1 treats a parameter sent without a value as omitted, so `mission_dispatch_handoff=` is an ordinary request for whichever exchange its other parameters select. The jwt requested_token_type the request description names is also enforced (invalid_request). Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "D361: the explicit selector, checked before every other exchange's selector. An empty value is not a selector (template.handoff.empty-selector-omitted). The jwt requested_token_type the request description names is also enforced (invalid_request). Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
   },
   {
    "id": "template.handoff.exchange-possession",
@@ -27048,13 +27048,13 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The activity check precedes consumption, so a grant presented while its instance is suspended stays redeemable within its lifetime. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "The activity check is the reserved derivation's state gate; its refusal releases the grant, so a grant presented while its instance is suspended stays redeemable within its lifetime. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
   },
   {
    "id": "template.handoff.single-use",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "dispatch-handoff",
-   "text": "consume the grant's `jti` atomically, and remember a consumed grant for as long as it would otherwise be accepted, clock skew included, refusing any further presentation with `invalid_grant`",
+   "text": "consume the grant's `jti` atomically, and remember a consumed grant for as long as it would otherwise be accepted, clock skew included, refusing any further presentation with `invalid_grant`, while a redemption that issues no token leaves the grant unconsumed",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -27065,7 +27065,7 @@
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a second redemption of a redeemed grant is refused invalid_grant and counts nothing, under another of the Agent's keys too; of two simultaneous redemptions exactly one succeeds and one derivation is counted; a consumed jti is still refused past the grant's exp through the skew allowance and is pruned only after it"
+    "normative": "a second redemption of a redeemed grant is refused invalid_grant and counts nothing, under another of the Agent's keys too; of two simultaneous redemptions exactly one succeeds (the other meets the reservation and is told to retry, or the consumption) and one derivation is counted, and once the winner has its token a retry is refused as a replay; a consumed jti is still refused past the grant's exp through the skew allowance and is pruned only after it; a redemption that issues no token leaves the grant redeemable: an authority-source outage before the grant is taken refuses 503, a derivation refused after it is taken, or an issuance failure after the derivation is reserved, releases it, and the same grant then redeems"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -27084,12 +27084,30 @@
     },
     {
      "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
-     "name": "the consumed-grant store (unit, @spec mission-template#dispatch-handoff single use) > consumes atomically and remembers a consumed jti through exp plus skew, then prunes it",
+     "name": "the consumed-grant store (unit, @spec mission-template#dispatch-handoff single use) > reserves atomically, releases only an unconfirmed reservation, and remembers a consumed jti through exp plus skew",
      "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: a redemption that issues no token leaves the grant redeemable (#1163 review) > an authority-source outage before the grant is taken refuses 503; restored, the same grant redeems",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: a redemption that issues no token leaves the grant redeemable (#1163 review) > a derivation refused after the grant is taken releases it; once derivable again, the same grant redeems",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: a redemption that issues no token leaves the grant redeemable (#1163 review) > an issuance failure after the derivation is reserved releases the grant; the retry redeems and counts it once",
+     "level": "endpoint",
      "surface": "token-endpoint"
     }
    ],
-   "notes": "D361: its own store (kernel/dispatch-handoff-store.ts), not the DPoP replay cache: one INSERT on the jti primary key, no eviction before exp plus skew. The store is in memory and built per boot like every AS store (D25/D27); the AS signing keys are per boot too, so no grant minted before a restart verifies after it, which is how a restart cannot revive a consumed grant here. A deployment with persistent signing keys needs this store durable. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "D361: its own store (kernel/dispatch-handoff-store.ts), not the DPoP replay cache: one INSERT on the jti primary key, no eviction of a consumed jti before exp plus skew. The store is in memory and built per boot like every AS store (D25/D27); the AS signing keys are per boot too, so no grant minted before a restart verifies after it, which is how a restart cannot revive a consumed grant here. A deployment with persistent signing keys requires persistent consumption records (#1163 review). Taking is two-phase (#1163 review P2): the jti is reserved, confirmed once the token exists, and released when none is issued; the authority source is resolved before the jti is taken. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
   },
   {
    "id": "template.handoff.redemption-issue",
@@ -27176,7 +27194,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a redemption increments the instance's derivation_count by exactly one while the handoff exchange counts nothing, a replayed or concurrently losing redemption counts nothing, a refused handoff request counts nothing, and the Dispatcher's grant stays the instance's own"
+    "normative": "a redemption increments the instance's derivation_count by exactly one while the handoff exchange counts nothing, a replayed or concurrently losing redemption counts nothing, a refused handoff request counts nothing, and the Dispatcher's grant stays the instance's own; a retry after an issuance failure counts nothing more, the derivation being reserved under the grant's own jti"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -27204,9 +27222,15 @@
      "name": "Dispatch Handoff: the explicit selector (@spec mission-template#dispatch-handoff, D361) > every conflicting selector is refused invalid_request and never falls through to its own exchange",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: a redemption that issues no token leaves the grant redeemable (#1163 review) > an issuance failure after the derivation is reserved releases the grant; the retry redeems and counts it once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "The Agent's token is minted under a provider Grant of its own, recorded in the Mission-bound grant index (kind dispatch-handoff) without moving the instance's grant_id; the redemption counts once (gateDerivation) and the save-time hook re-gates active state only. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "The Agent's token is minted under a provider Grant of its own, recorded in the Mission-bound grant index (kind dispatch-handoff) without moving the instance's grant_id; the redemption counts once (reserveDerivation, keyed by the grant's jti, @spec control-plane#serialization) and the save-time hook re-gates active state only. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
   },
   {
    "id": "template.handoff.agent-continues",
@@ -27248,6 +27272,105 @@
     }
    ],
    "notes": "D357 acceptance bar item 4 and the recovery half of item 5, with #1153's self-exchange rules 1 and 2 in force. The shipped subagent-invoice-extractor registration (token exchange per D361, and refresh_token for the family's refresh) is the Agent. AAM step 3 (aam-nightly-reconciliation.test.ts) runs the same path against the live stack in CI's impl-ci; it is skipped without OpenFGA."
+  },
+  {
+   "id": "template.handoff.empty-selector-omitted",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "A `mission_dispatch_handoff` sent without a value is treated as omitted ({{Section 3.2 of RFC6749}}), not as a value other than `true`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a mission_dispatch_handoff sent with an empty value is treated as omitted: the request is processed as the exchange its other parameters select (here child creation, refused for its own missing creation_request_id), never refused as a malformed selector; nothing is created or counted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the explicit selector (@spec mission-template#dispatch-handoff, D361) > a selector sent without a value is treated as omitted (RFC 6749 Section 3.2), never as a malformed value",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1163 review: the owner accepted the omitted reading and asked for it to be stated, citing RFC 6749 Section 3.2 (the token endpoint). oidc-provider drops a parameter sent without a value."
+  },
+  {
+   "id": "template.handoff.exchange-proof",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "It presents a DPoP proof ({{RFC9449}}) under the key the subject token is bound to.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the handoff exchange refuses invalid_dpop_proof a proof without iat, one a day old, one older than 240 seconds, and one an hour ahead, and accepts one 200 seconds old; a proof under any key but the subject token's is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: complete, fresh DPoP proofs on both legs (@spec RFC 9449 Section 4.3, #1163 review) > the exchange refuses an incomplete, stale or future-dated proof; a proof within the window succeeds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > wrong key: a DPoP proof under any key but the instance token's is refused invalid_grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1163 review P1 (RFC 9449 Section 4.3): the token endpoint's own proof checks (verifyTokenEndpointDpop) require a public, asymmetric header key, the signature, htu and htm, an iat within [now - 240 s, now + 60 s], then an unseen jti. The window is asymmetric so a proof's whole acceptance interval fits inside the replay cache's 300 s memory of its jti. The check runs in verifySubjectPossession, so child creation and expansion apply it too. Proved by disabling the check (dispatch-handoff mutation harnesses, #1158 and the #1163 review)."
+  },
+  {
+   "id": "template.handoff.redemption-proof",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "authenticating as itself and presenting a DPoP proof under its own key",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the redemption refuses invalid_dpop_proof a proof without iat, a stale or future-dated one, and one whose header key carries private or symmetric (oct) members, taking nothing, after which the same grant redeems; a redemption without a proof is refused invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: complete, fresh DPoP proofs on both legs (@spec RFC 9449 Section 4.3, #1163 review) > the redemption refuses an incomplete, stale or future-dated proof, or a private or symmetric proof key, taking nothing; the grant then redeems",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > a redemption without a DPoP proof is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1163 review P1 (RFC 9449 Section 4.3); the same verifyTokenEndpointDpop as the exchange. Every proof failure at redemption is invalid_dpop_proof (the child redemption, whose block this was copied from, answers invalid_request for an invalid proof). A private `d` is also refused by jose itself; the symmetric case (an HS256 proof under an oct key, which jose would verify) is the check's own witness. Proved by disabling the check (dispatch-handoff mutation harnesses, #1158 and the #1163 review)."
   },
   {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",

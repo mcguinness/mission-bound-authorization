@@ -13,16 +13,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import {
-  calculateJwkThumbprint,
-  createLocalJWKSet,
-  type CryptoKey,
-  decodeProtectedHeader,
-  type JSONWebKeySet,
-  type JWK,
-  jwtVerify,
-  SignJWT,
-} from "jose";
+import { createLocalJWKSet, type CryptoKey, type JSONWebKeySet, jwtVerify, SignJWT } from "jose";
 import { errors, type KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
@@ -32,11 +23,11 @@ import { GateError } from "../kernel/kernel.js";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
 import {
   authoritySource,
-  freshProofJti,
   JWT_TOKEN_TYPE,
   presentedTokenAuthority,
   txError,
   verifySubjectPossession,
+  verifyTokenEndpointDpop,
 } from "./continuation-grant.js";
 import {
   type AdapterOptions,
@@ -288,9 +279,9 @@ function refuse(ctx: KoaContextWithOIDC, error: string, description: string): vo
  * the Agent under a provider Grant of its own, recorded in the Mission-bound
  * grant index (kind `dispatch-handoff`) WITHOUT moving the Mission's
  * `grant_id`, so the Dispatcher's token keeps resolving. The redemption is
- * one counted derivation (`gateDerivation` here); the save-time hook then
- * resolves the grant through the index and re-gates with `gateActive` only,
- * as for a delegation family, so nothing is counted twice.
+ * one counted derivation (`reserveDerivation` here, keyed by the grant); the
+ * save-time hook then resolves the grant through the index and re-gates with
+ * `gateActive` only, as for a delegation family, so nothing is counted twice.
  */
 export async function handleDispatchHandoffRedemption(
   opts: AdapterOptions,
@@ -323,41 +314,22 @@ export async function handleDispatchHandoffRedemption(
     return;
   }
 
-  // The Agent's own key: its DPoP proof binds the token it receives.
+  // The Agent's own key: its DPoP proof binds the token it receives. Every
+  // proof failure is invalid_dpop_proof (@spec RFC 9449 Section 4.3, #1163
+  // review), a stale or incomplete proof included.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    jkt = await calculateJwkThumbprint(header.jwk as JWK);
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") throw new Error("DPoP htu/htm mismatch");
-    proofJti = proof.jti;
-  } catch {
-    throw new errors.InvalidRequest("invalid DPoP proof");
-  }
-  if (!freshProofJti(opts, proofJti)) {
-    refuse(ctx, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuse(ctx, "invalid_dpop_proof", verified.description);
     return;
   }
+  const { jkt } = verified.proof;
 
-  // 3. The instance must be active, with a derivation left: a non-counting
-  //    precheck, so a refusal here leaves the grant unconsumed.
-  try {
-    kernel.checkDerivation(record.id);
-  } catch (e) {
-    throw gateRefusal(opts, e, record.id);
-  }
-
-  // 4. Single use: consumed atomically and remembered past the grant's exp.
-  if (!kernel.dispatchHandoffs.consume({ jti: grant.jti, missionId: record.id, expMs: grant.expMs })) {
-    refuse(ctx, "invalid_grant", "dispatch handoff grant was already redeemed");
-    return;
-  }
-
-  // 5. The Agent's token: the grant's authority narrowed by the current
-  //    effective set.
+  // 5 (resolved first). The grant's authority narrowed by the current
+  //    effective set, resolved through the authority source BEFORE the grant
+  //    is taken (#1163 review): a transient outage refuses 503 and leaves the
+  //    grant redeemable.
   let effective: AuthorityEntry[];
   try {
     effective = authoritySource(opts).effectiveAuthoritySet(record);
@@ -373,43 +345,79 @@ export async function handleDispatchHandoffRedemption(
     refuse(ctx, "invalid_grant", "the handed-off authority is no longer within the instance's effective authority");
     return;
   }
-  // @spec mission-template#dispatch-handoff, continuation#transport-async
-  // (#1157, D358) — the redeemed token is the Agent's delegation handle: its
-  // audience is the Agent's own client_id (not a resource), and it is
-  // sender-constrained to the Agent's key, so the Agent opens the async
-  // delegation family as its approved agent.
-  const handleAudience = record.client_id;
-  const oidcGrant = new provider.Grant({ accountId: record.subject.sub, clientId: record.client_id });
-  for (const entry of authority) {
-    (oidcGrant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
+
+  // 4. Single use: the jti is taken atomically, then confirmed once the token
+  //    exists; a redemption that issues no token releases it, so the grant
+  //    stays redeemable within its lifetime.
+  const taken = kernel.dispatchHandoffs.reserve({ jti: grant.jti, missionId: record.id, expMs: grant.expMs });
+  if (taken === "consumed") {
+    refuse(ctx, "invalid_grant", "dispatch handoff grant was already redeemed");
+    return;
   }
-  const grantId = await oidcGrant.save();
-  kernel.missionBoundGrants.record({ grantId, missionId: record.id, kind: "dispatch-handoff" });
-  try {
-    kernel.gateDerivation(record.id);
-  } catch (e) {
-    await (oidcGrant as unknown as { destroy: () => Promise<void> }).destroy();
-    throw gateRefusal(opts, e, record.id);
+  if (taken === "in-progress") {
+    txError(ctx, 400, "invalid_request", "a redemption of this dispatch handoff grant is in progress; retry with the same grant");
+    return;
   }
 
-  const info = resourceServerInfoFor(handleAudience, opts.accessTokenTTL ?? 300);
-  info.accessTokenTTL = Math.min(
-    info.accessTokenTTL,
-    Math.max(1, Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000)),
-  );
-  const at = new provider.AccessToken({
-    accountId: record.subject.sub,
-    client,
-    grantId,
-    gty: CHILD_JWT_BEARER_GRANT_TYPE,
-    rar: authority,
-    scope: SCOPE_DECIDED_AT_SAVE,
-  });
-  at.resourceServer = newResourceServer(provider, handleAudience, info);
-  at.jkt = jkt; // sender-constrained to the Agent's own key
-  markDelegationHandle(at);
-  ctx.oidc.entity("AccessToken", at);
-  const jwt = await at.save();
+  // 3 and 5. The Agent's token, under a provider Grant owned by the Agent and
+  //    recorded as Mission-bound. The redemption is one counted derivation,
+  //    reserved against the grant's own jti as its operation identity
+  //    (@spec control-plane#serialization): its gate refuses an instance that
+  //    is not active (the grant is then released), and a retry after a failed
+  //    attempt replays that reservation and never counts twice.
+  let oidcGrant: { destroy: () => Promise<void> } | undefined;
+  let derivationReservation: string | undefined;
+  let jwt: string;
+  let at: InstanceType<Provider["AccessToken"]>;
+  try {
+    // @spec mission-template#dispatch-handoff, continuation#transport-async
+    // (#1157, D358) — the redeemed token is the Agent's delegation handle: its
+    // audience is the Agent's own client_id (not a resource), and it is
+    // sender-constrained to the Agent's key, so the Agent opens the async
+    // delegation family as its approved agent.
+    const handleAudience = record.client_id;
+    const agentGrant = new provider.Grant({ accountId: record.subject.sub, clientId: record.client_id });
+    for (const entry of authority) {
+      (agentGrant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
+    }
+    const grantId = await agentGrant.save();
+    oidcGrant = agentGrant as unknown as { destroy: () => Promise<void> };
+    kernel.missionBoundGrants.record({ grantId, missionId: record.id, kind: "dispatch-handoff" });
+    const admitted = kernel.reserveDerivation(record.id, { operationId: `dispatch-handoff:${grant.jti}` });
+    derivationReservation = admitted.reservation.reservation.reservationId;
+
+    const info = resourceServerInfoFor(handleAudience, opts.accessTokenTTL ?? 300);
+    info.accessTokenTTL = Math.min(
+      info.accessTokenTTL,
+      Math.max(1, Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000)),
+    );
+    at = new provider.AccessToken({
+      accountId: record.subject.sub,
+      client,
+      grantId,
+      gty: CHILD_JWT_BEARER_GRANT_TYPE,
+      rar: authority,
+      scope: SCOPE_DECIDED_AT_SAVE,
+    });
+    at.resourceServer = newResourceServer(provider, handleAudience, info);
+    at.jkt = jkt; // sender-constrained to the Agent's own key
+    markDelegationHandle(at);
+    ctx.oidc.entity("AccessToken", at);
+    jwt = await at.save();
+  } catch (e) {
+    // No token was issued: release the grant and drop the Agent's provider
+    // Grant. A derivation already reserved stays pending under the grant's
+    // operation identity, so the retry mints against it.
+    kernel.dispatchHandoffs.release(grant.jti);
+    await oidcGrant?.destroy();
+    if (e instanceof SourceUnavailableError) {
+      txError(ctx, 503, "temporarily_unavailable", e.message);
+      return;
+    }
+    throw gateRefusal(opts, e, record.id);
+  }
+  kernel.releaseDerivation(derivationReservation as string, { artifactId: at.jti });
+  kernel.dispatchHandoffs.confirm(grant.jti);
 
   ctx.status = 200;
   ctx.body = {
