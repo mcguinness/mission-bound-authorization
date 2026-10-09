@@ -522,12 +522,41 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
     expect(res.error_description).toContain("not a dispatched instance");
   });
 
-  it("an instance no longer active is refused invalid_grant", async () => {
+  it.each([
+    ["suspended", "suspend", "mission_suspended"],
+    ["revoked", "revoke", "mission_revoked"],
+    ["completed", "complete", "mission_completed"],
+  ] as const)(
+    "an instance %s is refused invalid_request with its mission_error, and no handoff grant is issued (D369)",
+    async (state, operation, missionError) => {
+      const instance = await dispatchInstance();
+      as.kernel.transition(instance.missionId, operation);
+      const res = await handoff(instance.token);
+      const body = (await res.json()) as {
+        error?: string;
+        error_description?: string;
+        mission_error?: string;
+        access_token?: string;
+      };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.mission_error).toBe(missionError);
+      expect(body.error_description).toContain(`dispatched instance is ${state}`);
+      expect(body.access_token).toBeUndefined();
+    },
+  );
+
+  it("an instance past its expires_at is refused invalid_request with mission_expired, and no handoff grant is issued (D369)", async () => {
     const instance = await dispatchInstance();
-    as.kernel.transition(instance.missionId, "revoke");
-    const res = await err(await handoff(instance.token));
-    expect(res.error).toBe("invalid_grant");
-    expect(res.error_description).toContain("dispatched instance is revoked");
+    as.kernel.db
+      .prepare("UPDATE missions SET expires_at = ? WHERE id = ?")
+      .run(new Date(Date.now() - 1000).toISOString(), instance.missionId);
+    const res = await handoff(instance.token);
+    const body = (await res.json()) as { error?: string; mission_error?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_error).toBe("mission_expired");
+    expect(body.access_token).toBeUndefined();
   });
 
   it("a subject token without readable authority is refused invalid_grant", async () => {
