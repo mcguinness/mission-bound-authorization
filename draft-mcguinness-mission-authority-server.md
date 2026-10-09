@@ -966,17 +966,28 @@ A Mission-joining PDP and its PEPs MUST observe the following:
 7. **Authority comes from the Mission.** On a successful join, the PDP
    evaluates the action under the runtime profile's decision contract,
    drawing the Authority Set from the Mission (the audience-scoped
-   Mission Status response or a materialized policy view), since the
-   credential carries none. All other decision inputs and invariants
-   of {{I-D.draft-mcguinness-mission-runtime}} apply unchanged.
+   Mission Status response or a materialized policy view), never from
+   the credential: the credential's own authority is the separate
+   bound of rule 8 and never substitutes for the Mission's. All other
+   decision inputs and invariants of
+   {{I-D.draft-mcguinness-mission-runtime}} apply unchanged.
 8. **The permit intersects three bounds.** A permit under a join never
    exceeds any of three independently evaluated bounds: the authority
-   the acting credential itself carries (the token as issued, enforced
-   at the resource server or gateway), the Mission's approved
-   authority, and current Resource policy. The join adds the Mission
-   bound and MUST NOT widen either of the other two. A PEP MUST
-   NOT treat a Mission permit as overriding what the credential or
-   the resource would refuse.
+   the acting credential itself carries, the Mission's approved
+   authority, and current Resource policy. The credential's authority
+   is the token as issued: the `mission_resource_access` entries that
+   the `scope` the PEP verified (from the JWT, or from the
+   introspection response for an opaque token) maps to under the
+   mapping contract ({{mapping-contract}}). The PEP carries them as
+   `context.credential.authority`, and the PDP evaluates them as
+   their own bound, never falling back to the Mission's authority
+   ({{I-D.draft-mcguinness-mission-authzen}}): an empty array leaves
+   every action outside the credential's authority
+   (`out_of_authority`), and an absent one is an unusable credential
+   (`credential_invalid`). The join adds the Mission bound and MUST
+   NOT widen either of the other two. A PEP MUST NOT treat a Mission
+   permit as overriding what the credential or the resource would
+   refuse.
 9. **Joined-view evidence commitment.** The PDP MUST record a
    joined-view commitment, `join_view_id`, as a top-level member of
    the Decision Evidence
@@ -2486,6 +2497,9 @@ contract states, for the joins performed:
   subject maps to the Mission's `subject`);
 - the client namespace mapping (how a credential's client maps to the
   Mission's `client_id`);
+- the scope mapping: the `mission_resource_access` entries, by
+  resource and actions, that each `scope` value of an ordinary token
+  maps to, where a value the mapping does not cover maps to no entry;
 - the delegate policy applied to `act`-chain actors, which MUST state
   how the OAuth binding's per-entry `delegation` rules are
   evaluated at the join;
