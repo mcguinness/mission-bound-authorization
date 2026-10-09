@@ -12,11 +12,10 @@
  * narrowed by the Mission's current Effective Authority Set.
  *
  * This is a no-actor self-exchange (mission#self-exchange): rule 1 opens it only
- * to the Mission's approved agent, and rule 2 bounds the handle by the
- * presented token's own authority. It is gated on active state and is not a
- * counted derivation: the handle grants no resource reach, and the family it
- * opens is the one counted derivation. A dispatched instance's Agent receives
- * its handle from the Template's Dispatch Handoff instead (dispatch-handoff.ts).
+ * to the Mission's approved agent, rule 2 bounds the handle by the presented
+ * token's own authority, and rule 3 makes it a derivation gated on `active`,
+ * counted once here, as the Dispatch Handoff's redemption that mints a
+ * dispatched Agent's handle is (dispatch-handoff.ts).
  */
 import type { KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
@@ -30,6 +29,7 @@ import {
   txError,
   verifySubjectPossession,
 } from "./continuation-grant.js";
+import { gateRefusal } from "./dispatch-handoff.js";
 import {
   type AdapterOptions,
   markDelegationHandle,
@@ -127,15 +127,22 @@ export async function handleDelegationHandleExchange(
   }
 
   // Mint. The handle rides a provider Grant of its own, recorded in the
-  // Mission-bound grant index (kind delegation-handle), so the save-time hook
-  // gates active state without counting a derivation, and the Mission's own
-  // grant_id does not move.
+  // Mission-bound grant index (kind delegation-handle), so the Mission's own
+  // grant_id does not move and the save-time hook re-gates active state only.
   const oidcGrant = new provider.Grant({ accountId: record.subject.sub, clientId: client.clientId });
   for (const entry of authority) {
     (oidcGrant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
   }
   const grantId = await oidcGrant.save();
   kernel.missionBoundGrants.record({ grantId, missionId: record.id, kind: "delegation-handle" });
+  // @spec mission#self-exchange rule 3, mission#issuance-gating — the one
+  // counted derivation of this exchange; nothing is counted again at save.
+  try {
+    kernel.gateDerivation(record.id);
+  } catch (e) {
+    await (oidcGrant as unknown as { destroy: () => Promise<void> }).destroy();
+    throw gateRefusal(opts, e, record.id);
+  }
 
   const info = resourceServerInfoFor(client.clientId, opts.accessTokenTTL ?? 300);
   info.accessTokenTTL = Math.min(

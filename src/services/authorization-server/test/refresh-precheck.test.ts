@@ -313,17 +313,18 @@ describe("refresh pre-check: a refused refresh consumes nothing (@spec mission#i
   });
 
   it("delegation-family grant over an exhausted cap: the family refresh is not refused for the Mission's cap and counts nothing", async () => {
-    // The code exchange counts 1 and the family's creating exchange counts 2.
-    const m = await issue({ requested_derivation_limit: 2 });
+    // The code exchange counts 1, the delegation-handle request 2 (#1157), and
+    // the family's creating exchange 3.
+    const m = await issue({ requested_derivation_limit: 3 });
     const f = await family(m.accessToken, m.keys);
-    expect(derivations(m.missionId)).toBe(2);
+    expect(derivations(m.missionId)).toBe(3);
     // The approval grant is out of derivations...
     const approval = await refresh(m.refreshToken, m.keys);
     expect(approval.body.mission_error).toBe("derivations_exhausted");
     // ...and the family's refreshes are not counted, so they continue.
     const refreshed = await refresh(f.refreshToken, f.keys);
     expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
-    expect(derivations(m.missionId)).toBe(2);
+    expect(derivations(m.missionId)).toBe(3);
   });
 
   it("residual: a suspension landing between the pre-check and the save-time gate is still refused by that gate, after rotation (#250)", async () => {

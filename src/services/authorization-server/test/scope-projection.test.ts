@@ -560,9 +560,9 @@ describe("unsupported actor context on the async-delegation exchange (@spec cont
     expect(base.status, JSON.stringify(base.body)).toBe(200);
     const baseToken = base.body.access_token as string;
     const missionId = (decodeJwt(baseToken).mission as { id: string }).id;
-    const count = as.kernel.get(missionId)?.derivation_count;
     const acting = base.keys;
     const subject = await handle(baseToken, acting);
+    const count = as.kernel.get(missionId)?.derivation_count;
     const actor = {
       actor_token: await actorAssertion(acting),
       actor_token_type: "urn:ietf:params:oauth:token-type:jwt",

@@ -1176,9 +1176,12 @@ describe("unresolvable Mission fails closed (@spec issuance-grant#effective-set-
 describe("async-delegation single count (@spec async-delegation)", () => {
   it("derivation_count rises by exactly 1 across issuance + N refreshes", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const before = as.kernel.get(missionId)?.derivation_count as number;
 
-    const first = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
+    const first = (await (await asyncDelegate(handle, { rawSubject: true })).json()) as { refresh_token: string };
     const afterExchange = as.kernel.get(missionId)?.derivation_count as number;
     expect(afterExchange - before).toBe(1); // the SINGLE family count (gateDerivation)
 
@@ -1472,10 +1475,14 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
   it("lost-response retry returns the SAME family (stored response verbatim); derivation_count consumed ONCE; no second family", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const before = as.kernel.get(missionId)?.derivation_count as number;
     const creationRequestId = crypto.randomUUID();
 
-    const first = await asyncDelegate(baseAccessToken, {
+    const first = await asyncDelegate(handle, {
+      rawSubject: true,
       authorizationDetails: confinedAuthority(),
       creationRequestId,
     });
@@ -1484,7 +1491,8 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
     // The lost-response retry: same creation_request_id, fresh DPoP proof
     // (same acting key), same inputs.
-    const retry = await asyncDelegate(baseAccessToken, {
+    const retry = await asyncDelegate(handle, {
+      rawSubject: true,
       authorizationDetails: confinedAuthority(),
       creationRequestId,
     });
@@ -1506,11 +1514,14 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
   it("retry after the initial refresh token was consumed is REFUSED: consumption proves delivery; the rotated head stays the sole live lineage", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const before = as.kernel.get(missionId)?.derivation_count as number;
     const creationRequestId = crypto.randomUUID();
 
     const first = (await (
-      await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId })
+      await asyncDelegate(handle, { rawSubject: true,  authorizationDetails: confinedAuthority(), creationRequestId })
     ).json()) as ExchangeBody;
     // A -> B: consume the initial refresh token (the family's native rotation).
     const rotated = (await (await refreshFamily(first.refresh_token as string)).json()) as ExchangeBody;
@@ -1518,7 +1529,8 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
     // Creation recovery is REFUSED: a rotating family is a single lineage and
     // recovery must never mint an independent sibling refresh token into it.
-    const retry = await asyncDelegate(baseAccessToken, {
+    const retry = await asyncDelegate(handle, {
+      rawSubject: true,
       authorizationDetails: confinedAuthority(),
       creationRequestId,
     });
@@ -1547,12 +1559,15 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
   it("concurrent first presentations of the same creation_request_id: exactly ONE family + one derivation count; every response is coherent or in-progress", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const before = as.kernel.get(missionId)?.derivation_count as number;
     const creationRequestId = crypto.randomUUID();
 
     const results = await Promise.all([
-      asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId }),
-      asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId }),
+      asyncDelegate(handle, { rawSubject: true,  authorizationDetails: confinedAuthority(), creationRequestId }),
+      asyncDelegate(handle, { rawSubject: true,  authorizationDetails: confinedAuthority(), creationRequestId }),
     ]);
     const bodies = (await Promise.all(results.map((r) => r.json()))) as ExchangeBody[];
 
@@ -1580,9 +1595,12 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
   it("crash simulation: a family-created reservation without completion RESUMES delivery of the SAME family (no second family, no recount)", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const creationRequestId = crypto.randomUUID();
     const first = (await (
-      await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId })
+      await asyncDelegate(handle, { rawSubject: true,  authorizationDetails: confinedAuthority(), creationRequestId })
     ).json()) as ExchangeBody;
     const after = as.kernel.get(missionId)?.derivation_count as number;
     const grantId = as.delegationFamilyStore.familiesForMission(missionId)[0] as string;
@@ -1596,7 +1614,8 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
       )
       .run(JSON.stringify({ grant_id: grantId, target: RESOURCE }), creationRequestId);
 
-    const retry = await asyncDelegate(baseAccessToken, {
+    const retry = await asyncDelegate(handle, {
+      rawSubject: true,
       authorizationDetails: confinedAuthority(),
       creationRequestId,
     });
@@ -1617,7 +1636,8 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
     // And the operation is completed again: a further retry returns the
     // resumed response verbatim while its refresh token is unconsumed... but
     // the refresh above consumed it, so creation recovery now refuses.
-    const post = await asyncDelegate(baseAccessToken, {
+    const post = await asyncDelegate(handle, {
+      rawSubject: true,
       authorizationDetails: confinedAuthority(),
       creationRequestId,
     });
@@ -1646,8 +1666,11 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
   it("missing creation_request_id -> invalid_request", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const before = as.kernel.get(missionId)?.derivation_count as number;
-    const res = await asyncDelegate(baseAccessToken, { creationRequestId: null });
+    const res = await asyncDelegate(handle, { rawSubject: true,  creationRequestId: null });
     const body = (await res.json()) as ExchangeBody;
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
@@ -1899,7 +1922,7 @@ describe("the async-delegation subject_token is a delegation handle (@spec conti
 });
 
 describe("the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358)", () => {
-  it("mints a handle audienced to the requesting client, under the presented token's key, with its authority, no scope, and no derivation counted", async () => {
+  it("mints a handle audienced to the requesting client, under the presented token's key, with its authority and no scope, as one counted derivation", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
     const count = as.kernel.get(missionId)?.derivation_count;
     const res = await delegationHandleRequest(baseAccessToken);
@@ -1923,7 +1946,8 @@ describe("the delegation-handle request (@spec continuation#transport-async, mis
     expect(claims.scope).toBeUndefined();
     expect(claims.authorization_details).toEqual(decodeJwt(baseAccessToken).authorization_details);
     expect(body.authorization_details).toEqual(claims.authorization_details);
-    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+    // Core Self-Exchange rule 3: the exchange is a derivation, counted once.
+    expect(as.kernel.get(missionId)?.derivation_count).toBe((count as number) + 1);
   });
 
   it("bounds the handle by the presented token's own authority, never the Mission's (rule 2)", async () => {

@@ -196,9 +196,9 @@ describe("a derivation that fails after admission (@spec mission#issuance-gating
   it("async-delegation creating exchange: a failure after the cap check, inside the commit, rolls the count back", async () => {
     const m = await issue();
     expect(derivations(m.missionId)).toBe(1); // the code exchange
-    // #1157: the delegation handle is requested first; it is not a counted derivation.
+    // #1157: the delegation handle is requested first, its own counted derivation.
     const subject = await handle(m.accessToken, m.keys);
-    expect(derivations(m.missionId)).toBe(1);
+    expect(derivations(m.missionId)).toBe(2);
     // The exchange runs gateDerivation inside advanceReserved's transaction,
     // which also commits the family-created transition. Fail that transaction
     // after the gate has passed and counted.
@@ -226,7 +226,7 @@ describe("a derivation that fails after admission (@spec mission#issuance-gating
     expect(gated).toBe(true); // the cap check passed and the count ran
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.body.access_token).toBeUndefined();
-    expect(derivations(m.missionId)).toBe(1); // rolled back with the transaction
+    expect(derivations(m.missionId)).toBe(2); // rolled back with the transaction
   });
 
   it("residual: the provider access-token hook counts before signing, so a code exchange that fails after the count leaves the failed derivation counted (#250)", async () => {

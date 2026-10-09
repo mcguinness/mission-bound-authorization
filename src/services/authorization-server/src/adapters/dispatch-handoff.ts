@@ -423,7 +423,7 @@ export async function handleDispatchHandoffRedemption(
 }
 
 /** A kernel {@link GateError} as `invalid_grant`, with `mission_error` where a value applies. */
-function gateRefusal(opts: AdapterOptions, e: unknown, missionId: string): unknown {
+export function gateRefusal(opts: AdapterOptions, e: unknown, missionId: string): unknown {
   return e instanceof GateError
     ? new MissionGrantError(e.message, gateErrorToMissionError(e.reason, opts.kernel.get(missionId)?.state))
     : e;
