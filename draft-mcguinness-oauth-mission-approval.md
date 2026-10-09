@@ -443,7 +443,8 @@ Cache-Control: no-store
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": { "period": "2026-Q3" } } ],
-  "mission_id": "msn_7Wq3nR8tV2xK5pL9yD4sB6zE1mC0fJ-" }
+  "mission_id": "msn_7Wq3nR8tV2xK5pL9yD4sB6zE1mC0fJ-",
+  "mission_expires_at": "2026-12-31T23:59:59Z" }
 ~~~
 
 The token carries the `mission` claim as the issuance profile defines

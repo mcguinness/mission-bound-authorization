@@ -472,7 +472,7 @@ Example SET (decoded), for a revocation:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "iat": 1793609600,
+  "iat": 1793610400,
   "jti": "set_9Kp2vN7sR1tY8mZ3qX5b",
   "sub_id": {
     "format": "opaque",
