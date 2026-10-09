@@ -616,6 +616,8 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     agentAccessToken = redeemedBody.access_token as string;
     const agentClaims = decodeJwt(agentAccessToken);
     expect(agentClaims.client_id).toBe("subagent-invoice-extractor");
+    // #1157 (D358): the redeemed token is the Agent's delegation handle.
+    expect(agentClaims.aud).toBe("subagent-invoice-extractor");
     expect((agentClaims.cnf as { jkt?: string }).jkt).toBe(agentJkt);
     expect((agentClaims.mission as { id?: string }).id).toBe(dispatchedMissionId);
 

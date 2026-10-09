@@ -955,13 +955,10 @@ export async function handleAsyncDelegationExchange(
     txError(ctx, 400, "invalid_grant", "subject_token is not a delegation handle audienced to the acting client");
     return;
   }
-  const handleJkt = (baseClaims.cnf as { jkt?: unknown } | undefined)?.jkt;
-  if (typeof handleJkt !== "string" || !handleJkt) {
-    txError(ctx, 400, "invalid_grant", "subject_token is not sender-constrained (no cnf.jkt)");
-    return;
-  }
-  if (handleJkt !== jkt) {
-    txError(ctx, 400, "invalid_grant", "possession proof does not match the subject_token confirmation key");
+  // A handle without `cnf.jkt` never matches a DPoP key thumbprint, so this
+  // one comparison refuses both an unconstrained token and a wrong key.
+  if ((baseClaims.cnf as { jkt?: unknown } | undefined)?.jkt !== jkt) {
+    txError(ctx, 400, "invalid_grant", "possession proof does not match the subject_token confirmation key (cnf.jkt)");
     return;
   }
   const record = kernel.get(missionId);

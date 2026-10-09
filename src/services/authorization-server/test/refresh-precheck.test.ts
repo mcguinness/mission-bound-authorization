@@ -23,6 +23,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { gateErrorToMissionError } from "../src/adapters/provider.js";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14783;
 const ISSUER = `http://localhost:${PORT}`;
@@ -156,14 +157,26 @@ async function issue(intentOver: Json = {}): Promise<{
 const refresh = (refreshToken: string, keys: Keys) =>
   token({ grant_type: "refresh_token", refresh_token: refreshToken }, keys);
 
+/**
+ * The acting client's delegation handle for `base` (#1157, D358), the async
+ * transport's subject_token, requested under the base token's own key.
+ */
+async function handle(base: string, keys: Keys): Promise<string> {
+  const res = await token(delegationHandleParams(base, "ap-agent"), keys);
+  if (res.status !== 200) throw new Error(`delegation handle refused: ${res.status} ${JSON.stringify(res.body)}`);
+  return res.body.access_token as string;
+}
+
 /** An async-delegation family over the Mission's own access token: its rotating refresh token. */
-async function family(baseAccessToken: string): Promise<{ refreshToken: string; keys: Keys }> {
-  const acting = await newKeys();
+async function family(baseAccessToken: string, baseKeys: Keys): Promise<{ refreshToken: string; keys: Keys }> {
+  // #1157: the family keeps the base token's key, through its delegation handle.
+  const acting = baseKeys;
+  const subject = await handle(baseAccessToken, acting);
   const res = await token(
     {
       grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
       request_refresh_token: "true",
-      subject_token: baseAccessToken,
+      subject_token: subject,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       resource: RESOURCE,
       creation_request_id: crypto.randomUUID(),
@@ -263,7 +276,7 @@ describe("refresh pre-check: a refused refresh consumes nothing (@spec mission#i
 
   it("delegation-family grant: a family refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse", async () => {
     const m = await issue();
-    const f = await family(m.accessToken);
+    const f = await family(m.accessToken, m.keys);
     await lifecycle(m.missionId, "suspend");
     const refused = await countingRefreshSaves(() => refresh(f.refreshToken, f.keys));
     expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
@@ -302,7 +315,7 @@ describe("refresh pre-check: a refused refresh consumes nothing (@spec mission#i
   it("delegation-family grant over an exhausted cap: the family refresh is not refused for the Mission's cap and counts nothing", async () => {
     // The code exchange counts 1 and the family's creating exchange counts 2.
     const m = await issue({ requested_derivation_limit: 2 });
-    const f = await family(m.accessToken);
+    const f = await family(m.accessToken, m.keys);
     expect(derivations(m.missionId)).toBe(2);
     // The approval grant is out of derivations...
     const approval = await refresh(m.refreshToken, m.keys);

@@ -299,6 +299,8 @@ interface ExchangeOpts {
    * resource-audienced token sets this.
    */
   rawSubject?: boolean;
+  /** The key the async exchange's DPoP proof is signed under (default: `actingDpop`). */
+  keys?: Keys;
 }
 
 /** The client_id each {@link ActingClient} authenticates as. */
@@ -373,7 +375,7 @@ async function asyncDelegate(baseAccessToken: string, opts: ExchangeOpts = {}): 
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(`${ISSUER}/token`, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(actingDpop, extra) },
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(opts.keys ?? actingDpop, extra) },
       body: new URLSearchParams({
         ...params,
         client_assertion: await assertionFor(opts.actingAs),
@@ -1839,6 +1841,194 @@ describe("async-delegation discovery (@spec async-delegation#discovery)", () => 
     const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
     expect(meta.delegated_refresh_token_profile_supported).toBe(true);
     expect(meta.identity_continuation_supported).toBe(true);
+  });
+});
+
+describe("the async-delegation subject_token is a delegation handle (@spec continuation#transport-async, draft-zhu-oauth-async-delegation-05 Section 4.3, #1157)", () => {
+  it("refuses a resource-audienced Mission access token: its audience is not the acting client", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    expect(decodeJwt(baseAccessToken).aud).toBe(RESOURCE);
+    const count = as.kernel.get(missionId)?.derivation_count;
+    const res = await asyncDelegate(baseAccessToken, { rawSubject: true });
+    const body = (await res.json()) as { error?: string; error_description?: string; refresh_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("not a delegation handle audienced to the acting client");
+    expect(body.refresh_token).toBeUndefined();
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+  });
+
+  it("refuses a handle presented under another key: client authentication never satisfies its sender constraint", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const handle = await delegationHandle(baseAccessToken);
+    const count = as.kernel.get(missionId)?.derivation_count;
+    const res = await asyncDelegate(handle, { rawSubject: true, keys: otherDpop });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("does not match the subject_token confirmation key");
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+  });
+
+  it("recovery revalidates the handle: a retry presenting the raw token or another key never retrieves the recorded family", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const handle = await delegationHandle(baseAccessToken);
+    const creationRequestId = crypto.randomUUID();
+    const first = await asyncDelegate(handle, { rawSubject: true, creationRequestId });
+    const firstBody = (await first.json()) as { refresh_token?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+
+    const raw = await asyncDelegate(baseAccessToken, { rawSubject: true, creationRequestId });
+    const rawBody = (await raw.json()) as { error?: string; error_description?: string; refresh_token?: string };
+    expect(raw.status, JSON.stringify(rawBody)).toBe(400);
+    expect(rawBody.error_description).toContain("not a delegation handle");
+    expect(rawBody.refresh_token).toBeUndefined();
+
+    const wrongKey = await asyncDelegate(handle, { rawSubject: true, creationRequestId, keys: otherDpop });
+    const wrongBody = (await wrongKey.json()) as { error?: string; error_description?: string; refresh_token?: string };
+    expect(wrongKey.status, JSON.stringify(wrongBody)).toBe(400);
+    expect(wrongBody.error_description).toContain("does not match the subject_token confirmation key");
+    expect(wrongBody.refresh_token).toBeUndefined();
+
+    // The handle itself still recovers the recorded family.
+    const again = await asyncDelegate(handle, { rawSubject: true, creationRequestId });
+    const againBody = (await again.json()) as { refresh_token?: string };
+    expect(again.status, JSON.stringify(againBody)).toBe(200);
+    expect(againBody.refresh_token).toBe(firstBody.refresh_token);
+  });
+});
+
+describe("the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358)", () => {
+  it("mints a handle audienced to the requesting client, under the presented token's key, with its authority, no scope, and no derivation counted", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const count = as.kernel.get(missionId)?.derivation_count;
+    const res = await delegationHandleRequest(baseAccessToken);
+    const body = (await res.json()) as {
+      access_token?: string;
+      issued_token_type?: string;
+      token_type?: string;
+      scope?: string;
+      authorization_details?: unknown;
+    };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.issued_token_type).toBe(ACCESS_TOKEN_TOKEN_TYPE);
+    expect(body.token_type).toBe("DPoP");
+    expect(body.scope).toBeUndefined();
+    expect(res.headers.get("cache-control")).toContain("no-store");
+    const claims = decodeJwt(body.access_token as string);
+    expect(claims.aud).toBe("ap-agent");
+    expect(claims.client_id).toBe("ap-agent");
+    expect((claims.cnf as { jkt?: string }).jkt).toBe(actingJkt);
+    expect((claims.mission as { id?: string }).id).toBe(missionId);
+    expect(claims.scope).toBeUndefined();
+    expect(claims.authorization_details).toEqual(decodeJwt(baseAccessToken).authorization_details);
+    expect(body.authorization_details).toEqual(claims.authorization_details);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+  });
+
+  it("bounds the handle by the presented token's own authority, never the Mission's (rule 2)", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    // A narrower Mission access token: a family token confined to one action.
+    const family = await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() });
+    const familyBody = (await family.json()) as { access_token?: string };
+    expect(family.status, JSON.stringify(familyBody)).toBe(200);
+    const res = await delegationHandleRequest(familyBody.access_token as string);
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const actions = (decodeJwt(body.access_token as string).authorization_details as Array<{ actions: string[] }>)
+      .flatMap((e) => e.actions);
+    expect(actions).toEqual(["payments:invoice.read"]);
+  });
+
+  it("refuses an audience other than the requesting client's own client_id", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const res = await delegationHandleRequest(baseAccessToken, undefined, actingDpop, { audience: RESOURCE });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_target");
+    expect(body.error_description).toContain("own client_id");
+  });
+
+  it("refuses a DPoP proof under a key other than the presented token's", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const res = await delegationHandleRequest(baseAccessToken, undefined, otherDpop);
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("does not match the subject_token confirmation key");
+  });
+
+  it("refuses a client presenting a token issued to another client", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const res = await delegationHandleRequest(baseAccessToken, "child");
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("not issued to the requesting client");
+  });
+
+  it("refuses a Mission that is no longer active", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    as.kernel.transition(missionId, "revoke");
+    const res = await delegationHandleRequest(baseAccessToken);
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("revoked");
+  });
+
+  it("narrows the handle by the Mission's current effective set, and refuses when nothing survives", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const contain = (eventId: string, remove: Array<{ resource: string; actions?: string[] }>) =>
+      as.kernel.contain(missionId, {
+        event: {
+          type: "tainted_read",
+          source: "https://siem.example/detections",
+          observed_at: new Date().toISOString(),
+          event_id: eventId,
+        },
+        remove,
+      });
+    contain(crypto.randomUUID(), [{ resource: RESOURCE, actions: ["payments:remittance.send"] }]);
+    const narrowed = await delegationHandleRequest(baseAccessToken);
+    const narrowedBody = (await narrowed.json()) as { access_token?: string };
+    expect(narrowed.status, JSON.stringify(narrowedBody)).toBe(200);
+    const actions = (decodeJwt(narrowedBody.access_token as string).authorization_details as Array<{ actions: string[] }>)
+      .flatMap((e) => e.actions);
+    expect(actions).toContain("payments:invoice.read");
+    expect(actions).not.toContain("payments:remittance.send");
+
+    contain(crypto.randomUUID(), [{ resource: RESOURCE }]);
+    const none = await delegationHandleRequest(baseAccessToken);
+    const noneBody = (await none.json()) as { error?: string; error_description?: string };
+    expect(none.status, JSON.stringify(noneBody)).toBe(400);
+    expect(noneBody.error).toBe("invalid_grant");
+    expect(noneBody.error_description).toContain("no longer within the Mission's effective authority");
+  });
+
+  it("refuses scope and authorization_details, and never routes a request combining audience with another exchange's parameter", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const refusal = async (extra: Record<string, string>) => {
+      const res = await delegationHandleRequest(baseAccessToken, undefined, actingDpop, extra);
+      return { status: res.status, ...((await res.json()) as { error?: string; error_description?: string }) };
+    };
+    const scoped = await refusal({ scope: "payments" });
+    expect(scoped.status).toBe(400);
+    expect(scoped.error).toBe("invalid_scope");
+    const detailed = await refusal({ authorization_details: JSON.stringify(confinedAuthority()) });
+    expect(detailed.status).toBe(400);
+    expect(detailed.error).toBe("invalid_request");
+    expect(detailed.error_description).toContain("narrow it at the async-delegation exchange");
+    for (const [param, value] of [
+      ["mission_intent", "{}"],
+      ["resource", RESOURCE],
+      ["creation_request_id", crypto.randomUUID()],
+    ] as const) {
+      const combined = await refusal({ [param]: value });
+      expect(combined.status, param).toBe(400);
+      expect(combined.error, param).toBe("invalid_request");
+      expect(combined.error_description, param).toContain(`cannot be combined with ${param}`);
+    }
   });
 });
 

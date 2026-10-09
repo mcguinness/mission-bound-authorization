@@ -53,6 +53,7 @@ import {
   type BuiltAs,
   type ProviderCapability,
 } from "../src/index.js";
+import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14583;
 const ISSUER = `http://localhost:${PORT}`;
@@ -325,6 +326,9 @@ describe("Dispatch Handoff: the handoff to the selected Agent and its continuati
     expect(rb.token_type).toBe("DPoP");
     const agentToken = decodeJwt(rb.access_token);
     expect(agentToken.client_id).toBe(AGENT_ID);
+    // #1157 (D358): the redeemed token is the Agent's delegation handle,
+    // audienced to the Agent itself, not to a resource.
+    expect(agentToken.aud).toBe(AGENT_ID);
     expect((agentToken.cnf as { jkt?: string }).jkt).toBe(agentJkt);
     expect((agentToken.cnf as { jkt?: string }).jkt).not.toBe(dispatcherJkt);
     expect((agentToken.mission as { id?: string }).id).toBe(instance.missionId);
@@ -351,10 +355,19 @@ describe("Dispatch Handoff: the handoff to the selected Agent and its continuati
 
   it("the Dispatcher still cannot continue the instance itself: the async exchange stays open only to the approved agent", async () => {
     const instance = await dispatchInstance();
+    // The instance token is not a delegation handle, so the async exchange
+    // refuses it (#1157)...
     const res = await err(await asyncDelegate(instance.token, crypto.randomUUID(), "dispatcher", dispatcherDpop));
     expect(res.status).toBe(400);
-    expect(res.error).toBe("invalid_request");
-    expect(res.error_description).toContain("open only to the Mission's approved agent");
+    expect(res.error).toBe("invalid_grant");
+    expect(res.error_description).toContain("not a delegation handle");
+    // ...and the Dispatcher cannot obtain one: rule 1 holds at the handle request.
+    const handle = await err(
+      await tokenRequest("dispatcher", dispatcherDpop, delegationHandleParams(instance.token, clientIds.dispatcher)),
+    );
+    expect(handle.status).toBe(400);
+    expect(handle.error).toBe("invalid_request");
+    expect(handle.error_description).toContain("open only to the Mission's approved agent");
   });
 
   it("the recipient comes from the record, never the request: an `audience` naming another client changes nothing", async () => {
@@ -788,6 +801,25 @@ describe("Dispatch Handoff behind the templates capability (adapters/capabilitie
       );
       expect(redeemed.error).toBe("invalid_grant");
       expect(redeemed.error_description).not.toBe("invalid dispatch handoff grant");
+    } finally {
+      listening.close();
+    }
+  });
+
+  it("async delegation off: the delegation-handle request is refused before any token is read (#1157)", async () => {
+    const issuer = `http://localhost:${PORT + 4}`;
+    const built = await buildAuthorizationServer({
+      issuer,
+      allowHeadlessAdjudication: true,
+      capabilities: without("async-delegation"),
+    });
+    const listening = built.provider.listen(PORT + 4);
+    try {
+      const res = await err(
+        await tokenAt(built, issuer, "dispatcher", dispatcherDpop, delegationHandleParams("not-a-token", clientIds.dispatcher)),
+      );
+      expect(res.error).toBe("invalid_request");
+      expect(res.error_description).toContain("(async-delegation) is not enabled");
     } finally {
       listening.close();
     }
