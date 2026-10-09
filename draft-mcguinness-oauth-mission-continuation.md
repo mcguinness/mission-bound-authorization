@@ -630,3 +630,9 @@ constrains their use and introduces none of its own.
 - A dispatched Mission enters the async delegation transport through
   its selected Agent, which redeems the Template profile's Dispatch
   Handoff for a delegation handle of its own (#1158).
+- The async delegation transport's `subject_token` is a delegation
+  handle: its audience is the acting client and possession of its own
+  key is proved at the exchange, as Section 4.3 of the async delegation
+  draft requires, replacing the re-binding to the acting key. An agent
+  obtains its handle with a no-actor self-exchange naming its own
+  `client_id` as `audience` (#1157).
