@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ccddd9e88c6445332e4c5807e8000f03685ddbfe",
-    "content_sha256": "0b78fc15c33129d6c530f9726b5d3ec9a54515b37e5b39a0c2cd2ec3e6001ec6"
+    "revision": "ed06fb6e130d428ef4d630472529a46a930bbf07",
+    "content_sha256": "3bcf2e9800c47b9e1c0bbbc8f1634b05ff718ca7e8228d0de837269d177c9db7"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -103,8 +103,8 @@
     "content_sha256": "f47ce123511fcb11509c380b8cd5e3131a5c7782739b9b19f2410a32dbcadadb"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "e6d514ce5ebf4ae47dee9bad3eaff6c2544ae64e",
-    "content_sha256": "0818fcd69f0ad54f83ab03603e393f4a563c143b4a45d5259b6ae6a40a00fcac"
+    "revision": "ed06fb6e130d428ef4d630472529a46a930bbf07",
+    "content_sha256": "258df7469e9d52d27afe6c61a461952ffb52233e6fc6afb7c74bf63b1008a124"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "c74a85acc97dc6ba157b26721f18767d76085b80",
@@ -127,8 +127,8 @@
     "content_sha256": "7a24c9a98ece9ae1ac533dde1a1158558a8e93c7d8419bbc39e4c1d33a4622fe"
    },
    "draft-mcguinness-mission-aauth.md": {
-    "revision": "010353d1a67472f328f5148948e0d11540b04adf",
-    "content_sha256": "f6c95be204b556a79f48183041f9b8b60dc369e487b7a454607d58044cc8e38c"
+    "revision": "ed06fb6e130d428ef4d630472529a46a930bbf07",
+    "content_sha256": "6712a25d57c20feb031d4c1ee0ce2ef361d3c405301fcce527761b9a20579123"
    },
    "draft-mcguinness-mission-mandate.md": {
     "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
@@ -4727,7 +4727,7 @@
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a record terminated under a retired state value reads as `terminated` with that reason and only the references its record retained (no invented `terminated_at` or `version`); an unrecognized state, a malformed termination or a stray termination reads fail closed, never `active`"
+    "normative": "a record terminated under a retired state value reads as `terminated` with that reason and only the facts its record retained (its references, the committing `version`, and a `terminated_at` only where retained); a `parent_terminated` termination derived from such a parent omits `terminated_at` rather than take its commit time; an unrecognized state, a malformed termination or a stray termination reads fail closed, never `active`"
    },
    "level": "unit",
    "coverage": "tested",
@@ -4743,6 +4743,12 @@
      "name": "legacy rows read fail closed and normalized (#705 witness 3) > reads an unrecognized state, a malformed termination and a stray termination fail closed, never active",
      "level": "unit",
      "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "a cascade under a legacy parent invents no effective time (#705 review P2) > materializing a cascade under a legacy parent with no retained instant keeps terminated_at unknown and records its commit time on the commit",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
     }
    ]
   },
@@ -4804,7 +4810,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a signed artifact carrying a retired state value (retained Carryover Evidence, a lifecycle-change SET) is verified over its stored bytes before it is read as `terminated` with that reason, and an unverifiable one is never normalized"
+    "normative": "a signed artifact carrying a retired state value (retained Carryover Evidence, a lifecycle-change SET) is verified over its stored bytes before it is read as `terminated` with that reason, an unverifiable one is never normalized, and the bytes read are retained as received and still verify unchanged"
    },
    "level": "unit",
    "coverage": "tested",
@@ -4817,12 +4823,153 @@
     },
     {
      "file": "src/packages/mission-signals/test/signals.test.ts",
-     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > normalizes a legacy SET's state only after its signature verifies, reading no top-level successor or carried_to",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > normalizes a legacy SET's state only after its signature verifies, keeping the references and instants the event retained",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > retains the original SET behind its normalized reading: the retained bytes verify unchanged and still carry the legacy state",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > signs a job journaled before the termination vocabulary in it, and redelivers a legacy SET already signed byte for byte (@spec mission#termination)",
      "level": "unit",
      "surface": "verification"
     }
    ],
-   "notes": "#705 (D359). The Signals receiver verifies before normalizing but keeps only its derived cache, not the SET bytes; the issuer side retains its Carryover Evidence JWS byte for byte."
+   "notes": "#705 (D359). The Signals receiver retains the compact SET that established each Mission's cached state, byte for byte; the issuer side retains its Carryover Evidence JWS byte for byte."
+  },
+  {
+   "id": "core.termination.retained-instant",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "termination",
+   "text": "For `expired`, the retained `terminated_at` is the Mission's `expires_at`; for another reason, a retained commit time is its `terminated_at` only where that commit was the termination's effect.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a legacy `expired` termination reports the Mission's `expires_at` as `terminated_at`; a legacy `revoked`, `completed` or `superseded` commit reports its commit time; a `parent_terminated` termination never takes its own commit time, whether read from a legacy commit or materialized under a parent with no retained `terminated_at`"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "legacy rows read fail closed and normalized (#705 witness 3) > reads each legacy terminal state as terminated with that reason, folding retained references and inventing no member",
+     "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "a cascade under a legacy parent invents no effective time (#705 review P2) > materializing a cascade under a legacy parent with no retained instant keeps terminated_at unknown and records its commit time on the commit",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > migrates a legacy expansion outbox onto the generalized table without losing an event",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > the SET builder emits only active, suspended or terminated, with termination exactly beside terminated and no top-level successor or carried_to",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#705 (D359); #1162 review: legacy facts are the committing `version`, `expires_at` for `expired`, and a commit time only where the commit was the effect."
+  },
+  {
+   "id": "core.termination.legacy-reading-retained-facts",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "termination",
+   "text": "a consumer of a report that still carries `revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a Mission's `state` MAY read it as `terminated` with that reason (`cascaded` as `parent_terminated`) and the facts the report retained",
+   "role": "verifier",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a verified lifecycle-change SET carrying a retired state reads as `terminated` with that reason, keeping the event's `version`, the reference its reason defines (`successor`, `carried_to`) and a retained instant, and folding no reference its reason does not define"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > normalizes a legacy SET's state only after its signature verifies, keeping the references and instants the event retained",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > signs a job journaled before the termination vocabulary in it, and redelivers a legacy SET already signed byte for byte (@spec mission#termination)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#705 (D359); #1162 review: legacy facts are the committing `version`, `expires_at` for `expired`, and a commit time only where the commit was the effect."
+  },
+  {
+   "id": "core.termination.emitter-never-legacy-state",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "termination",
+   "text": "an emitter never reports those values as a state.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a commit journaled under a retired state value is delivered and signed as `terminated` with that reason, never with the retired value as `state`; a SET already signed is redelivered byte for byte, never re-signed"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > the SET builder emits only active, suspended or terminated, with termination exactly beside terminated and no top-level successor or carried_to",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > signs a job journaled before the termination vocabulary in it, and redelivers a legacy SET already signed byte for byte (@spec mission#termination)",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > migrates a legacy expansion outbox onto the generalized table without losing an event",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#705 (D359)."
   },
   {
    "id": "core.lifecycle.computed-expiry-before-materialization",
@@ -30191,6 +30338,34 @@
    ]
   },
   {
+   "id": "child-delegation.child-state.legacy-parent-no-instant",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-state",
+   "text": "Where the Parent Mission's termination retained no `terminated_at` ({{I-D.draft-mcguinness-oauth-mission}}, Section \"Mission Termination\"), the child's has none either: the child's commit time is its transition's, never its `terminated_at`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child cascaded, or materialized on a read path, under a parent terminated with a retired state value and no retained instant is `parent_terminated` with no `terminated_at`; its commit carries the materialization time as `committed_at`"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "a cascade under a legacy parent invents no effective time (#705 review P2) > materializing a cascade under a legacy parent with no retained instant keeps terminated_at unknown and records its commit time on the commit",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#705 (D359); #1162 review P2."
+  },
+  {
    "id": "child-delegation.source.commit-check",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "record-requirements",
@@ -32972,6 +33147,27 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
+  },
+  {
+   "id": "aauth.lifecycle.unmapped-reason-omits-termination",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "lifecycle",
+   "text": "An AAuth reason the table pairs with no family reason has no family `termination`: a family report of the mission whose `termination` is optional omits it rather than substitute a reason such as `revoked`, and the native `termination_reason` stays in AAuth's own record.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AAuth mission terminated `administrative`, or with a reason outside both sets, is reported on a family surface whose `termination` is optional (an AuthZEN `mission_state_observation`) as `terminated` with no `termination`, never `revoked`, while AAuth's record keeps the native reason"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#705; #1162 review (owner ruling). No reference implementation projects an AAuth mission onto a family surface."
   },
   {
    "id": "aauth.statement.chained-holder-identity",
