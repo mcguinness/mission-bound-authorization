@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "e1ebd9ef6c7507368dbd25c46b984c1412d972f5b71cc76ca8c3be36238da60f"
+    "revision": "1f11bbe47aa41369c0445cc5c7f1ce1ff86b0da4",
+    "content_sha256": "68d8931fb89539f56d4fdf529babbc92b01ed8d71148d04e32e43cde1fcfb57e"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
@@ -23,8 +23,8 @@
     "content_sha256": "89bf3dedc4144bf5aee77e79b8a2dc1a35c03a3ba1bf2a4f4170a52386c49310"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "b04d0ffcb8c296552afd6a19109608a7605bce9006cd2e4e5ecafaa2cc041577"
+    "revision": "1f11bbe47aa41369c0445cc5c7f1ce1ff86b0da4",
+    "content_sha256": "e13696c334cf2d0911974be74a5562ac25f219b74c385cf28f7d579ad085bf34"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
@@ -10837,7 +10837,7 @@
    "id": "mas.baseline-join.authority-from-mission",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "On a successful join, the PDP evaluates the action under the runtime profile's decision contract, drawing the Authority Set from the Mission (the audience-scoped Mission Status response or a materialized policy view), since the credential carries none.",
+   "text": "On a successful join, the PDP evaluates the action under the runtime profile's decision contract, drawing the Authority Set from the Mission (the audience-scoped Mission Status response or a materialized policy view), never from the credential: the credential's own authority is the separate bound of rule 8 and never substitutes for the Mission's.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -10884,7 +10884,7 @@
    "id": "mas.baseline-join.three-bound-intersection",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A permit under a join never exceeds any of three independently evaluated bounds: the authority the acting credential itself carries (the token as issued, enforced at the resource server or gateway), the Mission's approved authority, and current Resource policy.",
+   "text": "A permit under a join never exceeds any of three independently evaluated bounds: the authority the acting credential itself carries, the Mission's approved authority, and current Resource policy.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
