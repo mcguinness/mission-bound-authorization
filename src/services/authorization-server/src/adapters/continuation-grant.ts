@@ -85,6 +85,7 @@ import {
   DISPATCH_HANDOFF_PARAM,
   handleDispatchHandoffExchange,
 } from "./dispatch-handoff.js";
+import { DELEGATION_HANDLE_CONFLICTS, handleDelegationHandleExchange } from "./delegation-handle.js";
 import {
   childErrorCode,
   gateErrorToMissionError,
@@ -303,8 +304,9 @@ export async function handleTokenExchangeGrant(
   // byte-for-byte unchanged whenever neither value is present:
   //   - child-creation issues a child-bound RFC 7523 JWT authorization grant (jwt);
   //   - expansion defers a Mission access token (or refuses a non-widening request).
-  // The subject_token possession rule (control the subject_token's OWN cnf) is the
-  // inverse of the async transport's deliberate re-binding; see verifySubjectPossession.
+  // The subject_token possession rule (control the subject_token's OWN cnf) is
+  // the one the async transport's delegation handle also follows (#1157); see
+  // verifySubjectPossession.
   // @spec cross-org-delegation#projection-exchange — a Chain Presentation
   // subject_token forks BEFORE the requested_token_type forks: the chain
   // exchange also requests an access token, and the subject_token_type is the
@@ -334,6 +336,19 @@ export async function handleTokenExchangeGrant(
   }
   if (params.requested_token_type === ACCESS_TOKEN_TOKEN_TYPE) {
     singleResource();
+    // @spec continuation#transport-async (#1157, D358) — `audience` selects the
+    // delegation-handle request (expansion never carries it). A request
+    // combining it with another exchange's parameter is refused, never routed.
+    if (params.audience !== undefined) {
+      const conflict = DELEGATION_HANDLE_CONFLICTS.find((p) => params[p] !== undefined);
+      if (conflict) {
+        txError(ctx, 400, "invalid_request", `audience (a delegation-handle request) cannot be combined with ${conflict}`);
+        return;
+      }
+      if (profileDisabled("async-delegation")) return;
+      await handleDelegationHandleExchange(opts, provider, ctx);
+      return;
+    }
     if (profileDisabled("expansion")) return;
     await handleExpansionExchange(opts, provider, ctx);
     return;
@@ -922,11 +937,31 @@ export async function handleAsyncDelegationExchange(
   // @spec async-delegation: the delegation handle (the base access token) is
   // bound to the acting client. Require the base token's client_id to equal the
   // authenticated acting client, so an authenticated client cannot present a base
-  // token issued to a DIFFERENT client and continue that Mission. The continuation
-  // family is re-bound to the acting client's own DPoP key (which may differ from
-  // the base token's key, so the base cnf is deliberately NOT required to match).
+  // token issued to a DIFFERENT client and continue that Mission.
   if (baseClaims.client_id !== client.clientId) {
     txError(ctx, 400, "invalid_grant", "subject_token was not issued to the acting client");
+    return;
+  }
+  // @spec draft-zhu-oauth-async-delegation-05 Section 4.3,
+  // continuation#transport-async (#1157, D358) — the subject_token is a
+  // delegation handle: its audience identifies the authenticated acting
+  // client (a single-valued `aud` equal to its client_id; a resource-audienced
+  // access token is refused), and the exchange enforces its sender constraint
+  // by possession of the handle's OWN confirmation key. Client authentication
+  // never satisfies a constraint bound to another key. Both run before the
+  // idempotency lookup, so a retry recovers a recorded family only through a
+  // handle it can present.
+  if (baseClaims.aud !== client.clientId) {
+    txError(ctx, 400, "invalid_grant", "subject_token is not a delegation handle audienced to the acting client");
+    return;
+  }
+  const handleJkt = (baseClaims.cnf as { jkt?: unknown } | undefined)?.jkt;
+  if (typeof handleJkt !== "string" || !handleJkt) {
+    txError(ctx, 400, "invalid_grant", "subject_token is not sender-constrained (no cnf.jkt)");
+    return;
+  }
+  if (handleJkt !== jkt) {
+    txError(ctx, 400, "invalid_grant", "possession proof does not match the subject_token confirmation key");
     return;
   }
   const record = kernel.get(missionId);
@@ -983,8 +1018,8 @@ export async function handleAsyncDelegationExchange(
 
   // @spec continuation#transport-async — the async-delegation operation
   // fingerprint: the RESOLVED base Mission (never the raw subject_token), the
-  // ACTING client's cnf (this exchange deliberately re-binds the family to the
-  // acting key), the requested confined subset, the target, and the selecting
+  // acting client's cnf (the handle's own key, whose possession was proved
+  // above), the requested confined subset, the target, and the selecting
   // request_refresh_token parameter.
   const fingerprint = creationFingerprint({
     op: "async-delegation",

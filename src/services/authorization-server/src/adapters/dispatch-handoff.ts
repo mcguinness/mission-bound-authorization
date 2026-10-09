@@ -41,6 +41,7 @@ import {
 import {
   type AdapterOptions,
   gateErrorToMissionError,
+  markDelegationHandle,
   MissionGrantError,
   newResourceServer,
   resourceServerInfoFor,
@@ -372,7 +373,12 @@ export async function handleDispatchHandoffRedemption(
     refuse(ctx, "invalid_grant", "the handed-off authority is no longer within the instance's effective authority");
     return;
   }
-  const resource = authority[0]?.resource ?? opts.issuer;
+  // @spec mission-template#dispatch-handoff, continuation#transport-async
+  // (#1157, D358) — the redeemed token is the Agent's delegation handle: its
+  // audience is the Agent's own client_id (not a resource), and it is
+  // sender-constrained to the Agent's key, so the Agent opens the async
+  // delegation family as its approved agent.
+  const handleAudience = record.client_id;
   const oidcGrant = new provider.Grant({ accountId: record.subject.sub, clientId: record.client_id });
   for (const entry of authority) {
     (oidcGrant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
@@ -386,7 +392,7 @@ export async function handleDispatchHandoffRedemption(
     throw gateRefusal(opts, e, record.id);
   }
 
-  const info = resourceServerInfoFor(resource, opts.accessTokenTTL ?? 300);
+  const info = resourceServerInfoFor(handleAudience, opts.accessTokenTTL ?? 300);
   info.accessTokenTTL = Math.min(
     info.accessTokenTTL,
     Math.max(1, Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000)),
@@ -399,8 +405,9 @@ export async function handleDispatchHandoffRedemption(
     rar: authority,
     scope: SCOPE_DECIDED_AT_SAVE,
   });
-  at.resourceServer = newResourceServer(provider, resource, info);
+  at.resourceServer = newResourceServer(provider, handleAudience, info);
   at.jkt = jkt; // sender-constrained to the Agent's own key
+  markDelegationHandle(at);
   ctx.oidc.entity("AccessToken", at);
   const jwt = await at.save();
 

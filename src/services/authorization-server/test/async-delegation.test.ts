@@ -75,7 +75,8 @@ let childClientKey: CryptoKey; // child actor private_key_jwt key
 let exchangerClientKey: CryptoKey; // TEST-ONLY child actor private_key_jwt key (#651)
 let bearerOnlyClientKey: CryptoKey; // TEST-ONLY jwt-bearer-only child actor key (#1158)
 let codeDpop: Keys; // DPoP key for the base-mission code flow
-let actingDpop: Keys; // DPoP key for the async exchange + refreshes (a DIFFERENT key)
+let actingDpop: Keys; // DPoP key for the async exchange + refreshes (the code-flow key, #1157)
+let otherDpop: Keys; // a key bound to nothing (the wrong-key cases)
 let actingJkt: string;
 let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
 
@@ -291,14 +292,75 @@ interface ExchangeOpts {
   creationRequestId?: string | null;
   /** Authenticate as a child actor client instead of `ap-agent` (@see ActingClient). */
   actingAs?: ActingClient;
+  /**
+   * Present `baseAccessToken` itself as the subject_token. By default the
+   * helper first exchanges it for the acting client's delegation handle
+   * (#1157, D358), which the transport requires; a refusal test presenting a
+   * resource-audienced token sets this.
+   */
+  rawSubject?: boolean;
+}
+
+/** The client_id each {@link ActingClient} authenticates as. */
+function clientIdFor(actingAs: ActingClient | undefined): string {
+  if (actingAs === "child") return "subagent-invoice-extractor";
+  if (actingAs === "exchanger") return EXCHANGER_CLIENT_ID;
+  if (actingAs === "bearerOnly") return BEARER_ONLY_CLIENT_ID;
+  return "ap-agent";
+}
+
+/**
+ * POST /token: the delegation-handle request (#1157, D358). An RFC 8693
+ * exchange whose `audience` is the acting client's own client_id; the DPoP
+ * proof is over the presented token's own key, which the handle keeps.
+ */
+async function delegationHandleRequest(
+  subjectToken: string,
+  actingAs?: ActingClient,
+  keys: Keys = actingDpop,
+  extraParams: Record<string, string> = {},
+): Promise<Response> {
+  const params: Record<string, string> = {
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    subject_token: subjectToken,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    audience: clientIdFor(actingAs),
+    ...extraParams,
+  };
+  const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+    fetch(`${ISSUER}/token`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(keys, extra) },
+      body: new URLSearchParams({
+        ...params,
+        client_assertion: await assertionFor(actingAs),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return res;
+}
+
+/** The acting client's delegation handle for `subjectToken`; throws on a refusal. */
+async function delegationHandle(subjectToken: string, actingAs?: ActingClient): Promise<string> {
+  const res = await delegationHandleRequest(subjectToken, actingAs);
+  const body = (await res.json()) as { access_token?: string };
+  if (res.status !== 200 || typeof body.access_token !== "string") {
+    throw new Error(`delegation handle request refused: ${res.status} ${JSON.stringify(body)}`);
+  }
+  return body.access_token;
 }
 
 /** POST /token: token-exchange + request_refresh_token=true (the async transport). */
 async function asyncDelegate(baseAccessToken: string, opts: ExchangeOpts = {}): Promise<Response> {
+  const subjectToken = opts.rawSubject ? baseAccessToken : await delegationHandle(baseAccessToken, opts.actingAs);
   const params: Record<string, string> = {
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
     request_refresh_token: "true",
-    subject_token: baseAccessToken,
+    subject_token: subjectToken,
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     resource: opts.resource ?? RESOURCE,
   };
@@ -478,7 +540,11 @@ beforeAll(async () => {
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   childClientKey = (await importJWK(as.childClientJwk as never, "ES256")) as CryptoKey;
   codeDpop = await generateKeyPair("ES256", { extractable: true });
-  actingDpop = await generateKeyPair("ES256", { extractable: true });
+  // #1157 (D358): the delegation handle keeps the presented token's key, and
+  // the exchange proves possession of it, so the family is bound to the
+  // code-flow key; there is no separate acting key to re-bind to.
+  actingDpop = codeDpop;
+  otherDpop = await generateKeyPair("ES256", { extractable: true });
   actingJkt = await calculateJwkThumbprint(await exportJWK(actingDpop.publicKey));
   remoteJwks = createRemoteJWKSet(new URL(`${ISSUER}/jwks`));
 });
@@ -634,13 +700,21 @@ describe("a retry recovers a recorded family only within the presented token (@s
 describe("a no-actor exchange is open only to the Mission's approved agent (@spec mission#self-exchange rule 1, #1153 review, D353)", () => {
   it("refuses invalid_request when the authenticated client is not the Mission Record's client_id, though the token names it", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
-    // The AS never issues such a token; the Mission Record is changed under it.
+    // The handle is minted while the agent is approved; the AS never issues a
+    // mismatched token, so the Mission Record is changed under it.
+    const handle = await delegationHandle(baseAccessToken);
     as.kernel.db.prepare("UPDATE missions SET client_id = ? WHERE id = ?").run("another-approved-agent", missionId);
-    const res = await asyncDelegate(baseAccessToken);
+    const res = await asyncDelegate(handle, { rawSubject: true });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("approved agent");
+    // The delegation-handle request applies the same rule (#1157).
+    const handleRes = await delegationHandleRequest(baseAccessToken);
+    const handleBody = (await handleRes.json()) as { error?: string; error_description?: string };
+    expect(handleRes.status, JSON.stringify(handleBody)).toBe(400);
+    expect(handleBody.error).toBe("invalid_request");
+    expect(handleBody.error_description).toContain("approved agent");
   });
 });
 
@@ -693,8 +767,8 @@ describe("async-delegation disconnected refresh (@spec async-delegation)", () =>
   it("sender-constrained refresh token: a DPoP proof from the WRONG key fails jkt verification", async () => {
     const { baseAccessToken } = await issueBaseMission();
     const { refresh_token } = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
-    // Present the code-flow DPoP key (not the acting key the refresh token is bound to).
-    const res = await refreshFamily(refresh_token, codeDpop);
+    // Present a key the refresh token is not bound to.
+    const res = await refreshFamily(refresh_token, otherDpop);
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_grant");
@@ -963,11 +1037,13 @@ describe("transient authority-source failure (@spec issuance-grant#effective-set
   it("at the initial exchange: refuses 503 before the idempotency reservation, so the SAME creation_request_id still redeems", async () => {
     const { baseAccessToken } = await issueBaseMission();
     const creationRequestId = crypto.randomUUID();
+    // The handle is minted before the outage: this case is the exchange's own refusal.
+    const handle = await delegationHandle(baseAccessToken);
 
     sourceOutage = "mission status source returned a rolled-back state version";
     let res: Response;
     try {
-      res = await asyncDelegate(baseAccessToken, { creationRequestId });
+      res = await asyncDelegate(handle, { creationRequestId, rawSubject: true });
     } finally {
       sourceOutage = undefined;
     }
@@ -980,7 +1056,7 @@ describe("transient authority-source failure (@spec issuance-grant#effective-set
     // Nothing was consumed: no reservation, no family, no derivation count, so
     // the retry is a FIRST presentation of that creation_request_id, not a
     // recovery of a failed one (which would replay the stored refusal).
-    const retry = await asyncDelegate(baseAccessToken, { creationRequestId });
+    const retry = await asyncDelegate(handle, { creationRequestId, rawSubject: true });
     const retryBody = (await retry.json()) as { refresh_token?: string; error?: string };
     expect(retry.status, JSON.stringify(retryBody)).toBe(200);
     expect(typeof retryBody.refresh_token).toBe("string");
@@ -1224,7 +1300,11 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
   it("fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused mission_expired and saves no family refresh token (@spec mission#mission-bound-tokens)", async () => {
     const expiry = halfSecondExpiry(10);
     const { baseAccessToken } = await issueBaseMission(expiry.iso);
-    const { result: res, saved } = await refreshTokensSavedAt(expiry.ms - 900, () => asyncDelegate(baseAccessToken));
+    // The handle is minted with time to spare; the 0.9 s case is the exchange's.
+    const handle = await delegationHandle(baseAccessToken);
+    const { result: res, saved } = await refreshTokensSavedAt(expiry.ms - 900, () =>
+      asyncDelegate(handle, { rawSubject: true }),
+    );
     const body = (await res.json()) as { error?: string; mission_error?: string; refresh_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_grant");
@@ -1733,7 +1813,9 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
     expect(redeemed.status, JSON.stringify(redeemedBody)).toBe(200);
     const childAccessToken = redeemedBody.access_token as string;
 
-    const res = await asyncDelegate(childAccessToken, { actingAs: "bearerOnly" });
+    // The grant-type refusal precedes any exchange handler, so the raw token
+    // shows it (a delegation-handle request is refused the same way).
+    const res = await asyncDelegate(childAccessToken, { actingAs: "bearerOnly", rawSubject: true });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
