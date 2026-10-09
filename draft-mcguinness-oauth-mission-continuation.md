@@ -462,9 +462,8 @@ In the operation fingerprint, `op` is `async-delegation`; `iss` and
 `client` are as the expansion profile defines them; `source` is the
 `mission_id` of the base Mission resolved from `subject_token`, never
 the raw token; `cnf` is the acting client's verified confirmation,
-since this exchange deliberately re-binds the family to the acting
-key rather than proving possession of the subject token's own
-confirmation; `proposal` is the parsed `authorization_details` array
+which is the delegation handle's own key; `proposal` is the parsed
+`authorization_details` array
 naming the requested confined subset, when present; `resource` is the
 target the family is audienced to; and `request_refresh_token` is the
 parameter selecting this exchange. A repetition whose fingerprint
