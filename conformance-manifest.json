@@ -16200,6 +16200,30 @@
      "name": "reconciliation settles a failure only from the attempt that redeemed the permit (#1016) > a genuine failure from the redeeming attempt still settles failed, live and through reconciliation",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect, over the remote channel: the wire stands once, and a run inside the window settles the claim completed from the ledger, with exactly one ledger entry",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > a refusal before any effect: a permit proven unredeemed in this epoch settles failed, and a retry under its key executes nothing",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > one claim's failed reconciliation is isolated: a later claim proven unredeemed still settles failed in the same run, the failed claim stays unresolved and is escalated, and a later run settles it with no second effect (#1161 review)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler's loop (@spec runtime#runtime-conformance, #1103) > derives its interval from the declared window, a third of it, so an unresolved claim gets at least two runs before its window closes",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ]
   },

@@ -53,6 +53,16 @@ export interface CommitResult {
   deduped: boolean;
 }
 
+/** One committed effect, on either connector. */
+export interface CommittedEffect {
+  opKey: string;
+  permitId: string;
+  missionId: string;
+  /** A wire's amount; an email has none. */
+  amount?: string;
+  committedAtMs: number;
+}
+
 export class Connectors {
   readonly db: Database;
   private nowMs: () => number;
@@ -92,6 +102,28 @@ export class Connectors {
       .prepare("SELECT op_key FROM ledger WHERE permit_id = ? UNION ALL SELECT op_key FROM outbox WHERE permit_id = ? LIMIT 1")
       .get(permitId, permitId) as { op_key: string } | undefined;
     return row?.op_key;
+  }
+
+  /**
+   * Every committed effect on either connector, a wire or an email, with the
+   * instant it committed: the effect side of reconciliation (`reconcile.ts`).
+   * An email carries no amount.
+   */
+  committedEffects(missionId?: string): CommittedEffect[] {
+    const union = `SELECT op_key, permit_id, mission_id, amount, committed_at FROM ledger
+      UNION ALL SELECT op_key, permit_id, mission_id, NULL AS amount, sent_at AS committed_at FROM outbox`;
+    const rows = (
+      missionId
+        ? this.db.prepare(`SELECT * FROM (${union}) WHERE mission_id = ?`).all(missionId)
+        : this.db.prepare(union).all()
+    ) as Array<{ op_key: string; permit_id: string; mission_id: string; amount: string | null; committed_at: number }>;
+    return rows.map((r) => ({
+      opKey: r.op_key,
+      permitId: r.permit_id,
+      missionId: r.mission_id,
+      ...(r.amount !== null ? { amount: r.amount } : {}),
+      committedAtMs: r.committed_at,
+    }));
   }
 
   ledgerEntries(missionId?: string): Array<Record<string, unknown>> {

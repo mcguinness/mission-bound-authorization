@@ -30,6 +30,7 @@ import {
   type ClaimRequester,
   type ConsumptionStatusFn,
   type IdempotencyClaimDomain,
+  type IndeterminateClaim,
   openIdempotencyClaimDomain,
 } from "../src/idempotency-claims.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
@@ -852,6 +853,113 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       expectDenied(await evaluate(request(c, { key }), options(claims, c)), "duplicate_suppressed", { next_action: "none" });
       claims.close();
       expect(rowsOf(file)).toEqual([expect.objectContaining({ state: "indeterminate" })]);
+    });
+  });
+
+  // @spec runtime#evidence (outcome reconciliation) (#1103): the declared
+  // alert is raised where the transition to indeterminate happens.
+  describe("the indeterminate alert hook (#1103)", () => {
+    /**
+     * A claim domain whose hook records each claim it is told of, with
+     * whether the domain's connection was still inside a transaction then.
+     */
+    function alertingDomain(c: Clock, hook?: (claim: IndeterminateClaim) => void) {
+      const file = join(mkdtempSync(join(tmpdir(), "claim-1103-")), "claims.sqlite");
+      const fired: Array<{ claim: IndeterminateClaim; inTransaction: boolean | undefined }> = [];
+      let current: IdempotencyClaimDomain | undefined;
+      const open = () => {
+        current = openIdempotencyClaimDomain({
+          file,
+          owner: CLAIM_OWNER,
+          statement: statementWithPrivilegedAdministration(),
+          now: c.now,
+          settlementKeys,
+          onIndeterminate:
+            hook ??
+            ((claim) => {
+              const db = (current as unknown as { db?: { inTransaction: boolean } } | undefined)?.db;
+              fired.push({ claim, inTransaction: db?.inTransaction });
+            }),
+        });
+        return current;
+      };
+      return { open, fired };
+    }
+    const WINDOW_CLOSE = T0 + VALID_MS + LEASE_MS + WINDOW_MS;
+
+    it("fires once per claim the window closes on, after the moving transaction commits, on the listing sweep and on the decision path", async () => {
+      const c = clock();
+      const { open, fired } = alertingDomain(c);
+      const claims = open();
+      const onDecision = freshKey();
+      const first = await evaluate(request(c, { key: onDecision }), options(claims, c));
+      const second = await evaluate(request(c), options(claims, c));
+      c.set(T0 + VALID_MS + LEASE_MS + 1_000);
+      expect(claims.listUnresolved(REQUESTER)).toHaveLength(2);
+      expect(fired).toEqual([]);
+      c.set(WINDOW_CLOSE);
+      // The decision path moves the first claim.
+      expectDenied(await evaluate(request(c, { key: onDecision }), options(claims, c)), "duplicate_suppressed", { next_action: "none" });
+      expect(fired.map((f) => f.claim.evaluation_id)).toEqual([first.context.evaluation_id]);
+      // The listing sweep moves the second.
+      expect(claims.listUnresolved(REQUESTER)).toEqual([]);
+      expect(fired.map((f) => f.claim.evaluation_id)).toEqual([first.context.evaluation_id, second.context.evaluation_id]);
+      // Never again for a claim already indeterminate.
+      claims.sweep();
+      expectDenied(await evaluate(request(c, { key: onDecision }), options(claims, c)), "duplicate_suppressed", { next_action: "none" });
+      expect(fired).toHaveLength(2);
+      for (const f of fired) {
+        expect(f.inTransaction).toBe(false);
+        expect(f.claim).toEqual({
+          evaluation_id: f.claim.evaluation_id,
+          mission_id: "msn_917",
+          action_class: "irreversible_action",
+          pep_id: REQUESTER.pep_id,
+          pep_epoch: REQUESTER.pep_epoch,
+          valid_until: new Date(T0 + VALID_MS).toISOString(),
+          closed_at: new Date(WINDOW_CLOSE).toISOString(),
+        });
+      }
+      claims.close();
+    });
+
+    it("fires for a prior boot's claim, which no current requester can list, when its window closes", async () => {
+      const c = clock();
+      const { open, fired } = alertingDomain(c);
+      let claims = open();
+      const permit = await evaluate(request(c), options(claims, c));
+      claims.close();
+      // The process restarts inside the window, under a new PEP epoch.
+      c.set(T0 + 1_000);
+      claims = open();
+      const restarted: ClaimRequester = { pep_id: REQUESTER.pep_id, pep_epoch: "epoch-917-after-restart" };
+      expect(claims.listUnresolved(restarted)).toEqual([]);
+      expect(fired).toEqual([]);
+      c.set(WINDOW_CLOSE);
+      expect(claims.listUnresolved(restarted)).toEqual([]);
+      expect(fired.map((f) => f.claim.evaluation_id)).toEqual([permit.context.evaluation_id]);
+      expect(fired[0]?.claim.pep_epoch).toBe(REQUESTER.pep_epoch);
+      claims.sweep();
+      expect(fired).toHaveLength(1);
+      claims.close();
+    });
+
+    it("a hook that throws never reaches the claim domain: the listing and the decision proceed", async () => {
+      const c = clock();
+      let calls = 0;
+      const { open } = alertingDomain(c, () => {
+        calls += 1;
+        throw new Error("alert sink down");
+      });
+      const claims = open();
+      const key = freshKey();
+      expect((await evaluate(request(c, { key }), options(claims, c))).decision).toBe(true);
+      expect((await evaluate(request(c), options(claims, c))).decision).toBe(true);
+      c.set(WINDOW_CLOSE);
+      expect(claims.listUnresolved(REQUESTER)).toEqual([]);
+      expectDenied(await evaluate(request(c, { key }), options(claims, c)), "duplicate_suppressed", { next_action: "none" });
+      expect(calls).toBe(2);
+      claims.close();
     });
   });
 

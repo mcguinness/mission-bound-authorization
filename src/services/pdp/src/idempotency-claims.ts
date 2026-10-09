@@ -43,7 +43,7 @@ import {
   isScopeDimension,
   isVolatileScopeMember,
 } from "@mission/core";
-import { type Database, DurableStoreError, openDurableStore, withTransaction } from "@mission/store";
+import { afterCommit, type Database, DurableStoreError, openDurableStore, withTransaction } from "@mission/store";
 import {
   type EnforcementScopeStatement,
   retentionWindowSeconds,
@@ -143,6 +143,33 @@ export interface ClaimDomainOptions {
   settlementKeys?: EvidenceKeyResolver;
   /** Bound on a consumption-status query; expiry is `unknown`. Default 1000 ms. */
   consumptionStatusTimeoutMs?: number;
+  /**
+   * @spec runtime#evidence (outcome reconciliation), runtime#runtime-conformance
+   * (#1103): told of every claim that moves `unresolved` to `indeterminate`,
+   * once, after the transaction that moved it commits, on whichever path
+   * moved it (the open-time sweep, a listing, a reconciliation, a decision).
+   * The sweep is epoch-agnostic, so this sees a prior process's claim that
+   * no current PEP epoch can list. The deployment wires it to the alerting
+   * obligation its statement declares. A hook that throws is ignored: it
+   * never reaches the decision or the transaction.
+   */
+  onIndeterminate?: (claim: IndeterminateClaim) => void;
+}
+
+/**
+ * A claim that closed `indeterminate` at its window's end, as the operator
+ * alert reports it: identifiers and instants only, never the stored decision
+ * or the request's parameters.
+ */
+export interface IndeterminateClaim {
+  evaluation_id: string;
+  /** The `mission.id` of the claim's idempotency scope. */
+  mission_id: string | undefined;
+  action_class: string;
+  pep_id: string;
+  pep_epoch: string;
+  valid_until: string;
+  closed_at: string;
 }
 
 interface ClassDomain {
@@ -731,6 +758,7 @@ export class IdempotencyClaimDomain {
         .prepare("UPDATE claims SET state = 'indeterminate', terminal_at_ms = ?, retain_until_ms = NULL WHERE evaluation_id = ?")
         .run(nowMs, current.evaluation_id);
       this.log(current, "unresolved", "indeterminate", "window_closed", nowMs);
+      this.notifyIndeterminate(current, nowMs);
       current = { ...current, state: "indeterminate", terminal_at_ms: nowMs, retain_until_ms: null };
     }
     if (
@@ -743,6 +771,41 @@ export class IdempotencyClaimDomain {
       current = { ...current, decision_json: null };
     }
     return current;
+  }
+
+  /**
+   * Queue {@link ClaimDomainOptions.onIndeterminate} for after the enclosing
+   * transaction commits, so a rolled-back transition alerts nothing. The
+   * catch is inside the callback: a commit callback runs outside the
+   * transaction's own error handling, so a throwing hook would otherwise read
+   * as an unreachable domain.
+   */
+  private notifyIndeterminate(row: ClaimRow, nowMs: number): void {
+    const hook = this.options.onIndeterminate;
+    if (!hook) return;
+    let missionId: string | undefined;
+    try {
+      const id = (JSON.parse(row.scope_json) as { mission?: { id?: unknown } }).mission?.id;
+      missionId = typeof id === "string" ? id : undefined;
+    } catch {
+      missionId = undefined;
+    }
+    const claim: IndeterminateClaim = {
+      evaluation_id: row.evaluation_id,
+      mission_id: missionId,
+      action_class: row.action_class,
+      pep_id: row.pep_id,
+      pep_epoch: row.pep_epoch,
+      valid_until: new Date(row.valid_until_ms).toISOString(),
+      closed_at: new Date(nowMs).toISOString(),
+    };
+    afterCommit(this.db, () => {
+      try {
+        hook(claim);
+      } catch {
+        /* the alert sink's failure never reaches the claim domain */
+      }
+    });
   }
 
   private move(row: ClaimRow, to: ClaimState, cause: string, nowMs: number): ClaimRow {
