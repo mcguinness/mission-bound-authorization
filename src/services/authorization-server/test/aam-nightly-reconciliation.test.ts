@@ -7,7 +7,8 @@
  *
  * AAM component            -> Mission realization exercised here
  *   Task Template + ceiling ->  oauth-mission-template + POST /templates
- *   Agent Identity Broker   ->  the mission-dispatch grant (low-consequence) +
+ *   Agent Identity Broker   ->  the mission-dispatch grant (low-consequence), its
+ *                                Dispatch Handoff to the selected Agent, and
  *                                an ordinary human approval (external-commitment)
  *   Task-Scoped Access Eng. ->  the PDP (@mission/pdp evaluate over OpenFGA)
  *   Mediation Layer         ->  the payments PEP + the harness EgressGate
@@ -69,7 +70,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { EgressGate, type EgressRefusal } from "../../agent/src/egress-gate.js";
 import { buildScopeStatement, scopeDigest } from "../../agent/src/harness-scope.js";
 import { ConsoleBff } from "../../console-bff/src/index.js";
-import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
+import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
+import {
+  ACCESS_TOKEN_TOKEN_TYPE,
+  JWT_TOKEN_TYPE,
+  TOKEN_EXCHANGE_GRANT_TYPE,
+} from "../src/adapters/continuation-grant.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
@@ -125,6 +131,11 @@ let modelId: string;
 let clientKey: CryptoKey; // the dispatcher (ap-agent) private_key_jwt key
 let dpopKeys: DpopKeys; // the dispatcher's DPoP key (binds the dispatched token)
 let dispatcherJkt: string;
+// The instance's selected Agent (subagent-invoice-extractor, its recorded
+// client_id): its own client key and DPoP key, after the Dispatch Handoff.
+let agentClientKey: CryptoKey;
+let agentDpopKeys: DpopKeys;
+let agentJkt: string;
 let payments: PaymentsStore;
 let pep: Pep;
 let pepEvidence: EvidenceStore;
@@ -149,6 +160,7 @@ let templateId = "";
 let templateHash = "";
 let dispatchedMissionId = ""; // low-consequence, machine-speed (Template-dispatched)
 let dispatchedAccessToken = "";
+let agentAccessToken = ""; // the selected Agent's own token, redeemed from the handoff
 let familyRefreshToken = "";
 let humanMissionId = ""; // the external-commitment capability, human-approved
 let restoredHumanMissionId = "";
@@ -167,24 +179,45 @@ async function clientAssertion(): Promise<string> {
     .sign(clientKey);
 }
 
-async function dpopProof(htu: string, htm: string, extra: Record<string, unknown> = {}): Promise<string> {
-  return new SignJWT({ htu, htm, ...extra })
-    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(dpopKeys.publicKey) })
+async function agentClientAssertion(): Promise<string> {
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid: "subagent-invoice-extractor-auth" })
+    .setIssuer("subagent-invoice-extractor")
+    .setSubject("subagent-invoice-extractor")
+    .setAudience(ISSUER)
     .setIssuedAt()
+    .setExpirationTime("2m")
     .setJti(crypto.randomUUID())
-    .sign(dpopKeys.privateKey);
+    .sign(agentClientKey);
 }
 
-/** POST /token with private_key_jwt + DPoP and the mandatory dpop-nonce retry. */
-async function tokenRequest(params: Record<string, string>): Promise<Response> {
+async function dpopProof(
+  htu: string,
+  htm: string,
+  extra: Record<string, unknown> = {},
+  keys: DpopKeys = dpopKeys,
+): Promise<string> {
+  return new SignJWT({ htu, htm, ...extra })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(keys.publicKey) })
+    .setIssuedAt()
+    .setJti(crypto.randomUUID())
+    .sign(keys.privateKey);
+}
+
+/**
+ * POST /token with private_key_jwt + DPoP and the mandatory dpop-nonce retry,
+ * as the dispatcher (the default) or as the selected Agent with its own keys.
+ */
+async function tokenRequest(params: Record<string, string>, party: "dispatcher" | "agent" = "dispatcher"): Promise<Response> {
   const htu = `${ISSUER}/token`;
+  const keys = party === "agent" ? agentDpopKeys : dpopKeys;
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(htu, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", extra) },
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", extra, keys) },
       body: new URLSearchParams({
         ...params,
-        client_assertion: await clientAssertion(),
+        client_assertion: party === "agent" ? await agentClientAssertion() : await clientAssertion(),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     });
@@ -216,22 +249,45 @@ async function dispatch(params: {
   });
 }
 
-/** The RFC 8693 request_refresh_token exchange: a base mission access token in,
- *  a rotated, sender-constrained refresh-token FAMILY out (async-delegation). */
-async function asyncDelegate(baseAccessToken: string): Promise<Response> {
+/**
+ * @spec mission-template#dispatch-handoff — the dispatcher exchanges the
+ * dispatched token (bound to its own key) for a single-use grant naming the
+ * instance's selected Agent.
+ */
+async function handoff(dispatchedToken: string): Promise<Response> {
   return tokenRequest({
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-    request_refresh_token: "true",
-    subject_token: baseAccessToken,
+    subject_token: dispatchedToken,
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
-    resource: RESOURCE,
-    creation_request_id: crypto.randomUUID(),
+    requested_token_type: JWT_TOKEN_TYPE,
+    mission_dispatch_handoff: "true",
   });
 }
 
-/** A disconnected refresh: native grant_type=refresh_token against the family. */
+/** The selected Agent redeems the handoff grant (RFC 7523) for its own token. */
+async function redeemHandoff(grant: string): Promise<Response> {
+  return tokenRequest({ grant_type: CHILD_JWT_BEARER_GRANT_TYPE, assertion: grant }, "agent");
+}
+
+/** The RFC 8693 request_refresh_token exchange, as the selected Agent: its own
+ *  access token in, a rotated, sender-constrained refresh-token FAMILY out. */
+async function asyncDelegate(agentToken: string): Promise<Response> {
+  return tokenRequest(
+    {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      request_refresh_token: "true",
+      subject_token: agentToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      resource: RESOURCE,
+      creation_request_id: crypto.randomUUID(),
+    },
+    "agent",
+  );
+}
+
+/** A disconnected refresh, as the Agent: native grant_type=refresh_token against the family. */
 async function refreshFamily(refreshToken: string): Promise<Response> {
-  return tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });
+  return tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken }, "agent");
 }
 
 /**
@@ -408,7 +464,8 @@ function tokenFactsFor(missionId: string): TokenFacts {
     clientId: "subagent-invoice-extractor",
     clientInstanceId: "aam-reconciler-inst",
     mission: { id: r.id, issuer: r.issuer, authority_hash: r.authority_hash },
-    cnfJkt: dispatcherJkt,
+    // The Agent's own key: it acts on the token it redeemed from the handoff.
+    cnfJkt: agentJkt,
     // @spec runtime#input-authority (#825) — as issued for this Mission.
     credentialAuthority: credentialAuthorityFrom(r.authority_set),
   };
@@ -421,6 +478,9 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
     dpopKeys = await generateKeyPair("ES256", { extractable: true });
     dispatcherJkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
+    agentClientKey = (await importJWK(as.childClientJwk as never, "ES256")) as CryptoKey;
+    agentDpopKeys = await generateKeyPair("ES256", { extractable: true });
+    agentJkt = await calculateJwkThumbprint(await exportJWK(agentDpopKeys.publicKey));
 
     const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
@@ -532,14 +592,34 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(refusedBody.mission_denial_reason).toBe("out_of_template_ceiling");
   });
 
-  // STEP 3: Disconnected run. AAM Agent Identity Broker (async-delegation transport).
-  it("step 3 (disconnected run): the dispatched Mission obtains a refresh-token family clamped to its expiry", async () => {
+  // STEP 3: Disconnected run. AAM Agent Identity Broker (the Dispatch Handoff,
+  // then the async-delegation transport).
+  it("step 3 (disconnected run): the dispatcher hands the instance to its Agent, which obtains a refresh-token family clamped to its expiry", async () => {
     const record = as.kernel.get(dispatchedMissionId);
     // The Mission's absolute lifetime is bounded by the template (well below FAR_FUTURE).
     const missionExp = Math.floor(Date.parse(record?.expires_at as string) / 1000);
     expect(Date.parse(record?.expires_at as string)).toBeLessThan(Date.parse(FAR_FUTURE));
+    // The dispatcher holds the token; the instance's approved agent is the Agent.
+    expect(decodeJwt(dispatchedAccessToken).client_id).toBe("ap-agent");
+    expect((decodeJwt(dispatchedAccessToken).cnf as { jkt?: string }).jkt).toBe(dispatcherJkt);
+    expect(record?.client_id).toBe("subagent-invoice-extractor");
 
-    const res = await asyncDelegate(dispatchedAccessToken);
+    // @spec mission-template#dispatch-handoff — the handoff, then the Agent's
+    // redemption under its own key.
+    const handed = await handoff(dispatchedAccessToken);
+    const handedBody = (await handed.json()) as { access_token?: string; issued_token_type?: string };
+    expect(handed.status, JSON.stringify(handedBody)).toBe(200);
+    expect(handedBody.issued_token_type).toBe(JWT_TOKEN_TYPE);
+    const redeemed = await redeemHandoff(handedBody.access_token as string);
+    const redeemedBody = (await redeemed.json()) as { access_token?: string };
+    expect(redeemed.status, JSON.stringify(redeemedBody)).toBe(200);
+    agentAccessToken = redeemedBody.access_token as string;
+    const agentClaims = decodeJwt(agentAccessToken);
+    expect(agentClaims.client_id).toBe("subagent-invoice-extractor");
+    expect((agentClaims.cnf as { jkt?: string }).jkt).toBe(agentJkt);
+    expect((agentClaims.mission as { id?: string }).id).toBe(dispatchedMissionId);
+
+    const res = await asyncDelegate(agentAccessToken);
     const body = (await res.json()) as {
       access_token?: string;
       token_type?: string;

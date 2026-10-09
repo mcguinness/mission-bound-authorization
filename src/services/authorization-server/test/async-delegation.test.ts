@@ -50,16 +50,21 @@ const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE; // served by ISSUER (intra-domain target)
 const FAR_EXP = "2027-01-01T00:00:00Z";
 /**
- * @spec async-delegation (#651) — the TEST-ONLY child actor client. The shipped
- * child actor (`subagent-invoice-extractor`, config/clients.json) is granted
- * only the jwt-bearer grant type, so it cannot open an async-delegation family
- * over real HTTP; that block is pinned as its own negative below. This client
- * clones that registration and adds the token-exchange and refresh_token grant
- * types, so a Child Mission naming it as `child_actor` can mint and refresh a
- * child-rooted family through /token. Registered through the AS builder's
- * `testClients` seam; config/clients.json is untouched.
+ * @spec async-delegation (#651) — the TEST-ONLY child actor client, with the
+ * jwt-bearer, token-exchange and refresh_token grant types, so a Child Mission
+ * naming it as `child_actor` can mint and refresh a child-rooted family through
+ * /token. Registered through the AS builder's `testClients` seam;
+ * config/clients.json is untouched.
  */
 const EXCHANGER_CLIENT_ID = "test-child-exchanger";
+/**
+ * The TEST-ONLY jwt-bearer-only child actor (#1158, D361): a registration
+ * without the token-exchange grant, which redeems its child grant but cannot
+ * open a delegation family. The shipped `subagent-invoice-extractor` carries
+ * token exchange (it continues a dispatched instance it was handed), so the
+ * grant-registration refusal is pinned on this distinct client.
+ */
+const BEARER_ONLY_CLIENT_ID = "test-child-jwt-bearer-only";
 
 type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };
 
@@ -68,6 +73,7 @@ let asServer: Server;
 let clientKey: CryptoKey; // ap-agent private_key_jwt key (kid ap-agent-auth)
 let childClientKey: CryptoKey; // child actor private_key_jwt key
 let exchangerClientKey: CryptoKey; // TEST-ONLY child actor private_key_jwt key (#651)
+let bearerOnlyClientKey: CryptoKey; // TEST-ONLY jwt-bearer-only child actor key (#1158)
 let codeDpop: Keys; // DPoP key for the base-mission code flow
 let actingDpop: Keys; // DPoP key for the async exchange + refreshes (a DIFFERENT key)
 let actingJkt: string;
@@ -131,10 +137,23 @@ async function exchangerClientAssertion(): Promise<string> {
     .sign(exchangerClientKey);
 }
 
+async function bearerOnlyClientAssertion(): Promise<string> {
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid: `${BEARER_ONLY_CLIENT_ID}-auth` })
+    .setIssuer(BEARER_ONLY_CLIENT_ID)
+    .setSubject(BEARER_ONLY_CLIENT_ID)
+    .setAudience(ISSUER)
+    .setIssuedAt()
+    .setExpirationTime("2m")
+    .setJti(crypto.randomUUID())
+    .sign(bearerOnlyClientKey);
+}
+
 /** The private_key_jwt assertion of the client a flow authenticates AS. */
 function assertionFor(actingAs: ActingClient | undefined): Promise<string> {
   if (actingAs === "child") return childClientAssertion();
   if (actingAs === "exchanger") return exchangerClientAssertion();
+  if (actingAs === "bearerOnly") return bearerOnlyClientAssertion();
   return clientAssertion();
 }
 
@@ -259,10 +278,11 @@ async function issueBaseMission(
  * the acting client `ap-agent`. @spec #651 — the async-delegation exchange
  * requires the `subject_token`'s client_id to equal the authenticated client
  * (continuation-grant.ts), so a family rooted at a Child Mission's own access
- * token is opened by that Mission's OWN child actor: `child` is the shipped one
- * (jwt-bearer only, so the exchange is refused), `exchanger` the test-only one.
+ * token is opened by that Mission's OWN child actor: `child` is the shipped one,
+ * `exchanger` the test-only one, `bearerOnly` the test-only jwt-bearer-only one
+ * (so the exchange is refused).
  */
-type ActingClient = "child" | "exchanger";
+type ActingClient = "child" | "exchanger" | "bearerOnly";
 
 interface ExchangeOpts {
   authorizationDetails?: unknown;
@@ -409,6 +429,13 @@ beforeAll(async () => {
     kid: `${EXCHANGER_CLIENT_ID}-auth`,
     alg: "ES256",
   };
+  const bearerOnlyKeys = await generateKeyPair("ES256", { extractable: true });
+  bearerOnlyClientKey = bearerOnlyKeys.privateKey;
+  const bearerOnlyJwk = {
+    ...(await exportJWK(bearerOnlyKeys.publicKey)),
+    kid: `${BEARER_ONLY_CLIENT_ID}-auth`,
+    alg: "ES256",
+  };
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
@@ -431,10 +458,21 @@ beforeAll(async () => {
         jwks: { keys: [exchangerJwk] },
         authorization_details_types: ["mission_resource_access"],
       },
+      {
+        client_id: BEARER_ONLY_CLIENT_ID,
+        client_name: "Invoice Extraction Sub-Agent (jwt-bearer only)",
+        grant_types: [CHILD_JWT_BEARER_GRANT_TYPE],
+        response_types: [],
+        redirect_uris: [],
+        token_endpoint_auth_method: "private_key_jwt",
+        token_endpoint_auth_signing_alg: "ES256",
+        jwks: { keys: [bearerOnlyJwk] },
+        authorization_details_types: ["mission_resource_access"],
+      },
     ],
     // @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the AS asserts
-    // the test-only child actor's type, exactly as config does for the shipped one.
-    actorProfiles: { [EXCHANGER_CLIENT_ID]: "ai_agent" },
+    // the test-only child actors' type, exactly as config does for the shipped one.
+    actorProfiles: { [EXCHANGER_CLIENT_ID]: "ai_agent", [BEARER_ONLY_CLIENT_ID]: "ai_agent" },
   });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
@@ -1679,24 +1717,23 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
   });
 
   /**
-   * Separate coverage for the SHIPPED registration, which is deliberately
-   * narrower than the test-only one above: config/clients.json grants
-   * "subagent-invoice-extractor" only the jwt-bearer grant type, so the shipped
-   * child actor redeems its assertion but cannot open a delegation family. The
-   * test pins that as an executable fact; it flips if the registration widens.
+   * The grant-registration boundary: a child actor registered for the
+   * jwt-bearer grant alone redeems its assertion but cannot open a delegation
+   * family. Pinned on a distinct test-only client (#1158, D361): the shipped
+   * child actor carries token exchange.
    */
-  it("the SHIPPED child actor registration permits redemption but refuses the async-delegation exchange", async () => {
+  it("a jwt-bearer-only child actor registration permits redemption but refuses the async-delegation exchange", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
-    const created = await createChildViaExchange(baseAccessToken, missionId);
+    const created = await createChildViaExchange(baseAccessToken, missionId, BEARER_ONLY_CLIENT_ID);
     const createdBody = (await created.json()) as { access_token?: string; mission_id?: string };
     expect(created.status, JSON.stringify(createdBody)).toBe(200);
 
-    const redeemed = await childRedeem(createdBody.access_token as string);
+    const redeemed = await childRedeem(createdBody.access_token as string, "bearerOnly");
     const redeemedBody = (await redeemed.json()) as { access_token?: string };
     expect(redeemed.status, JSON.stringify(redeemedBody)).toBe(200);
     const childAccessToken = redeemedBody.access_token as string;
 
-    const res = await asyncDelegate(childAccessToken, { actingAs: "child" });
+    const res = await asyncDelegate(childAccessToken, { actingAs: "bearerOnly" });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
@@ -1704,8 +1741,8 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
   });
 
   it("the TEST-ONLY testClients seam refuses to redefine a config-shipped client", async () => {
-    // The seam ADDS registrations; a duplicate client_id would silently widen
-    // what config/clients.json ships, which is the block the negative above pins.
+    // The seam ADDS registrations; a duplicate client_id would silently
+    // redefine what config/clients.json ships.
     await expect(
       buildAuthorizationServer({
         issuer: `http://localhost:${PORT + 1}`,
