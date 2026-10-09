@@ -1544,21 +1544,107 @@ by the <code>iss</code> of a person token, the <code>ps</code> claim of a resour
 token, or the PS a request is made to; the blob carries no member
 naming it.  On the wire the reference is the <code>mission_s256</code> claim or
 parameter.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
-<p id="section-3.2-2">The PS's approval envelope carries <code>s256</code> alongside a <code>mission</code> member
+<p id="section-3.2-2">When a consumer represents an AAuth Mission Reference with <code>issuer</code>
+and <code>id</code>, such as the Runtime's <code>mission.issuer</code> and <code>mission.id</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) or the AuthZEN profile's
+<code>context.mission</code> (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), <code>issuer</code>
+is the approving PS's server identifier and <code>id</code> is the unchanged
+<code>s256</code> value.  The consumer obtains both from native context it has
+validated, as the following table maps them, and adds no algorithm
+prefix, rehashes nothing, and introduces no OAuth <code>mission_id</code>.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+<span id="name-mission-reference-projectio"></span><table class="center" id="table-1">
+          <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-mission-reference-projectio" class="selfRef">Mission Reference projection</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Validated native context</th>
+              <th class="text-left" rowspan="1" colspan="1">issuer</th>
+              <th class="text-left" rowspan="1" colspan="1">id</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Person token</td>
+              <td class="text-left" rowspan="1" colspan="1">the token's <code>iss</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">the token's <code>mission_s256</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Resource token</td>
+              <td class="text-left" rowspan="1" colspan="1">the token's <code>ps</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">the token's <code>mission_s256</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Auth token, three-party or four-party</td>
+              <td class="text-left" rowspan="1" colspan="1">the token's <code>ps</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">the token's <code>mission_s256</code>
+</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Approval envelope, or an authenticated mission-scoped PS request</td>
+              <td class="text-left" rowspan="1" colspan="1">the PS's server identifier, established for that endpoint through its metadata and protocol validation</td>
+              <td class="text-left" rowspan="1" colspan="1">the validated approval's <code>s256</code>, or the request's native mission reference</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-3.2-4">The PS's server identifier is its metadata <code>issuer</code>, never its
+<code>mission_endpoint</code>, a per-mission URL, a token audience, or a host the
+consumer infers, and it is compared exactly (Section 11.1.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  For an auth token, the
+consumer MUST take <code>issuer</code> from <code>ps</code> and MUST NOT fall back to <code>iss</code>,
+which names the Access Server in four-party access (Section 9.4.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>); AAuth's own checks still
+apply, including that a PS-issued auth token names itself in <code>ps</code>.  A
+missing, malformed, or unverified component establishes no Mission
+Reference, and AAuth's failure ordering and responses are unchanged.
+The same <code>s256</code> under two PS identifiers is two Mission References.
+An accepted <code>update</code> leaves the pair unchanged: its position, not the
+pair, identifies the current Approved Context version, and the pair
+alone proves neither current state nor current version.  A projected
+reference identifies the Mission and nothing more: it carries no
+authority, establishes neither Structured Authority nor Runtime or
+AuthZEN conformance, and leaves a resource token a request artifact,
+never an execution credential.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+<p id="section-3.2-5">For example, a validated four-party auth token with <code>iss</code>
+          <code>https://as.example</code>, <code>ps</code> <code>https://ps.example</code>, and <code>mission_s256</code>
+          <code>dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk</code> projects as follows.  The
+fragment shows only the projected members, not a complete token or
+decision request; the credential's own issuer stays in the credential
+context:<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-3.2-6">
+<pre>
+{
+  "mission": {
+    "issuer": "https://ps.example",
+    "id": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+  },
+  "credential": {
+    "issuer": "https://as.example"
+  }
+}
+</pre><a href="#section-3.2-6" class="pilcrow">¶</a>
+</div>
+<p id="section-3.2-7">The PS's approval envelope carries <code>s256</code> alongside a <code>mission</code> member
 that is the base64url encoding, without padding, of the exact bytes it
 persists as the mission blob.  The agent decodes <code>mission</code> to recover
 those bytes.  AAuth makes verifying <code>s256</code> against the decoded bytes a
 SHOULD before first use; a Mission Context Agent MUST verify it before
 any governed use, and MUST preserve the decoded bytes exactly.  Parsing
 and reserializing the JSON can change the bytes and therefore MUST NOT
-be used to reproduce the committed blob.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
-<p id="section-3.2-3">The reference simultaneously provides stable identification and an
+be used to reproduce the committed blob.<a href="#section-3.2-7" class="pilcrow">¶</a></p>
+<p id="section-3.2-8">The reference simultaneously provides stable identification and an
 integrity commitment.  This binding does not add <code>intent_hash</code>,
 <code>authority_hash</code>, <code>proposal_hash</code>, or a second semantic projection.  Such parallel
 commitments would create ambiguity about which object was approved and
 would require implementations to keep multiple canonicalizations in
-lockstep.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
-<p id="section-3.2-4"><code>mission_s256</code> commits to the original approved blob and to nothing
+lockstep.<a href="#section-3.2-8" class="pilcrow">¶</a></p>
+<p id="section-3.2-9"><code>mission_s256</code> commits to the original approved blob and to nothing
 accepted after it.  An accepted <code>update</code> changes neither the blob nor
 <code>mission_s256</code>, but from its acceptance the mission's meaning is the
 blob plus its accepted updates (Section 8.4 of
@@ -1572,13 +1658,13 @@ position zero; the update's own <code>s256</code> is verification material for
 the entry at that position, not a unique identifier.  A pending or
 rejected update is part of no version.  Work that the original
 description no longer describes uses a successor mission, and the old
-mission terminates as <code>superseded</code>.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
-<p id="section-3.2-5">The reference does not authenticate itself when copied outside a
+mission terminates as <code>superseded</code>.<a href="#section-3.2-9" class="pilcrow">¶</a></p>
+<p id="section-3.2-10">The reference does not authenticate itself when copied outside a
 protected AAuth message.  It gains protocol integrity from the AAuth
 message signature or signed token that carries it.  Implementations MUST
 apply all AAuth signature, issuer, audience, proof-of-possession, and
-request-context checks before relying on a received reference.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
-<p id="section-3.2-6">The reference is an integrity commitment, not a secret.  It is a
+request-context checks before relying on a received reference.<a href="#section-3.2-10" class="pilcrow">¶</a></p>
+<p id="section-3.2-11">The reference is an integrity commitment, not a secret.  It is a
 deterministic digest of the blob bytes, so a party that can predict
 the blob's content can confirm a guess; the digest's length says
 nothing about the entropy of its input.  This binding confines the
@@ -1597,11 +1683,11 @@ takes a <code>mission_s256</code> parameter, a PS MUST establish that the missio
 belongs to the requesting agent before reporting its state.  For an
 absent mission and a mission belonging to another agent, the PS MUST
 return the same status, error, body, and header set, with observably
-equivalent timing.<a href="#section-3.2-6" class="pilcrow">¶</a></p>
-<p id="section-3.2-7">Possession of the reference, or a correct guess, conveys no authority
+equivalent timing.<a href="#section-3.2-11" class="pilcrow">¶</a></p>
+<p id="section-3.2-12">Possession of the reference, or a correct guess, conveys no authority
 over status, logs, or management.  A deployment that claims stronger
 unpredictability documents its added entropy construction and its
-retention consequences; this binding defines no member for it.<a href="#section-3.2-7" class="pilcrow">¶</a></p>
+retention consequences; this binding defines no member for it.<a href="#section-3.2-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="blob">
@@ -1658,8 +1744,8 @@ protocol and the resource's own authorization semantics.<a href="#section-3.3.1-
 <a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-roles" class="section-name selfRef">Roles</a>
         </h3>
 <p id="section-4.1-1">The AAuth roles map to the Mission Context model as follows:<a href="#section-4.1-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-1">
-          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<table class="center" id="table-2">
+          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">AAuth role</th>
@@ -1873,8 +1959,8 @@ each Resource or Access Server applies its own policy.<a href="#section-4.4-4" c
 <p id="section-4.5-1">Mission governance and resource access mode are independent.  The
 security effect of a mission therefore depends on whether the PS is on
 the authorization path.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-2">
-          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<table class="center" id="table-3">
+          <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Resource access mode</th>
@@ -1941,9 +2027,9 @@ verifier step that supply it.  Its section numbers refer to
 operation is that of <span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>.
 Consistent with this document's rule that it adds no new AAuth wire
 members, it defines no extensions to close a gap.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
-<span id="name-transaction-authorization-r"></span><table class="center" id="table-3">
+<span id="name-transaction-authorization-r"></span><table class="center" id="table-4">
           <caption>
-<a href="#table-3" class="selfRef">Table 3</a>:
+<a href="#table-4" class="selfRef">Table 4</a>:
 <a href="#name-transaction-authorization-r" class="selfRef">Transaction authorization requirements: native carriers and status</a>
           </caption>
 <thead>
@@ -2073,7 +2159,11 @@ issued in the mission context, its issuer (the PS, or the AS in
 four-party access) copies the same flat <code>mission_s256</code> claim onward
 from the resource token (Section 9.4.1 of
 <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.7-1" class="pilcrow">¶</a></p>
-<p id="section-4.7-2">A resource that calls a downstream resource for its caller acts as an
+<p id="section-4.7-2">Projecting a reference into <code>issuer</code> and <code>id</code> (<a href="#reference" class="auto internal xref">Section 3.2</a>) adds no
+member to an AAuth token or mission blob, fetches no blob, and computes
+no new digest: a consumer projects only a reference it has already
+validated, and no AAuth party carries an OAuth field for it.<a href="#section-4.7-2" class="pilcrow">¶</a></p>
+<p id="section-4.7-3">A resource that calls a downstream resource for its caller acts as an
 intermediary: an agent with its own agent identifier and key (Section
 10.1.1.1 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  It requests a
 person token for the downstream resource, presenting the token its
@@ -2088,23 +2178,23 @@ the mission's current version when it decides.  A chained hop is
 therefore PS-governed derivation under the same Mission, not a child
 mission: the Mission's <code>agent</code> stays the root actor, the intermediary
 is a separate actor (<a href="#mission-substrate" class="auto internal xref">Section 9</a>), and the hop's supervision
-decision follows <a href="#roles" class="auto internal xref">Section 4.1</a>.<a href="#section-4.7-2" class="pilcrow">¶</a></p>
-<p id="section-4.7-3">This binding adds no member alongside that claim.  The approving PS
+decision follows <a href="#roles" class="auto internal xref">Section 4.1</a>.<a href="#section-4.7-3" class="pilcrow">¶</a></p>
+<p id="section-4.7-4">This binding adds no member alongside that claim.  The approving PS
 that scopes it is named as <a href="#reference" class="auto internal xref">Section 3.2</a> describes.  Receivers MUST NOT
 require <code>mission_id</code>,
 <code>issuer</code>, <code>policy_version</code>, <code>intent_hash</code>, <code>authority_hash</code>,
 <code>proposal_hash</code>, or embedded
-authorization details for conformance to this binding.<a href="#section-4.7-3" class="pilcrow">¶</a></p>
-<p id="section-4.7-4">Each copying party MUST preserve <code>mission_s256</code> exactly.  A PS receiving
+authorization details for conformance to this binding.<a href="#section-4.7-4" class="pilcrow">¶</a></p>
+<p id="section-4.7-5">Each copying party MUST preserve <code>mission_s256</code> exactly.  A PS receiving
 a resource token with a mission reference MUST verify that <code>ps</code>
 identifies itself before using local mission state.  Token verifiers
 MUST perform the AAuth issuer, audience, agent, key, and
-request-binding checks in addition to comparing the reference.<a href="#section-4.7-4" class="pilcrow">¶</a></p>
-<p id="section-4.7-5">The presence of a reference establishes correlation, not authorization.
+request-binding checks in addition to comparing the reference.<a href="#section-4.7-5" class="pilcrow">¶</a></p>
+<p id="section-4.7-6">The presence of a reference establishes correlation, not authorization.
 Authorization still depends on the issuer's decision, the token's scopes
 and other claims, proof of possession, resource policy, and, where the PS
-is on path, the PS's current contextual governance decision.<a href="#section-4.7-5" class="pilcrow">¶</a></p>
-<p id="section-4.7-6">AAuth does not treat a stripped mission as permitted downgrade: a
+is on path, the PS's current contextual governance decision.<a href="#section-4.7-6" class="pilcrow">¶</a></p>
+<p id="section-4.7-7">AAuth does not treat a stripped mission as permitted downgrade: a
 resource MUST NOT omit <code>mission_s256</code> from a resource token when the
 presented token it verified carried one, and a PS MUST verify the
 <code>presented_token</code> the agent forwards against the resource token, its
@@ -2119,14 +2209,14 @@ than one person token for the same resource, and only the named
 presented token identifies one.  The check uses no retained record on
 the request path; the PS's record of the person tokens it issues
 serves revocation (Section 7.1 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.7-6" class="pilcrow">¶</a></p>
-<p id="section-4.7-7">This binding keeps further local rules on top of it.  An agent
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.7-7" class="pilcrow">¶</a></p>
+<p id="section-4.7-8">This binding keeps further local rules on top of it.  An agent
 operating under a mission MUST verify that a returned resource token
 carries the exact <code>mission_s256</code>, and MUST NOT continue that
 authorization under the mission when it is absent or different.  A PS
 whose policy places an agent under mission governance MUST reject a
-missionless token request from that agent.<a href="#section-4.7-7" class="pilcrow">¶</a></p>
-<p id="section-4.7-8">AAuth lists an AS-issued auth token's <code>mission_s256</code> among its optional
+missionless token request from that agent.<a href="#section-4.7-8" class="pilcrow">¶</a></p>
+<p id="section-4.7-9">AAuth lists an AS-issued auth token's <code>mission_s256</code> among its optional
 claims, and the PS's delivery checks do not include it (Sections 9.4.1
 and 9.1.3 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  In four-party
 access, before returning an AS-issued auth token to the agent, a PS
@@ -2134,46 +2224,46 @@ MUST verify that the token carries the resource token's <code>mission_s256</code
 exactly whenever the resource token carried one.  A token that fails
 this check fails the PS's delivery verification, and the PS answers
 <code>as_unreachable</code> (Section 9.1.3 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.7-8" class="pilcrow">¶</a></p>
-<p id="section-4.7-9">A request's Mission association is required when that policy applies
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.7-9" class="pilcrow">¶</a></p>
+<p id="section-4.7-10">A request's Mission association is required when that policy applies
 or when the request derives from a presented token or upstream token
 that carries <code>mission_s256</code>.  A required association that is missing,
 malformed, invalid, unresolvable, or mismatched fails the request under
-AAuth's own rules, in AAuth's order of checks:<a href="#section-4.7-9" class="pilcrow">¶</a></p>
+AAuth's own rules, in AAuth's order of checks:<a href="#section-4.7-10" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-4.7-10.1">
-            <p id="section-4.7-10.1.1">a malformed <code>mission_s256</code> in a person token request receives
+<li class="normal" id="section-4.7-11.1">
+            <p id="section-4.7-11.1.1">a malformed <code>mission_s256</code> in a person token request receives
 <code>invalid_request</code>, and one naming a mission that does not exist or
 belongs to another agent is rejected (Section 7.1 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>);<a href="#section-4.7-10.1.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>);<a href="#section-4.7-11.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-4.7-10.2">
-            <p id="section-4.7-10.2.1">a presented token that fails verification receives
+          <li class="normal" id="section-4.7-11.2">
+            <p id="section-4.7-11.2.1">a presented token that fails verification receives
 <code>invalid_presented_token</code>, or <code>expired_presented_token</code> when only its
 <code>exp</code> fails, which is how a Mission-bound token fails once
 <code>expires_at</code> passes (Sections 6.7.2 and 7.1.2 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>);<a href="#section-4.7-10.2.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>);<a href="#section-4.7-11.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-4.7-10.3">
-            <p id="section-4.7-10.3.1">a resource token that omits or mismatches its presented token's
+          <li class="normal" id="section-4.7-11.3">
+            <p id="section-4.7-11.3.1">a resource token that omits or mismatches its presented token's
 <code>mission_s256</code> receives <code>invalid_resource_token</code> (Section 6.7.2 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>); and<a href="#section-4.7-10.3.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>); and<a href="#section-4.7-11.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-4.7-10.4">
-            <p id="section-4.7-10.4.1">a request that reaches the mission-state check under a mission that
+          <li class="normal" id="section-4.7-11.4">
+            <p id="section-4.7-11.4.1">a request that reaches the mission-state check under a mission that
 is no longer active receives <code>mission_terminated</code> (Section 8.8 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.7-10.4.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.7-11.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-4.7-11">The PS, or the AS in four-party access, MUST NOT evaluate a failed
+<p id="section-4.7-12">The PS, or the AS in four-party access, MUST NOT evaluate a failed
 request as missionless authorization, and the agent MUST NOT retry it
-without the reference.<a href="#section-4.7-11" class="pilcrow">¶</a></p>
-<p id="section-4.7-12">Intentionally missionless authorization is a separate path, admitted by
+without the reference.<a href="#section-4.7-12" class="pilcrow">¶</a></p>
+<p id="section-4.7-13">Intentionally missionless authorization is a separate path, admitted by
 explicit deployment policy from the outset for requests with no
 required or inherited Mission association.  It is never a fallback
 after Mission validation fails.  It is outside the Lifecycle-Gated
 Authorization and Credential-Bound claims.  Each claim's scope and
-activation conditions are stated in <a href="#mission-substrate" class="auto internal xref">Section 9</a>.<a href="#section-4.7-12" class="pilcrow">¶</a></p>
+activation conditions are stated in <a href="#mission-substrate" class="auto internal xref">Section 9</a>.<a href="#section-4.7-13" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="lifecycle">
@@ -2220,9 +2310,9 @@ Termination Reasons registry (<span>[<a href="#I-D.draft-mcguinness-oauth-missio
 Section "Mission Termination Reasons Registry").  The two reason sets
 correspond as follows; on either side, a mission that is <code>terminated</code>
 is non-active whatever its reason:<a href="#section-4.8-4" class="pilcrow">¶</a></p>
-<span id="name-termination-reason-correspo"></span><table class="center" id="table-4">
+<span id="name-termination-reason-correspo"></span><table class="center" id="table-5">
           <caption>
-<a href="#table-4" class="selfRef">Table 4</a>:
+<a href="#table-5" class="selfRef">Table 5</a>:
 <a href="#name-termination-reason-correspo" class="selfRef">Termination reason correspondence</a>
           </caption>
 <thead>
@@ -2719,9 +2809,9 @@ of <a href="#mission-log" class="auto internal xref">Section 4.3</a>.<a href="#s
 every supplied row states its activation conditions, and its temporal
 and failure elements in its cells or by express inheritance of the
 Bounded Reliance floor (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>):<a href="#section-9-4" class="pilcrow">¶</a></p>
-<span id="name-aauth-mission-substrate-cap"></span><table class="center" id="table-5">
+<span id="name-aauth-mission-substrate-cap"></span><table class="center" id="table-6">
         <caption>
-<a href="#table-5" class="selfRef">Table 5</a>:
+<a href="#table-6" class="selfRef">Table 6</a>:
 <a href="#name-aauth-mission-substrate-cap" class="selfRef">AAuth Mission substrate capabilities</a>
         </caption>
 <thead>
@@ -2867,6 +2957,10 @@ metadata member, error code, capability value, or registry value.<a href="#secti
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"AAuth Mission Management"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-management.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-management.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
@@ -2906,24 +3000,35 @@ incremental deployment remain distinct concerns.<a href="#appendix-A-1" class="p
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Lifecycle maps AAuth's <code>termination_reason</code> to the family's Mission
+          <p id="appendix-B-2.1.1">Native Reference defines how a consumer that keys Missions by
+<code>issuer</code> and <code>id</code>, such as the Runtime and the AuthZEN profile,
+projects an AAuth Mission Reference: the approving PS's server
+identifier and the unchanged <code>s256</code>, from each validated native
+carrier, with <code>ps</code> on an auth token and no fallback to its <code>iss</code>; a
+projected reference carries no authority.  A four-party example
+separates the Mission's issuer from the credential's.  Reference
+Propagation states that the projection adds no AAuth wire member
+(#1169).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Lifecycle maps AAuth's <code>termination_reason</code> to the family's Mission
 Termination Reasons, including AAuth's <code>administrative</code>, the
 family's <code>parent_terminated</code>, and an unrecognized reason on either
 side, omits a family <code>termination</code> for a reason with no family
 counterpart, and notes that Mission Status's <code>suspended</code> state has
 no AAuth counterpart.  AAuth's states and members are unchanged
-(#705).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+(#705).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">A chained hop is PS-governed derivation under the same Mission: the
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">A chained hop is PS-governed derivation under the same Mission: the
 Mission's <code>agent</code> is the root actor, the holder of a chained person
 token is the intermediary, whose identity the PS establishes from its
 authenticated agent token and its records (<code>cnf</code> binds only the key),
 and the PS copies <code>mission_s256</code> from the upstream token, which the
-intermediary never supplies (#966).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+intermediary never supplies (#966).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">An accepted update approves a new immutable version of the Approved
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">An accepted update approves a new immutable version of the Approved
 Context, identified by the Mission Reference and its position in the
 accepted-update sequence; <code>mission_s256</code> commits to the original
 blob only, and a pending or rejected update is part of no version.
@@ -2931,10 +3036,10 @@ The PS must not accept a broadening update without the Supervisor's
 acceptance; under a deciding supervision server, its <code>allow</code> accepts
 and its <code>ask</code> requires the person, so a configured server can
 authorize broadening without a fresh human decision. The Statement
-names the versions and disclaims any containment guarantee (#965).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+names the versions and disclaims any containment guarantee (#965).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Maps AAuth's Supervisor role and defines an agent's deciding
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">Maps AAuth's Supervisor role and defines an agent's deciding
 supervision server. A PS with one obtains that server's decision for
 supervision decisions and keeps verification, enforcement, issuance,
 and recording; management authorization and revocation are
@@ -2944,7 +3049,7 @@ acceptance. The mission log records the actual decider and, for a
 supervision-server exchange, the <code>sdi</code> and the exchange with any
 signatures; the deciding server is a log reader; a supervision server
 does not see the R3 proposal. AAuth Supervision is cited
-informatively, pinned at dickhardt/AAuth commit 70d67375 (#967).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+informatively, pinned at dickhardt/AAuth commit 70d67375 (#967).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

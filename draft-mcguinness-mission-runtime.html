@@ -1702,7 +1702,11 @@ deployment establishes it in one of two modes:<a href="#section-2.3-1" class="pi
             <p id="section-2.3-2.1.1"><strong>Credential-carried.</strong> The acting credential's Mission reference
 identifies the Mission, under the binding's own credential
 representation (the OAuth realization is the <code>mission</code> claim,
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The PEP takes the Mission
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; the AAuth realization is the
+signed <code>mission_s256</code> claim on the access paths where the AAuth
+binding supplies Credential-Bound, projected to the approving Person
+Server and <code>s256</code> as that binding defines,
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>). The PEP takes the Mission
 reference from the validated credential, after establishing the
 credential's validity for the protected resource and request under
 the binding's own credential-validation rules (the OAuth realization
@@ -1715,13 +1719,12 @@ reference from the deployment's Mission binding source. The PDP
 <span class="bcp14">MUST</span> verify that reference against the acting credential under a
 join a binding profile defines; an unverified reference <span class="bcp14">MUST NOT</span>
 establish the Mission. The Mission Authority Server profile defines
-the concrete join for this mode
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), and the AAuth
-binding's reference propagation supplies the externally carried
-reference for such a join
-(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>), as the MAS profile's
-Mission Reference Propagation channel does in credential-less MAS
-mode.<a href="#section-2.3-2.2.1" class="pilcrow">¶</a></p>
+the concrete join for this mode, and its Mission Reference
+Propagation channel carries the reference in credential-less MAS
+mode (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). The AAuth
+binding defines no such join, so an AAuth Mission reference
+establishes a Mission in this mode only under a separately specified
+verified join (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-2.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-2.3-3">The mode each enforcement scope uses is part of its Enforcement
@@ -6022,11 +6025,11 @@ any decision-API wire members are defined by the decision-API binding
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-actor-proofs">[I-D.draft-mcguinness-oauth-actor-proofs]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor-Signed Hop Proofs"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-proofs-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-proofs-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-proofs-00</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor-Signed Hop Proofs"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-proofs-01</span>, <time datetime="2026-10-09" class="refDate">9 October 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-proofs-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-proofs-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-actor-receipts">[I-D.draft-mcguinness-oauth-actor-receipts]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor Receipts for Delegation Provenance"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-receipts-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-00</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor Receipts for Delegation Provenance"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-receipts-01</span>, <time datetime="2026-10-08" class="refDate">8 October 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-client-instance-id">[I-D.draft-mcguinness-oauth-client-instance-id]</dt>
         <dd>
@@ -6225,7 +6228,7 @@ the view of <a href="#policy-view-example" class="auto internal xref">Appendix B
 Mission, the authorizing <code>mission_resource_access</code> entry and its
 <code>max_amount</code> constraint, and the <code>parameter_digest</code> of
 <a href="#parameter-digest-example" class="auto internal xref">Appendix A</a>, correlated by <code>evaluation_id</code>
-        <code>dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ</code>. The companion's own worked example
+        <code>dec_8K2nP4qV9rL3tY6sB1zN0eF7jB</code>. The companion's own worked example
 shows the concrete record
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#appendix-C-2" class="pilcrow">¶</a></p>
 <p id="appendix-C-3">The executing PEP then acts and produces the execution-outcome record
@@ -6258,26 +6261,34 @@ worked example shows the concrete record
 <p id="appendix-D-1">[[ To be removed from the final specification ]]<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-D-2.1">
-          <p id="appendix-D-2.1.1">Time: a Mission state source reports an expired Mission as
-<code>terminated</code> with reason <code>expired</code>; the refusal on it is unchanged
-(#705).<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.1.1">Mission Binding Establishment: names the AAuth realization of a
+credential-carried Mission reference beside the OAuth one, limited
+to the access paths where the AAuth binding supplies
+Credential-Bound, and no longer says AAuth reference propagation
+supplies an externally established reference: the AAuth binding
+defines no join (#1169).<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.2">
-          <p id="appendix-D-2.2.1">Action Classification: the <code>purpose</code> that may raise a class is the
+          <p id="appendix-D-2.2.1">Time: a Mission state source reports an expired Mission as
+<code>terminated</code> with reason <code>expired</code>; the refusal on it is unchanged
+(#705).<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.3">
+          <p id="appendix-D-2.3.1">Action Classification: the <code>purpose</code> that may raise a class is the
 approved Mission's, from its Mission state or a validated
 projection, never a value the request asserts. The semantic
 intent-alignment signal's bound cites the issuance profile's
 treatment of <code>purpose</code> as restrictive outside its configured-mapping
 lookup rather than as inert. The rule 2 statement adds a
-requirement; the signal's requirement is unchanged (#1102).<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.3">
-          <p id="appendix-D-2.3.1">The <code>rendering_independence</code> assurance row names the action-bound
-approval it is evaluated per; "approval event" is reserved for the
-Mission's creation (#1120).<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
+requirement; the signal's requirement is unchanged (#1102).<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.4">
-          <p id="appendix-D-2.4.1">Mission State and Freshness states credential expiry and the
+          <p id="appendix-D-2.4.1">The <code>rendering_independence</code> assurance row names the action-bound
+approval it is evaluated per; "approval event" is reserved for the
+Mission's creation (#1120).<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.5">
+          <p id="appendix-D-2.5.1">Mission State and Freshness states credential expiry and the
 state-gated refresh cycle as one Credential-lifetime freshness
 source below the high-consequence floor, conforming only where every
 issuance, refresh, and exchange path checks Mission state within the
@@ -6286,76 +6297,76 @@ from an earlier observation adds that observation's age, and the
 latency statements for paths outside PDP gating carry the same sum.
 No BCP 14 sentence changed; the stated conformance condition,
 previously gated derivation and refresh, now covers every issuance,
-refresh, and exchange path and has its own ledger row.<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.5">
-          <p id="appendix-D-2.5.1">Evaluation-Context Binding no longer speaks of "Runtime-Enforced
-conformance": a level is guidance, never a conformance class. No
-requirement changed.<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
+refresh, and exchange path and has its own ledger row.<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.6">
-          <p id="appendix-D-2.6.1">Idempotency defines the Exact and Bounded-consistency enforcement
-profiles for its own claim, so the idempotency requirements no longer
-depend on the experimental metering companion, which is cited only as
-applying the same profiles to its counters.<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.6.1">Evaluation-Context Binding no longer speaks of "Runtime-Enforced
+conformance": a level is guidance, never a conformance class. No
+requirement changed.<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.7">
-          <p id="appendix-D-2.7.1">Credential Custody: the acting credential for a high-consequence
+          <p id="appendix-D-2.7.1">Idempotency defines the Exact and Bounded-consistency enforcement
+profiles for its own claim, so the idempotency requirements no longer
+depend on the experimental metering companion, which is cited only as
+applying the same profiles to its counters.<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.8">
+          <p id="appendix-D-2.8.1">Credential Custody: the acting credential for a high-consequence
 action is sender-constrained in either Mission-establishment mode.
 The PEP supplies a confirmation key only from a binding it verified
 with a current proof of possession, and the PDP denies a
 high-consequence action without one. Enforcement Invariants and
-Failure Modes point to the rule.<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.8">
-          <p id="appendix-D-2.8.1">Out of Scope lists cross-PDP history composition other than through
-the deployment's evidence store or registered transparency records,
-matching History. No requirement changed.<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
+Failure Modes point to the rule.<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.9">
-          <p id="appendix-D-2.9.1">Authority input: for every issuer-held narrowing mechanism the
-deployment runs, the PDP establishes current effective authority from
-a source reporting it and refuses when it cannot; the PDP refuses an
-action within a discharged entry (formerly <span class="bcp14">SHOULD</span>).<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.9.1">Out of Scope lists cross-PDP history composition other than through
+the deployment's evidence store or registered transparency records,
+matching History. No requirement changed.<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.10">
-          <p id="appendix-D-2.10.1">A materialized policy view is one way to evaluate the authority
+          <p id="appendix-D-2.10.1">Authority input: for every issuer-held narrowing mechanism the
+deployment runs, the PDP establishes current effective authority from
+a source reporting it and refuses when it cannot; the PDP refuses an
+action within a discharged entry (formerly <span class="bcp14">SHOULD</span>).<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.11">
+          <p id="appendix-D-2.11.1">A materialized policy view is one way to evaluate the authority
 input, not the only one: the Materialized Policy View section
 governs a PDP that uses one, and the authority input requires
 whatever the PDP evaluates to be no broader than the current
 effective authority and bound to the Mission, with mutable state
 from a state source; the policy-view version names whichever basis
-the PDP evaluated.<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.11">
-          <p id="appendix-D-2.11.1">The Operation Profile's items are grouped as the operation's binding
-and its declarations, with no change to any requirement or to which
-operations it applies to; a declaration is stated even where the
-answer is no.<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
+the PDP evaluated.<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.12">
-          <p id="appendix-D-2.12.1">The record minimum's evaluation request digest is over the input
-the runtime evidence companion defines (#971).<a href="#appendix-D-2.12.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.12.1">The Operation Profile's items are grouped as the operation's binding
+and its declarations, with no change to any requirement or to which
+operations it applies to; a declaration is stated even where the
+answer is no.<a href="#appendix-D-2.12.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.13">
-          <p id="appendix-D-2.13.1">Security Considerations notes that an idempotency key identifies a
-request, not the business event it carries out, and that the
-Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.13.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.13.1">The record minimum's evaluation request digest is over the input
+the runtime evidence companion defines (#971).<a href="#appendix-D-2.13.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.14">
-          <p id="appendix-D-2.14.1">The Enforcement Scope Statement is what a deployment adopting the
-Runtime-Enforced bundle publishes, not what earns the level; the
-level stays guidance, matching the architecture's assurance levels,
-and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.14.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.14.1">Security Considerations notes that an idempotency key identifies a
+request, not the business event it carries out, and that the
+Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.14.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.15">
-          <p id="appendix-D-2.15.1">The Introduction states this profile as the per-action decision for
-the action classes it covers, composed over the issuance profile's
-bounds, and Deployment Considerations names introspection as a
-cutoff on the issuance-only path.<a href="#appendix-D-2.15.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.15.1">The Enforcement Scope Statement is what a deployment adopting the
+Runtime-Enforced bundle publishes, not what earns the level; the
+level stays guidance, matching the architecture's assurance levels,
+and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.15.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.16">
-          <p id="appendix-D-2.16.1">Client-instance references follow their successors:
+          <p id="appendix-D-2.16.1">The Introduction states this profile as the per-action decision for
+the action classes it covers, composed over the issuance profile's
+bounds, and Deployment Considerations names introspection as a
+cutoff on the issuance-only path.<a href="#appendix-D-2.16.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.17">
+          <p id="appendix-D-2.17.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -6363,37 +6374,37 @@ cited. Attester-verified
 context is instance identity that grants no authority, custody's
 per-instance key follows the successor's instance-unique key for
 attribution, and EAT evidence is no longer tied to a carrier
-profile. No requirement changed.<a href="#appendix-D-2.16.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.17">
-          <p id="appendix-D-2.17.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
-and its negative-conformance case (#759). Observing or requesting an
-independent approval is distinct from resolving it.<a href="#appendix-D-2.17.1" class="pilcrow">¶</a></p>
+profile. No requirement changed.<a href="#appendix-D-2.17.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.18">
-          <p id="appendix-D-2.18.1">Defined compound-action phases, one Decision per consequential
+          <p id="appendix-D-2.18.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
+and its negative-conformance case (#759). Observing or requesting an
+independent approval is distinct from resolving it.<a href="#appendix-D-2.18.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.19">
+          <p id="appendix-D-2.19.1">Defined compound-action phases, one Decision per consequential
 phase, a PEP-derived phase binding verified at permit use,
 phase-scoped idempotency where phases share an action identifier,
 and compensation correlation (#252). Strength change:
 <code>compensates_evaluation_id</code> on Decision Evidence moves from <span class="bcp14">OPTIONAL</span>
 to <span class="bcp14">REQUIRED</span> for a compensate-phase decision, <span class="bcp14">OPTIONAL</span> otherwise. The
 AuthZEN condition, the evidence member, and conformance coverage are
-specified separately.<a href="#appendix-D-2.18.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.19">
-          <p id="appendix-D-2.19.1">Added per-entry perimeter dispositions inside the existing
-mediated-scope declaration, its compatibility rule, and the
-prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.19.1" class="pilcrow">¶</a></p>
+specified separately.<a href="#appendix-D-2.19.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.20">
-          <p id="appendix-D-2.20.1">Operational Considerations added (#310): a dependency-conditional outage
+          <p id="appendix-D-2.20.1">Added per-entry perimeter dispositions inside the existing
+mediated-scope declaration, its compatibility rule, and the
+prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.20.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.21">
+          <p id="appendix-D-2.21.1">Operational Considerations added (#310): a dependency-conditional outage
 blast-radius table indexed by action class, the remaining-window
 ride-through, the declared positive break-glass mode with truthful
 emergency evidence, and the replication disclosure. The three operator
-declarations carry no implementation coverage.<a href="#appendix-D-2.20.1" class="pilcrow">¶</a></p>
+declarations carry no implementation coverage.<a href="#appendix-D-2.21.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.21">
-          <p id="appendix-D-2.21.1">Added the Evaluation-Context Binding named assurance extension (#773),
+        <li class="normal" id="appendix-D-2.22">
+          <p id="appendix-D-2.22.1">Added the Evaluation-Context Binding named assurance extension (#773),
 claimed per mediated action class: a versioned descriptor of
 decision-relevant resource-resolved facts, a salted PEP-computed
 context digest committed with that descriptor, reverification at use,
@@ -6401,7 +6412,7 @@ and the declared verified and enforced properties. The deferred
 evaluation-context bullet is struck and the TOCTOU considerations point
 at the extension, keeping the residual for uncovered facts and
 non-adopters. The wire condition, the evidence members, and conformance
-coverage are specified separately.<a href="#appendix-D-2.21.1" class="pilcrow">¶</a></p>
+coverage are specified separately.<a href="#appendix-D-2.22.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

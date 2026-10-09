@@ -1427,9 +1427,12 @@ a raw-octet digest over the exact serialization octets
 names consequential read, consequential write, irreversible action,
 external commitment, and privileged administration), high-consequence
 classes, and parameter-bound are used as defined in
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. The Mission claim (<code>id</code>,
-<code>issuer</code>) and the integrity anchors (<code>intent_hash</code>,
-<code>authority_hash</code>) are used as defined in
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. A Mission reference (<code>id</code>,
+<code>issuer</code>) is a binding's Mission Reference identifier and Controller
+namespace, in the representation that binding defines; the OAuth
+realization is the Mission claim of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>. The integrity anchors
+(<code>intent_hash</code>, <code>authority_hash</code>) are used as defined in
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>; <code>authorization_details</code>
 entries of type <code>mission_resource_access</code> are used as defined in its
 Mission Resource Access Profile
@@ -4530,39 +4533,46 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1"><code>authority_bound</code> is a coordinated Decision Evidence extension
-member, registered and owned by the AuthZEN profile: the authority
-bound that decided an <code>out_of_authority</code> or <code>parameter_violation</code>
-deny (#825).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Terminology: a Mission reference (<code>id</code>, <code>issuer</code>) is a binding's
+Mission Reference identifier and Controller namespace in that
+binding's representation, with the OAuth realization unchanged; the
+records' Mission reference members and their presence rules are
+unchanged (#1169).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">The Refusal Record's PEP <code>denial_reason</code> set adds <code>request_invalid</code>:
-the PEP established the action, and the supplied arguments fail its
-required input schema. <code>request_unsupported</code> keeps its meaning, an
-action the enforcement surface does not implement (#1106).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.2.1"><code>authority_bound</code> is a coordinated Decision Evidence extension
+member, registered and owned by the AuthZEN profile: the authority
+bound that decided an <code>out_of_authority</code> or <code>parameter_violation</code>
+deny (#825).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1"><code>join_view_id</code> is a coordinated Decision Evidence extension member,
+          <p id="appendix-A-2.3.1">The Refusal Record's PEP <code>denial_reason</code> set adds <code>request_invalid</code>:
+the PEP established the action, and the supplied arguments fail its
+required input schema. <code>request_unsupported</code> keeps its meaning, an
+action the enforcement surface does not implement (#1106).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1"><code>join_view_id</code> is a coordinated Decision Evidence extension member,
 registered and owned by the Mission Authority Server: the
 joined-view commitment of a decision reached over a successful
 Mission Join (#972 item 27a). The list of commonly carried
-coordinated members also names <code>principal_mapping</code>.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+coordinated members also names <code>principal_mapping</code>.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
 PDP evaluates through a materialized policy view; a PDP that
 evaluates the Mission's recorded authority directly omits it and
 records <code>authority_hash</code> and the new <code>pdp_policy_version</code>, following
 the runtime profile's two evaluation paths; the Mission Receipt's
-<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1"><code>evaluation_request_digest</code> covers the evaluation request as the
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1"><code>evaluation_request_digest</code> covers the evaluation request as the
 decision-API profile defines it or, for a Refusal Record emitted
 before any request, a defined pre-request input; the Refusal Record
 member <code>request_digest_input</code> names which. The digest is no longer
 described as privacy-preserving: it commits to its input and does
-not hide an input a party can guess (#971).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+not hide an input a party can guess (#971).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

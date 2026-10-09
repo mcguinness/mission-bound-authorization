@@ -200,11 +200,15 @@ Table of Contents
    consequential read, consequential write, irreversible action,
    external commitment, and privileged administration), high-consequence
    classes, and parameter-bound are used as defined in
-   [I-D.draft-mcguinness-mission-runtime].  The Mission claim (id,
-   issuer) and the integrity anchors (intent_hash, authority_hash) are
-   used as defined in [I-D.draft-mcguinness-oauth-mission];
-   authorization_details entries of type mission_resource_access are
-   used as defined in its Mission Resource Access Profile
+   [I-D.draft-mcguinness-mission-runtime].  A Mission reference (id,
+   issuer) is a binding's Mission Reference identifier and Controller
+   namespace, in the representation that binding defines; the OAuth
+   realization is the Mission claim of
+   [I-D.draft-mcguinness-oauth-mission].  The integrity anchors
+   (intent_hash, authority_hash) are used as defined in
+   [I-D.draft-mcguinness-oauth-mission]; authorization_details entries
+   of type mission_resource_access are used as defined in its Mission
+   Resource Access Profile
    ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
    Additional terms:
@@ -2614,6 +2618,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Terminology: a Mission reference (id, issuer) is a binding's
+      Mission Reference identifier and Controller namespace in that
+      binding's representation, with the OAuth realization unchanged;
+      the records' Mission reference members and their presence rules
+      are unchanged (#1169).
 
    *  authority_bound is a coordinated Decision Evidence extension
       member, registered and owned by the AuthZEN profile: the authority

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-09T05:12:02Z
-Source repository commit: 5e2c77ee5a92c2d8d597f69d3cfb1706c7129744
+Generated: 2026-10-09T17:22:17Z
+Source repository commit: e395d037c29e08e3370f20cc4bef9f3f9bb4eb14
 Member count: 9
 
 Reading order:
@@ -370,8 +370,8 @@ Table of Contents
 
    7.  *Stop.* Revocation or expiry turns every gate: issuance refuses
        at once, the PDP denies within its state source's staleness
-       bound, the harness pauses bound sessions and queues, and the
-       orchestrator unwinds in-flight work
+       bound, the harness suppresses or terminates bound sessions and
+       queues, and the orchestrator unwinds in-flight work
        ([I-D.draft-mcguinness-mission-harness],
        [I-D.draft-mcguinness-mission-orchestration]); a token no state-
        aware gate reaches runs to its own expiry (Section 10.4).
@@ -11124,7 +11124,7 @@ Table of Contents
        "iss": "https://as.example.com",
        "sub_profile": "ai_agent"
      },
-     "cnf": { "jkt": "qVx7y2N0p4Lq9Md3sZJ8b8mZ3rN2xT5pV4lE6sQqYY" },
+     "cnf": { "jkt": "Inaz7NtW9__w8ZNhk-CB7X_Y1G-XSCRAYT4oBffaS_0" },
      "mission": {
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com"
@@ -12624,9 +12624,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-actor-profile]
               McGuinness, K., "OAuth Actor Profile for Delegation", Work
               in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
-              profile-00, 30 April 2026,
+              profile-01, 8 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-actor-profile-00>.
+              oauth-actor-profile-01>.
 
    [I-D.draft-mcguinness-oauth-client-attesters]
               McGuinness, K., "OAuth 2.0 Client Attester Endorsement",
@@ -17147,7 +17147,11 @@ Table of Contents
    *  *Credential-carried.* The acting credential's Mission reference
       identifies the Mission, under the binding's own credential
       representation (the OAuth realization is the mission claim,
-      [I-D.draft-mcguinness-oauth-mission]).  The PEP takes the Mission
+      [I-D.draft-mcguinness-oauth-mission]; the AAuth realization is the
+      signed mission_s256 claim on the access paths where the AAuth
+      binding supplies Credential-Bound, projected to the approving
+      Person Server and s256 as that binding defines,
+      [I-D.draft-mcguinness-mission-aauth]).  The PEP takes the Mission
       reference from the validated credential, after establishing the
       credential's validity for the protected resource and request under
       the binding's own credential-validation rules (the OAuth
@@ -17160,12 +17164,12 @@ Table of Contents
       that reference against the acting credential under a join a
       binding profile defines; an unverified reference MUST NOT
       establish the Mission.  The Mission Authority Server profile
-      defines the concrete join for this mode
-      ([I-D.draft-mcguinness-mission-authority-server]), and the AAuth
-      binding's reference propagation supplies the externally carried
-      reference for such a join ([I-D.draft-mcguinness-mission-aauth]),
-      as the MAS profile's Mission Reference Propagation channel does in
-      credential-less MAS mode.
+      defines the concrete join for this mode, and its Mission Reference
+      Propagation channel carries the reference in credential-less MAS
+      mode ([I-D.draft-mcguinness-mission-authority-server]).  The AAuth
+      binding defines no such join, so an AAuth Mission reference
+      establishes a Mission in this mode only under a separately
+      specified verified join ([I-D.draft-mcguinness-mission-aauth]).
 
    The mode each enforcement scope uses is part of its Enforcement Scope
    Statement (Section 5.2).  In either mode, the established Mission is
@@ -21013,16 +21017,16 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-actor-proofs]
               McGuinness, K., "OAuth Actor-Signed Hop Proofs", Work in
               Progress, Internet-Draft, draft-mcguinness-oauth-actor-
-              proofs-00, 4 July 2026,
+              proofs-01, 9 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-actor-proofs-00>.
+              oauth-actor-proofs-01>.
 
    [I-D.draft-mcguinness-oauth-actor-receipts]
               McGuinness, K., "OAuth Actor Receipts for Delegation
               Provenance", Work in Progress, Internet-Draft, draft-
-              mcguinness-oauth-actor-receipts-00, 4 July 2026,
+              mcguinness-oauth-actor-receipts-01, 8 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-actor-receipts-00>.
+              oauth-actor-receipts-01>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
               McGuinness, K., "Client Instance Identification for
@@ -21220,7 +21224,7 @@ Appendix C.  Runtime Evidence Worked Examples
    Evidence record cites the Mission, the authorizing
    mission_resource_access entry and its max_amount constraint, and the
    parameter_digest of Appendix A, correlated by evaluation_id
-   dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ.  The companion's own worked example
+   dec_8K2nP4qV9rL3tY6sB1zN0eF7jB.  The companion's own worked example
    shows the concrete record
    ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
@@ -21248,6 +21252,13 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Mission Binding Establishment: names the AAuth realization of a
+      credential-carried Mission reference beside the OAuth one, limited
+      to the access paths where the AAuth binding supplies Credential-
+      Bound, and no longer says AAuth reference propagation supplies an
+      externally established reference: the AAuth binding defines no
+      join (#1169).
 
    *  Time: a Mission state source reports an expired Mission as
       terminated with reason expired; the refusal on it is unchanged
@@ -21590,11 +21601,15 @@ Table of Contents
    consequential read, consequential write, irreversible action,
    external commitment, and privileged administration), high-consequence
    classes, and parameter-bound are used as defined in
-   [I-D.draft-mcguinness-mission-runtime].  The Mission claim (id,
-   issuer) and the integrity anchors (intent_hash, authority_hash) are
-   used as defined in [I-D.draft-mcguinness-oauth-mission];
-   authorization_details entries of type mission_resource_access are
-   used as defined in its Mission Resource Access Profile
+   [I-D.draft-mcguinness-mission-runtime].  A Mission reference (id,
+   issuer) is a binding's Mission Reference identifier and Controller
+   namespace, in the representation that binding defines; the OAuth
+   realization is the Mission claim of
+   [I-D.draft-mcguinness-oauth-mission].  The integrity anchors
+   (intent_hash, authority_hash) are used as defined in
+   [I-D.draft-mcguinness-oauth-mission]; authorization_details entries
+   of type mission_resource_access are used as defined in its Mission
+   Resource Access Profile
    ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
    Additional terms:
@@ -24005,6 +24020,12 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Terminology: a Mission reference (id, issuer) is a binding's
+      Mission Reference identifier and Controller namespace in that
+      binding's representation, with the OAuth realization unchanged;
+      the records' Mission reference members and their presence rules
+      are unchanged (#1169).
+
    *  authority_bound is a coordinated Decision Evidence extension
       member, registered and owned by the AuthZEN profile: the authority
       bound that decided an out_of_authority or parameter_violation deny
@@ -24453,11 +24474,15 @@ Table of Contents
    and the action-class names (consequential read, consequential write,
    irreversible action, external commitment, and privileged
    administration) are used as defined in
-   [I-D.draft-mcguinness-mission-runtime].  The Mission claim (id,
-   issuer) and the integrity anchors (intent_hash, authority_hash) are
-   used as defined in [I-D.draft-mcguinness-oauth-mission];
-   authorization_details entries of type mission_resource_access are
-   used as defined in its Mission Resource Access Profile
+   [I-D.draft-mcguinness-mission-runtime].  A Mission reference (id,
+   issuer) is a binding's Mission Reference identifier and Controller
+   namespace, in the representation that binding defines; the OAuth
+   realization is the Mission claim of
+   [I-D.draft-mcguinness-oauth-mission].  The integrity anchors
+   (intent_hash, authority_hash) are used as defined in
+   [I-D.draft-mcguinness-oauth-mission]; authorization_details entries
+   of type mission_resource_access are used as defined in its Mission
+   Resource Access Profile
    ([I-D.draft-mcguinness-oauth-mission-resource-access]).  Effective
    Authority Set is used as defined in
    [I-D.draft-mcguinness-oauth-mission-status].
@@ -24620,9 +24645,15 @@ Table of Contents
    context.mission_state_observation (Section 6.8), so a change in state
    never mints a new policy_view_id (Section 5).
 
-   id:  REQUIRED.  A string.  The Mission's id.
+   id:  REQUIRED.  A string.  The Mission Reference identifier, in its
+      binding's representation (the OAuth realization is the Mission's
+      id).
 
-   issuer:  REQUIRED.  A string containing a URI.  The Mission's issuer.
+   issuer:  REQUIRED.  A string containing a URI.  The Mission
+      Reference's Controller namespace, in its binding's representation
+      (the OAuth realization is the Mission's issuer).  It is not the
+      credential's issuer, which context.credential.issuer carries
+      (Section 6.4).
 
    authority_hash:  OPTIONAL.  A string.  The Authority Set integrity
       anchor, in the integrity-anchor encoded form
@@ -26123,7 +26154,9 @@ Table of Contents
      "decision": false,
      "context": {
        "evaluation_id": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc",
+       "evaluated_at": "2026-11-02T08:14:00Z",
        "reason": "approval_required",
+       "next_action": "request",
        "access_request": {
          "endpoint": "https://requests.example.com/access-requests",
          "expires_at": "2026-11-02T09:14:00Z",
@@ -27240,6 +27273,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  context.mission's id and issuer are the binding's Mission
+      Reference identifier and Controller namespace in that binding's
+      representation, with the OAuth realization unchanged, and issuer
+      is distinct from context.credential.issuer.  Terminology states
+      the same (#1169).
 
    *  mission_state_observation gains an OPTIONAL termination, the
       Mission's termination when state is terminated.  The PDP rule,
