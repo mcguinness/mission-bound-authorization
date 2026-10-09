@@ -445,10 +445,10 @@ bounds are:
   `authorization_details` of the validated JWT or, for an opaque
   token, of its introspection response; for an ordinary token joined
   to a Mission under an externally established reference
-  ({{token-validation}}), the authority that token carries as issued,
-  established and enforced as the join profile defines (the Mission
-  Authority Server enforces it at the resource server or gateway,
-  {{I-D.draft-mcguinness-mission-authority-server}}); and
+  ({{token-validation}}), the authority that token carries as issued:
+  the entries its verified `scope` maps to under the join profile's
+  mapping contract ({{I-D.draft-mcguinness-mission-authority-server}}),
+  which the PDP enforces as this bound; and
 - the current effective authority: the approved Authority Set,
   narrowed by any narrowing mechanism the deployment runs. For a
   Mission-bound token with no narrowing mechanism running, the

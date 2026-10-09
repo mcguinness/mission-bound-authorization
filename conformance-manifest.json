@@ -7,24 +7,24 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "96abef0ac2491ba242cca31d8960eb242def5e47",
-    "content_sha256": "42233e378a7d1207a8ed73b308068b1cf23e5927b21d94ffc9584ed5f827b952"
+    "revision": "1f11bbe47aa41369c0445cc5c7f1ce1ff86b0da4",
+    "content_sha256": "68d8931fb89539f56d4fdf529babbc92b01ed8d71148d04e32e43cde1fcfb57e"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "d055b3b94bea14920088842f43fa7684237dfacdff77e059961748bf0f31fb91"
+    "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
+    "content_sha256": "5e04dd5054c6fa6c1013df78220cfe55ae3f3f98b6cb673381f9cfd9f28b4f1d"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "9b890b427ffd23c4c0b8c7f33118df6f4038219a",
-    "content_sha256": "c1fb17ce0f9d37cc15c973fbac912fa4ef31a9e27ed81cbda8b7645d6ea4b37d"
+    "revision": "27ea2fc059d9063aac5f99516bd01fa6f0b0658c",
+    "content_sha256": "90f4ba51c9752c26ad7aef7e68aff078b4f5ff6e6e19467b57b3c0c65759946a"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "bdf5e7fb6550c5fe72231c0acb4be6a6f4f8df136deeb2c7a6728462dab6bc09"
+    "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
+    "content_sha256": "89bf3dedc4144bf5aee77e79b8a2dc1a35c03a3ba1bf2a4f4170a52386c49310"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "b04d0ffcb8c296552afd6a19109608a7605bce9006cd2e4e5ecafaa2cc041577"
+    "revision": "1f11bbe47aa41369c0445cc5c7f1ce1ff86b0da4",
+    "content_sha256": "e13696c334cf2d0911974be74a5562ac25f219b74c385cf28f7d579ad085bf34"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
@@ -35,12 +35,12 @@
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "96abef0ac2491ba242cca31d8960eb242def5e47",
-    "content_sha256": "99be424ca19917bed51384a000c3c0f9dc6c770d8b4fce13c8fdfffe367431dc"
+    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
+    "content_sha256": "562b8648cf7e3ad55223995dee9b0333bad2db55a956acfc860a1321836476f6"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
-    "content_sha256": "587a0fa788b22b95429701e5fb6c6d95c80f47091dd071538f116d5578069a17"
+    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
+    "content_sha256": "567d56a9a8d82ae5a4495e3c0147ae4570470a6931b6a2cf4ca72c3eace6d961"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "96abef0ac2491ba242cca31d8960eb242def5e47",
-    "content_sha256": "80f404441067e922b14fd4b3996744a2070775852cc24493fbe372876679ad12"
+    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
+    "content_sha256": "cd08db072fc48e80ac1e4c7a20b55c2cd2694400c5555e21d36a3e0c0d34783a"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -99,16 +99,16 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
-    "content_sha256": "df4b3cc03ebb756aa96ff79abcefd906cf3d990bb77920b5902143f3f7ad677e"
+    "revision": "e6d514ce5ebf4ae47dee9bad3eaff6c2544ae64e",
+    "content_sha256": "f47ce123511fcb11509c380b8cd5e3131a5c7782739b9b19f2410a32dbcadadb"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "96abef0ac2491ba242cca31d8960eb242def5e47",
-    "content_sha256": "c4de3491b5ab185ad0bbceeef41ff2f14fefab6ab6dd22fb13adef5d5fbc63ba"
+    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
+    "content_sha256": "c946d25702ea9ad0435d22933c49e98eaaeaf107127ba078fccf8c026aa3302f"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
-    "content_sha256": "5fcca87b0e0a1460daf3b7282e00f491bf559ef5b5645e5fe8155b2064ae5e70"
+    "revision": "c74a85acc97dc6ba157b26721f18767d76085b80",
+    "content_sha256": "ae693e62093b5de105aabc0df10b335856e3f16b6af189e646bf8451dce2d33e"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -127,8 +127,8 @@
     "content_sha256": "7a24c9a98ece9ae1ac533dde1a1158558a8e93c7d8419bbc39e4c1d33a4622fe"
    },
    "draft-mcguinness-mission-aauth.md": {
-    "revision": "ed06fb6e130d428ef4d630472529a46a930bbf07",
-    "content_sha256": "6712a25d57c20feb031d4c1ee0ce2ef361d3c405301fcce527761b9a20579123"
+    "revision": "c908bd3ed1638bdf994d615a5b65423fa6eebf7c",
+    "content_sha256": "0af450d300a722cd9a6e2ae480ecab221646d2d1b2e9a15b5b630f8d48b425e0"
    },
    "draft-mcguinness-mission-mandate.md": {
     "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
@@ -265,6 +265,7 @@
    "expansion.interactive-completion",
    "aauth.supervision-server",
    "aauth.supervision-proof",
+   "aauth.reference-projection",
    "aauth-management.update-position",
    "aauth-management.delegation-tree"
   ]
@@ -11102,7 +11103,7 @@
    "id": "mas.baseline-join.authority-from-mission",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "On a successful join, the PDP evaluates the action under the runtime profile's decision contract, drawing the Authority Set from the Mission (the audience-scoped Mission Status response or a materialized policy view), since the credential carries none.",
+   "text": "On a successful join, the PDP evaluates the action under the runtime profile's decision contract, drawing the Authority Set from the Mission (the audience-scoped Mission Status response or a materialized policy view), never from the credential: the credential's own authority is the separate bound of rule 8 and never substitutes for the Mission's.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -11149,7 +11150,7 @@
    "id": "mas.baseline-join.three-bound-intersection",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A permit under a join never exceeds any of three independently evaluated bounds: the authority the acting credential itself carries (the token as issued, enforced at the resource server or gateway), the Mission's approved authority, and current Resource policy.",
+   "text": "A permit under a join never exceeds any of three independently evaluated bounds: the authority the acting credential itself carries, the Mission's approved authority, and current Resource policy.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -18017,7 +18018,7 @@
    "id": "authzen.context-mission.identity-members-required",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-mission",
-   "text": "REQUIRED. A string. The Mission's `id`.",
+   "text": "REQUIRED. A string. The Mission Reference identifier, in its binding's representation (the OAuth realization is the Mission's `id`).",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -33496,6 +33497,94 @@
    "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
   },
   {
+   "id": "aauth.reference.projection",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "`issuer` is the approving PS's server identifier and `id` is the unchanged `s256` value",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.reference-projection"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer representing an AAuth Mission Reference with `issuer` and `id` sets `issuer` to the approving PS's server identifier (its metadata `issuer`) and `id` to the `s256` exactly as validated: from a person token, its `iss` and `mission_s256`; from a resource token or an auth token, its `ps` and `mission_s256`; from an approval envelope or authenticated mission-scoped PS request, the PS identifier established for that endpoint and the validated `s256`; with no algorithm prefix, no rehash, and no OAuth `mission_id`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
+  },
+  {
+   "id": "aauth.reference.auth-token-ps-no-iss-fallback",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "For an auth token, the consumer MUST take `issuer` from `ps` and MUST NOT fall back to `iss`",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.reference-projection"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for an auth token the projected `issuer` is the token's `ps`; for a four-party auth token whose `iss` names the Access Server, the projected `issuer` is the PS and the Access Server stays only in the credential's issuer; an auth token missing `ps` yields no projected reference rather than one built from `iss`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
+  },
+  {
+   "id": "aauth.reference.namespace-separation",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "The same `s256` under two PS identifiers is two Mission References.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.reference-projection"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "two projected references with equal `id` and different `issuer` are treated as two Missions, never one; an accepted `update` leaves the projected pair unchanged, and no update digest replaces `id`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
+  },
+  {
+   "id": "aauth.reference.unusable-input-no-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "A missing, malformed, or unverified component establishes no Mission Reference",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.reference-projection"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a missing, malformed, or unverified `ps`, `iss`, `mission_s256`, or PS identifier yields no projected Mission Reference, and the request proceeds under AAuth's own failure ordering and responses with no reference manufactured"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
+  },
+  {
    "id": "aauth.lifecycle.broadening-update-needs-supervisor",
    "spec": "draft-mcguinness-mission-aauth.md",
    "anchor": "lifecycle",
@@ -33621,6 +33710,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#966 (D356, owner review). Native AAuth tests are scoped to the #836 pilot's chained slice; no reference implementation of call chaining exists."
+  },
+  {
+   "id": "aauth.ref-propagation.projection-no-wire-member",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "adds no member to an AAuth token or mission blob, fetches no blob, and computes no new digest",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "aauth.reference-projection"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "projecting a validated AAuth reference into `issuer` and `id` changes no AAuth token or mission blob, retrieves no mission blob, and computes no digest; no AAuth party is required to carry an OAuth field"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
   },
   {
    "id": "mandate.minting.termination-at-issuance",
