@@ -28492,9 +28492,15 @@
      "name": "the async-delegation subject_token is a delegation handle (@spec continuation#transport-async, draft-zhu-oauth-async-delegation-05 Section 4.3, #1157) > recovery revalidates the handle: a retry presenting the raw token or another key never retrieves the recorded family",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: complete, fresh DPoP proofs on both legs (@spec RFC 9449 Section 4.3, #1163 review) > the delegation-handle request and the async exchange refuse an incomplete, stale or future-dated proof; within the window both succeed (#1157 review P1)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body)."
+   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body). Owner review of #1165: the proof is complete and fresh (RFC 9449 Section 4.3) at both the handle request and the async exchange."
   },
   {
    "id": "continuation.async-transport.handle-request",
@@ -28533,9 +28539,21 @@
      "name": "the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358) > refuses a DPoP proof under a key other than the presented token's",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: complete, fresh DPoP proofs on both legs (@spec RFC 9449 Section 4.3, #1163 review) > the delegation-handle request and the async exchange refuse an incomplete, stale or future-dated proof; within the window both succeed (#1157 review P1)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358) > refuses audience combined with the async selector before routing: no family and no derivation count (#1157 review P2)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body)."
+   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body). Owner review of #1165: the proof is complete and fresh (RFC 9449 Section 4.3) at both the handle request and the async exchange, and a request combining audience with another exchange's selector is refused before routing."
   },
   {
    "id": "continuation.async-transport.handle-key-and-authority",
