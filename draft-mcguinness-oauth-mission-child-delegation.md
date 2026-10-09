@@ -1532,7 +1532,11 @@ Termination"):
   Its `terminated_at` is the Parent Mission's `terminated_at`: a
   cascade propagates one instant, so every Child Mission one cascade
   terminates reports the same `terminated_at`, whenever its own
-  transition commits. Its `termination` carries these further members:
+  transition commits. Where the Parent Mission's termination retained
+  no `terminated_at` ({{I-D.draft-mcguinness-oauth-mission}}, Section
+  "Mission Termination"), the child's has none either: the child's
+  commit time is its transition's, never its `terminated_at`. Its
+  `termination` carries these further members:
 
   `parent`:
   : REQUIRED. A string. The Mission identifier of the immediate Parent
@@ -2307,7 +2311,8 @@ apply unchanged.
 - Cascade terminates a Child Mission with reason `parent_terminated`,
   registered in the Mission Termination Reasons registry, whose
   `termination` names the immediate `parent`, takes the parent's
-  `terminated_at`, and carries Carryover's `carried_to`; the child's own
+  `terminated_at` (none where the parent's retained none), and carries
+  Carryover's `carried_to`; the child's own
   expiry takes precedence on both paths, and the record's accountable
   human is `approval_basis.consent_principal` (#705).
 - Derivation Budget Is Not Inherited: for a `policy_drawdown` entry,

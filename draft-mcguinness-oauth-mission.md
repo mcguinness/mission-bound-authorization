@@ -2694,18 +2694,22 @@ changes it: an expiry, or any later event, does not replace the
 reason or references of a Mission already terminated.
 
 A termination carries every member its reason requires, except one
-recorded before the reason defined that member: such a termination
-exposes only the facts its record retained and omits a member it has
-no retained value for, `terminated_at` included, rather than
-inventing one. A consumer that receives such a termination, or a
+recorded before the reason defined that member, or derived from such
+a termination: such a termination exposes only the facts its record
+retained and omits a member it has no retained value for,
+`terminated_at` included, rather than inventing one. For `expired`,
+the retained `terminated_at` is the Mission's `expires_at`; for
+another reason, a retained commit time is its `terminated_at` only
+where that commit was the termination's effect. A consumer that
+receives such a termination, or a
 `reason` it does not recognize, still treats the Mission as
 terminated: it stops work governed by the Mission, follows no absent
 reference, and infers no cause-specific action. For a transition
 period, a consumer of a report that still carries `revoked`,
 `expired`, `completed`, `superseded`, or `cascaded` as a Mission's
 `state` MAY read it as `terminated` with that reason (`cascaded` as
-`parent_terminated`); an emitter never reports those values as a
-state. That reading is local: the consumer never re-emits or re-signs it,
+`parent_terminated`) and the facts the report retained; an emitter
+never reports those values as a state. That reading is local: the consumer never re-emits or re-signs it,
 and it verifies a signed artifact over its original bytes, which it
 retains, before reading it this way.
 
@@ -6006,9 +6010,11 @@ Cross-Domain:
   comes from a new Mission Termination Reasons registry, seeded with
   `revoked` and `expired`; companions register further reasons, never
   further terminal states. The `mission_error` values drop the
-  `mission_` prefix. The record's deprecated `approver` alias is
-  removed; `approval_basis.consent_principal` is the accountable
-  principal (#705).
+  `mission_` prefix. A termination recorded before a member existed,
+  or derived from one, keeps only its retained facts. The record's
+  deprecated `approver` alias is removed;
+  `approval_basis.consent_principal` is the accountable principal
+  (#705).
 - Mission Intent: `success_criteria` is removed. It carried no
   machine authorization semantics; `goal` can describe the outcomes
   that show the task is complete, as human-readable and unenforced

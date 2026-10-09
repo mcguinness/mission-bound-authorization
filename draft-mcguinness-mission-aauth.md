@@ -841,6 +841,11 @@ is non-active whatever its reason:
 | unrecognized | unrecognized | A family reader treats the Mission as terminated: it stops governed work, follows no absent reference, and infers no cause-specific action.  An AAuth Mission Management recipient retains `terminated` and treats the reason as an opaque audit value. |
 {: title="Termination reason correspondence"}
 
+An AAuth reason the table pairs with no family reason has no family
+`termination`: a family report of the mission whose `termination` is
+optional omits it rather than substitute a reason such as `revoked`,
+and the native `termination_reason` stays in AAuth's own record.
+
 An accepted `update` can narrow or broaden the work under the same
 reference ({{reference}}).  The PS MUST NOT accept an update that
 broadens the work without the Supervisor's acceptance.  The Supervisor
@@ -1244,8 +1249,10 @@ incremental deployment remain distinct concerns.
 - Lifecycle maps AAuth's `termination_reason` to the family's Mission
   Termination Reasons, including AAuth's `administrative`, the
   family's `parent_terminated`, and an unrecognized reason on either
-  side, and notes that Mission Status's `suspended` state has no AAuth
-  counterpart.  AAuth's states and members are unchanged (#705).
+  side, omits a family `termination` for a reason with no family
+  counterpart, and notes that Mission Status's `suspended` state has
+  no AAuth counterpart.  AAuth's states and members are unchanged
+  (#705).
 
 - A chained hop is PS-governed derivation under the same Mission: the
   Mission's `agent` is the root actor, the holder of a chained person
