@@ -30,13 +30,14 @@ import {
   verifyTokenEndpointDpop,
 } from "./continuation-grant.js";
 import {
-  type AdapterOptions,
   gateErrorToMissionError,
+  lifecycleMissionError,
   markDelegationHandle,
   MissionGrantError,
   newResourceServer,
   resourceServerInfoFor,
   SCOPE_DECIDED_AT_SAVE,
+  type AdapterOptions,
 } from "./provider.js";
 
 /** @spec mission-template#dispatch-handoff: the handoff grant's JWS `typ` (media type application/mission-dispatch-handoff+jwt). */
@@ -197,10 +198,7 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
   const active = kernel.applyExpiry(record);
   if (active.state !== "active") {
     txError(ctx, 400, "invalid_request", `dispatched instance is ${active.state}`);
-    const missionError = gateErrorToMissionError(
-      active.state === "expired" ? "mission_expired" : "mission_not_active",
-      active.state,
-    );
+    const missionError = lifecycleMissionError(active);
     if (missionError) (ctx.body as Record<string, unknown>).mission_error = missionError;
     return;
   }
@@ -443,6 +441,6 @@ export async function handleDispatchHandoffRedemption(
 /** A kernel {@link GateError} as `invalid_grant`, with `mission_error` where a value applies. */
 export function gateRefusal(opts: AdapterOptions, e: unknown, missionId: string): unknown {
   return e instanceof GateError
-    ? new MissionGrantError(e.message, gateErrorToMissionError(e.reason, opts.kernel.get(missionId)?.state))
+    ? new MissionGrantError(e.message, gateErrorToMissionError(e.reason, opts.kernel.observedRecord(missionId)))
     : e;
 }

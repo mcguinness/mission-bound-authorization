@@ -523,12 +523,12 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
   });
 
   it.each([
-    ["suspended", "suspend", "mission_suspended"],
-    ["revoked", "revoke", "mission_revoked"],
-    ["completed", "complete", "mission_completed"],
+    ["suspended", "suspend", "suspended", "suspended"],
+    ["revoked", "revoke", "revoked", "terminated"],
+    ["completed", "complete", "completed", "terminated"],
   ] as const)(
     "an instance %s is refused invalid_request with its mission_error, and no handoff grant is issued (D369)",
-    async (state, operation, missionError) => {
+    async (_label, operation, missionError, lifecycleState) => {
       const instance = await dispatchInstance();
       as.kernel.transition(instance.missionId, operation);
       const res = await handoff(instance.token);
@@ -541,12 +541,12 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
       expect(res.status, JSON.stringify(body)).toBe(400);
       expect(body.error).toBe("invalid_request");
       expect(body.mission_error).toBe(missionError);
-      expect(body.error_description).toContain(`dispatched instance is ${state}`);
+      expect(body.error_description).toContain(`dispatched instance is ${lifecycleState}`);
       expect(body.access_token).toBeUndefined();
     },
   );
 
-  it("an instance past its expires_at is refused invalid_request with mission_expired, and no handoff grant is issued (D369)", async () => {
+  it("an instance past its expires_at is refused invalid_request with mission_error expired, and no handoff grant is issued (D369)", async () => {
     const instance = await dispatchInstance();
     as.kernel.db
       .prepare("UPDATE missions SET expires_at = ? WHERE id = ?")
@@ -555,7 +555,7 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
     const body = (await res.json()) as { error?: string; mission_error?: string; access_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
-    expect(body.mission_error).toBe("mission_expired");
+    expect(body.mission_error).toBe("expired");
     expect(body.access_token).toBeUndefined();
   });
 
@@ -732,7 +732,7 @@ describe("Dispatch Handoff: redemption refusals (@spec mission-template#dispatch
     as.kernel.transition(instance.missionId, "suspend");
     const res = await err(await redeem(grant));
     expect(res.error).toBe("invalid_grant");
-    expect(res.mission_error).toBe("mission_suspended");
+    expect(res.mission_error).toBe("suspended");
     as.kernel.transition(instance.missionId, "resume");
     expect((await redeem(grant)).status).toBe(200);
   });

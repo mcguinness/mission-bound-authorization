@@ -27319,7 +27319,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Mission without template lineage is refused invalid_grant; an instance suspended, revoked, completed, or past its expires_at is refused invalid_request with mission_error mission_suspended, mission_revoked, mission_completed or mission_expired, and no handoff grant is issued"
+    "normative": "a Mission without template lineage is refused invalid_grant; an instance suspended, revoked, completed, or past its expires_at is refused invalid_request with mission_error suspended, revoked, completed or expired, and no handoff grant is issued"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -27338,7 +27338,7 @@
     },
     {
      "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
-     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an instance past its expires_at is refused invalid_request with mission_expired, and no handoff grant is issued (D369)",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an instance past its expires_at is refused invalid_request with mission_error expired, and no handoff grant is issued (D369)",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -27360,7 +27360,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the handoff exchange refuses a suspended, revoked, completed or expired instance with invalid_request and mission_error mission_suspended, mission_revoked, mission_completed or mission_expired, issuing no handoff grant; a Mission without template lineage stays invalid_grant"
+    "normative": "the handoff exchange refuses a suspended, revoked, completed or expired instance with invalid_request and mission_error suspended, revoked, completed or expired, issuing no handoff grant; a Mission without template lineage stays invalid_grant"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -27373,7 +27373,7 @@
     },
     {
      "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
-     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an instance past its expires_at is refused invalid_request with mission_expired, and no handoff grant is issued (D369)",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an instance past its expires_at is refused invalid_request with mission_error expired, and no handoff grant is issued (D369)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -27635,7 +27635,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a suspended instance refuses redemption with invalid_grant and mission_error mission_suspended, without consuming the grant, which redeems after resume"
+    "normative": "a suspended instance refuses redemption with invalid_grant and mission_error suspended, without consuming the grant, which redeems after resume"
    },
    "level": "endpoint",
    "coverage": "tested",

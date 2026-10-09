@@ -32,12 +32,13 @@ import {
 } from "./continuation-grant.js";
 import { gateRefusal } from "./dispatch-handoff.js";
 import {
-  type AdapterOptions,
   gateErrorToMissionError,
+  lifecycleMissionError,
   markDelegationHandle,
   newResourceServer,
   resourceServerInfoFor,
   SCOPE_DECIDED_AT_SAVE,
+  type AdapterOptions,
 } from "./provider.js";
 
 /** The gate reasons that are lifecycle refusals (the Mission is not `active`), not a limit. */
@@ -127,7 +128,7 @@ export async function handleDelegationHandleExchange(
     refuseInactive(
       ctx,
       `mission ${record.id} is ${active.state}`,
-      gateErrorToMissionError(active.state === "expired" ? "mission_expired" : "mission_not_active", active.state),
+      lifecycleMissionError(active),
     );
     return;
   }
@@ -163,7 +164,7 @@ export async function handleDelegationHandleExchange(
   } catch (e) {
     await (oidcGrant as unknown as { destroy: () => Promise<void> }).destroy();
     if (e instanceof GateError && LIFECYCLE_GATE_REASONS.has(e.reason)) {
-      refuseInactive(ctx, e.message, gateErrorToMissionError(e.reason, kernel.get(record.id)?.state));
+      refuseInactive(ctx, e.message, gateErrorToMissionError(e.reason, kernel.observedRecord(record.id)));
       return;
     }
     throw gateRefusal(opts, e, record.id);

@@ -2004,8 +2004,8 @@ describe("the delegation-handle request (@spec continuation#transport-async, mis
     // @spec mission#issuance-gating (#1154, D369): a Token Exchange refuses an
     // inactive Mission with invalid_request, keeping mission_error.
     expect(body.error).toBe("invalid_request");
-    expect(body.mission_error).toBe("mission_revoked");
-    expect(body.error_description).toContain("revoked");
+    expect(body.mission_error).toBe("revoked");
+    expect(body.error_description).toContain("terminated");
   });
 
   it("narrows the handle by the Mission's current effective set, and refuses when nothing survives", async () => {
@@ -2049,7 +2049,7 @@ describe("the delegation-handle request (@spec continuation#transport-async, mis
       const lifecycleBody = (await lifecycle.json()) as { error?: string; mission_error?: string; access_token?: string };
       expect(lifecycle.status, JSON.stringify(lifecycleBody)).toBe(400);
       expect(lifecycleBody.error).toBe("invalid_request");
-      expect(lifecycleBody.mission_error).toBe("mission_expired");
+      expect(lifecycleBody.mission_error).toBe("expired");
       expect(lifecycleBody.access_token).toBeUndefined();
 
       spy.mockImplementationOnce(() => {
