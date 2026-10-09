@@ -805,7 +805,7 @@ operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) or naming a later merged
-issue (such as #1103 or #1104) are true at `66d15b6b`, and every `file:line` citation is read there.
+issue (such as #1103 or #1104) are true at `7740e345`, and every `file:line` citation is read there.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -873,7 +873,7 @@ drives an AS-issued Mission-bound token through that assembled path.
   own `authorization_details`, read as the credential's authority. A token
   that fails the profile is refused, never demoted to the ordinary class.
   Before the PDP is asked, the PEP refuses `out_of_authority` for an action
-  outside that authority, one whole entry at a time (`pep.ts:1372-1406`).
+  outside that authority, one whole entry at a time (`pep.ts:1420-1454`).
 - **Boundary.** In request, before any claim reaches a decision.
 - **Asynchronous work.** None.
 - **Crash and recovery.** The DPoP replay cache is in memory. Signing keys are
@@ -957,20 +957,21 @@ drives an AS-issued Mission-bound token through that assembled path.
   Record carrying `request_invalid` (D334). An unknown tool is refused
   `unknown_tool` (`request_unsupported`), and a schema intake cannot read is
   refused `capability_source_unresolvable`. Target lookup, the effective
-  parameters and the effect use the normalized arguments.
+  parameters and the effect use the normalized arguments. An intake refusal
+  changes no business state on a read or either write path.
 - **Hook.** `buildEffectiveParams`
   (`services/mcp-payments/src/effective-params.ts:27-44`) builds the effective
   parameters from the payments store, never from tool arguments, and
   `parameterDigest` (`:83`) commits them into the decision request. Three
   separate PEP checks run at use:
-  - `verifyPermitAtUse` (`pep.ts:2021`) runs the permit-use table
-    (`pep.ts:419-459`): the permit's bound phase against the crossing's phase
+  - `verifyPermitAtUse` (`pep.ts:2069`) runs the permit-use table
+    (`pep.ts:424-464`): the permit's bound phase against the crossing's phase
     (`phase_mismatch`), then `valid_until` (`permit_expired`). It compares no
     digest.
-  - `reverifyCapability` (`pep.ts:2142`) re-checks the capability snapshot
+  - `reverifyCapability` (`pep.ts:2190`) re-checks the capability snapshot
     (`capability_source_unresolvable`).
-  - `reverify` (`pep.ts:2053`, a single-record operation) and `reverifyList`
-    (`pep.ts:2093`, a list read) re-derive the effective parameters and
+  - `reverify` (`pep.ts:2101`, a single-record operation) and `reverifyList`
+    (`pep.ts:2141`, a list read) re-derive the effective parameters and
     compare the digest (`parameter_mismatch`; a target that no longer resolves
     is also `parameter_mismatch`).
 - **Order and boundary, by dispatch path** (`dispatchPathFor`, called from
@@ -994,7 +995,7 @@ drives an AS-issued Mission-bound token through that assembled path.
     transaction token is presented, and the connector commit (`:1717-1768`).
     A refusal after redemption marks the operation `abandoned` and records
     suppressed Execution Evidence, which settles the PDP claim `failed`
-    because the attempt is redeemed (`pep.ts:1950-1952`). The permit is spent;
+    because the attempt is redeemed (`pep.ts:1998-2000`). The permit is spent;
     a retry needs a fresh decision (code reading).
 - **Asynchronous work.** None.
 - **Crash and recovery.** The payments store is in memory and reseeded per
@@ -1011,6 +1012,9 @@ drives an AS-issued Mission-bound token through that assembled path.
   - `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > an authoritative member (D34) is refused invalid_request with no PDP call and one Refusal Record` (authoritative member)
   - `intake NFC-normalizes strings before target lookup, effective parameters and execution (@spec operation-profile-payments-v1, D316) > NFC and NFD forms of one invoice_id resolve the same target, yield the same effective parameters, and execute with the normalized value` (normalization)
   - `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > the signed Refusal Record names request_invalid for arguments outside the schema, request_unsupported for an unknown tool and capability_source_unresolvable for an unreadable schema, each with no PDP call and no effect` (the three signed values)
+  - `an intake refusal leaves the business stores untouched on reads and both write paths (@spec operation-profile-payments-v1, #1148, D379) > get_invoice refused at intake changes no invoice, vendor or schedule, writes no reservation and consumes no permit, with no PDP call and one Refusal Record`
+  - `an intake refusal leaves the business stores untouched on reads and both write paths (@spec operation-profile-payments-v1, #1148, D379) > hold_transfer refused at intake changes no invoice, vendor or schedule, writes no reservation and consumes no permit, with no PDP call and one Refusal Record`
+  - `an intake refusal leaves the business stores untouched on reads and both write paths (@spec operation-profile-payments-v1, #1148, D379) > schedule_payment refused at intake changes no invoice, vendor or schedule, writes no reservation and consumes no permit, with no PDP call and one Refusal Record`
 - **Residual.** A single-record read re-derives no digest at use; its fresh
   decision is the binding. A transaction-tier refusal after redemption spends
   the permit, and no test asserts the spent state.
@@ -1115,8 +1119,11 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Hook.** The PDP emits Decision Evidence for every decision. The PEP
   verifies it (byte equality, signature, emitter-bound key, role, audience)
   before release, refusing `decision_evidence_unverifiable` otherwise
-  (`pep.ts:1606-1618`). The PEP emits Refusal Records (`pep.ts:2157-2218`) and
-  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1917-1960`). The
+  (`pep.ts:1654-1666`). The PEP emits Refusal Records (`pep.ts:2205-2266`), whose
+  `denial_reason` the exhaustive `PRE_DECISION_DENIAL_REASON` supplies; an
+  unmapped diagnostic, or a value outside the emitting role's closed set, is
+  refused before signing (#1148). It also emits
+  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1965-2008`). The
   executor emits `completed` Execution Evidence after a connector commit
   (`server.ts:1799-1832`). The record table is the contract's §6.
 - **Boundary.** Synchronous, inside the request.
@@ -1132,6 +1139,9 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
   - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > suppressExecution retries once on the same execution identity, returns emission_failed after a second failure, and never retains a disposition twice`
   - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a completed write that fails once is retried on the same execution identity: one record, the claim settles completed, one effect`
   - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a completed write that fails twice reports the gap: the effect stands once, the claim is not settled completed, and neither a retry nor reconciliation repeats the effect`
+  - `an unmapped refusal diagnostic is rejected before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > an unmapped diagnostic on the enforcement path rejects enforcement, with no signing call, no retained Refusal Record and no business effect`
+  - `the PEP maps every Refusal Record diagnostic into the closed set (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > the mapping covers exactly the Refusal Record path's diagnostics, and each maps to a value in the closed PEP set`
+  - `the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > a PEP record carrying a diagnostic or another role's value is refused unsigned, while every closed PEP value signs`
 - **Residual.** The `completed` write after a connector commit retries once
   on the same execution identity. A second failure leaves the effect without
   Execution Evidence: the call returns `ok: false` with
