@@ -556,21 +556,31 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
       LIFECYCLE_CHANGE_EVENT_URI
     ];
     expect(event?.state).toBe("terminated");
-    expect(event?.termination).toEqual({ reason: "superseded", successor: "msn_successor" });
+    // The facts the journaled commit retained: its version, its reference,
+    // and its commit time, which a supersession's commit is the effect of.
+    const superseded = {
+      reason: "superseded",
+      terminated_at: "2026-08-02T12:00:00Z",
+      version: 1,
+      successor: "msn_successor",
+    };
+    expect(event?.termination).toEqual(superseded);
     expect(event).not.toHaveProperty("successor");
     expect(seen).toContain(signedLegacy); // never re-signed
 
-    // The receiver verified the legacy bytes, then read them as terminated.
+    // The receiver verified the legacy bytes, then read them as terminated
+    // with the facts they retained, and keeps the bytes it read them from.
     expect(receiver.viewState("msn_legacy_superseded")).toMatchObject({
       state: "terminated",
-      termination: { reason: "superseded", successor: "msn_successor" },
+      termination: superseded,
     });
     expect(receiver.viewState("msn_legacy_cascaded")).toEqual({
       state: "terminated",
-      termination: { reason: "parent_terminated" },
+      termination: { reason: "parent_terminated", version: 1, carried_to: "msn_replacement" },
       version: 1,
       expires_at: "2027-01-01T00:00:00Z",
     });
+    expect(receiver.retainedSet("msn_legacy_cascaded")).toBe(signedLegacy);
     emitter.close();
   });
 });

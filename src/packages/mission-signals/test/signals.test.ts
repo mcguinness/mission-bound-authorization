@@ -22,7 +22,7 @@ import {
   type Fga,
   type MissionView,
 } from "@mission/pdp";
-import { decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
+import { decodeJwt, exportJWK, generateKeyPair, jwtVerify, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
 import { withCredential } from "../../../services/pdp/test/with-credential.js";
 import {
@@ -496,16 +496,34 @@ describe("Mission Signals: termination in the lifecycle-change event (@spec miss
       parent: "msn_parent",
       carried_to: "msn_replacement",
     });
-    // A legacy commit: its reason and its retained reference only, nothing invented.
-    expect(events.get("legacy revoked")?.termination).toEqual({ reason: "revoked" });
-    expect(events.get("legacy expired")?.termination).toEqual({ reason: "expired" });
-    expect(events.get("legacy completed")?.termination).toEqual({ reason: "completed" });
+    // A legacy commit: its reason and the facts it retained, nothing invented.
+    // Its `version`; `expires_at` as an `expired` termination's instant; its
+    // commit time only where the commit was the effect, so a cascade (whose
+    // parent may have terminated earlier) has no `terminated_at`.
+    expect(events.get("legacy revoked")?.termination).toEqual({
+      reason: "revoked",
+      terminated_at: T,
+      version: 4,
+    });
+    expect(events.get("legacy expired")?.termination).toEqual({
+      reason: "expired",
+      terminated_at: EXPIRES_AT,
+      version: 4,
+    });
+    expect(events.get("legacy completed")?.termination).toEqual({
+      reason: "completed",
+      terminated_at: T,
+      version: 4,
+    });
     expect(events.get("legacy superseded")?.termination).toEqual({
       reason: "superseded",
+      terminated_at: T,
+      version: 4,
       successor: "msn_successor",
     });
     expect(events.get("legacy cascaded")?.termination).toEqual({
       reason: "parent_terminated",
+      version: 4,
       carried_to: "msn_replacement",
     });
     expect(events.get("a legacy prior_state")).not.toHaveProperty("prior_state");
@@ -525,6 +543,7 @@ describe("Mission Signals: termination in the lifecycle-change event (@spec miss
       },
       // A top-level member is not the termination's reference: never read.
       successor: "msn_wrong",
+      carried_to: "msn_wrong_replacement",
       version: 1,
     });
     const applied = await receiver.verifyAndApply(superseded);
@@ -609,18 +628,30 @@ describe("Mission Signals: termination in the lifecycle-change event (@spec miss
     }
   });
 
-  it("normalizes a legacy SET's state only after its signature verifies, reading no top-level successor or carried_to", async () => {
+  it("normalizes a legacy SET's state only after its signature verifies, keeping the references and instants the event retained", async () => {
+    const T = NOW.toISOString();
     const legacy: Array<[Record<string, unknown>, Record<string, unknown>]> = [
-      [{ state: "revoked", prior_state: "active" }, { reason: "revoked" }],
-      [{ state: "expired", prior_state: "active" }, { reason: "expired" }],
-      [{ state: "completed", prior_state: "active" }, { reason: "completed" }],
       [
-        { state: "superseded", prior_state: "active", successor: "msn_successor" },
-        { reason: "superseded" },
+        // A reference the reason does not define is not folded in.
+        { state: "revoked", prior_state: "active", successor: "msn_x", carried_to: "msn_y" },
+        { reason: "revoked", terminated_at: T, version: 1 },
       ],
       [
+        { state: "expired", prior_state: "active" },
+        { reason: "expired", terminated_at: EXPIRES_AT, version: 1 },
+      ],
+      [
+        { state: "completed", prior_state: "active" },
+        { reason: "completed", terminated_at: T, version: 1 },
+      ],
+      [
+        { state: "superseded", prior_state: "active", successor: "msn_successor" },
+        { reason: "superseded", terminated_at: T, version: 1, successor: "msn_successor" },
+      ],
+      [
+        // A cascade's commit is not its effect: no `terminated_at` is invented.
         { state: "cascaded", prior_state: "active", carried_to: "msn_replacement" },
-        { reason: "parent_terminated" },
+        { reason: "parent_terminated", version: 1, carried_to: "msn_replacement" },
       ],
     ];
     for (const [body, termination] of legacy) {
@@ -648,5 +679,45 @@ describe("Mission Signals: termination in the lifecycle-change event (@spec miss
         String(body.state),
       ).toEqual(termination);
     }
+  });
+
+  it("retains the original SET behind its normalized reading: the retained bytes verify unchanged and still carry the legacy state", async () => {
+    const { keys, receiver, signEvent } = await fixture();
+    expect(receiver.retainedSet(MISSION_ID)).toBeUndefined();
+    const activation = await signEvent({ state: "active", version: 1 });
+    expect((await receiver.verifyAndApply(activation)).status).toBe("applied");
+    expect(receiver.retainedSet(MISSION_ID)).toBe(activation);
+
+    const legacy = await signEvent({
+      state: "cascaded",
+      prior_state: "active",
+      carried_to: "msn_replacement",
+      version: 2,
+    });
+    expect((await receiver.verifyAndApply(legacy)).status).toBe("applied");
+    expect(receiver.viewState(MISSION_ID)?.state).toBe("terminated");
+
+    // Retained as received, byte for byte, and still verifiable: the issuer's
+    // signed legacy state and reference, not the receiver's normalized view.
+    const retained = receiver.retainedSet(MISSION_ID) as string;
+    expect(retained).toBe(legacy);
+    const { payload } = await jwtVerify(retained, keys.publicKey, { typ: SET_TYP });
+    expect(
+      (payload.events as Record<string, Record<string, unknown>>)[LIFECYCLE_CHANGE_EVENT_URI],
+    ).toMatchObject({ state: "cascaded", carried_to: "msn_replacement", version: 2 });
+    const [header, body, signature] = retained.split(".");
+    const flipped = `${signature?.[0] === "A" ? "B" : "A"}${signature?.slice(1)}`;
+    await expect(
+      jwtVerify(`${header}.${body}.${flipped}`, keys.publicKey, { typ: SET_TYP }),
+    ).rejects.toThrow();
+
+    // A refused, duplicate or stale SET never replaces the retained one.
+    const rogue = await generateKeyPair("ES256", { extractable: true });
+    const forged = await signEvent({ state: "active", version: 3 }, rogue.privateKey);
+    expect((await receiver.verifyAndApply(forged)).status).toBe("refused");
+    expect((await receiver.verifyAndApply(legacy)).status).toBe("duplicate");
+    const replay = await signEvent({ state: "active", version: 1 });
+    expect((await receiver.verifyAndApply(replay)).status).toBe("stale");
+    expect(receiver.retainedSet(MISSION_ID)).toBe(legacy);
   });
 });

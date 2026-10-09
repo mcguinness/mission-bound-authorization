@@ -152,10 +152,11 @@ export async function signLifecycleEvent(
  * is `active` or `suspended`. A commit journaled before that vocabulary (a
  * durable outbox job whose SET was never signed) still carries a legacy
  * terminal `state` and top-level `successor` or `carried_to`: it is reported
- * as `terminated` with that reason (`cascaded` as `parent_terminated`), its
- * retained reference folded into `termination` (`successor` for
- * `superseded`, `carried_to` for `parent_terminated`), and no member it did
- * not retain is filled in.
+ * as `terminated` with that reason (`cascaded` as `parent_terminated`) and
+ * the facts the commit retained ({@link normalizeLegacyMissionState}): its
+ * `version`, its reference, and `terminated_at` from `expires_at` for
+ * `expired` or from `committed_at` where the commit was the effect. No
+ * member it did not retain is filled in.
  */
 function eventLifecycle(commit: LifecycleCommit): {
   state: string;
@@ -172,21 +173,17 @@ function eventLifecycle(commit: LifecycleCommit): {
     journaled.prior_state === "active" || journaled.prior_state === "suspended"
       ? { prior_state: journaled.prior_state }
       : {};
-  const normalized = normalizeLegacyMissionState(journaled.state);
+  const normalized = normalizeLegacyMissionState(journaled.state, {
+    version: commit.version,
+    expires_at: commit.expires_at,
+    committed_at: commit.committed_at,
+    successor: journaled.successor,
+    carried_to: journaled.carried_to,
+  });
   if (normalized.state !== "terminated") return { state: normalized.state, ...prior };
-  let termination: MissionTermination | undefined;
-  if (normalized.termination !== undefined) {
-    termination = { ...normalized.termination };
-    const ref = (value: unknown) => (typeof value === "string" && value !== "" ? value : undefined);
-    const successor = ref(journaled.successor);
-    const carriedTo = ref(journaled.carried_to);
-    if (termination.reason === "superseded" && successor !== undefined)
-      termination.successor = successor;
-    if (termination.reason === "parent_terminated" && carriedTo !== undefined)
-      termination.carried_to = carriedTo;
-  } else if (commit.termination !== undefined) {
-    termination = { ...commit.termination };
-  }
+  const termination: MissionTermination | undefined =
+    normalized.termination ??
+    (commit.termination !== undefined ? { ...commit.termination } : undefined);
   return { state: "terminated", ...prior, ...(termination !== undefined ? { termination } : {}) };
 }
 
@@ -306,6 +303,16 @@ export class MissionSignalReceiver {
    * acknowledgement moves the marker forward and re-raises the latch.
    */
   private readonly rematerializeNeeded = new Map<string, RematerializationBaseline>();
+  /**
+   * @spec mission#termination — the original compact SET, byte for byte,
+   * whose verified payload established each Mission's cached state: the
+   * signed artifact behind a normalized reading (a legacy terminal `state`
+   * read as `terminated`) stays verifiable as received, never re-serialized
+   * or re-signed. Replaced only when a later event replaces the cached state;
+   * a refused, duplicate or stale SET never touches it. Unbounded in-process,
+   * like {@link cache}, whose lifetime it shares.
+   */
+  private readonly retained = new Map<string, string>();
   private readonly jwkSet: ReturnType<typeof createLocalJWKSet>;
   /** This receiver's registered audience (the emitter delivers by audience). */
   readonly audience: string;
@@ -411,6 +418,7 @@ export class MissionSignalReceiver {
     // rides every commit once ever present, but the cache must not forget it
     // on an event that happens not to carry it).
     const nextContainmentVersion = containment_version ?? priorContainmentVersion;
+    this.retained.set(JSON.stringify([this.opts.issuer, missionId]), setJwt);
     this.cache.set(JSON.stringify([this.opts.issuer, missionId]), {
       state,
       ...terminationMember,
@@ -453,6 +461,17 @@ export class MissionSignalReceiver {
   /** The last state established for a Mission, for a consumer's `loadView`. */
   viewState(missionId: string): CachedState | undefined {
     return this.cache.get(JSON.stringify([this.opts.issuer, missionId]));
+  }
+
+  /**
+   * @spec mission#termination — the original compact SET whose verified
+   * payload established {@link viewState} for a Mission, exactly as received:
+   * it verifies against the issuer's keys unchanged and still carries what the
+   * issuer signed (a legacy terminal `state` included), while `viewState`
+   * holds this receiver's normalized reading of it.
+   */
+  retainedSet(missionId: string): string | undefined {
+    return this.retained.get(JSON.stringify([this.opts.issuer, missionId]));
   }
 
   /**
@@ -558,14 +577,18 @@ interface ParsedEvent {
  * read over its verified bytes.
  *
  * @spec mission#termination: `termination` is read from the event body
- * beside a `terminated` state; there is no top-level `successor` or
- * `carried_to` to read. A missing or malformed `termination` never refuses
- * the event (refusing would leave an earlier `active` in the cache): the
- * Mission is applied as `terminated` with no termination facts, and a
- * `termination` beside any other state is dropped. A legacy terminal `state`
- * (`revoked`, `expired`, `completed`, `superseded`, `cascaded`) is read as
- * `terminated` with that reason, `cascaded` as `parent_terminated`, with no
- * other member: a local view, never re-emitted or re-signed.
+ * beside a `terminated` state; a top-level `successor` or `carried_to` beside
+ * it is not read. A missing or malformed `termination` never refuses the
+ * event (refusing would leave an earlier `active` in the cache): the Mission
+ * is applied as `terminated` with no termination facts, and a `termination`
+ * beside any other state is dropped. A legacy terminal `state` (`revoked`,
+ * `expired`, `completed`, `superseded`, `cascaded`) is read as `terminated`
+ * with that reason, `cascaded` as `parent_terminated`, and the facts the
+ * event retained ({@link normalizeLegacyMissionState}): its `version`, its
+ * top-level `successor` or `carried_to`, and `terminated_at` from
+ * `expires_at` for `expired` or from `committed_at` where the commit was the
+ * effect. A local view, never re-emitted or re-signed; the receiver retains
+ * the SET it read it from ({@link MissionSignalReceiver.retainedSet}).
  */
 function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
   const events = payload.events as Record<string, unknown> | undefined;
@@ -587,7 +610,13 @@ function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
   ) {
     return undefined;
   }
-  const normalized = normalizeLegacyMissionState(reported);
+  const normalized = normalizeLegacyMissionState(reported, {
+    version,
+    expires_at,
+    committed_at: ev.committed_at,
+    successor: ev.successor,
+    carried_to: ev.carried_to,
+  });
   const state = normalized.state;
   const termination =
     state !== "terminated"
