@@ -1651,7 +1651,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // and so a child client that lists this grant type is not rejected as
   // invalid_client_metadata. `assertion` is declared in the params set or the
   // token endpoint strips it; client_assertion/_type are auth params and survive.
-  // @spec mission-template#dispatch-handoff (#1158) — the same grant type
+  // @spec mission-template#dispatch-handoff (#1158): the same grant type
   // redeems a Dispatch Handoff grant, selected by the assertion's own `typ`;
   // each branch verifies its own `typ`, so neither accepts the other's grant.
   if (grantEnabled.get(CHILD_JWT_BEARER_GRANT_TYPE)) {
@@ -1739,7 +1739,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // @spec mission#scope-projection — declared so an exchange's requested
         // `scope` is honored or refused, never stripped unseen.
         "scope",
-        // @spec mission-template#dispatch-handoff — the handoff selector.
+        // @spec mission-template#dispatch-handoff: the handoff selector.
         "mission_dispatch_handoff",
       ]),
       // @spec id-continuation-assertion — the ICA continuation exchange takes

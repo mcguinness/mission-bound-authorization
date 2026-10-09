@@ -264,7 +264,7 @@ export async function handleTokenExchangeGrant(
   // ICA param hard-checks below, so the ICA continuation path is byte-for-byte
   // unchanged whenever the flag is absent. The familyStore lookup (NOT a gty string)
   // is the discriminator on every subsequent hop.
-  // @spec mission-template#dispatch-handoff (#1158, D361) — the explicit
+  // @spec mission-template#dispatch-handoff (#1158, D361): the explicit
   // handoff selector, checked FIRST: a malformed value, or one combined with
   // another exchange's selector, is refused here and never falls through to
   // that exchange (child creation included).

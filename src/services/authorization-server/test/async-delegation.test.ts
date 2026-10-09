@@ -50,7 +50,7 @@ const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE; // served by ISSUER (intra-domain target)
 const FAR_EXP = "2027-01-01T00:00:00Z";
 /**
- * @spec async-delegation (#651) — the TEST-ONLY child actor client, with the
+ * @spec async-delegation (#651): the TEST-ONLY child actor client, with the
  * jwt-bearer, token-exchange and refresh_token grant types, so a Child Mission
  * naming it as `child_actor` can mint and refresh a child-rooted family through
  * /token. Registered through the AS builder's `testClients` seam;

@@ -47,7 +47,7 @@ import {
   SCOPE_DECIDED_AT_SAVE,
 } from "./provider.js";
 
-/** @spec mission-template#dispatch-handoff — the handoff grant's JWS `typ` (media type application/mission-dispatch-handoff+jwt). */
+/** @spec mission-template#dispatch-handoff: the handoff grant's JWS `typ` (media type application/mission-dispatch-handoff+jwt). */
 export const DISPATCH_HANDOFF_TYP = "mission-dispatch-handoff+jwt";
 
 /** The handoff grant is short-lived, and never outlasts the instance. */
@@ -124,7 +124,7 @@ export interface DispatchHandoffClaims {
 }
 
 /**
- * @spec mission-template#dispatch-handoff redemption step 1 — verify the
+ * @spec mission-template#dispatch-handoff redemption step 1: verify the
  * grant's signature, `typ` and `exp`, and that its `aud` identifies this AS's
  * token endpoint. `undefined` for any grant that fails, a child grant
  * included: the handoff grant is validated apart from it.
@@ -168,7 +168,7 @@ export async function verifyDispatchHandoffGrant(
 }
 
 /**
- * @spec mission-template#dispatch-handoff — the exchange. The router has
+ * @spec mission-template#dispatch-handoff: the exchange. The router has
  * already checked the selector (`true`, no conflicting selector, the jwt
  * `requested_token_type`). Steps follow the Template profile; the response is
  * the handoff grant, and nothing is counted (the redemption is the
@@ -281,7 +281,7 @@ function refuse(ctx: KoaContextWithOIDC, error: string, description: string): vo
 }
 
 /**
- * @spec mission-template#dispatch-handoff — redemption. Client authentication
+ * @spec mission-template#dispatch-handoff: redemption. Client authentication
  * (private_key_jwt) has run, so `ctx.oidc.client` is the authenticated client.
  * Steps follow the Template profile's redemption rules. The token is issued to
  * the Agent under a provider Grant of its own, recorded in the Mission-bound

@@ -1,5 +1,5 @@
 /**
- * @spec mission-template#dispatch-handoff (#1158, D361) — the consumed
+ * @spec mission-template#dispatch-handoff (#1158, D361): the consumed
  * Dispatch Handoff grants. A handoff grant is single use: its `jti` is
  * consumed ATOMICALLY (one INSERT on the primary key, so two concurrent
  * redemptions cannot both succeed) and REMEMBERED for as long as the grant

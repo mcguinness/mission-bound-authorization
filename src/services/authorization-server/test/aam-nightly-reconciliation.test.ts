@@ -250,7 +250,7 @@ async function dispatch(params: {
 }
 
 /**
- * @spec mission-template#dispatch-handoff — the dispatcher exchanges the
+ * @spec mission-template#dispatch-handoff: the dispatcher exchanges the
  * dispatched token (bound to its own key) for a single-use grant naming the
  * instance's selected Agent.
  */
@@ -604,7 +604,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect((decodeJwt(dispatchedAccessToken).cnf as { jkt?: string }).jkt).toBe(dispatcherJkt);
     expect(record?.client_id).toBe("subagent-invoice-extractor");
 
-    // @spec mission-template#dispatch-handoff — the handoff, then the Agent's
+    // @spec mission-template#dispatch-handoff: the handoff, then the Agent's
     // redemption under its own key.
     const handed = await handoff(dispatchedAccessToken);
     const handedBody = (await handed.json()) as { access_token?: string; issued_token_type?: string };

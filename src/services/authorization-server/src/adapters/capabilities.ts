@@ -78,7 +78,7 @@ export const TOKEN_EXCHANGE_CAPABILITIES: readonly ProviderCapability[] = [
   "continuation",
   "cross-org",
   "expansion",
-  // @spec mission-template#dispatch-handoff — the handoff exchange.
+  // @spec mission-template#dispatch-handoff: the handoff exchange.
   "templates",
 ];
 

@@ -541,7 +541,7 @@ export class MissionKernel {
    * purged Mission-bound grant as an ordinary one and fail OPEN.
    */
   readonly missionBoundGrants: MissionBoundGrantStore;
-  /** @spec mission-template#dispatch-handoff (#1158) — consumed handoff grants (single use). */
+  /** @spec mission-template#dispatch-handoff (#1158): consumed handoff grants (single use). */
   readonly dispatchHandoffs: DispatchHandoffStore;
   /**
    * @spec discharge#discharge-idempotency — the durable event-dedup store, on THIS
