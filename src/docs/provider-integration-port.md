@@ -1139,7 +1139,7 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
   `OutcomeReconciler` (`services/mcp-payments/src/outcome-reconciler.ts`) is
   built from that declaration and refuses one naming another component. Each
   run settles this epoch's unresolved claims (`reconcileClaims`,
-  `services/mcp-payments/src/claim-reconciliation.ts:47`), alerts what stays
+  `services/mcp-payments/src/claim-reconciliation.ts:53`), alerts what stays
   unmatched between `completed` Execution Evidence and the connectors'
   committed effects (`reconcile`), runs the reservation store's `sweep()` and
   `sweepConsumedPermits()`, and escalates a `reserved` row without executing
@@ -1147,7 +1147,9 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
   every claim that closes `indeterminate`, after the transition commits.
 - **Boundary.** Each step stands alone. A step that throws raises
   `reconciliation_failed` and the others still run; a run never overlaps the
-  next.
+  next. Within the claims step each claim stands alone: one whose
+  reconciliation throws raises `reconciliation_failed` naming it, stays
+  unresolved for the next run, and the claims after it still settle.
 - **Asynchronous work.** The reconciler is the overlay's only asynchronous
   work: once at start, then every 300 s (a third of the window), on a timer
   that holds no process open. `pnpm as-native` and `pnpm demo:serve` start
@@ -1162,6 +1164,7 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
   (`:723-735`), the hook raises the alert, and its key stays refused.
 - **Tests:**
   - `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect, over the remote channel: the wire stands once, and a run inside the window settles the claim completed from the ledger, with exactly one ledger entry` (PEP-level)
+  - `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > one claim's failed reconciliation is isolated: a later claim proven unredeemed still settles failed in the same run, the failed claim stays unresolved and is escalated, and a later run settles it with no second effect (#1161 review)` (PEP-level)
   - `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > a refusal before any effect: the redeeming attempt's own suppressed Execution Evidence settles failed when its settlement never arrived, and nothing executes` (PEP-level)
   - `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > an outcome nothing establishes stays open, closes indeterminate when its window closes, and raises the declared alert exactly once, never from a run's open list` (PEP-level)
   - `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing` (PEP-level)

@@ -222,12 +222,23 @@ export class OutcomeReconciler {
       }
     };
     await step("claims", async () => {
-      report.claims = await reconcileClaims({
+      const claims = await reconcileClaims({
         claims: o.claims,
         evidence: o.evidence,
         redemption: o.redemption,
         connectors: o.connectors,
       });
+      report.claims = claims;
+      // A claim whose reconciliation threw is isolated by `reconcileClaims`
+      // (the claims after it still settle); each is escalated here, every
+      // run it fails, until it settles or closes indeterminate (#1161 review).
+      for (const failure of claims.errors) {
+        this.raise({
+          kind: "reconciliation_failed",
+          evaluation_id: failure.evaluation_id,
+          cause: `claims: ${failure.error}`,
+        });
+      }
     });
     await step("orphans", () => this.detectOrphans(report));
     await step("reservation_sweep", () => {

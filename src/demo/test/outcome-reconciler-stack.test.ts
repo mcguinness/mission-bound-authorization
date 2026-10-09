@@ -62,7 +62,7 @@ describe("the composed stack's declared outcome reconciler (@spec runtime#eviden
         expect(stack.reconciler.intervalMs).toBe(5 * 60_000);
         const run = await stack.reconciler.runOnce();
         expect(run).toMatchObject({ skipped: false, failed: [], reserved: [] });
-        expect(run.claims).toEqual({ settled: [], unredeemed: [], open: [], states: {} });
+        expect(run.claims).toEqual({ settled: [], unredeemed: [], open: [], states: {}, errors: [] });
         expect(stack.reconciler.started).toBe(false);
       } finally {
         await closeStack(stack);

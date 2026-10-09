@@ -296,7 +296,7 @@ describe("the declared outcome reconciler runs the reconciliation (@spec runtime
         const k = key();
         await wireWithLostEvidence(h, k);
         // Inside the permit and its lease the claim is not the reconciler's yet.
-        expect((await h.reconciler.runOnce()).claims).toEqual({ settled: [], unredeemed: [], open: [], states: {} });
+        expect((await h.reconciler.runOnce()).claims).toEqual({ settled: [], unredeemed: [], open: [], states: {}, errors: [] });
         h.clock.advance(PAST_LEASE_MS);
         expect(h.clock.ms()).toBeLessThan(WINDOW_CLOSE_MS);
         const run = await h.reconciler.runOnce();
@@ -322,6 +322,46 @@ describe("the declared outcome reconciler runs the reconciliation (@spec runtime
       }
     });
   }
+
+  it("one claim's failed reconciliation is isolated: a later claim proven unredeemed still settles failed in the same run, the failed claim stays unresolved and is escalated, and a later run settles it with no second effect (#1161 review)", async () => {
+    const h = await harness();
+    try {
+      // Claim A, claimed first: missing evidence after an effect.
+      await wireWithLostEvidence(h, key());
+      h.clock.advance(1);
+      // Claim B, claimed after A: a refusal before any effect, never redeemed.
+      const permit = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN);
+      expect(permit.permitted).toBe(true);
+      const b = permit.decision?.context.evaluation_id as string;
+      h.clock.advance(PAST_LEASE_MS);
+      expect(h.clock.ms()).toBeLessThan(WINDOW_CLOSE_MS);
+      // A's evidence recovery write throws in this run, as the review reproduced.
+      const failing = failCompletedWrites(h);
+      const run = await h.reconciler.runOnce();
+      failing.restore();
+      const a = run.claims?.errors[0]?.evaluation_id as string;
+      expect(run.claims?.errors).toEqual([{ evaluation_id: a, error: "Error" }]);
+      expect(a).not.toBe(b);
+      // B still settled failed in the same run: A's failure did not stop it.
+      expect(run.claims?.unredeemed).toEqual([b]);
+      expect(run.claims?.states).toEqual({ [b]: "failed" });
+      // The step itself did not fail; A alone was escalated, with no error text.
+      expect(run.failed).toEqual([]);
+      expect(h.alerts.alerts).toEqual([
+        expect.objectContaining({ kind: "reconciliation_failed", evaluation_id: a, cause: "claims: Error" }),
+      ]);
+      expect(h.connectors.ledgerEntries()).toHaveLength(1);
+      // A stays unresolved, and the next run settles it completed from the
+      // ledger: the effect stands once and is never repeated.
+      const next = await h.reconciler.runOnce();
+      expect(next.claims?.errors).toEqual([]);
+      expect(next.claims?.states).toEqual({ [a]: "completed" });
+      expect(executions(h, "completed")).toHaveLength(1);
+      expect(h.connectors.ledgerEntries()).toHaveLength(1);
+    } finally {
+      await h.close();
+    }
+  });
 
   it("a refusal before any effect: a permit proven unredeemed in this epoch settles failed, and a retry under its key executes nothing", async () => {
     const h = await harness();
@@ -416,7 +456,7 @@ describe("the declared outcome reconciler runs the reconciliation (@spec runtime
     const after = await harness({ claimsFile, clock: c });
     try {
       const first = await after.reconciler.runOnce();
-      expect(first.claims).toEqual({ settled: [], unredeemed: [], open: [], states: {} });
+      expect(first.claims).toEqual({ settled: [], unredeemed: [], open: [], states: {}, errors: [] });
       c.set(WINDOW_CLOSE_MS - 1_000);
       expect((await after.reconciler.runOnce()).claims?.open).toEqual([]);
       expect(after.alerts.alerts).toEqual([]);
