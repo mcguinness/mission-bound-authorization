@@ -1150,8 +1150,10 @@ The following example shows a decision request for a successful join
 in the AuthZEN profile. The PEP supplies `context.mission` from its
 Mission binding, the Mission state it observed in the MAS's signed
 Mission Status response as `context.mission_state_observation`, the
-authenticated client as `context.actor.client_id`, and the other
-decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
+authenticated client as `context.actor.client_id`, the entries the
+token's `scope` maps to under the mapping contract as
+`context.credential.authority`, and the other decision inputs per
+{{I-D.draft-mcguinness-mission-authzen}}:
 
 ~~~ json
 {
@@ -1181,15 +1183,28 @@ decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
       "freshness_at": "2026-11-02T08:14:00Z"
     },
     "actor": { "client_id": "client_erp-recon-agent" },
+    "credential": {
+      "issuer": "https://as.example.com",
+      "expires_at": "2026-11-02T09:14:00Z",
+      "authority": [
+        {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": ["invoices.read"]
+        }
+      ]
+    },
     "mission_join": {}
   }
 }
 ~~~
 
 The credential's authenticated subject and client match the Mission's
-`subject.sub` and `client_id`, so the join holds, and the PDP evaluates
-the action under the Mission's Authority Set. The following example
-shows the resulting permit:
+`subject.sub` and `client_id`, so the join holds. The PDP evaluates
+the action under the Mission's Authority Set and, as a separate
+bound, under the credential's own authority, here the read entry its
+`invoices.read` scope maps to. The following example shows the
+resulting permit:
 
 ~~~ json
 {
