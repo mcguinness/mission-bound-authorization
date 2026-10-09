@@ -2770,7 +2770,8 @@ This document does not define the wire shape of that operation. A
 deployment-defined authenticated surface satisfies this requirement;
 Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
 defines an interoperable `revoke` operation, authorized under its own
-lifecycle authorization policy.
+lifecycle authorization policy, which a deployment can serve alone
+under that document's revoke-only conformance class.
 
 As {{Section 2.1 of RFC7009}} permits, a deployment's revocation
 policy can treat revoking a Mission's refresh token as revoking the
@@ -6004,6 +6005,9 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Revocation: the pointer to Mission Status's interoperable `revoke`
+  names its revoke-only conformance class (#1182).
 
 - Mission lifecycle: the states are `active` and `terminated`, and a
   terminated Mission carries a `termination` object whose `reason`

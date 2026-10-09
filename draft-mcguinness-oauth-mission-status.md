@@ -790,7 +790,7 @@ Wire error codes (carried in the `error` member of a JSON body):
 
 | `error` | HTTP | Description |
 |---|---|---|
-| `invalid_request` | 400 | Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, or a retransmitted `nonce` paired with a request that is not byte-identical to the original ({{idempotency}}). |
+| `invalid_request` | 400 | Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, a Lifecycle `operation` the AS does not serve ({{mission-lifecycle-endpoint}}), or a retransmitted `nonce` paired with a request that is not byte-identical to the original ({{idempotency}}). |
 | `invalid_client` | 400 | Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted ({{mission-status-auth-failures}}). |
 | `unauthorized` | 401 | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted; the response carries the challenges of {{mission-status-auth-failures}}. |
 | `not_found` | 404 | Reference does not exist OR is not visible. |
@@ -1046,6 +1046,12 @@ The base operations are:
 - `resume`: return a suspended Mission to `active`.
 - `complete`: mark the Mission completed; transition to `terminated`
   with reason `completed`.
+
+The AS MUST refuse an `operation` value it does not serve, a base
+operation its conformance claim omits ({{conformance}}) or an extension
+operation it has not adopted, with `invalid_request`
+({{mission-status-errors}}) before looking up the Mission, leaving the
+Mission unchanged, so the refusal discloses nothing about it.
 
 A companion profile MAY register a further `operation` value on this
 endpoint that changes no Mission-level state, provided it defines the
@@ -1748,6 +1754,21 @@ An implementation claiming an extension MUST meet its requirements:
   `completed` termination it introduces exactly as the issuance profile
   gates on non-`active` state, and advertise `mission_lifecycle_endpoint` and
   `mission_lifecycle_endpoint_auth_methods_supported`.
+- **Mission Lifecycle, revoke only**: serve the management endpoint
+  ({{mission-lifecycle-endpoint}}) with the `revoke` operation alone,
+  under its authentication, its explicit lifecycle authorization
+  ({{lifecycle-authorization}}), the idempotency and conflict rules of
+  {{idempotency}}, and the not-found refusal of an unauthorized
+  request; answer each `revoke` with the signed, state-only Mission
+  Status Response, whose `aud` is the authenticated requester and whose
+  `nonce` is the request's ({{mission-status-response}}); refuse every
+  other operation ({{mission-lifecycle-endpoint}}, Operations); and
+  advertise `mission_lifecycle_endpoint`,
+  `mission_lifecycle_endpoint_auth_methods_supported`, and
+  `mission_status_signing_alg_values_supported`. It need not serve the
+  Mission Status operation, and it introduces neither the `suspended`
+  state nor the `completed` termination. An implementation claiming
+  Mission Lifecycle meets it.
 - **Revocation propagation**: advertise `mission_max_stale_seconds`
   and size Mission-bound access-token TTLs to it
   ({{revocation-enforcement-classes}}).
@@ -1956,6 +1977,13 @@ Authorization work for feedback that shaped these extensions.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Conformance gains a revoke-only Mission Lifecycle class: the
+  Lifecycle endpoint with `revoke` alone, under its authentication,
+  lifecycle authorization, idempotency and signed state-only response,
+  without the Mission Status operation. An `operation` the AS does not
+  serve is refused `invalid_request` before the Mission is looked up
+  (#1182).
 
 - Mission lifecycle: the states are `active`, `suspended` and
   `terminated`. A terminated Mission's `mission.termination` carries
