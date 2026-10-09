@@ -19,8 +19,8 @@
     "content_sha256": "c1fb17ce0f9d37cc15c973fbac912fa4ef31a9e27ed81cbda8b7645d6ea4b37d"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "8fd969aba32757b674ea7137286bdce4f2cdd3ecb1d5c5769252f01b033f9434"
+    "revision": "54b36a16bda236f372d8be1d9b0a4ebdc3d84089",
+    "content_sha256": "c22b81d4ff5715915504826747e221c16f2639e9452d9e8c813694720bffad3f"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
@@ -127,8 +127,8 @@
     "content_sha256": "7a24c9a98ece9ae1ac533dde1a1158558a8e93c7d8419bbc39e4c1d33a4622fe"
    },
    "draft-mcguinness-mission-aauth.md": {
-    "revision": "ed06fb6e130d428ef4d630472529a46a930bbf07",
-    "content_sha256": "6712a25d57c20feb031d4c1ee0ce2ef361d3c405301fcce527761b9a20579123"
+    "revision": "54b36a16bda236f372d8be1d9b0a4ebdc3d84089",
+    "content_sha256": "7b28977995755db958da0560af1d62b9f7cc7871b42c7941020b897436d22fa1"
    },
    "draft-mcguinness-mission-mandate.md": {
     "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
@@ -33128,6 +33128,48 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#965 (D356). Native AAuth tests are scoped to the #836 pilot; no reference implementation of mission updates exists."
+  },
+  {
+   "id": "aauth.reference.issuer-id-mapping",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "uses the approving PS's identifier as the issuer and `s256` as the identifier",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer that names an AAuth Mission by an issuer and an identifier, such as a Runtime record's `mission.issuer` and `mission.id` or an AuthZEN request's `context.mission`, records the approving PS's identifier as the issuer and the mission's `s256` as the identifier, and no other value for either"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169. No reference component names an AAuth Mission by issuer and identifier: `src/packages/aauth-wire` (#836 slice 1) verifies `ps` and that a PS-issued auth token names itself in it, but carries no Mission, and no service consumes it."
+  },
+  {
+   "id": "aauth.reference.ps-source",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "The consumer MUST take the PS from the `iss` of a person token or the `ps` claim of a resource or auth token, and MUST NOT take it from the `iss` of an auth token",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the issuer recorded for an AAuth Mission is the PS named by a person token's `iss` or a resource or auth token's `ps`; for an auth token an Access Server issued in four-party access, whose `iss` names that Access Server, the recorded issuer is the PS its `ps` claim names, never the Access Server"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1169. No reference component names an AAuth Mission by issuer and identifier: `src/packages/aauth-wire` (#836 slice 1) verifies `ps` and that a PS-issued auth token names itself in it, but carries no Mission, and no service consumes it."
   },
   {
    "id": "aauth.lifecycle.broadening-update-needs-supervisor",
