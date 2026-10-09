@@ -1824,8 +1824,9 @@ The referenced profiles' OAuth error outcomes map onto this
 endpoint's error surface as the OAuth binding's outcomes do
 ({{intent-submission}}): `invalid_request` outcomes map to
 `invalid_mission_intent`, and authority-derivation failures map to
-`invalid_authority`. Two rules cover the outcomes those profiles
-express as `invalid_grant`:
+`invalid_authority`. Two rules take precedence for the outcomes those
+profiles express as `invalid_grant`, and for their refusal of a
+predecessor or parent that is not `active`, whatever its error code:
 
 - If the binding of {{native-binding}} does not resolve a
   `predecessor` or `parent`,
@@ -3256,6 +3257,11 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Native-operation error mapping: a refusal of a predecessor or parent
+  that is not `active` maps to `conflict` whatever OAuth code its
+  profile uses, since that refusal is `invalid_request` on a Token
+  Exchange (#1154).
 
 - Mission lifecycle (#705). A superseded predecessor is `terminated`
   with reason `superseded` and names its successor in

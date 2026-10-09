@@ -2726,15 +2726,16 @@ cited:
 5. each token's `exp` does not exceed the Mission's `expires_at`
    ({{mission-bound-tokens}}).
 
-Unless the referenced Mission is `active`, the AS MUST refuse, with
-the `invalid_grant` error code, a request to derive a token at the
-token endpoint, on refresh, or on Token Exchange ({{RFC8693}}). The
-AS MUST refuse, with the `invalid_grant` error code, a derivation
-request it answers after it has acknowledged a revocation of the
-Mission. Where a profile of a Token Exchange that the AS implements
-assigns its own error code to either refusal, such as a continuation
-profile's code for an ended chain, the AS uses that profile's code
-instead of `invalid_grant`; the refusal itself, and the
+Unless the referenced Mission is `active`, the AS MUST refuse a
+request to derive a token at the token endpoint: a Token Exchange
+({{RFC8693}}) with the `invalid_request` error code
+({{Section 2.2.2 of RFC8693}}), and any other grant, refresh
+included, with the `invalid_grant` error code. The AS MUST refuse a
+derivation request it answers after it has acknowledged a revocation
+of the Mission, with the same error code. Where a profile of a Token
+Exchange that the AS implements assigns its own error code to either
+refusal, such as a continuation profile's code for an ended chain,
+the AS uses that profile's code instead; the refusal itself, and the
 `mission_error` member below, still apply.
 
 A derivation is one issuance operation the issuer AS performs for a
@@ -2744,7 +2745,7 @@ Token Exchange, or a cross-domain grant issuance
 profile bounds the number of derivations under a Mission
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 
-`invalid_grant` alone does not tell a client which gate refused. On a
+The error code alone does not tell a client which gate refused. On a
 refusal under this section the AS SHOULD include, alongside `error`,
 the `mission_error` token-error-response member ({{iana}}) with one
 of the values `revoked`, `expired`, or `superseded` (where a companion
@@ -3366,7 +3367,7 @@ elsewhere in this document that names one of these codes
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}) | safe `error_description` |
 | Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}) | safe `error_description` |
 | Authorization decision: the Approver declines, approval authentication fails the floor or a requested `acr_values`/`max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}) | none unless a defined extension applies |
-| Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_grant` ({{Section 5.2 of RFC6749}}), or the code a Token Exchange profile assigns ({{issuance-gating}}) | `mission_error` ({{iana}}) |
+| Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}) | `mission_error` ({{iana}}) |
 | Token endpoint: the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}) | safe detail |
 | Token exchange with no actor ({{self-exchange}}): the authenticated client is not the Mission's approved agent | `invalid_request` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
 | Delegated token exchange ({{delegation-constraints}}): narrowing leaves no entries for the delegate | `invalid_target` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
@@ -6004,6 +6005,13 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Issuance Gating refuses a derivation from a Mission that is not
+  `active` with `invalid_request` on a Token Exchange, as Section 2.2.2
+  of RFC 8693 requires for an unacceptable subject token, and with
+  `invalid_grant` on every other grant, refresh included. A Token
+  Exchange profile's own code and the `mission_error` diagnostic are
+  unchanged (#1154).
 
 - Mission lifecycle: the states are `active` and `terminated`, and a
   terminated Mission carries a `termination` object whose `reason`
