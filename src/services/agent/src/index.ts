@@ -6,7 +6,15 @@
  * loop are the demo entrypoint (scripts/demo).
  */
 
-export { checkOnResume, checkStatusContinuity, type ResumeDecision, type MissionState } from "./harness.js";
+export {
+  checkOnResume,
+  checkStatusContinuity,
+  checkSupersessionContinuity,
+  type MissionState,
+  type ResumeDecision,
+  type SupersessionContinuity,
+  supersessionSuccessor,
+} from "./harness.js";
 export {
   buildScopeStatement,
   CHANNEL_CLASSES,

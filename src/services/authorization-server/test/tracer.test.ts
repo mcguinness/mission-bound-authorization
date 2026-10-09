@@ -251,7 +251,7 @@ describe("M1 tracer slice", () => {
     expect(claims.aud).toBe(CANONICAL_RESOURCE);
     missionId = mission.id;
     const record = as.kernel.get(missionId);
-    expect(record?.approver.sub).toBe("bob");
+    expect(record?.approval_basis.consent_principal.sub).toBe("bob");
     expect(record?.subject.sub).toBe("alice");
   });
 
@@ -322,9 +322,9 @@ describe("M1 tracer slice", () => {
     expect(res.status).toBe(400);
     expect(body.error).toBe("invalid_grant");
     // @spec status#mission-lifecycle-endpoint — a suspended Mission's refusal
-    // carries Mission Status's `mission_suspended`, never `mission_revoked`,
-    // so the client can tell a `resume` lifts it (@see gateErrorToMissionError).
-    expect(body.mission_error).toBe("mission_suspended");
+    // carries Mission Status's `suspended`, never `revoked`, so the client
+    // can tell a `resume` lifts it (@see gateErrorToMissionError).
+    expect(body.mission_error).toBe("suspended");
 
     expect((await (await lifecycle("resume")).json() as { state: string }).state).toBe("active");
     res = await tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });
@@ -340,7 +340,12 @@ describe("M1 tracer slice", () => {
       headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
       body: JSON.stringify({ operation: "revoke" }),
     });
-    expect(((await res1.json()) as { state: string }).state).toBe("revoked");
+    // @spec status#mission-lifecycle-endpoint, mission#termination: the
+    // lifecycle outcome reports `terminated` with its `termination` beside it.
+    expect(await res1.json()).toMatchObject({
+      state: "terminated",
+      termination: { reason: "revoked", version: expect.any(Number) },
+    });
 
     const res2 = await tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });
     expect(res2.status).toBe(400);
@@ -363,8 +368,9 @@ describe("M1 tracer slice", () => {
       },
       body: new URLSearchParams({ token: accessToken }).toString(),
     });
-    const body = (await res3.json()) as { mission?: { state: string } };
-    expect(body.mission?.state).toBe("revoked");
+    const body = (await res3.json()) as { mission?: { state: string; termination?: { reason: string } } };
+    expect(body.mission?.state).toBe("terminated");
+    expect(body.mission?.termination?.reason).toBe("revoked");
   });
 
   it("AS metadata advertises mission_bound_authorization_supported, the adapter introspection endpoint, and the mission_max_stale_seconds ceiling", async () => {

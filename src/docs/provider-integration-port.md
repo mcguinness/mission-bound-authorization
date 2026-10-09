@@ -151,8 +151,9 @@ the store.
   - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > an unsupported acr is refused`
 - **Residual.**
   - The achieved `acr` and `auth_time` are checked and not retained. The
-    record's `approver` is `{iss, sub}` (`kernel.approve`), so the issuance
-    evidence does not show the achieved context.
+    record's `approval_basis.consent_principal` is `{iss, sub}`
+    (`kernel.approve`), so the issuance evidence does not show the achieved
+    context.
   - The decision carries no digest of the rendered page. `decide()`
     re-derives from the interaction's immutable pushed parameters and current
     configuration, and `kernel.approve` computes the anchors over that. A
@@ -399,7 +400,7 @@ the store.
   - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a rotating refresh: the rotated refresh token and the new access token expire no later than the Mission` (`exp-clamp.test.ts`)
   - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a credential minted with under one second of Mission left is refused, never given a 0 s or overrunning lifetime` (`exp-clamp.test.ts`)
   - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed with under one second of Mission left redirects access_denied, never invalid_grant, and issues no code` (`exp-clamp.test.ts`)
-  - `async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused mission_expired with no refresh token saved (@spec mission#mission-bound-tokens)` (`async-delegation.test.ts`)
+  - `async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens)` (`async-delegation.test.ts`)
 - **Tests (kernel-level):** `single-process control-plane fault boundaries > a derivation admitted from a stale snapshot cannot overshoot the cap` (`control-plane-faults.test.ts`).
 - **Unsupported or residual.**
   - The counter is not coupled to the token it pays for (§4.3; #250).
@@ -418,8 +419,8 @@ the store.
     returns 0, a negative lifetime, or a 1 s floor: past `expires_at` it runs
     `gateActive`, which commits the expiry and refuses as the gate does, and
     with under one second left it refuses too. A token-endpoint mint refuses
-    `invalid_grant` `mission_expired`; the authorization code, minted at the
-    authorization endpoint's resume, refuses `access_denied`
+    `invalid_grant` with `mission_error` `expired`; the authorization code,
+    minted at the authorization endpoint's resume, refuses `access_denied`
     (`{#error-mapping}`, an authorization decision refused by AS policy),
     because RFC 6749 Section 4.1.2.1 defines no `invalid_grant` there. The
     deferred, child, dispatch, async-delegation and expansion mints keep their
@@ -454,9 +455,11 @@ the store.
   `extraTokenClaims`. That gate is `gateDerivation` for a Mission approval
   grant, and `gateActive` for a family grant or an index hit whose
   `grant_id` has moved. A `GateError` becomes `invalid_grant`
-  (`MissionGrantError`). Where a value applies (`mission_revoked`,
-  `mission_expired`, `derivations_exhausted`), the `grant.error` listener adds
-  `mission_error`; a suspended Mission gets none.
+  (`MissionGrantError`). Where a value applies (the Mission's termination
+  reason `revoked`, `expired`, `superseded`, `completed` or
+  `parent_terminated`, `suspended`, or `derivations_exhausted`), the
+  `grant.error` listener adds `mission_error`; a termination reason it does
+  not recognize gets none.
   Both saves evaluate the token's lifetime (`clampToMission`) before any gate,
   so the rotated refresh token, a family token included, is never saved past
   the Mission's `expires_at`. The presented token is still consumed first
@@ -617,8 +620,8 @@ the store.
   A failure in steps 3 to 6, or in step 8, is a bare `active: false`. A
   refresh token takes a parallel branch through `provider.RefreshToken.find`.
 - **Boundary.** Each call reads current kernel state. `applyExpiry` can commit
-  an `expired` transition during the read. The AS caches nothing. The route
-  itself sets no `Cache-Control` header (code reading). `plain-rs` makes a
+  the expiry (`terminated`, reason `expired`) during the read. The AS caches
+  nothing. The route itself sets no `Cache-Control` header (code reading). `plain-rs` makes a
   fresh call for every request and caches nothing (`introspectActive`;
   `plain-rs introspection failure contract (#873) > introspects every request: two requests make two calls, and a positive first result does not admit the second once the endpoint says active false`).
 - **Asynchronous work.** None.
@@ -627,7 +630,7 @@ the store.
   the new keys, and would miss the index if it verified. Both answer
   `active: false`. Fail closed; no assembly-level restart test.
 - **Tests (HTTP):**
-  - `composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state revoked, NO top-level or mission authorization_details` (`introspection-endpoint.test.ts`)
+  - `composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details` (`introspection-endpoint.test.ts`)
   - `caller authentication (@spec mission#caller-authorization-and-minimization) > refuses an unauthenticated call with 401 + WWW-Authenticate` (`introspection-endpoint.test.ts`)
   - `strict token resolution: bare active:false, no Mission or token detail > wrong-audience caller: the ENTIRE response is minimized` (`introspection-endpoint.test.ts`)
   - `Mission-bound refresh tokens (@spec mission#introspection) > Mission revocation reports the composite even though it destroys the grant` (`introspection-endpoint.test.ts`)

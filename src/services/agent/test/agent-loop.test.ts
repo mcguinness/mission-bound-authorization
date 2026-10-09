@@ -162,7 +162,7 @@ async function build(): Promise<{ server: McpPaymentsServer; connectors: Connect
 }
 
 const active = async (): Promise<MissionState> => "active";
-const revoked = async (): Promise<MissionState> => "revoked";
+const terminated = async (): Promise<MissionState> => "terminated";
 
 /** The V3 usage/finish shapes the mock's doGenerate must carry (values are nominal). */
 const USAGE = {
@@ -274,7 +274,7 @@ d("agent loop (increment 2): the LLM planner reaches tools ONLY through the medi
     const spy = spyChannel();
     // A spy channel makes "the channel was never reached" directly observable; its
     // callTool is the side-effect oracle, so an untouched spy == no ledger entry.
-    const harness = new MediatedHarness(spy.channel, VIEW.id, revoked);
+    const harness = new MediatedHarness(spy.channel, VIEW.id, terminated);
     const jwt = await signMissionToken();
     const res = await runAgentLoop({ harness, missionToken: jwt, goal: GOAL, model: textOnly("mission not active; stopping.") });
     // The guard suppressed the whole tool surface: listTools never reached the channel.
@@ -283,7 +283,7 @@ d("agent loop (increment 2): the LLM planner reaches tools ONLY through the medi
     // A direct attempt to act also fails closed before the channel (mirrors increment 1).
     const direct = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, jwt);
     expect(direct.ok).toBe(false);
-    expect(direct.refusal_reason).toBe("mission_not_active:revoked");
+    expect(direct.refusal_reason).toBe("mission_not_active:terminated");
     expect(spy.calls).toEqual([]);
   });
 

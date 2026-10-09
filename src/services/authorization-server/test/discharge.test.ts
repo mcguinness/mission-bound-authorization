@@ -336,7 +336,7 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
       event_id: "close-2026-q3",
       outcome: "discharged",
       prior_version: 1,
-      current_version: 2,
+      new_version: 2,
     });
     // No Mission-state transition: `state` is unchanged, `version` incremented.
     expect(after.state).toBe("active");
@@ -349,6 +349,28 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
     expect(kernel.effectiveAuthoritySet(after).map((e) => e.actions)).toEqual([
       ["payments:invoice.read"],
     ]);
+  });
+
+  it("the Discharge Result pairs prior_version with new_version, on the first commit and on an event replay, and never carries current_version (@spec discharge#discharge-result, #705)", () => {
+    const { kernel } = makeKernel();
+    const record = approve(kernel);
+    const s = selectorsFor(record);
+    const request = {
+      authority: "svc:close-management",
+      entry_digest: s.entry_digest,
+      condition_digest: s.condition_digest,
+      event_type: s.event_type,
+      event_id: "close-705",
+    };
+    const first = kernel.discharge(record.id, request).result;
+    expect(first).toMatchObject({ outcome: "discharged", prior_version: 1, new_version: 2 });
+    expect(first).not.toHaveProperty("current_version");
+    // The replayed event reports the versions the ORIGINAL commit produced,
+    // read back from the event store under the same member names.
+    const replay = kernel.discharge(record.id, request).result;
+    expect(replay).toMatchObject({ outcome: "discharged", prior_version: 1, new_version: 2 });
+    expect(replay).not.toHaveProperty("current_version");
+    expect(kernel.get(record.id)?.version).toBe(2);
   });
 
   it("already_discharged for a sibling condition and for a different event_id, with no re-latch", () => {
@@ -390,7 +412,7 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
     });
     expect(two.result.outcome).toBe("already_discharged");
     expect(two.result.prior_version).toBe(2);
-    expect(two.result.current_version).toBe(2);
+    expect(two.result.new_version).toBe(2);
 
     // The SAME condition under a different event_id.
     const three = kernel.discharge(record.id, {
@@ -454,7 +476,7 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
       event_id: "close-after-revoke",
     });
     expect(noop.result.outcome).toBe("terminal_noop");
-    expect(noop.result.prior_version).toBe(noop.result.current_version);
+    expect(noop.result.prior_version).toBe(noop.result.new_version);
     expect(kernel.get(revoked.id)?.discharged).toBeUndefined();
     expect(kernel.get(revoked.id)?.version).toBe(2); // the revoke's own increment only
   });
@@ -945,7 +967,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
       event_id: body.event_id,
       outcome: "discharged",
       prior_version: 1,
-      current_version: 2,
+      new_version: 2,
     });
     // A sibling of `mission`, which reports the UNCHANGED state and the new version.
     expect(payload.mission).toMatchObject({ id: record.id, state: "active", version: 2 });
@@ -1098,7 +1120,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
       outcome: "terminal_noop",
       entry_digest: s.entry_digest,
       prior_version: versionBefore,
-      current_version: versionBefore,
+      new_version: versionBefore,
     });
     expect(as.kernel.get(record.id)?.version).toBe(versionBefore);
     expect(as.kernel.get(record.id)?.discharged).toBeUndefined();
@@ -1112,7 +1134,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     expect(await dischargeResultOf(res)).toMatchObject({
       outcome: "discharged",
       prior_version: 2,
-      current_version: 3,
+      new_version: 3,
     });
     expect(as.kernel.get(record.id)?.state).toBe("suspended");
     expect(as.kernel.effectiveAuthoritySet(as.kernel.get(record.id) as MissionRecord)).toHaveLength(1);
@@ -1127,7 +1149,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     expect(await dischargeResultOf(again)).toMatchObject({
       outcome: "already_discharged",
       prior_version: 3,
-      current_version: 3,
+      new_version: 3,
     });
     expect(as.kernel.get(record.id)?.version).toBe(3);
   });
@@ -1141,7 +1163,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     expect(await dischargeResultOf(res)).toMatchObject({
       outcome: "discharged",
       prior_version: 1,
-      current_version: 2,
+      new_version: 2,
     });
     const after = as.kernel.get(record.id) as MissionRecord;
     expect(after.version).toBe(2); // exactly one increment for the whole class
@@ -1184,7 +1206,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     expect(await dischargeResultOf(first)).toMatchObject({
       outcome: "discharged",
       prior_version: 1,
-      current_version: 2,
+      new_version: 2,
     });
 
     // Same event tuple, same fingerprint, FRESH nonce: no state work, a new
@@ -1197,7 +1219,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     expect(payload.discharge_result).toMatchObject({
       outcome: "discharged",
       prior_version: 1,
-      current_version: 2,
+      new_version: 2,
     });
     expect(as.kernel.get(record.id)?.version).toBe(2); // no re-latch
 
@@ -1454,7 +1476,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
       // byte-identical duplicate, one equivalence class), never the read entry.
       const res = await lifecycle(record.id, selectorBody(record, { condition_selector: send }));
       expect(res.status).toBe(200);
-      expect(await dischargeResultOf(res)).toMatchObject({ outcome: "discharged", current_version: 2 });
+      expect(await dischargeResultOf(res)).toMatchObject({ outcome: "discharged", new_version: 2 });
       const after = as.kernel.get(record.id) as MissionRecord;
       expect(after.discharged?.map((d) => d.entry_digest)).toEqual([sendSel.entry_digest]);
       expect(as.kernel.effectiveAuthoritySet(after).map((e) => e.actions)).toEqual([
@@ -1503,7 +1525,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
       const { entry_digest: _e, condition_digest: _c, ...rest } = original;
       const retry = await lifecycle(record.id, { ...rest, nonce: freshNonce(), condition_selector: selector });
       expect(retry.status).toBe(200);
-      expect(await dischargeResultOf(retry)).toMatchObject({ outcome: "discharged", prior_version: 1, current_version: 2 });
+      expect(await dischargeResultOf(retry)).toMatchObject({ outcome: "discharged", prior_version: 1, new_version: 2 });
     });
 
     it("refuses a request carrying both target forms, or neither, as invalid_request", async () => {
@@ -1570,7 +1592,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
       expect(await dischargeResultOf(await lifecycle(record.id, bySelector))).toMatchObject({
         outcome: "discharged",
         prior_version: 1,
-        current_version: 2,
+        new_version: 2,
       });
       // The same occurrence in the DIGEST form is a replay, not a new assertion
       // (no already_discharged) and not a conflict.
@@ -1580,7 +1602,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
       expect(await dischargeResultOf(replay)).toMatchObject({
         outcome: "discharged",
         prior_version: 1,
-        current_version: 2,
+        new_version: 2,
       });
       expect(as.kernel.get(record.id)?.version).toBe(2);
       // And it is the SAME tuple: a divergent assertion in the other form conflicts.
@@ -1603,7 +1625,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
         event_id: body.event_id,
         outcome: "discharged",
         prior_version: 1,
-        current_version: 2,
+        new_version: 2,
       });
     });
 
@@ -1626,7 +1648,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
         event_id: "close-cross-form",
         outcome: "discharged",
         prior_version: 1,
-        current_version: 2,
+        new_version: 2,
       });
     });
   });
@@ -1724,11 +1746,11 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
     expect(await res.json()).toMatchObject({ error: "not_found" });
 
     const after = expiryAs.kernel.get(record.id);
-    expect(after?.state).toBe("expired");
+    expect(after?.termination?.reason).toBe("expired");
     expect(after?.version).toBe(record.version + 1);
     expect(after?.discharged).toBeUndefined();
     expect(eventRows(record.id)).toBe(0);
-    expect(commits.map((c) => c.state)).toEqual(["expired"]);
+    expect(commits.map((c) => [c.state, c.termination?.reason])).toEqual([["terminated", "expired"]]);
 
     // The refusal claimed no success: a byte-identical retransmission is no 200.
     expect((await post(record.id, body)).status).not.toBe(200);
@@ -1758,9 +1780,9 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
     expect(await res.json()).toMatchObject({ error: "conflict" });
 
     const after = expiryAs.kernel.get(record.id);
-    expect(after?.state).toBe("expired");
+    expect(after?.termination?.reason).toBe("expired");
     expect(after?.version).toBe(discharged.version + 1);
-    expect(commits.map((c) => c.state)).toEqual(["expired"]);
+    expect(commits.map((c) => [c.state, c.termination?.reason])).toEqual([["terminated", "expired"]]);
 
     // A second conflicting request transitions nothing further.
     expect((await post(record.id, { ...divergent, nonce: freshNonce() })).status).toBe(409);
@@ -1799,7 +1821,7 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
       expect(known.nonce).toBe(knownNonce);
     }
     // The guard touched only the known Mission: its expiry committed.
-    expect(expiryAs.kernel.get(record.id)?.state).toBe("expired");
+    expect(expiryAs.kernel.get(record.id)?.termination?.reason).toBe("expired");
   });
 
   it("valid selectors on an expired Mission: terminal_noop, the expiry committed once, exact replay unchanged", async () => {
@@ -1817,12 +1839,12 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
     >;
     expect(result.outcome).toBe("terminal_noop");
     expect(result.prior_version).toBe(record.version + 1);
-    expect(result.current_version).toBe(record.version + 1);
+    expect(result.new_version).toBe(record.version + 1);
 
     const after = expiryAs.kernel.get(record.id);
-    expect(after?.state).toBe("expired");
+    expect(after?.termination?.reason).toBe("expired");
     expect(after?.version).toBe(record.version + 1);
-    expect(commits.map((c) => c.state)).toEqual(["expired"]);
+    expect(commits.map((c) => [c.state, c.termination?.reason])).toEqual([["terminated", "expired"]]);
 
     // A byte-identical retransmission replays the stored signed bytes verbatim.
     expect(await (await post(record.id, body)).text()).toBe(bytes);
@@ -1844,11 +1866,11 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
     }
 
     const after = expiryAs.kernel.get(record.id);
-    expect(after?.state).toBe("expired");
+    expect(after?.termination?.reason).toBe("expired");
     expect(after?.version).toBe(record.version + 1);
     // The operation's own write (its terminal_noop event row) rolled back.
     expect(eventRows(record.id)).toBe(0);
-    expect(commits.map((c) => c.state)).toEqual(["expired"]);
+    expect(commits.map((c) => [c.state, c.termination?.reason])).toEqual([["terminated", "expired"]]);
   });
 
   it("an expiry-store failure answers no success and is never disguised as not-found", async () => {

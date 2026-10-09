@@ -953,6 +953,11 @@ single-use, phase and parameter bindings are unchanged.
       established from its Mission state source
       ({{I-D.draft-mcguinness-mission-runtime}}).
 
+    `termination`:
+    : OPTIONAL. An object. The Mission's `termination`
+      ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+      Termination") when `state` is `terminated`; absent otherwise.
+
     `version`:
     : OPTIONAL. An integer. The Mission's state version as the status
       profile defines it ({{I-D.draft-mcguinness-oauth-mission-status}}),
@@ -2909,6 +2914,10 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- `mission_state_observation` gains an OPTIONAL `termination`, the
+  Mission's `termination` when `state` is `terminated`. The PDP rule,
+  which keys only on exact `active`, is unchanged (#705).
 
 - Decision Evidence gains `authority_bound`, registered by this
   profile: `credential` or `mission`, the authority bound that decided

@@ -37,6 +37,7 @@
 
 import { randomBytes } from "node:crypto";
 import { afterCommit, type Database, withTransaction } from "@mission/store";
+import { normalizeLegacyCommit } from "./termination.js";
 import type { LifecycleCommit, PersistedLifecycleCommit } from "./types.js";
 
 /**
@@ -54,8 +55,37 @@ const PENDING_ATTEMPT_GUARD =
  * The payload schema version an event row carries. The drain refuses an
  * unrecognized version rather than reinterpreting stored bytes: a payload it
  * cannot read is pending work, never work it may silently discard.
+ *
+ * @spec mission#termination: version 2 is the termination vocabulary
+ * (`state` `active`, `suspended` or `terminated`, with `termination`).
+ * A version-1 row was committed before it and still carries a legacy terminal
+ * `state` and top-level `successor` / `carried_to`; it is read through
+ * {@link readPersistedCommit}, normalized in memory, and its stored bytes are
+ * never rewritten.
  */
-export const LIFECYCLE_EVENT_PAYLOAD_VERSION = 1;
+export const LIFECYCLE_EVENT_PAYLOAD_VERSION = 2;
+
+/** The pre-termination-vocabulary payload version, still readable. */
+export const LEGACY_LIFECYCLE_EVENT_PAYLOAD_VERSION = 1;
+
+/**
+ * Read a persisted event payload by its version: the current version as
+ * stored, a legacy version normalized ({@link normalizeLegacyCommit}), and
+ * any other version refused (pending work, never reinterpreted).
+ */
+export function readPersistedCommit(
+  payloadVersion: number,
+  json: string,
+  label: string,
+): PersistedLifecycleCommit {
+  if (payloadVersion === LIFECYCLE_EVENT_PAYLOAD_VERSION) {
+    return JSON.parse(json) as PersistedLifecycleCommit;
+  }
+  if (payloadVersion === LEGACY_LIFECYCLE_EVENT_PAYLOAD_VERSION) {
+    return normalizeLegacyCommit(JSON.parse(json) as PersistedLifecycleCommit);
+  }
+  throw new Error(`${label} carries unrecognized payload version ${payloadVersion}`);
+}
 
 /** Terminal dispositions a durable delivery row can reach. */
 export type DeliveryDisposition =
@@ -216,6 +246,9 @@ export class LifecycleOutbox {
             // The legacy drain re-ran the cascade once per job; carry it on the
             // first migrated event so the recovery is not lost.
             ...(index === 0 ? { cascadeMissionId: row.mission_id } : {}),
+            // These bytes predate the termination vocabulary: copied as they
+            // are and tagged legacy, so every reader normalizes them.
+            payloadVersion: LEGACY_LIFECYCLE_EVENT_PAYLOAD_VERSION,
           });
         }
       }
@@ -263,7 +296,7 @@ export class LifecycleOutbox {
 
   private insertEvent(
     commit: PersistedLifecycleCommit,
-    extra: { cascadeMissionId?: string } = {},
+    extra: { cascadeMissionId?: string; payloadVersion?: number } = {},
   ): number {
     const res = this.db
       .prepare(
@@ -276,7 +309,7 @@ export class LifecycleOutbox {
         commit.issuer,
         commit.id,
         commit.version,
-        LIFECYCLE_EVENT_PAYLOAD_VERSION,
+        extra.payloadVersion ?? LIFECYCLE_EVENT_PAYLOAD_VERSION,
         commit.committed_at,
         JSON.stringify(commit),
         extra.cascadeMissionId ?? null,
@@ -311,14 +344,11 @@ export class LifecycleOutbox {
    */
   private deliverEventRow(row: EventRow, opts: { isolate: boolean }): boolean {
     try {
-      if (row.payload_version !== LIFECYCLE_EVENT_PAYLOAD_VERSION) {
-        throw new Error(
-          `lifecycle event ${row.event_id} carries unrecognized payload version ${row.payload_version}`,
-        );
-      }
       // Frozen exactly as a directly emitted commit is: a replayed payload and
       // a first delivery are the same immutable event.
-      const commit = Object.freeze(JSON.parse(row.commit_json) as PersistedLifecycleCommit);
+      const commit = Object.freeze(
+        readPersistedCommit(row.payload_version, row.commit_json, `lifecycle event ${row.event_id}`),
+      );
       if (row.cascade_mission_id) this.opts.recoverCascade?.(row.cascade_mission_id);
       this.opts.publish(commit);
     } catch (e) {
@@ -429,12 +459,13 @@ export class LifecycleOutbox {
         this.markRemoved(row.seq, row.subscriber);
         continue;
       }
-      if (row.payload_version !== LIFECYCLE_EVENT_PAYLOAD_VERSION) {
-        throw new Error(
-          `lifecycle delivery ${row.seq}/${row.subscriber} carries unrecognized payload version ${row.payload_version}`,
-        );
-      }
-      const commit = Object.freeze(JSON.parse(row.commit_json) as PersistedLifecycleCommit);
+      const commit = Object.freeze(
+        readPersistedCommit(
+          row.payload_version,
+          row.commit_json,
+          `lifecycle delivery ${row.seq}/${row.subscriber}`,
+        ),
+      );
       try {
         await subscriber.deliver(JSON.parse(row.payload_json) as unknown, commit);
         // A guarded write that changes nothing means another pass already

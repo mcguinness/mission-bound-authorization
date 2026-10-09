@@ -101,9 +101,20 @@ export {
 export {
   type DeliveryDisposition,
   type DurableCommitSubscriber,
+  LEGACY_LIFECYCLE_EVENT_PAYLOAD_VERSION,
   LIFECYCLE_EVENT_PAYLOAD_VERSION,
   LifecycleOutbox,
+  readPersistedCommit,
 } from "./kernel/lifecycle-outbox.js";
+export {
+  LEGACY_TERMINAL_REASONS,
+  normalizeLegacyCommit,
+  normalizeStoredLifecycle,
+  observeExpiry,
+  parentTerminatedTermination,
+  parseTermination,
+  UNKNOWN_TERMINATION_REASON,
+} from "./kernel/termination.js";
 export {
   composeTombstoneRetentionSeconds,
   DEFAULT_AUDIT_RETENTION_S,
@@ -344,6 +355,8 @@ export {
   commitCarryoverManifest,
   decodeCarryoverEvidence,
   prepareCarryover,
+  readCarryoverMap,
+  verifyCarryoverEvidence,
   type ApplyCarryoverInput,
   type ApplyCarryoverResult,
   type CarryoverChangeClass,

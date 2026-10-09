@@ -520,7 +520,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(mission.predecessor).toBe(pred.missionId);
     expect(as.kernel.get(successorId)?.predecessor).toBe(pred.missionId);
     // The predecessor is superseded on the successor's first redemption.
-    expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+    expect(as.kernel.get(pred.missionId)?.termination?.reason).toBe("superseded");
     // @spec mission#grant-binding, expansion#successor-expiry (issue #647) —
     // the resolving poll IS the creation-completing body, so it carries the
     // successor's identifier and its committed effective expiry, verbatim.
@@ -629,8 +629,8 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     // activation. The predecessor keeps its terminal state, was never
     // superseded, and gained no successor link.
     const predRecord = as.kernel.get(pred.missionId);
-    expect(predRecord?.state).toBe("revoked");
-    expect(predRecord?.successor ?? undefined).toBeUndefined();
+    expect(predRecord?.termination?.reason).toBe("revoked");
+    expect(predRecord?.termination).not.toHaveProperty("successor");
   });
 
   it("a deferral-retirement fault rolls back successor, supersession and outbox as one transaction", async () => {
@@ -671,7 +671,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     const fb = (await first.json()) as { access_token?: string };
     expect(first.status, JSON.stringify(fb)).toBe(200);
     const successorId = (decodeJwt(fb.access_token as string) as { mission: { id: string } }).mission.id;
-    expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+    expect(as.kernel.get(pred.missionId)?.termination?.reason).toBe("superseded");
 
     // Simulate the crash window: the activation transaction committed but
     // the completion was not released, and the durable finalization job was
@@ -687,7 +687,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(second.status, JSON.stringify(sb)).toBe(200);
     const recoveredId = (decodeJwt(sb.access_token as string) as { mission: { id: string } }).mission.id;
     expect(recoveredId).toBe(successorId);
-    expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+    expect(as.kernel.get(pred.missionId)?.termination?.reason).toBe("superseded");
     // The replayed outbox events all published (idempotent drain).
     expect(as.kernel.outbox.pendingEventCount()).toBe(0);
   });
@@ -725,7 +725,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     // events are pending with their immutable payloads persisted. The
     // completion has not yet been released to the token adapter, so recovery
     // can return it.
-    expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+    expect(as.kernel.get(pred.missionId)?.termination?.reason).toBe("superseded");
     expect(as.kernel.db.prepare("SELECT redeemed, completion_released FROM expansion_deferrals WHERE deferral_code = ?").get(ob.deferral_code)).toEqual({ redeemed: 1, completion_released: 0 });
     expect(as.kernel.outbox.pendingEventCount()).toBeGreaterThan(0);
     const successorId = (as.kernel.db
@@ -792,16 +792,18 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
 
     // The finalization drain cascaded the child once, in generation order.
     const cascaded = as.kernel.get(child.id);
-    expect(cascaded?.state).toBe("cascaded");
+    expect(cascaded?.termination?.reason).toBe("parent_terminated");
     const versionAfterFirst = cascaded?.version;
 
-    // The child's `cascaded` transition is itself a durable event, committed in
-    // the SAME transaction as the supersession that cascaded it.
+    // The child's `parent_terminated` transition is itself a durable event,
+    // committed in the SAME transaction as the supersession that cascaded it.
     const childEvents = as.kernel.db
       .prepare("SELECT event_id, commit_json FROM lifecycle_events WHERE mission_id = ? ORDER BY seq")
       .all(child.id) as Array<{ event_id: string; commit_json: string }>;
     const cascadedEvent = childEvents.find(
-      (row) => (JSON.parse(row.commit_json) as { state: string }).state === "cascaded",
+      (row) =>
+        (JSON.parse(row.commit_json) as { termination?: { reason: string } }).termination?.reason ===
+        "parent_terminated",
     );
     expect(cascadedEvent).toBeDefined();
 
@@ -811,9 +813,16 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
       .run(ob.deferral_code as string);
     as.kernel.db.prepare("UPDATE lifecycle_events SET published = 0").run();
 
-    const recorded: Array<{ id: string; event_id?: string; state?: string }> = [];
+    const recorded: Array<{ id: string; event_id?: string; state?: string; termination?: { reason: string } }> = [];
     const kernelAny = as.kernel as unknown as {
-      opts: { onLifecycleCommit?: (c: { id: string; event_id?: string; state?: string }) => void };
+      opts: {
+        onLifecycleCommit?: (c: {
+          id: string;
+          event_id?: string;
+          state?: string;
+          termination?: { reason: string };
+        }) => void;
+      };
     };
     const origHook = kernelAny.opts.onLifecycleCommit;
     kernelAny.opts.onLifecycleCommit = (c) => {
@@ -833,7 +842,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     // descendant's committed transition is REDELIVERED rather than lost, with
     // the identity it was committed under.
     const after = as.kernel.get(child.id);
-    expect(after?.state).toBe("cascaded");
+    expect(after?.termination?.reason).toBe("parent_terminated");
     expect(after?.version).toBe(versionAfterFirst);
     const childEventsAfter = as.kernel.db
       .prepare("SELECT event_id FROM lifecycle_events WHERE mission_id = ?")
@@ -842,7 +851,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
       childEvents.map((r) => r.event_id).sort(),
     );
     const replayedChild = recorded.filter(
-      (c) => c.id === child.id && c.state === "cascaded",
+      (c) => c.id === child.id && c.termination?.reason === "parent_terminated",
     );
     expect(replayedChild).toHaveLength(1);
     expect(replayedChild[0]?.event_id).toBe(cascadedEvent?.event_id);
@@ -1037,8 +1046,8 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
     expect(replacement?.client_id).toBe(CARRY_ACTOR);
     // The old child is carried, terminal, and its correlation is committed.
     const oldChild = as.kernel.get(pred.childId);
-    expect(oldChild?.state).toBe("cascaded");
-    expect(oldChild?.carried_to).toBe(replacement?.mission_id);
+    expect(oldChild?.termination?.reason).toBe("parent_terminated");
+    expect(oldChild?.termination?.carried_to).toBe(replacement?.mission_id);
     // The replacement is a child of the SUCCESSOR with a direct basis.
     const newChild = as.kernel.get(replacement?.mission_id as string);
     expect(newChild?.parent?.id).toBe(body.mission_id);

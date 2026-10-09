@@ -610,7 +610,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     // code, with Mission Status's value for a suspended Mission.
     expect(refusedBody.error).toBe("unauthorized_client");
     expect(refusedBody.error_description).toMatch(/gate refused issuance/);
-    expect(refusedBody.mission_error).toBe("mission_suspended");
+    expect(refusedBody.mission_error).toBe("suspended");
 
     // Nothing was issued, so nothing was consumed: the assertion is still
     // single-use-unspent. (Recording at validation, the prior behavior, burned
@@ -638,7 +638,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_continuation");
     expect(body.error_description).toMatch(/gate refused issuance/);
-    expect(body.mission_error).toBe("mission_expired");
+    expect(body.mission_error).toBe("expired");
   });
 
   it("(b2) a Mission whose authority is fully contained -> invalid_target (ICA -02 5.5.6)", async () => {
@@ -683,8 +683,28 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_continuation");
     expect(body.error_description).toMatch(/gate refused issuance/);
-    expect(body.mission_error).toBe("mission_revoked");
+    expect(body.mission_error).toBe("revoked");
   });
+
+  for (const op of ["revoke", "complete"] as const) {
+    const reason = op === "revoke" ? "revoked" : "completed";
+    it(`(b4a) a Mission terminated ${reason} before its expires_at passed reports ${reason}, never expired (@spec mission#termination)`, async () => {
+      const { missionId, handle } = newLineage(`apev-b4a-${op}`);
+      as.kernel.transition(missionId, op);
+      // The store lags the lifecycle (as in b4), and the Mission's expires_at
+      // has since passed: the recorded cause still governs the refusal.
+      as.continuationStore.db.prepare("UPDATE continuation_anchors SET state = 'active' WHERE mission_id = ?").run(missionId);
+      as.continuationStore.db.prepare("UPDATE continuation_handles SET state = 'active' WHERE mission_id = ?").run(missionId);
+      as.kernel.db.prepare("UPDATE missions SET expires_at = ? WHERE id = ?").run("2020-01-01T00:00:00Z", missionId);
+      const res = await tokenExchange({ subjectToken: await mintICA(handle) });
+      const body = (await res.json()) as { error?: string; error_description?: string; mission_error?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_continuation");
+      expect(body.error_description).toMatch(/mission_not_active/);
+      expect(body.mission_error).toBe(reason);
+      expect(as.kernel.get(missionId)?.termination?.reason).toBe(reason);
+    });
+  }
 
   it("(b5) a refusal at the Mission gate records no child hop (the hop is recorded only once the gate admits)", async () => {
     const { missionId, handle } = newLineage("apev-b5");

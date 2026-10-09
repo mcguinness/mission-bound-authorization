@@ -274,7 +274,7 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     for (const a of actions) {
       expect(a.endsWith(".read") || a.endsWith(".list")).toBe(true);
     }
-    expect(record?.approver.sub).toBe("bob");
+    expect(record?.approval_basis.consent_principal.sub).toBe("bob");
     expect(record?.client_id).toBe("subagent-invoice-extractor");
     expect(record?.template?.template_hash).toMatch(/^sha-256:/);
 

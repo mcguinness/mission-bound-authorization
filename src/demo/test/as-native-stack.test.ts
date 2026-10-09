@@ -586,7 +586,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       // `lifecycle-revoke` is on.
       const revoke = await lifecycle("revoke");
       expect(revoke.status, await revoke.clone().text()).toBe(200);
-      expect(stack.kernel.get(spareId)?.state).toBe("revoked");
+      expect(stack.kernel.get(spareId)?.termination?.reason).toBe("revoked");
     },
 
     async everyDisabledCapability(): Promise<void> {

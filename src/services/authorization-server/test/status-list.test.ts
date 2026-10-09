@@ -144,7 +144,7 @@ describe("Mission Status List (@spec status-list#status-list)", () => {
     expect(readStatusBit(token, idxs[4])).toBe(STATUS_VALID); // still active
 
     // And the persisted state was actually committed to `expired`.
-    expect(kernel.get(missions[2].id)?.state).toBe("expired");
+    expect(kernel.get(missions[2].id)?.termination?.reason).toBe("expired");
   });
 
   it("readStatus: VALID -> active; INVALID/SUSPENDED/reserved 0x03/unknown/expired -> non-active", async () => {

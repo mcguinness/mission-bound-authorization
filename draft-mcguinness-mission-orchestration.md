@@ -530,22 +530,28 @@ These states are all non-active:
 
 | State | Defined by |
 |---|---|
-| `revoked` | {{I-D.draft-mcguinness-oauth-mission}} |
-| `expired` | {{I-D.draft-mcguinness-oauth-mission}} |
+| `terminated` | {{I-D.draft-mcguinness-oauth-mission}} |
 | `suspended` | {{I-D.draft-mcguinness-oauth-mission-status}} |
-| `completed` | {{I-D.draft-mcguinness-oauth-mission-status}} |
-| `superseded` | {{I-D.draft-mcguinness-oauth-mission-expansion}} |
+
+A `terminated` Mission's `termination.reason` records how it ended:
+`revoked` or `expired` ({{I-D.draft-mcguinness-oauth-mission}}),
+`completed` ({{I-D.draft-mcguinness-oauth-mission-status}}),
+`superseded` ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or
+another reason a companion profile registers.
 
 The orchestrator needs none of those companion profiles to be
 conformant: per the issuance profile's forward-compatibility rule it
-treats any state other than `active` as non-active. A deployment MAY
-define different operator handling for each state, but none allows
-new governed execution without a fresh authority path.
+treats any state other than `active` as non-active, and a
+`terminated` Mission as non-active whatever its termination reason. A
+deployment MAY define different operator handling for each state and
+termination reason, but none allows new governed execution without a
+fresh authority path.
 
-In particular, a `superseded` Mission's continued work SHOULD proceed
-under the successor Mission through a fresh derivation from the
-successor's grant, not by rebinding the predecessor's authority; the
-successor carries its own Authority Set
+In particular, the continued work of a Mission `terminated` with
+`termination.reason` `superseded` SHOULD proceed under the successor
+Mission its `termination.successor` names, through a fresh derivation
+from the successor's grant, not by rebinding the predecessor's
+authority; the successor carries its own Authority Set
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 ## Authority-Narrowing Behavior {#authority-narrowing}
@@ -609,8 +615,8 @@ An orchestrator can learn of Mission state change from:
 
 The orchestrator MUST record the trigger source in Orchestration
 Evidence. If two trigger sources disagree, the orchestrator MUST use
-the safer state until it can reconcile. For example, a signed `revoked`
-signal overrides a stale local `active` cache.
+the safer state until it can reconcile. For example, a signed
+`terminated` signal overrides a stale local `active` cache.
 
 # In-Flight Requests {#in-flight}
 
@@ -680,8 +686,8 @@ record links:
   (`linked_evidence`);
 - the specific evaluation the compensation reverses
   (`compensates_evaluation_id`);
-- the state transition that triggered compensation (`mission_state`
-  and `reason`);
+- the state transition that triggered compensation (`mission_state`,
+  `mission_termination`, and `reason`);
 - the compensation action (`compensation_action`);
 - the authority basis for compensation (`authority_basis`); and
 - the outcome (`compensation_outcome`).
@@ -776,6 +782,12 @@ members:
 
 `mission_state`:
 : REQUIRED. The state observed.
+
+`mission_termination`:
+: REQUIRED when `mission_state` is `terminated` and the state source
+  reported one; absent otherwise. The Mission's `termination`
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+  Termination").
 
 `state_source`:
 : REQUIRED. A value from the shared `state_source` value space defined
@@ -912,7 +924,11 @@ decision's `evaluation_id` in `compensates_evaluation_id`, and omits
   },
   "workflow_id": "wf_invoice_recon_2026q3",
   "step_id": "post_journal_entry",
-  "mission_state": "revoked",
+  "mission_state": "terminated",
+  "mission_termination": {
+    "reason": "revoked",
+    "terminated_at": "2026-11-02T08:30:00Z"
+  },
   "state_source": "status",
   "orchestration_decision": "compensate",
   "reason": "committed_step_reversed_after_review",
@@ -1052,6 +1068,11 @@ This document makes no IANA request.
 
 \[\[ To be removed from the final specification ]]
 
+- The non-active states are `terminated`, with its termination
+  reason, and `suspended`. Orchestration Evidence carries
+  `mission_termination` beside a `terminated` `mission_state`, and
+  continued work after reason `superseded` proceeds under the
+  `termination.successor` (#705).
 - Authority-Narrowing Behavior ({{authority-narrowing}}): a third
   State-Change Behavior trigger, independent of the non-active and
   staleness sequences, for a `mission.lifecycle-change` event's

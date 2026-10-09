@@ -3,8 +3,8 @@
  *
  * Behavior when a Mission becomes non-active or its active state cannot be
  * established within the staleness bound. Two triggers, resolved with
- * established-non-active taking precedence (a signed `revoked` overrides a stale
- * `active` cache, § trigger-sources):
+ * established-non-active taking precedence (a signed `terminated` overrides a
+ * stale `active` cache, § trigger-sources):
  *
  * - An ESTABLISHED non-active state runs the full sequence 1..5.
  * - STALENESS ALONE (an `active` state that could not be established within the
@@ -14,10 +14,12 @@
  *
  * `MissionState` is imported read-only from the agent harness; per the issuance
  * profile's forward-compatibility rule, any state other than `active` is
- * non-active, so `cascaded` (and any future state) is just one more trigger.
+ * non-active, so `terminated` with any reason (and any future state) is just
+ * one more trigger. Only the `superseded` guidance reads the reason.
  */
 
 import type { MissionState } from "@mission/agent";
+import type { MissionTermination } from "@mission/core";
 import type { OrchestrationDecision } from "./evidence.js";
 import { type OutcomeClass, requiresHumanReview } from "./in-flight.js";
 import type { ReversibilityClass } from "./reversibility.js";
@@ -63,6 +65,26 @@ export interface StateChangeResult {
   sequence: StateChangeStep[];
   runs_post_completion: boolean;
   steps: StepDecision[];
+  /**
+   * @spec orchestration#state-change-behavior: the successor Mission a
+   * superseded Mission's continued work SHOULD proceed under, through a fresh
+   * derivation from the successor's grant, never by rebinding the
+   * predecessor's authority. Set only when `state` is `terminated`,
+   * `termination.reason` is exactly `superseded` and `termination.successor`
+   * is a string. It changes nothing in the stop sequence above.
+   */
+  successor?: string;
+}
+
+/** The successor a `superseded` termination names, keyed on the reason. */
+function supersededSuccessor(
+  state: MissionState | string,
+  termination: MissionTermination | undefined,
+): string | undefined {
+  if (state !== "terminated" || termination?.reason !== "superseded") return undefined;
+  return typeof termination.successor === "string" && termination.successor !== ""
+    ? termination.successor
+    : undefined;
 }
 
 function fromPreStart(behavior: PreStartBehavior): OrchestrationDecision {
@@ -155,10 +177,13 @@ function classifyStep(step: InFlightStepInput, runsPostCompletion: boolean): Ste
  * Compute the ordered state-change decision for a Mission whose state became
  * non-active or could not be established. `stale` means specifically "the active
  * state could not be established within the staleness bound"; an established
- * non-active `state` takes precedence over `stale`.
+ * non-active `state` takes precedence over `stale`. `termination` is the
+ * Mission's reported termination beside a `terminated` state; it never changes
+ * the trigger, and only a `superseded` reason adds successor guidance.
  */
 export function onMissionStateChange(input: {
   state: MissionState | string;
+  termination?: MissionTermination;
   stale: boolean;
   steps?: InFlightStepInput[];
 }): StateChangeResult {
@@ -166,8 +191,8 @@ export function onMissionStateChange(input: {
 
   let trigger: StateChangeTrigger;
   if (!isActive) {
-    // Established non-active (e.g. a signed `revoked`) runs the full sequence,
-    // even if a local cache was also stale.
+    // Established non-active (e.g. a signed `terminated`) runs the full
+    // sequence, even if a local cache was also stale.
     trigger = "established_non_active";
   } else if (input.stale) {
     trigger = "staleness";
@@ -189,5 +214,13 @@ export function onMissionStateChange(input: {
   ];
 
   const steps = (input.steps ?? []).map((s) => classifyStep(s, runsPostCompletion));
-  return { triggered: true, trigger, sequence, runs_post_completion: runsPostCompletion, steps };
+  const successor = supersededSuccessor(input.state, input.termination);
+  return {
+    triggered: true,
+    trigger,
+    sequence,
+    runs_post_completion: runsPostCompletion,
+    steps,
+    ...(successor !== undefined ? { successor } : {}),
+  };
 }

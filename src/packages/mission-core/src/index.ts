@@ -71,11 +71,16 @@ export {
   SUPPORTED_CONSTRAINT_KEYS,
   withoutCapabilitySources,
 } from "./authority-subset.js";
-export type {
-  MissionBinding,
-  MissionStatusLease,
-  StateSource,
-  StopPolicy,
+export {
+  COMMIT_IS_EFFECT_REASONS,
+  type LegacyRetainedFacts,
+  type MissionBinding,
+  type MissionStatusLease,
+  type MissionTermination,
+  normalizeLegacyMissionState,
+  readMissionTermination,
+  type StateSource,
+  type StopPolicy,
 } from "./binding.js";
 export { canonicalDigest, canonicalize, type JsonValue } from "./canonicalize.js";
 export {

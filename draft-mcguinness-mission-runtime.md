@@ -912,8 +912,8 @@ credential-expiry check enforces the Mission's expiry transitively
 {{I-D.draft-mcguinness-mission-runtime-oauth}}). The Mission reference
 and its state source do not themselves surface `expires_at`; where a
 Mission state source does expose it (or reports the Mission
-`expired`), the PDP MUST refuse on it independent of the credential's
-own expiry.
+`terminated` with reason `expired`), the PDP MUST refuse on it
+independent of the credential's own expiry.
 
 The PDP sets the permit's validity window from these inputs. That
 the action actually executes within that window is the executing
@@ -3780,6 +3780,9 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Time: a Mission state source reports an expired Mission as
+  `terminated` with reason `expired`; the refusal on it is unchanged
+  (#705).
 - Action Classification: the `purpose` that may raise a class is the
   approved Mission's, from its Mission state or a validated
   projection, never a value the request asserts. The semantic

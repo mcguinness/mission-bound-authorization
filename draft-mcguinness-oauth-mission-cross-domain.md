@@ -1064,11 +1064,12 @@ specifies the non-issuer half of that rule.
 
 A Resource AS that supports introspection for a local token it minted
 from a cross-domain grant returns the claim-shape members only: `id`,
-`issuer`, and `authority_hash`. It MUST omit `mission.state` rather
-than report a stale value as current. It holds the token, not the
-Mission: it knows the Mission state only as of grant validation and
-has no query to the issuer keyed by `mission_id` (neither this
-document nor the issuance profile defines one).
+`issuer`, and `authority_hash`. It MUST omit `mission.state` and
+`mission.termination` rather than report a stale value as current. It
+holds the token, not the Mission: it knows the Mission state only as
+of grant validation and has no query to the issuer keyed by
+`mission_id` (neither this document nor the issuance profile defines
+one).
 
 `authority_hash`, when included, is the issuer's commitment carried
 through the grant, not a value the Resource AS recomputes from its
@@ -1594,6 +1595,9 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Introspection at a Resource AS: a non-issuer Resource AS omits
+  `mission.termination` as well as `mission.state` (#705).
 
 - Issuing the Cross-Domain Grant: the comparison with the primary
   access token names the RFC 9700 recommendation the issuance profile

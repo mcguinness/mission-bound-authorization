@@ -137,7 +137,7 @@ Tests:
 
 A
 non-active Mission yields `active: false` with `mission.state`
-(`composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state revoked, NO top-level or mission authorization_details`).
+(`composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details`).
 
 **The scope-projection mapping is trusted operator configuration.** Its
 ownership, integrity and update procedure are in `src/config/README.md`.
@@ -154,8 +154,8 @@ target that processes the `act` chain and the `mission` claim.
   Mission-bound grant has its configured lifetime or the Mission's remaining
   whole seconds, whichever is shorter (`clampToMission` and the `ttl`
   configuration in `buildProvider`). A Mission with under one second left is
-  refused `invalid_grant` `mission_expired` at the token endpoint, never given
-  a token:
+  refused `invalid_grant` with `mission_error` `expired` at the token
+  endpoint, never given a token:
   `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > code exchange: the access token, refresh token and authorization code all expire no later than a Mission ending inside their lifetimes`,
   `> a credential minted with under one second of Mission left is refused, never given a 0 s or overrunning lifetime`.
 - **Access tokens:** 300 seconds (`config/topology.json`
@@ -453,7 +453,8 @@ targets the plain RS, the `authorization_details` proposal is
                                    "mission":{"id":"msn_...","issuer":"http://localhost:4400"},"cnf":{"jkt":"..."}}}
 4. GET /api/reports        <- 200 {"reports":[]}
 5. POST /api/reports       <- 403 {"error":"insufficient_scope", ... scope="reports.write" ...}
-6. Revoke                  <- 200 {"id":"msn_...","state":"revoked","version":2}   (as svc:console)
+6. Revoke                  <- 200 {"id":"msn_...","state":"terminated","termination":{"reason":"revoked", ...},"version":2}
+                                                                                    (as svc:console)
 6a. Refresh after revoke   <- 400 {"error":"invalid_grant"}
 6b. GET after revoke       <- 200 {"reports":[]}                                    JWT only: honored until exp
 6b. GET after revoke       <- 401 {"error":"invalid_token","error_description":"the access token is not active"}
@@ -565,23 +566,23 @@ commit of the PR that published it. Check it out, then run
 
 | Draft | Revision | Role |
 |---|---|---|
-| `draft-mcguinness-oauth-mission.md` (the OAuth binding) | `5f5768e8` (the sections this deployment relies on are unchanged in substance since `4777b582`: later commits are editorial, or re-point the Intent Submission Evidence citations to its companion, which this deployment does not use) | Normative: Mission intake, derivation, approval, record, issuance, scope projection, introspection (`{#introspection}`), and the authenticated revocation means (§ Revocation, `{#revocation}`), which a deployment-defined surface satisfies |
+| `draft-mcguinness-oauth-mission.md` (the OAuth binding) | `ccddd9e8` (#705: the lifecycle states are `active` and `terminated` with a `termination`, which introspection reports beside `mission.state`, and the record has no `approver`; the other sections this deployment relies on are unchanged in substance since `4777b582`) | Normative: Mission intake, derivation, approval, record, issuance, scope projection, introspection (`{#introspection}`), and the authenticated revocation means (§ Revocation, `{#revocation}`), which a deployment-defined surface satisfies |
 | `draft-mcguinness-oauth-mission-resource-access.md` | `7fc9ef45` | Normative: the `mission_resource_access` type and its scope-projection conditions |
-| `draft-mcguinness-mission-architecture.md` | `40d72534` (the sections relied on are unchanged since `e2dda50a`; later commits touch only the document map and the verb layers) | Informative: the entry ramp, assurance claims and the Deployment Profile shape |
-| `draft-mcguinness-oauth-mission-status.md` | `4fe0d0b0` (the only change since the `9311ba74` that `SPEC_VERSIONS.md` records is the retired Status section) | Informative: the semantics the lifecycle `revoke` follows, and the revocation-propagation sizing. Section by section below |
-| `draft-mcguinness-mission-control-plane.md` | `909a3ee7` | Informative: implementation discipline on the revoke path. The transition, its `nonce` claim and the response commit together (`{#serialization}`); a terminal Mission leaves a tombstone (`{#tombstones}`); lifecycle fan-out drains per request (`{#fanout}`). No claim here depends on it |
-| `draft-mcguinness-oauth-mission-issuance-grant.md` | `e2dda50a` | Not relied on. The code-exchange and refresh projections (`rarThroughEffectiveSet`) cite its `{#effective-set-projection}`, which governs a consuming AS. This AS is the Mission's issuer, and with containment and discharge off the effective set is the Authority Set |
+| `draft-mcguinness-mission-architecture.md` | `def29355` (the sections relied on are unchanged since `e2dda50a`; later commits touch only the document map, the verb layers and the lifecycle summary) | Informative: the entry ramp, assurance claims and the Deployment Profile shape |
+| `draft-mcguinness-oauth-mission-status.md` | `eecf2207` (#705: `revoke` commits `terminated` with reason `revoked`, the response carries `termination` with its committing `version`, and idempotency compares the reason) | Informative: the semantics the lifecycle `revoke` follows, and the revocation-propagation sizing. Section by section below |
+| `draft-mcguinness-mission-control-plane.md` | `dc3d3cc0` | Informative: implementation discipline on the revoke path. The transition, its `nonce` claim and the response commit together (`{#serialization}`); a terminal Mission leaves a tombstone (`{#tombstones}`); lifecycle fan-out drains per request (`{#fanout}`). No claim here depends on it |
+| `draft-mcguinness-oauth-mission-issuance-grant.md` | `dc3d3cc0` | Not relied on. The code-exchange and refresh projections (`rarThroughEffectiveSet`) cite its `{#effective-set-projection}`, which governs a consuming AS. This AS is the Mission's issuer, and with containment and discharge off the effective set is the Authority Set |
 
 **The Mission Status companion, section by section.** The lifecycle endpoint
 here is the OAuth binding's deployment-defined revocation surface
 (`{#revocation}`). Its `revoke` follows these sections of the Status
-companion at `4fe0d0b0`:
+companion at `eecf2207`:
 
 - § Mission Lifecycle Endpoint (`{#mission-lifecycle-endpoint}`), its
   Operations subsection: the `revoke` operation and the REQUIRED `nonce`.
   Walkthrough step 6.
 - § Legal Transitions (`{#legal-transitions}`): `revoke` from `active` to
-  `revoked`. Walkthrough step 6.
+  `terminated` with reason `revoked`. Walkthrough step 6.
 - § Idempotency and Conflicts (`{#idempotency}`): deduplication by
   principal, Mission and `nonce`; a byte-identical retransmit replays the
   original response; the same `nonce` on a different request is refused
@@ -615,8 +616,9 @@ from the companion's:
 - the caller authenticates with an `x-service-token` header, not mTLS, a
   sender-constrained access token or private-key JWT (the endpoint's
   Authentication subsection);
-- a transition answers `{"id", "state", "version"}` JSON, not a signed
-  Mission Status Response;
+- a transition answers `{"id", "state", "version"}` JSON, with
+  `termination` beside a `terminated` state, not a signed Mission Status
+  Response;
 - `mission_lifecycle_endpoint` and its auth-methods member are not
   advertised.
 

@@ -14,6 +14,7 @@ import {
   createChildMission,
   GateError,
   MissionKernel,
+  type MissionRecord,
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
@@ -115,12 +116,15 @@ describe("kernel.gateActive (@spec mission#lifecycle)", () => {
       proposedAuthority: proposed(["payments:invoice.read"]),
       childActor: { sub: "subagent-reader", sub_profile: "ai_agent" },
     });
-    // Raw UPDATE bypasses setState, so NO cascade fires and the child stays
-    // active: this isolates the ancestor-active branch of the gate. (Going
-    // through transition() would cascade the child to `cascaded` and the gate
-    // would instead trip on the child's own state, testing nothing.)
-    kernel.db.prepare("UPDATE missions SET state = 'revoked' WHERE id = ?").run(parent.id);
+    // Raw UPDATE bypasses setState, so NO suspend projection fires and the
+    // child stays active: this isolates the ancestor-active branch of the gate.
+    // (Going through transition() would project the child to `suspended`, and
+    // a TERMINATED ancestor makes the child itself observed `terminated` with
+    // reason `parent_terminated`, so the gate would instead trip on the
+    // child's own observed state, testing nothing about the walk.)
+    kernel.db.prepare("UPDATE missions SET state = 'suspended' WHERE id = ?").run(parent.id);
     expect(kernel.get(child.id)?.state).toBe("active"); // precondition
+    expect(kernel.observe(kernel.get(child.id) as MissionRecord).state).toBe("active"); // no projection
     // The regex is discriminating: only the lineage branch produces this message,
     // proving the walk fired rather than the child's own state check.
     expect(() => kernel.gateActive(child.id)).toThrow(/non-active ancestor/);

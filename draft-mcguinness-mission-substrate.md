@@ -1238,9 +1238,10 @@ The kernel's Approver is whoever makes the approval decision through
 the binding's native ceremony, which can be a policy authority.  The
 family separates three roles that this one term can combine
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping"):
-`consent_principal`, the accountable human recorded as `approver`;
-`activation_actor`, who triggered the instance; and `adjudication`,
-the mechanism that decided it.  For a direct approval, the kernel's
+`consent_principal`, the accountable human (the Mission record's
+`approval_basis.consent_principal`); `activation_actor`, who
+triggered the instance; and `adjudication`, the mechanism that
+decided it.  For a direct approval, the kernel's
 Approver is `consent_principal`.  Under a standing-consent basis,
 `consent_principal` is the accountable owner whose earlier approval
 of the standing consent roots the instance; the authorized policy
@@ -1271,6 +1272,10 @@ reference to it; no change is ever made solely to move words.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Family Use names the accountable human by the OAuth binding's
+  record member `approval_basis.consent_principal`, following that
+  binding's removal of the record's `approver` alias (#705).
 
 - Family Use maps the kernel's Approver to the family's accountable
   owner (`consent_principal`) and, under a standing-consent basis, to
