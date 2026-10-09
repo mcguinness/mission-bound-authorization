@@ -54,6 +54,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-template:
+    title: "Mission Template for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
@@ -410,6 +418,10 @@ MUST equal the Mission's `expires_at`; and the family MUST be invalidated
 when the Mission reaches a terminal state, reusing that draft's
 family-revocation and reuse-detection rules with the Mission lifecycle as
 the trigger.
+
+A dispatched Mission enters this transport through its selected Agent,
+which redeems the Template profile's Dispatch Handoff for a delegation
+handle of its own ({{I-D.draft-mcguinness-oauth-mission-template}}).
 
 This is the "scheduled continuation roots in durable
 authorization" case: the Mission is that durable authorization. Successive

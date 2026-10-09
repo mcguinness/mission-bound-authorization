@@ -30,7 +30,11 @@ author:
 normative:
   RFC3339:
   RFC6755:
+  RFC6838:
+  RFC7523:
+  RFC8693:
   RFC9396:
+  RFC9449:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -808,7 +812,8 @@ performs exactly one derivation per `dispatch_event_id`: the
 adjudication order of {{dispatch}} runs once for a new identifier, and
 a repeated identifier is gated to the previously committed instance
 rather than a fresh derivation. This is the single gated derivation
-this document permits per dispatch event.
+the Dispatch performs per dispatch event; a Dispatch Handoff's
+redemption ({{dispatch-handoff}}) is a further derivation.
 
 On success the Mission Issuer responds with an access token bound to
 the instance, sender-constrained to the Dispatcher's key:
@@ -840,6 +845,87 @@ A Dispatch refused under {{dispatch}} or {{prohibited-classes}} carries
 the OAuth `error` member together with `mission_denial_reason`
 ({{denial-reasons}}), exactly as any other adjudication denial in this
 family.
+
+## Dispatch Handoff {#dispatch-handoff}
+
+A dispatched instance's approved agent is its selected Agent
+({{the-mission-template}}), but the Dispatch returns the instance's
+access token to the Dispatcher, sender-constrained to the Dispatcher's
+key ({{grant-type}}). The Dispatch Handoff conveys the instance to its
+Agent: the Dispatcher exchanges that token for a handoff grant naming
+the Agent as its only redeemer, and the Agent redeems the grant for a
+token of its own. The handoff uses the token endpoint and existing
+grant types; it adds one token request parameter.
+
+The Dispatcher requests a handoff with a Token Exchange ({{RFC8693}})
+whose `subject_token` is the instance's access token
+(`subject_token_type` `urn:ietf:params:oauth:token-type:access_token`),
+whose `requested_token_type` is
+`urn:ietf:params:oauth:token-type:jwt`, and which carries
+`mission_dispatch_handoff` with the value `true`, the parameter that
+selects this operation. It MAY carry `authorization_details`
+({{RFC9396}}) naming a narrower subset. It presents a DPoP proof
+({{RFC9449}}) under the key the subject token is bound to.
+
+The Mission Issuer MUST refuse with `invalid_request` a
+`mission_dispatch_handoff` with any value other than `true`, and one
+combined with a parameter that selects another exchange, such as
+`request_refresh_token` or a Child Mission creation parameter
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}); it never
+treats such a request as another exchange. It then MUST:
+
+1. verify the subject token, and that the DPoP proof's key is the key
+   the token is bound to;
+2. verify that the authenticated client is the client the subject token
+   was issued to, the Dispatcher;
+3. verify that the Mission carries the `template` lineage member
+   ({{template-member}}) and is `active`;
+4. take the recipient from the instance's recorded `client_id`, the
+   selected Agent, never from the request; and
+5. confine the handed-off authority to the subject token's authority
+   and the instance's current Effective Authority Set
+   ({{I-D.draft-mcguinness-oauth-mission}}), refusing with
+   `invalid_authorization_details` a requested `authorization_details`
+   that is not a subset of both; absent a request, the handed-off
+   authority is the subject token's authority narrowed by the Effective
+   Authority Set.
+
+A failure of steps 1 to 3 is refused with `invalid_grant`.
+
+On success the response carries the handoff grant as `access_token`,
+with `issued_token_type` `urn:ietf:params:oauth:token-type:jwt` and
+`token_type` `N_A` ({{RFC8693}}). The handoff grant is a JWT the
+Mission Issuer signs with `typ` `mission-dispatch-handoff+jwt`: `iss`
+identifies the Mission Issuer, `aud` identifies its token endpoint,
+`client_id` names the selected Agent as the only redeemer, `sub` is the
+instance's Subject, `mission` is the instance's `mission` claim,
+`authorization_details` is the handed-off authority, and `jti`, `iat`
+and `exp` bound it. Its lifetime is short and never outlasts the
+instance's `expires_at`.
+
+The Agent redeems the handoff grant with the JWT bearer authorization
+grant ({{RFC7523}}), authenticating as itself and presenting a DPoP
+proof under its own key. The Mission Issuer MUST:
+
+1. verify the grant's signature, `typ` and `exp`, and that its `aud`
+   identifies its own token endpoint;
+2. verify that the grant's `client_id`, the authenticated client, and
+   the instance's recorded `client_id` are one client;
+3. consume the grant's `jti` atomically, and remember a consumed grant
+   for as long as it would otherwise be accepted, clock skew included,
+   refusing any further presentation with `invalid_grant`;
+4. verify that the instance is `active`; and
+5. issue the Agent a token for the instance, bound to the key of its
+   DPoP proof, whose authority is the grant's narrowed by the
+   instance's current Effective Authority Set.
+
+The token issued at redemption is the Agent's delegation handle: its
+audience identifies the Agent and it is sender-constrained to the
+Agent's key, so the Agent continues the instance as its approved agent
+on the continuation profile's async delegation transport
+({{I-D.draft-mcguinness-oauth-mission-continuation}}). The redemption
+is a derivation from the instance, gated and counted as the issuance
+profile requires ({{I-D.draft-mcguinness-oauth-mission}}).
 
 # Prohibited Classes {#prohibited-classes}
 
@@ -948,7 +1034,9 @@ creation and then steps out of the way.
   continuation profile's transports
   ({{I-D.draft-mcguinness-oauth-mission-continuation}}). Async
   delegation is the natural scheduled-dispatch path: a scheduled run
-  dispatches an instance and carries it forward on that transport.
+  dispatches an instance, hands it to its selected Agent
+  ({{dispatch-handoff}}), and the Agent carries it forward on that
+  transport.
 - **Expandable, but not by the template.** A dispatched Mission MAY be
   expanded through a human-approved expansion
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}). Such an expansion
@@ -1128,13 +1216,39 @@ This is a proposed registration. The value is used under the reserved
 advance of registration completing; this document is the specification
 that names and defines it.
 
-This document also registers one parameter in the "OAuth Parameters"
+This document also registers two parameters in the "OAuth Parameters"
 registry:
 
 - Name: `dispatch_event_id`
 - Parameter Usage Location: token request
 - Change Controller: IETF
 - Reference: this document, {{grant-type}}, {{dispatch}}
+
+- Name: `mission_dispatch_handoff`
+- Parameter Usage Location: token request
+- Change Controller: IETF
+- Reference: this document, {{dispatch-handoff}}
+
+IANA is also requested to register one media type per {{RFC6838}}:
+
+- Type name: application
+- Subtype name: mission-dispatch-handoff+jwt
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JWS Compact Serialization
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document, {{dispatch-handoff}}
+- Applications that use this media type: Mission Issuers and OAuth
+  authorization servers implementing this profile
+- Fragment identifier considerations: n/a
+- Additional information: n/a
+- Person and email address to contact for further information: see
+  the Authors' Addresses section
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: see the Authors' Addresses section
+- Change controller: IETF
 
 `dispatch_event_id` is a distinct name from the expansion profile's
 `creation_request_id` ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
@@ -1146,7 +1260,7 @@ parameter's registration defines: it is already load-bearing as the
 reusing the expansion profile's own registered parameter under
 `op: dispatch`.
 
-Beyond these two registrations, this document requests no further
+Beyond these registrations, this document requests no further
 IANA action. Following the restraint of the sibling profiles:
 
 - `template_hash` is a Mission integrity anchor whose `typ`,
@@ -1172,6 +1286,12 @@ IANA action. Following the restraint of the sibling profiles:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Dispatch Handoff conveys a dispatched instance to its selected
+  Agent: the Dispatcher exchanges the instance's token
+  (`mission_dispatch_handoff`) for a single-use grant naming the Agent,
+  which the Agent redeems for its own delegation handle (#1158). Its
+  redemption is a further derivation.
 
 - Template Consent, Dispatch and Conformance: where Mission
   Derivation Limits is adopted, the Dispatch Policy states the rule
