@@ -753,10 +753,9 @@ export async function buildAuthorizationServer(opts: {
    * a registration the demo deliberately does not ship registers it here and
    * signs its own `private_key_jwt` assertions with the private half of the
    * `jwks` it supplies, so this function never hands a shipped client's key
-   * back. The child-rooted async-delegation family is the motivating case: the
-   * shipped child actor is granted only the jwt-bearer grant type, so driving
-   * a family rooted at a Child Mission's own access token over real HTTP needs
-   * a child actor registered for the token-exchange grant as well. Production
+   * back. The motivating cases are child actors a test names in a Child
+   * Mission's `child_actor` (the async-delegation family rooted at its own
+   * access token, a jwt-bearer-only registration's refusal). Production
    * callers MUST omit this.
    */
   testClients?: Record<string, unknown>[];
@@ -1096,7 +1095,9 @@ export async function buildAuthorizationServer(opts: {
     statusListPublisher,
     clients: [
       agent.metadata,
-      ...(capabilityEnabled(opts, "child-delegation") ? [child.metadata] : []),
+      // The child actor is also the demo templates' selected Agent, which
+      // redeems a Dispatch Handoff (@spec mission-template#dispatch-handoff).
+      ...(capabilityEnabled(opts, "child-delegation") || capabilityEnabled(opts, "templates") ? [child.metadata] : []),
       governed.metadata,
       ...(opts.testClients ?? []),
     ],

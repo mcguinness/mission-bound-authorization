@@ -47,6 +47,12 @@ const idem = (): string => `idem_${randomUUID()}`;
 const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-dispatch";
 const TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange";
 const ACCESS_TOKEN_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
+// @spec mission-template#dispatch-handoff: the handoff requests a JWT (the
+// grant), which the selected Agent redeems with the RFC 7523 JWT bearer grant.
+const JWT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
+const JWT_BEARER_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+/** A dispatched instance's selected Agent (the AAM template's recipient). */
+const AGENT_CLIENT_ID = "subagent-invoice-extractor";
 /** The single declared inference destination the harness egress gate mediates. */
 const ANTHROPIC = "https://api.anthropic.com";
 
@@ -437,7 +443,7 @@ function aamLegend() {
     console.log(`  ${C.bold}${C.cyan}${component.padEnd(27)}${C.reset}${C.dim}${surface}${C.reset}`);
   console.log(`\n${C.bold}AAM → Mission${C.reset} ${C.dim}— each Agent Access Model component and the Mission surface that realizes it (notes/AAM.md).${C.reset}`);
   row("Task Template + ceiling", "Mission Template + POST /templates (consent once)");
-  row("Agent Identity Broker", "the mission-dispatch grant (low-consequence) + an ordinary approval (external-commitment)");
+  row("Agent Identity Broker", "the mission-dispatch grant (low-consequence), its Dispatch Handoff to the selected Agent, + an ordinary approval (external-commitment)");
   row("Task-Scoped Access Engine", "the PDP (@mission/pdp) over OpenFGA");
   row("Mediation Layer", "the payments PEP + the harness EgressGate");
   row("Trust Ratchet", "Mission Containment (signed protected-event ingestion)");
@@ -656,33 +662,85 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     ok: overBody.mission_denial_reason === "out_of_template_ceiling",
   });
 
-  // ---- 15. Disconnected run (AAM Agent Identity Broker: async-delegation) ----
-  step(15, "Disconnected run: AAM Agent Identity Broker → the async-delegation refresh family");
+  // ---- 15. Disconnected run (AAM Agent Identity Broker: Dispatch Handoff + async-delegation) ----
+  step(15, "Disconnected run: AAM Agent Identity Broker → the Dispatch Handoff, then the async-delegation refresh family");
   goal(
-    "The scheduler exchanges the dispatched token for a rotating refresh-token family so a disconnected reconciler can run.",
-    "each issued access token is clamped to the mission expiry, and the refresh token rotates on every use.",
+    "The scheduler hands the dispatched instance to its selected Agent, which exchanges its own token for a rotating refresh-token family so a disconnected reconciler can run.",
+    "the Agent's token is bound to its own key; each issued access token is clamped to the mission expiry, and the refresh token rotates on every use.",
   );
   const missionExp = Math.floor(Date.parse(dispatchedRecord.expires_at) / 1000);
-  hop("Scheduler (ap-agent)", "AS", "POST /token (RFC 8693 request_refresh_token)", "HTTP");
+  hop("Scheduler (ap-agent)", "AS", "POST /token (RFC 8693, mission_dispatch_handoff=true)", "HTTP");
+  httpReq("POST", `${asUrl}/token`, {
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof under the dispatched token's key>" },
+    body: {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: "<dispatched mission access token>",
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      mission_dispatch_handoff: "true",
+      client_assertion: "<private_key_jwt>",
+    },
+  });
+  const handRes = await tokenGrantRequest(asUrl, as.agentClientJwk, dispatcherDpop, {
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    subject_token: dispatchedAccessToken,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    requested_token_type: JWT_TOKEN_TYPE,
+    mission_dispatch_handoff: "true",
+  });
+  const handBody = handRes.body as { access_token?: string };
+  httpRes(handRes.status, { ...handBody, ...(handBody.access_token ? { access_token: truncTok(handBody.access_token) } : {}) });
+  if (handRes.status !== 200 || !handBody.access_token) {
+    throw new Error(`dispatch handoff failed: ${handRes.status} ${JSON.stringify(handBody)}`);
+  }
+  note(`a single-use handoff grant naming ${decodeClaims(handBody.access_token).client_id} (the instance's recorded Agent) as its only redeemer.`);
+
+  // The selected Agent redeems the grant as itself, under its own key.
+  const agentDpop = await generateKeyPair("ES256", { extractable: true });
+  hop(`Agent (${AGENT_CLIENT_ID})`, "AS", "POST /token (RFC 7523 JWT bearer: redeem the handoff grant)", "HTTP");
+  httpReq("POST", `${asUrl}/token`, {
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof under the Agent's own key>" },
+    body: { grant_type: JWT_BEARER_GRANT_TYPE, assertion: "<handoff grant>", client_assertion: "<private_key_jwt>" },
+  });
+  const redRes = await tokenGrantRequest(
+    asUrl,
+    as.childClientJwk,
+    agentDpop,
+    { grant_type: JWT_BEARER_GRANT_TYPE, assertion: handBody.access_token },
+    AGENT_CLIENT_ID,
+  );
+  const redBody = redRes.body as { access_token?: string };
+  httpRes(redRes.status, { ...redBody, ...(redBody.access_token ? { access_token: truncTok(redBody.access_token) } : {}) });
+  if (redRes.status !== 200 || !redBody.access_token) {
+    throw new Error(`dispatch handoff redemption failed: ${redRes.status} ${JSON.stringify(redBody)}`);
+  }
+
+  hop(`Agent (${AGENT_CLIENT_ID})`, "AS", "POST /token (RFC 8693 request_refresh_token)", "HTTP");
   httpReq("POST", `${asUrl}/token`, {
     headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof>" },
     body: {
       grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
       request_refresh_token: "true",
-      subject_token: "<dispatched mission access token>",
+      subject_token: "<the Agent's delegation handle, audienced to the Agent>",
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       resource: CANONICAL_RESOURCE,
       creation_request_id: "<client-generated idempotency id>",
     },
   });
-  const exchRes = await tokenGrantRequest(asUrl, as.agentClientJwk, dispatcherDpop, {
-    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-    request_refresh_token: "true",
-    subject_token: dispatchedAccessToken,
-    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
-    resource: CANONICAL_RESOURCE,
-    creation_request_id: crypto.randomUUID(),
-  });
+  const exchRes = await tokenGrantRequest(
+    asUrl,
+    as.childClientJwk,
+    agentDpop,
+    {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      request_refresh_token: "true",
+      subject_token: redBody.access_token,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      resource: CANONICAL_RESOURCE,
+      creation_request_id: crypto.randomUUID(),
+    },
+    AGENT_CLIENT_ID,
+  );
   const exchBody = exchRes.body as { access_token?: string; token_type?: string; refresh_token?: string };
   httpRes(exchRes.status, {
     ...exchBody,
@@ -704,10 +762,13 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof>" },
     body: { grant_type: "refresh_token", refresh_token: "<family refresh token>" },
   });
-  const refRes = await tokenGrantRequest(asUrl, as.agentClientJwk, dispatcherDpop, {
-    grant_type: "refresh_token",
-    refresh_token: familyRefreshToken,
-  });
+  const refRes = await tokenGrantRequest(
+    asUrl,
+    as.childClientJwk,
+    agentDpop,
+    { grant_type: "refresh_token", refresh_token: familyRefreshToken },
+    AGENT_CLIENT_ID,
+  );
   const refBody = refRes.body as { access_token?: string; token_type?: string; refresh_token?: string };
   httpRes(refRes.status, {
     ...refBody,
