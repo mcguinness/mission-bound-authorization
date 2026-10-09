@@ -811,6 +811,38 @@ describe("Dispatch Handoff: complete, fresh DPoP proofs on both legs (@spec RFC 
     expect(ok.status, JSON.stringify(await ok.clone().json())).toBe(200);
   });
 
+  it("the delegation-handle request and the async exchange refuse an incomplete, stale or future-dated proof; within the window both succeed (#1157 review P1)", async () => {
+    const instance = await dispatchInstance();
+    const agentHandle = await handedOff(instance);
+    const handleParams = delegationHandleParams(agentHandle, AGENT_ID);
+    const asyncParams = {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      request_refresh_token: "true",
+      subject_token: agentHandle,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      resource: RESOURCE,
+      creation_request_id: crypto.randomUUID(),
+    };
+    for (const [leg, params] of [
+      ["handle request", handleParams],
+      ["async exchange", asyncParams],
+    ] as const) {
+      for (const { label, claims, description } of stale()) {
+        const res = await err(
+          await tokenRequest("agent", agentDpop, params, (extra) => rawProof(agentDpop, { ...claims, ...extra })),
+        );
+        expect(res.status, `${leg}: ${label}`).toBe(400);
+        expect(res.error, `${leg}: ${label}`).toBe("invalid_dpop_proof");
+        expect(res.error_description, `${leg}: ${label}`).toContain(description);
+      }
+    }
+    expect(as.delegationFamilyStore.familiesForMission(instance.missionId)).toHaveLength(0);
+    for (const params of [handleParams, asyncParams]) {
+      const ok = await tokenRequest("agent", agentDpop, params, (extra) => rawProof(agentDpop, { iat: nowS() - 200, ...extra }));
+      expect(ok.status, JSON.stringify(await ok.clone().json())).toBe(200);
+    }
+  });
+
   it("the redemption refuses an incomplete, stale or future-dated proof, or a private or symmetric proof key, taking nothing; the grant then redeems", async () => {
     const instance = await dispatchInstance();
     const h = await handoff(instance.token);

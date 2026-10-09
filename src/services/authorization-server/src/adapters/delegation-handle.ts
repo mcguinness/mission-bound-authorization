@@ -20,6 +20,7 @@
 import type { KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
 import { projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
+import { GateError } from "../kernel/kernel.js";
 import type { AuthorityEntry } from "../kernel/types.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
@@ -32,11 +33,27 @@ import {
 import { gateRefusal } from "./dispatch-handoff.js";
 import {
   type AdapterOptions,
+  gateErrorToMissionError,
   markDelegationHandle,
   newResourceServer,
   resourceServerInfoFor,
   SCOPE_DECIDED_AT_SAVE,
 } from "./provider.js";
+
+/** The gate reasons that are lifecycle refusals (the Mission is not `active`), not a limit. */
+const LIFECYCLE_GATE_REASONS: ReadonlySet<string> = new Set(["mission_not_active", "mission_expired"]);
+
+/**
+ * @spec mission#issuance-gating (#1154, D369) — a Token Exchange refused because
+ * its Mission is not `active`: the Mission makes the subject token unacceptable
+ * for the exchange, so the refusal is `invalid_request` (RFC 8693 Section
+ * 2.2.2), keeping the `mission_error` diagnostic. A derivation-limit refusal
+ * stays `invalid_grant` (gateRefusal).
+ */
+function refuseInactive(ctx: KoaContextWithOIDC, description: string, missionError: string | undefined): void {
+  txError(ctx, 400, "invalid_request", description);
+  if (missionError) (ctx.body as Record<string, unknown>).mission_error = missionError;
+}
 
 /**
  * Parameters a delegation-handle request never carries: the selectors and
@@ -107,7 +124,11 @@ export async function handleDelegationHandleExchange(
   }
   const active = kernel.applyExpiry(record);
   if (active.state !== "active") {
-    txError(ctx, 400, "invalid_grant", `mission ${record.id} is ${active.state}`);
+    refuseInactive(
+      ctx,
+      `mission ${record.id} is ${active.state}`,
+      gateErrorToMissionError(active.state === "expired" ? "mission_expired" : "mission_not_active", active.state),
+    );
     return;
   }
   let effective: AuthorityEntry[];
@@ -141,6 +162,10 @@ export async function handleDelegationHandleExchange(
     kernel.gateDerivation(record.id);
   } catch (e) {
     await (oidcGrant as unknown as { destroy: () => Promise<void> }).destroy();
+    if (e instanceof GateError && LIFECYCLE_GATE_REASONS.has(e.reason)) {
+      refuseInactive(ctx, e.message, gateErrorToMissionError(e.reason, kernel.get(record.id)?.state));
+      return;
+    }
     throw gateRefusal(opts, e, record.id);
   }
 

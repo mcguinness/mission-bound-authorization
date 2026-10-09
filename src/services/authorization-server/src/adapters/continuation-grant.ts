@@ -359,6 +359,22 @@ export async function handleTokenExchangeGrant(
     return;
   }
 
+  // @spec continuation#transport-async (#1157, review P2) — `audience` selects
+  // the delegation-handle request; the async transport takes `resource`, never
+  // `audience`. A request combining `audience` with another exchange's
+  // parameter is refused here, before routing, so it is never served as that
+  // exchange (no family, no reservation, no derivation count).
+  if (
+    params.audience !== undefined &&
+    (params.requested_token_type === ACCESS_TOKEN_TOKEN_TYPE || params.request_refresh_token !== undefined)
+  ) {
+    const conflict = DELEGATION_HANDLE_CONFLICTS.find((p) => params[p] !== undefined);
+    if (conflict) {
+      txError(ctx, 400, "invalid_request", `audience (a delegation-handle request) cannot be combined with ${conflict}`);
+      return;
+    }
+  }
+
   const requestRefresh = params.request_refresh_token;
   if (requestRefresh === "true" || requestRefresh === true) {
     singleResource();
@@ -406,14 +422,9 @@ export async function handleTokenExchangeGrant(
   if (params.requested_token_type === ACCESS_TOKEN_TOKEN_TYPE) {
     singleResource();
     // @spec continuation#transport-async (#1157, D358) — `audience` selects the
-    // delegation-handle request (expansion never carries it). A request
-    // combining it with another exchange's parameter is refused, never routed.
+    // delegation-handle request (expansion never carries it); its conflicts
+    // were refused above, before routing.
     if (params.audience !== undefined) {
-      const conflict = DELEGATION_HANDLE_CONFLICTS.find((p) => params[p] !== undefined);
-      if (conflict) {
-        txError(ctx, 400, "invalid_request", `audience (a delegation-handle request) cannot be combined with ${conflict}`);
-        return;
-      }
       if (profileDisabled("async-delegation")) return;
       await handleDelegationHandleExchange(opts, provider, ctx);
       return;
@@ -945,31 +956,21 @@ export async function handleAsyncDelegationExchange(
   // the DPoP-derived presenter jkt (reuse the ICA handler's DPoP block). The new
   // access + refresh tokens are sender-constrained to THIS key; a disconnected client
   // presents a fresh DPoP proof per refresh, matching the refresh token's jkt.
+  // @spec RFC 9449 Section 4.3 (#1157 review P1): the proof proving the
+  // delegation handle's key is complete and fresh, through the shared
+  // token-endpoint verifier (iat window and jti replay included).
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const proofJws = ctx.get("DPoP");
   if (!proofJws) {
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  const verifiedProof = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verifiedProof.ok) {
+    txError(ctx, 400, "invalid_dpop_proof", verifiedProof.description);
     return;
   }
-  if (!freshProofJti(opts, proofJti)) {
-    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
-    return;
-  }
+  const { jkt } = verifiedProof.proof;
 
   // Step 2: resolve the Mission from the base mission access token (mirror the
   // /transaction handler's resolution: verify on the AS jwks, read mission.id).

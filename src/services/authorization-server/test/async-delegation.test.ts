@@ -43,6 +43,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE, presentedTokenAuthority } from "../src/adapters/continuation-grant.js";
 import { buildAuthorizationServer, type BuiltAs, SourceUnavailableError } from "../src/index.js";
+import { GateError } from "../src/kernel/kernel.js";
 
 const PORT = 14480;
 const ISSUER = `http://localhost:${PORT}`;
@@ -301,6 +302,8 @@ interface ExchangeOpts {
   rawSubject?: boolean;
   /** The key the async exchange's DPoP proof is signed under (default: `actingDpop`). */
   keys?: Keys;
+  /** Extra request parameters (the conflict cases). */
+  extraParams?: Record<string, string>;
 }
 
 /** The client_id each {@link ActingClient} authenticates as. */
@@ -365,6 +368,7 @@ async function asyncDelegate(baseAccessToken: string, opts: ExchangeOpts = {}): 
     subject_token: subjectToken,
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     resource: opts.resource ?? RESOURCE,
+    ...opts.extraParams,
   };
   if (opts.creationRequestId !== null) {
     params.creation_request_id = opts.creationRequestId ?? crypto.randomUUID();
@@ -1995,9 +1999,12 @@ describe("the delegation-handle request (@spec continuation#transport-async, mis
     const { missionId, baseAccessToken } = await issueBaseMission();
     as.kernel.transition(missionId, "revoke");
     const res = await delegationHandleRequest(baseAccessToken);
-    const body = (await res.json()) as { error?: string; error_description?: string };
+    const body = (await res.json()) as { error?: string; error_description?: string; mission_error?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    // @spec mission#issuance-gating (#1154, D369): a Token Exchange refuses an
+    // inactive Mission with invalid_request, keeping mission_error.
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_error).toBe("mission_revoked");
     expect(body.error_description).toContain("revoked");
   });
 
@@ -2028,6 +2035,57 @@ describe("the delegation-handle request (@spec continuation#transport-async, mis
     expect(none.status, JSON.stringify(noneBody)).toBe(400);
     expect(noneBody.error).toBe("invalid_grant");
     expect(noneBody.error_description).toContain("no longer within the Mission's effective authority");
+  });
+
+  it("a lifecycle refusal at the handle's counted derivation is invalid_request with mission_error; a derivation-cap refusal stays invalid_grant (D369)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const spy = vi.spyOn(as.kernel, "gateDerivation");
+    try {
+      // A Mission that expires between the early check and the count.
+      spy.mockImplementationOnce(() => {
+        throw new GateError("mission_expired", `mission ${missionId} is expired`);
+      });
+      const lifecycle = await delegationHandleRequest(baseAccessToken);
+      const lifecycleBody = (await lifecycle.json()) as { error?: string; mission_error?: string; access_token?: string };
+      expect(lifecycle.status, JSON.stringify(lifecycleBody)).toBe(400);
+      expect(lifecycleBody.error).toBe("invalid_request");
+      expect(lifecycleBody.mission_error).toBe("mission_expired");
+      expect(lifecycleBody.access_token).toBeUndefined();
+
+      spy.mockImplementationOnce(() => {
+        throw new GateError("derivation_cap_exhausted", `mission ${missionId} has no derivations left`);
+      });
+      const capped = await delegationHandleRequest(baseAccessToken);
+      const cappedBody = (await capped.json()) as { error?: string };
+      expect(capped.status, JSON.stringify(cappedBody)).toBe(400);
+      expect(cappedBody.error).toBe("invalid_grant");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("refuses audience combined with the async selector before routing: no family and no derivation count (#1157 review P2)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const handle = await delegationHandle(baseAccessToken);
+    const count = as.kernel.get(missionId)?.derivation_count;
+    // The async exchange carrying audience, with or without the access-token
+    // requested_token_type: both are refused before either exchange runs.
+    const cases = [
+      asyncDelegate(handle, { rawSubject: true, extraParams: { audience: "ap-agent" } }),
+      asyncDelegate(handle, {
+        rawSubject: true,
+        extraParams: { audience: "ap-agent", requested_token_type: ACCESS_TOKEN_TOKEN_TYPE },
+      }),
+    ];
+    for (const res of await Promise.all(cases)) {
+      const body = (await res.json()) as { error?: string; error_description?: string; refresh_token?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toContain("cannot be combined with request_refresh_token");
+      expect(body.refresh_token).toBeUndefined();
+    }
+    expect(as.delegationFamilyStore.familiesForMission(missionId)).toHaveLength(0);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
   });
 
   it("refuses scope and authorization_details, and never routes a request combining audience with another exchange's parameter", async () => {
