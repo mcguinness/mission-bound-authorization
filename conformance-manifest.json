@@ -59,8 +59,8 @@
     "content_sha256": "9201cdc83aa8e79a1a2615bf25f69c9ff8fac11424be6336c8f5052ba1f24b5b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "777368ed96be072b8cd997992cbd0164eb9466e9",
-    "content_sha256": "761e73c40c0fe5773adae4f493bbe0144bcb8755ab907b8c7353e21bb70a05bf"
+    "revision": "5a441cd18359218b1e783dfb1f24c508ca2b4d90",
+    "content_sha256": "5e1e1eb00c090e651c18d7362545bf4631ef5e3e529bc03ec873de5098688698"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -26766,7 +26766,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Mission without template lineage, and an instance no longer active, are refused invalid_grant"
+    "normative": "a Mission without template lineage is refused invalid_grant; an instance suspended, revoked, completed, or past its expires_at is refused invalid_request with mission_error mission_suspended, mission_revoked, mission_completed or mission_expired, and no handoff grant is issued"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -26779,12 +26779,59 @@
     },
     {
      "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
-     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an instance no longer active is refused invalid_grant",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an instance %s is refused invalid_request with its mission_error, and no handoff grant is issued (D369)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an instance past its expires_at is refused invalid_request with mission_expired, and no handoff grant is issued (D369)",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The lineage case presents an AS-signed token for an ordinary Mission (the test holds the AS token key). Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "The lineage case presents an AS-signed token for an ordinary Mission (the test holds the AS token key). Proved by disabling the check (dispatch-handoff mutation harness, #1158). D369: the inactive-instance refusal at this exchange is invalid_request with mission_error (template.handoff.exchange-inactive-refusal); the redemption keeps invalid_grant."
+  },
+  {
+   "id": "template.handoff.exchange-inactive-refusal",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "A Mission that is not `active` is refused with `invalid_request` ({{Section 2.2.2 of RFC8693}}), carrying the `mission_error` member ({{I-D.draft-mcguinness-oauth-mission}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the handoff exchange refuses a suspended, revoked, completed or expired instance with invalid_request and mission_error mission_suspended, mission_revoked, mission_completed or mission_expired, issuing no handoff grant; a Mission without template lineage stays invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an instance %s is refused invalid_request with its mission_error, and no handoff grant is issued (D369)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an instance past its expires_at is refused invalid_request with mission_expired, and no handoff grant is issued (D369)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > a Mission without template lineage is refused invalid_grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D369 (#1154): a Token Exchange's inactive-Mission refusal is invalid_request, a profile may assign the code, and mission_error is preserved. The handoff exchange refuses an inactive instance itself, before any token save, so #1172's grant-type-aware save-time gate does not reach it; this is its own check. The redemption keeps invalid_grant (template.handoff.redemption-active). Proved by disabling the check (D369 mutations: the code, the mission_error member, the expiry mapping)."
   },
   {
    "id": "template.handoff.recipient-from-record",
@@ -27047,7 +27094,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The activity check is the reserved derivation's state gate; its refusal releases the grant, so a grant presented while its instance is suspended stays redeemable within its lifetime. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "The activity check is the reserved derivation's state gate; its refusal releases the grant, so a grant presented while its instance is suspended stays redeemable within its lifetime. Proved by disabling the check (dispatch-handoff mutation harness, #1158). D369: the redemption, a JWT-bearer grant, keeps invalid_grant."
   },
   {
    "id": "template.handoff.single-use",
