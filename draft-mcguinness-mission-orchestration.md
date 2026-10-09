@@ -941,7 +941,11 @@ decision's `evaluation_id` in `compensates_evaluation_id`, and omits
   "authority_basis": "separate_mission",
   "compensation_action": "erp.journal_entry.reverse",
   "compensation_outcome": "completed",
-  "occurred_at": "2026-11-02T09:03:00Z"
+  "occurred_at": "2026-11-02T09:03:00Z",
+  "evidence_envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6Im9yY2hlc3RyYXRvci1rZXktMSIsInR5cCI6Im1pc3Npb24tb3JjaGVzdHJhdGlvbi1ldmlkZW5jZSJ9..."
+  }
 }
 ~~~
 

@@ -595,8 +595,8 @@ Under the OAuth binding, an operator gives an agent the task
    ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 7. **Stop.** Revocation or expiry turns every gate: issuance refuses
    at once, the PDP denies within its state source's staleness bound,
-   the harness pauses bound sessions and queues, and the orchestrator
-   unwinds in-flight work
+   the harness suppresses or terminates bound sessions and queues,
+   and the orchestrator unwinds in-flight work
    ({{I-D.draft-mcguinness-mission-harness}},
    {{I-D.draft-mcguinness-mission-orchestration}}); a token no
    state-aware gate reaches runs to its own expiry
