@@ -182,19 +182,24 @@ class ContinuationRefusal extends Error {
  * may still continue later: `unauthorized_client`, never `invalid_continuation`.
  * Contained or exhausted authority leaves the audience unpermitted:
  * `invalid_target`. The derivation cap is a limit: `invalid_grant`. Every other
- * exchange keeps core's `invalid_grant` (mission#issuance-gating). `state` is
- * the Mission's own state, read after a gate throw, since the gate's expiry
- * clock may have just committed `expired`; `mission_error` rides as the
- * diagnostic where core defines one.
+ * exchange keeps core's `invalid_grant` (mission#issuance-gating). `observed`
+ * is the Mission's own OBSERVED record, read after a gate throw (its expiry
+ * and any ancestor's termination apply whether or not persisted);
+ * `mission_error` rides as the diagnostic where one is defined, naming the
+ * Mission's recorded termination reason.
  */
-function refuseContinuationGate(ctx: KoaContextWithOIDC, reason: GateError["reason"], state: string | undefined): void {
+function refuseContinuationGate(
+  ctx: KoaContextWithOIDC,
+  reason: GateError["reason"],
+  observed: { state: string; termination?: { reason: string } } | undefined,
+): void {
   let error: string;
   switch (reason) {
     case "mission_expired":
       error = "invalid_continuation";
       break;
     case "mission_not_active":
-      error = state !== undefined && TERMINAL_STATES.has(state as MissionState) ? "invalid_continuation" : "unauthorized_client";
+      error = observed !== undefined && TERMINAL_STATES.has(observed.state as MissionState) ? "invalid_continuation" : "unauthorized_client";
       break;
     case "authority_contained":
     case "authority_exhausted":
@@ -204,7 +209,7 @@ function refuseContinuationGate(ctx: KoaContextWithOIDC, reason: GateError["reas
       error = "invalid_grant";
   }
   txError(ctx, 400, error, `continuation Mission gate refused issuance (${reason})`);
-  const missionError = gateErrorToMissionError(reason, state);
+  const missionError = gateErrorToMissionError(reason, observed);
   if (missionError) (ctx.body as Record<string, unknown>).mission_error = missionError;
 }
 
@@ -612,10 +617,17 @@ export async function handleTokenExchangeGrant(
     return;
   }
   // A Mission that ended (terminal, or past its expiry) ended the chain, even
-  // where the store has not yet observed it.
-  const expired = record.state === "expired" || Date.parse(record.expires_at) <= opts.kernel.nowDate().getTime();
-  if (expired || TERMINAL_STATES.has(record.state)) {
-    refuseContinuationGate(ctx, expired ? "mission_expired" : "mission_not_active", record.state);
+  // where the store has not yet observed it. @spec mission#termination: the
+  // OBSERVED record keeps a recorded cause: a Mission revoked, completed or
+  // superseded before its `expires_at` passed still reports that reason, and
+  // only a Mission whose own termination is `expired` reports expiry.
+  const observed = opts.kernel.observe(record);
+  if (TERMINAL_STATES.has(observed.state)) {
+    refuseContinuationGate(
+      ctx,
+      observed.termination?.reason === "expired" ? "mission_expired" : "mission_not_active",
+      observed,
+    );
     return;
   }
   // Limits come after a permanently unusable hop: the chain's finite hop-count
@@ -628,7 +640,7 @@ export async function handleTokenExchangeGrant(
     return;
   }
   if (record.derivation_limit !== null && record.derivation_count >= record.derivation_limit) {
-    refuseContinuationGate(ctx, "derivation_cap_exhausted", record.state);
+    refuseContinuationGate(ctx, "derivation_cap_exhausted", observed);
     return;
   }
 
@@ -654,7 +666,7 @@ export async function handleTokenExchangeGrant(
     opts.kernel.gateActive(resolved.missionId);
   } catch (e) {
     if (e instanceof GateError) {
-      refuseContinuationGate(ctx, e.reason, opts.kernel.get(resolved.missionId)?.state);
+      refuseContinuationGate(ctx, e.reason, opts.kernel.observedRecord(resolved.missionId));
       return;
     }
     throw e;
@@ -849,7 +861,7 @@ export async function handleTokenExchangeGrant(
     // distinct description from the store path in rule 4). The checks above
     // leave this to an empty effective set, or to a state change since they ran.
     if (e instanceof GateError) {
-      refuseContinuationGate(ctx, e.reason, opts.kernel.get(resolved.missionId)?.state);
+      refuseContinuationGate(ctx, e.reason, opts.kernel.observedRecord(resolved.missionId));
       return;
     }
     // issueCrossDomainGrant throws a bare Error when no authority-set entry maps
@@ -2403,7 +2415,7 @@ export async function handleExpansionExchange(
   // @spec expansion#creation-lookup-order — the idempotency lookup runs AFTER
   // client authentication and possession verification but BEFORE the
   // predecessor lifecycle gate below: the recoverable retry is exactly the one
-  // whose predecessor moved to `superseded` when the first attempt succeeded;
+  // whose predecessor was terminated `superseded` when the first attempt succeeded;
   // re-running "predecessor must be active" first would reject it.
   const existing = idem.find(client.clientId, creationRequestId);
   if (existing) {
@@ -2674,7 +2686,7 @@ async function pollDeferredExpansion(
  *                 expired, a FRESH Mission access token is minted for the SAME
  *                 successor (ordinary issuance accounting via extraTokenClaims;
  *                 no second creation, no second lifecycle event).
- * This path is reached by the retry whose predecessor moved to `superseded`
+ * This path is reached by the retry whose predecessor was terminated `superseded`
  * when the first attempt succeeded (the lookup-order rule).
  */
 async function recoverExpansion(

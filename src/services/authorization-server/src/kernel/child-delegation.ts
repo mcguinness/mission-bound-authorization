@@ -197,8 +197,11 @@ export function justifyingIndex(childEntry: AuthorityEntry, parentSet: Authority
  */
 export function countChildBuckets(kernel: MissionKernel, parent: MissionRecord): Map<number, number> {
   const buckets = new Map<number, number>();
-  for (const existing of kernel.findChildren(parent.id)) {
-    if (TERMINAL_STATES.has(existing.state)) continue; // only non-terminal count
+  for (const found of kernel.findChildren(parent.id)) {
+    // Only non-terminal children count, as OBSERVED: a child past its own
+    // `expires_at` is terminated whether or not that has been persisted.
+    const existing = kernel.observe(found);
+    if (TERMINAL_STATES.has(existing.state)) continue;
     const drawnOn = new Set<number>();
     for (const ce of existing.authority_set) {
       const pi = justifyingIndex(ce, parent.authority_set);
@@ -499,7 +502,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // digest; without one it carries only the event identifier.
   const approvalBasis: ApprovalBasis = {
     type: "policy_drawdown",
-    consent_principal: parent.approver,
+    consent_principal: parent.approval_basis.consent_principal,
     activation: {
       ...(primaryPolicy
         ? { policy_id: primaryPolicy.id, policy_version: primaryPolicy.version, policy_digest: primaryPolicy.digest }
@@ -531,10 +534,9 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     // Subject and human accountability are inherited from the Parent Mission
     // (§issuance-relationship): a Child Mission is created under a parent grant.
     subject: parent.subject,
-    approver: parent.approver,
     approval_basis: approvalBasis,
     // @spec mission#authority-sources — inherited verbatim from the Parent
-    // Mission, like `subject` and `approver`.
+    // Mission, like `subject` and the Approver (`consent_principal`).
     authority_source: parent.authority_source,
     // @spec child-delegation#child-client-identity — client_id == child actor sub.
     client_id: clientId,

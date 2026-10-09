@@ -648,9 +648,11 @@ export function dispatchFromTemplate(
       `subject ${input.subject.iss} ${input.subject.sub} is not a permitted recipient`,
     );
   }
-  // max-active: count non-terminal instances (store rows filtered by kernel state).
+  // max-active: count non-terminal instances (store rows filtered by the
+  // OBSERVED kernel state: an instance past its `expires_at` is terminated
+  // whether or not that transition has been persisted).
   const active = store.activeInstanceCount(template.id, (missionId) => {
-    const m = kernel.get(missionId);
+    const m = kernel.observedRecord(missionId);
     return !m || TERMINAL_STATES.has(m.state);
   });
   if (active >= template.max_active) {
@@ -817,7 +819,6 @@ export function dispatchFromTemplate(
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
     authority_hash: authorityHash(template.issuer, final as never),
     subject: input.subject,
-    approver: template.approver,
     approval_basis: approvalBasis,
     authority_source: authoritySource,
     client_id: recipient,

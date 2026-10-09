@@ -368,10 +368,11 @@ Four pairs in the table are related but distinct inputs:
   the value is an immutable commitment and a ceiling only, carrying no
   liveness, so the runtime core's only-`active` rule and freshness
   requirements apply unchanged. Where a Mission state source separately
-  reports the Mission `expired`, or exposes the Mission's `expires_at`,
-  the PDP MUST refuse on it independent of the token's own `exp`: the
-  baseline `mission` claim need not carry `expires_at`, and OAuth token
-  introspection {{RFC7662}} does not itself surface it. The issuance
+  reports the Mission `terminated` with reason `expired`, or exposes
+  the Mission's `expires_at`, the PDP MUST refuse on it independent of
+  the token's own `exp`: the baseline `mission` claim need not carry
+  `expires_at`, and OAuth token introspection {{RFC7662}} does not
+  itself surface it. The issuance
   profile caps the `exp` of every token the Mission Issuer derives at
   the Mission's `expires_at` ({{I-D.draft-mcguinness-oauth-mission}},
   Section "Mission-Bound Access Tokens"), so the `exp` check enforces
@@ -444,10 +445,10 @@ bounds are:
   `authorization_details` of the validated JWT or, for an opaque
   token, of its introspection response; for an ordinary token joined
   to a Mission under an externally established reference
-  ({{token-validation}}), the authority that token carries as issued,
-  established and enforced as the join profile defines (the Mission
-  Authority Server enforces it at the resource server or gateway,
-  {{I-D.draft-mcguinness-mission-authority-server}}); and
+  ({{token-validation}}), the authority that token carries as issued:
+  the entries its verified `scope` maps to under the join profile's
+  mapping contract ({{I-D.draft-mcguinness-mission-authority-server}}),
+  which the PDP enforces as this bound; and
 - the current effective authority: the approved Authority Set,
   narrowed by any narrowing mechanism the deployment runs. For a
   Mission-bound token with no narrowing mechanism running, the
@@ -506,7 +507,7 @@ Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}):
 | Issuer introspection | the interval from the lookup to the action it serves | one lookup per use | issuer availability | reuse of one response across decisions |
 | Issuer introspection with Status `fresh_until` | published staleness bound, to `fresh_until` | one lookup within the bound for Mission state; an opaque token is still introspected per use for its claims | issuer availability | revocation inside the bound |
 | Mission Status | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
-| Status List | Status List Token TTL | local bit read, plus one list fetch per window | list publisher availability | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
+| Status List | Status List Token TTL | local bit read, plus one list fetch per window | list publisher availability | the termination reason and its references; a non-VALID bit sends the consumer to the authoritative surface |
 | Lifecycle Signals | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
 
 Each Mission-freshness source is a separate mechanism whose
@@ -650,6 +651,11 @@ The Mission-bound token claims this document maps are registered by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Runtime Input Mapping and Mission State Sources: a state source
+  reports an expired Mission as `terminated` with reason `expired`,
+  and the Status List cannot provide the termination reason or its
+  references (#705).
 
 - Establishing Validated Credential Context: the OAuth realization of
   the runtime core's sender-constraint requirement for high-consequence

@@ -205,6 +205,23 @@ describe("Enforcement Scope Statement validation (@spec runtime#runtime-conforma
     expect(findings.some((f) => f.member === "extensions.outcome_reconciliation")).toBe(true);
   });
 
+  // #1103: the restart bound the reconciler realizes is stated, never implicit.
+  it("an outcome_reconciliation declaration must state prior_process_outcomes, and only a value its enum names", () => {
+    const declared = {
+      window: "PT15M",
+      responsible_component: "mcp-payments-pep",
+      alerting: "an operator alert for every idempotency claim that closes indeterminate",
+    };
+    const withDeclaration = (outcome: Record<string, unknown>): EnforcementScopeStatement =>
+      ({ ...baseline(), extensions: { outcome_reconciliation: { ...declared, ...outcome } } }) as unknown as EnforcementScopeStatement;
+    expect(validateEnforcementScopeStatement(withDeclaration({ prior_process_outcomes: "indeterminate_at_window_close" }))).toEqual([]);
+    for (const outcome of [{}, { prior_process_outcomes: "reconciled_across_restart" }, { prior_process_outcomes: 1 }]) {
+      expect(validateEnforcementScopeStatement(withDeclaration(outcome)), JSON.stringify(outcome)).toEqual([
+        { member: "extensions.outcome_reconciliation", problem: "prior_process_outcomes must be one of indeterminate_at_window_close" },
+      ]);
+    }
+  });
+
   it("a claim within the declared scope passes claimsWithinScope", () => {
     const stmt = baseline();
     expect(

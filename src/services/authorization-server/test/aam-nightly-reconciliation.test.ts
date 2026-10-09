@@ -557,7 +557,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     expect(record).toBeDefined();
     // Template lineage + approver-of-record == the template's human.
     expect(record?.template?.template_hash).toBe(templateHash);
-    expect(record?.approver.sub).toBe("bob");
+    expect(record?.approval_basis.consent_principal.sub).toBe("bob");
     // Authority Set == the template-clipped effective set (the dispatch response),
     // and it is READ-ONLY: the Dispatch never confers the prohibited class.
     expect(body.authorization_details).toEqual(as.kernel.effectiveAuthoritySet(record!));
@@ -708,7 +708,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     // A direct approval_basis: a fresh human decision, NOT template lineage.
     expect(record?.approval_basis.type).toBe("direct");
     expect(record?.template).toBeUndefined();
-    expect(record?.approver.sub).toBe("bob");
+    expect(record?.approval_basis.consent_principal.sub).toBe("bob");
     expect(record?.subject.sub).toBe("alice"); // distinct approver (Governance D37)
 
     // The external-comms capability is genuinely granted here...

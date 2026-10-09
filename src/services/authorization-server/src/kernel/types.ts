@@ -81,33 +81,86 @@ export interface IntentSubmissionEvidenceFact {
 }
 
 
-/** @spec status#state-machine — only `active` permits derivation. */
-export type MissionState =
-  | "active"
-  | "suspended"
-  | "revoked"
-  | "expired"
-  | "completed"
-  | "superseded"
-  | "cascaded";
+/**
+ * @spec mission#lifecycle, status#state-machine: the Mission lifecycle
+ * states: the OAuth binding's `active` and `terminated`, and Mission Status's
+ * `suspended`. Only `active` permits derivation. A Mission ends in the one
+ * terminal state `terminated`; its {@link Termination} says why.
+ */
+export type MissionState = "active" | "suspended" | "terminated";
 
-export type LifecycleOperation = "revoke" | "suspend" | "resume" | "complete";
+/**
+ * @spec mission#termination, mission#iana-termination-reasons: the
+ * termination reasons this implementation commits: the OAuth binding's
+ * `revoked` and `expired`, Mission Status's `completed`, Expansion's
+ * `superseded`, and Child Delegation's `parent_terminated`. A recorded
+ * reason is carried as an open string ({@link Termination.reason}): a reason
+ * outside this set is still terminated, never active or suspended.
+ */
+export type TerminationReason = "revoked" | "expired" | "completed" | "superseded" | "parent_terminated";
 
-/** @spec status#legal-transitions */
-export const LEGAL_TRANSITIONS: Record<LifecycleOperation, { from: MissionState[]; to: MissionState }> = {
-  revoke: { from: ["active", "suspended"], to: "revoked" },
-  suspend: { from: ["active"], to: "suspended" },
-  resume: { from: ["suspended"], to: "active" },
-  complete: { from: ["active", "suspended"], to: "completed" },
-};
-
-export const TERMINAL_STATES: ReadonlySet<MissionState> = new Set([
+export const TERMINATION_REASONS: ReadonlySet<string> = new Set<TerminationReason>([
   "revoked",
   "expired",
   "completed",
   "superseded",
-  "cascaded",
+  "parent_terminated",
 ]);
+
+/**
+ * @spec mission#termination: the `termination` object a `terminated`
+ * Mission carries, in its record and beside `state` wherever the state is
+ * reported. Written once, atomically with the transition to `terminated`,
+ * and never changed.
+ *
+ * `version` is set on every termination this kernel commits, and
+ * `terminated_at` on every one whose effective instant is known. They are
+ * optional here for a termination read from a record committed before this
+ * vocabulary (which exposes only the facts it retained, never an invented
+ * member), for a `parent_terminated` termination under such a parent (its
+ * instant stays unknown; the commit's own time is its `committed_at`), and
+ * for an `expired` or `parent_terminated` termination observed before it is
+ * committed (no `version` yet). `successor` is required for `superseded`, `parent` for
+ * `parent_terminated`; `origin` and `origin_reason` are provenance only, and
+ * `carried_to` is present exactly when Child Mission Carryover committed a
+ * replacement.
+ */
+export interface Termination {
+  reason: string;
+  terminated_at?: string;
+  /** @spec status#mission-status-response: the state version of the committing transition. */
+  version?: number;
+  successor?: string;
+  parent?: string;
+  origin?: string;
+  origin_reason?: string;
+  carried_to?: string;
+}
+
+export type LifecycleOperation = "revoke" | "suspend" | "resume" | "complete";
+
+/**
+ * @spec status#legal-transitions: each operation's legal source states, its
+ * resulting state and, for a transition to `terminated`, the termination
+ * reason it records.
+ */
+export const LEGAL_TRANSITIONS: Record<
+  LifecycleOperation,
+  { from: MissionState[]; to: MissionState; reason?: TerminationReason }
+> = {
+  revoke: { from: ["active", "suspended"], to: "terminated", reason: "revoked" },
+  suspend: { from: ["active"], to: "suspended" },
+  resume: { from: ["suspended"], to: "active" },
+  complete: { from: ["active", "suspended"], to: "terminated", reason: "completed" },
+};
+
+/** @spec mission#lifecycle: the one terminal state. */
+export const TERMINAL_STATES: ReadonlySet<MissionState> = new Set<MissionState>(["terminated"]);
+
+/** True only for the terminal state `terminated`. */
+export function isTerminated(state: string): boolean {
+  return state === "terminated";
+}
 
 /**
  * @spec child-delegation#cascade — the cascade mode recorded on a Child
@@ -264,12 +317,13 @@ export interface ContainmentEventRecord {
  * invariant is "every Mission is rooted in an approved authorization basis,"
  * generalizing "every Mission is created by an explicit approval event."
  * `approval_basis` is a Mission Record member, fixed at creation and
- * immutable for the life of the Mission (like `approver`/`subject`, unlike
+ * immutable for the life of the Mission (like `subject`, unlike
  * containment, which is evaluated state). It separates three previously
- * collapsed facts: `consent_principal` (who consented — identical to
- * {@link MissionRecord.approver}), `activation` (which policy/event activated
- * THIS instance), and `activation_actor` (who or what dispatched it). It is
- * provenance recorded ALONGSIDE `approver`, NOT folded into `intent_hash` or
+ * collapsed facts: `consent_principal` (who consented: the Approver, which
+ * every reader takes from here), `activation` (which policy/event activated
+ * THIS instance), and
+ * `activation_actor` (who or what dispatched it). It is provenance, NOT
+ * folded into `intent_hash` or
  * `authority_hash` (the core keeps its two-anchor domain separation); `type`
  * MAY ride the `mission` claim as a read-only signal (see
  * {@link MissionClaim.approval_basis}) that MUST NOT be relied on to grant
@@ -406,6 +460,15 @@ export interface MissionRecord {
   id: string;
   issuer: string;
   state: MissionState;
+  /**
+   * @spec mission#termination: present exactly when `state` is
+   * `terminated`. It holds the termination's references: `successor` for a
+   * `superseded` predecessor, and `parent` plus, when Child Mission Carryover
+   * committed a replacement, `carried_to` for a `parent_terminated` child
+   * (@spec child-delegation#carryover-records). Neither reference exists
+   * outside it. With `state`, the record's only mutable member.
+   */
+  termination?: Termination;
   intent: MissionIntent;
   /**
    * @spec mission#mission-record — the `authorization_details` array the
@@ -438,10 +501,9 @@ export interface MissionRecord {
    */
   submission_evidence?: IntentSubmissionEvidenceFact[];
   subject: { iss: string; sub: string };
-  approver: { iss: string; sub: string };
   /**
-   * @spec mission#approval-basis — fixed at creation, immutable. `approver`
-   * above IS `approval_basis.consent_principal`; see {@link ApprovalBasis}.
+   * @spec mission#approval-basis: fixed at creation, immutable. The
+   * Approver is `approval_basis.consent_principal`; see {@link ApprovalBasis}.
    */
   approval_basis: ApprovalBasis;
   /**
@@ -483,14 +545,6 @@ export interface MissionRecord {
    * so it is written only by `insertRecord`.
    */
   related_to?: string;
-  /**
-   * @spec child-delegation#carryover-records — the old child's pointer at its
-   * replacement: a BARE Mission Identifier string under the same issuer, set
-   * exactly when the old child's `cascaded` transition and its replacement
-   * commit in one transaction. Absent for an excluded child, immutable
-   * thereafter, and grants nothing.
-   */
-  carried_to?: string;
   /** @spec child-delegation#parent-member: set on a Child Mission only. */
   parent?: ParentRef;
   /**
@@ -539,22 +593,21 @@ export interface MissionRecord {
 export interface LifecycleCommit {
   id: string;
   issuer: string;
+  /** Only `active` or `suspended`: a terminated Mission commits no further transition. */
   prior_state?: MissionState;
   state: MissionState;
+  /**
+   * @spec mission#termination, signals#lifecycle-event: present exactly
+   * when `state` is `terminated`: the termination this commit wrote, its
+   * `version` equal to this commit's `version`. It carries the termination's
+   * references (`successor`, `parent`, and `carried_to` exactly when a
+   * Carryover replacement committed with the transition); a commit has no
+   * top-level reference member.
+   */
+  termination?: Termination;
   version: number;
   committed_at: string;
   expires_at: string;
-  successor?: string;
-  /**
-   * @spec status#mission-status-response, signals#lifecycle-event — the
-   * committed replacement Mission identifier on an old child's `cascaded`
-   * commit, a bare same-issuer string interpreted in this event's own issuing
-   * namespace. Present exactly when a replacement committed with this
-   * transition (@spec child-delegation#carryover-records); absent on every
-   * other commit, including an excluded child's cascade. Correlation, never
-   * authority.
-   */
-  carried_to?: string;
   /**
    * @spec signals#delivery, control-plane#fanout — stable event identity for
    * replayable emission, assigned by the kernel INSIDE the state write's

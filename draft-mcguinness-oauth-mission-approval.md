@@ -443,7 +443,8 @@ Cache-Control: no-store
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": { "period": "2026-Q3" } } ],
-  "mission_id": "msn_7Wq3nR8tV2xK5pL9yD4sB6zE1mC0fJ-" }
+  "mission_id": "msn_7Wq3nR8tV2xK5pL9yD4sB6zE1mC0fJ-",
+  "mission_expires_at": "2026-12-31T23:59:59Z" }
 ~~~
 
 The token carries the `mission` claim as the issuance profile defines
@@ -492,8 +493,8 @@ An Approval Governance Record ({{decision-set}}) participates in the
 approval before commitment and is evidence after it; its assertion
 authentication and atomic-commitment rules live in Mission Approval
 Governance ({{I-D.draft-mcguinness-mission-approval-governance}}).
-The accountable `approver` on the Mission record remains the
-principal every downstream check and projection uses.
+The Mission record's `approval_basis.consent_principal` remains the
+accountable principal every downstream check and projection uses.
 
 # Privacy Considerations {#privacy-considerations}
 

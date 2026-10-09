@@ -758,9 +758,7 @@ unrecognized states fail-safe non-active.
 | Family state | GNAP surface |
 |---|---|
 | `active` | continuation, token issuance, and rotation served; introspection reports tokens by their own status |
-| `completed` | grant finalized; continuation refused (`invalid_continuation`); rotation refused (`invalid_rotation`); introspection reports `active: false` |
-| `revoked` | grant finalized; continuation refused (`invalid_continuation`); rotation refused (`invalid_rotation`); introspection reports `active: false` |
-| `expired` | grant finalized; continuation refused (`invalid_continuation`); rotation refused (`invalid_rotation`); introspection reports `active: false` |
+| `terminated` (reason `revoked`, `expired`, `completed`, or any other) | grant finalized; continuation refused (`invalid_continuation`); rotation refused (`invalid_rotation`); introspection reports `active: false` |
 | `suspended` | continuation defers: a `continue` object with `wait` and no new tokens; rotation refused (`invalid_rotation`); introspection reports `active: false` |
 
 The projection is fail-safe: every non-`active` state projects to a
@@ -781,7 +779,7 @@ GNAP's model:
   introspection; a deployment that validates structured tokens
   without introspection needs the state surfaces below.
 - **Expiry.** When the record's `expires_at` passes, the Mission
-  transitions to `expired` without a request.
+  is `terminated` with reason `expired` without a request.
 - **Completion.** The client instance's `DELETE` of the continuation
   URI is grant cancellation: it always finalizes the grant, per
   {{RFC9635}}. A Mission-Bound GNAP Authorization Server MAY
@@ -932,7 +930,9 @@ three carriage surfaces:
   responses only ({{lifecycle}}, {{iana}}).
 - **Grant-response-carried**: the grant response carries a `mission`
   member ({{iana}}) giving the client instance the Mission
-  Reference, `expires_at`, and current `state`. This surface informs
+  Reference, `expires_at`, current `state`, and, for a terminated
+  Mission, its `termination` ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Mission Termination"). This surface informs
   the Actor; it is correlation for the client, never proof for a
   resource server.
 

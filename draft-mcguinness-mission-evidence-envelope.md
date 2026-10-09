@@ -860,7 +860,7 @@ it:
   },
   "evidence_envelope": {
     "format": "jws-compact",
-    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0xIn0..."
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0xIiwidHlwIjoiYXBwbGljYXRpb24vbWlzc2lvbi1ldmlkZW5jZStqd3MiLCJjdHkiOiJhcHBsaWNhdGlvbi9taXNzaW9uLWV2aWRlbmNlK2pzb24ifQ..."
   }
 }
 ~~~

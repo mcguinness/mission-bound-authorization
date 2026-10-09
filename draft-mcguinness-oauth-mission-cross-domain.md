@@ -1064,11 +1064,12 @@ specifies the non-issuer half of that rule.
 
 A Resource AS that supports introspection for a local token it minted
 from a cross-domain grant returns the claim-shape members only: `id`,
-`issuer`, and `authority_hash`. It MUST omit `mission.state` rather
-than report a stale value as current. It holds the token, not the
-Mission: it knows the Mission state only as of grant validation and
-has no query to the issuer keyed by `mission_id` (neither this
-document nor the issuance profile defines one).
+`issuer`, and `authority_hash`. It MUST omit `mission.state` and
+`mission.termination` rather than report a stale value as current. It
+holds the token, not the Mission: it knows the Mission state only as
+of grant validation and has no query to the issuer keyed by
+`mission_id` (neither this document nor the issuance profile defines
+one).
 
 `authority_hash`, when included, is the issuer's commitment carried
 through the grant, not a value the Resource AS recomputes from its
@@ -1364,9 +1365,9 @@ additionally carries, for that resource, an `invoices.read` entry
 `journal-entries.write` entry capped at a `max_amount` of 500.00
 USD. The
 Mission was recorded `active` with `authority_hash`
-`sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ` and
+`sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg` and
 `intent_hash`
-`sha-256:Zb8mR3nX5pV4lE6sQqYwQ7p4LHnX9Md0LqJ6sZJ2xT5f` (illustrative;
+`sha-256:SSDZGp4CRwv7ZL4_ttfKb-qTWn-aHy8Ffc8a_dE4Nkk` (illustrative;
 this Mission's Intent and Authority Set extend the single-domain
 walkthrough's, so its anchors differ from that example's). The partner ERP
 is behind the Resource AS `ras.partner.example.com`, so the agent's
@@ -1411,7 +1412,7 @@ audience-scoped authority for the ERP:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
   }
 }
 ~~~
@@ -1466,7 +1467,7 @@ registration, not the agent's home-domain `client_id`:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
   }
 }
 ~~~
@@ -1553,7 +1554,7 @@ operation:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
   }
 }
 ~~~
@@ -1594,6 +1595,9 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Introspection at a Resource AS: a non-issuer Resource AS omits
+  `mission.termination` as well as `mission.state` (#705).
 
 - Issuing the Cross-Domain Grant: the comparison with the primary
   access token names the RFC 9700 recommendation the issuance profile

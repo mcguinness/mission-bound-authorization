@@ -425,7 +425,9 @@ export class WriteReservationStore {
 
   /**
    * Purge every completed record past its retention. A `reserved` record is
-   * never purged by time: only reconciliation resolves it.
+   * never purged by time: the declared reconciler escalates it to an operator
+   * and nothing resolves it by executing again. The reconciler runs this
+   * sweep each run (`outcome-reconciler.ts`, #1103).
    */
   sweep(): number {
     return this.db
@@ -480,8 +482,8 @@ export class WriteReservationStore {
   /**
    * Purge every consumed identifier past its retention, which is past its
    * permit's acceptance window, so the permit it names is refused
-   * `permit_expired` before any redemption is attempted. Nothing schedules
-   * this sweep, like {@link sweep}.
+   * `permit_expired` before any redemption is attempted. The declared
+   * reconciler runs this sweep each run, with {@link sweep} (#1103).
    */
   sweepConsumedPermits(): number {
     return this.db.prepare("DELETE FROM consumed_permits WHERE retain_until_ms < ?").run(this.now().getTime()).changes;

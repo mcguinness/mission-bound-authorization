@@ -54,9 +54,33 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-transaction-authorization:
     title: "Mission Transaction Authorization Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission:
+    title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-status:
+    title: "Mission Status and Lifecycle for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
     author:
       -
         ins: K. McGuinness
@@ -87,6 +111,15 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-hardt-aauth-supervision:
+    title: "AAuth Supervision"
+    target: https://github.com/dickhardt/AAuth/blob/70d67375deb0bb002af7da0711fc58f6e8926e7e/draft-hardt-aauth-supervision.md
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026-10-03
+    refcontent: "Work in Progress, editor's copy at commit 70d67375, not submitted as an Internet-Draft"
 
 --- abstract
 
@@ -165,7 +198,7 @@ made in that resource's vocabulary and at its own policy decision point.
 The PS applies the further contextual governance constraint when it is
 on the authorization path.
 
-## Scope
+## Scope {#scope}
 
 This document specifies:
 
@@ -291,6 +324,61 @@ token, or the PS a request is made to; the blob carries no member
 naming it.  On the wire the reference is the `mission_s256` claim or
 parameter.
 
+When a consumer represents an AAuth Mission Reference with `issuer`
+and `id`, such as the Runtime's `mission.issuer` and `mission.id`
+({{I-D.draft-mcguinness-mission-runtime}}) or the AuthZEN profile's
+`context.mission` ({{I-D.draft-mcguinness-mission-authzen}}), `issuer`
+is the approving PS's server identifier and `id` is the unchanged
+`s256` value.  The consumer obtains both from native context it has
+validated, as the following table maps them, and adds no algorithm
+prefix, rehashes nothing, and introduces no OAuth `mission_id`.
+
+| Validated native context | `issuer` | `id` |
+| --- | --- | --- |
+| Person token | the token's `iss` | the token's `mission_s256` |
+| Resource token | the token's `ps` | the token's `mission_s256` |
+| Auth token, three-party or four-party | the token's `ps` | the token's `mission_s256` |
+| Approval envelope, or an authenticated mission-scoped PS request | the PS's server identifier, established for that endpoint through its metadata and protocol validation | the validated approval's `s256`, or the request's native mission reference |
+{: title="Mission Reference projection"}
+
+The PS's server identifier is its metadata `issuer`, never its
+`mission_endpoint`, a per-mission URL, a token audience, or a host the
+consumer infers, and it is compared exactly (Section 11.1.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  For an auth token, the
+consumer MUST take `issuer` from `ps` and MUST NOT fall back to `iss`,
+which names the Access Server in four-party access (Section 9.4.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}); AAuth's own checks still
+apply, including that a PS-issued auth token names itself in `ps`.  A
+missing, malformed, or unverified component establishes no Mission
+Reference, and AAuth's failure ordering and responses are unchanged.
+The same `s256` under two PS identifiers is two Mission References.
+An accepted `update` leaves the pair unchanged: its position, not the
+pair, identifies the current Approved Context version, and the pair
+alone proves neither current state nor current version.  A projected
+reference identifies the Mission and nothing more: it carries no
+authority, establishes neither Structured Authority nor Runtime or
+AuthZEN conformance, and leaves a resource token a request artifact,
+never an execution credential.
+
+For example, a validated four-party auth token with `iss`
+`https://as.example`, `ps` `https://ps.example`, and `mission_s256`
+`dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk` projects as follows.  The
+fragment shows only the projected members, not a complete token or
+decision request; the credential's own issuer stays in the credential
+context:
+
+~~~ json
+{
+  "mission": {
+    "issuer": "https://ps.example",
+    "id": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+  },
+  "credential": {
+    "issuer": "https://as.example"
+  }
+}
+~~~
+
 The PS's approval envelope carries `s256` alongside a `mission` member
 that is the base64url encoding, without padding, of the exact bytes it
 persists as the mission blob.  The agent decodes `mission` to recover
@@ -306,6 +394,22 @@ integrity commitment.  This binding does not add `intent_hash`,
 commitments would create ambiguity about which object was approved and
 would require implementations to keep multiple canonicalizations in
 lockstep.
+
+`mission_s256` commits to the original approved blob and to nothing
+accepted after it.  An accepted `update` changes neither the blob nor
+`mission_s256`, but from its acceptance the mission's meaning is the
+blob plus its accepted updates (Section 8.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  This binding therefore
+treats each accepted update as the approval of a new immutable version
+of the Approved Context ({{I-D.draft-mcguinness-mission-substrate}}):
+the blob plus the accepted updates through that one, in acceptance
+order.  A version is identified by the Mission Reference together with
+its position in the accepted-update sequence, the original blob being
+position zero; the update's own `s256` is verification material for
+the entry at that position, not a unique identifier.  A pending or
+rejected update is part of no version.  Work that the original
+description no longer describes uses a successor mission, and the old
+mission terminates as `superseded`.
 
 The reference does not authenticate itself when copied outside a
 protected AAuth message.  It gains protocol integrity from the AAuth
@@ -385,9 +489,24 @@ The AAuth roles map to the Mission Context model as follows:
 |---|---|
 | Agent | Proposes work, verifies and stores the approved blob, names the mission at person-token issuance, supplies justifications, and records actions as AAuth requires. |
 | Person Server | Acts as controlling authority, conducts approval and clarification, stores state and the mission log, and governs requests on PS endpoints. |
-| Person | Reviews, clarifies, approves, and accepts completion through the PS. |
+| Person | Reviews, clarifies, and approves through the PS when the Person is the Supervisor or a supervision server asks, and accepts completion through the PS. |
+| Supervisor | Performs supervision (Section 4.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}): the Person by default, or the deciding supervision server the PS consults for the agent ({{I-D.draft-hardt-aauth-supervision}}). |
 | Resource | Defines and enforces its resource authorization; copies `mission_s256` unchanged from the presented token into each resource token it issues, as AAuth requires. |
 | Access Server | Evaluates resource policy and issues auth tokens in federated access; it does not evaluate the private mission blob. |
+
+An agent's deciding supervision server is the one supervision server
+the PS consults for that agent, as configured at the PS; an agent
+without one is supervised by the person (Section 6 of
+{{I-D.draft-hardt-aauth-supervision}}).  For supervision decisions
+within this binding's scope ({{scope}}), a PS with a deciding
+supervision server for the agent obtains that server's decision.  The
+PS retains responsibility for verification, enforcement, issuance, and
+recording.  Management authorization and revocation are unchanged;
+AAuth Supervision excludes both from supervision (Section 1.3 of
+{{I-D.draft-hardt-aauth-supervision}}).  A supervision server's `allow`
+of a completion does not by itself terminate the mission: the mission
+terminates with reason `completed` only when the person accepts
+({{lifecycle}}).
 
 No AAuth party becomes an OAuth client, authorization server, or resource
 server merely by implementing this binding.
@@ -399,11 +518,11 @@ proposal to the PS `mission_endpoint`.  The proposal contains the
 natural-language description and can contain requested tools as defined
 by AAuth.
 
-The PS MAY defer the response while the person or another appropriate
-decision-maker reviews the proposal.  AAuth clarification messages can
-ask the agent for missing context or negotiate changes.  The agent MUST
-NOT treat the proposal, a pending response, or a clarification exchange
-as approval.
+The PS MAY defer the response while the Supervisor ({{roles}}), by
+default the person, reviews the proposal.  AAuth clarification messages
+can ask the agent for missing context or negotiate changes.  The agent
+MUST NOT treat the proposal, a pending response, or a clarification
+exchange as approval.
 
 Approval occurs only when the PS returns the approval envelope: `s256`
 and the approved mission blob as the base64url-encoded `mission`
@@ -455,8 +574,22 @@ SHOULD preserve sufficient correlation data to associate each decision
 with its authenticated request and any issued token without recording
 raw credentials.
 
+For each supervision decision, the PS records the actual decider: the
+person acting directly, the deciding supervision server identified by
+its `issuer`, or the person answering after the server's `ask` or while
+the server is unavailable.  For an exchange with a supervision server,
+the log entry is the exchange itself under the PS-minted `sdi`, with
+any signatures preserved, and the person's later answer is recorded
+under the same `sdi` (Sections 7.3 and 9.4 of
+{{I-D.draft-hardt-aauth-supervision}}).  An unsigned response rests on
+the PS's own record; a response signed under the server's published
+`jwks_uri` is independently verifiable.  A deployment that claims to
+prove what its supervision server decided requires a server that
+signs.
+
 The PS MUST protect the mission log's integrity, MUST restrict read
-access to the person, the PS itself, and parties authorized under its
+access to the person, the PS itself, the deciding supervision server
+for the mission's agent ({{roles}}), and parties authorized under its
 administrative policy, and MUST retain the log for a declared period
 that extends beyond termination.
 
@@ -564,6 +697,11 @@ members, it defines no extensions to close a gap.
 | Fresh decision | PS adjudication under the lifecycle gate ({{lifecycle}}) | Supplied | None |
 {: title="Transaction authorization requirements: native carriers and status"}
 
+Where a supervision server ({{roles}}) makes the fresh decision, it
+receives the resource token, which commits to the proposal through
+`r3_uri` and `r3_s256`, but not the proposal itself (Section 11.2 of
+{{I-D.draft-hardt-aauth-supervision}}).
+
 The R3 parameter commitment is not shown to be equivalent to
 `parameter_digest` ({{I-D.draft-mcguinness-mission-runtime}}).  R3
 commits to the parameters exactly as the resource serialized them in
@@ -614,6 +752,28 @@ issued in the mission context, its issuer (the PS, or the AS in
 four-party access) copies the same flat `mission_s256` claim onward
 from the resource token (Section 9.4.1 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}).
+
+Projecting a reference into `issuer` and `id` ({{reference}}) adds no
+member to an AAuth token or mission blob, fetches no blob, and computes
+no new digest: a consumer projects only a reference it has already
+validated, and no AAuth party carries an OAuth field for it.
+
+A resource that calls a downstream resource for its caller acts as an
+intermediary: an agent with its own agent identifier and key (Section
+10.1.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  It requests a
+person token for the downstream resource, presenting the token its
+caller presented as `upstream_token`.  When that upstream token carries
+`mission_s256`, the PS evaluates the request against that mission and
+copies `mission_s256` into the person token it issues; the
+intermediary does not send `mission_s256` of its own (Sections 7.1 and
+10.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  The copied
+`mission_s256` names the mission, not a version of its Approved
+Context ({{reference}}); the PS evaluates each chained request against
+the mission's current version when it decides.  A chained hop is
+therefore PS-governed derivation under the same Mission, not a child
+mission: the Mission's `agent` stays the root actor, the intermediary
+is a separate actor ({{mission-substrate}}), and the hop's supervision
+decision follows {{roles}}.
 
 This binding adds no member alongside that claim.  The approving PS
 that scopes it is named as {{reference}} describes.  Receivers MUST NOT
@@ -730,6 +890,43 @@ revocation of the mission (Section 11.12.4 of
 operation at the `mission_control_endpoint`, which AAuth Mission
 Management {{I-D.draft-mcguinness-mission-aauth-management}} defines.
 
+AAuth carries the reason and time as the flat `termination_reason` and
+`terminated_at` members.  The OAuth binding nests them in a
+`termination` object whose `reason` is a value of its Mission
+Termination Reasons registry ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission Termination Reasons Registry").  The two reason sets
+correspond as follows; on either side, a mission that is `terminated`
+is non-active whatever its reason:
+
+| Family reason | AAuth `termination_reason` | Correspondence |
+| --- | --- | --- |
+| `revoked` | `revoked` | Same value. |
+| `expired` | `expired` | Same value. |
+| `completed` | `completed` | Same value.  AAuth records it only when the person accepts the agent's completion proposal; the family records it through the Mission Status `complete` operation. |
+| `superseded` | `superseded` | Same value.  Each side names the replacement in its own member: the family in `termination.successor`, a Mission `id`; AAuth Mission Management in `replacement_s256`. |
+| `parent_terminated` | none | The family records it for a Child Mission whose parent terminated.  AAuth defines no such reason and creates no child missions. |
+| none | `administrative` | AAuth records it when an authorized administrator ends the mission under local policy.  The family registers no such reason. |
+| unrecognized | unrecognized | A family reader treats the Mission as terminated: it stops governed work, follows no absent reference, and infers no cause-specific action.  An AAuth Mission Management recipient retains `terminated` and treats the reason as an opaque audit value. |
+{: title="Termination reason correspondence"}
+
+An AAuth reason the table pairs with no family reason has no family
+`termination`: a family report of the mission whose `termination` is
+optional omits it rather than substitute a reason such as `revoked`,
+and the native `termination_reason` stays in AAuth's own record.
+
+An accepted `update` can narrow or broaden the work under the same
+reference ({{reference}}).  The PS MUST NOT accept an update that
+broadens the work without the Supervisor's acceptance.  The Supervisor
+is the Person unless a deciding supervision server is configured for
+the agent ({{roles}}).  Under a deciding supervision server, the
+server's `allow` accepts the update and its `ask` requires the
+person's response (Section 10.3 of
+{{I-D.draft-hardt-aauth-supervision}}); the PS does not classify
+broadening itself to decide whether to consult the server, so a
+configured server can authorize broadening without a fresh human
+decision.  The Supervisor's acceptance is the approval of the new
+version ({{reference}}).
+
 Every mission approved under this binding MUST carry AAuth's
 `expires_at` member, and the PS MUST enforce it on every decision path
 as AAuth requires.  A proposal can request an expiry under AAuth
@@ -756,8 +953,10 @@ termination prevents new governed issuance; an outstanding person
 token or auth token remains usable until revocation or its own expiry,
 inside that bound.
 
-There is no suspended state in this binding.  A short wait uses AAuth's
-deferred-response mechanism.  A long or materially changed pause is
+There is no suspended state in this binding, unlike the OAuth binding
+with Mission Status, which adds a reversible `suspended` state
+({{I-D.draft-mcguinness-oauth-mission-status}}).  A short wait uses
+AAuth's deferred-response mechanism.  A long or materially changed pause is
 handled by terminating the old mission and approving a new, appropriately
 scoped mission while retaining the old log for audit.
 
@@ -953,7 +1152,12 @@ SHOULD minimize recorded personal data, separate token identifiers from
 raw token material, define retention and deletion policies, protect log
 access, and give the person meaningful visibility into the retained
 history.  Termination does not itself require erasure because the log can
-be needed for audit and incident response.
+be needed for audit and incident response.  A deciding supervision
+server receives mission text, justifications, audit records, and
+clarification transcripts for the agents routed to it, and a newly
+routed server receives the active state the PS replays to it (Sections
+14 and 17.1 of {{I-D.draft-hardt-aauth-supervision}}); the routing
+configured at the PS determines that disclosure.
 
 Pairwise subject identifiers and other AAuth privacy mechanisms remain
 applicable.  This binding does not replace them with the agent identifier
@@ -1005,15 +1209,23 @@ The contextual-governance kernel maps as follows:
    governance state, and the mission log ({{roles}}).  Consumers
    establish its identity and keys from AAuth's published PS metadata
    and key set ({{I-D.draft-hardt-oauth-aauth-protocol}}).
-3. **Actor binding**: the blob's `agent` member names the AAuth agent
-   identifier, authenticated by its agent token and HTTP message
-   signatures; parent-mediated and call-chaining relationships are
-   the only delegations, and the identifier maps to no OAuth
-   `client_id` ({{blob}}, {{roles}}).
+3. **Actor binding**: the blob's `agent` member names the root actor,
+   the AAuth agent identifier authenticated by its agent token and
+   HTTP message signatures; parent-mediated and call-chaining
+   relationships are the only delegations, and the identifier maps to
+   no OAuth `client_id` ({{blob}}, {{roles}}).  The holder of a chained
+   person token is the intermediary, a separate actor whose agent
+   identity the PS establishes from the intermediary's authenticated
+   agent token and its own records; the token's `cnf` binds the key,
+   not the identity ({{ref-propagation}}).
 4. **Approved Context**: the private approved mission blob, delivered
    as the approval envelope's base64url `mission` member and immutable
-   under the exact-byte `s256` commitment over its decoded bytes; it is
-   never disclosed to Resources or Access Servers.  Both governance
+   under the exact-byte `s256` commitment over its decoded bytes, and
+   each later version an accepted update approves: the blob plus the
+   accepted updates through it, immutable and identified by the
+   Mission Reference and its position in the accepted-update sequence,
+   by the kernel's new-version route ({{reference}}, {{lifecycle}}).
+   None of it is disclosed to Resources or Access Servers.  Both governance
    parties retain the decoded blob, satisfying the kernel's
    maintained-value branch; `s256` is verification material for
    holders, and AAuth fixes its algorithm at SHA-256 with no migration
@@ -1038,9 +1250,11 @@ The contextual-governance kernel maps as follows:
    Expiry {{I-D.draft-mcguinness-aauth-mission-expiry}} profiles the
    member this binding relies on.
 8. **Context propagation**: the signed `mission_s256` claim, carried
-   by person, resource, and auth tokens, carries governance context;
-   the blob itself never propagates; coverage varies by access mode
-   ({{ref-propagation}}, {{access-modes}}).
+   by person, resource, and auth tokens, carries governance context,
+   including on a person token the PS issues to an intermediary on an
+   upstream token, where the PS copies the claim and the intermediary
+   never supplies it; the blob itself never propagates; coverage varies
+   by access mode ({{ref-propagation}}, {{access-modes}}).
 9. **Governance record**: the PS mission log is the ordered
    governance record, scoped to PS-observed operations with
    agent-reported local activity distinguished, and with the
@@ -1057,7 +1271,7 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 | Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, person-token issuance under a named or upstream-inherited mission, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and intentionally missionless requests, admitted by policy with no required or inherited association, are outside the claim; a failed required association is rejected, never treated as missionless ({{ref-propagation}}); the post-transition residual is bounded by person-token and auth-token lifetime and `expires_at` |
 | State-Observable | supplied | the AAuth Mission Management status operation active ({{I-D.draft-mcguinness-mission-aauth-management}}) | Authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable | The base binding exposes no consumer-facing state source; token acceptance is not observation |
 | Structured Authority | not supplied | -- | -- | The mission description is private prose and `approved_tools` is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary |
-| Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary |
+| Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary; an accepted update can broaden the work under the same reference with the Supervisor's acceptance ({{lifecycle}}), so the binding offers no containment guarantee |
 | Credential-Bound | supplied | PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering, and the PS's delivery check rejects one that omits or alters the claim ({{ref-propagation}}) |
 | Authorized Context Correlation | not supplied | -- | -- | The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined |
 | Independently Verifiable | not supplied | -- | -- | `s256` proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties |
@@ -1095,3 +1309,54 @@ metadata member, error code, capability value, or registry value.
 The author thanks the AAuth community for defining a mission model in
 which contextual governance, deterministic resource authorization, and
 incremental deployment remain distinct concerns.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Native Reference defines how a consumer that keys Missions by
+  `issuer` and `id`, such as the Runtime and the AuthZEN profile,
+  projects an AAuth Mission Reference: the approving PS's server
+  identifier and the unchanged `s256`, from each validated native
+  carrier, with `ps` on an auth token and no fallback to its `iss`; a
+  projected reference carries no authority.  A four-party example
+  separates the Mission's issuer from the credential's.  Reference
+  Propagation states that the projection adds no AAuth wire member
+  (#1169).
+
+- Lifecycle maps AAuth's `termination_reason` to the family's Mission
+  Termination Reasons, including AAuth's `administrative`, the
+  family's `parent_terminated`, and an unrecognized reason on either
+  side, omits a family `termination` for a reason with no family
+  counterpart, and notes that Mission Status's `suspended` state has
+  no AAuth counterpart.  AAuth's states and members are unchanged
+  (#705).
+
+- A chained hop is PS-governed derivation under the same Mission: the
+  Mission's `agent` is the root actor, the holder of a chained person
+  token is the intermediary, whose identity the PS establishes from its
+  authenticated agent token and its records (`cnf` binds only the key),
+  and the PS copies `mission_s256` from the upstream token, which the
+  intermediary never supplies (#966).
+
+- An accepted update approves a new immutable version of the Approved
+  Context, identified by the Mission Reference and its position in the
+  accepted-update sequence; `mission_s256` commits to the original
+  blob only, and a pending or rejected update is part of no version.
+  The PS must not accept a broadening update without the Supervisor's
+  acceptance; under a deciding supervision server, its `allow` accepts
+  and its `ask` requires the person, so a configured server can
+  authorize broadening without a fresh human decision. The Statement
+  names the versions and disclaims any containment guarantee (#965).
+
+- Maps AAuth's Supervisor role and defines an agent's deciding
+  supervision server. A PS with one obtains that server's decision for
+  supervision decisions and keeps verification, enforcement, issuance,
+  and recording; management authorization and revocation are
+  unchanged, and a supervision server's `allow` of a completion does
+  not by itself terminate the mission, which still needs the person's
+  acceptance. The mission log records the actual decider and, for a
+  supervision-server exchange, the `sdi` and the exchange with any
+  signatures; the deciding server is a log reader; a supervision server
+  does not see the R3 proposal. AAuth Supervision is cited
+  informatively, pinned at dickhardt/AAuth commit 70d67375 (#967).

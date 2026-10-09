@@ -192,6 +192,10 @@ async function main() {
     withAuthServer: true,
   });
   if (!stack.authServer) throw new Error("expected authServer extras (composeStack withAuthServer)");
+  // @spec runtime#evidence (outcome reconciliation) (#1103): the declared
+  // reconciler runs for the server's lifetime on a timer that keeps no
+  // process alive; its operator alerts go to stderr.
+  stack.reconciler.start();
   const asUrl = stack.authServer.asUrl;
   const agentClientJwk = stack.authServer.agentClientJwk;
 

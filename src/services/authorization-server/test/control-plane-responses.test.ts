@@ -191,6 +191,34 @@ describe("control-plane lifecycle response boundary", () => {
     expect(await retry.json()).toMatchObject({ error: "conflict" });
   });
 
+  it("compares the termination reason: revoke replays byte for byte, a revoke retry with a fresh nonce is idempotent, and complete on the revoked Mission is a conflict (@spec status#idempotency, #705)", async () => {
+    const record = approveOnAs();
+    const nonce = freshNonce();
+    const first = await lifecycle(record.id, { operation: "revoke", nonce });
+    expect(first.status).toBe(200);
+    const original = await first.text();
+    const outcome = JSON.parse(original) as { state: string; termination?: { reason: string; version: number }; version: number };
+    expect(outcome.state).toBe("terminated");
+    expect(outcome.termination).toMatchObject({ reason: "revoked", version: outcome.version });
+    // Same resulting state AND reason under a fresh nonce: idempotent success
+    // reporting the recorded termination, with no new version.
+    const again = await lifecycle(record.id, { operation: "revoke", nonce: freshNonce() });
+    expect(again.status).toBe(200);
+    expect(await again.json()).toEqual(outcome);
+    // Same state, different reason: a conflict, and the cause is unchanged.
+    const completed = await lifecycle(record.id, { operation: "complete", nonce: freshNonce() });
+    expect(completed.status).toBe(409);
+    expect(await completed.json()).toMatchObject({
+      error: "conflict",
+      error_description: "complete is not legal from terminated (revoked)",
+    });
+    expect(as.kernel.get(record.id)?.termination).toEqual(outcome.termination);
+    // The nonce replay returns the stored body byte for byte.
+    const replay = await lifecycle(record.id, { operation: "revoke", nonce });
+    expect(replay.status).toBe(200);
+    expect(await replay.text()).toBe(original);
+  });
+
   it("replays a successful request before any state-dependent check, after the state moved on", async () => {
     const record = approveOnAs();
     const nonce = freshNonce();
@@ -200,7 +228,7 @@ describe("control-plane lifecycle response boundary", () => {
     // The Mission then moves to a terminal state, from which `suspend` is
     // illegal and re-execution would refuse.
     expect((await lifecycle(record.id, { operation: "revoke", nonce: freshNonce() })).status).toBe(200);
-    expect(as.kernel.get(record.id)?.state).toBe("revoked");
+    expect(as.kernel.get(record.id)?.termination?.reason).toBe("revoked");
     const replay = await lifecycle(record.id, { operation: "suspend", nonce });
     expect(replay.status).toBe(200);
     expect(await replay.text()).toBe(original);
@@ -334,7 +362,7 @@ describe("control-plane lifecycle expiry under a refused operation", () => {
       .run("2020-01-01T00:00:00Z", record.id);
     commits.length = 0;
 
-    // `revoke` is legal from active and suspended, never from `expired`, so the
+    // `revoke` is legal from active and suspended, never from `terminated`, so the
     // request refuses on the state the expiry just committed.
     const res = await lifecycleOn(EXPIRY_ISSUER, record.id, {
       operation: "revoke",
@@ -346,10 +374,10 @@ describe("control-plane lifecycle expiry under a refused operation", () => {
     // The expiry stays committed: fail closed means a refusal never rolls back
     // a narrowing the request materialized.
     const after = expiryAs.kernel.get(record.id);
-    expect(after?.state).toBe("expired");
+    expect(after?.termination?.reason).toBe("expired");
     expect(after?.version).toBe(record.version + 1);
     // And it was PUBLISHED: the commit subscriber saw the expired transition.
-    expect(commits.map((c) => c.state)).toEqual(["expired"]);
+    expect(commits.map((c) => [c.state, c.termination?.reason])).toEqual([["terminated", "expired"]]);
   });
 });
 
@@ -553,18 +581,18 @@ describe("control-plane retained signed responses", () => {
         requestDigest: "sha-256:req",
         status: 200,
         contentType: "application/json",
-        material: { kind: "json", body: { id: key.missionId, state: "revoked", version: 2 } },
+        material: { kind: "json", body: { id: key.missionId, state: "terminated", termination: { reason: "revoked", terminated_at: "2026-09-01T00:00:00Z", version: 2 }, version: 2 } },
       });
       store.record(key, {
         requestDigest: "sha-256:req",
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ id: key.missionId, state: "revoked", version: 2 }),
+        body: JSON.stringify({ id: key.missionId, state: "terminated", termination: { reason: "revoked", terminated_at: "2026-09-01T00:00:00Z", version: 2 }, version: 2 }),
       });
       clock.at = new Date(clock.at.getTime() + 120_000);
       expect(store.find(key)?.state).toBe("final");
       expect(store.find(key)?.body).toBe(
-        JSON.stringify({ id: key.missionId, state: "revoked", version: 2 }),
+        JSON.stringify({ id: key.missionId, state: "terminated", termination: { reason: "revoked", terminated_at: "2026-09-01T00:00:00Z", version: 2 }, version: 2 }),
       );
       clock.at = new Date(clock.at.getTime() + 600_001);
       expect(store.find(key)).toBeUndefined();

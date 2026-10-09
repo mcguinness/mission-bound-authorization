@@ -966,17 +966,28 @@ A Mission-joining PDP and its PEPs MUST observe the following:
 7. **Authority comes from the Mission.** On a successful join, the PDP
    evaluates the action under the runtime profile's decision contract,
    drawing the Authority Set from the Mission (the audience-scoped
-   Mission Status response or a materialized policy view), since the
-   credential carries none. All other decision inputs and invariants
-   of {{I-D.draft-mcguinness-mission-runtime}} apply unchanged.
+   Mission Status response or a materialized policy view), never from
+   the credential: the credential's own authority is the separate
+   bound of rule 8 and never substitutes for the Mission's. All other
+   decision inputs and invariants of
+   {{I-D.draft-mcguinness-mission-runtime}} apply unchanged.
 8. **The permit intersects three bounds.** A permit under a join never
    exceeds any of three independently evaluated bounds: the authority
-   the acting credential itself carries (the token as issued, enforced
-   at the resource server or gateway), the Mission's approved
-   authority, and current Resource policy. The join adds the Mission
-   bound and MUST NOT widen either of the other two. A PEP MUST
-   NOT treat a Mission permit as overriding what the credential or
-   the resource would refuse.
+   the acting credential itself carries, the Mission's approved
+   authority, and current Resource policy. The credential's authority
+   is the token as issued: the `mission_resource_access` entries that
+   the `scope` the PEP verified (from the JWT, or from the
+   introspection response for an opaque token) maps to under the
+   mapping contract ({{mapping-contract}}). The PEP carries them as
+   `context.credential.authority`, and the PDP evaluates them as
+   their own bound, never falling back to the Mission's authority
+   ({{I-D.draft-mcguinness-mission-authzen}}): an empty array leaves
+   every action outside the credential's authority
+   (`out_of_authority`), and an absent one is an unusable credential
+   (`credential_invalid`). The join adds the Mission bound and MUST
+   NOT widen either of the other two. A PEP MUST NOT treat a Mission
+   permit as overriding what the credential or the resource would
+   refuse.
 9. **Joined-view evidence commitment.** The PDP MUST record a
    joined-view commitment, `join_view_id`, as a top-level member of
    the Decision Evidence
@@ -1139,8 +1150,10 @@ The following example shows a decision request for a successful join
 in the AuthZEN profile. The PEP supplies `context.mission` from its
 Mission binding, the Mission state it observed in the MAS's signed
 Mission Status response as `context.mission_state_observation`, the
-authenticated client as `context.actor.client_id`, and the other
-decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
+authenticated client as `context.actor.client_id`, the entries the
+token's `scope` maps to under the mapping contract as
+`context.credential.authority`, and the other decision inputs per
+{{I-D.draft-mcguinness-mission-authzen}}:
 
 ~~~ json
 {
@@ -1170,15 +1183,28 @@ decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
       "freshness_at": "2026-11-02T08:14:00Z"
     },
     "actor": { "client_id": "client_erp-recon-agent" },
+    "credential": {
+      "issuer": "https://as.example.com",
+      "expires_at": "2026-11-02T09:14:00Z",
+      "authority": [
+        {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": ["invoices.read"]
+        }
+      ]
+    },
     "mission_join": {}
   }
 }
 ~~~
 
 The credential's authenticated subject and client match the Mission's
-`subject.sub` and `client_id`, so the join holds, and the PDP evaluates
-the action under the Mission's Authority Set. The following example
-shows the resulting permit:
+`subject.sub` and `client_id`, so the join holds. The PDP evaluates
+the action under the Mission's Authority Set and, as a separate
+bound, under the credential's own authority, here the read entry its
+`invoices.read` scope maps to. The following example shows the
+resulting permit:
 
 ~~~ json
 {
@@ -1425,7 +1451,7 @@ that conflicts with the PEP's recorded binding:
 {
   "decision": false,
   "context": {
-    "evaluation_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
+    "evaluation_id": "dec_sKvVoQNDRBaEO9rQ9V8Mqd6yzt0j",
     "reason": "mission_reference_conflict"
   }
 }
@@ -1909,11 +1935,13 @@ reference:
   `denied` with the code in the status response.
 - **Supersession atomicity.** In one atomic operation on the MAS's
   records, the successor activates with its `predecessor` member set,
-  and the predecessor transitions to `superseded` with its `successor`
-  member set. The `successor` and `related_to` members carry that
+  and the predecessor transitions to `terminated` with reason
+  `superseded`, its `termination.successor` naming the successor. The
+  `termination.successor` and `related_to` members carry that
   profile's semantics and surface through the MAS's Mission Status
-  responses. The `superseded` state enters the state space the MAS
-  reports ({{lifecycle-and-state}}).
+  responses, `termination.successor` inside `mission.termination`. The
+  `superseded` reason enters the termination reasons the MAS reports
+  ({{lifecycle-and-state}}).
 - **Denial reasons.** That profile's Mission Denial Reasons registry
   applies, including this document's `subject_mismatch`
   ({{native-binding}}); the code rides in `mission_denial_reason` per
@@ -1957,8 +1985,9 @@ reference:
 - **Cascade.** Cascade applies with one simplification: the MAS owns
   its state store, so cascade transitions are native lifecycle
   transitions on its own records. The MAS implements that profile's
-  `immediate` mode, and the `cascaded` state surfaces through Mission
-  Status ({{lifecycle-and-state}}).
+  `immediate` mode, and a cascade-terminated child surfaces through
+  Mission Status as `terminated` with reason `parent_terminated` in
+  `mission.termination` ({{lifecycle-and-state}}).
 - **Denial reasons.** That profile's closed denial-reason set applies;
   the code rides in `mission_denial_reason` per {{native-carriage}}.
   The `parent_mismatch` reason has no analog on this surface: with no
@@ -2354,7 +2383,8 @@ following obligations:
   separation-of-duty rule is evaluated, or validating an assertion
   requires authority standing outside the Mission record. The Mission
   record still carries
-  exactly one accountable `approver`, the only principal any
+  exactly one accountable principal,
+  `approval_basis.consent_principal`, the only principal any
   projection or enforcement consumes. Direct self-approval by one
   authenticated human remains the degenerate case, which the Mission
   record represents completely.
@@ -2482,6 +2512,9 @@ contract states, for the joins performed:
   subject maps to the Mission's `subject`);
 - the client namespace mapping (how a credential's client maps to the
   Mission's `client_id`);
+- the scope mapping: the `mission_resource_access` entries, by
+  resource and actions, that each `scope` value of an ordinary token
+  maps to, where a value the mapping does not cover maps to no entry;
 - the delegate policy applied to `act`-chain actors, which MUST state
   how the OAuth binding's per-entry `delegation` rules are
   evaluated at the join;
@@ -3232,9 +3265,10 @@ shows the decision.
 An authorized party revokes the Mission at the Mission Lifecycle
 endpoint ({{lifecycle-and-state}}). The agent's token remains valid
 OAuth ({{limitations}}). Once the PDP's state check observes the
-revocation, within the published staleness bound, it reports
-`revoked`, and the PDP denies the agent's next consequential action
-with the AuthZEN profile's `mission_inactive` reason
+revocation, within the published staleness bound, it reports the
+Mission `terminated` with reason `revoked`, and the PDP denies the
+agent's next consequential action with the AuthZEN profile's
+`mission_inactive` reason
 ({{I-D.draft-mcguinness-mission-authzen}}). The following example
 shows the denial:
 
@@ -3251,6 +3285,13 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission lifecycle (#705). A superseded predecessor is `terminated`
+  with reason `superseded` and names its successor in
+  `termination.successor`, and a cascade-terminated child reports
+  reason `parent_terminated`; both surface in the Mission Status
+  response's `mission.termination`. The record's accountable
+  principal is `approval_basis.consent_principal`.
 
 - Mission Approval and the Substrate Statement name the OAuth
   binding's approval steps by content instead of by number, adding
