@@ -3750,7 +3750,7 @@ A permit decision on the 423.50 USD journal entry of
 Mission, the authorizing `mission_resource_access` entry and its
 `max_amount` constraint, and the `parameter_digest` of
 {{parameter-digest-example}}, correlated by `evaluation_id`
-`dec_4NqX7rT2vB9mK5sL8pJ0eW3yZ6cQ`. The companion's own worked example
+`dec_8K2nP4qV9rL3tY6sB1zN0eF7jB`. The companion's own worked example
 shows the concrete record
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 

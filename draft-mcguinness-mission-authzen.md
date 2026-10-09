@@ -2179,7 +2179,9 @@ present, and the PDP marks the denial requestable under {{ARAP}}:
   "decision": false,
   "context": {
     "evaluation_id": "dec_7YbK4nQ9tR2xV6mL1sP8eJ3wZc",
+    "evaluated_at": "2026-11-02T08:14:00Z",
     "reason": "approval_required",
+    "next_action": "request",
     "access_request": {
       "endpoint": "https://requests.example.com/access-requests",
       "expires_at": "2026-11-02T09:14:00Z",

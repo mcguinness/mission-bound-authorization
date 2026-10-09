@@ -1366,9 +1366,9 @@ additionally carries, for that resource, an `invoices.read` entry
 `journal-entries.write` entry capped at a `max_amount` of 500.00
 USD. The
 Mission was recorded `active` with `authority_hash`
-`sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ` and
+`sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg` and
 `intent_hash`
-`sha-256:Zb8mR3nX5pV4lE6sQqYwQ7p4LHnX9Md0LqJ6sZJ2xT5f` (illustrative;
+`sha-256:SSDZGp4CRwv7ZL4_ttfKb-qTWn-aHy8Ffc8a_dE4Nkk` (illustrative;
 this Mission's Intent and Authority Set extend the single-domain
 walkthrough's, so its anchors differ from that example's). The partner ERP
 is behind the Resource AS `ras.partner.example.com`, so the agent's
@@ -1413,7 +1413,7 @@ audience-scoped authority for the ERP:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
   }
 }
 ~~~
@@ -1468,7 +1468,7 @@ registration, not the agent's home-domain `client_id`:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
   }
 }
 ~~~
@@ -1555,7 +1555,7 @@ operation:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
   }
 }
 ~~~
