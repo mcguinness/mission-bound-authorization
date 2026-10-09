@@ -2059,6 +2059,18 @@ describe("the delegation-handle request (@spec continuation#transport-async, mis
       const cappedBody = (await capped.json()) as { error?: string };
       expect(capped.status, JSON.stringify(cappedBody)).toBe(400);
       expect(cappedBody.error).toBe("invalid_grant");
+
+      // A Mission revoked between the early check and the count: the
+      // diagnostic is read from the Mission as observed at the refusal.
+      spy.mockImplementationOnce(() => {
+        as.kernel.transition(missionId, "revoke");
+        throw new GateError("mission_not_active", `mission ${missionId} is terminated`);
+      });
+      const revoked = await delegationHandleRequest(baseAccessToken);
+      const revokedBody = (await revoked.json()) as { error?: string; mission_error?: string };
+      expect(revoked.status, JSON.stringify(revokedBody)).toBe(400);
+      expect(revokedBody.error).toBe("invalid_request");
+      expect(revokedBody.mission_error).toBe("revoked");
     } finally {
       spy.mockRestore();
     }
