@@ -830,7 +830,11 @@ Table of Contents
        authority is the subject token's authority narrowed by the
        Effective Authority Set.
 
-   A failure of steps 1 to 3 is refused with invalid_grant.
+   A failure of steps 1 or 2, or a Mission without the template lineage
+   member, is refused with invalid_grant.  A Mission that is not active
+   is refused with invalid_request (Section 2.2.2 of [RFC8693]),
+   carrying the mission_error member
+   ([I-D.draft-mcguinness-oauth-mission]).
 
    On success the response carries the handoff grant as access_token,
    with issued_token_type urn:ietf:params:oauth:token-type:jwt and

@@ -2153,7 +2153,11 @@ authority is the subject token's authority narrowed by the Effective
 Authority Set.<a href="#section-6.3-4.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-6.3-5">A failure of steps 1 to 3 is refused with <code>invalid_grant</code>.<a href="#section-6.3-5" class="pilcrow">¶</a></p>
+<p id="section-6.3-5">A failure of steps 1 or 2, or a Mission without the <code>template</code> lineage
+member, is refused with <code>invalid_grant</code>. A Mission that is not <code>active</code>
+is refused with <code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>),
+carrying the <code>mission_error</code> member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.3-5" class="pilcrow">¶</a></p>
 <p id="section-6.3-6">On success the response carries the handoff grant as <code>access_token</code>,
 with <code>issued_token_type</code> <code>urn:ietf:params:oauth:token-type:jwt</code> and
 <code>token_type</code> <code>N_A</code> (<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>). The handoff grant is a JWT the
