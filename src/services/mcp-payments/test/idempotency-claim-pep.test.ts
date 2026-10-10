@@ -15,7 +15,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { IDEMPOTENCY_KEY_PATTERN } from "@mission/core";
 import { TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import {
@@ -45,6 +45,7 @@ import {
   operationKey,
   PaymentsStore,
   Pep,
+  reconcile,
   reconcileClaims,
   recordRedeemingAttempt,
   redemptionStatusFor,
@@ -184,6 +185,7 @@ async function harness(o: HarnessOptions = {}) {
   return {
     server,
     pep,
+    point,
     payments,
     engine,
     connectors,
@@ -535,5 +537,252 @@ describe("the Operation Profile defines an idempotency key for every non-idempot
     expect(h.lastDecision()?.denial_reason).toBe("parameter_violation");
     expect(h.connectors.ledgerEntries()).toHaveLength(0);
     await h.close();
+  });
+});
+
+type Harness = Awaited<ReturnType<typeof harness>>;
+
+/** The Execution Evidence the PEP's store retained, in order. */
+const executions = (h: Harness) => h.evidence.all().flatMap((e) => (e.kind === "execution" ? [e.content] : []));
+
+/** How many records of each signed kind the PEP's store retained. */
+const retainedKinds = (h: Harness) => ({
+  decision: h.evidence.all().filter((e) => e.kind === "decision").length,
+  refusal: h.evidence.all().filter((e) => e.kind === "refusal").length,
+  execution: executions(h).length,
+});
+
+/**
+ * Fail the executor's `completed` write `times` times: either before anything
+ * is retained, or after the record is retained (the write landed and its
+ * acknowledgement was lost). The PEP's own `suppressed` writes pass through.
+ */
+function failCompletedWrite(h: Harness, mode: "before_retention" | "after_retention", times: number) {
+  const original = h.evidence.recordExecution.bind(h.evidence);
+  let left = times;
+  return vi.spyOn(h.evidence, "recordExecution").mockImplementation(async (emitterId, role, input) => {
+    if (role === "executor" && left > 0) {
+      left -= 1;
+      if (mode === "after_retention") await original(emitterId, role, input);
+      throw new Error("completed write failed");
+    }
+    return original(emitterId, role, input);
+  });
+}
+
+/**
+ * @spec runtime-evidence#execution-evidence-object, runtime#idempotency
+ * (#1104): every evidence emission failure on the transaction tier is one of
+ * two cases, and each test keeps them apart. A refusal before any effect
+ * leaves no effect, and its evidence is a Refusal Record, a suppressed
+ * Execution Evidence, or a reported gap in either. Missing evidence after an
+ * effect leaves the effect standing exactly once, reports the gap, and never
+ * settles the claim as if nothing happened. No retry and no reconciliation
+ * repeats the effect.
+ */
+describe("evidence emission failures: a refusal before any effect, or a reported gap after one (#1104)", () => {
+  it("the PDP's Decision Evidence emitter throws: the claim is released, the PEP refuses pdp_unreachable, and nothing executes", async () => {
+    for (const mode of ["co-resident", "remote"] as const) {
+      const h = await harness({ mode });
+      try {
+        const k = key();
+        const emit = vi.spyOn(h.point.emitter, "emit").mockRejectedValue(new Error("emitter unavailable"));
+        const refused = await wire(h, k);
+        expect(refused, mode).toEqual({ ok: false, refusal_reason: "pdp_unreachable" });
+        expect(emit, mode).toHaveBeenCalled();
+        // A refusal before any effect: no PDP record, the PEP's own Refusal Record.
+        expect(h.connectors.ledgerEntries(), mode).toHaveLength(0);
+        expect(retainedKinds(h), mode).toEqual({ decision: 0, refusal: 1, execution: 0 });
+        expect(h.settlements, mode).toHaveLength(0);
+        // Released: once the emitter recovers, the SAME key is adopted rather
+        // than suppressed as an evaluation still in flight, and executes once.
+        emit.mockRestore();
+        const retried = await wire(h, k);
+        expect(retried.ok, `${mode}: ${JSON.stringify(retried)}`).toBe(true);
+        expect(h.connectors.ledgerEntries(), mode).toHaveLength(1);
+        expect(
+          executions(h).map((e) => e.outcome),
+          mode,
+        ).toEqual(["completed"]);
+      } finally {
+        await h.close();
+      }
+    }
+  });
+
+  it("a Refusal Record emission throws: the call rejects, nothing is recorded, and nothing executes", async () => {
+    const h = await harness();
+    try {
+      const refusal = vi.spyOn(h.evidence, "recordRefusal").mockRejectedValue(new Error("refusal emission failed"));
+      // Refused before any decision: the invoice does not resolve.
+      await expect(
+        h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-missing", idempotency_key: key() }, TOKEN),
+      ).rejects.toThrow(/refusal emission failed/);
+      // Refused after the decision call failed: the emitter is down as well.
+      const emit = vi.spyOn(h.point.emitter, "emit").mockRejectedValue(new Error("emitter unavailable"));
+      await expect(
+        h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN),
+      ).rejects.toThrow(/refusal emission failed/);
+      expect(refusal).toHaveBeenCalledTimes(2);
+      expect(emit).toHaveBeenCalled();
+      expect(h.connectors.ledgerEntries()).toHaveLength(0);
+      expect(retainedKinds(h)).toEqual({ decision: 0, refusal: 0, execution: 0 });
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("suppressExecution returns effective_parameter_digest_unobservable when the permit's target no longer resolves, and retains nothing", async () => {
+    const h = await harness();
+    try {
+      const permit = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN);
+      const attempt = permit.attempt;
+      if (!attempt) throw new Error("no permit");
+      const record = vi.spyOn(h.evidence, "recordExecution");
+      // Through the server: the invoice disappears between the permit and the
+      // commit. Refused before any effect, with no record to retain.
+      const refused = await h.server.callTransactionTool(
+        "execute_wire_transfer",
+        { invoice_id: "inv-1", idempotency_key: key() },
+        TOKEN,
+        () => h.payments.db.prepare("DELETE FROM invoices WHERE id = ?").run("inv-1"),
+      );
+      expect(refused).toEqual({ ok: false, refusal_reason: "parameter_mismatch" });
+      expect(h.connectors.ledgerEntries()).toHaveLength(0);
+      // The earlier permit's disposition, now that its target is gone.
+      expect(await h.pep.suppressExecution(attempt, "parameter_mismatch")).toEqual({
+        recorded: false,
+        gap: "effective_parameter_digest_unobservable",
+      });
+      expect(record).not.toHaveBeenCalled();
+      expect(executions(h)).toEqual([]);
+      expect(h.settlements).toHaveLength(0);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("suppressExecution retries once on the same execution identity, returns emission_failed after a second failure, and never retains a disposition twice", async () => {
+    const h = await harness();
+    try {
+      const permit = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN);
+      const attempt = permit.attempt;
+      if (!attempt) throw new Error("no permit");
+      const original = h.evidence.recordExecution.bind(h.evidence);
+      const record = vi.spyOn(h.evidence, "recordExecution");
+      const identities = () => record.mock.calls.map((call) => call[2].execution_id);
+
+      // Both tries fail before retention: the gap, and nothing retained.
+      record.mockRejectedValueOnce(new Error("emission failed")).mockRejectedValueOnce(new Error("emission failed"));
+      expect(await h.pep.suppressExecution(attempt, "permit_expired")).toEqual({ recorded: false, gap: "emission_failed" });
+      expect(identities()).toEqual([attempt.executionId, attempt.executionId]);
+      expect(executions(h)).toEqual([]);
+
+      // The write lands and its acknowledgement is lost: the retry returns
+      // the retained record instead of retaining a second one.
+      record.mockClear();
+      record.mockImplementationOnce(async (emitterId, role, input) => {
+        await original(emitterId, role, input);
+        throw new Error("acknowledgement lost");
+      });
+      expect(await h.pep.suppressExecution(attempt, "permit_expired")).toEqual({ recorded: true });
+      expect(identities()).toEqual([attempt.executionId, attempt.executionId]);
+      expect(executions(h).map((e) => [e.execution_id, e.outcome, e.error])).toEqual([
+        [attempt.executionId, "suppressed", "permit_expired"],
+      ]);
+
+      // A later delivery of the same disposition is still the one record.
+      expect(await h.pep.suppressExecution(attempt, "permit_expired")).toEqual({ recorded: true });
+      expect(executions(h)).toHaveLength(1);
+      expect(h.connectors.ledgerEntries()).toHaveLength(0);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("a completed write that fails once is retried on the same execution identity: one record, the claim settles completed, one effect", async () => {
+    for (const mode of ["before_retention", "after_retention"] as const) {
+      const h = await harness();
+      try {
+        const record = failCompletedWrite(h, mode, 1);
+        const executed = await wire(h, key());
+        expect(executed, mode).toMatchObject({ ok: true, deduped: false, result: { executed: true, invoice_id: "inv-1" } });
+        expect(executed.gap, mode).toBeUndefined();
+        const completedCalls = record.mock.calls.filter((call) => call[1] === "executor");
+        expect(completedCalls, mode).toHaveLength(2);
+        expect(completedCalls[0]?.[2].execution_id, mode).toBe(completedCalls[1]?.[2].execution_id);
+        expect(
+          executions(h).map((e) => [e.execution_id, e.outcome]),
+          mode,
+        ).toEqual([[completedCalls[0]?.[2].execution_id, "completed"]]);
+        expect(h.settlementResults, mode).toEqual([{ accepted: true, state: "completed", duplicate: false }]);
+        expect(h.connectors.ledgerEntries(), mode).toHaveLength(1);
+        const opKey = (executed.result as { op_key: string }).op_key;
+        expect(h.engine.state(opKey), mode).toBe("reconciled");
+      } finally {
+        await h.close();
+      }
+    }
+  });
+
+  it("a completed write that fails twice reports the gap: the effect stands once, the claim is not settled completed, and neither a retry nor reconciliation repeats the effect", async () => {
+    const h = await harness();
+    try {
+      const k = key();
+      const record = failCompletedWrite(h, "before_retention", 2);
+      const first = await wire(h, k);
+      // Missing evidence after an effect: not a refusal, and the effect is reported.
+      expect(first).toMatchObject({
+        ok: false,
+        gap: "emission_failed",
+        deduped: false,
+        result: { executed: true, invoice_id: "inv-1" },
+      });
+      expect(first.refusal_reason).toBeUndefined();
+      expect(first.denial_reason).toBeUndefined();
+      const opKey = (first.result as { op_key: string }).op_key;
+      const ledger = h.connectors.ledgerEntries();
+      expect(ledger).toHaveLength(1);
+      const evaluationId = String(ledger[0]?.permit_id);
+      const completedCalls = record.mock.calls.filter((call) => call[1] === "executor");
+      expect(completedCalls).toHaveLength(2);
+      expect(completedCalls[0]?.[2].execution_id).toBe(completedCalls[1]?.[2].execution_id);
+      // No record, no settlement, the operation left for reconciliation.
+      expect(executions(h)).toEqual([]);
+      expect(h.settlements).toHaveLength(0);
+      expect(h.engine.state(opKey)).toBe("connector_committed");
+      expect(reconcile("msn_917", h.evidence, h.connectors).ledgerWithoutEvidence).toEqual([opKey]);
+      record.mockRestore();
+
+      // The same request again: the claim is still held, so it is refused and executes nothing.
+      const again = await wire(h, k);
+      expect(again).toMatchObject({ ok: false, denial_reason: "duplicate_suppressed" });
+      expect(h.connectors.ledgerEntries()).toHaveLength(1);
+      // A new key for the same operation: refused at redemption, before any effect.
+      const rekeyed = await wire(h, key());
+      expect(rekeyed).toEqual({ ok: false, refusal_reason: "permit_consumed" });
+      expect(h.connectors.ledgerEntries()).toHaveLength(1);
+      expect(h.settlements).toHaveLength(0);
+
+      // Past the lease the claim is unresolved, never completed, until
+      // reconciliation settles it from the connector ledger: one completed
+      // record, and still one effect.
+      h.advance(PAST_LEASE_MS);
+      expect((await h.channel.listUnresolved()).map((u) => u.evaluation_id)).toContain(evaluationId);
+      const report = await reconcileClaims({
+        claims: h.channel,
+        evidence: h.evidence,
+        redemption: h.redemption,
+        connectors: h.connectors,
+      });
+      expect(report.states[evaluationId]).toBe("completed");
+      expect(executions(h).filter((e) => e.evaluation_id === evaluationId).map((e) => e.outcome)).toEqual(["completed"]);
+      expect(reconcile("msn_917", h.evidence, h.connectors).ledgerWithoutEvidence).toEqual([]);
+      expect((await wire(h, k)).denial_reason).toBe("duplicate_suppressed");
+      expect(h.lastDecision()?.next_action).toBe("none");
+      expect(h.connectors.ledgerEntries()).toHaveLength(1);
+    } finally {
+      await h.close();
+    }
   });
 });

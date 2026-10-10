@@ -1829,7 +1829,8 @@
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-derivation-limits",
-    "draft-mcguinness-oauth-mission-expansion"
+    "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-template"
    ]
   },
   {

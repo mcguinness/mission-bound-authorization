@@ -804,8 +804,8 @@ token this AS issued. The deployment contract,
 operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
-`01874fd5`; statements about the as-native target (#1105) are true at
-`001183f5`, and every `file:line` citation is read there.
+`01874fd5`; statements about the as-native target (#1105) or naming a later merged
+issue (such as #1103 or #1104) are true at `7740e345`, and every `file:line` citation is read there.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -838,7 +838,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `Pep.intake` (closed schema, NFC) before any decision work; `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level and MCP channel, [FGA] (§5.4) | A single-record read re-derives no digest at use (§5.4) |
 | Permit redemption | Transaction tier, keyed writes, and single-use permits on the unkeyed write path | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation; `takeSingleUse` (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction. An unkeyed-write redemption is one insert, immediately before the effect; a keyed retrieval's is one insert before anything is disclosed (D342) | None; settlement is awaited | Claim, reservation and consumed-identifier records survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | One redemption per operation key per process (§5.5) |
-| Evidence | Yes | The PDP's emitter; `recordRefusal`, `suppressExecution`; the executor's `completed` write (§5.6) | Synchronous in the request; Decision Evidence is verified before release | None | Retention is in memory and lost at restart | PEP-level (§5.6) | A failed `completed` write after a connector commit is silent (#1104); no Execution Evidence on a successful call outside the transaction tier (§5.6) |
+| Evidence | Yes | The PDP's emitter; `recordRefusal`, `suppressExecution`; the executor's `completed` write (§5.6) | Synchronous in the request; Decision Evidence is verified before release | None | Retention is in memory and lost at restart | PEP-level (§5.6) | A `completed` write that fails twice after a connector commit is reported (`gap: "emission_failed"`), and the running reconciler settles its claim from the ledger (§5.7); no Execution Evidence on a successful call outside the transaction tier (§5.6) |
 | Recovery and reconciliation | Declared by the Enforcement Scope Statement | `OutcomeReconciler`: `reconcileClaims`, `reconcile`, both reservation sweeps; the claim domain's `onIndeterminate` alert hook (§5.7) | Each step on its own; a step that throws alerts and the others run | The reconciler is the overlay's only asynchronous work: at start, then every 300 s | A prior process's claim closes `indeterminate` with the declared alert and its key stays refused, a stated bound (§5.7) | PEP-level, composed and launcher (§5.7); the PDP crash boundary (§5.5) | A prior process's outcome is never reconciled; a `reserved` row is escalated, never resolved (§5.7) |
 
 ### 5.1 Credential validation
@@ -847,7 +847,7 @@ drives an AS-issued Mission-bound token through that assembled path.
   possession.
   - **HTTP transport** (`services/mcp-payments/src/mcp-http-transport.ts:264`):
     `validateCredential` with the request's DPoP presentation calls
-    `validateToken`, which runs `verifyDpopBoundToken` (`server.ts:563-580`):
+    `validateToken`, which runs `verifyDpopBoundToken` (`server.ts:571-588`):
     signature, issuer, audience, `cnf.jkt` and the DPoP proof over this
     request. The target serves this entry point at the declared resource
     audience. A MAS-governed route calls `validateGatewayCredential` instead;
@@ -856,9 +856,9 @@ drives an AS-issued Mission-bound token through that assembled path.
     is authenticated before its session is resolved, and another holder's
     request on the session is answered 404 `Session not found`
     (`createHttpMcpChannel`).
-  - **In-process mediated channel** (`services/mcp-payments/src/mcp-transport.ts:121`,
-    `:147`): `validateCredential` with no proof calls `validateMissionToken`
-    (`server.ts:725-738`): signature, issuer and audience. It carries
+  - **In-process mediated channel** (`services/mcp-payments/src/mcp-transport.ts:123`,
+    `:149`): `validateCredential` with no proof calls `validateMissionToken`
+    (`server.ts:733-746`): signature, issuer and audience. It carries
     `cnf.jkt` into the token facts but verifies no proof of possession,
     because the channel has no HTTP request to bind one to. It refuses a
     transaction token (`txn_pop_required`), so a challenged retry goes over
@@ -866,19 +866,19 @@ drives an AS-issued Mission-bound token through that assembled path.
     this channel with AS-issued Mission-bound tokens. The AS-native target
     and its acceptance pack exclude it (D315).
 
-  Both then apply `missionBoundFactsFrom` (`server.ts:591-624`) and
+  Both then apply `missionBoundFactsFrom` (`server.ts:599-632`) and
   `readMissionAccessClaims`
   (`services/mcp-payments/src/token-verifier.ts:108-120`): `typ` `at+jwt`, the
   RFC 9068 claims, a `mission` claim with `id` and `issuer`, and the token's
   own `authorization_details`, read as the credential's authority. A token
   that fails the profile is refused, never demoted to the ordinary class.
   Before the PDP is asked, the PEP refuses `out_of_authority` for an action
-  outside that authority, one whole entry at a time (`pep.ts:1372-1406`).
+  outside that authority, one whole entry at a time (`pep.ts:1420-1454`).
 - **Boundary.** In request, before any claim reaches a decision.
 - **Asynchronous work.** None.
 - **Crash and recovery.** The DPoP replay cache is in memory. Signing keys are
   generated per boot (D25), so a pre-restart token fails signature
-  validation. The PEP fetches the AS JWKS once at assembly (`stack.ts:472`);
+  validation. The PEP fetches the AS JWKS once at assembly (`stack.ts:482`);
   refresh is #831's.
 - **Tests:**
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
@@ -925,7 +925,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 
 ### 5.3 Protected state and lifecycle
 
-- **Hook.** `loadView` (`stack.ts:781-788`) reads the kernel's committed state
+- **Hook.** `loadView` (`stack.ts:797-804`) reads the kernel's committed state
   and version for each decision, with `mode: "fresh"` and `freshness_at` set
   to now. Under PEP placement the PEP forwards that observation at
   `context.mission_state_observation`, and the PDP's own view wins on
@@ -957,44 +957,45 @@ drives an AS-issued Mission-bound token through that assembled path.
   Record carrying `request_invalid` (D334). An unknown tool is refused
   `unknown_tool` (`request_unsupported`), and a schema intake cannot read is
   refused `capability_source_unresolvable`. Target lookup, the effective
-  parameters and the effect use the normalized arguments.
+  parameters and the effect use the normalized arguments. An intake refusal
+  changes no business state on a read or either write path.
 - **Hook.** `buildEffectiveParams`
   (`services/mcp-payments/src/effective-params.ts:27-44`) builds the effective
   parameters from the payments store, never from tool arguments, and
   `parameterDigest` (`:83`) commits them into the decision request. Three
   separate PEP checks run at use:
-  - `verifyPermitAtUse` (`pep.ts:2021`) runs the permit-use table
-    (`pep.ts:419-459`): the permit's bound phase against the crossing's phase
+  - `verifyPermitAtUse` (`pep.ts:2069`) runs the permit-use table
+    (`pep.ts:424-464`): the permit's bound phase against the crossing's phase
     (`phase_mismatch`), then `valid_until` (`permit_expired`). It compares no
     digest.
-  - `reverifyCapability` (`pep.ts:2142`) re-checks the capability snapshot
+  - `reverifyCapability` (`pep.ts:2190`) re-checks the capability snapshot
     (`capability_source_unresolvable`).
-  - `reverify` (`pep.ts:2053`, a single-record operation) and `reverifyList`
-    (`pep.ts:2093`, a list read) re-derive the effective parameters and
+  - `reverify` (`pep.ts:2101`, a single-record operation) and `reverifyList`
+    (`pep.ts:2141`, a list read) re-derive the effective parameters and
     compare the digest (`parameter_mismatch`; a target that no longer resolves
     is also `parameter_mismatch`).
 - **Order and boundary, by dispatch path** (`dispatchPathFor`, called from
   both transports):
-  - Read (`callReadTool`, `server.ts:1038`): the permit-use table, the
+  - Read (`callReadTool`, `server.ts:1046`): the permit-use table, the
     capability check, `reverifyList` for a list read, the permit-use table
     again, then the read. A single-record read re-derives no digest at use.
     Nothing is written. A `consequential_write` sent down this path is
     served by the write path.
-  - Write (`callWriteTool`, `server.ts:1137`): the permit-use table, the
+  - Write (`callWriteTool`, `server.ts:1145`): the permit-use table, the
     capability check, `reverify`, the permit-use table again, then, for a
     permit carrying `use_limit`, its single-use redemption (§5.5), then the
     effect. For a keyed reversible write, the effect is the reservation
     transaction, which also redeems a carried `use_limit` (§5.5). Nothing
     else is written before the effect.
-  - Transaction tier (`callTransactionTool`, `server.ts:1513`): the
-    permit-use table at admission (`:1588`); single-use redemption (`:1630`),
+  - Transaction tier (`callTransactionTool`, `server.ts:1521`): the
+    permit-use table at admission (`:1596`); single-use redemption (`:1638`),
     which writes the engine's operation state; then the capability check
-    (`:1661`), the execution lease (`:1679`), `reverify` (`:1685`) and the
-    permit-use table again (`:1697`); then the `txn` consumption, where a
-    transaction token is presented, and the connector commit (`:1709-1760`).
+    (`:1669`), the execution lease (`:1687`), `reverify` (`:1693`) and the
+    permit-use table again (`:1705`); then the `txn` consumption, where a
+    transaction token is presented, and the connector commit (`:1717-1768`).
     A refusal after redemption marks the operation `abandoned` and records
     suppressed Execution Evidence, which settles the PDP claim `failed`
-    because the attempt is redeemed (`pep.ts:1950-1952`). The permit is spent;
+    because the attempt is redeemed (`pep.ts:1998-2000`). The permit is spent;
     a retry needs a fresh decision (code reading).
 - **Asynchronous work.** None.
 - **Crash and recovery.** The payments store is in memory and reseeded per
@@ -1011,6 +1012,9 @@ drives an AS-issued Mission-bound token through that assembled path.
   - `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > an authoritative member (D34) is refused invalid_request with no PDP call and one Refusal Record` (authoritative member)
   - `intake NFC-normalizes strings before target lookup, effective parameters and execution (@spec operation-profile-payments-v1, D316) > NFC and NFD forms of one invoice_id resolve the same target, yield the same effective parameters, and execute with the normalized value` (normalization)
   - `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > the signed Refusal Record names request_invalid for arguments outside the schema, request_unsupported for an unknown tool and capability_source_unresolvable for an unreadable schema, each with no PDP call and no effect` (the three signed values)
+  - `an intake refusal leaves the business stores untouched on reads and both write paths (@spec operation-profile-payments-v1, #1148, D379) > get_invoice refused at intake changes no invoice, vendor or schedule, writes no reservation and consumes no permit, with no PDP call and one Refusal Record`
+  - `an intake refusal leaves the business stores untouched on reads and both write paths (@spec operation-profile-payments-v1, #1148, D379) > hold_transfer refused at intake changes no invoice, vendor or schedule, writes no reservation and consumes no permit, with no PDP call and one Refusal Record`
+  - `an intake refusal leaves the business stores untouched on reads and both write paths (@spec operation-profile-payments-v1, #1148, D379) > schedule_payment refused at intake changes no invoice, vendor or schedule, writes no reservation and consumes no permit, with no PDP call and one Refusal Record`
 - **Residual.** A single-record read re-derives no digest at use; its fresh
   decision is the binding. A transaction-tier refusal after redemption spends
   the permit, and no test asserts the spent state.
@@ -1020,14 +1024,14 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Hook.**
   - Transaction tier: the PDP claims (idempotency scope, `idempotency_key`)
     with the operation identity before issuing the permit
-    (`idempotency-claims.ts`). `callTransactionTool` (`server.ts:1513`)
+    (`idempotency-claims.ts`). `callTransactionTool` (`server.ts:1521`)
     redeems the permit once (`TransactionEngine.redeemPermit`,
-    `server.ts:1630`) under an execution lease, commits the connector effect,
+    `server.ts:1638`) under an execution lease, commits the connector effect,
     emits Execution Evidence and settles the claim (`settleClaim`,
-    `server.ts:1820`).
+    `server.ts:1848`).
   - Keyed reversible writes: the PEP reserves the key in its own SQLite store
     and commits the effect, the reservation and the result in one local
-    transaction (`server.ts:1463`;
+    transaction (`server.ts:1471`;
     `services/mcp-payments/src/write-reservations.ts:281`).
   - Single-use permits on the unkeyed write path: the statement publishes
     `single_use_decision_identifier` as the `consequential_write` class
@@ -1075,7 +1079,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Crash and recovery.** The claim and reservation files survive a restart,
   and with them the consumed identifiers.
   The engine's redemption records do not, and every process reuses the epoch
-  `demo-epoch` (`stack.ts:820`), so single use across a restart rests on the
+  `demo-epoch` (`stack.ts:836`), so single use across a restart rests on the
   persisted claim and reservations (the contract's §7). Surviving is not
 recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Tests:**
@@ -1115,22 +1119,39 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Hook.** The PDP emits Decision Evidence for every decision. The PEP
   verifies it (byte equality, signature, emitter-bound key, role, audience)
   before release, refusing `decision_evidence_unverifiable` otherwise
-  (`pep.ts:1606-1618`). The PEP emits Refusal Records (`pep.ts:2157-2218`) and
-  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1917-1960`). The
+  (`pep.ts:1654-1666`). The PEP emits Refusal Records (`pep.ts:2205-2266`), whose
+  `denial_reason` the exhaustive `PRE_DECISION_DENIAL_REASON` supplies; an
+  unmapped diagnostic, or a value outside the emitting role's closed set, is
+  refused before signing (#1148). It also emits
+  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1965-2008`). The
   executor emits `completed` Execution Evidence after a connector commit
-  (`server.ts:1790-1814`). The record table is the contract's §6.
+  (`server.ts:1799-1832`). The record table is the contract's §6.
 - **Boundary.** Synchronous, inside the request.
 - **Asynchronous work.** None.
 - **Crash and recovery.** `EvidenceRetentionStore` is in memory as shipped
-  (`stack.ts:682-684`). Retained records are lost at restart.
+  (`stack.ts:698-700`). Retained records are lost at restart.
 - **Tests (PEP-level):**
   - `a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence`
   - `retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart` (on a file-backed store, not the shipped one)
-- **Residual.** The `completed` write after a connector commit has no error
-  handling: if it fails, the effect stands, no Execution Evidence exists and
-  the claim is not settled. The other three emission failures fail closed
-  with no test. Both are #1104's. A successful call outside the transaction
-  tier emits no Execution Evidence.
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > the PDP's Decision Evidence emitter throws: the claim is released, the PEP refuses pdp_unreachable, and nothing executes`
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a Refusal Record emission throws: the call rejects, nothing is recorded, and nothing executes`
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > suppressExecution returns effective_parameter_digest_unobservable when the permit's target no longer resolves, and retains nothing`
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > suppressExecution retries once on the same execution identity, returns emission_failed after a second failure, and never retains a disposition twice`
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a completed write that fails once is retried on the same execution identity: one record, the claim settles completed, one effect`
+  - `evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a completed write that fails twice reports the gap: the effect stands once, the claim is not settled completed, and neither a retry nor reconciliation repeats the effect`
+  - `an unmapped refusal diagnostic is rejected before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > an unmapped diagnostic on the enforcement path rejects enforcement, with no signing call, no retained Refusal Record and no business effect`
+  - `the PEP maps every Refusal Record diagnostic into the closed set (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > the mapping covers exactly the Refusal Record path's diagnostics, and each maps to a value in the closed PEP set`
+  - `the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > a PEP record carrying a diagnostic or another role's value is refused unsigned, while every closed PEP value signs`
+- **Residual.** The `completed` write after a connector commit retries once
+  on the same execution identity. A second failure leaves the effect without
+  Execution Evidence: the call returns `ok: false` with
+  `gap: "emission_failed"` and the committed `result`, never a
+  `refusal_reason`; the operation stays `connector_committed`; and the claim
+  stays unsettled until the running reconciler settles it `completed` from
+  the ledger (§5.7). No
+  durable queue retries a still-failing record (#594 W4-4). The other three
+  emission failures refuse before any effect. A successful call outside the
+  transaction tier emits no Execution Evidence.
 
 ### 5.7 Recovery and reconciliation
 
@@ -1250,7 +1271,7 @@ Runtime overlay:
   lease after a revocation (§5.3); the operation key
   omits `idempotency_key`, so a repeat for an unchanged invoice is refused
   (§5.5); a failed `completed` write after a connector commit leaves the
-  effect without Execution Evidence (§5.6; #1104); a successful call outside
+  effect without Execution Evidence until the next reconciler run recovers it from the ledger (§5.6, §5.7); a successful call outside
   the transaction tier has no Execution Evidence (§5.6).
 
 **No test yet.**
@@ -1269,10 +1290,7 @@ Runtime overlay:
 - Replay: authorization-code reuse (§4.4).
 - Recovery: an assembled AS restarted on a file-backed kernel (§4.5).
 - Runtime overlay: a Mission the loader does not find on the Mission-bound
-  path, and the run-to-completion interval (§5.3); the PDP emitter throwing,
-  a Refusal Record emission throwing, both `suppressExecution` gaps and the
-  failed `completed` write, each distinguishing a refusal before any effect
-  from missing evidence after one (§5.6; #1104); the assembled-path test
+  path, and the run-to-completion interval (§5.3); the assembled-path test
   against a live OpenFGA runs only in CI (§5).
 
 ## 7. Provider-specific notes (oidc-provider 9.10)

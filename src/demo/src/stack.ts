@@ -104,6 +104,11 @@ export interface AuthServerExtras {
   asUrl: string;
   /** The agent confidential client's private JWK (private_key_jwt signer). */
   agentClientJwk: Record<string, unknown>;
+  /**
+   * The sub-agent client's private JWK: a dispatched instance's selected Agent,
+   * which redeems the Dispatch Handoff as itself (@spec mission-template#dispatch-handoff).
+   */
+  childClientJwk: Record<string, unknown>;
   /** Trusted console/driver only. Never included in agent dependencies or tool results. */
   approverServiceToken: string;
   /** AROP Deferred Token Response store (drive open/approve/deny headlessly). */
@@ -576,6 +581,7 @@ export async function composeStack(opts: {
     authServer = {
       asUrl,
       agentClientJwk: as.agentClientJwk,
+      childClientJwk: as.childClientJwk,
       approverServiceToken,
       deferrals: as.deferrals,
       ras,

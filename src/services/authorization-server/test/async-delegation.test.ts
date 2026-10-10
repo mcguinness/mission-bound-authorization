@@ -41,8 +41,9 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
-import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE } from "../src/adapters/continuation-grant.js";
+import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE, presentedTokenAuthority } from "../src/adapters/continuation-grant.js";
 import { buildAuthorizationServer, type BuiltAs, SourceUnavailableError } from "../src/index.js";
+import { GateError } from "../src/kernel/kernel.js";
 
 const PORT = 14480;
 const ISSUER = `http://localhost:${PORT}`;
@@ -50,16 +51,21 @@ const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE; // served by ISSUER (intra-domain target)
 const FAR_EXP = "2027-01-01T00:00:00Z";
 /**
- * @spec async-delegation (#651) — the TEST-ONLY child actor client. The shipped
- * child actor (`subagent-invoice-extractor`, config/clients.json) is granted
- * only the jwt-bearer grant type, so it cannot open an async-delegation family
- * over real HTTP; that block is pinned as its own negative below. This client
- * clones that registration and adds the token-exchange and refresh_token grant
- * types, so a Child Mission naming it as `child_actor` can mint and refresh a
- * child-rooted family through /token. Registered through the AS builder's
- * `testClients` seam; config/clients.json is untouched.
+ * @spec async-delegation (#651): the TEST-ONLY child actor client, with the
+ * jwt-bearer, token-exchange and refresh_token grant types, so a Child Mission
+ * naming it as `child_actor` can mint and refresh a child-rooted family through
+ * /token. Registered through the AS builder's `testClients` seam;
+ * config/clients.json is untouched.
  */
 const EXCHANGER_CLIENT_ID = "test-child-exchanger";
+/**
+ * The TEST-ONLY jwt-bearer-only child actor (#1158, D361): a registration
+ * without the token-exchange grant, which redeems its child grant but cannot
+ * open a delegation family. The shipped `subagent-invoice-extractor` carries
+ * token exchange (it continues a dispatched instance it was handed), so the
+ * grant-registration refusal is pinned on this distinct client.
+ */
+const BEARER_ONLY_CLIENT_ID = "test-child-jwt-bearer-only";
 
 type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };
 
@@ -68,8 +74,10 @@ let asServer: Server;
 let clientKey: CryptoKey; // ap-agent private_key_jwt key (kid ap-agent-auth)
 let childClientKey: CryptoKey; // child actor private_key_jwt key
 let exchangerClientKey: CryptoKey; // TEST-ONLY child actor private_key_jwt key (#651)
+let bearerOnlyClientKey: CryptoKey; // TEST-ONLY jwt-bearer-only child actor key (#1158)
 let codeDpop: Keys; // DPoP key for the base-mission code flow
-let actingDpop: Keys; // DPoP key for the async exchange + refreshes (a DIFFERENT key)
+let actingDpop: Keys; // DPoP key for the async exchange + refreshes (the code-flow key, #1157)
+let otherDpop: Keys; // a key bound to nothing (the wrong-key cases)
 let actingJkt: string;
 let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
 
@@ -131,10 +139,23 @@ async function exchangerClientAssertion(): Promise<string> {
     .sign(exchangerClientKey);
 }
 
+async function bearerOnlyClientAssertion(): Promise<string> {
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid: `${BEARER_ONLY_CLIENT_ID}-auth` })
+    .setIssuer(BEARER_ONLY_CLIENT_ID)
+    .setSubject(BEARER_ONLY_CLIENT_ID)
+    .setAudience(ISSUER)
+    .setIssuedAt()
+    .setExpirationTime("2m")
+    .setJti(crypto.randomUUID())
+    .sign(bearerOnlyClientKey);
+}
+
 /** The private_key_jwt assertion of the client a flow authenticates AS. */
 function assertionFor(actingAs: ActingClient | undefined): Promise<string> {
   if (actingAs === "child") return childClientAssertion();
   if (actingAs === "exchanger") return exchangerClientAssertion();
+  if (actingAs === "bearerOnly") return bearerOnlyClientAssertion();
   return clientAssertion();
 }
 
@@ -259,10 +280,11 @@ async function issueBaseMission(
  * the acting client `ap-agent`. @spec #651 — the async-delegation exchange
  * requires the `subject_token`'s client_id to equal the authenticated client
  * (continuation-grant.ts), so a family rooted at a Child Mission's own access
- * token is opened by that Mission's OWN child actor: `child` is the shipped one
- * (jwt-bearer only, so the exchange is refused), `exchanger` the test-only one.
+ * token is opened by that Mission's OWN child actor: `child` is the shipped one,
+ * `exchanger` the test-only one, `bearerOnly` the test-only jwt-bearer-only one
+ * (so the exchange is refused).
  */
-type ActingClient = "child" | "exchanger";
+type ActingClient = "child" | "exchanger" | "bearerOnly";
 
 interface ExchangeOpts {
   authorizationDetails?: unknown;
@@ -271,16 +293,82 @@ interface ExchangeOpts {
   creationRequestId?: string | null;
   /** Authenticate as a child actor client instead of `ap-agent` (@see ActingClient). */
   actingAs?: ActingClient;
+  /**
+   * Present `baseAccessToken` itself as the subject_token. By default the
+   * helper first exchanges it for the acting client's delegation handle
+   * (#1157, D358), which the transport requires; a refusal test presenting a
+   * resource-audienced token sets this.
+   */
+  rawSubject?: boolean;
+  /** The key the async exchange's DPoP proof is signed under (default: `actingDpop`). */
+  keys?: Keys;
+  /** Extra request parameters (the conflict cases). */
+  extraParams?: Record<string, string>;
+}
+
+/** The client_id each {@link ActingClient} authenticates as. */
+function clientIdFor(actingAs: ActingClient | undefined): string {
+  if (actingAs === "child") return "subagent-invoice-extractor";
+  if (actingAs === "exchanger") return EXCHANGER_CLIENT_ID;
+  if (actingAs === "bearerOnly") return BEARER_ONLY_CLIENT_ID;
+  return "ap-agent";
+}
+
+/**
+ * POST /token: the delegation-handle request (#1157, D358). An RFC 8693
+ * exchange whose `audience` is the acting client's own client_id; the DPoP
+ * proof is over the presented token's own key, which the handle keeps.
+ */
+async function delegationHandleRequest(
+  subjectToken: string,
+  actingAs?: ActingClient,
+  keys: Keys = actingDpop,
+  extraParams: Record<string, string> = {},
+): Promise<Response> {
+  const params: Record<string, string> = {
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    subject_token: subjectToken,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    audience: clientIdFor(actingAs),
+    ...extraParams,
+  };
+  const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+    fetch(`${ISSUER}/token`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(keys, extra) },
+      body: new URLSearchParams({
+        ...params,
+        client_assertion: await assertionFor(actingAs),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return res;
+}
+
+/** The acting client's delegation handle for `subjectToken`; throws on a refusal. */
+async function delegationHandle(subjectToken: string, actingAs?: ActingClient): Promise<string> {
+  const res = await delegationHandleRequest(subjectToken, actingAs);
+  const body = (await res.json()) as { access_token?: string };
+  if (res.status !== 200 || typeof body.access_token !== "string") {
+    throw new Error(`delegation handle request refused: ${res.status} ${JSON.stringify(body)}`);
+  }
+  return body.access_token;
 }
 
 /** POST /token: token-exchange + request_refresh_token=true (the async transport). */
 async function asyncDelegate(baseAccessToken: string, opts: ExchangeOpts = {}): Promise<Response> {
+  const subjectToken = opts.rawSubject ? baseAccessToken : await delegationHandle(baseAccessToken, opts.actingAs);
   const params: Record<string, string> = {
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
     request_refresh_token: "true",
-    subject_token: baseAccessToken,
+    subject_token: subjectToken,
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     resource: opts.resource ?? RESOURCE,
+    ...opts.extraParams,
   };
   if (opts.creationRequestId !== null) {
     params.creation_request_id = opts.creationRequestId ?? crypto.randomUUID();
@@ -291,7 +379,7 @@ async function asyncDelegate(baseAccessToken: string, opts: ExchangeOpts = {}): 
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(`${ISSUER}/token`, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(actingDpop, extra) },
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(opts.keys ?? actingDpop, extra) },
       body: new URLSearchParams({
         ...params,
         client_assertion: await assertionFor(opts.actingAs),
@@ -409,6 +497,13 @@ beforeAll(async () => {
     kid: `${EXCHANGER_CLIENT_ID}-auth`,
     alg: "ES256",
   };
+  const bearerOnlyKeys = await generateKeyPair("ES256", { extractable: true });
+  bearerOnlyClientKey = bearerOnlyKeys.privateKey;
+  const bearerOnlyJwk = {
+    ...(await exportJWK(bearerOnlyKeys.publicKey)),
+    kid: `${BEARER_ONLY_CLIENT_ID}-auth`,
+    alg: "ES256",
+  };
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
@@ -431,16 +526,31 @@ beforeAll(async () => {
         jwks: { keys: [exchangerJwk] },
         authorization_details_types: ["mission_resource_access"],
       },
+      {
+        client_id: BEARER_ONLY_CLIENT_ID,
+        client_name: "Invoice Extraction Sub-Agent (jwt-bearer only)",
+        grant_types: [CHILD_JWT_BEARER_GRANT_TYPE],
+        response_types: [],
+        redirect_uris: [],
+        token_endpoint_auth_method: "private_key_jwt",
+        token_endpoint_auth_signing_alg: "ES256",
+        jwks: { keys: [bearerOnlyJwk] },
+        authorization_details_types: ["mission_resource_access"],
+      },
     ],
     // @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the AS asserts
-    // the test-only child actor's type, exactly as config does for the shipped one.
-    actorProfiles: { [EXCHANGER_CLIENT_ID]: "ai_agent" },
+    // the test-only child actors' type, exactly as config does for the shipped one.
+    actorProfiles: { [EXCHANGER_CLIENT_ID]: "ai_agent", [BEARER_ONLY_CLIENT_ID]: "ai_agent" },
   });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   childClientKey = (await importJWK(as.childClientJwk as never, "ES256")) as CryptoKey;
   codeDpop = await generateKeyPair("ES256", { extractable: true });
-  actingDpop = await generateKeyPair("ES256", { extractable: true });
+  // #1157 (D358): the delegation handle keeps the presented token's key, and
+  // the exchange proves possession of it, so the family is bound to the
+  // code-flow key; there is no separate acting key to re-bind to.
+  actingDpop = codeDpop;
+  otherDpop = await generateKeyPair("ES256", { extractable: true });
   actingJkt = await calculateJwkThumbprint(await exportJWK(actingDpop.publicKey));
   remoteJwks = createRemoteJWKSet(new URL(`${ISSUER}/jwks`));
 });
@@ -511,6 +621,125 @@ describe("async-delegation issuance (@spec async-delegation)", () => {
   });
 });
 
+describe("the presented token's own authority bounds the family (@spec mission#self-exchange rule 2, #825 PR 2c)", () => {
+  /** A family access token confined to the invoice read: a real token narrower than its Mission, same client, no act. */
+  async function narrowerToken(): Promise<{ token: string; authority: unknown; derived: unknown }> {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const res = await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() });
+    const body = (await res.json()) as { access_token: string; authorization_details: unknown };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    return { token: body.access_token, authority: body.authorization_details, derived: as.kernel.get(missionId)?.authority_set };
+  }
+
+  it("confines an absent request to the presented token's authority, never the Mission's", async () => {
+    const narrow = await narrowerToken();
+    expect(narrow.authority).not.toEqual(narrow.derived);
+    const res = await asyncDelegate(narrow.token); // no authorization_details
+    const body = (await res.json()) as { access_token?: string; authorization_details?: unknown };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details).toEqual(narrow.authority);
+    const { payload } = await jwtVerify(body.access_token as string, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
+    expect(payload.authorization_details).toEqual(narrow.authority);
+  });
+
+  it("refuses a request beyond the presented token's authority, though the Mission allows it", async () => {
+    const narrow = await narrowerToken();
+    const res = await asyncDelegate(narrow.token, { authorizationDetails: fullAuthority() });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(body.error_description).toContain("presented token");
+  });
+
+  it("permits a request within the presented token's authority", async () => {
+    const narrow = await narrowerToken();
+    const res = await asyncDelegate(narrow.token, { authorizationDetails: confinedAuthority() });
+    const body = (await res.json()) as { authorization_details?: unknown };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.authorization_details).toEqual(narrow.authority);
+  });
+});
+
+describe("a retry recovers a recorded family only within the presented token (@spec mission#self-exchange rule 2, #1153 review, D353)", () => {
+  /** A broad family under one creation_request_id, plus a narrower and an equivalent token for the same Mission. */
+  async function broadFamily(crashed: boolean) {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const narrow = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() })).json()) as { access_token: string };
+    const equivalent = (await (await asyncDelegate(baseAccessToken)).json()) as { access_token: string };
+    const creationRequestId = crypto.randomUUID();
+    const res = await asyncDelegate(baseAccessToken, { creationRequestId }); // authorization_details omitted
+    const broad = (await res.json()) as { access_token: string; authorization_details: unknown };
+    expect(res.status, JSON.stringify(broad)).toBe(200);
+    if (crashed) {
+      // The crash window: the family exists and was counted, but no response was delivered.
+      const grants = as.delegationFamilyStore.familiesForMission(missionId);
+      const grantId = grants[grants.length - 1];
+      as.kernel.db
+        .prepare("UPDATE creation_idempotency SET state = 'reserved', mission_id = NULL, completed_at = NULL, delivery_json = ? WHERE creation_request_id = ?")
+        .run(JSON.stringify({ grant_id: grantId, target: RESOURCE }), creationRequestId);
+    }
+    return { narrow: narrow.access_token, equivalent: equivalent.access_token, creationRequestId, broad };
+  }
+
+  for (const crashed of [false, true]) {
+    const state = crashed ? "created before a crash" : "completed";
+    it(`refuses a narrower token recovering a broader family ${state}, with authorization_details omitted`, async () => {
+      const f = await broadFamily(crashed);
+      const retry = await asyncDelegate(f.narrow, { creationRequestId: f.creationRequestId });
+      const body = (await retry.json()) as { error?: string; error_description?: string };
+      expect(retry.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toContain("presented token");
+    });
+
+    it(`recovers a family ${state} with an equivalent replacement token`, async () => {
+      const f = await broadFamily(crashed);
+      const retry = await asyncDelegate(f.equivalent, { creationRequestId: f.creationRequestId });
+      const body = (await retry.json()) as { access_token?: string; authorization_details?: unknown };
+      expect(retry.status, JSON.stringify(body)).toBe(200);
+      expect(body.authorization_details).toEqual(f.broad.authorization_details);
+      if (!crashed) expect(body.access_token).toBe(f.broad.access_token);
+    });
+  }
+});
+
+describe("a no-actor exchange is open only to the Mission's approved agent (@spec mission#self-exchange rule 1, #1153 review, D353)", () => {
+  it("refuses invalid_request when the authenticated client is not the Mission Record's client_id, though the token names it", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    // The handle is minted while the agent is approved; the AS never issues a
+    // mismatched token, so the Mission Record is changed under it.
+    const handle = await delegationHandle(baseAccessToken);
+    as.kernel.db.prepare("UPDATE missions SET client_id = ? WHERE id = ?").run("another-approved-agent", missionId);
+    const res = await asyncDelegate(handle, { rawSubject: true });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("approved agent");
+    // The delegation-handle request applies the same rule (#1157).
+    const handleRes = await delegationHandleRequest(baseAccessToken);
+    const handleBody = (await handleRes.json()) as { error?: string; error_description?: string };
+    expect(handleRes.status, JSON.stringify(handleBody)).toBe(400);
+    expect(handleBody.error).toBe("invalid_request");
+    expect(handleBody.error_description).toContain("approved agent");
+  });
+});
+
+describe("presentedTokenAuthority reads a token's authority in full or not at all (@spec mission#self-exchange rule 2, #1153 review, D353)", () => {
+  const entry = { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] };
+  it("returns the entries of a well-formed authorization_details", () => {
+    expect(presentedTokenAuthority({ authorization_details: [entry] })).toEqual([entry]);
+  });
+  it.each([
+    ["absent", {}],
+    ["empty", { authorization_details: [] }],
+    ["not an array", { authorization_details: entry }],
+    ["an entry without its resource", { authorization_details: [{ type: entry.type, actions: entry.actions }] }],
+    ["an entry with a non-string action", { authorization_details: [{ ...entry, actions: [1] }] }],
+  ])("returns nothing for authorization_details that is %s", (_label, claims) => {
+    expect(presentedTokenAuthority(claims as Record<string, unknown>)).toBeUndefined();
+  });
+});
+
 describe("async-delegation disconnected refresh (@spec async-delegation)", () => {
   it("grant_type=refresh_token with no resource -> a new access token audienced to the target + a rotated refresh token", async () => {
     const { baseAccessToken } = await issueBaseMission();
@@ -544,8 +773,8 @@ describe("async-delegation disconnected refresh (@spec async-delegation)", () =>
   it("sender-constrained refresh token: a DPoP proof from the WRONG key fails jkt verification", async () => {
     const { baseAccessToken } = await issueBaseMission();
     const { refresh_token } = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
-    // Present the code-flow DPoP key (not the acting key the refresh token is bound to).
-    const res = await refreshFamily(refresh_token, codeDpop);
+    // Present a key the refresh token is not bound to.
+    const res = await refreshFamily(refresh_token, otherDpop);
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_grant");
@@ -814,11 +1043,13 @@ describe("transient authority-source failure (@spec issuance-grant#effective-set
   it("at the initial exchange: refuses 503 before the idempotency reservation, so the SAME creation_request_id still redeems", async () => {
     const { baseAccessToken } = await issueBaseMission();
     const creationRequestId = crypto.randomUUID();
+    // The handle is minted before the outage: this case is the exchange's own refusal.
+    const handle = await delegationHandle(baseAccessToken);
 
     sourceOutage = "mission status source returned a rolled-back state version";
     let res: Response;
     try {
-      res = await asyncDelegate(baseAccessToken, { creationRequestId });
+      res = await asyncDelegate(handle, { creationRequestId, rawSubject: true });
     } finally {
       sourceOutage = undefined;
     }
@@ -831,7 +1062,7 @@ describe("transient authority-source failure (@spec issuance-grant#effective-set
     // Nothing was consumed: no reservation, no family, no derivation count, so
     // the retry is a FIRST presentation of that creation_request_id, not a
     // recovery of a failed one (which would replay the stored refusal).
-    const retry = await asyncDelegate(baseAccessToken, { creationRequestId });
+    const retry = await asyncDelegate(handle, { creationRequestId, rawSubject: true });
     const retryBody = (await retry.json()) as { refresh_token?: string; error?: string };
     expect(retry.status, JSON.stringify(retryBody)).toBe(200);
     expect(typeof retryBody.refresh_token).toBe("string");
@@ -949,9 +1180,12 @@ describe("unresolvable Mission fails closed (@spec issuance-grant#effective-set-
 describe("async-delegation single count (@spec async-delegation)", () => {
   it("derivation_count rises by exactly 1 across issuance + N refreshes", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const before = as.kernel.get(missionId)?.derivation_count as number;
 
-    const first = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
+    const first = (await (await asyncDelegate(handle, { rawSubject: true })).json()) as { refresh_token: string };
     const afterExchange = as.kernel.get(missionId)?.derivation_count as number;
     expect(afterExchange - before).toBe(1); // the SINGLE family count (gateDerivation)
 
@@ -1107,7 +1341,11 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
   it("fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused invalid_request with mission_error expired and saves no family refresh token (@spec mission#mission-bound-tokens, mission#issuance-gating)", async () => {
     const expiry = halfSecondExpiry(10);
     const { baseAccessToken } = await issueBaseMission(expiry.iso);
-    const { result: res, saved } = await refreshTokensSavedAt(expiry.ms - 900, () => asyncDelegate(baseAccessToken));
+    // The handle is minted with time to spare; the 0.9 s case is the exchange's.
+    const handle = await delegationHandle(baseAccessToken);
+    const { result: res, saved } = await refreshTokensSavedAt(expiry.ms - 900, () =>
+      asyncDelegate(handle, { rawSubject: true }),
+    );
     const body = (await res.json()) as { error?: string; mission_error?: string; refresh_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     // A Token Exchange refuses a Mission that is not active with invalid_request
@@ -1275,10 +1513,14 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
   it("lost-response retry returns the SAME family (stored response verbatim); derivation_count consumed ONCE; no second family", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const before = as.kernel.get(missionId)?.derivation_count as number;
     const creationRequestId = crypto.randomUUID();
 
-    const first = await asyncDelegate(baseAccessToken, {
+    const first = await asyncDelegate(handle, {
+      rawSubject: true,
       authorizationDetails: confinedAuthority(),
       creationRequestId,
     });
@@ -1287,7 +1529,8 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
     // The lost-response retry: same creation_request_id, fresh DPoP proof
     // (same acting key), same inputs.
-    const retry = await asyncDelegate(baseAccessToken, {
+    const retry = await asyncDelegate(handle, {
+      rawSubject: true,
       authorizationDetails: confinedAuthority(),
       creationRequestId,
     });
@@ -1309,11 +1552,14 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
   it("retry after the initial refresh token was consumed is REFUSED: consumption proves delivery; the rotated head stays the sole live lineage", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const before = as.kernel.get(missionId)?.derivation_count as number;
     const creationRequestId = crypto.randomUUID();
 
     const first = (await (
-      await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId })
+      await asyncDelegate(handle, { rawSubject: true,  authorizationDetails: confinedAuthority(), creationRequestId })
     ).json()) as ExchangeBody;
     // A -> B: consume the initial refresh token (the family's native rotation).
     const rotated = (await (await refreshFamily(first.refresh_token as string)).json()) as ExchangeBody;
@@ -1321,7 +1567,8 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
     // Creation recovery is REFUSED: a rotating family is a single lineage and
     // recovery must never mint an independent sibling refresh token into it.
-    const retry = await asyncDelegate(baseAccessToken, {
+    const retry = await asyncDelegate(handle, {
+      rawSubject: true,
       authorizationDetails: confinedAuthority(),
       creationRequestId,
     });
@@ -1350,12 +1597,15 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
   it("concurrent first presentations of the same creation_request_id: exactly ONE family + one derivation count; every response is coherent or in-progress", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const before = as.kernel.get(missionId)?.derivation_count as number;
     const creationRequestId = crypto.randomUUID();
 
     const results = await Promise.all([
-      asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId }),
-      asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId }),
+      asyncDelegate(handle, { rawSubject: true,  authorizationDetails: confinedAuthority(), creationRequestId }),
+      asyncDelegate(handle, { rawSubject: true,  authorizationDetails: confinedAuthority(), creationRequestId }),
     ]);
     const bodies = (await Promise.all(results.map((r) => r.json()))) as ExchangeBody[];
 
@@ -1383,9 +1633,12 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
   it("crash simulation: a family-created reservation without completion RESUMES delivery of the SAME family (no second family, no recount)", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const creationRequestId = crypto.randomUUID();
     const first = (await (
-      await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority(), creationRequestId })
+      await asyncDelegate(handle, { rawSubject: true,  authorizationDetails: confinedAuthority(), creationRequestId })
     ).json()) as ExchangeBody;
     const after = as.kernel.get(missionId)?.derivation_count as number;
     const grantId = as.delegationFamilyStore.familiesForMission(missionId)[0] as string;
@@ -1399,7 +1652,8 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
       )
       .run(JSON.stringify({ grant_id: grantId, target: RESOURCE }), creationRequestId);
 
-    const retry = await asyncDelegate(baseAccessToken, {
+    const retry = await asyncDelegate(handle, {
+      rawSubject: true,
       authorizationDetails: confinedAuthority(),
       creationRequestId,
     });
@@ -1420,7 +1674,8 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
     // And the operation is completed again: a further retry returns the
     // resumed response verbatim while its refresh token is unconsumed... but
     // the refresh above consumed it, so creation recovery now refuses.
-    const post = await asyncDelegate(baseAccessToken, {
+    const post = await asyncDelegate(handle, {
+      rawSubject: true,
       authorizationDetails: confinedAuthority(),
       creationRequestId,
     });
@@ -1449,8 +1704,11 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
 
   it("missing creation_request_id -> invalid_request", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // #1157: the delegation handle is its own counted derivation, requested
+    // before the baseline; the counts below are the family exchange's.
+    const handle = await delegationHandle(baseAccessToken);
     const before = as.kernel.get(missionId)?.derivation_count as number;
-    const res = await asyncDelegate(baseAccessToken, { creationRequestId: null });
+    const res = await asyncDelegate(handle, { rawSubject: true,  creationRequestId: null });
     const body = (await res.json()) as ExchangeBody;
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
@@ -1602,24 +1860,25 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
   });
 
   /**
-   * Separate coverage for the SHIPPED registration, which is deliberately
-   * narrower than the test-only one above: config/clients.json grants
-   * "subagent-invoice-extractor" only the jwt-bearer grant type, so the shipped
-   * child actor redeems its assertion but cannot open a delegation family. The
-   * test pins that as an executable fact; it flips if the registration widens.
+   * The grant-registration boundary: a child actor registered for the
+   * jwt-bearer grant alone redeems its assertion but cannot open a delegation
+   * family. Pinned on a distinct test-only client (#1158, D361): the shipped
+   * child actor carries token exchange.
    */
-  it("the SHIPPED child actor registration permits redemption but refuses the async-delegation exchange", async () => {
+  it("a jwt-bearer-only child actor registration permits redemption but refuses the async-delegation exchange", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
-    const created = await createChildViaExchange(baseAccessToken, missionId);
+    const created = await createChildViaExchange(baseAccessToken, missionId, BEARER_ONLY_CLIENT_ID);
     const createdBody = (await created.json()) as { access_token?: string; mission_id?: string };
     expect(created.status, JSON.stringify(createdBody)).toBe(200);
 
-    const redeemed = await childRedeem(createdBody.access_token as string);
+    const redeemed = await childRedeem(createdBody.access_token as string, "bearerOnly");
     const redeemedBody = (await redeemed.json()) as { access_token?: string };
     expect(redeemed.status, JSON.stringify(redeemedBody)).toBe(200);
     const childAccessToken = redeemedBody.access_token as string;
 
-    const res = await asyncDelegate(childAccessToken, { actingAs: "child" });
+    // The grant-type refusal precedes any exchange handler, so the raw token
+    // shows it (a delegation-handle request is refused the same way).
+    const res = await asyncDelegate(childAccessToken, { actingAs: "bearerOnly", rawSubject: true });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
@@ -1627,8 +1886,8 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
   });
 
   it("the TEST-ONLY testClients seam refuses to redefine a config-shipped client", async () => {
-    // The seam ADDS registrations; a duplicate client_id would silently widen
-    // what config/clients.json ships, which is the block the negative above pins.
+    // The seam ADDS registrations; a duplicate client_id would silently
+    // redefine what config/clients.json ships.
     await expect(
       buildAuthorizationServer({
         issuer: `http://localhost:${PORT + 1}`,
@@ -1643,6 +1902,261 @@ describe("async-delegation discovery (@spec async-delegation#discovery)", () => 
     const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
     expect(meta.delegated_refresh_token_profile_supported).toBe(true);
     expect(meta.identity_continuation_supported).toBe(true);
+  });
+});
+
+describe("the async-delegation subject_token is a delegation handle (@spec continuation#transport-async, draft-zhu-oauth-async-delegation-05 Section 4.3, #1157)", () => {
+  it("refuses a resource-audienced Mission access token: its audience is not the acting client", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    expect(decodeJwt(baseAccessToken).aud).toBe(RESOURCE);
+    const count = as.kernel.get(missionId)?.derivation_count;
+    const res = await asyncDelegate(baseAccessToken, { rawSubject: true });
+    const body = (await res.json()) as { error?: string; error_description?: string; refresh_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("not a delegation handle audienced to the acting client");
+    expect(body.refresh_token).toBeUndefined();
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+  });
+
+  it("refuses a handle presented under another key: client authentication never satisfies its sender constraint", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const handle = await delegationHandle(baseAccessToken);
+    const count = as.kernel.get(missionId)?.derivation_count;
+    const res = await asyncDelegate(handle, { rawSubject: true, keys: otherDpop });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("does not match the subject_token confirmation key");
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+  });
+
+  it("recovery revalidates the handle: a retry presenting the raw token or another key never retrieves the recorded family", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const handle = await delegationHandle(baseAccessToken);
+    const creationRequestId = crypto.randomUUID();
+    const first = await asyncDelegate(handle, { rawSubject: true, creationRequestId });
+    const firstBody = (await first.json()) as { refresh_token?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+
+    const raw = await asyncDelegate(baseAccessToken, { rawSubject: true, creationRequestId });
+    const rawBody = (await raw.json()) as { error?: string; error_description?: string; refresh_token?: string };
+    expect(raw.status, JSON.stringify(rawBody)).toBe(400);
+    expect(rawBody.error_description).toContain("not a delegation handle");
+    expect(rawBody.refresh_token).toBeUndefined();
+
+    const wrongKey = await asyncDelegate(handle, { rawSubject: true, creationRequestId, keys: otherDpop });
+    const wrongBody = (await wrongKey.json()) as { error?: string; error_description?: string; refresh_token?: string };
+    expect(wrongKey.status, JSON.stringify(wrongBody)).toBe(400);
+    expect(wrongBody.error_description).toContain("does not match the subject_token confirmation key");
+    expect(wrongBody.refresh_token).toBeUndefined();
+
+    // The handle itself still recovers the recorded family.
+    const again = await asyncDelegate(handle, { rawSubject: true, creationRequestId });
+    const againBody = (await again.json()) as { refresh_token?: string };
+    expect(again.status, JSON.stringify(againBody)).toBe(200);
+    expect(againBody.refresh_token).toBe(firstBody.refresh_token);
+  });
+});
+
+describe("the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358)", () => {
+  it("mints a handle audienced to the requesting client, under the presented token's key, with its authority and no scope, as one counted derivation", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const count = as.kernel.get(missionId)?.derivation_count;
+    const res = await delegationHandleRequest(baseAccessToken);
+    const body = (await res.json()) as {
+      access_token?: string;
+      issued_token_type?: string;
+      token_type?: string;
+      scope?: string;
+      authorization_details?: unknown;
+    };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.issued_token_type).toBe(ACCESS_TOKEN_TOKEN_TYPE);
+    expect(body.token_type).toBe("DPoP");
+    expect(body.scope).toBeUndefined();
+    expect(res.headers.get("cache-control")).toContain("no-store");
+    const claims = decodeJwt(body.access_token as string);
+    expect(claims.aud).toBe("ap-agent");
+    expect(claims.client_id).toBe("ap-agent");
+    expect((claims.cnf as { jkt?: string }).jkt).toBe(actingJkt);
+    expect((claims.mission as { id?: string }).id).toBe(missionId);
+    expect(claims.scope).toBeUndefined();
+    expect(claims.authorization_details).toEqual(decodeJwt(baseAccessToken).authorization_details);
+    expect(body.authorization_details).toEqual(claims.authorization_details);
+    // Core Self-Exchange rule 3: the exchange is a derivation, counted once.
+    expect(as.kernel.get(missionId)?.derivation_count).toBe((count as number) + 1);
+  });
+
+  it("bounds the handle by the presented token's own authority, never the Mission's (rule 2)", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    // A narrower Mission access token: a family token confined to one action.
+    const family = await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() });
+    const familyBody = (await family.json()) as { access_token?: string };
+    expect(family.status, JSON.stringify(familyBody)).toBe(200);
+    const res = await delegationHandleRequest(familyBody.access_token as string);
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const actions = (decodeJwt(body.access_token as string).authorization_details as Array<{ actions: string[] }>)
+      .flatMap((e) => e.actions);
+    expect(actions).toEqual(["payments:invoice.read"]);
+  });
+
+  it("refuses an audience other than the requesting client's own client_id", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const res = await delegationHandleRequest(baseAccessToken, undefined, actingDpop, { audience: RESOURCE });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_target");
+    expect(body.error_description).toContain("own client_id");
+  });
+
+  it("refuses a DPoP proof under a key other than the presented token's", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const res = await delegationHandleRequest(baseAccessToken, undefined, otherDpop);
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("does not match the subject_token confirmation key");
+  });
+
+  it("refuses a client presenting a token issued to another client", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const res = await delegationHandleRequest(baseAccessToken, "child");
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("not issued to the requesting client");
+  });
+
+  it("refuses a Mission that is no longer active", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    as.kernel.transition(missionId, "revoke");
+    const res = await delegationHandleRequest(baseAccessToken);
+    const body = (await res.json()) as { error?: string; error_description?: string; mission_error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    // @spec mission#issuance-gating (#1154, D369): a Token Exchange refuses an
+    // inactive Mission with invalid_request, keeping mission_error.
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_error).toBe("revoked");
+    expect(body.error_description).toContain("terminated");
+  });
+
+  it("narrows the handle by the Mission's current effective set, and refuses when nothing survives", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const contain = (eventId: string, remove: Array<{ resource: string; actions?: string[] }>) =>
+      as.kernel.contain(missionId, {
+        event: {
+          type: "tainted_read",
+          source: "https://siem.example/detections",
+          observed_at: new Date().toISOString(),
+          event_id: eventId,
+        },
+        remove,
+      });
+    contain(crypto.randomUUID(), [{ resource: RESOURCE, actions: ["payments:remittance.send"] }]);
+    const narrowed = await delegationHandleRequest(baseAccessToken);
+    const narrowedBody = (await narrowed.json()) as { access_token?: string };
+    expect(narrowed.status, JSON.stringify(narrowedBody)).toBe(200);
+    const actions = (decodeJwt(narrowedBody.access_token as string).authorization_details as Array<{ actions: string[] }>)
+      .flatMap((e) => e.actions);
+    expect(actions).toContain("payments:invoice.read");
+    expect(actions).not.toContain("payments:remittance.send");
+
+    contain(crypto.randomUUID(), [{ resource: RESOURCE }]);
+    const none = await delegationHandleRequest(baseAccessToken);
+    const noneBody = (await none.json()) as { error?: string; error_description?: string };
+    expect(none.status, JSON.stringify(noneBody)).toBe(400);
+    expect(noneBody.error).toBe("invalid_grant");
+    expect(noneBody.error_description).toContain("no longer within the Mission's effective authority");
+  });
+
+  it("a lifecycle refusal at the handle's counted derivation is invalid_request with mission_error; a derivation-cap refusal stays invalid_grant (D369)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const spy = vi.spyOn(as.kernel, "gateDerivation");
+    try {
+      // A Mission that expires between the early check and the count.
+      spy.mockImplementationOnce(() => {
+        throw new GateError("mission_expired", `mission ${missionId} is expired`);
+      });
+      const lifecycle = await delegationHandleRequest(baseAccessToken);
+      const lifecycleBody = (await lifecycle.json()) as { error?: string; mission_error?: string; access_token?: string };
+      expect(lifecycle.status, JSON.stringify(lifecycleBody)).toBe(400);
+      expect(lifecycleBody.error).toBe("invalid_request");
+      expect(lifecycleBody.mission_error).toBe("expired");
+      expect(lifecycleBody.access_token).toBeUndefined();
+
+      spy.mockImplementationOnce(() => {
+        throw new GateError("derivation_cap_exhausted", `mission ${missionId} has no derivations left`);
+      });
+      const capped = await delegationHandleRequest(baseAccessToken);
+      const cappedBody = (await capped.json()) as { error?: string };
+      expect(capped.status, JSON.stringify(cappedBody)).toBe(400);
+      expect(cappedBody.error).toBe("invalid_grant");
+
+      // A Mission revoked between the early check and the count: the
+      // diagnostic is read from the Mission as observed at the refusal.
+      spy.mockImplementationOnce(() => {
+        as.kernel.transition(missionId, "revoke");
+        throw new GateError("mission_not_active", `mission ${missionId} is terminated`);
+      });
+      const revoked = await delegationHandleRequest(baseAccessToken);
+      const revokedBody = (await revoked.json()) as { error?: string; mission_error?: string };
+      expect(revoked.status, JSON.stringify(revokedBody)).toBe(400);
+      expect(revokedBody.error).toBe("invalid_request");
+      expect(revokedBody.mission_error).toBe("revoked");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("refuses audience combined with the async selector before routing: no family and no derivation count (#1157 review P2)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const handle = await delegationHandle(baseAccessToken);
+    const count = as.kernel.get(missionId)?.derivation_count;
+    // The async exchange carrying audience, with or without the access-token
+    // requested_token_type: both are refused before either exchange runs.
+    const cases = [
+      asyncDelegate(handle, { rawSubject: true, extraParams: { audience: "ap-agent" } }),
+      asyncDelegate(handle, {
+        rawSubject: true,
+        extraParams: { audience: "ap-agent", requested_token_type: ACCESS_TOKEN_TOKEN_TYPE },
+      }),
+    ];
+    for (const res of await Promise.all(cases)) {
+      const body = (await res.json()) as { error?: string; error_description?: string; refresh_token?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toContain("cannot be combined with request_refresh_token");
+      expect(body.refresh_token).toBeUndefined();
+    }
+    expect(as.delegationFamilyStore.familiesForMission(missionId)).toHaveLength(0);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+  });
+
+  it("refuses scope and authorization_details, and never routes a request combining audience with another exchange's parameter", async () => {
+    const { baseAccessToken } = await issueBaseMission();
+    const refusal = async (extra: Record<string, string>) => {
+      const res = await delegationHandleRequest(baseAccessToken, undefined, actingDpop, extra);
+      return { status: res.status, ...((await res.json()) as { error?: string; error_description?: string }) };
+    };
+    const scoped = await refusal({ scope: "payments" });
+    expect(scoped.status).toBe(400);
+    expect(scoped.error).toBe("invalid_scope");
+    const detailed = await refusal({ authorization_details: JSON.stringify(confinedAuthority()) });
+    expect(detailed.status).toBe(400);
+    expect(detailed.error).toBe("invalid_request");
+    expect(detailed.error_description).toContain("narrow it at the async-delegation exchange");
+    for (const [param, value] of [
+      ["mission_intent", "{}"],
+      ["resource", RESOURCE],
+      ["creation_request_id", crypto.randomUUID()],
+    ] as const) {
+      const combined = await refusal({ [param]: value });
+      expect(combined.status, param).toBe(400);
+      expect(combined.error, param).toBe("invalid_request");
+      expect(combined.error_description, param).toContain(`cannot be combined with ${param}`);
+    }
   });
 });
 
