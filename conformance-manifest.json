@@ -51,8 +51,8 @@
     "content_sha256": "59f5bb1554f7f4d60be297ba66c33a5df756983e22eb1c5ebb361d3b9c34d18e"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "eecf22076356a14f7f797e410d708f4ae98cef6a",
-    "content_sha256": "b003fdb0e919729c8b4ba20dda56b31ecdb99dae3ea8c0bd77a715863dba0e18"
+    "revision": "1a5ae2e0f5080f7eca8f27f6a0ad0ecdfd2def54",
+    "content_sha256": "f17d312b067ba2e56fb9963a5c833cdc0ba7e235aa07cee3096ccfdd4039b134"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "5bc15030b4a95624b7cd3567076c069211b42ab4",
@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "884bd5a85ba8eac24fe08c53ff1918cf31a3cbf2",
-    "content_sha256": "be507ad594834d0ec7b8221eca555cd7ed98d97e4eca6e71e3b86578d8b20215"
+    "revision": "80b0e6a0b8d64cbef6301f8600d44dbc09472246",
+    "content_sha256": "94da7fd7e8cdd9653bc71e5cdc4b237d4fb045c5f4fa01618bd861a125648ef9"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -8751,7 +8751,7 @@
    "id": "status.conformance.revoke-only-class",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "conformance",
-   "text": "serve the management endpoint ({{mission-lifecycle-endpoint}}) with the `revoke` operation alone, under its authentication, its explicit lifecycle authorization ({{lifecycle-authorization}}), the idempotency and conflict rules of {{idempotency}}, and the not-found refusal of an unauthorized request",
+   "text": "serve the management endpoint ({{mission-lifecycle-endpoint}}) with the `revoke` operation, under its authentication, its explicit lifecycle authorization ({{lifecycle-authorization}}), the idempotency and conflict rules of {{idempotency}}, and the not-found refusal of an unauthorized request",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -8762,7 +8762,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment serving `revoke` alone revokes for an authorized caller holding none of the Mission's tokens, after which every derivation refuses and a racing refresh either commits first or is refused; refuses every other operation `invalid_request`; replays a same-nonce retry and refuses a nonce mismatch; answers a fresh `revoke` of a revoked Mission with no transition and a `revoke` of a completed or expired Mission with `conflict`; answers an unauthorized caller as an unknown Mission; serves no Mission Status operation; and answers each `revoke` with the signed, state-only Mission Status Response whose `aud` is the requester and whose `nonce` is the request's",
+    "normative": "a deployment serving `revoke` revokes for an authorized caller holding none of the Mission's tokens, after which every derivation refuses and a racing refresh either commits first or is refused; refuses every operation it has not adopted `invalid_request`; replays a same-nonce retry and refuses a nonce mismatch; answers a fresh `revoke` of a revoked Mission with no transition and a `revoke` of a completed or expired Mission with `conflict`; answers an unauthorized caller as an unknown Mission; and answers each `revoke` with the signed, state-only Mission Status Response whose `aud` is the requester and whose `nonce` is the request's. The class requires no other operation and not the Mission Status operation, without forbidding either; the witness deployment adopts neither",
     "local": "behavior witnessed on the reference configured revoke-only; three reference gaps keep the row partial and the capability unclaimed: (1) the request shape is POST /missions/{id}/lifecycle with a JSON body and a service token, not the advertised mission_lifecycle_endpoint with a form body carrying mission_id under Status's authentication methods, so neither mission_lifecycle_endpoint nor its auth-methods member is advertised; (2) revoke is answered with plain JSON, not the signed state-only Mission Status Response with requester aud and nonce binding; (3) mission_status_signing_alg_values_supported is advertised only when status or discharge is on, which must widen to the lifecycle capabilities once Lifecycle responses are signed"
    },
    "level": "endpoint",
@@ -8782,7 +8782,13 @@
     },
     {
      "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
-     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses every other operation invalid_request before looking up the Mission, leaving it unchanged",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses every operation the deployment has not adopted invalid_request before looking up the Mission, leaving it unchanged",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses an unrecognized or absent operation invalid_request before looking up the Mission",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     },
@@ -8852,14 +8858,32 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an operation the deployment does not serve (`suspend`, `resume`, `complete`, `discharge`, `contain` on a revoke-only deployment) is refused `invalid_request` with the same response for a known and an unknown Mission, and the Mission's state and version are unchanged"
+    "normative": "an operation the deployment does not serve is refused `invalid_request` with the same response for a known and an unknown Mission, and the Mission's state and version are unchanged: a recognized operation it has not adopted (`suspend`, `resume`, `complete`, `discharge`, `contain` on a revoke-only deployment) and an unrecognized or absent `operation` value alike"
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
-     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses every other operation invalid_request before looking up the Mission, leaving it unchanged",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses every operation the deployment has not adopted invalid_request before looking up the Mission, leaving it unchanged",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses an unrecognized or absent operation invalid_request before looking up the Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses an unrecognized operation invalid_request before the Mission lookup on a full deployment, the same for an unknown Mission (@spec status#mission-lifecycle-endpoint, #1183)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses malformed wire shapes as invalid_request, never a 500",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     }
