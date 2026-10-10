@@ -165,6 +165,8 @@ function build(
      * permit, and therefore the same evaluation identifier, twice.
      */
     decide?: import("@mission/pdp").DecisionFn;
+    /** The DPoP proof replay cache (a small one for the cache-bound case, #1173). */
+    dpopReplay?: import("@mission/core").DpopProofReplay;
   } = {},
 ) {
   const payments = new PaymentsStore();
@@ -211,6 +213,7 @@ function build(
     ...(opts.txnTokenJwks ? { txnTokenJwks: opts.txnTokenJwks } : {}),
     ...(opts.asIssuer ? { asIssuer: opts.asIssuer } : {}),
     ...(opts.txnStores ? { txnStores: opts.txnStores } : {}),
+    ...(opts.dpopReplay ? { dpopReplay: opts.dpopReplay } : {}),
   });
   return { payments, evidence, connectors, engine, server, pep };
 }
@@ -710,6 +713,53 @@ d("M5 transaction-assurance tier", () => {
 
     // ...and a conforming proof still verifies.
     expect((await server.verifyTransactionCredential(token, await popFor(token))).ok).toBe(true);
+  });
+
+  it("holds a transaction credential's proof to the asymmetric window, and answers a full replay cache state_unavailable (@spec RFC 9449 Section 4.3, Section 11.1, #1173, D375)", async () => {
+    const { newDpopProofReplay } = await import("@mission/core");
+    const rsTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxn = await generateKeyPair("ES256", { extractable: true });
+    const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+    // Room for two proofs: the two accepted below fill it.
+    const dpopReplay = newDpopProofReplay(300, Date.now, 2);
+    const { server, payments } = build({
+      challengeSigner: { sign: rsTxn.privateKey, kid: "rs-txn", asIssuer: AS_ISSUER },
+      txnTokenJwks: { keys: [asTxnPub] },
+      asIssuer: AS_ISSUER,
+      dpopReplay,
+    });
+    const challengeRes = await server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-1", idempotency_key: idem() },
+      TOKEN,
+      undefined,
+      undefined,
+      ACCEPT_CHALLENGE,
+    );
+    const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
+    const token = await signTxnToken({
+      key: asTxn.privateKey,
+      txn,
+      cnfJkt: TOKEN.cnfJkt,
+      parameterDigest: digestFor(payments),
+      authorizationDetails: remittanceEntry(),
+    });
+    const refusal = async (pop: Awaited<ReturnType<typeof popFor>>): Promise<string | undefined> => {
+      const r = await server.verifyTransactionCredential(token, pop);
+      return r.ok ? undefined : (r as { refusal_reason: string }).refusal_reason;
+    };
+    const nowS = Math.floor(Date.now() / 1000);
+    // Beyond either bound of the asymmetric window: both were inside the old symmetric 300 s one.
+    expect(await refusal(await popFor(token, { iat: nowS + 90 }))).toBe("txn_cnf_mismatch");
+    expect(await refusal(await popFor(token, { iat: nowS - 260 }))).toBe("txn_cnf_mismatch");
+    // Inside it, just within each bound: accepted, and the cache is now full.
+    const ahead = await popFor(token, { iat: nowS + 50 });
+    expect(await refusal(ahead)).toBeUndefined();
+    expect(await refusal(await popFor(token, { iat: nowS - 230 }))).toBeUndefined();
+    // A new proof at the bound: the replay state is unavailable, a pre-decision refusal.
+    expect(await refusal(await popFor(token))).toBe("state_unavailable");
+    // A seen proof is still a replay, full or not.
+    expect(await refusal(ahead)).toBe("txn_cnf_mismatch");
   });
 
   it("authorizes the challenged operation alone, never another tool (@spec txn-authorization#transaction-token)", async () => {

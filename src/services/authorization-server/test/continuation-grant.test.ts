@@ -36,6 +36,7 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import { TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import {
   AuthorityNarrowedToEmptyError,
@@ -337,6 +338,9 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
   return res;
 }
 
+/** The token endpoint's DPoP replay cache, switchable to full (#1173). */
+const replay = switchableDpopReplay();
+
 beforeAll(async () => {
   caiKeys = await generateKeyPair("ES256", { extractable: true });
   const caiPub = { ...(await exportJWK(caiKeys.publicKey)), kid: "cai-key", alg: "ES256", use: "sig" };
@@ -366,6 +370,8 @@ beforeAll(async () => {
   });
 
   as = await buildAuthorizationServer({
+    // @spec #1173 (D375): switchable to full for the cache-bound cases.
+    dpopProofReplay: replay,
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     // Further token-exchange clients, so a hop can be continued by an actor
@@ -408,6 +414,38 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const grant = decodeJwt(body.access_token as string) as { iat: number; exp: number };
     expect(grant.exp).toBeLessThanOrEqual(missionExp);
     expect(grant.exp - grant.iat).toBeLessThan(300);
+  });
+
+  // @spec RFC 9449 Section 11.1 (#1173, D375): at the replay cache's bound.
+  it("at the replay cache's bound refuses a new key proof temporarily_unavailable with Retry-After, and keeps a seen proof a replay", async () => {
+    const { handle } = newLineage("apev-dpop-capacity");
+    let accepted = "";
+    const ok = await tokenExchange({
+      subjectToken: await mintICA(handle),
+      makeProof: async (extra) => {
+        accepted = await dpopProof(`${ISSUER}/token`, "POST", extra);
+        return accepted;
+      },
+    });
+    expect(ok.status).toBe(200);
+    replay.full = true;
+    try {
+      const label = "a new proof";
+      const res = await tokenExchange({ subjectToken: await mintICA(handle) });
+      const body = (await res.json()) as { error?: string; access_token?: string };
+      expect(res.status, `${label}: ${JSON.stringify(body)}`).toBe(503);
+      expect(body.error, label).toBe("temporarily_unavailable");
+      expect(res.headers.get("retry-after"), label).toBe(String(SWITCHED_RETRY_AFTER_S));
+      expect(body.access_token, label).toBeUndefined();
+      const replayed = await tokenExchange({ subjectToken: await mintICA(handle), makeProof: async () => accepted });
+      const replayedBody = (await replayed.json()) as { error?: string; error_description?: string };
+      expect(replayed.status, "a seen proof").toBe(400);
+      expect(replayedBody.error, "a seen proof").toBe("invalid_dpop_proof");
+      expect(replayedBody.error_description, "a seen proof").toContain("replayed");
+    } finally {
+      replay.full = false;
+    }
+    expect((await tokenExchange({ subjectToken: await mintICA(handle) })).status).toBe(200);
   });
 
   // @spec RFC 9449 Section 4.3 (#1173): rule 5's key proof is complete and fresh.
