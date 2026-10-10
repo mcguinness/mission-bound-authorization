@@ -105,10 +105,10 @@ defines nothing those documents already define.
 | Side | Change |
 | --- | --- |
 | Company AS | Accept `mission_intent`, `authorization_details`, and the PAP `session_id` through PAR at Direct Sign-In. Bind the Session into the authorization transaction. Render the task and its authority on the existing consent page. Store the Mission. Issue a Mission-bound Account Token. Gate refresh on Mission state. Issue JWT access tokens or offer introspection. |
-| Company APIs, MCP, Company Agent | Under a Mission Session Token, propose and never perform. Existing scope checks already refuse direct writes, because the token never carries `poppy:write`. |
+| Company APIs, MCP, Company Agent | Under a Mission Session Token, propose and never perform. Existing scope checks already refuse direct writes, because the token never carries `poppy:write` or any other write-capable scope. |
 | Company operations endpoint | Check the carried authority at read, confirm, and cancel (Section 3.7). Admit confirmations in the same transaction as the Mission state check. Record the Mission in `confirmation`. |
 | Company account settings | List the agent's active Missions, each with its goal and a revoke control. |
-| Personal Agent | Discover the extension. Sign in with PAR for each task. Keep each task's credential in the trusted runtime, not the model. Stop when the Company lacks the extension. Confirm with `standing_permission`, or with `user` when the operation requires it. Revoke the Mission when the task ends. |
+| Personal Agent | Discover the extension. Sign in with PAR for each task, on a Session of its own. Keep each task's credential in the trusted runtime, not the model. Stop when the Company lacks the extension. Confirm with `standing_permission`, or with `user` when the operation requires it. Revoke the Mission when the task ends. |
 
 ### 3.2 Flow
 
@@ -170,6 +170,20 @@ The Company lists the extension in `poppy.json` beside `operations`:
   endpoint fails such an entry closed. Resource-access defines `false` as
   equivalent to omission, so the AS grants an entry carrying `false`
   without the key. That removes nothing the entry granted.
+- Each governed action has a **contract version**: the documented meaning
+  of the action and the complete set of `terms` keys that describe its
+  effects.
+  - The AS records in the Mission Record the version of each governed
+    action current at the approval event.
+  - The operations endpoint evaluates a confirmation against the recorded
+    version. It refuses with `insufficient_authority` a revision whose
+    `terms` carry a key outside that version's set, or that the Company can
+    perform only under a different version.
+  - A changed contract needs a new Mission.
+
+  The version stays in the Company's own Mission Record, so nothing changes
+  on the wire. The alternative would put it in `authorization_details`,
+  through versioned action identifiers such as `exchange.v1.confirm`.
 - Each action `a` yields three action identifiers on the operations
   resource: `a.read`, `a.confirm`, and `a.cancel`. An entry can name them
   separately or as the family `a.*`.
@@ -280,8 +294,8 @@ signs in themselves (Spec 4.4).
 
 The code exchange is PAP's, with one added check. The pushed request
 carries the PAP `session_id`. At PAR, the AS checks that the Session belongs
-to the authenticated client and binds the Session into the authorization
-transaction. At redemption, it refuses with `invalid_grant` any `session_id`
+to the authenticated client and is free for this Mission (Section 3.5), and
+binds the Session into the authorization transaction. At redemption, it refuses with `invalid_grant` any `session_id`
 that differs from the pushed one.
 
 This closes the redemption half of G8: a code redeems only into the Session
@@ -312,36 +326,52 @@ PAP's sign-in response, plus core's members:
 - The `refresh_token` is a Mission Account Token. It is added beside any
   ordinary Account Token the agent holds and replaces nothing, so the
   step-up replacement rule of Spec 4.4 does not apply.
-- It is already sender-constrained, which is what core requires of
-  Mission-bound refresh tokens (sender-constrained or rotated). PAP accepts
-  an Account Token only from the `client_id` it was issued to, authenticated
-  by `private_key_jwt` (Spec 4.8). RFC 9449 Section 5 names this
-  client-authentication binding as the sender constraint for a confidential
-  client's refresh token. Rotation stays optional (Spec 4.8).
+- It is sender-constrained under RFC 9449 Section 5, which treats an
+  authenticated confidential client's refresh token as bound by client
+  authentication. PAP accepts an Account Token only from the `client_id` it
+  was issued to, authenticated by `private_key_jwt` (Spec 4.8). Whether
+  that satisfies core's rule (sender-constrained or rotated) is #1204. A
+  Company that wants no doubt until it is settled rotates the token, which
+  PAP permits (Spec 4.8).
 - No credential outlives `mission_expires_at`, per core.
 - Session Tokens stay opaque to the agent (Spec 4.2). Core profiles two
   forms of Mission-bound access token: an RFC 9068 JWT, or an opaque token
   whose AS offers introspection (core's introspected-consumption mode). PAP
   lets the Company choose either, since the agent never reads the token. A
   Company that resolves opaque tokens only from its own records, with no
-  introspection offered, is outside core as written. Section 6.2 proposes
-  the clarification that would admit it.
-- Governance rides the token, not the Session. A Session renewed with an
-  ordinary Account Token gets ordinary tokens. Agents should still use a
-  separate Session per Mission, for clarity.
+  introspection offered, is outside core as written. #1203 (Section 6.2)
+  asks for the clarification that would admit it.
+- **A Session serves at most one Mission, and a Mission may have several
+  Sessions.**
+  - At PAR, the AS refuses with `invalid_session` a `session_id` already
+    bound to a different Mission, or signed in through an ordinary Account
+    Token.
+  - At the token endpoint, it refuses with `invalid_session` two
+    combinations: a Mission Account Token presented with a Session bound to
+    a different Mission, and an ordinary Account Token presented with a
+    Session bound to a Mission.
+
+  `invalid_session` is PAP's existing error (Spec 4.8). Because grant types
+  never mix on one Session:
+  - revoking one Mission's Account Token signs out only that Mission's
+    Sessions (Spec 4.9);
+  - a browser joined to a Mission Session resolves to exactly one Mission.
 
 ### 3.6 Proposals under a Mission token
 
 Proposals are unchanged from Ops 4: an existing endpoint, MCP tool, or the
-Company Agent proposes an operation. The extension adds two rules:
+Company Agent proposes an operation. A Mission Session Token carries no
+write-capable scope, whether `poppy:write` or one the Company defines (Spec
+4.4). The extension adds two rules:
 
 1. Under a Mission Session Token, the Company proposes and never performs. A
-   proposal has no effect, so proposing needs no `poppy:write`. The Company
+   proposal has no effect, so proposing needs no write-capable scope. The Company
    returns a proposal only if the token may read it (`decide(op, token,
    op.action + ".read", now)`, Section 3.7); otherwise it refuses with
    `mission_denial="insufficient_authority"` and discards the proposal.
 2. An endpoint that only executes directly refuses with `insufficient_scope`,
-   as it already does for a token without `poppy:write`.
+   as it already does for a token without `poppy:write` or any other
+   write-capable scope.
 
 Rule 2 gives the no-direct-execution property without a dedicated proposal
 endpoint, so G6 cannot bite an agent holding only a Mission token. It also
@@ -371,10 +401,13 @@ confirm(op, token, body):
   if token has no Mission:
     if body.approved_by == "standing_permission" and policy.missions_required:
       refuse 403 user_approval_required                        # existing Ops 9 error
-    check poppy:write as PAP does; continue as PAP
+    check the action's write scope as PAP does (Ops 5.2 check 2); continue as PAP
 
   else:
     C = decide(op, token, op.action + ".confirm", now)
+    v = the contract version the Mission Record holds for op.action
+    if op needs a version other than v, or op.terms has a key outside v's set:
+      refuse 403 insufficient_scope, mission_denial="insufficient_authority"
 
   in one transaction that locks the Mission record:            # revocation takes the same lock
     t = now                                                    # the admission instant; becomes confirmed_at
@@ -385,6 +418,9 @@ confirm(op, token, body):
         refuse 401 invalid_token
       if no entry in C holds time_window at t:
         refuse 403 insufficient_scope, mission_denial="insufficient_authority"
+    recheck at t the Company's eligibility rules that depend on mutable
+      state, such as one exchange per order item; if one fails, the
+      operation fails under the Company's business rules, with no effect
     record confirmation at t (with mission), move to in_progress
   perform once                                                 # Ops 5.2, 6
 
@@ -441,6 +477,14 @@ holds(key, value, op, t):
   confirm that waits on the lock past a bound is refused. Once the Company
   acknowledges a revocation, it admits no further confirmation under that
   Mission.
+
+  The same transaction rechecks the Company's own eligibility rules that
+  depend on mutable state, such as one exchange per order item. When two
+  operations race on such a rule, at most one is admitted.
+- **The approved contract governs.** A confirmation is evaluated against the
+  contract version the Mission Record holds for the action (Section 3.3).
+  A revision that adds a `terms` key outside that version, or that needs a
+  newer version, is refused, even when every listed constraint holds.
 - **Read and cancel need the same check.** Under a Mission token, `GET
   {endpoint}/{operation_id}` requires `decide(op, token, op.action +
   ".read", now)`, and cancel requires `decide(op, token, op.action +
@@ -502,8 +546,10 @@ Afterward:
 - Operations confirmed before the end continue (Ops 5.2). Authority was
   checked at the commit point.
 - The Mission's tokens no longer read or cancel anything. To track or stop
-  those operations, an ordinary signed-in Session follows PAP's rules (Ops
-  3.2). That is recovery under the account's own authority, not Mission
+  those operations, a separate, ordinary signed-in Session follows PAP's
+  rules (Ops 3.2).
+- Other Missions are unaffected. Their Sessions were never shared with this
+  one (Section 3.5). That is recovery under the account's own authority, not Mission
   authority.
 
 ### 3.9 Channels
@@ -513,7 +559,7 @@ Afterward:
 | OpenAPI | Proposals under a Mission token. Direct-execution endpoints refuse. |
 | MCP | Bearer tokens are per MCP server (Spec 4.3), so each MCP server the task uses needs its own read entry. Tools propose operations. Confirmation happens at the DPoP operations endpoint. |
 | Conversations | The Company Agent proposes. A message never confirms (Ops 4.3). |
-| Web | A browser joined to a Mission Session is treated as signed out, unless the website enforces the same scopes as the APIs and confirms only through the Section 3.7 check and admission. A User who confirms in their own browser, signed in to their own account, acts on their own authority, outside the Mission. |
+| Web | A browser joined to a Mission Session resolves to that one Mission (Section 3.5). It is treated as signed out, unless the website enforces the same scopes as the APIs and confirms only through the Section 3.7 check and admission. A User who confirms in their own browser, signed in to their own account, acts on their own authority, outside the Mission. |
 
 ### 3.10 What the agent developer writes
 
@@ -521,7 +567,8 @@ Afterward:
 company = discover(domain)                         # poppy.json + AS metadata (Spec 3)
 if company does not list both "operations" and "karlmcguinness.com/mission":
     tell the User the Company cannot hold this task's limits; stop
-cred = sign_in_with_mission(company, goal, entries)   # PAR + Direct Sign-In
+session = start_session(company)                   # signed-out; one Session per Mission (3.5)
+cred = sign_in_with_mission(company, session, goal, entries)   # PAR + Direct Sign-In
 task.credential = cred                             # trusted runtime; the model never picks it
 
 op = call(cred, POST /orders/ord_7Hk2/exchanges, ...)   # 202 + operation; cred cannot execute
@@ -542,7 +589,7 @@ Intent must not submit the same authority as bare `scope` or
 nor otherwise established. It surfaces the inability instead.
 
 Stopping also keeps any ordinary credential the agent holds out of the task.
-That is this profile's rule, not core's.
+That is this profile's rule, not core's (#1205).
 
 The User may separately choose to run an ordinary PAP workflow instead. That
 is a different authorization, outside this profile:
@@ -568,6 +615,8 @@ what is done under a Mission token.
 | The Company holds its own record of what the User approved, on its own page, and when | Company AS (core Mission Record) |
 | After the Company acknowledges a revocation, it admits no further confirmation and issues no further token under that Mission. No confirmation is admitted after the Mission's or the operation's `expires_at`, or outside a covering `time_window`. | Confirmation admitted in one transaction with the state check, serialized with revocation on the Mission record and judged at its commit instant; core issuance gating |
 | A chargeable action is confirmed only within a money bound, and an action listed without one is never charged | AS refuses an uncapped `a.confirm` entry; confirm check on the total charge |
+| A confirmation is held to the action contract the User approved; a changed contract needs a new Mission | Contract version recorded in the Mission Record; confirm check |
+| Revoking one Mission never signs out another Mission's Session or changes what its browser may do | One Session per Mission, enforced with `invalid_session` (Section 3.5) |
 | One task's credential cannot read, confirm, or cancel another task's operations beyond its own Mission | Authority check |
 | The planner cannot choose a broader task credential | Agent's trusted runtime. The Company cannot verify this. |
 
@@ -575,7 +624,7 @@ what is done under a Mission token.
 | --- | --- | --- |
 | Cumulative limits (count, total spend) | Two operations under one Mission can each commit if each fits. Narrow entries, such as order and item equality, limit this in practice. | Mission Metering (`max_calls`, `max_budget`) |
 | Verified per-revision User approval | `approved_by: "user"` stays on trust (Ops 8). An entry with `requires_action_approval: true` is refused rather than satisfied by it. | Mission Transaction Authorization, or another action-bound approval hosted by the Company |
-| Device Sign-In and Mediated Sign-In | Agents without a redirect cannot create Missions. Mediated Sign-In has no Company-rendered approval, so it stays out. | Core issue: Intent carriage on the RFC 8628 request (Section 6.2) |
+| Device Sign-In and Mediated Sign-In | Agents without a redirect cannot create Missions. Mediated Sign-In has no Company-rendered approval, so it stays out. | #1202: Intent carriage on device sign-in (Section 6.2) |
 | Conditions outside `terms` | Only `terms` and Common Constraints are checked. Summary prose is not. | Ops 3 already requires every effect in `terms` when present. A Company governing an action puts its conditions there. |
 | Other credentials the agent holds | An ordinary write-capable token, whether `poppy:write` or a narrower Company write scope, is not bounded by any Mission. It can confirm with `approved_by: "user"` on the agent's word (T11). | Company policy: issue agents no write-capable scope of any kind for the governed actions, so every agent write to them goes through a Mission |
 | Missions across Companies | Each Company sees only its own Mission. Aggregate limits are the agent's job. | Cross-Domain companion, opt-in, at the cost of correlation (Section 5) |
@@ -583,14 +632,16 @@ what is done under a Mission token.
 The profile claims no assurance level beyond Baseline Issuance. It adds two
 capabilities on top:
 
-- **A state check at confirm, serialized with revocation**, the freshness
-  half-step the architecture describes.
+- **A state check at confirm, serialized with revocation.** It fits the
+  Architecture's freshness half-step once the clause #1203 proposes lands.
+  Today the Architecture names only Mission Status and introspection with a
+  published staleness bound.
 - **Enforcement of the carried authority at one resource server**, the
   operations endpoint, for actions that go through operations.
 
 It does not claim Runtime-Enforced. It has no PDP, no permits, and no
 runtime evidence, and paths outside operations are covered only by the
-absence of `poppy:write`.
+absence of `poppy:write` or any other write-capable scope.
 
 ## 5. Disposition of Draft 00
 
@@ -602,7 +653,7 @@ should be narrowed to Section 3. Three findings drive this.
    Companies propose from the channels that already exist (Ops 4) and
    deduplicates by operation ID (Ops 6). The draft's goal, never executing
    when the agent meant to propose, is met by a Mission token that never
-   carries `poppy:write` (Section 3.6).
+   carries `poppy:write` or any other write-capable scope (Section 3.6).
 2. **It puts machinery into the first profile that PAP or core already
    supply.**
    - `parameter_digest`: PAP revisions are immutable and held by the Company.
@@ -630,7 +681,7 @@ should be narrowed to Section 3. Three findings drive this.
 | `mas_join` mode | Remove | Nothing for PAP. A PAP Company already changes its AS. |
 | ARAP approval object | Defer | Verified per-revision approval (Section 4) |
 | Enforcement statement URI | Remove | Coverage is stated by the rules of Sections 3.6 and 3.9 |
-| One Mission per Session | Remove; governance rides the token | Nothing. The rule fought Spec 4.8. |
+| One Mission per Session | Retain, as one Session per Mission (Section 3.5), enforced with PAP's own `invalid_session` | Nothing. Mixing grant types on one Session made revocation and browser authority ambiguous. |
 | Cross-domain projection, ID-JAG (Section 16 of Draft 00) | Out of version 1 | Section 4 |
 | 30 conformance cases | Replace with the tests in Section 7 | Coverage of removed mechanisms only |
 | Separate proposal/read and commit entries | Retain, as `a.read`/`a.cancel` and `a.confirm` entries (Section 3.4) | Nothing |
@@ -656,17 +707,21 @@ These help PAP whether or not Mission is used.
 
 ### 6.2 To the Mission family
 
-Proposed issues. None has been filed.
+Filed; each needs a ruling.
 
-1. **Core: Intent carriage on the RFC 8628 device authorization request.**
-   PAR exists to keep the Intent off the front channel. The device
-   authorization request is already a client-authenticated back-channel
-   POST. Allowing it unblocks PAP Device Sign-In and headless agents
-   generally.
-2. **Core: in-house introspected consumption.** Clarify whether an estate
-   whose AS and resource servers are one deployment satisfies introspected
-   consumption with an internal lookup. If it does, opaque Mission-bound
-   tokens need no public RFC 7662 endpoint.
+1. **#1202, Intent carriage on device sign-in.** An Intent travels only
+   through PAR, so RFC 8628 device authorization cannot create a Mission.
+   The device request is a back-channel POST, but it is no more
+   client-authenticated than PAR. Recommended route: a companion draft,
+   plus one hook in core.
+2. **#1203, in-house introspected consumption.** Recommended: an in-house
+   read of the issuer's state counts. The commit-point check needs one
+   clause in the Architecture's existing freshness wording, not a new name.
+3. **#1204, refresh-token sender constraint.** Section 3.5 relies on client
+   authentication counting.
+4. **#1205, ordinary credentials.** Downgrade by Omission does not cover a
+   client that does the task with an ordinary token it holds. Section
+   3.10's rule is this profile's own.
 
 ## 7. Decisive tests
 
@@ -687,10 +742,13 @@ otherwise.
 | T9 | An authority proposal whose `exchange.confirm` entry carries `requires_action_approval: false` | Sign in, then confirm a covered revision with `standing_permission` | The granted `authorization_details` echoes the entry without the key, because `false` is the same as absent. The confirm returns `200`. |
 | T10 | The Company lists `operations` but not the extension | The agent starts the Mission workflow | The agent makes no action call and tells the User why. It submits the authority neither as bare `scope` nor as `authorization_details`. |
 | T11 | An operation proposed under the Mission token at 90.00 USD; the agent also holds an ordinary signed-in credential | Confirm with the ordinary credential and `approved_by: "user"` | (a) Where the Company issues agents any write-capable scope for the action (`poppy:write` or a narrower Company scope): `200` as an ordinary PAP confirmation, with no `confirmation.mission`. The label is the agent's assertion (Ops 8), and the record does not attribute the confirmation to the Mission. (b) Where the Company issues agents no write-capable scope of any kind for the governed actions: no such credential exists, so the confirm cannot happen. |
-| T12 | Two open operations for the same exchange (two operation IDs) proposed in two channels | Confirm both under the Mission token | Required: each operation is performed at most once, and each admitted confirmation carries `confirmation.mission`. Documented, not required: the Mission alone does not refuse the second (Section 4); only the Company's business rule or Metering (`max_calls` of 1 on `exchange.confirm`) does. |
+| T12a | Two open operations for the same exchange (two operation IDs), proposed in two channels; the Company relies on a one-exchange-per-item rule | Confirm both concurrently under the Mission token | Exactly one is admitted and performed once, carrying `confirmation.mission`. The other has no effect. |
+| T12b | The same two operations; the Company has no such rule | Confirm both under the Mission token | Required: each is performed at most once. Documented, not required: both may be admitted, because the Mission alone does not count them (Section 4). Only Metering's `max_calls` of 1 on `exchange.confirm` refuses the second. |
 | T13 | The agent's browser is joined to the Mission Session, and the website offers confirmation (Ops 4.4) | Confirm on the website and, concurrently, at the endpoint | Either the website treats the browser as signed out and offers no confirmation, or it runs the Section 3.7 check and admission. No confirmation is admitted outside the Mission. The action is performed at most once across both channels. |
 | T14 | (a) Revision 2 of the exchange adds a 10.00 USD fee to 70.00 USD. (b) A `return` operation, an action listed without `max_amount`, gains a 5.00 USD restocking fee in revision 2. | Confirm each with `standing_permission` | (a) `403`, `insufficient_authority`: the total charge, 80.00 USD, exceeds the cap. (b) `403`, `insufficient_authority`: an action listed without `max_amount` carries no charge. No effect in either case. |
 | T15 | A confirm waits on the Mission lock, held by a concurrent writer, while (a) the Mission's `expires_at`, (b) the operation's `expires_at`, or (c) the covering entry's `time_window` end passes | Release the lock | (a) `401 invalid_token`. (b) The operation is returned as it is, `expired`, with no confirmation. (c) `403`, `insufficient_authority`. No effect in any case. Every admitted confirmation's `confirmed_at` precedes the bound. |
+| T16 | The jacket Mission is approved under `exchange` contract v1. The Company then deploys v2, which adds a `protection_plan` term with a monthly charge. | Propose the exchange under v2, then confirm with `standing_permission` under the Mission token | `403`, `insufficient_authority`; the operation stays `proposed`. A new Mission approved under v2 confirms it. |
+| T17 | Missions A (the jacket exchange) and B (returning `itm_9Zp`), for the same client, User, and account | (a) Sign in B with A's `session_id`. (b) With separate Sessions, revoke A in settings, then repeat the case with RFC 7009 revocation. | (a) `invalid_session`. (b) A's Session is signed out and its tokens fail. B's Session and tokens keep working, and B's return confirms with `200`. |
 
 ## 8. Adoption path
 
