@@ -1062,10 +1062,15 @@ harness the one layer that can apply a taint rule against the case
 where untrusted content drives an agent to exfiltrate within its
 authority.
 
-Taint is classed by source. Content from the Subject or the Approver
-does not taint; the deployment's **content trust list** extends that
-baseline to the sources it vouches for, such as first-party tools, its
-own catalogs, and designated corpora. Content from an unlisted source,
+Taint is classed by source. Content from the Approver, or from the
+delegating person of a user-delegated Mission, does not taint; the
+deployment's **content trust list** extends that baseline to the
+sources it vouches for, such as first-party tools, its own catalogs,
+and designated corpora. No content is trusted solely because its
+source is the Subject: a workload or organizational Subject
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority
+Sources"), which can be the governed agent's own principal, confers
+no baseline trust. Content from an unlisted source,
 or from a source the deployment explicitly marks untrusted (web
 fetches, inbound messages, third-party documents), is **tainted**.
 
