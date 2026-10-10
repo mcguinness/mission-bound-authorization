@@ -1254,9 +1254,12 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
 
   it("revoke Mission -> a new async-delegation exchange is refused invalid_request, opening no family and counting no derivation (@spec mission#issuance-gating, #1154)", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // The handle is taken while the Mission is active; the async exchange then
+    // presents it after the revocation.
+    const handle = await delegationHandle(baseAccessToken);
     as.kernel.transition(missionId, "revoke");
     const countBefore = as.kernel.get(missionId)?.derivation_count;
-    const res = await asyncDelegate(baseAccessToken);
+    const res = await asyncDelegate(handle, { rawSubject: true });
     const body = (await res.json()) as { error?: string; access_token?: string; refresh_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     // The exchange refuses invalid_request; a refresh of a family opened before
@@ -1270,9 +1273,12 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
 
   it("a Mission at its derivation limit refuses a new async-delegation exchange with invalid_grant, a limit and not a lifecycle refusal, opening no family (@spec derivation-limits, mission#issuance-gating, #1154)", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
+    // The handle request is itself a counted derivation, so the limit is set
+    // after it: the async exchange is the derivation the limit refuses.
+    const handle = await delegationHandle(baseAccessToken);
     const count = as.kernel.get(missionId)?.derivation_count as number;
     as.kernel.db.prepare("UPDATE missions SET derivation_limit = ? WHERE id = ?").run(count, missionId);
-    const res = await asyncDelegate(baseAccessToken);
+    const res = await asyncDelegate(handle, { rawSubject: true });
     const body = (await res.json()) as { error?: string; refresh_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_grant");
