@@ -361,7 +361,12 @@ Table of Contents
    task's lifetime, ordinary machine-to-machine service credentials
    among them; those use OAuth unchanged.  The boundary is that lifetime
    equality, not the absence of a human: a workload's durable multi-step
-   task is in scope as a service-owned Mission (Section 6.2).
+   task is in scope as a service-owned Mission (Section 6.2).  The
+   direct realization creates each Mission at an approval interaction on
+   the authorization endpoint;
+   [I-D.draft-mcguinness-mission-architecture] (Section "Mission
+   Creation Paths") maps the paths where an administrator, or a policy a
+   human consented to, decides without one.
 
    A Mission is intended to cover one concrete task, not an agent's
    whole lifetime: narrow, per-task Missions, each separately approved
@@ -2598,16 +2603,17 @@ Table of Contents
    5.  each token's exp does not exceed the Mission's expires_at
        (Section 10).
 
-   Unless the referenced Mission is active, the AS MUST refuse, with the
-   invalid_grant error code, a request to derive a token at the token
-   endpoint, on refresh, or on Token Exchange ([RFC8693]).  The AS MUST
-   refuse, with the invalid_grant error code, a derivation request it
-   answers after it has acknowledged a revocation of the Mission.  Where
-   a profile of a Token Exchange that the AS implements assigns its own
-   error code to either refusal, such as a continuation profile's code
-   for an ended chain, the AS uses that profile's code instead of
-   invalid_grant; the refusal itself, and the mission_error member
-   below, still apply.
+   Unless the referenced Mission is active, the AS MUST refuse a request
+   to derive a token at the token endpoint: a Token Exchange ([RFC8693])
+   with the invalid_request error code (Section 2.2.2 of [RFC8693]), and
+   any other grant, refresh included, with the invalid_grant error code.
+   The AS MUST refuse a derivation request it answers after it has
+   acknowledged a revocation of the Mission, with the same error code.
+   Where a profile of a Token Exchange that the AS implements assigns
+   its own error code to either refusal, such as a continuation
+   profile's code for an ended chain, the AS uses that profile's code
+   instead; the refusal itself, and the mission_error member below,
+   still apply.
 
    A derivation is one issuance operation the issuer AS performs for a
    single request: the initial authorization-code exchange, a refresh, a
@@ -2616,7 +2622,7 @@ Table of Contents
    profile bounds the number of derivations under a Mission
    ([I-D.draft-mcguinness-oauth-mission-derivation-limits]).
 
-   invalid_grant alone does not tell a client which gate refused.  On a
+   The error code alone does not tell a client which gate refused.  On a
    refusal under this section the AS SHOULD include, alongside error,
    the mission_error token-error-response member (Section 22) with one
    of the values revoked, expired, or superseded (where a companion
@@ -3311,8 +3317,10 @@ Table of Contents
    |max_age, or a well-formed request (including configured-  |                                                |applies          |
    |mapping mode) is refused by AS policy                     |                                                |                 |
    +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Token endpoint: the Mission is terminated (revoked,       |invalid_grant (Section 5.2 of [RFC6749]), or the|mission_error    |
-   |expired, superseded, or another termination reason)       |code a Token Exchange profile assigns           |(Section 22)     |
+   |Token endpoint: the Mission is terminated (revoked,       |invalid_request on a Token Exchange             |mission_error    |
+   |expired, superseded, or another termination reason)       |(Section 2.2.2 of [RFC8693]), invalid_grant     |(Section 22)     |
+   |                                                          |(Section 5.2 of [RFC6749]) on any other grant,  |                 |
+   |                                                          |or the code a Token Exchange profile assigns    |                 |
    |                                                          |(Section 9.2)                                   |                 |
    +----------------------------------------------------------+------------------------------------------------+-----------------+
    |Token endpoint: the requested RAR subset exceeds the      |invalid_authorization_details (Section 6 of     |safe detail      |
@@ -6612,6 +6620,13 @@ Appendix G.  Document History
 
    -01
 
+   *  Issuance Gating refuses a derivation from a Mission that is not
+      active with invalid_request on a Token Exchange, as Section 2.2.2
+      of RFC 8693 requires for an unacceptable subject token, and with
+      invalid_grant on every other grant, refresh included.  A Token
+      Exchange profile's own code and the mission_error diagnostic are
+      unchanged (#1154).
+
    *  Mission lifecycle: the states are active and terminated, and a
       terminated Mission carries a termination object whose reason comes
       from a new Mission Termination Reasons registry, seeded with
@@ -6639,6 +6654,10 @@ Appendix G.  Document History
       the defined Mission-aware Resource Server, Mission Issuer, Mission
       Client and Resource AS keep their capitals.  No requirement
       changes.
+
+   *  Applicability points to the architecture's map of Mission creation
+      paths, including a Mission for an agent acting on its own
+      authority (#1186).  No requirement changes.
 
    *  Mission Intent: an informative summary table gives each member,
       whether it is required, and what the AS does with it, after a

@@ -93,6 +93,7 @@ Table of Contents
    7.  The Mission Verbs
      7.1.  Propose
      7.2.  Approve and Record
+       7.2.1.  Mission Creation Paths
      7.3.  Govern
      7.4.  Enforce Each Action
      7.5.  Run and Wind Down
@@ -1399,6 +1400,91 @@ Table of Contents
    decision, per the progressive profile's prohibited set
    ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
+7.2.1.  Mission Creation Paths
+
+   Each Mission's creation answers three questions: whose authority it
+   draws on (authority_source), who decides and when (approval_basis),
+   and how the request reaches the Mission Issuer.  An agent with no
+   delegating user holds a service_owned Mission, drawing on its own
+   provisioned authority, or an organizational Mission, drawing on a
+   governed policy; its Subject is a workload or organizational
+   principal, never a person.  Client authentication or a workload
+   identity system says who the agent is; the Mission records which task
+   it may perform.
+
+   +==============+==================+===================+=============+
+   |Situation     | Whose authority  | Who decides       |How the      |
+   |(home)        |                  |                   |request      |
+   |              |                  |                   |arrives      |
+   +==============+==================+===================+=============+
+   |A user        | the user's       | that user, at the |the          |
+   |approves an   | (user_delegated) | approval event    |authorization|
+   |agent's task  |                  |                   |endpoint     |
+   |(oauth-       |                  |                   |             |
+   |mission)      |                  |                   |             |
+   +--------------+------------------+-------------------+-------------+
+   |An            | the agent's      | the               |the          |
+   |administrator | (service_owned)  | administrator, at |authorization|
+   |approves an   | or a governed    | the approval      |endpoint, or |
+   |agent's own   | policy's         | event             |a pending    |
+   |task (oauth-  | (organizational) |                   |request      |
+   |mission with  |                  |                   |resolved     |
+   |oauth-        |                  |                   |later with no|
+   |mission-      |                  |                   |user present |
+   |approval, or  |                  |                   |             |
+   |mission-      |                  |                   |             |
+   |authority-    |                  |                   |             |
+   |server)       |                  |                   |             |
+   +--------------+------------------+-------------------+-------------+
+   |A policy      | the source       | a dispatch        |one token    |
+   |approves each | retained at      | policy, within a  |request from |
+   |run of a      | template consent | template a human  |a listed     |
+   |recurring     |                  | consented to once |dispatcher   |
+   |task (oauth-  |                  |                   |             |
+   |mission-      |                  |                   |             |
+   |template,     |                  |                   |             |
+   |experimental) |                  |                   |             |
+   +--------------+------------------+-------------------+-------------+
+   |An agent      | the Parent       | a fresh human     |a child-     |
+   |starts a sub- | Mission's        | approval, or the  |creation     |
+   |agent (oauth- |                  | parent's          |token        |
+   |mission-      |                  | delegation policy |exchange     |
+   |child-        |                  | (policy_drawdown) |             |
+   |delegation)   |                  |                   |             |
+   +--------------+------------------+-------------------+-------------+
+
+                      Table 3: Mission creation paths
+
+   The administrator's authority to approve for that Subject and to
+   activate that source is checked at approval steps 2 and 3 of the
+   OAuth binding ([I-D.draft-mcguinness-oauth-mission], Section "Mission
+   Approval").  The record excerpt below, other members omitted, shows
+   the administrator row: subject and client_id name the agent, and
+   consent_principal names the administrator.
+
+   {
+     "subject": {
+       "iss": "https://login.example.com",
+       "sub": "agt_ledger_reconciler"
+     },
+     "client_id": "ledger-reconciler",
+     "authority_source": { "type": "service_owned" },
+     "approval_basis": {
+       "type": "direct",
+       "consent_principal": {
+         "iss": "https://login.example.com",
+         "sub": "adm_4Hq9Tz"
+       },
+       "activation": { "approval_event_id": "ape_2Lw7Kq9Rv4" },
+       "activation_actor": {
+         "iss": "https://login.example.com",
+         "sub": "adm_4Hq9Tz"
+       },
+       "root_commitment":
+         "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQo"
+     }
+   }
+
 7.3.  Govern
 
    Question:  How do consumers observe Mission state, and how does
@@ -2079,7 +2165,7 @@ Table of Contents
        |                           | admission                     |
        +---------------------------+-------------------------------+
 
-                  Table 3: Derivation modes by portability
+                  Table 4: Derivation modes by portability
 
    A deployment seeking interoperable authority uses narrowing; a model-
    assisted extension stays local policy unless a profile pins it with a
@@ -2253,7 +2339,7 @@ Table of Contents
    |              |                        |                |analysis      |
    +--------------+------------------------+----------------+--------------+
 
-          Table 4: Substrate primitives in their OAuth realization
+          Table 5: Substrate primitives in their OAuth realization
 
    The anchors in the envelope row are *commitment anchors*, not
    enforcement proofs (Section 9.2).  A resource server holding a
@@ -2521,7 +2607,7 @@ Table of Contents
    |            |         |          |              |              |Status       |
    +------------+---------+----------+--------------+--------------+-------------+
 
-               Table 5: How the binding architectures differ
+               Table 6: How the binding architectures differ
 
    A MAS deployment that holds the same Mission as an AS deployment does
    not thereby provide AS-native semantics, so a comparison of
@@ -2638,7 +2724,7 @@ Table of Contents
      | Profile     | the above                             | 12.6    |
      +-------------+---------------------------------------+---------+
 
-                         Table 6: Assurance frames
+                         Table 7: Assurance frames
 
    The levels are *adoption bundles*: named sets of the documents a
    deployment runs, so a deployment, a procurement, or a review can cite
@@ -2832,7 +2918,7 @@ Table of Contents
      |                  | approval                                  |
      +------------------+-------------------------------------------+
 
-            Table 7: What each level makes defensible to grant
+            Table 8: What each level makes defensible to grant
 
    The mapping is informative: the action classes are the runtime
    profile's ([I-D.draft-mcguinness-mission-runtime]), resource policy
@@ -3022,7 +3108,7 @@ Table of Contents
    |                            | projection     |                     |
    +----------------------------+----------------+---------------------+
 
-                    Table 8: Mission binding properties
+                    Table 9: Mission binding properties
 
    The mapping join and the Mission Join Assertion are the MAS's
    ([I-D.draft-mcguinness-mission-authority-server]).
@@ -3128,7 +3214,8 @@ Table of Contents
     |           | and the credential's derivation link to it          |
     +-----------+-----------------------------------------------------+
 
-    Table 9: How the OAuth binding establishes credential-mission-bound
+      Table 10: How the OAuth binding establishes credential-mission-
+                                   bound
 
    Sender constraint is not among the six conditions.  Issuance-time key
    targeting and presentation-time proof are presenter-key-bound, a
@@ -3258,7 +3345,7 @@ Table of Contents
     | permit      |                                                   |
     +-------------+---------------------------------------------------+
 
-                    Table 10: Mission binding mechanisms
+                    Table 11: Mission binding mechanisms
 
    The property names above are stable identifiers.  A claim is a per-
    path declaration, not prose: each claimed property or composition
@@ -3335,7 +3422,7 @@ Table of Contents
     |            |                                    | controls      |
     +------------+------------------------------------+---------------+
 
-                      Table 11: The containment matrix
+                      Table 12: The containment matrix
 
    The issuer-held containment overlay is defined by
    [I-D.draft-mcguinness-oauth-mission-containment], and cascade
@@ -3508,7 +3595,7 @@ Table of Contents
    |        |(note 6)    |             |                 |             |
    +--------+------------+-------------+-----------------+-------------+
 
-      Table 12: What a capability kill stops, and what runs to its own
+      Table 13: What a capability kill stops, and what runs to its own
                                    bound
 
    Notes:
@@ -3620,7 +3707,7 @@ Table of Contents
     |              | committed facts     | facts      | none)        |
     +--------------+---------------------+------------+--------------+
 
-         Table 13: What each layer prevents, detects, and leaves
+         Table 14: What each layer prevents, detects, and leaves
 
    In each layer, the family commits and checks what a party was shown,
    decided, or did.  It does not make the human attentive, the producer
@@ -3701,7 +3788,7 @@ Table of Contents
    |               | needs it   |                                     |
    +---------------+------------+-------------------------------------+
 
-                     Table 14: Entry ramps by estate
+                     Table 15: Entry ramps by estate
 
    Grant redemption and the issuance join are defined by
    [I-D.draft-mcguinness-oauth-mission-issuance-grant].  Every row
@@ -4571,7 +4658,7 @@ Appendix B.  Comparison to a Conventional Stack
    |             |               | (Section 8)         |               |
    +-------------+---------------+---------------------+---------------+
 
-     Table 15: Where a conventional stack meets Mission standardization
+     Table 16: Where a conventional stack meets Mission standardization
 
    The OAuth binding's sections named in the table are in
    [I-D.draft-mcguinness-oauth-mission].  Past these crossovers, a
@@ -4613,7 +4700,7 @@ Appendix C.  A Worked Composition
      | PEP/PDP    |                       | routes                  |
      +------------+-----------------------+-------------------------+
 
-           Table 16: Provider claims in the worked composition
+           Table 17: Provider claims in the worked composition
 
    The runtime profile and its evidence companion supply action-time
    enforcement and decision evidence at the gateway
@@ -4688,7 +4775,7 @@ Appendix C.  A Worked Composition
       |             | gateway    | evidence                         |
       +-------------+------------+----------------------------------+
 
-                        Table 17: Composition result
+                        Table 18: Composition result
 
    AAuth supplies work continuity, the payment authority decides
    permission in its own vocabulary, and the gateway is the scoped
@@ -5040,7 +5127,7 @@ Appendix G.  Mission Document Map
         |             | defines no binding or mechanism.         |
         +-------------+------------------------------------------+
 
-                                 Table 18
+                                 Table 19
 
    *The substrate and the bindings:*
 
@@ -5087,7 +5174,7 @@ Appendix G.  Mission Document Map
     |                               | than OAuth publish Statements.  |
     +-------------------------------+---------------------------------+
 
-                                  Table 19
+                                  Table 20
 
    *Approval time:*
 
@@ -5140,7 +5227,7 @@ Appendix G.  Mission Document Map
      |                                   | instantiated Mission.     |
      +-----------------------------------+---------------------------+
 
-                                  Table 20
+                                  Table 21
 
    *Lifecycle:*
 
@@ -5211,7 +5298,7 @@ Appendix G.  Mission Document Map
     |                                 | termination.                  |
     +---------------------------------+-------------------------------+
 
-                                  Table 21
+                                  Table 22
 
    *Cross-domain projection and continuity:*
 
@@ -5241,7 +5328,7 @@ Appendix G.  Mission Document Map
    |                                    | hop.                        |
    +------------------------------------+-----------------------------+
 
-                                 Table 22
+                                 Table 23
 
    *Runtime enforcement:*
 
@@ -5289,7 +5376,7 @@ Appendix G.  Mission Document Map
    |                                         | domain decision.        |
    +-----------------------------------------+-------------------------+
 
-                                  Table 23
+                                  Table 24
 
    *Agent runtime:*
 
@@ -5309,7 +5396,7 @@ Appendix G.  Mission Document Map
     |                            | compensation after a stop.        |
     +----------------------------+-----------------------------------+
 
-                                 Table 24
+                                 Table 25
 
    *Sub-agents:*
 
@@ -5326,7 +5413,7 @@ Appendix G.  Mission Document Map
     |                                | preserved by runtime re-check. |
     +--------------------------------+--------------------------------+
 
-                                  Table 25
+                                  Table 26
 
    *Proof and portability:*
 
@@ -5359,7 +5446,7 @@ Appendix G.  Mission Document Map
    |                                         | kinds.                 |
    +-----------------------------------------+------------------------+
 
-                                 Table 26
+                                 Table 27
 
    *Security model:*
 
@@ -5377,7 +5464,7 @@ Appendix G.  Mission Document Map
       |                             | compromise costs.             |
       +-----------------------------+-------------------------------+
 
-                                  Table 27
+                                  Table 28
 
 Appendix H.  Document History
 

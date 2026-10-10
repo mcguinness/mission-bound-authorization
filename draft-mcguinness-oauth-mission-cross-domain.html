@@ -1768,7 +1768,7 @@ assertion that carries no Mission binding (<a href="#error-responses" class="aut
 <ul class="normal">
 <li class="normal" id="section-8-11.1">
           <p id="section-8-11.1.1">that the Mission is <code>active</code>, failing otherwise with
-<code>invalid_grant</code>; and<a href="#section-8-11.1.1" class="pilcrow">¶</a></p>
+<code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>); and<a href="#section-8-11.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-11.2">
           <p id="section-8-11.2.1">that the target Resource AS is authorized for the requested
@@ -2313,10 +2313,16 @@ conditions so both surfaces fail uniformly.<a href="#section-11-1" class="pilcro
 </td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">The subject token does not resolve to a Mission, or the Mission is not <code>active</code>
-</td>
+            <td class="text-left" rowspan="1" colspan="1">The subject token does not resolve to a Mission</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_grant</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">The Mission is not <code>active</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_request</code>
 </td>
           </tr>
           <tr>
@@ -3193,25 +3199,31 @@ exceeds the Mission's <code>expires_at</code>. The ID-JAG carried identity
 <p id="appendix-B-2">-01<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-3.1">
-          <p id="appendix-B-3.1.1">Introspection at a Resource AS: a non-issuer Resource AS omits
-<code>mission.termination</code> as well as <code>mission.state</code> (#705).<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.1.1">Grant issuance at the originating AS refuses a Mission that is not
+<code>active</code> with <code>invalid_request</code>, following the issuance profile's
+Token Exchange rule; redemption at the Resource AS keeps
+<code>invalid_grant</code> (#1154).<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.2">
-          <p id="appendix-B-3.2.1">Issuing the Cross-Domain Grant: the comparison with the primary
-access token names the RFC 9700 recommendation the issuance profile
-adopts; the issuance profile sets no BCP 14 level of its own there.
-No requirement changed.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.2.1">Introspection at a Resource AS: a non-issuer Resource AS omits
+<code>mission.termination</code> as well as <code>mission.state</code> (#705).<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.3">
-          <p id="appendix-B-3.3.1">Controls taxonomy retirement (#636): <code>max_derivations</code> renamed
+          <p id="appendix-B-3.3.1">Issuing the Cross-Domain Grant: the comparison with the primary
+access token names the RFC 9700 recommendation the issuance profile
+adopts; the issuance profile sets no BCP 14 level of its own there.
+No requirement changed.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.4">
+          <p id="appendix-B-3.4.1">Controls taxonomy retirement (#636): <code>max_derivations</code> renamed
 <code>derivation_limit</code> at its one normative reference (Issuing the
 Cross-Domain Grant). The Document History entry below is left
 unchanged: it is a historical record of the disclosure pattern this
 document mirrored at the time, under that pattern's then-current
-name.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+name.<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.4">
-          <p id="appendix-B-3.4.1">Reshaped Per-Domain Delegation Depth's disclosure from a flat
+        <li class="normal" id="appendix-B-3.5">
+          <p id="appendix-B-3.5.1">Reshaped Per-Domain Delegation Depth's disclosure from a flat
 <span class="bcp14">SHOULD</span> to a conditional, interface-addressed <span class="bcp14">MUST</span>, mirroring the
 child delegation profile's <code>max_derivations</code> disclosure pattern,
 and corrected the composed-bound arithmetic: the disclosed bound is
@@ -3219,18 +3231,18 @@ the sum of each distinct Resource AS domain's applicable
 <code>max_depth</code> (or a conservative per-domain maximum), not one
 per-domain <code>max_depth</code> times a flat domain count, and domains are
 counted by distinct Resource AS from the resource-to-AS mapping,
-never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
+never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.5">
-          <p id="appendix-B-3.5.1">Editorial density pass: split several overlong paragraphs (no BCP-14
+        <li class="normal" id="appendix-B-3.6">
+          <p id="appendix-B-3.6.1">Editorial density pass: split several overlong paragraphs (no BCP-14
 keyword sentence changed) and merged a duplicated sentence in
 Per-Domain Delegation Depth (the unconditional "a Resource AS of
 this document begins its delegation depth at 0" restated what the
 preceding, correctly conditioned sentence already said; the
-citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
+citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.6">
-          <p id="appendix-B-3.6.1">Added an explicit Resource AS requirement to authenticate the
+        <li class="normal" id="appendix-B-3.7">
+          <p id="appendix-B-3.7.1">Added an explicit Resource AS requirement to authenticate the
 redeeming client at redemption, distinct from the cross-domain
 grant's sender-constraint, and restated local-token client
 identification as a property-level requirement bound to that
@@ -3240,7 +3252,7 @@ the RFC 9068 case) rather than naming <code>client_id</code> directly (S-12).
 Scoped the origin-identity-carriage sentence to the Origin
 Principal profile when claimed, and separately barred reinterpreting
 the cross-domain grant's own <code>client_id</code> claim as the local
-identifier under any profile.<a href="#appendix-B-3.6.1" class="pilcrow">¶</a></p>
+identifier under any profile.<a href="#appendix-B-3.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -1500,7 +1500,7 @@ withdraws permission to continue and ends the chain
 (<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-6.2" class="relref">Section 6.2</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>).
 A refusal at this exchange uses that draft's codes
 (<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-5.5.6" class="relref">Section 5.5.6</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>),
-in place of the issuance profile's <code>invalid_grant</code>: a terminal Mission
+in place of the issuance profile's <code>invalid_request</code>: a terminal Mission
 is <code>invalid_continuation</code>, a suspended Mission is <code>unauthorized_client</code>,
 no remaining authority for the audience is <code>invalid_target</code>, and a
 derivation or hop-count limit is <code>invalid_grant</code>. The issuance
@@ -1856,39 +1856,44 @@ constrains their use and introduces none of its own.<a href="#section-11-1" clas
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Aligned with the published Identity Continuation Assertion (-02): the
+          <p id="appendix-A-2.1.1">The Identity Continuation Transport's codes replace the issuance
+profile's Token Exchange code, now <code>invalid_request</code>; the codes
+themselves are unchanged (#1154).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Aligned with the published Identity Continuation Assertion (-02): the
 transport runs among Resource Authorization Servers that trust a
 common IdP, its assertion issuer is the Continuation Assertion
 Issuer, the Mission binds the chain authorization, lifecycle anchor,
 and chain ending, single use is keyed on <code>(iss, jti)</code>, and Privacy
-Considerations notes that a chain remains correlatable (#906).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+Considerations notes that a chain remains correlatable (#906).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">The Identity Continuation Transport states the refusal codes at that
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">The Identity Continuation Transport states the refusal codes at that
 exchange, those of the Identity Continuation Assertion in place of
 the issuance profile's <code>invalid_grant</code>, as the issuance profile
 permits for a Token Exchange profile that assigns its own code. The
-<code>mission_error</code> diagnostic requirements are unchanged (#921).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+<code>mission_error</code> diagnostic requirements are unchanged (#921).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">The Identity Continuation Transport states how Mission delegation
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">The Identity Continuation Transport states how Mission delegation
 depth is counted there: over the hop's IdP-held ancestry plus the
 current actor, merging only consecutive equal actors, from the
 approved client at depth 0, with no reset, and with nothing issued
-when the ancestry is incomplete (#960).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">A dispatched Mission enters the async delegation transport through
-its selected Agent, which redeems the Template profile's Dispatch
-Handoff for a delegation handle of its own (#1158).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+when the ancestry is incomplete (#960).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">The async delegation transport's <code>subject_token</code> is a delegation
+          <p id="appendix-A-2.5.1">A dispatched Mission enters the async delegation transport through
+its selected Agent, which redeems the Template profile's Dispatch
+Handoff for a delegation handle of its own (#1158).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">The async delegation transport's <code>subject_token</code> is a delegation
 handle: its audience is the acting client and possession of its own
 key is proved at the exchange, as Section 4.3 of the async delegation
 draft requires, replacing the re-binding to the acting key. An agent
 obtains its handle with a no-actor self-exchange naming its own
-<code>client_id</code> as <code>audience</code> (#1157).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+<code>client_id</code> as <code>audience</code> (#1157).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

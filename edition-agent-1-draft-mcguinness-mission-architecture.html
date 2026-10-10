@@ -1229,6 +1229,11 @@ it names is defined by the profile it points to.<a href="#section-abstract-1" cl
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
                 <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-approve-and-record" class="internal xref">Approve and Record</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2.2.1">
+                    <p id="section-toc.1-1.7.2.2.2.1.1"><a href="#section-7.2.1" class="auto internal xref">7.2.1</a>.  <a href="#name-mission-creation-paths" class="internal xref">Mission Creation Paths</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
                 <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-govern" class="internal xref">Govern</a></p>
@@ -2958,6 +2963,96 @@ approver reading attacker-influenced proposals is itself an injection
 surface. The high-consequence classes stay on a fresh human decision,
 per the progressive profile's prohibited set
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-7.2-5" class="pilcrow">¶</a></p>
+<div id="creation-paths">
+<section id="section-7.2.1">
+          <h4 id="name-mission-creation-paths">
+<a href="#section-7.2.1" class="section-number selfRef">7.2.1. </a><a href="#name-mission-creation-paths" class="section-name selfRef">Mission Creation Paths</a>
+          </h4>
+<p id="section-7.2.1-1">Each Mission's creation answers three questions: whose authority it
+draws on (<code>authority_source</code>), who decides and when
+(<code>approval_basis</code>), and how the request reaches the Mission Issuer.
+An agent with no delegating user holds a <code>service_owned</code> Mission,
+drawing on its own provisioned authority, or an <code>organizational</code>
+Mission, drawing on a governed policy; its Subject is a workload or
+organizational principal, never a person. Client authentication or a
+workload identity system says who the agent is; the Mission records
+which task it may perform.<a href="#section-7.2.1-1" class="pilcrow">¶</a></p>
+<span id="name-mission-creation-paths-2"></span><div id="creation-paths-table">
+<table class="center" id="table-3">
+            <caption>
+<a href="#table-3" class="selfRef">Table 3</a>:
+<a href="#name-mission-creation-paths-2" class="selfRef">Mission creation paths</a>
+            </caption>
+<thead>
+              <tr>
+                <th class="text-left" rowspan="1" colspan="1">Situation (home)</th>
+                <th class="text-left" rowspan="1" colspan="1">Whose authority</th>
+                <th class="text-left" rowspan="1" colspan="1">Who decides</th>
+                <th class="text-left" rowspan="1" colspan="1">How the request arrives</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">A user approves an agent's task (<code>oauth-mission</code>)</td>
+                <td class="text-left" rowspan="1" colspan="1">the user's (<code>user_delegated</code>)</td>
+                <td class="text-left" rowspan="1" colspan="1">that user, at the approval event</td>
+                <td class="text-left" rowspan="1" colspan="1">the authorization endpoint</td>
+              </tr>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">An administrator approves an agent's own task (<code>oauth-mission</code> with <code>oauth-mission-approval</code>, or <code>mission-authority-server</code>)</td>
+                <td class="text-left" rowspan="1" colspan="1">the agent's (<code>service_owned</code>) or a governed policy's (<code>organizational</code>)</td>
+                <td class="text-left" rowspan="1" colspan="1">the administrator, at the approval event</td>
+                <td class="text-left" rowspan="1" colspan="1">the authorization endpoint, or a pending request resolved later with no user present</td>
+              </tr>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">A policy approves each run of a recurring task (<code>oauth-mission-template</code>, experimental)</td>
+                <td class="text-left" rowspan="1" colspan="1">the source retained at template consent</td>
+                <td class="text-left" rowspan="1" colspan="1">a dispatch policy, within a template a human consented to once</td>
+                <td class="text-left" rowspan="1" colspan="1">one token request from a listed dispatcher</td>
+              </tr>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">An agent starts a sub-agent (<code>oauth-mission-child-delegation</code>)</td>
+                <td class="text-left" rowspan="1" colspan="1">the Parent Mission's</td>
+                <td class="text-left" rowspan="1" colspan="1">a fresh human approval, or the parent's delegation policy (<code>policy_drawdown</code>)</td>
+                <td class="text-left" rowspan="1" colspan="1">a child-creation token exchange</td>
+              </tr>
+            </tbody>
+          </table>
+</div>
+<p id="section-7.2.1-3">The administrator's authority to approve for that Subject and to
+activate that source is checked at approval steps 2 and 3 of the
+OAuth binding (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Mission Approval"). The record excerpt below, other members omitted,
+shows the administrator row: <code>subject</code> and <code>client_id</code> name the
+agent, and <code>consent_principal</code> names the administrator.<a href="#section-7.2.1-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-7.2.1-4">
+<pre>
+{
+  "subject": {
+    "iss": "https://login.example.com",
+    "sub": "agt_ledger_reconciler"
+  },
+  "client_id": "ledger-reconciler",
+  "authority_source": { "type": "service_owned" },
+  "approval_basis": {
+    "type": "direct",
+    "consent_principal": {
+      "iss": "https://login.example.com",
+      "sub": "adm_4Hq9Tz"
+    },
+    "activation": { "approval_event_id": "ape_2Lw7Kq9Rv4" },
+    "activation_actor": {
+      "iss": "https://login.example.com",
+      "sub": "adm_4Hq9Tz"
+    },
+    "root_commitment":
+      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQo"
+  }
+}
+</pre><a href="#section-7.2.1-4" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
 </section>
 </div>
 <div id="govern">
@@ -3833,9 +3928,9 @@ Approval activates authority the source already holds and grants nothing
 beyond it. The Approver needs authority to activate the source, not
 personal possession of its permissions.<a href="#section-9.2-8" class="pilcrow">¶</a></p>
 <p id="section-9.2-9">The derivation modes rank by how portable their result is:<a href="#section-9.2-9" class="pilcrow">¶</a></p>
-<span id="name-derivation-modes-by-portabi"></span><table class="center" id="table-3">
+<span id="name-derivation-modes-by-portabi"></span><table class="center" id="table-4">
           <caption>
-<a href="#table-3" class="selfRef">Table 3</a>:
+<a href="#table-4" class="selfRef">Table 4</a>:
 <a href="#name-derivation-modes-by-portabi" class="selfRef">Derivation modes by portability</a>
           </caption>
 <thead>
@@ -3974,9 +4069,9 @@ Controller;<a href="#section-10-6.1.1" class="pilcrow">¶</a></p>
         <h3 id="name-the-primitives-at-a-glance">
 <a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-the-primitives-at-a-glance" class="section-name selfRef">The Primitives, at a Glance</a>
         </h3>
-<span id="name-substrate-primitives-in-the"></span><table class="center" id="table-4">
+<span id="name-substrate-primitives-in-the"></span><table class="center" id="table-5">
           <caption>
-<a href="#table-4" class="selfRef">Table 4</a>:
+<a href="#table-5" class="selfRef">Table 5</a>:
 <a href="#name-substrate-primitives-in-the" class="selfRef">Substrate primitives in their OAuth realization</a>
           </caption>
 <thead>
@@ -4265,9 +4360,9 @@ while agent identity and resource-managed access bypass it.<a href="#section-10.
 </li>
         </ul>
 <p id="section-10.5-5">The differences that decide a design:<a href="#section-10.5-5" class="pilcrow">¶</a></p>
-<span id="name-how-the-binding-architectur"></span><table class="center" id="table-5">
+<span id="name-how-the-binding-architectur"></span><table class="center" id="table-6">
           <caption>
-<a href="#table-5" class="selfRef">Table 5</a>:
+<a href="#table-6" class="selfRef">Table 6</a>:
 <a href="#name-how-the-binding-architectur" class="selfRef">How the binding architectures differ</a>
           </caption>
 <thead>
@@ -4423,9 +4518,9 @@ token-layer chokepoint without moving approval.<a href="#section-10.5-17" class=
 <p id="section-11-1">This document uses six frames for what a deployment does and what
 it can show. Each answers a different question, and none substitutes
 for another:<a href="#section-11-1" class="pilcrow">¶</a></p>
-<span id="name-assurance-frames"></span><table class="center" id="table-6">
+<span id="name-assurance-frames"></span><table class="center" id="table-7">
         <caption>
-<a href="#table-6" class="selfRef">Table 6</a>:
+<a href="#table-7" class="selfRef">Table 7</a>:
 <a href="#name-assurance-frames" class="selfRef">Assurance frames</a>
         </caption>
 <thead>
@@ -4641,9 +4736,9 @@ runtime conformance requires no attestation
 </dl>
 <p id="section-11.1-3">Read in adoption order, each level makes a broader class of agent
 work defensible to grant.<a href="#section-11.1-3" class="pilcrow">¶</a></p>
-<span id="name-what-each-level-makes-defen"></span><table class="center" id="table-7">
+<span id="name-what-each-level-makes-defen"></span><table class="center" id="table-8">
           <caption>
-<a href="#table-7" class="selfRef">Table 7</a>:
+<a href="#table-8" class="selfRef">Table 8</a>:
 <a href="#name-what-each-level-makes-defen" class="selfRef">What each level makes defensible to grant</a>
           </caption>
 <thead>
@@ -4830,9 +4925,9 @@ three dimensions as follows: <code>mission-reference-selected</code> and
 to credential binding; and <code>action-bound</code> to action binding. The index
 establishes no property for any mechanism; the mechanism mapping below
 states what each mechanism establishes.<a href="#section-11.4-4" class="pilcrow">¶</a></p>
-<span id="name-mission-binding-properties-2"></span><table class="center" id="table-8">
+<span id="name-mission-binding-properties-2"></span><table class="center" id="table-9">
           <caption>
-<a href="#table-8" class="selfRef">Table 8</a>:
+<a href="#table-9" class="selfRef">Table 9</a>:
 <a href="#name-mission-binding-properties-2" class="selfRef">Mission binding properties</a>
           </caption>
 <thead>
@@ -4985,9 +5080,9 @@ establish the conditions, independent of the substrate contract
 Assessment explains that mapping and is not a conformance result;
 OAuth conformance stays governed by the OAuth binding. The OAuth
 binding's evidence for each condition:<a href="#section-11.4-13" class="pilcrow">¶</a></p>
-<span id="name-how-the-oauth-binding-estab"></span><table class="center" id="table-9">
+<span id="name-how-the-oauth-binding-estab"></span><table class="center" id="table-10">
           <caption>
-<a href="#table-9" class="selfRef">Table 9</a>:
+<a href="#table-10" class="selfRef">Table 10</a>:
 <a href="#name-how-the-oauth-binding-estab" class="selfRef">How the OAuth binding establishes credential-mission-bound</a>
           </caption>
 <thead>
@@ -5112,9 +5207,9 @@ work-item identifier the harness recorded. No family carrier
 supplies that cross-link, so a deployment claims the two properties
 separately and nothing more.<a href="#section-11.4-24" class="pilcrow">¶</a></p>
 <p id="section-11.4-25">The mechanism mapping is conservative:<a href="#section-11.4-25" class="pilcrow">¶</a></p>
-<span id="name-mission-binding-mechanisms"></span><table class="center" id="table-10">
+<span id="name-mission-binding-mechanisms"></span><table class="center" id="table-11">
           <caption>
-<a href="#table-10" class="selfRef">Table 10</a>:
+<a href="#table-11" class="selfRef">Table 11</a>:
 <a href="#name-mission-binding-mechanisms" class="selfRef">Mission binding mechanisms</a>
           </caption>
 <thead>
@@ -5189,9 +5284,9 @@ and action-level binding likewise compose rather than substitute.<a href="#secti
 <p id="section-11.5-1">Mission termination is one control in a larger containment surface.
 Each kill has a different blast radius, and an incident responder
 needs the whole matrix:<a href="#section-11.5-1" class="pilcrow">¶</a></p>
-<span id="name-the-containment-matrix-2"></span><table class="center" id="table-11">
+<span id="name-the-containment-matrix-2"></span><table class="center" id="table-12">
           <caption>
-<a href="#table-11" class="selfRef">Table 11</a>:
+<a href="#table-12" class="selfRef">Table 12</a>:
 <a href="#name-the-containment-matrix-2" class="selfRef">The containment matrix</a>
           </caption>
 <thead>
@@ -5318,9 +5413,9 @@ the containment profile
 grant (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>) where the
 cell says so; "runtime profile" is
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>.<a href="#section-11.6-2" class="pilcrow">¶</a></p>
-<span id="name-what-a-capability-kill-stop"></span><table class="center" id="table-12">
+<span id="name-what-a-capability-kill-stop"></span><table class="center" id="table-13">
           <caption>
-<a href="#table-12" class="selfRef">Table 12</a>:
+<a href="#table-13" class="selfRef">Table 13</a>:
 <a href="#name-what-a-capability-kill-stop" class="selfRef">What a capability kill stops, and what runs to its own bound</a>
           </caption>
 <thead>
@@ -5456,9 +5551,9 @@ own bound, and how tight that bound is.<a href="#section-11.6-6" class="pilcrow"
 <a href="#section-11.7" class="section-number selfRef">11.7. </a><a href="#name-prevention-detection-and-re" class="section-name selfRef">Prevention, Detection, and Residue</a>
         </h3>
 <p id="section-11.7-1">Each layer earns a specific property and leaves a specific residue:<a href="#section-11.7-1" class="pilcrow">¶</a></p>
-<span id="name-what-each-layer-prevents-de"></span><table class="center" id="table-13">
+<span id="name-what-each-layer-prevents-de"></span><table class="center" id="table-14">
           <caption>
-<a href="#table-13" class="selfRef">Table 13</a>:
+<a href="#table-14" class="selfRef">Table 14</a>:
 <a href="#name-what-each-layer-prevents-de" class="selfRef">What each layer prevents, detects, and leaves</a>
           </caption>
 <thead>
@@ -5535,9 +5630,9 @@ an authorization server that supports pushed authorization requests,
 rich authorization requests, and JWT access tokens. The standalone
 ramp assumes none of that and trades it for PEP coverage. By starting
 condition:<a href="#section-12.1-1" class="pilcrow">¶</a></p>
-<span id="name-entry-ramps-by-estate-2"></span><table class="center" id="table-14">
+<span id="name-entry-ramps-by-estate-2"></span><table class="center" id="table-15">
           <caption>
-<a href="#table-14" class="selfRef">Table 14</a>:
+<a href="#table-15" class="selfRef">Table 15</a>:
 <a href="#name-entry-ramps-by-estate-2" class="selfRef">Entry ramps by estate</a>
           </caption>
 <thead>
@@ -6410,9 +6505,9 @@ short credentials, and a stateful PDP) implements durable task
 state, fan-out joins, persistent narrowing, and audit locally. Five
 places mark where that local composition meets what this family
 standardizes:<a href="#appendix-B-3" class="pilcrow">¶</a></p>
-<span id="name-where-a-conventional-stack-"></span><table class="center" id="table-15">
+<span id="name-where-a-conventional-stack-"></span><table class="center" id="table-16">
         <caption>
-<a href="#table-15" class="selfRef">Table 15</a>:
+<a href="#table-16" class="selfRef">Table 16</a>:
 <a href="#name-where-a-conventional-stack-" class="selfRef">Where a conventional stack meets Mission standardization</a>
         </caption>
 <thead>
@@ -6477,9 +6572,9 @@ providers, none of which is the OAuth binding. An AAuth agent acts
 under a PS-governed Mission and calls a payment API whose authority
 vocabulary the resource owns.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 <p id="appendix-C-2">Four components publish provider claims:<a href="#appendix-C-2" class="pilcrow">¶</a></p>
-<span id="name-provider-claims-in-the-work"></span><table class="center" id="table-16">
+<span id="name-provider-claims-in-the-work"></span><table class="center" id="table-17">
         <caption>
-<a href="#table-16" class="selfRef">Table 16</a>:
+<a href="#table-17" class="selfRef">Table 17</a>:
 <a href="#name-provider-claims-in-the-work" class="selfRef">Provider claims in the worked composition</a>
         </caption>
 <thead>
@@ -6554,9 +6649,9 @@ adapter's output, the gateway's join validates:<a href="#appendix-C-8" class="pi
 than the state observation's declared freshness. A missing or
 conflicting input fails closed.<a href="#appendix-C-10" class="pilcrow">¶</a></p>
 <p id="appendix-C-11">The composition succeeds with these results and limits:<a href="#appendix-C-11" class="pilcrow">¶</a></p>
-<span id="name-composition-result"></span><table class="center" id="table-17">
+<span id="name-composition-result"></span><table class="center" id="table-18">
         <caption>
-<a href="#table-17" class="selfRef">Table 17</a>:
+<a href="#table-18" class="selfRef">Table 18</a>:
 <a href="#name-composition-result" class="selfRef">Composition result</a>
         </caption>
 <thead>
@@ -6993,8 +7088,8 @@ with no <code>suspended</code> state and its own termination reasons, served by
 <code>mission-aauth-management</code>, with the expiry bound profiled by
 <code>aauth-mission-expiry</code>.<a href="#appendix-G-3" class="pilcrow">¶</a></p>
 <p id="appendix-G-4"><strong>Architecture mappings:</strong><a href="#appendix-G-4" class="pilcrow">¶</a></p>
-<table class="center" id="table-18">
-        <caption><a href="#table-18" class="selfRef">Table 18</a></caption>
+<table class="center" id="table-19">
+        <caption><a href="#table-19" class="selfRef">Table 19</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Document</th>
@@ -7011,8 +7106,8 @@ with no <code>suspended</code> state and its own termination reasons, served by
         </tbody>
       </table>
 <p id="appendix-G-6"><strong>The substrate and the bindings:</strong><a href="#appendix-G-6" class="pilcrow">¶</a></p>
-<table class="center" id="table-19">
-        <caption><a href="#table-19" class="selfRef">Table 19</a></caption>
+<table class="center" id="table-20">
+        <caption><a href="#table-20" class="selfRef">Table 20</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Document</th>
@@ -7071,8 +7166,8 @@ with no <code>suspended</code> state and its own termination reasons, served by
         </tbody>
       </table>
 <p id="appendix-G-8"><strong>Approval time:</strong><a href="#appendix-G-8" class="pilcrow">¶</a></p>
-<table class="center" id="table-20">
-        <caption><a href="#table-20" class="selfRef">Table 20</a></caption>
+<table class="center" id="table-21">
+        <caption><a href="#table-21" class="selfRef">Table 21</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Document</th>
@@ -7131,8 +7226,8 @@ with no <code>suspended</code> state and its own termination reasons, served by
         </tbody>
       </table>
 <p id="appendix-G-10"><strong>Lifecycle:</strong><a href="#appendix-G-10" class="pilcrow">¶</a></p>
-<table class="center" id="table-21">
-        <caption><a href="#table-21" class="selfRef">Table 21</a></caption>
+<table class="center" id="table-22">
+        <caption><a href="#table-22" class="selfRef">Table 22</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Document</th>
@@ -7221,8 +7316,8 @@ with no <code>suspended</code> state and its own termination reasons, served by
         </tbody>
       </table>
 <p id="appendix-G-12"><strong>Cross-domain projection and continuity:</strong><a href="#appendix-G-12" class="pilcrow">¶</a></p>
-<table class="center" id="table-22">
-        <caption><a href="#table-22" class="selfRef">Table 22</a></caption>
+<table class="center" id="table-23">
+        <caption><a href="#table-23" class="selfRef">Table 23</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Document</th>
@@ -7257,8 +7352,8 @@ with no <code>suspended</code> state and its own termination reasons, served by
         </tbody>
       </table>
 <p id="appendix-G-14"><strong>Runtime enforcement:</strong><a href="#appendix-G-14" class="pilcrow">¶</a></p>
-<table class="center" id="table-23">
-        <caption><a href="#table-23" class="selfRef">Table 23</a></caption>
+<table class="center" id="table-24">
+        <caption><a href="#table-24" class="selfRef">Table 24</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Document</th>
@@ -7305,8 +7400,8 @@ with no <code>suspended</code> state and its own termination reasons, served by
         </tbody>
       </table>
 <p id="appendix-G-16"><strong>Agent runtime:</strong><a href="#appendix-G-16" class="pilcrow">¶</a></p>
-<table class="center" id="table-24">
-        <caption><a href="#table-24" class="selfRef">Table 24</a></caption>
+<table class="center" id="table-25">
+        <caption><a href="#table-25" class="selfRef">Table 25</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Document</th>
@@ -7335,8 +7430,8 @@ with no <code>suspended</code> state and its own termination reasons, served by
         </tbody>
       </table>
 <p id="appendix-G-18"><strong>Sub-agents:</strong><a href="#appendix-G-18" class="pilcrow">¶</a></p>
-<table class="center" id="table-25">
-        <caption><a href="#table-25" class="selfRef">Table 25</a></caption>
+<table class="center" id="table-26">
+        <caption><a href="#table-26" class="selfRef">Table 26</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Document</th>
@@ -7359,8 +7454,8 @@ with no <code>suspended</code> state and its own termination reasons, served by
         </tbody>
       </table>
 <p id="appendix-G-20"><strong>Proof and portability:</strong><a href="#appendix-G-20" class="pilcrow">¶</a></p>
-<table class="center" id="table-26">
-        <caption><a href="#table-26" class="selfRef">Table 26</a></caption>
+<table class="center" id="table-27">
+        <caption><a href="#table-27" class="selfRef">Table 27</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Document</th>
@@ -7395,8 +7490,8 @@ with no <code>suspended</code> state and its own termination reasons, served by
         </tbody>
       </table>
 <p id="appendix-G-22"><strong>Security model:</strong><a href="#appendix-G-22" class="pilcrow">¶</a></p>
-<table class="center" id="table-27">
-        <caption><a href="#table-27" class="selfRef">Table 27</a></caption>
+<table class="center" id="table-28">
+        <caption><a href="#table-28" class="selfRef">Table 28</a></caption>
 <thead>
           <tr>
             <th class="text-left" rowspan="1" colspan="1">Document</th>

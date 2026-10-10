@@ -543,8 +543,9 @@ Table of Contents
    and verify it is in the active state before adjudicating, and MUST
    re-verify it at completion when adjudication is deferred or
    interactive (Section 5.4).  An expansion request against a
-   predecessor that is not active MUST be refused with invalid_grant and
-   a reconciliation status (Section 10):
+   predecessor that is not active MUST be refused with invalid_request
+   (Section 2.2.2 of [RFC8693]) and a reconciliation status
+   (Section 10):
 
    *  if the predecessor made a terminal exit from active (it is
       terminated, with reason revoked, expired, already superseded
@@ -1227,13 +1228,15 @@ Table of Contents
 
    If any check fails, the Mission Issuer MUST refuse the completion
    with invalid_grant and the applicable reconciliation status from the
-   closed set below.  The losing or otherwise stale expansion is
-   rejected at completion; it activates no successor.  The third check
-   catches narrowing that lands between adjudication and activation:
-   authority contained or discharged after the approval returns only
-   through a new expansion, adjudicated against the current
-   restrictions, which require fresh human approval with the restriction
-   disclosed.
+   closed set below; where the token-exchange response completes the
+   expansion, a failed first or second check, a predecessor no longer
+   active, is refused with invalid_request instead (Section 4.3).  The
+   losing or otherwise stale expansion is rejected at completion; it
+   activates no successor.  The third check catches narrowing that lands
+   between adjudication and activation: authority contained or
+   discharged after the approval returns only through a new expansion,
+   adjudicated against the current restrictions, which require fresh
+   human approval with the restriction disclosed.
 
    The reconciliation status codes are:
 
@@ -1275,7 +1278,7 @@ Table of Contents
 
    The Mission Issuer conveys the reconciliation status in a
    mission_expansion_status member of the OAuth error response body,
-   alongside the invalid_grant error:
+   alongside the OAuth error:
 
    mission_expansion_status:  A string carrying one reconciliation
       status from this document's closed set (Section 10).  It is
@@ -1584,13 +1587,13 @@ Table of Contents
    Two failure classes are not denial reasons and use the issuance
    profile's error vocabulary directly: an expansion request whose
    predecessor cross-check does not match the subject_token-resolved
-   Mission, or whose predecessor is not active, fails with invalid_grant
-   (Section 4.2, Section 4.3); an expansion Mission Intent the Mission
-   Issuer cannot parse fails with invalid_request; one it can parse but
-   cannot derive a valid Authority Set from fails with
-   invalid_authorization_details ([RFC9396]) where the client submitted
-   a proposal alongside it, or access_denied where it did not, exactly
-   as for any Mission creation.
+   Mission fails with invalid_grant (Section 4.2), or with
+   invalid_request where its predecessor is not active (Section 4.3); an
+   expansion Mission Intent the Mission Issuer cannot parse fails with
+   invalid_request; one it can parse but cannot derive a valid Authority
+   Set from fails with invalid_authorization_details ([RFC9396]) where
+   the client submitted a proposal alongside it, or access_denied where
+   it did not, exactly as for any Mission creation.
 
 13.  Worked Example
 
@@ -1679,10 +1682,10 @@ Table of Contents
 
    *  resolve the predecessor from subject_token, verify possession
       against the token's own confirmation key, refuse a predecessor
-      cross-check that does not match the resolved Mission or a
-      predecessor that is not active with invalid_grant, and evaluate
-      the request in the verification order of Section 5.1 (Section 4.2,
-      Section 4.3);
+      cross-check that does not match the resolved Mission with
+      invalid_grant and a predecessor that is not active with
+      invalid_request, and evaluate the request in the verification
+      order of Section 5.1 (Section 4.2, Section 4.3);
 
    *  require a creation_request_id on every expansion exchange,
       refusing a missing one with invalid_request, and recover a
@@ -1816,10 +1819,10 @@ Table of Contents
       the successor (Section 5.4), and serializes the completions that
       activate a successor of the same predecessor (Section 10).
 
-   *  A failed check refuses with invalid_grant and a reconciliation
-      status that tells the client whether to discover an existing
-      successor or stop, without leaking the predecessor's new internal
-      state beyond that (Section 10).
+   *  A failed check refuses with a reconciliation status (Section 10)
+      that tells the client whether to discover an existing successor or
+      stop, without leaking the predecessor's new internal state beyond
+      that (Section 10).
 
 15.5.  Duplicate creation
 
@@ -2321,6 +2324,12 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  A predecessor that is not active refuses the expansion exchange
+      with invalid_request, following the issuance profile's Token
+      Exchange rule; a predecessor cross-check mismatch, and a
+      completion by code redemption or deferred poll, keep invalid_grant
+      (#1154).
 
    *  Supersession terminates the predecessor: it becomes terminated
       with reason superseded, registered in the Mission Termination

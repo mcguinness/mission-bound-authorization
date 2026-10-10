@@ -528,8 +528,8 @@ Table of Contents
 
    Before issuing, the AS MUST verify:
 
-   *  that the Mission is active, failing otherwise with invalid_grant;
-      and
+   *  that the Mission is active, failing otherwise with invalid_request
+      (Section 2.2.2 of [RFC8693]); and
 
    *  that the target Resource AS is authorized for the requested
       resources under the Mission's Authority Set, failing otherwise
@@ -992,7 +992,9 @@ Table of Contents
       | identity-assertion token is presented    |                 |
       +------------------------------------------+-----------------+
       | The subject token does not resolve to a  | invalid_grant   |
-      | Mission, or the Mission is not active    |                 |
+      | Mission                                  |                 |
+      +------------------------------------------+-----------------+
+      | The Mission is not active                | invalid_request |
       +------------------------------------------+-----------------+
       | The target Resource AS is not authorized | invalid_target  |
       | for the requested resources under the    |                 |
@@ -1789,6 +1791,11 @@ Appendix B.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Grant issuance at the originating AS refuses a Mission that is not
+      active with invalid_request, following the issuance profile's
+      Token Exchange rule; redemption at the Resource AS keeps
+      invalid_grant (#1154).
 
    *  Introspection at a Resource AS: a non-issuer Resource AS omits
       mission.termination as well as mission.state (#705).
