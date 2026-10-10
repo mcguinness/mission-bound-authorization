@@ -15,6 +15,7 @@ import {
   type ChallengeIssuers,
   CatalogProvider,
   type DeferralStore,
+  type DischargeAuthorityPolicy,
   issueCrossDomainGrant,
   type IssuerEvidenceStore,
   MissionKernel,
@@ -293,6 +294,14 @@ export async function composeStack(opts: {
    * less the payments resource under the `as-native` target.
    */
   masGovernedResources?: readonly string[];
+  /**
+   * @spec discharge#discharge-authority (#1144): the policy resolving a
+   * `terminal_when` condition's `discharge_authority`, given to the AS and the
+   * kernel. The shipped demo registers none, so its Missions carry no
+   * completion condition; a composition that registers one gets the discharge
+   * operation and, through `viewFor`, the PDP's point-of-use refusal.
+   */
+  dischargeAuthority?: DischargeAuthorityPolicy;
 }): Promise<DemoStack> {
   const asNative = opts.target === "as-native";
   const masGovernedResources =
@@ -410,6 +419,7 @@ export async function composeStack(opts: {
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
       },
       ...(capabilities ? { capabilities } : {}),
+      ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
       // @spec authority-server#mission-join (#557) — the demo's MAS-governed
       // route acts under an ORDINARY OAuth credential, and no other path in
       // this deployment mints one. The AS itself is unchanged by the Join;
@@ -614,7 +624,15 @@ export async function composeStack(opts: {
     // @spec mission#authority-sources — the same shipped catalog the wired AS
     // runs with: the kernel takes one REQUIRED catalog on every path, so the
     // no-AS-server composition cannot approve against an invented source.
-    kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, containmentPolicy: CONTAINMENT_POLICY as never, authoritySourceCatalog: AUTHORITY_SOURCES as never, statusKey: asKeys.privateKey, statusKid: TOPOLOGY.keys.asStatus.kid });
+    kernel = new MissionKernel({
+      issuer: ISS,
+      policy: DERIVATION_POLICY as never,
+      containmentPolicy: CONTAINMENT_POLICY as never,
+      authoritySourceCatalog: AUTHORITY_SOURCES as never,
+      statusKey: asKeys.privateKey,
+      statusKid: TOPOLOGY.keys.asStatus.kid,
+      ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
+    });
     issuer = ISS;
     serverJwks = { keys: [] };
     // No AS, so no AS-signed token is verified on this path.
@@ -755,6 +773,12 @@ export async function composeStack(opts: {
     const r = kernel.get(missionId);
     if (!r) return undefined;
     const fresh = kernel.applyExpiry(r);
+    // @spec discharge#runtime, discharge#visibility (#1144, D335): the committed
+    // discharge DELTA beside the committed set, so the PDP refuses a discharged
+    // entry at the point of use (`authority_discharged`, step 5b) and reads a
+    // credential's discharge condition through its source entries (step 5c).
+    // The PDP cannot detect a missing delta, so this loader supplies it.
+    const dischargedDigests = kernel.dischargedEntryDigests(fresh);
     return {
       id: fresh.id,
       issuer: fresh.issuer,
@@ -783,6 +807,7 @@ export async function composeStack(opts: {
             },
           }
         : {}),
+      ...(dischargedDigests.length > 0 ? { discharged: { entry_digests: dischargedDigests } } : {}),
     };
   };
 
