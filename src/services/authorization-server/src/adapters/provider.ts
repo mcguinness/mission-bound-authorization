@@ -2927,12 +2927,22 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           return;
         }
       }
-      // Deployment capability controls (adapters/capabilities.ts): an operation
-      // this deployment disabled is refused `invalid_request` before any Mission
-      // is looked up, so the refusal names the deployment, never the Mission.
-      const operationCapability = LIFECYCLE_OPERATION_CAPABILITY[String(body.operation)];
-      if (operationCapability && !enabled(operationCapability)) {
-        sendInvalidRequest(`operation ${String(body.operation)} is not enabled on this deployment`);
+      // @spec status#mission-lifecycle-endpoint ("Operations"): an operation this
+      // deployment does not serve, one it does not recognize (an absent value or
+      // an unadopted extension) or one its capability controls disabled
+      // (adapters/capabilities.ts), is refused `invalid_request` before any
+      // Mission is looked up, so the refusal names the deployment, never the
+      // Mission.
+      const operation = String(body.operation);
+      const operationCapability = Object.hasOwn(LIFECYCLE_OPERATION_CAPABILITY, operation)
+        ? LIFECYCLE_OPERATION_CAPABILITY[operation]
+        : undefined;
+      if (operationCapability === undefined) {
+        sendInvalidRequest(`operation ${operation} is not supported`);
+        return;
+      }
+      if (!enabled(operationCapability)) {
+        sendInvalidRequest(`operation ${operation} is not enabled on this deployment`);
         return;
       }
       // @spec discharge#discharge-operation, discharge#discharge-commit ("States")
