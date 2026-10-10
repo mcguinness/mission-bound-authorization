@@ -1284,6 +1284,65 @@ Authorization: ...
 }
 ~~~
 
+For an agent acting for its own workload principal, `subject` names
+the workload principal and `context.actor` names the agent's client.
+The token carries no `act`, so that client is the immediate actor
+({{I-D.draft-mcguinness-mission-runtime}}). The `subject.type` value
+`workload` is deployment-profiled. The `ledger-reconciler` agent reads
+an invoice:
+
+~~~ http-message
+POST /pdp/access/v1/evaluation HTTP/1.1
+Host: pdp.example.com
+Content-Type: application/json
+Authorization: ...
+
+{
+  "subject": {
+    "type": "workload",
+    "id": "agt_ledger_reconciler",
+    "properties": {
+      "iss": "https://login.example.com"
+    }
+  },
+  "resource": {
+    "type": "invoice",
+    "id": "inv_2026Q3_842",
+    "properties": {
+      "audience": "https://erp.example.com"
+    }
+  },
+  "action": {
+    "name": "invoices.read"
+  },
+  "context": {
+    "mission": {
+      "id": "msn_3Jt8Vw2pQ6sN1xR4kL9zB7mD0cF5hYq2",
+      "issuer": "https://as.example.com"
+    },
+    "mission_state_observation": {
+      "state": "active",
+      "mode": "fresh",
+      "freshness_at": "2026-11-02T08:14:00Z"
+    },
+    "actor": {
+      "client_id": "ledger-reconciler"
+    },
+    "credential": {
+      "issuer": "https://as.example.com",
+      "expires_at": "2026-11-02T09:14:00Z",
+      "authority": [
+        {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": ["invoices.read"]
+        }
+      ]
+    }
+  }
+}
+~~~
+
 ## PDP-side consistency checks
 
 A PDP that also serves non-Mission AuthZEN traffic MUST NOT downgrade:

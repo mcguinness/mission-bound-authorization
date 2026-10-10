@@ -1,4 +1,5 @@
 [
   { "sub": "alice", "name": "Alice Anderson", "email": "alice@acme.example", "roles": ["subject"] },
-  { "sub": "bob", "name": "Bob Brown", "email": "bob@acme.example", "roles": ["subject", "approver"], "approves_for": ["alice", "acme-accounts-payable"] }
+  { "sub": "bob", "name": "Bob Brown", "email": "bob@acme.example", "roles": ["subject", "approver"], "approves_for": ["alice", "acme-accounts-payable"] },
+  { "sub": "dana", "name": "Dana Diaz", "email": "dana@acme.example", "roles": ["approver"], "approves_for": ["agt_ledger_reconciler"] }
 ]

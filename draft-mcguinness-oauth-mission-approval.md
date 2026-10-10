@@ -454,6 +454,23 @@ resolve to `access_denied` and the agent would submit a fresh, narrower
 Mission Intent, unless the deployment runs the experimental revision
 companion ({{I-D.draft-mcguinness-oauth-mission-approval-revision}}).
 
+A headless agent can drive the request itself. Agent
+`ledger-reconciler`, with no user present, submits its Mission Intent
+through PAR and sends the authorization request, which the endpoint
+completes into the deferred state without user interaction
+({{front-channel}}); the agent redeems the code with
+`completion_mode=deferred` and polls as above. The Mission Issuer
+routes the Proposed Mission to `adm_4Hq9Tz`, an administrator
+authorized to approve for the workload principal
+`agt_ledger_reconciler` and to activate its `service_owned` authority
+source ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+Approval"). On the review surface the administrator authenticates and
+approves, and the Subject is established there as that workload
+principal. The resolving poll returns a Mission-bound token whose
+`sub` is `agt_ledger_reconciler` and whose `client_id` is
+`ledger-reconciler`; the record names `adm_4Hq9Tz` as
+`approval_basis.consent_principal`.
+
 # Conformance {#conformance}
 
 A Mission Issuer conforming to this profile MUST:
