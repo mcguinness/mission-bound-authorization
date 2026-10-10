@@ -103,8 +103,8 @@
     "content_sha256": "df4b3cc03ebb756aa96ff79abcefd906cf3d990bb77920b5902143f3f7ad677e"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "96abef0ac2491ba242cca31d8960eb242def5e47",
-    "content_sha256": "c4de3491b5ab185ad0bbceeef41ff2f14fefab6ab6dd22fb13adef5d5fbc63ba"
+    "revision": "f6fff13fcc75fc8d86f3915914c6f0452a229302",
+    "content_sha256": "569e73d27fe483df2ab196c38c26cc07af173909909f1438d66d9d6676bcf409"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
@@ -31974,6 +31974,138 @@
    "notes": "#1118 (D326) specification slice. Unconditional, as for child-delegation.source.inherited-from-parent. The reference AS re-asserts the inherited source's ceiling against the root's current declaration before computing the child's anchors (kernel assertInheritedAuthoritySource); the candidate witness 'a drawdown refuses access_denied when the source narrowed since approval' in authority-source.test.ts is not mapped or mutation-proved under this row, and the reference AS has no deferred child creation to exercise the pending window. No error code is pinned: the draft names none."
   },
   {
+   "id": "child-delegation.attenuation.presented-token-bound",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "attenuation",
+   "text": "every child Authority Set entry MUST also be a subset, under the same rule, of an entry of the authority the presented `subject_token` carries, so a down-scoped token never mints a child broader than itself",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the child-creation exchange creates a child within the presented token's authority, and refuses with invalid_request and mission_denial_reason not_strict_subset a child beyond it (an action the token lacks, or a delegation right the token lacks), though the parent allows it, creating no child; a subject_token whose authority cannot be read is refused invalid_grant; the deny Child Evidence records attenuation result exceeds_presented_authority"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > creates a child within the presented token's authority",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > refuses a child from a token without the delegation right, though the parent carries it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > refuses a child proposal beyond the presented token's authority with not_strict_subset, though the parent allows it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > refuses a subject_token whose authority cannot be read, creating nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "child mission creation (@spec child-delegation#child-creation, #parent-member) > bounds the child by the presented token's authority, naming that bound in the evidence (@spec child-delegation#attenuation, D353)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#825 PR 2c follow-up (D353), the child-grant counterpart of the OAuth binding's Self-Exchange rule 2. The presented tokens are real family access tokens of the parent Mission, bound to one acting key; the unreadable one is signed by a test-held AS token key, since the AS never mints a Mission token without authorization_details. Capability sources are bindings, not authority, so the comparison sets them aside (they are checked against the parent); a delegation right is authority, so a token that dropped it mints no child. Proved by disabling each check (the kernel bound, the evidence name, the adapter's pass-through, the recovery bound, the unreadable-authority guard): each is killed by the tests cited."
+  },
+  {
+   "id": "child-delegation.attenuation.presented-token-authorizes-creation",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "attenuation",
+   "text": "the presented `subject_token` MUST authorize this child-creation operation: each entry of its authority that a child entry is a subset of MUST carry a `children` object, and that object's `allowed_child_actors`, `max_child_depth`, and `max_children` ({{fanout}}) constrain the creation alongside the parent entry's, its `max_children` bounding the same count ({{fanout-accounting}}); a token without that delegation right authorizes no child, and carrying the token's restrictions into the child does not satisfy this",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token whose children object admits no child actor refuses creation with child_actor_not_allowed, and one whose max_children is 0 refuses it with fanout_exceeded, though the parent permits both and the child carries the same restricted delegation; the token's max_children bounds the parent's own count of active children on the entry (a second child under max_children 1 is refused, while the broad token still creates); a grandchild beyond the token's max_child_depth is refused; a token without a children object refuses as not_strict_subset; each deny Child Evidence records attenuation result exceeds_presented_authority"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > the presented token's children control %s refuses this creation, though the parent permits it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > the presented token's max_children bounds the parent's count; the broad token still creates",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > refuses a child from a token without the delegation right, though the parent carries it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "child mission creation (@spec child-delegation#child-creation, #parent-member) > the presented token's children controls govern this creation, the evidence naming the bound (@spec child-delegation#attenuation, #fanout, #1192 review)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1192 review (P1): the token's delegation restrictions govern creation, not only the authority copied into the child. Shown over HTTP before the fix (a token with allowed_child_actors [] or max_children 0 created a child, 200). The depth control is witnessed at the kernel: the authorization_details schema admits no max_child_depth below 1, so only a grandchild can exceed it. Proved by disabling each gate (the token's actor, depth and count controls at creation, the recovery controls, the recorded child counted once): each is killed by the tests cited. The token's children-object presence needs no separate gate: a child always carries its parent entry's children object or a narrower one, so the authority bound refuses a token without one."
+  },
+  {
+   "id": "child-delegation.creation-idempotency.recovery-within-presented-token",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "creation-idempotency",
+   "text": "A repetition whose `subject_token` does not authorize the recorded creation under {{attenuation}}, both its authority bound and its `children` controls, with the recorded child counted once toward `max_children`, is refused with the corresponding denial reason: recovery never delivers a child the presented token could not have created.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a retry of a completed child creation with the same client, key and request is refused, delivering no grant, when the presented token is narrower than the recorded child (not_strict_subset), admits no child actor (child_actor_not_allowed), or has a max_children below the active count including the recorded child (fanout_exceeded); an equivalent token, or one whose max_children admits the count with the recorded child counted once, recovers the same child"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > a retry recovers a recorded child only within the presented token; an equivalent token recovers it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > a retry recovers a recorded child only when the presented token's controls admit it (actor, count)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The creation fingerprint does not bind the presented token, so without this check a narrower token presenting the same request recovered the broader child (shown before the fix). Mirrors the async-delegation recovery bound (D353). Proved by disabling each check (the kernel bound, the evidence name, the adapter's pass-through, the recovery bound, the unreadable-authority guard): each is killed by the tests cited. #1192 review: recovery applies the token's children controls too, counting the recorded child once."
+  },
+  {
    "id": "child-delegation.carryover.expansion-disclosure",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "deferred-window",
@@ -32268,7 +32400,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#825 PR 2c (D312); the recovery path was closed after the owner's review (D353). The presented token in the tests is a real down-scoped token, a family's own access token. The AS's one no-actor exchange is the async-delegation transport; it has no separate self-exchange endpoint. The unreadable-authority guard is covered directly through presentedTokenAuthority, since the AS never signs a Mission access token without authorization_details. The child-grant bound is a separate follow-up (D353)."
+   "notes": "#825 PR 2c (D312); the recovery path was closed after the owner's review (D353). The presented token in the tests is a real down-scoped token, a family's own access token. The AS's one no-actor exchange is the async-delegation transport; it has no separate self-exchange endpoint. The unreadable-authority guard is covered directly through presentedTokenAuthority, since the AS never signs a Mission access token without authorization_details. The child-grant bound is child-delegation.attenuation.presented-token-bound (D353)."
   },
   {
    "id": "runtime.oauth.required-instance-attribution",

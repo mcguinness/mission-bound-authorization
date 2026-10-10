@@ -791,9 +791,13 @@ order, refusing on the first failure:
    lineage chain is non-active.
 7. Verify the applicable parent Authority Set entry's `delegation`
    carries a `children` object permitting child creation, and that
-   `child_actor` satisfies its constraints ({{fanout}}).
+   `child_actor` satisfies its constraints ({{fanout}}); verify the same
+   of the presented `subject_token`'s applicable entry
+   ({{attenuation}}).
 8. Derive the child Authority Set, verify strict subset
-   ({{strict-subset}}), and apply fan-out controls.
+   ({{strict-subset}}) and that it is within the authority the
+   `subject_token` carries ({{attenuation}}), and apply the fan-out
+   controls of both.
 9. Determine subset derivation versus fresh approval and complete per
    {{completion}}: synchronous, deferred, or interactive.
 10. At the creation commit, re-verify parent state ({{creation-race}})
@@ -846,6 +850,13 @@ of the same `(client, creation_request_id)`:
   Mission, count a second time against `max_children`
   ({{fanout-accounting}}), or record a second Child Evidence object
   ({{child-evidence}}).
+
+A repetition whose `subject_token` does not authorize the recorded
+creation under {{attenuation}}, both its authority bound and its
+`children` controls, with the recorded child counted once toward
+`max_children`, is refused with the corresponding denial reason:
+recovery never delivers a child the presented token could not have
+created.
 
 ## Worked Example {#worked-example}
 
@@ -948,12 +959,14 @@ This profile defines these symbolic denial reasons:
   ({{fanout}}).
 
 `child_actor_not_allowed`:
-: The child actor does not satisfy the parent entry's
-  `allowed_child_actors` ({{fanout}}) or equivalent policy.
+: The child actor does not satisfy the parent entry's or the presented
+  `subject_token`'s `allowed_child_actors` ({{fanout}},
+  {{attenuation}}), or equivalent policy.
 
 `not_strict_subset`:
 : The proposed child authority is not a strict subset of parent
-  authority ({{strict-subset}}).
+  authority ({{strict-subset}}), or exceeds the authority the presented
+  `subject_token` carries ({{attenuation}}).
 
 `fanout_exceeded`:
 : Creating the child would exceed a fan-out control.
@@ -1183,6 +1196,18 @@ A Child Mission MUST be bounded by the Parent Mission:
 
 - every child Authority Set entry MUST be a subset of a parent entry
   under the subset rule of {{I-D.draft-mcguinness-oauth-mission}};
+- every child Authority Set entry MUST also be a subset, under the same
+  rule, of an entry of the authority the presented `subject_token`
+  carries, so a down-scoped token never mints a child broader than
+  itself;
+- the presented `subject_token` MUST authorize this child-creation
+  operation: each entry of its authority that a child entry is a subset
+  of MUST carry a `children` object, and that object's
+  `allowed_child_actors`, `max_child_depth`, and `max_children`
+  ({{fanout}}) constrain the creation alongside the parent entry's, its
+  `max_children` bounding the same count ({{fanout-accounting}}); a
+  token without that delegation right authorizes no child, and carrying
+  the token's restrictions into the child does not satisfy this;
 - the child MUST NOT include a resource, action, constraint relaxation,
   or delegation right not present in the parent;
 - the child's effective `expires_at` MUST NOT be later than the child
@@ -1237,8 +1262,9 @@ resource containment and `.*` action families) apply as that rule
 defines them, and nothing beyond them applies.
 
 If the Mission Issuer cannot prove the child Authority Set is a strict
-subset of the parent, it MUST refuse child creation with
-`not_strict_subset`.
+subset of the parent, and within the authority the presented
+`subject_token` carries ({{attenuation}}), it MUST refuse child
+creation with `not_strict_subset`.
 
 ## Derivation Budget Is Not Inherited {#derivation-budget}
 
@@ -2311,6 +2337,12 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The authority the presented `subject_token` carries bounds the
+  child as well as the parent's does, and the token's own `children`
+  controls govern the creation alongside the parent's, at creation and
+  on recovery, so a down-scoped token never mints or recovers a child
+  it could not authorize; the denial reasons cover both (#825).
 
 - A Parent Mission that is not `active` refuses the child-creation
   exchange with `invalid_request`, following the issuance profile's

@@ -28,7 +28,7 @@ import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fix
 
 import { type Server } from "node:http";
 import { type AuthorityEntry, canonicalize, type JsonValue } from "@mission/core";
-import { CANONICAL_RESOURCE } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
@@ -36,6 +36,7 @@ import {
   exportJWK,
   generateKeyPair,
   importJWK,
+  type JWK,
   jwtVerify,
   SignJWT,
 } from "jose";
@@ -70,6 +71,7 @@ const BEARER_ONLY_CLIENT_ID = "test-child-jwt-bearer-only";
 type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };
 
 let as: BuiltAs;
+let asTokenKey: CryptoKey; // the test-held AS token key (testTokenSigningJwk)
 let asServer: Server;
 let clientKey: CryptoKey; // ap-agent private_key_jwt key (kid ap-agent-auth)
 let childClientKey: CryptoKey; // child actor private_key_jwt key
@@ -504,8 +506,13 @@ beforeAll(async () => {
     kid: `${BEARER_ONLY_CLIENT_ID}-auth`,
     alg: "ES256",
   };
+  // A test-held AS token key, so a test can sign a token the AS never mints
+  // (one without authorization_details) with a key on jwks_uri.
+  const asTokenKeys = await generateKeyPair(TOPOLOGY.keys.asToken.alg, { extractable: true });
+  asTokenKey = asTokenKeys.privateKey;
   as = await buildAuthorizationServer({
     issuer: ISSUER,
+    testTokenSigningJwk: (await exportJWK(asTokenKeys.privateKey)) as JWK,
     allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     authoritySource: {
       effectiveAuthoritySet: (record) => {
@@ -701,6 +708,240 @@ describe("a retry recovers a recorded family only within the presented token (@s
       if (!crashed) expect(body.access_token).toBe(f.broad.access_token);
     });
   }
+});
+
+describe("the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353)", () => {
+  /** The child-creation exchange as ap-agent, presenting `subjectToken` under `keys`. */
+  async function createChild(
+    subjectToken: string,
+    parentId: string,
+    opts: { keys?: Keys; authorizationDetails?: unknown; creationRequestId?: string } = {},
+  ): Promise<Response> {
+    const params: Record<string, string> = {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: subjectToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      creation_request_id: opts.creationRequestId ?? crypto.randomUUID(),
+      parent: parentId,
+      mission_intent: JSON.stringify({
+        intent: { goal: "Extract Acme invoices", target_resources: [RESOURCE], expires_at: FAR_EXP },
+      }),
+      child_actor: JSON.stringify({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" }),
+      authorization_details: JSON.stringify(opts.authorizationDetails ?? confinedAuthority()),
+    };
+    const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+      fetch(`${ISSUER}/token`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          dpop: await dpopProof(opts.keys ?? actingDpop, extra),
+        },
+        body: new URLSearchParams({
+          ...params,
+          client_assertion: await clientAssertion(),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        }).toString(),
+      });
+    let res = await send();
+    const nonce = res.headers.get("dpop-nonce");
+    if (res.status === 400 && nonce) res = await send({ nonce });
+    return res;
+  }
+
+  /**
+   * A Mission with three family access tokens, all bound to the acting key:
+   * `broad` (the Mission's whole authority), `narrow` (the invoice read,
+   * keeping the Mission entry's delegation right), and `undelegable` (the
+   * invoice read without that right).
+   */
+  async function tokens(): Promise<{ missionId: string; broad: string; narrow: string; undelegable: string }> {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const family = async (authorizationDetails?: unknown): Promise<string> => {
+      const res = await asyncDelegate(baseAccessToken, authorizationDetails ? { authorizationDetails } : {});
+      const body = (await res.json()) as { access_token: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      return body.access_token;
+    };
+    const readEntry = as.kernel
+      .get(missionId)
+      ?.authority_set.find((e) => e.actions.includes("payments:invoice.read"));
+    expect(readEntry?.delegation).toBeDefined();
+    return {
+      missionId,
+      broad: await family(),
+      narrow: await family(confinedAuthority().map((e) => ({ ...e, delegation: readEntry?.delegation }))),
+      undelegable: await family(confinedAuthority()),
+    };
+  }
+
+  /**
+   * A family token for the invoice read whose delegation right carries the
+   * Mission entry's `children` object changed by `restrict`, and the matching
+   * child proposal (the same restricted delegation), so the authority bound
+   * passes and the token's child-creation controls decide (#1192 review).
+   */
+  async function restricted(
+    baseAccessToken: string,
+    missionId: string,
+    restrict: (children: Record<string, unknown>) => void,
+  ): Promise<{ token: string; proposal: unknown }> {
+    const entry = as.kernel.get(missionId)?.authority_set.find((e) => e.actions.includes("payments:invoice.read"));
+    const delegation = structuredClone(entry?.delegation) as Record<string, unknown>;
+    restrict(delegation.children as Record<string, unknown>);
+    const proposal = confinedAuthority().map((e) => ({ ...e, delegation }));
+    const res = await asyncDelegate(baseAccessToken, { authorizationDetails: proposal });
+    const body = (await res.json()) as { access_token: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    return { token: body.access_token, proposal };
+  }
+
+  it.each([
+    ["allowed_child_actors: []", (c: Record<string, unknown>) => { c.allowed_child_actors = []; }, "child_actor_not_allowed"],
+    ["max_children: 0", (c: Record<string, unknown>) => { c.max_children = 0; }, "fanout_exceeded"],
+  ] as const)(
+    "the presented token's children control %s refuses this creation, though the parent permits it",
+    async (_label, restrict, reason) => {
+      const { missionId, baseAccessToken } = await issueBaseMission();
+      const { token, proposal } = await restricted(baseAccessToken, missionId, restrict);
+      const before = as.kernel.findChildren(missionId).length;
+      const res = await createChild(token, missionId, { authorizationDetails: proposal });
+      const body = (await res.json()) as { error?: string; mission_denial_reason?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.mission_denial_reason).toBe(reason);
+      expect(as.kernel.findChildren(missionId)).toHaveLength(before);
+    },
+  );
+
+  it("the presented token's max_children bounds the parent's count; the broad token still creates", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const { token, proposal } = await restricted(baseAccessToken, missionId, (c) => { c.max_children = 1; });
+    const first = await createChild(token, missionId, { authorizationDetails: proposal });
+    expect(first.status, JSON.stringify(await first.clone().json())).toBe(200);
+    const second = await createChild(token, missionId, { authorizationDetails: proposal });
+    const body = (await second.json()) as { mission_denial_reason?: string };
+    expect(second.status, JSON.stringify(body)).toBe(400);
+    expect(body.mission_denial_reason).toBe("fanout_exceeded");
+    const broadRes = await asyncDelegate(baseAccessToken);
+    const broad = ((await broadRes.json()) as { access_token: string }).access_token;
+    const third = await createChild(broad, missionId, { authorizationDetails: proposal });
+    expect(third.status, JSON.stringify(await third.clone().json())).toBe(200);
+  });
+
+  it("a retry recovers a recorded child only when the presented token's controls admit it (actor, count)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const broadRes = await asyncDelegate(baseAccessToken);
+    const broad = ((await broadRes.json()) as { access_token: string }).access_token;
+
+    // Actor eligibility: a child recorded under the broad token is not recovered by a token that admits no child actor.
+    const actors = await restricted(baseAccessToken, missionId, (c) => { c.allowed_child_actors = []; });
+    const cridA = crypto.randomUUID();
+    const createdA = await createChild(broad, missionId, { authorizationDetails: actors.proposal, creationRequestId: cridA });
+    const createdABody = (await createdA.json()) as { mission_id?: string };
+    expect(createdA.status, JSON.stringify(createdABody)).toBe(200);
+    const refusedA = await createChild(actors.token, missionId, { authorizationDetails: actors.proposal, creationRequestId: cridA });
+    const refusedABody = (await refusedA.json()) as { mission_denial_reason?: string; access_token?: string };
+    expect(refusedA.status, JSON.stringify(refusedABody)).toBe(400);
+    expect(refusedABody.mission_denial_reason).toBe("child_actor_not_allowed");
+    expect(refusedABody.access_token).toBeUndefined();
+
+    // Fan-out: the recorded child counts once. max_children 0 refuses its recovery; max_children 2 admits it.
+    const none = await restricted(baseAccessToken, missionId, (c) => { c.max_children = 0; });
+    const cridC = crypto.randomUUID();
+    const createdC = await createChild(broad, missionId, { authorizationDetails: none.proposal, creationRequestId: cridC });
+    const createdCBody = (await createdC.json()) as { mission_id?: string };
+    expect(createdC.status, JSON.stringify(createdCBody)).toBe(200);
+    const refusedC = await createChild(none.token, missionId, { authorizationDetails: none.proposal, creationRequestId: cridC });
+    const refusedCBody = (await refusedC.json()) as { mission_denial_reason?: string };
+    expect(refusedC.status, JSON.stringify(refusedCBody)).toBe(400);
+    expect(refusedCBody.mission_denial_reason).toBe("fanout_exceeded");
+    // Two non-terminal children are now drawn on the entry: a token whose max_children admits them recovers.
+    const room = await restricted(baseAccessToken, missionId, (c) => { c.max_children = 2; });
+    const recovered = await createChild(room.token, missionId, { authorizationDetails: none.proposal, creationRequestId: cridC });
+    const recoveredBody = (await recovered.json()) as { mission_id?: string };
+    expect(recovered.status, JSON.stringify(recoveredBody)).toBe(200);
+    expect(recoveredBody.mission_id).toBe(createdCBody.mission_id);
+  });
+
+  it("creates a child within the presented token's authority", async () => {
+    const { missionId, narrow } = await tokens();
+    const res = await createChild(narrow, missionId);
+    const body = (await res.json()) as { mission_id?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const child = as.kernel.get(body.mission_id as string);
+    expect(child?.parent?.id).toBe(missionId);
+    expect(child?.authority_set.flatMap((e) => e.actions)).toEqual(["payments:invoice.read"]);
+  });
+
+  it("refuses a child from a token without the delegation right, though the parent carries it", async () => {
+    const { missionId, undelegable } = await tokens();
+    const before = as.kernel.findChildren(missionId).length;
+    const res = await createChild(undelegable, missionId);
+    const body = (await res.json()) as { error?: string; mission_denial_reason?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_denial_reason).toBe("not_strict_subset");
+    expect(as.kernel.findChildren(missionId)).toHaveLength(before);
+  });
+
+  it("refuses a child proposal beyond the presented token's authority with not_strict_subset, though the parent allows it", async () => {
+    const { missionId, narrow } = await tokens();
+    const before = as.kernel.findChildren(missionId).length;
+    const res = await createChild(narrow, missionId, { authorizationDetails: fullAuthority() });
+    const body = (await res.json()) as { error?: string; mission_denial_reason?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_denial_reason).toBe("not_strict_subset");
+    expect(as.kernel.findChildren(missionId)).toHaveLength(before);
+  });
+
+  it("refuses a subject_token whose authority cannot be read, creating nothing", async () => {
+    const { missionId } = await tokens();
+    const actingJkt = await calculateJwkThumbprint(await exportJWK(actingDpop.publicKey));
+    const now = Math.floor(Date.now() / 1000);
+    const record = as.kernel.get(missionId);
+    const token = await new SignJWT({
+      client_id: "ap-agent",
+      sub: record?.subject.sub,
+      mission: { id: missionId, issuer: ISSUER },
+      cnf: { jkt: actingJkt },
+    })
+      .setProtectedHeader({ alg: TOPOLOGY.keys.asToken.alg, kid: TOPOLOGY.keys.asToken.kid, typ: "at+jwt" })
+      .setIssuer(ISSUER)
+      .setAudience(RESOURCE)
+      .setIssuedAt(now)
+      .setExpirationTime(now + 120)
+      .setJti(crypto.randomUUID())
+      .sign(asTokenKey);
+    const before = as.kernel.findChildren(missionId).length;
+    const res = await createChild(token, missionId);
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("no readable authorization_details");
+    expect(as.kernel.findChildren(missionId)).toHaveLength(before);
+  });
+
+  it("a retry recovers a recorded child only within the presented token; an equivalent token recovers it", async () => {
+    const { missionId, broad, narrow } = await tokens();
+    const crid = crypto.randomUUID();
+    const first = await createChild(broad, missionId, { authorizationDetails: fullAuthority(), creationRequestId: crid });
+    const firstBody = (await first.json()) as { mission_id?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+    // Same client, key, Mission and request: the narrower token cannot recover the broader child.
+    const refused = await createChild(narrow, missionId, { authorizationDetails: fullAuthority(), creationRequestId: crid });
+    const refusedBody = (await refused.json()) as { error?: string; mission_denial_reason?: string; access_token?: string };
+    expect(refused.status, JSON.stringify(refusedBody)).toBe(400);
+    expect(refusedBody.error).toBe("invalid_request");
+    expect(refusedBody.mission_denial_reason).toBe("not_strict_subset");
+    expect(refusedBody.access_token).toBeUndefined();
+    // An equivalent broad token recovers the same child.
+    const again = await createChild(broad, missionId, { authorizationDetails: fullAuthority(), creationRequestId: crid });
+    const againBody = (await again.json()) as { mission_id?: string };
+    expect(again.status, JSON.stringify(againBody)).toBe(200);
+    expect(againBody.mission_id).toBe(firstBody.mission_id);
+  });
 });
 
 describe("a no-actor exchange is open only to the Mission's approved agent (@spec mission#self-exchange rule 1, #1153 review, D353)", () => {
