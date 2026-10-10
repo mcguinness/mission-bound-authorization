@@ -13758,9 +13758,15 @@
      "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof whose ath hashes the root rather than the leaf",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/dpop-proof.test.ts",
+     "name": "the Resource Server's DPoP proof verifier (@spec RFC 9449 Section 4.3, Section 11.1, #1173) > accepts an iat up to 60 s ahead and 240 s behind, and refuses one beyond either bound",
+     "level": "unit",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse."
+   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse. #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts)."
   },
   {
    "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",
