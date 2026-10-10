@@ -963,7 +963,10 @@ This profile defines these symbolic denial reasons:
 
 These symbolic strings appear in error bodies, evidence, and audit,
 layered on the OAuth error codes the issuance profile uses:
-`parent_not_active` and `parent_mismatch` accompany `invalid_grant`;
+`parent_mismatch` accompanies `invalid_grant`; `parent_not_active`
+accompanies `invalid_request` on the child-creation exchange
+({{Section 2.2.2 of RFC8693}}) and `invalid_grant` on the poll or code
+redemption that completes a deferred or interactive creation;
 `delegation_not_permitted`, `child_actor_not_allowed`,
 `not_strict_subset`, and `fanout_exceeded` accompany `invalid_request`;
 and `policy_denied` accompanies `access_denied`. In an error response
@@ -2308,6 +2311,11 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A Parent Mission that is not `active` refuses the child-creation
+  exchange with `invalid_request`, following the issuance profile's
+  Token Exchange rule; a deferred or interactive creation that fails
+  the parent re-check at completion keeps `invalid_grant` (#1154).
 
 - Cascade terminates a Child Mission with reason `parent_terminated`,
   registered in the Mission Termination Reasons registry, whose

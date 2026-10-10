@@ -425,6 +425,24 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     expect(body.mission_denial_reason).toBe("parent_mismatch");
   });
 
+  it("a parent that is not active refuses the child-creation exchange with invalid_request and parent_not_active, creating no child (@spec child-delegation#denial-reasons, mission#issuance-gating, #1154)", async () => {
+    const revoked = await issueParentMission();
+    as.kernel.transition(revoked.missionId, "revoke");
+    const missionCountBefore = as.kernel.allMissions().length;
+    const res = await createChildViaExchange({
+      subjectToken: revoked.accessToken,
+      parent: revoked.missionId,
+      childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+    });
+    const body = (await res.json()) as { error?: string; mission_denial_reason?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    // The exchange refuses invalid_request; the parent_mismatch cross-check above keeps invalid_grant.
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_denial_reason).toBe("parent_not_active");
+    expect(body.access_token).toBeUndefined();
+    expect(as.kernel.allMissions().length).toBe(missionCountBefore);
+  });
+
   it("a refresh token as subject_token is rejected (#448: a reusable bearer refresh credential MUST NOT carry possession)", async () => {
     // The load-bearing possession invariant: only the parent's sender-constrained
     // Mission ACCESS token may carry possession. Presenting the parent's refresh
