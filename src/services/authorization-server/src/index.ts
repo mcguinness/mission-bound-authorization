@@ -615,7 +615,7 @@ export interface BuiltAs {
    */
   governedClientJwk: Record<string, unknown>;
   /**
-   * @spec mission#authority-sources — the private JWK of `ledger-reconciler`,
+   * @spec mission#authority-sources: the private JWK of `ledger-reconciler`,
    * the client of the shipped `service_owned` source, so a test can drive an
    * agent acting for its own workload principal end to end.
    */
@@ -884,7 +884,7 @@ export async function buildAuthorizationServer(opts: {
   // @spec mission#downgrade-by-omission — the Mission-governed demo client:
   // registered so the AS-side anti-downgrade hook is exercisable end to end.
   const governed = await seedGovernedClient();
-  // @spec mission#authority-sources — the agent acting for its own workload
+  // @spec mission#authority-sources: the agent acting for its own workload
   // principal, the client of the shipped `service_owned` source.
   const ledgerReconciler = await seedLedgerReconcilerClient();
   // @spec async-delegation (issue #651) — TEST-ONLY registrations compose ONTO

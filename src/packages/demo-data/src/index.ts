@@ -1889,7 +1889,7 @@ export async function seedGovernedClient(): Promise<SeededClient> {
 }
 
 /**
- * @spec mission#authority-sources — the agent that acts for its own workload
+ * @spec mission#authority-sources: the agent that acts for its own workload
  * principal: the one client of the shipped `service_owned` source, whose
  * Missions record the workload principal `agt_ledger_reconciler` as Subject.
  * The client and the Subject are separate identities, each established on its

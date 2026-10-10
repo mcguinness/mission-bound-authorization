@@ -1,4 +1,4 @@
-// pnpm demo -- one-command scripted walkthrough of scenarios 0-15 (M12).
+// pnpm demo: one-command scripted walkthrough of scenarios 0-15 (M12).
 // The scenario bodies live as the per-milestone integration tests, which the
 // runner drives against the composed in-process stack; this entrypoint boots
 // the stack, runs them in order, and prints a scorecard. Requires OpenFGA up
