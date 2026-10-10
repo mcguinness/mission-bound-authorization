@@ -593,7 +593,7 @@ assertion that carries no Mission binding ({{error-responses}}).
 Before issuing, the AS MUST verify:
 
 - that the Mission is `active`, failing otherwise with
-  `invalid_grant`; and
+  `invalid_request` ({{Section 2.2.2 of RFC8693}}); and
 - that the target Resource AS is authorized for the requested
   resources under the Mission's Authority Set, failing otherwise
   with `invalid_target` ({{RFC8693}}).
@@ -1037,7 +1037,8 @@ At issuance (the token exchange at the Mission Issuer,
 | Condition | Error |
 |---|---|
 | `subject_token_type` is not `refresh_token`, or an access, delegated, or bare identity-assertion token is presented | `invalid_request` |
-| The subject token does not resolve to a Mission, or the Mission is not `active` | `invalid_grant` |
+| The subject token does not resolve to a Mission | `invalid_grant` |
+| The Mission is not `active` | `invalid_request` |
 | The target Resource AS is not authorized for the requested resources under the Authority Set | `invalid_target` |
 
 At redemption (the JWT-bearer grant at the Resource AS,
@@ -1595,6 +1596,11 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Grant issuance at the originating AS refuses a Mission that is not
+  `active` with `invalid_request`, following the issuance profile's
+  Token Exchange rule; redemption at the Resource AS keeps
+  `invalid_grant` (#1154).
 
 - Introspection at a Resource AS: a non-issuer Resource AS omits
   `mission.termination` as well as `mission.state` (#705).
