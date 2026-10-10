@@ -371,6 +371,7 @@ import {
   handleTokenExchangeGrant,
   type SubjectResolver,
   TOKEN_EXCHANGE_GRANT_TYPE,
+  verifyTokenEndpointDpop,
 } from "./continuation-grant.js";
 import type { ContinuationIssuer } from "../kernel/continuation-assertion.js";
 import type { ContinuationStore } from "../kernel/continuation-store.js";
@@ -2169,26 +2170,16 @@ async function mintDeferredToken(
   // like the /transaction handler. Nonce handling is not required here.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    jkt = await calculateJwkThumbprint(header.jwk as JWK);
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    throw new errors.InvalidRequest("invalid DPoP proof");
-  }
-  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
-  if (!freshProofJti(opts, proofJti)) {
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
     ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
+    ctx.body = { error: "invalid_dpop_proof", error_description: verified.description };
     ctx.set("cache-control", "no-store");
     return;
   }
+  const { jkt } = verified.proof;
 
   // Containment: derive the resource fallback from the EFFECTIVE set (a fresh
   // mission has no containment, so this is the approved set as-is).
@@ -2339,26 +2330,16 @@ async function handleChildJwtBearerGrant(
   //    key; its thumbprint becomes the token's cnf.jkt.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    jkt = await calculateJwkThumbprint(header.jwk as JWK);
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    throw new errors.InvalidRequest("invalid DPoP proof");
-  }
-  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
-  if (!freshProofJti(opts, proofJti)) {
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
     ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
+    ctx.body = { error: "invalid_dpop_proof", error_description: verified.description };
     ctx.set("cache-control", "no-store");
     return;
   }
+  const { jkt } = verified.proof;
 
   // 6. Bind an oidc Grant to the child LAZILY (mirror the `decide` path). Do NOT
   //    call gateDerivation here: extraTokenClaims runs it during save() and a
@@ -3917,26 +3898,16 @@ async function handleMissionDispatchGrant(
   // verified DPoP key is the fingerprint's `cnf` and the issued token's binding.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    jkt = await calculateJwkThumbprint(header.jwk as JWK);
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    throw new errors.InvalidRequest("invalid DPoP proof");
-  }
-  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
-  if (!freshProofJti(opts, proofJti)) {
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
     ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
+    ctx.body = { error: "invalid_dpop_proof", error_description: verified.description };
     ctx.set("cache-control", "no-store");
     return;
   }
+  const { jkt } = verified.proof;
 
   // Core-consistency: the Dispatcher does NOT name the Subject; the Issuer
   // establishes it. The template carries the consenting human (approver); the

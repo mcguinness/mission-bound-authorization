@@ -10326,6 +10326,53 @@
    ]
   },
   {
+   "id": "cross-org.verification.leaf-proof-of-possession",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "verification",
+   "text": "verify the leaf presenter's proof of possession",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Chain Presentation exchange is refused without a DPoP proof, with a structurally invalid proof, with a proof over a key that is not the leaf cnf.jwk, or with a proof whose iat is missing, non-numeric or outside the acceptance window, and a proof inside the window is accepted once and refused on replay"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a missing DPoP proof (invalid_request)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a structurally invalid DPoP proof (invalid_dpop_proof)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a DPoP proof over a key that is not the leaf's cnf key (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1173. Step 8 of the destination verification list, whose lead-in carries the MUST. The proof is complete and fresh (RFC 9449 Section 4.3) through the shared token-endpoint verifier."
+  },
+  {
    "id": "cross-org.actor.credential-validation",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "actor-evidence",
