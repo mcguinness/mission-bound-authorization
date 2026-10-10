@@ -1252,6 +1252,44 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
     expect(body.access_token).toBeUndefined();
   });
 
+  it("revoke Mission -> a new async-delegation exchange is refused invalid_request, opening no family and counting no derivation (@spec mission#issuance-gating, #1154)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    // The handle is taken while the Mission is active; the async exchange then
+    // presents it after the revocation.
+    const handle = await delegationHandle(baseAccessToken);
+    as.kernel.transition(missionId, "revoke");
+    const countBefore = as.kernel.get(missionId)?.derivation_count;
+    const res = await asyncDelegate(handle, { rawSubject: true });
+    const body = (await res.json()) as { error?: string; access_token?: string; refresh_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    // The exchange refuses invalid_request; a refresh of a family opened before
+    // the revocation keeps invalid_grant (the test above).
+    expect(body.error).toBe("invalid_request");
+    expect(body.access_token).toBeUndefined();
+    expect(body.refresh_token).toBeUndefined();
+    expect(as.delegationFamilyStore.familiesForMission(missionId)).toEqual([]);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+  });
+
+  it("a Mission at its derivation limit refuses a new async-delegation exchange with invalid_grant, a limit and not a lifecycle refusal, opening no family (@spec derivation-limits, mission#issuance-gating, #1154)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    // The handle request is itself a counted derivation, so the limit is set
+    // after it: the async exchange is the derivation the limit refuses.
+    const handle = await delegationHandle(baseAccessToken);
+    const count = as.kernel.get(missionId)?.derivation_count as number;
+    as.kernel.db.prepare("UPDATE missions SET derivation_limit = ? WHERE id = ?").run(count, missionId);
+    const res = await asyncDelegate(handle, { rawSubject: true });
+    const body = (await res.json()) as { error?: string; refresh_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.refresh_token).toBeUndefined();
+    // The provisional family is rolled back: none resolves as live.
+    for (const grantId of as.delegationFamilyStore.familiesForMission(missionId)) {
+      expect(as.delegationFamilyStore.resolve(grantId)).toBeUndefined();
+    }
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+  });
+
   it("absolute-lifetime clamp: the initial access token exp never exceeds the Mission expires_at", async () => {
     const expiresAt = new Date(Date.now() + 60_000).toISOString(); // 60s < the 300s AT default
     const { missionId, baseAccessToken } = await issueBaseMission(expiresAt);
@@ -1306,7 +1344,7 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
     return { iso: new Date(ms).toISOString(), ms };
   };
 
-  it("fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused with mission_error expired and saves no family refresh token (@spec mission#mission-bound-tokens)", async () => {
+  it("fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused invalid_request with mission_error expired and saves no family refresh token (@spec mission#mission-bound-tokens, mission#issuance-gating)", async () => {
     const expiry = halfSecondExpiry(10);
     const { baseAccessToken } = await issueBaseMission(expiry.iso);
     // The handle is minted with time to spare; the 0.9 s case is the exchange's.
@@ -1316,13 +1354,15 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
     );
     const body = (await res.json()) as { error?: string; mission_error?: string; refresh_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    // A Token Exchange refuses a Mission that is not active with invalid_request
+    // (RFC 8693 Section 2.2.2, #1154); the family refresh below keeps invalid_grant.
+    expect(body.error).toBe("invalid_request");
     expect(body.mission_error).toBe("expired");
     expect(body.refresh_token).toBeUndefined();
     expect(saved).toBe(0);
   });
 
-  it("fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens)", async () => {
+  it("fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused invalid_grant with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens, mission#issuance-gating)", async () => {
     const expiry = halfSecondExpiry(20);
     const { missionId, baseAccessToken } = await issueBaseMission(expiry.iso);
     // Open the family 5.4 s before expires_at: its refresh token's lifetime is
