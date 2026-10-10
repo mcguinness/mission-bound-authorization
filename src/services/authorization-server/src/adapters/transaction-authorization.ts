@@ -44,7 +44,19 @@ import { mintTransactionToken } from "../kernel/transaction-token.js";
 import type { OperationProfileRegistry } from "../kernel/operation-profile.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { TxnWorkflowStore, type TxnWorkflowRecord } from "../kernel/txn-workflow-store.js";
-import { DPOP_PROOF_REPLAY_WINDOW_S, type DpopProofReplay } from "./dpop-replay.js";
+import { type DpopProofReplay, dpopProofIatInWindow } from "./dpop-replay.js";
+
+/** @spec RFC 9449 Section 11.1, #1173 (D375): the replay cache is at its bound; refuse retryably. */
+interface ReplayUnavailable {
+  unavailable: true;
+  retryAfterS: number;
+}
+
+/** 503 `temporarily_unavailable` with `Retry-After`: the request may succeed once capacity frees. */
+function refuseReplayUnavailable(ctx: TxnCtx, r: ReplayUnavailable): void {
+  fail(ctx, 503, "temporarily_unavailable", "DPoP proof replay state is at capacity");
+  ctx.set("Retry-After", String(r.retryAfterS));
+}
 
 /**
  * The subset of the Access Request Service this endpoint uses. Structural so
@@ -338,6 +350,10 @@ export async function handleTransactionAuthorization(
   // The TAS authenticates the Presenting Client. `client_id` on the issued
   // token is THIS authenticated identity, never a request assertion.
   const clientId = await authenticateClient(deps, params);
+  if (typeof clientId === "object") {
+    refuseReplayUnavailable(ctx, clientId);
+    return;
+  }
   if (!clientId) {
     fail(ctx, 401, "invalid_client", "client authentication failed");
     return;
@@ -345,6 +361,10 @@ export async function handleTransactionAuthorization(
 
   // Proof of possession of the challenge's `cnf` key, bound to this endpoint.
   const proven = await verifyDpop(deps, ctx);
+  if (typeof proven === "object") {
+    refuseReplayUnavailable(ctx, proven);
+    return;
+  }
   if (!proven) {
     fail(ctx, 400, "invalid_dpop_proof", "a DPoP proof of the challenge cnf key is required");
     return;
@@ -1029,7 +1049,7 @@ function requiresActionApproval(
 async function authenticateClient(
   deps: TxnAuthorizationDeps,
   params: Record<string, unknown>,
-): Promise<string | undefined> {
+): Promise<string | ReplayUnavailable | undefined> {
   const assertion = params.client_assertion;
   if (
     typeof assertion !== "string" ||
@@ -1060,8 +1080,12 @@ async function authenticateClient(
     // validates it when present, so an assertion omitting it would otherwise
     // authenticate forever.
     if (typeof payload.exp !== "number") return undefined;
-    if (typeof payload.jti !== "string" || !deps.dpopProofReplay.check(`ca:${payload.jti}`)) {
-      return undefined;
+    if (typeof payload.jti !== "string") return undefined;
+    // The assertion's jti shares the proof replay cache: at its bound a new
+    // one cannot be recorded either, so it is refused retryably too.
+    const admission = deps.dpopProofReplay.admit(`ca:${payload.jti}`);
+    if (!admission.admitted) {
+      return admission.reason === "full" ? { unavailable: true, retryAfterS: admission.retryAfterS } : undefined;
     }
     return asserted;
   } catch {
@@ -1074,7 +1098,7 @@ async function authenticateClient(
  * thumbprint. The proof is bound to THIS endpoint (htu/htm) and its `jti` is
  * single-use within the acceptance window.
  */
-async function verifyDpop(deps: TxnAuthorizationDeps, ctx: TxnCtx): Promise<string | undefined> {
+async function verifyDpop(deps: TxnAuthorizationDeps, ctx: TxnCtx): Promise<string | ReplayUnavailable | undefined> {
   const proofJws = ctx.get("dpop");
   if (!proofJws) return undefined;
   try {
@@ -1085,14 +1109,17 @@ async function verifyDpop(deps: TxnAuthorizationDeps, ctx: TxnCtx): Promise<stri
     const { payload } = await jwtVerify(proofJws, jwk as never, { typ: "dpop+jwt" });
     if (payload.htu !== `${deps.issuer}/transaction` || payload.htm !== "POST") return undefined;
     // @spec RFC 9449 §4.2/§4.3 — `iat` is REQUIRED and the proof is only
-    // accepted within a short window around it, in BOTH directions: a captured
-    // proof stops being usable, and a future-dated one never starts. The window
-    // is the replay cache's, so a jti is remembered at least as long as a proof
-    // bearing it can be accepted.
+    // accepted within the asymmetric window the token endpoint uses (60 s
+    // ahead, 240 s behind): a captured proof stops being usable, and a
+    // future-dated one never starts. The whole acceptance interval fits inside
+    // the replay cache's memory of the jti.
     if (typeof payload.iat !== "number") return undefined;
-    const nowS = Math.floor(deps.now().getTime() / 1000);
-    if (Math.abs(nowS - payload.iat) > DPOP_PROOF_REPLAY_WINDOW_S) return undefined;
-    if (typeof payload.jti !== "string" || !deps.dpopProofReplay.check(payload.jti)) return undefined;
+    if (!dpopProofIatInWindow(payload.iat, Math.floor(deps.now().getTime() / 1000))) return undefined;
+    if (typeof payload.jti !== "string") return undefined;
+    const admission = deps.dpopProofReplay.admit(payload.jti);
+    if (!admission.admitted) {
+      return admission.reason === "full" ? { unavailable: true, retryAfterS: admission.retryAfterS } : undefined;
+    }
     return jkt;
   } catch {
     return undefined;

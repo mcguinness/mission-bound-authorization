@@ -300,7 +300,7 @@ import {
   childMissionClaim,
 } from "../kernel/child-delegation.js";
 import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
-import { type DpopProofReplay, newDpopProofReplay } from "./dpop-replay.js";
+import { type DpopProofReplay, newDpopProofReplay, refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
   handleTransactionAuthorization,
   newTxnWorkflows,
@@ -367,7 +367,6 @@ import { DISPATCH_HANDOFF_TYP, handleDispatchHandoffRedemption } from "./dispatc
 import type { CrossOrgOptions } from "./cross-org-grant.js";
 import {
   type ContinuationReplay,
-  freshProofJti,
   handleTokenExchangeGrant,
   type SubjectResolver,
   TOKEN_EXCHANGE_GRANT_TYPE,
@@ -2174,9 +2173,7 @@ async function mintDeferredToken(
   // shared token-endpoint verifier (iat window and jti replay included).
   const verified = await verifyTokenEndpointDpop(opts, proofJws);
   if (!verified.ok) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: verified.description };
-    ctx.set("cache-control", "no-store");
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
   const { jkt } = verified.proof;
@@ -2334,9 +2331,7 @@ async function handleChildJwtBearerGrant(
   // shared token-endpoint verifier (iat window and jti replay included).
   const verified = await verifyTokenEndpointDpop(opts, proofJws);
   if (!verified.ok) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: verified.description };
-    ctx.set("cache-control", "no-store");
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
   const { jkt } = verified.proof;
@@ -3892,9 +3887,7 @@ async function handleMissionDispatchGrant(
   // shared token-endpoint verifier (iat window and jti replay included).
   const verified = await verifyTokenEndpointDpop(opts, proofJws);
   if (!verified.ok) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: verified.description };
-    ctx.set("cache-control", "no-store");
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
   const { jkt } = verified.proof;
