@@ -22,9 +22,12 @@ and "Ops 5.1".
 - Mission fits in one sentence: **a Mission is a standing permission the User
   approves on the Company's own sign-in page, which the Company checks at
   confirm.**
-- The first profile needs no new endpoint, no new confirm member, no new
-  error code, and no change to PAP's opaque tokens. The Personal Agent adds
-  PAR to Direct Sign-In and the Company adds one check at confirm.
+- The first profile adds no endpoint of its own, no confirm request member,
+  no error code, and no change to PAP's opaque tokens. The cost is
+  concentrated in the Company's AS: it gains a PAR endpoint, which core
+  requires, and becomes a core Mission Issuer. The operations endpoint adds
+  one check at confirm. The Personal Agent pushes its Direct Sign-In request
+  through PAR.
 - The earlier Draft 00 should be narrowed to this profile. Section 5 lists
   what moves out and what each cut loses.
 
@@ -152,7 +155,10 @@ The Company lists the extension in `poppy.json` beside `operations`:
   has its resource-access meaning. Any other name is an operation `terms` key
   and constrains that term to equal the given value.
 - Operation entries name the operations resource: the `operations` entry's
-  `resource` when it has one, otherwise its `endpoint`.
+  `resource` when it has one, otherwise its `endpoint`. The operations
+  endpoint identifies itself by that identifier for every path beneath it,
+  including `/{operation_id}/confirm`, so the default `exact`
+  `resource_match` applies to confirm requests.
 
 The Company's AS metadata carries what core already requires:
 `mission_bound_authorization_supported`,
@@ -329,6 +335,12 @@ holds(key, value, op):
   any other key  -> op.terms[key] equals value
 ```
 
+- Under a Mission token, the covering entry stands in for the second check
+  of Ops 5.2, "the token has the scopes the action needs". This is the one
+  PAP confirm rule the extension overrides.
+- Reading (`GET {endpoint}/{operation_id}`) and cancelling follow the
+  ownership rules of Ops 3.2 unchanged and need no entry. Only confirm
+  consumes Mission authority.
 - A Mission token confirms only within its Mission, whatever `approved_by`
   says. If the User approves a revision outside the Mission, the agent
   confirms it with an ordinary write-capable Session, if it has one and the
@@ -436,11 +448,17 @@ client holding an Intent. The agent never submits the authority as plain
 | Other credentials the agent holds | An ordinary `poppy:write` Account Token is not bounded by any Mission | Company policy: grant agents `poppy:read` plus Missions only |
 | Missions across Companies | Each Company sees only its own Mission. Aggregate limits are the agent's job. | Cross-Domain companion, opt-in, at the cost of correlation (Section 5) |
 
-This deployment sits at the Baseline Issuance level. In addition, the
-operations endpoint enforces the carried authority, as core defines for a
-Mission-aware resource server. It needs no Runtime profile: immutable
-revisions plus a live state read at confirm already check exact terms
-against current state at the commit point.
+The profile claims no assurance level beyond Baseline Issuance. It adds two
+capabilities on top:
+
+- **A live state read at confirm**, the freshness half-step the architecture
+  describes.
+- **Enforcement of the carried authority at one resource server**, the
+  operations endpoint, for actions that go through operations.
+
+It does not claim Runtime-Enforced. It has no PDP, no permits, and no
+runtime evidence, and paths outside operations are covered only by the
+absence of `poppy:write`.
 
 ## 5. Disposition of Draft 00
 
