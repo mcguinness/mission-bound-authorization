@@ -1094,8 +1094,19 @@ Session-level taint remains the fallback where provenance is
 unavailable: the harness applies the rule to every such action in a
 governed session that tainted content has entered. Session-level
 taint persists for the governed session's lifetime and clears only
-with a fresh session or an explicit Subject-directed reset recorded
-in Harness Evidence ({{harness-evidence}}).
+with a fresh session or an explicit reset, given as a trusted
+direction and recorded in Harness Evidence ({{harness-evidence}}).
+
+A **trusted direction**, a taint reset or an egress direction, is one
+given by the delegating person of a user-delegated Mission, the
+Approver, or another principal the deployment authorizes for that
+Mission, through a surface the governed agent cannot invoke from its
+tool plane or from any channel it drives, such as that person's own
+input to the session or an operator's control surface. The surface
+establishes the principal's identity itself, never from caller
+input. No principal gives a trusted direction solely because it is
+the Subject, and identity alone, administrative metadata included,
+authorizes none.
 
 Taint follows derivation across session boundaries with the same
 polarity. A sub-agent session spawned from a tainted session
