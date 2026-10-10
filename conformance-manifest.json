@@ -51,8 +51,8 @@
     "content_sha256": "59f5bb1554f7f4d60be297ba66c33a5df756983e22eb1c5ebb361d3b9c34d18e"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "eecf22076356a14f7f797e410d708f4ae98cef6a",
-    "content_sha256": "b003fdb0e919729c8b4ba20dda56b31ecdb99dae3ea8c0bd77a715863dba0e18"
+    "revision": "1a5ae2e0f5080f7eca8f27f6a0ad0ecdfd2def54",
+    "content_sha256": "f17d312b067ba2e56fb9963a5c833cdc0ba7e235aa07cee3096ccfdd4039b134"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "5bc15030b4a95624b7cd3567076c069211b42ab4",
@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "e7ac28e2b05e674aefafbeaf921e7fa07b91af30",
-    "content_sha256": "760f57faebe1cc63e70798dec013e3fa9d96ddf6df5756ce439e66909f585ab8"
+    "revision": "b60e615359a319318b0a72dc3489d51bf54996e4",
+    "content_sha256": "32ddf43b2ee09f824112924e46331bbc2120bd940e53f713cdd9e1e769753973"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -204,6 +204,7 @@
    "core.introspection",
    "core.introspected-consumption",
    "status.lifecycle",
+   "status.lifecycle-revoke",
    "status.discharge",
    "signals.events",
    "cross-org.delegation",
@@ -4706,6 +4707,38 @@
    ]
   },
   {
+   "id": "core.revocation.revoke-by-mission-id",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "revocation",
+   "text": "A deployment MUST provide an authenticated means for the Subject, the Approver, or an administrator to revoke a Mission by `mission_id`, independent of possession of any token",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authenticated party holding none of the Mission's tokens revokes it by its identifier, after which every derivation under the Mission refuses",
+    "local": "the administrator path is witnessed (a service principal holding none of the Mission's tokens); Subject and Approver access to the same surface is not exercised"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1182 (D378)."
+  },
+  {
    "id": "core.issuance-gating.inactive-refused-by-grant",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "issuance-gating",
@@ -7668,6 +7701,12 @@
      "name": "the discharge operation on the lifecycle endpoint > replays the stored signed response verbatim on a byte-identical retransmission",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > replays a same-nonce retry byte for byte, and refuses the same nonce with a different request invalid_request",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
    "notes": "LifecycleResponseStore, keyed by (endpoint, principal, mission_id, nonce), stores the response's exact bytes with the digest of the exact request bytes; the retransmission replays it without re-executing. Proven on `discharge`, whose response is the signed envelope (string equality is meaningful). DEVIATION: `nonce` is REQUIRED for `discharge` and OPTIONAL for the four state operations here, since existing operational callers never send one; dedup applies to any operation that does carry one."
@@ -7697,6 +7736,12 @@
     {
      "file": "src/services/authorization-server/test/discharge.test.ts",
      "name": "the discharge operation on the lifecycle endpoint > replays the stored signed response verbatim on a byte-identical retransmission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > replays a same-nonce retry byte for byte, and refuses the same nonce with a different request invalid_request",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     }
@@ -8946,6 +8991,47 @@
    "notes": "The funnel checks selector existence and condition membership (one lookup: the condition is resolved INSIDE the named entry), then event_type match, then target authorization, and only then distinguishes a terminal Mission. The test revokes a Mission and presents an unknown entry_digest: the answer is the not_found collapse, not terminal_noop, so the terminal state is never a selector-existence oracle; the same terminal Mission with resolving selectors then answers terminal_noop."
   },
   {
+   "id": "discharge.runtime.pdp-refuses-discharged-entry",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "runtime",
+   "text": "that profile requires its PDP to refuse a discharged entry at the point of use",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "in a deployment running the runtime profile, the PDP refuses an action within a discharged entry at the point of use, denying authority_discharged, so a credential issued before the discharge stops permitting before it expires"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-discharge.test.ts",
+     "name": "discharged entries are excluded from the PDP's authority input > denies authority_discharged for the discharged entry while the Mission stays active",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/discharge-overlay-stack.test.ts",
+     "name": "the composed stack refuses a discharged entry at the point of use (@spec discharge#runtime, #1144) > after a discharge commit, the next decision for that entry is authority_discharged, and a credential deriving only from it is refused at step 5c while a live entry's credential still permits (co-resident)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/discharge-overlay-stack.test.ts",
+     "name": "the composed stack refuses a discharged entry at the point of use (@spec discharge#runtime, #1144) > after a discharge commit, the next decision for that entry is authority_discharged, and a credential deriving only from it is refused at step 5c while a live entry's credential still permits (remote)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1144 (D335). The PDP-level witness is the runtime row's; the composed stack's witness shows the canonical loader supplies the discharge delta, so the refusal holds end to end in both PDP modes."
+  },
+  {
    "id": "status.effective-set.single-computation",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "conformance",
@@ -8967,6 +9053,149 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
+  },
+  {
+   "id": "status.conformance.revoke-only-class",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "conformance",
+   "text": "serve the management endpoint ({{mission-lifecycle-endpoint}}) with the `revoke` operation, under its authentication, its explicit lifecycle authorization ({{lifecycle-authorization}}), the idempotency and conflict rules of {{idempotency}}, and the not-found refusal of an unauthorized request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle-revoke"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment serving `revoke` revokes for an authorized caller holding none of the Mission's tokens, after which every derivation refuses and a racing refresh either commits first or is refused; refuses every operation it has not adopted `invalid_request`; replays a same-nonce retry and refuses a nonce mismatch; answers a fresh `revoke` of a revoked Mission with no transition and a `revoke` of a completed or expired Mission with `conflict`; answers an unauthorized caller as an unknown Mission; and answers each `revoke` with the signed, state-only Mission Status Response whose `aud` is the requester and whose `nonce` is the request's. The class requires no other operation and not the Mission Status operation, without forbidding either; the witness deployment adopts neither",
+    "local": "behavior witnessed on the reference configured revoke-only; three reference gaps keep the row partial and the capability unclaimed: (1) the request shape is POST /missions/{id}/lifecycle with a JSON body and a service token, not the advertised mission_lifecycle_endpoint with a form body carrying mission_id under Status's authentication methods, so neither mission_lifecycle_endpoint nor its auth-methods member is advertised; (2) revoke is answered with plain JSON, not the signed state-only Mission Status Response with requester aud and nonce binding; (3) mission_status_signing_alg_values_supported is advertised only when status or discharge is on, which must widen to the lifecycle capabilities once Lifecycle responses are signed"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a racing refresh either commits before the revoke or is refused: a revoke landing after the refresh pre-check is still refused at the save-time gate",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses every operation the deployment has not adopted invalid_request before looking up the Mission, leaving it unchanged",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses an unrecognized or absent operation invalid_request before looking up the Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > does not serve the Mission Status operation",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > replays a same-nonce retry byte for byte, and refuses the same nonce with a different request invalid_request",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > a fresh revoke of a revoked Mission succeeds with no new transition",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > refuses a revoke of a completed or an expired Mission with conflict, keeping its cause",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > answers a caller without lifecycle authorization exactly as it answers an unknown Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > compares the termination reason: revoke replays byte for byte, a revoke retry with a fresh nonce is idempotent, and complete on the revoked Mission is a conflict (@spec status#idempotency, #705)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "idempotency compares the termination reason (#705 witness 8) > same state and reason is idempotent success; revoke on a completed termination and complete on a revoked one are conflicts",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "idempotency compares the termination reason (#705 witness 8) > revoke on an expired Mission is a conflict, whether or not the expiry was persisted",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1182 (D378, D383). The reference gaps in the local observation are tracked as #1191; the row stays partial and status.lifecycle-revoke unclaimed until it lands."
+  },
+  {
+   "id": "status.lifecycle.unserved-operation-refused",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "The AS MUST refuse an `operation` value it does not serve, a base operation its conformance claim omits ({{conformance}}) or an extension operation it has not adopted, with `invalid_request` ({{mission-status-errors}}) before looking up the Mission, leaving the Mission unchanged",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an operation the deployment does not serve is refused `invalid_request` with the same response for a known and an unknown Mission, and the Mission's state and version are unchanged: a recognized operation it has not adopted (`suspend`, `resume`, `complete`, `discharge`, `contain` on a revoke-only deployment) and an unrecognized or absent `operation` value alike"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses every operation the deployment has not adopted invalid_request before looking up the Mission, leaving it unchanged",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses an unrecognized or absent operation invalid_request before looking up the Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses an unrecognized operation invalid_request before the Mission lookup on a full deployment, the same for an unknown Mission (@spec status#mission-lifecycle-endpoint, #1183)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses malformed wire shapes as invalid_request, never a 500",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1182 (D378)."
   },
   {
    "id": "child-delegation.carryover.status-correlation",
@@ -9188,6 +9417,12 @@
     {
      "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
      "name": "control-plane lifecycle response boundary > compares the termination reason: revoke replays byte for byte, a revoke retry with a fresh nonce is idempotent, and complete on the revoked Mission is a conflict (@spec status#idempotency, #705)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > refuses a revoke of a completed or an expired Mission with conflict, keeping its cause",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     }
@@ -10089,6 +10324,53 @@
      "surface": "verification"
     }
    ]
+  },
+  {
+   "id": "cross-org.verification.leaf-proof-of-possession",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "verification",
+   "text": "verify the leaf presenter's proof of possession",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Chain Presentation exchange is refused without a DPoP proof, with a structurally invalid proof, with a proof over a key that is not the leaf cnf.jwk, or with a proof whose iat is missing, non-numeric or outside the acceptance window, and a proof inside the window is accepted once and refused on replay"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a missing DPoP proof (invalid_request)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a structurally invalid DPoP proof (invalid_dpop_proof)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a DPoP proof over a key that is not the leaf's cnf key (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1173. Step 8 of the destination verification list, whose lead-in carries the MUST. The proof is complete and fresh (RFC 9449 Section 4.3) through the shared token-endpoint verifier."
   },
   {
    "id": "cross-org.actor.credential-validation",
@@ -13670,9 +13952,15 @@
      "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof whose ath hashes the root rather than the leaf",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/dpop-proof.test.ts",
+     "name": "the Resource Server's DPoP proof verifier (@spec RFC 9449 Section 4.3, Section 11.1, #1173) > accepts an iat up to 60 s ahead and 240 s behind, and refuses one beyond either bound",
+     "level": "unit",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse."
+   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse. #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts)."
   },
   {
    "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",
@@ -14308,9 +14596,21 @@
      "name": "the canonical Mission loader preserves the committed entry identity (D335) > reproduces the committed authority_hash and each entry's issuer digest, though it adds join_delegation",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/discharge-overlay-stack.test.ts",
+     "name": "the composed stack refuses a discharged entry at the point of use (@spec discharge#runtime, #1144) > after a discharge commit, the next decision for that entry is authority_discharged, and a credential deriving only from it is refused at step 5c while a live entry's credential still permits (co-resident)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/discharge-overlay-stack.test.ts",
+     "name": "the composed stack refuses a discharged entry at the point of use (@spec discharge#runtime, #1144) > after a discharge commit, the next decision for that entry is authority_discharged, and a credential deriving only from it is refused at step 5c while a live entry's credential still permits (remote)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "MissionView gains a `discharged` DELTA (the discharged entries' commitments) and evaluateInner denies the new `authority_discharged` reason at step 5b, after the entry match and the containment overlay, keyed by the same `entry_digest` a permit already carries. The delta shape mirrors containment's for the same reason: it tells approved-then-completed from never-approved. Both materialization paths are tested: the delta path (authority_discharged) and the effective-set path, where the entry is absent because Mission Status and the introspection projection omit it (@spec status#visibility) and the action denies out_of_authority. The AS side exposes `MissionKernel.dischargedEntryDigests(record)` for a view builder; the demo stack's own loadView is not rewired, so no deployed PEP in this repo populates the delta yet. The PDP keys the delta by the committed entry digest, the materialized entry without its PDP-local members (the canonical loader adds join_delegation); the demo test proves the loader's view reproduces the issuer's digests and authority_hash (D335). The demo loader does not yet supply the delta itself (#1144)."
+   "notes": "MissionView gains a `discharged` DELTA (the discharged entries' commitments) and evaluateInner denies the new `authority_discharged` reason at step 5b, after the entry match and the containment overlay, keyed by the same `entry_digest` a permit already carries. The delta shape mirrors containment's for the same reason: it tells approved-then-completed from never-approved. Both materialization paths are tested: the delta path (authority_discharged) and the effective-set path, where the entry is absent because Mission Status and the introspection projection omit it (@spec status#visibility) and the action denies out_of_authority. The AS side exposes `MissionKernel.dischargedEntryDigests(record)`, and the demo stack's canonical loader, `viewFor`, supplies the delta from it (#1144, D335). The PDP keys the delta by the committed entry digest, the materialized entry without its PDP-local members (the canonical loader adds join_delegation); the demo test proves the loader's view reproduces the issuer's digests and authority_hash (D335). The composed stack refuses a discharged entry in both PDP modes, including a credential deriving only from it (step 5c)."
   },
   {
    "id": "runtime.decision-inputs.containment-excludes-authority",

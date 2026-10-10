@@ -300,7 +300,7 @@ import {
   childMissionClaim,
 } from "../kernel/child-delegation.js";
 import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
-import { type DpopProofReplay, newDpopProofReplay } from "./dpop-replay.js";
+import { type DpopProofReplay, newDpopProofReplay, refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
   handleTransactionAuthorization,
   newTxnWorkflows,
@@ -367,10 +367,10 @@ import { DISPATCH_HANDOFF_TYP, handleDispatchHandoffRedemption } from "./dispatc
 import type { CrossOrgOptions } from "./cross-org-grant.js";
 import {
   type ContinuationReplay,
-  freshProofJti,
   handleTokenExchangeGrant,
   type SubjectResolver,
   TOKEN_EXCHANGE_GRANT_TYPE,
+  verifyTokenEndpointDpop,
 } from "./continuation-grant.js";
 import type { ContinuationIssuer } from "../kernel/continuation-assertion.js";
 import type { ContinuationStore } from "../kernel/continuation-store.js";
@@ -2078,6 +2078,19 @@ async function handleDeferredGrant(
 
   // --- Poll/redeem: the client presents the deferral_code. ---
   if (typeof params.deferral_code === "string" && params.deferral_code) {
+    // @spec RFC 9449 Section 4.3 (#1173, #1199 review): the proof is verified
+    // BEFORE the deferral is redeemed, so a refused proof (a retryable refusal
+    // at the replay cache's bound included) leaves an approved deferral
+    // redeemable. The verified key binds the minted token. The token endpoint
+    // does not pre-validate DPoP for custom grants; nonce handling is not
+    // required here.
+    const proofJws = ctx.get("DPoP");
+    if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
+    const verified = await verifyTokenEndpointDpop(opts, proofJws);
+    if (!verified.ok) {
+      refuseTokenEndpointProof(ctx, verified);
+      return;
+    }
     const r = deferrals.redeem(params.deferral_code);
     if ("error" in r) {
       switch (r.error) {
@@ -2093,7 +2106,7 @@ async function handleDeferredGrant(
           throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
       }
     }
-    await mintDeferredToken(opts, provider, ctx, r);
+    await mintDeferredToken(opts, provider, ctx, r, verified.proof.jkt);
     return;
   }
 
@@ -2158,36 +2171,12 @@ async function mintDeferredToken(
   provider: Provider,
   ctx: KoaContextWithOIDC,
   deferred: DeferredToken,
+  /** The verified DPoP proof key's thumbprint (handleDeferredGrant): the minted token's binding. */
+  jkt: string,
 ): Promise<void> {
   const record = opts.kernel.get(deferred.mission.id);
   if (!record || !record.grant_id) {
     throw new errors.InvalidGrant("mission grant not found for deferral");
-  }
-
-  // DPoP-bind the minted token: derive the jkt from the request's DPoP proof
-  // (the token endpoint does not pre-validate DPoP for custom grants), exactly
-  // like the /transaction handler. Nonce handling is not required here.
-  const proofJws = ctx.get("DPoP");
-  if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    jkt = await calculateJwkThumbprint(header.jwk as JWK);
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    throw new errors.InvalidRequest("invalid DPoP proof");
-  }
-  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
-  if (!freshProofJti(opts, proofJti)) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
-    ctx.set("cache-control", "no-store");
-    return;
   }
 
   // Containment: derive the resource fallback from the EFFECTIVE set (a fresh
@@ -2339,26 +2328,14 @@ async function handleChildJwtBearerGrant(
   //    key; its thumbprint becomes the token's cnf.jkt.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    jkt = await calculateJwkThumbprint(header.jwk as JWK);
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    throw new errors.InvalidRequest("invalid DPoP proof");
-  }
-  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
-  if (!freshProofJti(opts, proofJti)) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
-    ctx.set("cache-control", "no-store");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
+  const { jkt } = verified.proof;
 
   // 6. Bind an oidc Grant to the child LAZILY (mirror the `decide` path). Do NOT
   //    call gateDerivation here: extraTokenClaims runs it during save() and a
@@ -2927,12 +2904,22 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           return;
         }
       }
-      // Deployment capability controls (adapters/capabilities.ts): an operation
-      // this deployment disabled is refused `invalid_request` before any Mission
-      // is looked up, so the refusal names the deployment, never the Mission.
-      const operationCapability = LIFECYCLE_OPERATION_CAPABILITY[String(body.operation)];
-      if (operationCapability && !enabled(operationCapability)) {
-        sendInvalidRequest(`operation ${String(body.operation)} is not enabled on this deployment`);
+      // @spec status#mission-lifecycle-endpoint ("Operations"): an operation this
+      // deployment does not serve, one it does not recognize (an absent value or
+      // an unadopted extension) or one its capability controls disabled
+      // (adapters/capabilities.ts), is refused `invalid_request` before any
+      // Mission is looked up, so the refusal names the deployment, never the
+      // Mission.
+      const operation = String(body.operation);
+      const operationCapability = Object.hasOwn(LIFECYCLE_OPERATION_CAPABILITY, operation)
+        ? LIFECYCLE_OPERATION_CAPABILITY[operation]
+        : undefined;
+      if (operationCapability === undefined) {
+        sendInvalidRequest(`operation ${operation} is not supported`);
+        return;
+      }
+      if (!enabled(operationCapability)) {
+        sendInvalidRequest(`operation ${operation} is not enabled on this deployment`);
         return;
       }
       // @spec discharge#discharge-operation, discharge#discharge-commit ("States")
@@ -3907,26 +3894,14 @@ async function handleMissionDispatchGrant(
   // verified DPoP key is the fingerprint's `cnf` and the issued token's binding.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    jkt = await calculateJwkThumbprint(header.jwk as JWK);
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    throw new errors.InvalidRequest("invalid DPoP proof");
-  }
-  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
-  if (!freshProofJti(opts, proofJti)) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
-    ctx.set("cache-control", "no-store");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
+  const { jkt } = verified.proof;
 
   // Core-consistency: the Dispatcher does NOT name the Subject; the Issuer
   // establishes it. The template carries the consenting human (approver); the

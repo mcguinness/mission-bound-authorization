@@ -21,6 +21,7 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import {
   TXN_TOKEN_PROHIBITED_CLAIMS,
   txnApprovalBindingDigest,
@@ -326,6 +327,8 @@ async function postTransaction(
     /** Present the assertion with no `client_id` parameter at all. */
     omitClientId?: boolean;
     omitClientAuth?: boolean;
+    /** A DPoP proof presented as-is (the window and cache-bound cases). */
+    proof?: string;
   } = {},
 ): Promise<Response> {
   const htu = `${ISSUER}/transaction`;
@@ -340,7 +343,7 @@ async function postTransaction(
     method: "POST",
     headers: {
       "content-type": "application/x-www-form-urlencoded",
-      dpop: await dpopProof(htu, "POST", opts.keys ?? dpopKeys),
+      dpop: opts.proof ?? (await dpopProof(htu, "POST", opts.keys ?? dpopKeys)),
     },
     body: new URLSearchParams({ ...auth, ...payload }).toString(),
   });
@@ -401,6 +404,9 @@ async function submit(
     { ...(opts.keys ? { keys: opts.keys } : {}) },
   );
 }
+
+/** The AS's DPoP replay cache (token endpoint and /transaction), switchable to full (#1173). */
+const replay = switchableDpopReplay();
 
 beforeAll(async () => {
   // RS txn-challenge signing key (its txn_challenge_jwks_uri); the AS is
@@ -470,6 +476,8 @@ beforeAll(async () => {
   };
 
   as = await buildAuthorizationServer({
+    // @spec #1173 (D375): switchable to full for the cache-bound cases.
+    dpopProofReplay: replay,
     issuer: ISSUER,
     allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     transactionAuthorization: {
@@ -2606,5 +2614,79 @@ describe("proof and credential freshness (@spec txn-authorization#challenge-rede
       expect(res.status).toBe(400);
       expect(((await res.json()) as { error?: string }).error).toBe("invalid_dpop_proof");
     }
+  });
+
+  /** An initial submission for a fresh challenge, presenting `proof` as-is. */
+  async function submitFresh(txn: string, proof: string): Promise<Response> {
+    const mission = await freshMission();
+    const challenge = await signChallenge(
+      {
+        txn,
+        authorization_details: remittanceEntry(mission.missionId),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${txn}`,
+        mission: mission.mission,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    return postTransaction(
+      {
+        transaction_challenge: challenge,
+        subject_token: mission.token,
+        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+      },
+      { proof },
+    );
+  }
+  const txnProof = async (claims: Record<string, unknown> = {}): Promise<string> =>
+    new SignJWT({ htu: `${ISSUER}/transaction`, htm: "POST", ...claims })
+      .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(dpopKeys.publicKey) })
+      .setJti(crypto.randomUUID())
+      .sign(dpopKeys.privateKey);
+
+  // @spec RFC 9449 Section 4.3 (#1173): the token endpoint's asymmetric window.
+  it("accepts a proof up to 60 s ahead and 240 s behind, and refuses one beyond either bound", async () => {
+    const nowS = Math.floor(Date.now() / 1000);
+    for (const [label, iat] of [["90 s ahead", nowS + 90], ["260 s behind", nowS - 260]] as const) {
+      const res = await submitFresh(`txn_1173_out_${crypto.randomUUID()}`, await txnProof({ iat }));
+      expect(res.status, label).toBe(400);
+      expect(((await res.json()) as { error?: string }).error, label).toBe("invalid_dpop_proof");
+    }
+    for (const [label, iat] of [["50 s ahead", nowS + 50], ["230 s behind", nowS - 230]] as const) {
+      const res = await submitFresh(`txn_1173_in_${crypto.randomUUID()}`, await txnProof({ iat }));
+      expect(res.status, `${label}: ${JSON.stringify(await res.clone().json())}`).toBe(200);
+    }
+  });
+
+  // @spec RFC 9449 Section 11.1 (#1173, D375): the cache /transaction shares with the token endpoint.
+  it("at the replay cache's bound refuses a new client assertion or proof temporarily_unavailable with Retry-After, and keeps a seen proof a replay", async () => {
+    const nowS = (): number => Math.floor(Date.now() / 1000);
+    const seenProof = await txnProof({ iat: nowS() });
+    expect((await submitFresh(`txn_1173_seen_${crypto.randomUUID()}`, seenProof)).status).toBe(200);
+    const expectUnavailable = async (label: string, res: Response): Promise<void> => {
+      const body = (await res.json()) as { error?: string; access_token?: string };
+      expect(res.status, `${label}: ${JSON.stringify(body)}`).toBe(503);
+      expect(body.error, label).toBe("temporarily_unavailable");
+      expect(res.headers.get("retry-after"), label).toBe(String(SWITCHED_RETRY_AFTER_S));
+      expect(body.access_token, label).toBeUndefined();
+    };
+    replay.full = true;
+    try {
+      // Every new jti at the bound: the client assertion's is refused first.
+      await expectUnavailable("a new client assertion", await submitFresh(`txn_1173_ca_${crypto.randomUUID()}`, await txnProof({ iat: nowS() })));
+      // The bound reaching the proof's jti alone.
+      replay.fullWhen = (jti) => !jti.startsWith("ca:");
+      await expectUnavailable("a new proof", await submitFresh(`txn_1173_pf_${crypto.randomUUID()}`, await txnProof({ iat: nowS() })));
+      const replayed = await submitFresh(`txn_1173_rp_${crypto.randomUUID()}`, seenProof);
+      expect(replayed.status, "a seen proof").toBe(400);
+      expect(((await replayed.json()) as { error?: string }).error, "a seen proof").toBe("invalid_dpop_proof");
+    } finally {
+      replay.full = false;
+      replay.fullWhen = () => true;
+    }
+    expect((await submitFresh(`txn_1173_after_${crypto.randomUUID()}`, await txnProof({ iat: nowS() }))).status).toBe(200);
   });
 });

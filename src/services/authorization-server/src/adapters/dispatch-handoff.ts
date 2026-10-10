@@ -21,6 +21,7 @@ import { projectThroughEffective, SourceUnavailableError } from "../kernel/deriv
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { GateError } from "../kernel/kernel.js";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
+import { refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
   authoritySource,
   JWT_TOKEN_TYPE,
@@ -327,7 +328,7 @@ export async function handleDispatchHandoffRedemption(
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
   const verified = await verifyTokenEndpointDpop(opts, proofJws);
   if (!verified.ok) {
-    refuse(ctx, "invalid_dpop_proof", verified.description);
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
   const { jkt } = verified.proof;

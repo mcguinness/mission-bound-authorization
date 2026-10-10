@@ -38,6 +38,7 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import {
   buildAuthorizationServer,
@@ -79,13 +80,27 @@ async function dpopProof(htu: string, htm: string, extra: Record<string, unknown
     .sign(dpopKeys.privateKey);
 }
 
-/** POST /token with private_key_jwt + DPoP, with the mandatory dpop-nonce retry. */
-async function tokenRequest(params: Record<string, string>): Promise<Response> {
+/** A DPoP proof with exactly the given claims beside htu, htm and jti: no `iat` unless `claims` sets one. */
+async function rawProof(claims: Record<string, unknown>): Promise<string> {
+  return new SignJWT({ htu: `${ISSUER}/token`, htm: "POST", jti: crypto.randomUUID(), ...claims })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(dpopKeys.publicKey) })
+    .sign(dpopKeys.privateKey);
+}
+
+/**
+ * POST /token with private_key_jwt + DPoP, with the mandatory dpop-nonce retry.
+ * `makeProof` replaces the default fresh proof (the freshness cases).
+ */
+async function tokenRequest(
+  params: Record<string, string>,
+  makeProof?: (extra: Record<string, unknown>) => Promise<string>,
+): Promise<Response> {
   const htu = `${ISSUER}/token`;
+  const proof = makeProof ?? ((extra: Record<string, unknown>) => dpopProof(htu, "POST", extra));
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(htu, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", extra) },
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
       body: new URLSearchParams({
         ...params,
         client_assertion: await clientAssertion(),
@@ -152,14 +167,18 @@ async function dispatch(params: {
   /** @spec mission#authority-proposal — the dispatcher's proposal on the
    *  standard authorization_details parameter of the dispatch grant. */
   authorizationDetails?: string;
+  makeProof?: (extra: Record<string, unknown>) => Promise<string>;
 }): Promise<Response> {
-  return tokenRequest({
-    grant_type: MISSION_DISPATCH_GRANT_TYPE,
-    template_id: params.templateId,
-    mission_intent: params.intent,
-    dispatch_event_id: params.dispatchEventId,
-    ...(params.authorizationDetails ? { authorization_details: params.authorizationDetails } : {}),
-  });
+  return tokenRequest(
+    {
+      grant_type: MISSION_DISPATCH_GRANT_TYPE,
+      template_id: params.templateId,
+      mission_intent: params.intent,
+      dispatch_event_id: params.dispatchEventId,
+      ...(params.authorizationDetails ? { authorization_details: params.authorizationDetails } : {}),
+    },
+    params.makeProof,
+  );
 }
 
 /** A held Dispatch Policy snapshot; `select_agent` is its Agent selection rule (@spec mission#standing-consent-bases). */
@@ -169,8 +188,13 @@ const heldPolicy = (id: string, rule: { select_agent?: string } = {}) => ({
   content: JSON.stringify({ id, ...rule }),
 });
 
+/** The token endpoint's DPoP replay cache, switchable to full (#1173). */
+const replay = switchableDpopReplay();
+
 beforeAll(async () => {
   as = await buildAuthorizationServer({
+    // @spec #1173 (D375): switchable to full for the cache-bound cases.
+    dpopProofReplay: replay,
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     // @spec mission-template#the-mission-template, mission#standing-consent-bases
@@ -602,5 +626,81 @@ describe("Dispatch idempotency at /token (@spec mission-template#dispatch, missi
     // The unchanged retry still recovers the committed instance.
     const retry = await dispatch({ templateId, intent: envelope("reconcile Acme invoices", "b-1"), dispatchEventId: "evt-mismatch" });
     expect(((await retry.json()) as { mission_id?: string }).mission_id).toBe(firstBody.mission_id);
+  });
+});
+
+describe("DPoP proof freshness on the dispatch grant (@spec RFC 9449 Section 4.3, #1173)", () => {
+  const nowS = (): number => Math.floor(Date.now() / 1000);
+  const outside = () => [
+    { label: "no iat", claims: {}, description: "DPoP proof has no iat" },
+    { label: "a non-numeric iat", claims: { iat: "now" }, description: "invalid DPoP proof" },
+    { label: "a boolean iat", claims: { iat: true }, description: "invalid DPoP proof" },
+    { label: "a day old", claims: { iat: nowS() - 86_400 }, description: "outside the acceptance window" },
+    { label: "past the window", claims: { iat: nowS() - 260 }, description: "outside the acceptance window" },
+    { label: "an hour ahead", claims: { iat: nowS() + 3_600 }, description: "outside the acceptance window" },
+  ];
+
+  it("refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused", async () => {
+    const created = await createTemplateAdmin(readOnlyTemplateBody());
+    const { template_id } = (await created.json()) as { template_id: string };
+    for (const { label, claims, description } of outside()) {
+      const res = await dispatch({
+        templateId: template_id,
+        intent: readOnlyIntent(),
+        dispatchEventId: `evt-stale-${crypto.randomUUID()}`,
+        makeProof: (extra) => rawProof({ ...claims, ...extra }),
+      });
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, label).toBe(400);
+      expect(body.error, label).toBe("invalid_dpop_proof");
+      expect(body.error_description, label).toContain(description);
+      expect(body.access_token, label).toBeUndefined();
+    }
+    for (const offset of [-230, 50]) {
+      let sent = "";
+      const params = { templateId: template_id, intent: readOnlyIntent(), dispatchEventId: `evt-fresh-${crypto.randomUUID()}` };
+      const ok = await dispatch({ ...params, makeProof: async (extra) => (sent = await rawProof({ iat: nowS() + offset, ...extra })) });
+      expect(ok.status, `iat ${offset}: ${JSON.stringify(await ok.clone().json())}`).toBe(200);
+      const replay = await dispatch({ ...params, makeProof: async () => sent });
+      const replayBody = (await replay.json()) as { error?: string; error_description?: string };
+      expect(replay.status, `iat ${offset}, replayed`).toBe(400);
+      expect(replayBody.error, `iat ${offset}, replayed`).toBe("invalid_dpop_proof");
+      expect(replayBody.error_description, `iat ${offset}, replayed`).toContain("replayed");
+    }
+  });
+});
+
+describe("the dispatch grant at the DPoP replay cache's bound (@spec RFC 9449 Section 11.1, #1173, D375)", () => {
+  it("refuses a new proof temporarily_unavailable with Retry-After, keeps a seen proof a replay, and dispatches again once capacity frees", async () => {
+    const created = await createTemplateAdmin(readOnlyTemplateBody());
+    const { template_id } = (await created.json()) as { template_id: string };
+    const params = () => ({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: `evt-cap-${crypto.randomUUID()}` });
+    let accepted = "";
+    const ok = await dispatch({
+      ...params(),
+      makeProof: async (extra) => {
+        accepted = await dpopProof(`${ISSUER}/token`, "POST", extra);
+        return accepted;
+      },
+    });
+    expect(ok.status).toBe(200);
+    replay.full = true;
+    try {
+      const label = "a new proof";
+      const res = await dispatch(params());
+      const body = (await res.json()) as { error?: string; access_token?: string };
+      expect(res.status, `${label}: ${JSON.stringify(body)}`).toBe(503);
+      expect(body.error, label).toBe("temporarily_unavailable");
+      expect(res.headers.get("retry-after"), label).toBe(String(SWITCHED_RETRY_AFTER_S));
+      expect(body.access_token, label).toBeUndefined();
+      const replayed = await dispatch({ ...params(), makeProof: async () => accepted });
+      const replayedBody = (await replayed.json()) as { error?: string; error_description?: string };
+      expect(replayed.status, "a seen proof").toBe(400);
+      expect(replayedBody.error, "a seen proof").toBe("invalid_dpop_proof");
+      expect(replayedBody.error_description, "a seen proof").toContain("replayed");
+    } finally {
+      replay.full = false;
+    }
+    expect((await dispatch(params())).status).toBe(200);
   });
 });

@@ -22,6 +22,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { Fga, type MissionView } from "@mission/pdp";
+import { type DpopProofReplay, newDpopProofReplay } from "@mission/core";
 import {
   ActorRecords,
   CANONICAL_RESOURCE,
@@ -511,7 +512,7 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
    * whether that ledger actually records the delegation.
    */
   async function buildGoverned(
-    opts: { delegate?: boolean; recordEdge?: boolean } = {},
+    opts: { delegate?: boolean; recordEdge?: boolean; dpopReplay?: DpopProofReplay } = {},
   ): Promise<{ url: string; evidence: EvidenceStore }> {
     const payments = new PaymentsStore();
     payments.seed(
@@ -581,6 +582,7 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
       jwks: { keys: [pubJwk] },
       keyRoles: { accessToken: ["mission-key"], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
+      ...(opts.dpopReplay ? { dpopReplay: opts.dpopReplay } : {}),
     });
     const channel = await createHttpMcpChannel(server, { masGoverned: true });
     cleanups.push(channel.close);
@@ -595,6 +597,33 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
     cleanups.push(close);
     const res = await client.callTool("get_invoice", { invoice_id: "inv-1" });
     expect(res.ok, JSON.stringify(res)).toBe(true);
+  });
+
+  // @spec runtime-evidence#pre-decision-refusal, RFC 9449 Section 11.1 (#1173, D375).
+  it("answers a DPoP replay cache at its bound with HTTP 503, Retry-After and the pre-decision state_unavailable, never dispatching the request", async () => {
+    // A zero bound: every new proof jti is refused for capacity.
+    const { url } = await buildGoverned({ dpopReplay: newDpopProofReplay(300, Date.now, 0) });
+    const token = await signOrdinaryToken();
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: `DPoP ${token}`,
+        dpop: await dpopProofFor(dpopKeys, canonicalHtu(url), "POST", token),
+        "mission-reference": `id="${VIEW.id}", issuer="${ISSUER}"`,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "0" } },
+      }),
+    });
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBe("300");
+    expect(res.headers.get("mcp-session-id")).toBeNull();
+    expect(((await res.json()) as { refusal_reason?: string }).refusal_reason).toBe("state_unavailable");
   });
 
   it("refuses mission_reference_conflict with the Mission-Reference field ABSENT: the route requires a reference and the credential establishes no Mission of its own", async () => {

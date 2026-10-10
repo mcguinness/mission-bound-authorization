@@ -64,6 +64,7 @@ import {
   splitScope,
 } from "@mission/core";
 import { UniqueViolationError } from "@mission/store";
+import { dpopProofIatAcceptableAt, refuseTokenEndpointProof, type TokenEndpointProofFailure } from "./dpop-replay.js";
 import {
   type CreationOperation,
   type CreationReservation,
@@ -237,24 +238,8 @@ export function continuationAuthorityFilter(
   };
 }
 
-/**
- * @spec RFC 9449 — record-and-check a manually verified DPoP proof's `jti` in
- * the bounded replay cache: a missing/empty jti or a reuse within the window
- * refuses (invalid_dpop_proof). Shared by every manual DPoP block at the token
- * endpoint (the custom grants); exported for the provider.ts blocks.
- */
-export function freshProofJti(opts: AdapterOptions, jti: unknown): boolean {
-  return typeof jti === "string" && jti !== "" && opts.dpopProofReplay?.check(jti) === true;
-}
-
-/**
- * How far in the future a token-endpoint DPoP proof's `iat` may lie (clock
- * skew). The past bound is the replay window less this, so a proof's whole
- * acceptance interval, `[iat - skew, iat + window - skew]`, fits inside the
- * replay cache's memory of its `jti` (first seen plus the window): a replay is
- * always refused by either the `iat` check or the cache, never neither.
- */
-export const DPOP_PROOF_FUTURE_SKEW_S = 60;
+/** @spec RFC 9449 Section 4.3 — the proof's clock-skew allowance, one value for every verifier (`@mission/core`). */
+export { DPOP_PROOF_FUTURE_SKEW_S } from "./dpop-replay.js";
 
 /**
  * Private JWK members: a proof key carrying any of them is not a public key.
@@ -283,7 +268,7 @@ export interface VerifiedTokenEndpointProof {
 export async function verifyTokenEndpointDpop(
   opts: AdapterOptions,
   proofJws: string,
-): Promise<{ ok: true; proof: VerifiedTokenEndpointProof } | { ok: false; description: string }> {
+): Promise<{ ok: true; proof: VerifiedTokenEndpointProof } | ({ ok: false } & TokenEndpointProofFailure)> {
   let jwk: JWK;
   let jkt: string;
   let payload: Record<string, unknown>;
@@ -303,11 +288,19 @@ export async function verifyTokenEndpointDpop(
     return { ok: false, description: "invalid DPoP proof" };
   }
   if (typeof payload.iat !== "number") return { ok: false, description: "DPoP proof has no iat" };
-  const nowS = Math.floor(Date.now() / 1000);
-  if (payload.iat > nowS + DPOP_PROOF_FUTURE_SKEW_S || payload.iat < nowS - (DPOP_PROOF_REPLAY_WINDOW_S - DPOP_PROOF_FUTURE_SKEW_S)) {
+  if (!dpopProofIatAcceptableAt(payload.iat, Date.now())) {
     return { ok: false, description: "DPoP proof iat is outside the acceptance window" };
   }
-  if (!freshProofJti(opts, payload.jti)) return { ok: false, description: "DPoP proof jti missing or replayed" };
+  // @spec RFC 9449 Section 11.1, #1173 (D375): the jti is single-use; at the
+  // cache's bound a NEW jti is refused retryably and no live entry is evicted.
+  const admission =
+    typeof payload.jti === "string" && payload.jti !== "" ? opts.dpopProofReplay?.admit(payload.jti) : undefined;
+  if (!admission || (!admission.admitted && admission.reason === "replay")) {
+    return { ok: false, description: "DPoP proof jti missing or replayed" };
+  }
+  if (!admission.admitted) {
+    return { ok: false, description: "DPoP proof replay cache is at capacity", retryAfterS: admission.retryAfterS };
+  }
   return { ok: true, proof: { jwk, jkt } };
 }
 
@@ -419,7 +412,7 @@ export async function handleTokenExchangeGrant(
         ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
         tokenKey: opts.childGrantKey as CryptoKey,
         tokenKid: opts.childGrantKid as string,
-        proofJtiFresh: (jti) => freshProofJti(opts, jti),
+        verifyDpop: (proofJws) => verifyTokenEndpointDpop(opts, proofJws),
         now: () => opts.kernel.nowDate(),
         ...(opts.scopeProjection ? { scopeProjection: opts.scopeProjection } : {}),
       },
@@ -562,31 +555,20 @@ export async function handleTokenExchangeGrant(
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const currentActor = { iss: opts.issuer, sub: client.clientId };
 
-  // DPoP: derive the presenter jkt exactly as mintDeferredToken does.
+  // DPoP: the presenter's key proof.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) {
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
-  if (!freshProofJti(opts, proofJti)) {
-    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
-    return;
-  }
+  const { jkt } = verified.proof;
   // The DPoP key MUST be the ICA's confirmed key: an ICA is never a bearer
   // token.
   if (ica.cnf.jkt !== jkt) {
@@ -988,7 +970,7 @@ export async function handleAsyncDelegationExchange(
   }
   const verifiedProof = await verifyTokenEndpointDpop(opts, proofJws);
   if (!verifiedProof.ok) {
-    txError(ctx, 400, "invalid_dpop_proof", verifiedProof.description);
+    refuseTokenEndpointProof(ctx, verifiedProof);
     return;
   }
   const { jkt } = verifiedProof.proof;
@@ -1626,7 +1608,7 @@ export interface ResolvedSubject {
  * OWN cnf.jkt. This is the inverse of {@link handleAsyncDelegationExchange}, which
  * deliberately re-binds to the acting client's key. The DPoP `jti` is single-use
  * per RFC 9449, enforced by the shared bounded-TTL replay cache
- * ({@link freshProofJti}) like every other manual DPoP block here.
+ * (through {@link verifyTokenEndpointDpop}) like every other DPoP check here.
  * Returns null after setting the ctx error body; the caller returns immediately.
  */
 export async function verifySubjectPossession(
@@ -1685,7 +1667,7 @@ export async function verifySubjectPossession(
   }
   const verified = await verifyTokenEndpointDpop(opts, proofJws);
   if (!verified.ok) {
-    txError(ctx, 400, "invalid_dpop_proof", verified.description);
+    refuseTokenEndpointProof(ctx, verified);
     return null;
   }
   const { jkt, jwk: dpopJwk } = verified.proof;
@@ -1913,20 +1895,14 @@ async function retrieveCarryoverResult(
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  let jkt: string;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    if (!freshProofJti(opts, proof.jti)) throw new Error("replayed jti");
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
+  const { jkt } = verified.proof;
   let retrieved: ReturnType<typeof store.retrieve>;
   try {
     retrieved = store.retrieve({ replacementId, actor: { sub: client.clientId } });
@@ -2608,25 +2584,14 @@ async function pollDeferredExpansion(
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
-  if (!freshProofJti(opts, proofJti)) {
-    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
-    return;
-  }
+  const { jkt } = verified.proof;
   const recordedJkt = store.recordedJkt(deferralCode);
   if (recordedJkt !== undefined && recordedJkt !== jkt) {
     txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
