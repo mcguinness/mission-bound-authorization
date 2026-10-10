@@ -1888,6 +1888,21 @@ export async function seedGovernedClient(): Promise<SeededClient> {
   return buildSeededClient(seed);
 }
 
+/**
+ * @spec mission#authority-sources — the agent that acts for its own workload
+ * principal: the one client of the shipped `service_owned` source, whose
+ * Missions record the workload principal `agt_ledger_reconciler` as Subject.
+ * The client and the Subject are separate identities, each established on its
+ * own; neither is derived from the other or from the source type.
+ */
+export async function seedLedgerReconcilerClient(): Promise<SeededClient> {
+  const seed = CLIENTS.find((c) => c.client_id === "ledger-reconciler");
+  if (!seed) {
+    throw new ConfigError("clients.json", "client 'ledger-reconciler' not found");
+  }
+  return buildSeededClient(seed);
+}
+
 /** Dev-only service token for control-plane edges (channel matrix). */
 export const DEV_SERVICE_TOKEN = TOPOLOGY.devServiceToken;
 

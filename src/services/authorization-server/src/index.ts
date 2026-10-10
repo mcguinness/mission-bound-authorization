@@ -13,6 +13,7 @@ import {
   seedAgentClient,
   seedChildClient,
   seedGovernedClient,
+  seedLedgerReconcilerClient,
   seedTrustedSources,
   type SeededTrustedSource,
   SCOPE_PROJECTION,
@@ -613,6 +614,12 @@ export interface BuiltAs {
    * governed client and observe the AS-side rejection.
    */
   governedClientJwk: Record<string, unknown>;
+  /**
+   * @spec mission#authority-sources — the private JWK of `ledger-reconciler`,
+   * the client of the shipped `service_owned` source, so a test can drive an
+   * agent acting for its own workload principal end to end.
+   */
+  ledgerReconcilerClientJwk: Record<string, unknown>;
   canonicalResource: string;
   /**
    * @spec id-continuation-assertion — the continuation handle store, exposed so a
@@ -877,11 +884,14 @@ export async function buildAuthorizationServer(opts: {
   // @spec mission#downgrade-by-omission — the Mission-governed demo client:
   // registered so the AS-side anti-downgrade hook is exercisable end to end.
   const governed = await seedGovernedClient();
+  // @spec mission#authority-sources — the agent acting for its own workload
+  // principal, the client of the shipped `service_owned` source.
+  const ledgerReconciler = await seedLedgerReconcilerClient();
   // @spec async-delegation (issue #651) — TEST-ONLY registrations compose ONTO
   // the shipped registry. A duplicate `client_id` would SHADOW a shipped
   // registration rather than add to it (silently widening what the demo
   // ships), so it is refused outright.
-  const shippedClientIds = new Set([agent, child, governed].map((c) => c.metadata.client_id));
+  const shippedClientIds = new Set([agent, child, governed, ledgerReconciler].map((c) => c.metadata.client_id));
   for (const testClient of opts.testClients ?? []) {
     const id = String(testClient.client_id);
     if (shippedClientIds.has(id)) {
@@ -1112,6 +1122,7 @@ export async function buildAuthorizationServer(opts: {
       // redeems a Dispatch Handoff (@spec mission-template#dispatch-handoff).
       ...(capabilityEnabled(opts, "child-delegation") || capabilityEnabled(opts, "templates") ? [child.metadata] : []),
       governed.metadata,
+      ledgerReconciler.metadata,
       ...(opts.testClients ?? []),
     ],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
@@ -1222,6 +1233,7 @@ export async function buildAuthorizationServer(opts: {
     agentClientJwk: agent.privateJwk,
     childClientJwk: child.privateJwk,
     governedClientJwk: governed.privateJwk,
+    ledgerReconcilerClientJwk: ledgerReconciler.privateJwk,
     canonicalResource: CANONICAL_RESOURCE,
     continuationStore,
     delegationFamilyStore,
