@@ -1755,20 +1755,23 @@ An implementation claiming an extension MUST meet its requirements:
   gates on non-`active` state, and advertise `mission_lifecycle_endpoint` and
   `mission_lifecycle_endpoint_auth_methods_supported`.
 - **Mission Lifecycle, revoke only**: serve the management endpoint
-  ({{mission-lifecycle-endpoint}}) with the `revoke` operation alone,
-  under its authentication, its explicit lifecycle authorization
+  ({{mission-lifecycle-endpoint}}) with the `revoke` operation, under
+  its authentication, its explicit lifecycle authorization
   ({{lifecycle-authorization}}), the idempotency and conflict rules of
   {{idempotency}}, and the not-found refusal of an unauthorized
   request; answer each `revoke` with the signed, state-only Mission
   Status Response, whose `aud` is the authenticated requester and whose
-  `nonce` is the request's ({{mission-status-response}}); refuse every
-  other operation ({{mission-lifecycle-endpoint}}, Operations); and
-  advertise `mission_lifecycle_endpoint`,
+  `nonce` is the request's ({{mission-status-response}}); refuse any
+  operation the implementation has not adopted
+  ({{mission-lifecycle-endpoint}}, Operations); and advertise
+  `mission_lifecycle_endpoint`,
   `mission_lifecycle_endpoint_auth_methods_supported`, and
-  `mission_status_signing_alg_values_supported`. It need not serve the
-  Mission Status operation, and it introduces neither the `suspended`
-  state nor the `completed` termination. An implementation claiming
-  Mission Lifecycle meets it.
+  `mission_status_signing_alg_values_supported`. The class requires no
+  other operation and not the Mission Status operation; an
+  implementation that adopts one meets its requirements as well, and
+  the `suspended` state and `completed` termination arrive only with
+  the operations that introduce them. An implementation claiming
+  Mission Lifecycle meets this class.
 - **Revocation propagation**: advertise `mission_max_stale_seconds`
   and size Mission-bound access-token TTLs to it
   ({{revocation-enforcement-classes}}).
