@@ -51,8 +51,8 @@
     "content_sha256": "59f5bb1554f7f4d60be297ba66c33a5df756983e22eb1c5ebb361d3b9c34d18e"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "eecf22076356a14f7f797e410d708f4ae98cef6a",
-    "content_sha256": "b003fdb0e919729c8b4ba20dda56b31ecdb99dae3ea8c0bd77a715863dba0e18"
+    "revision": "1a5ae2e0f5080f7eca8f27f6a0ad0ecdfd2def54",
+    "content_sha256": "f17d312b067ba2e56fb9963a5c833cdc0ba7e235aa07cee3096ccfdd4039b134"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "f9c4eb28516517c5955734a70c61ae8c6d42309b",
@@ -204,6 +204,7 @@
    "core.introspection",
    "core.introspected-consumption",
    "status.lifecycle",
+   "status.lifecycle-revoke",
    "status.discharge",
    "signals.events",
    "cross-org.delegation",
@@ -4767,6 +4768,38 @@
    ]
   },
   {
+   "id": "core.revocation.revoke-by-mission-id",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "revocation",
+   "text": "A deployment MUST provide an authenticated means for the Subject, the Approver, or an administrator to revoke a Mission by `mission_id`, independent of possession of any token",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authenticated party holding none of the Mission's tokens revokes it by its identifier, after which every derivation under the Mission refuses",
+    "local": "the administrator path is witnessed (a service principal holding none of the Mission's tokens); Subject and Approver access to the same surface is not exercised"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1182 (D378)."
+  },
+  {
    "id": "core.issuance-gating.inactive-refused-by-grant",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "issuance-gating",
@@ -7807,6 +7840,12 @@
      "name": "the discharge operation on the lifecycle endpoint > replays the stored signed response verbatim on a byte-identical retransmission",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > replays a same-nonce retry byte for byte, and refuses the same nonce with a different request invalid_request",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
    "notes": "LifecycleResponseStore, keyed by (endpoint, principal, mission_id, nonce), stores the response's exact bytes with the digest of the exact request bytes; the retransmission replays it without re-executing. Proven on `discharge`, whose response is the signed envelope (string equality is meaningful). DEVIATION: `nonce` is REQUIRED for `discharge` and OPTIONAL for the four state operations here, since existing operational callers never send one; dedup applies to any operation that does carry one."
@@ -7836,6 +7875,12 @@
     {
      "file": "src/services/authorization-server/test/discharge.test.ts",
      "name": "the discharge operation on the lifecycle endpoint > replays the stored signed response verbatim on a byte-identical retransmission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > replays a same-nonce retry byte for byte, and refuses the same nonce with a different request invalid_request",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     }
@@ -9149,6 +9194,149 @@
    "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
   },
   {
+   "id": "status.conformance.revoke-only-class",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "conformance",
+   "text": "serve the management endpoint ({{mission-lifecycle-endpoint}}) with the `revoke` operation, under its authentication, its explicit lifecycle authorization ({{lifecycle-authorization}}), the idempotency and conflict rules of {{idempotency}}, and the not-found refusal of an unauthorized request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle-revoke"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment serving `revoke` revokes for an authorized caller holding none of the Mission's tokens, after which every derivation refuses and a racing refresh either commits first or is refused; refuses every operation it has not adopted `invalid_request`; replays a same-nonce retry and refuses a nonce mismatch; answers a fresh `revoke` of a revoked Mission with no transition and a `revoke` of a completed or expired Mission with `conflict`; answers an unauthorized caller as an unknown Mission; and answers each `revoke` with the signed, state-only Mission Status Response whose `aud` is the requester and whose `nonce` is the request's. The class requires no other operation and not the Mission Status operation, without forbidding either; the witness deployment adopts neither",
+    "local": "behavior witnessed on the reference configured revoke-only; three reference gaps keep the row partial and the capability unclaimed: (1) the request shape is POST /missions/{id}/lifecycle with a JSON body and a service token, not the advertised mission_lifecycle_endpoint with a form body carrying mission_id under Status's authentication methods, so neither mission_lifecycle_endpoint nor its auth-methods member is advertised; (2) revoke is answered with plain JSON, not the signed state-only Mission Status Response with requester aud and nonce binding; (3) mission_status_signing_alg_values_supported is advertised only when status or discharge is on, which must widen to the lifecycle capabilities once Lifecycle responses are signed"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a racing refresh either commits before the revoke or is refused: a revoke landing after the refresh pre-check is still refused at the save-time gate",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses every operation the deployment has not adopted invalid_request before looking up the Mission, leaving it unchanged",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses an unrecognized or absent operation invalid_request before looking up the Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > does not serve the Mission Status operation",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > replays a same-nonce retry byte for byte, and refuses the same nonce with a different request invalid_request",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > a fresh revoke of a revoked Mission succeeds with no new transition",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > refuses a revoke of a completed or an expired Mission with conflict, keeping its cause",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > answers a caller without lifecycle authorization exactly as it answers an unknown Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > compares the termination reason: revoke replays byte for byte, a revoke retry with a fresh nonce is idempotent, and complete on the revoked Mission is a conflict (@spec status#idempotency, #705)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "idempotency compares the termination reason (#705 witness 8) > same state and reason is idempotent success; revoke on a completed termination and complete on a revoked one are conflicts",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "idempotency compares the termination reason (#705 witness 8) > revoke on an expired Mission is a conflict, whether or not the expiry was persisted",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1182 (D378, D383). The reference gaps in the local observation are tracked as #1191; the row stays partial and status.lifecycle-revoke unclaimed until it lands."
+  },
+  {
+   "id": "status.lifecycle.unserved-operation-refused",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "The AS MUST refuse an `operation` value it does not serve, a base operation its conformance claim omits ({{conformance}}) or an extension operation it has not adopted, with `invalid_request` ({{mission-status-errors}}) before looking up the Mission, leaving the Mission unchanged",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an operation the deployment does not serve is refused `invalid_request` with the same response for a known and an unknown Mission, and the Mission's state and version are unchanged: a recognized operation it has not adopted (`suspend`, `resume`, `complete`, `discharge`, `contain` on a revoke-only deployment) and an unrecognized or absent `operation` value alike"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses every operation the deployment has not adopted invalid_request before looking up the Mission, leaving it unchanged",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses an unrecognized or absent operation invalid_request before looking up the Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses an unrecognized operation invalid_request before the Mission lookup on a full deployment, the same for an unknown Mission (@spec status#mission-lifecycle-endpoint, #1183)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses malformed wire shapes as invalid_request, never a 500",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1182 (D378)."
+  },
+  {
    "id": "child-delegation.carryover.status-correlation",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
@@ -9368,6 +9556,12 @@
     {
      "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
      "name": "control-plane lifecycle response boundary > compares the termination reason: revoke replays byte for byte, a revoke retry with a fresh nonce is idempotent, and complete on the revoked Mission is a conflict (@spec status#idempotency, #705)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > refuses a revoke of a completed or an expired Mission with conflict, keeping its cause",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     }

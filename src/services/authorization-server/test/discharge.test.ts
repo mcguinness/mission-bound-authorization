@@ -1381,12 +1381,26 @@ describe("the discharge operation on the lifecycle endpoint", () => {
       expect(((await res.json()) as Record<string, unknown>).error).toBe("invalid_request");
     }
     // A valid-JSON body that is not an object lands as an empty member set:
-    // no operation resolves, so it collapses into the endpoint's own
-    // `not_found` vocabulary — a refusal, never a member-access 500.
+    // no `operation` is present, so it is refused `invalid_request` before any
+    // Mission is looked up (@spec status#mission-lifecycle-endpoint,
+    // "Operations"): a refusal, never a member-access 500.
     const nullBody = await lifecycle(record.id, null);
-    expect(nullBody.status).toBe(404);
-    expect(await nullBody.json()).toMatchObject({ error: "not_found" });
+    expect(nullBody.status).toBe(400);
+    expect(await nullBody.json()).toMatchObject({ error: "invalid_request" });
     expect(as.kernel.get(record.id)?.discharged).toBeUndefined();
+  });
+
+  it("refuses an unrecognized operation invalid_request before the Mission lookup on a full deployment, the same for an unknown Mission (@spec status#mission-lifecycle-endpoint, #1183)", async () => {
+    const record = approveOnAs();
+    const body = { operation: "unadopted_extension", nonce: freshNonce() };
+    const known = await lifecycle(record.id, body);
+    const unknown = await lifecycle("msn_unknown_0000000000000000000000", body);
+    expect(known.status).toBe(400);
+    const knownBody = (await known.json()) as Record<string, unknown>;
+    expect(knownBody.error).toBe("invalid_request");
+    expect(unknown.status).toBe(400);
+    expect(await unknown.json()).toEqual(knownBody);
+    expect(as.kernel.get(record.id)?.state).toBe("active");
   });
 
   it("terminal_noop over HTTP is event-idempotent: fresh-nonce replay returns the stored outcome, divergent re-assertion conflicts", async () => {
