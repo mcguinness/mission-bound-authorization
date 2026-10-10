@@ -1083,6 +1083,17 @@ for the store. Otherwise a tainted session launders content across
 the session boundary by writing it to a vouched store that a later
 session reads as trusted, defeating the fresh-session reset below.
 
+A **trusted direction**, a taint reset or an egress direction, is one
+given by the delegating person of a user-delegated Mission, the
+Approver, or another principal the deployment authorizes for that
+Mission, through a surface the governed agent cannot invoke from its
+tool plane or from any channel it drives, such as that person's own
+input to the session or an operator's control surface. The surface
+establishes the principal's identity itself, never from caller
+input. No principal gives a trusted direction solely because it is
+the Subject, and identity alone, administrative metadata included,
+authorizes none.
+
 The trigger is parameter provenance where the harness can establish
 it. Because the harness mediates tool input and output, it SHOULD
 track at the data plane which tainted source a value derives from. The
@@ -1096,17 +1107,6 @@ governed session that tainted content has entered. Session-level
 taint persists for the governed session's lifetime and clears only
 with a fresh session or an explicit reset, given as a trusted
 direction and recorded in Harness Evidence ({{harness-evidence}}).
-
-A **trusted direction**, a taint reset or an egress direction, is one
-given by the delegating person of a user-delegated Mission, the
-Approver, or another principal the deployment authorizes for that
-Mission, through a surface the governed agent cannot invoke from its
-tool plane or from any channel it drives, such as that person's own
-input to the session or an operator's control surface. The surface
-establishes the principal's identity itself, never from caller
-input. No principal gives a trusted direction solely because it is
-the Subject, and identity alone, administrative metadata included,
-authorizes none.
 
 Taint follows derivation across session boundaries with the same
 polarity. A sub-agent session spawned from a tainted session
