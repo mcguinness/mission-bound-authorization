@@ -733,7 +733,6 @@ d("M5 transaction-assurance tier", () => {
       { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
-      undefined,
       ACCEPT_CHALLENGE,
     );
     const txn = decodeJwt(challengeRes.transaction_challenge as string).txn as string;
