@@ -8841,7 +8841,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1182 (D378)."
+   "notes": "#1182 (D378, D383). The reference gaps in the local observation are tracked as #1191; the row stays partial and status.lifecycle-revoke unclaimed until it lands."
   },
   {
    "id": "status.lifecycle.unserved-operation-refused",
