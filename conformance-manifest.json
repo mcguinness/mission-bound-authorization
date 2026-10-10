@@ -8680,6 +8680,47 @@
    "notes": "The funnel checks selector existence and condition membership (one lookup: the condition is resolved INSIDE the named entry), then event_type match, then target authorization, and only then distinguishes a terminal Mission. The test revokes a Mission and presents an unknown entry_digest: the answer is the not_found collapse, not terminal_noop, so the terminal state is never a selector-existence oracle; the same terminal Mission with resolving selectors then answers terminal_noop."
   },
   {
+   "id": "discharge.runtime.pdp-refuses-discharged-entry",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "runtime",
+   "text": "that profile requires its PDP to refuse a discharged entry at the point of use",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "in a deployment running the runtime profile, the PDP refuses an action within a discharged entry at the point of use, denying authority_discharged, so a credential issued before the discharge stops permitting before it expires"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-discharge.test.ts",
+     "name": "discharged entries are excluded from the PDP's authority input > denies authority_discharged for the discharged entry while the Mission stays active",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/discharge-overlay-stack.test.ts",
+     "name": "the composed stack refuses a discharged entry at the point of use (@spec discharge#runtime, #1144) > after a discharge commit, the next decision for that entry is authority_discharged, and a credential deriving only from it is refused at step 5c while a live entry's credential still permits (co-resident)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/discharge-overlay-stack.test.ts",
+     "name": "the composed stack refuses a discharged entry at the point of use (@spec discharge#runtime, #1144) > after a discharge commit, the next decision for that entry is authority_discharged, and a credential deriving only from it is refused at step 5c while a live entry's credential still permits (remote)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1144 (D335). The PDP-level witness is the runtime row's; the composed stack's witness shows the canonical loader supplies the discharge delta, so the refusal holds end to end in both PDP modes."
+  },
+  {
    "id": "status.effective-set.single-computation",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "conformance",
@@ -14042,9 +14083,21 @@
      "name": "the canonical Mission loader preserves the committed entry identity (D335) > reproduces the committed authority_hash and each entry's issuer digest, though it adds join_delegation",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/discharge-overlay-stack.test.ts",
+     "name": "the composed stack refuses a discharged entry at the point of use (@spec discharge#runtime, #1144) > after a discharge commit, the next decision for that entry is authority_discharged, and a credential deriving only from it is refused at step 5c while a live entry's credential still permits (co-resident)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/discharge-overlay-stack.test.ts",
+     "name": "the composed stack refuses a discharged entry at the point of use (@spec discharge#runtime, #1144) > after a discharge commit, the next decision for that entry is authority_discharged, and a credential deriving only from it is refused at step 5c while a live entry's credential still permits (remote)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "MissionView gains a `discharged` DELTA (the discharged entries' commitments) and evaluateInner denies the new `authority_discharged` reason at step 5b, after the entry match and the containment overlay, keyed by the same `entry_digest` a permit already carries. The delta shape mirrors containment's for the same reason: it tells approved-then-completed from never-approved. Both materialization paths are tested: the delta path (authority_discharged) and the effective-set path, where the entry is absent because Mission Status and the introspection projection omit it (@spec status#visibility) and the action denies out_of_authority. The AS side exposes `MissionKernel.dischargedEntryDigests(record)` for a view builder; the demo stack's own loadView is not rewired, so no deployed PEP in this repo populates the delta yet. The PDP keys the delta by the committed entry digest, the materialized entry without its PDP-local members (the canonical loader adds join_delegation); the demo test proves the loader's view reproduces the issuer's digests and authority_hash (D335). The demo loader does not yet supply the delta itself (#1144)."
+   "notes": "MissionView gains a `discharged` DELTA (the discharged entries' commitments) and evaluateInner denies the new `authority_discharged` reason at step 5b, after the entry match and the containment overlay, keyed by the same `entry_digest` a permit already carries. The delta shape mirrors containment's for the same reason: it tells approved-then-completed from never-approved. Both materialization paths are tested: the delta path (authority_discharged) and the effective-set path, where the entry is absent because Mission Status and the introspection projection omit it (@spec status#visibility) and the action denies out_of_authority. The AS side exposes `MissionKernel.dischargedEntryDigests(record)` for a view builder; the demo stack's own loadView is not rewired, so no deployed PEP in this repo populates the delta yet. The PDP keys the delta by the committed entry digest, the materialized entry without its PDP-local members (the canonical loader adds join_delegation); the demo test proves the loader's view reproduces the issuer's digests and authority_hash (D335). The demo loader does not yet supply the delta itself (#1144). #1144 (D335): the demo stack's canonical loader, viewFor, now supplies the delta from the kernel's committed discharge latches, and the composed stack refuses a discharged entry in both PDP modes, including a credential deriving only from it (step 5c)."
   },
   {
    "id": "runtime.decision-inputs.containment-excludes-authority",
