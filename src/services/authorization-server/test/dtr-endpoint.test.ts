@@ -83,12 +83,25 @@ async function dpopProof(
 }
 
 /** POST /token with private_key_jwt + DPoP, with the mandatory dpop-nonce retry. */
-async function tokenRequest(params: Record<string, string>, keys: DpopKeys = dpopKeys): Promise<Response> {
+/** A DPoP proof with exactly the given claims beside htu, htm and jti: no `iat` unless `claims` sets one. */
+async function rawProof(claims: Record<string, unknown>, keys: DpopKeys = dpopKeys): Promise<string> {
+  return new SignJWT({ htu: `${ISSUER}/token`, htm: "POST", jti: crypto.randomUUID(), ...claims })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(keys.publicKey) })
+    .sign(keys.privateKey);
+}
+
+/** POST /token with private_key_jwt + DPoP; `makeProof` replaces the default fresh proof (the freshness cases). */
+async function tokenRequest(
+  params: Record<string, string>,
+  keys: DpopKeys = dpopKeys,
+  makeProof?: (extra: Record<string, unknown>) => Promise<string>,
+): Promise<Response> {
   const htu = `${ISSUER}/token`;
+  const proof = makeProof ?? ((extra: Record<string, unknown>) => dpopProof(htu, "POST", keys, extra));
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(htu, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", keys, extra) },
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
       body: new URLSearchParams({
         ...params,
         client_assertion: await clientAssertion(),
@@ -187,8 +200,11 @@ async function initiate(requested: AuthorityEntry[]): Promise<Response> {
   });
 }
 /** Poll/redeem a deferral by its deferral_code (grant_type=deferred). */
-async function poll(deferralCode: string): Promise<Response> {
-  return tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: deferralCode });
+async function poll(
+  deferralCode: string,
+  makeProof?: (extra: Record<string, unknown>) => Promise<string>,
+): Promise<Response> {
+  return tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: deferralCode }, dpopKeys, makeProof);
 }
 
 /**
@@ -401,5 +417,51 @@ describe("the deferred grant and the Mission's expires_at (@spec mission#mission
     const at = decodeJwt(body.access_token as string) as { iat: number; exp: number };
     expect(at.exp).toBeLessThanOrEqual(missionExp);
     expect(at.exp - at.iat).toBeLessThan(300);
+  });
+});
+
+describe("DPoP proof freshness at the deferred grant's mint (@spec RFC 9449 Section 4.3, #1173)", () => {
+  const nowS = (): number => Math.floor(Date.now() / 1000);
+
+  /** An approved deferral, ready to redeem (each redemption uses one up). */
+  async function approvedDeferral(): Promise<string> {
+    const res = await initiate(subset(["payments:remittance.send"]));
+    const body = (await res.json()) as { deferral_code?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    const code = body.deferral_code as string;
+    as.deferrals.approve(code, new Date((nowS() + 120) * 1000).toISOString());
+    return code;
+  }
+
+  it("refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused", async () => {
+    const outside = [
+      { label: "no iat", claims: {}, description: "DPoP proof has no iat" },
+      { label: "a non-numeric iat", claims: { iat: "now" }, description: "invalid DPoP proof" },
+      { label: "a day old", claims: { iat: nowS() - 86_400 }, description: "outside the acceptance window" },
+      { label: "past the window", claims: { iat: nowS() - 260 }, description: "outside the acceptance window" },
+      { label: "an hour ahead", claims: { iat: nowS() + 3_600 }, description: "outside the acceptance window" },
+    ];
+    for (const { label, claims, description } of outside) {
+      const res = await poll(await approvedDeferral(), (extra) => rawProof({ ...claims, ...extra }));
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, label).toBe(400);
+      expect(body.error, label).toBe("invalid_dpop_proof");
+      expect(body.error_description, label).toContain(description);
+      expect(body.access_token, label).toBeUndefined();
+    }
+    for (const offset of [-230, 50]) {
+      let sent = "";
+      const ok = await poll(await approvedDeferral(), async (extra) => {
+        sent = await rawProof({ iat: nowS() + offset, ...extra });
+        return sent;
+      });
+      expect(ok.status, `iat ${offset}: ${JSON.stringify(await ok.clone().json())}`).toBe(200);
+      // A second approved deferral, so only the replayed proof can refuse it.
+      const replay = await poll(await approvedDeferral(), async () => sent);
+      const replayBody = (await replay.json()) as { error?: string; error_description?: string };
+      expect(replay.status, `iat ${offset}, replayed`).toBe(400);
+      expect(replayBody.error, `iat ${offset}, replayed`).toBe("invalid_dpop_proof");
+      expect(replayBody.error_description, `iat ${offset}, replayed`).toContain("replayed");
+    }
   });
 });

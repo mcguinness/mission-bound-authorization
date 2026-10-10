@@ -103,13 +103,28 @@ async function dpopProof(htu: string, htm: string, extra: Record<string, unknown
     .sign(dpopKeys.privateKey);
 }
 
-/** POST /token with ap-agent private_key_jwt + DPoP (dpopKeys), with the dpop-nonce retry. */
-async function tokenRequest(params: Record<string, string>): Promise<Response> {
+/** A DPoP proof with exactly the given claims beside htu, htm and jti: no `iat` unless `claims` sets one. */
+async function rawProof(claims: Record<string, unknown>, keys: DpopKeys = dpopKeys): Promise<string> {
+  return new SignJWT({ htu: `${ISSUER}/token`, htm: "POST", jti: crypto.randomUUID(), ...claims })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(keys.publicKey) })
+    .sign(keys.privateKey);
+}
+
+/**
+ * POST /token with ap-agent private_key_jwt + DPoP (dpopKeys), with the
+ * dpop-nonce retry. `makeProof` replaces the default fresh proof (the
+ * freshness cases).
+ */
+async function tokenRequest(
+  params: Record<string, string>,
+  makeProof?: (extra: Record<string, unknown>) => Promise<string>,
+): Promise<Response> {
   const htu = `${ISSUER}/token`;
+  const proof = makeProof ?? ((extra: Record<string, unknown>) => dpopProof(htu, "POST", extra));
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(htu, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", extra) },
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
       body: new URLSearchParams({
         ...params,
         client_assertion: await clientAssertion(),
@@ -260,12 +275,18 @@ async function expandViaExchange(
 }
 
 /** Poll a deferred expansion: deferral_code + DPoP only, NO subject_token (check (b)). */
-async function pollExpansion(deferralCode: string): Promise<Response> {
-  return tokenRequest({
-    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
-    deferral_code: deferralCode,
-  });
+async function pollExpansion(
+  deferralCode: string,
+  makeProof?: (extra: Record<string, unknown>) => Promise<string>,
+): Promise<Response> {
+  return tokenRequest(
+    {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      deferral_code: deferralCode,
+    },
+    makeProof,
+  );
 }
 
 function approveDeferral(deferralCode: string): void {
@@ -988,14 +1009,16 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
     k: CryptoKey,
     dpop: DpopKeys,
     params: Record<string, string>,
+    makeProof?: (extra: Record<string, unknown>) => Promise<string>,
   ): Promise<Response> => {
     const htu = `${ISSUER}/token`;
-    const proof = async (extra: Record<string, unknown>): Promise<string> =>
+    const fresh = async (extra: Record<string, unknown>): Promise<string> =>
       new SignJWT({ htu, htm: "POST", ...extra })
         .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(dpop.publicKey) })
         .setIssuedAt()
         .setJti(crypto.randomUUID())
         .sign(dpop.privateKey);
+    const proof = makeProof ?? fresh;
     const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
       fetch(htu, {
         method: "POST",
@@ -1080,6 +1103,57 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
     expect(newChild?.approval_basis.type).toBe("direct");
   });
 
+  // @spec RFC 9449 Section 4.3 (#1173): the retriever's proof is complete and fresh.
+  it("retrieval refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused", async () => {
+    const nowS = (): number => Math.floor(Date.now() / 1000);
+    const outside = [
+      { label: "no iat", claims: {}, description: "DPoP proof has no iat" },
+      { label: "a non-numeric iat", claims: { iat: "now" }, description: "invalid DPoP proof" },
+      { label: "a day old", claims: { iat: nowS() - 86_400 }, description: "outside the acceptance window" },
+      { label: "past the window", claims: { iat: nowS() - 260 }, description: "outside the acceptance window" },
+      { label: "an hour ahead", claims: { iat: nowS() + 3_600 }, description: "outside the acceptance window" },
+    ];
+    const pred = await predecessorWithChild();
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance for the proof cases", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const openedBody = (await opened.json()) as { deferral_code: string };
+    approveDeferral(openedBody.deferral_code);
+    const done = await pollExpansion(openedBody.deferral_code);
+    const completion = (await done.json()) as { carryover_replacements: Array<{ mission_id: string }> };
+    expect(done.status, JSON.stringify(completion)).toBe(200);
+    // Retrieval is idempotent, so one replacement serves every case.
+    const params = {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      carryover_replacement: completion.carryover_replacements[0]?.mission_id as string,
+    };
+    const retrieve = (makeProof: (extra: Record<string, unknown>) => Promise<string>) =>
+      requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, carryDpop, params, makeProof);
+    for (const { label, claims, description } of outside) {
+      const res = await retrieve((extra) => rawProof({ ...claims, ...extra }, carryDpop));
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, label).toBe(400);
+      expect(body.error, label).toBe("invalid_dpop_proof");
+      expect(body.error_description, label).toContain(description);
+      expect(body.access_token, label).toBeUndefined();
+    }
+    for (const offset of [-230, 50]) {
+      let sent = "";
+      const ok = await retrieve(async (extra) => {
+        sent = await rawProof({ iat: nowS() + offset, ...extra }, carryDpop);
+        return sent;
+      });
+      expect(ok.status, `iat ${offset}: ${JSON.stringify(await ok.clone().json())}`).toBe(200);
+      const replay = await retrieve(async () => sent);
+      const replayBody = (await replay.json()) as { error?: string; error_description?: string };
+      expect(replay.status, `iat ${offset}, replayed`).toBe(400);
+      expect(replayBody.error, `iat ${offset}, replayed`).toBe("invalid_dpop_proof");
+      expect(replayBody.error_description, `iat ${offset}, replayed`).toContain("replayed");
+    }
+  });
+
   it("retrieves the committed replacement result idempotently for its own child actor, and refuses another authenticated client", async () => {
     const pred = await predecessorWithChild();
     const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance again", [
@@ -1155,5 +1229,56 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
     const oldBody = (await oldLookup.json()) as { error?: string };
     expect(oldLookup.status, JSON.stringify(oldBody)).toBe(400);
     expect(oldBody.error).toBe("invalid_request");
+  });
+});
+
+describe("DPoP proof freshness on the deferred expansion poll (@spec RFC 9449 Section 4.3, #1173)", () => {
+  /** An approved widening deferral, ready for its poll. */
+  async function approvedExpansion(): Promise<string> {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    approveDeferral(ob.deferral_code as string);
+    return ob.deferral_code as string;
+  }
+
+  it("refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused", async () => {
+    const nowS = (): number => Math.floor(Date.now() / 1000);
+    const outside = [
+      { label: "no iat", claims: {}, description: "DPoP proof has no iat" },
+      { label: "a non-numeric iat", claims: { iat: "now" }, description: "invalid DPoP proof" },
+      { label: "a day old", claims: { iat: nowS() - 86_400 }, description: "outside the acceptance window" },
+      { label: "past the window", claims: { iat: nowS() - 260 }, description: "outside the acceptance window" },
+      { label: "an hour ahead", claims: { iat: nowS() + 3_600 }, description: "outside the acceptance window" },
+    ];
+    // The proof is checked before the deferral is redeemed, so one deferral
+    // serves every refused case.
+    const code = await approvedExpansion();
+    for (const { label, claims, description } of outside) {
+      const res = await pollExpansion(code, (extra) => rawProof({ ...claims, ...extra }));
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, label).toBe(400);
+      expect(body.error, label).toBe("invalid_dpop_proof");
+      expect(body.error_description, label).toContain(description);
+      expect(body.access_token, label).toBeUndefined();
+    }
+    for (const [index, offset] of [-230, 50].entries()) {
+      let sent = "";
+      const ok = await pollExpansion(index === 0 ? code : await approvedExpansion(), async (extra) => {
+        sent = await rawProof({ iat: nowS() + offset, ...extra });
+        return sent;
+      });
+      expect(ok.status, `iat ${offset}: ${JSON.stringify(await ok.clone().json())}`).toBe(200);
+      // A second approved deferral, so only the replayed proof can refuse it.
+      const replay = await pollExpansion(await approvedExpansion(), async () => sent);
+      const replayBody = (await replay.json()) as { error?: string; error_description?: string };
+      expect(replay.status, `iat ${offset}, replayed`).toBe(400);
+      expect(replayBody.error, `iat ${offset}, replayed`).toBe("invalid_dpop_proof");
+      expect(replayBody.error_description, `iat ${offset}, replayed`).toContain("replayed");
+    }
   });
 });
