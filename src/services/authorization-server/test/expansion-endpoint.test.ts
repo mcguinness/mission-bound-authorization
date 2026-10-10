@@ -1109,6 +1109,7 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
     const outside = [
       { label: "no iat", claims: {}, description: "DPoP proof has no iat" },
       { label: "a non-numeric iat", claims: { iat: "now" }, description: "invalid DPoP proof" },
+      { label: "a boolean iat", claims: { iat: true }, description: "invalid DPoP proof" },
       { label: "a day old", claims: { iat: nowS() - 86_400 }, description: "outside the acceptance window" },
       { label: "past the window", claims: { iat: nowS() - 260 }, description: "outside the acceptance window" },
       { label: "an hour ahead", claims: { iat: nowS() + 3_600 }, description: "outside the acceptance window" },
@@ -1251,6 +1252,7 @@ describe("DPoP proof freshness on the deferred expansion poll (@spec RFC 9449 Se
     const outside = [
       { label: "no iat", claims: {}, description: "DPoP proof has no iat" },
       { label: "a non-numeric iat", claims: { iat: "now" }, description: "invalid DPoP proof" },
+      { label: "a boolean iat", claims: { iat: true }, description: "invalid DPoP proof" },
       { label: "a day old", claims: { iat: nowS() - 86_400 }, description: "outside the acceptance window" },
       { label: "past the window", claims: { iat: nowS() - 260 }, description: "outside the acceptance window" },
       { label: "an hour ahead", claims: { iat: nowS() + 3_600 }, description: "outside the acceptance window" },
