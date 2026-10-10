@@ -6,6 +6,7 @@
  * proof of possession, the origin-principal mapping, the local-policy
  * intersection, the mint, and the derivation evidence.
  */
+import { refuseTokenEndpointProof, type TokenEndpointProofFailure } from "./dpop-replay.js";
 import {
   chainDigest,
   ChainPresentationError,
@@ -106,7 +107,9 @@ interface HandlerOpts {
   tokenKey: CryptoKey;
   tokenKid: string;
   /** @spec RFC 9449 Section 4.3 (#1173): the shared token-endpoint proof verifier (iat window, jti replay). */
-  verifyDpop: (proofJws: string) => Promise<{ ok: true; proof: { jkt: string } } | { ok: false; description: string }>;
+  verifyDpop: (
+    proofJws: string,
+  ) => Promise<{ ok: true; proof: { jkt: string } } | ({ ok: false } & TokenEndpointProofFailure)>;
   now: () => Date;
   /** @spec mission#scope-projection — the AS's mapping; absent, every audience is unknown. */
   scopeProjection?: ScopeProjectionMapping;
@@ -170,7 +173,7 @@ export async function handleCrossOrgChainExchange(
   }
   const verifiedProof = await opts.verifyDpop(proofJws);
   if (!verifiedProof.ok) {
-    fail(ctx, "invalid_dpop_proof", verifiedProof.description);
+    refuseTokenEndpointProof(ctx, verifiedProof);
     return;
   }
   const dpopJkt = verifiedProof.proof.jkt;

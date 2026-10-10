@@ -130,8 +130,12 @@ export {
 } from "./cross-org-presentation.js";
 export { compareAmounts, InvalidAmountError, isValidAmount } from "./decimal-amount.js";
 export {
+  DPOP_PROOF_FUTURE_SKEW_S,
+  DPOP_PROOF_REPLAY_MAX_ENTRIES,
   DPOP_PROOF_REPLAY_WINDOW_S,
+  type DpopProofAdmission,
   type DpopProofReplay,
+  dpopProofIatAcceptableAt,
   newDpopProofReplay,
 } from "./dpop-replay.js";
 export {

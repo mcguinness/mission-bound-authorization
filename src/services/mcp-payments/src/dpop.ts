@@ -15,9 +15,12 @@
  *    private material, which is never a proof of anything);
  *  - that key's thumbprint is the PRESENTED credential's `cnf.jkt`;
  *  - `htu`/`htm` bind the proof to THIS request;
- *  - `jti` is a string and single-use within the acceptance window;
- *  - `iat` is a number within that window in BOTH directions (a captured proof
- *    stops being usable; a future-dated one never starts);
+ *  - `jti` is a string and single-use within the acceptance window; a new
+ *    `jti` the replay cache cannot record (at its bound) is refused retryably
+ *    ({@link DpopReplayUnavailableError}), never by evicting a live entry;
+ *  - `iat` is a number within the acceptance window, at most 60 s ahead and
+ *    240 s behind (a captured proof stops being usable; a future-dated one
+ *    never starts);
  *  - `ath` is the access token's hash. Without it a proof binds only to a KEY,
  *    so two credentials bound to the same key are interchangeable on the wire:
  *    the proof minted to present one would present the other. `ath` is what
@@ -25,10 +28,7 @@
  */
 
 import { createHash } from "node:crypto";
-import {
-  DPOP_PROOF_REPLAY_WINDOW_S,
-  type DpopProofReplay,
-} from "@mission/core";
+import { type DpopProofReplay, dpopProofIatAcceptableAt } from "@mission/core";
 import { calculateJwkThumbprint, decodeProtectedHeader, type JWK, jwtVerify } from "jose";
 
 /** The signing algorithms this resource accepts on a DPoP proof. */
@@ -38,6 +38,17 @@ export const DPOP_PROOF_ALGS = ["ES256"] as const;
  *  ASCII of the token as it was presented. */
 export function accessTokenHash(accessToken: string): string {
   return createHash("sha256").update(accessToken, "ascii").digest("base64url");
+}
+
+/**
+ * @spec RFC 9449 Section 11.1, #1173 (D375): the proof could not be checked for
+ * replay because the replay cache is at its bound. Not a verdict on the proof:
+ * callers answer it retryably (the pre-decision `state_unavailable`).
+ */
+export class DpopReplayUnavailableError extends Error {
+  constructor(readonly retryAfterS: number) {
+    super("DPoP proof replay state is at capacity");
+  }
 }
 
 /** The request-bound proof a presented credential travels with. */
@@ -75,15 +86,17 @@ export async function verifyDpopProof(input: {
   });
   if (payload.htu !== input.htu || payload.htm !== input.htm) throw new Error("DPoP htu/htm mismatch");
   if (typeof payload.iat !== "number") throw new Error("DPoP proof has no iat");
-  const nowS = Math.floor((input.now?.() ?? new Date()).getTime() / 1000);
-  if (Math.abs(nowS - payload.iat) > DPOP_PROOF_REPLAY_WINDOW_S) {
+  if (!dpopProofIatAcceptableAt(payload.iat, (input.now?.() ?? new Date()).getTime())) {
     throw new Error("DPoP proof iat is outside the acceptance window");
   }
   if (typeof payload.ath !== "string") throw new Error("DPoP proof has no ath");
   if (payload.ath !== accessTokenHash(input.accessToken)) {
     throw new Error("DPoP ath does not hash the presented credential");
   }
-  if (typeof payload.jti !== "string" || !input.replay.check(payload.jti)) {
+  if (typeof payload.jti !== "string") throw new Error("DPoP proof jti is missing or replayed");
+  const admission = input.replay.admit(payload.jti);
+  if (!admission.admitted) {
+    if (admission.reason === "full") throw new DpopReplayUnavailableError(admission.retryAfterS);
     throw new Error("DPoP proof jti is missing or replayed");
   }
   return jkt;

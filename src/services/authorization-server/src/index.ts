@@ -25,6 +25,7 @@ import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
+import type { DpopProofReplay } from "./adapters/dpop-replay.js";
 import {
   buildProvider,
   type ProtectedEventSource,
@@ -791,6 +792,12 @@ export async function buildAuthorizationServer(opts: {
   /** The `Retry-After` seconds stamped on a `temporarily_unavailable`. */
   stateRecoveryRetryAfter?: number;
   /**
+   * @spec RFC 9449 Section 11.1 — the token endpoint's DPoP proof replay
+   * cache. Defaults to a bounded in-memory one; a test of the cache's bound
+   * (#1173, D375) injects a smaller one.
+   */
+  dpopProofReplay?: DpopProofReplay;
+  /**
    * @spec authority-server#mission-join (#557) — DEV ONLY: serve
    * `POST /dev/ordinary-token`, which mints an ORDINARY DPoP-bound access
    * token (a `scope`, the payments audience, no `mission` claim) on a
@@ -1195,6 +1202,7 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.stateRecoveryRetryAfter !== undefined
       ? { stateRecoveryRetryAfter: opts.stateRecoveryRetryAfter }
       : {}),
+    ...(opts.dpopProofReplay ? { dpopProofReplay: opts.dpopProofReplay } : {}),
     // @spec mission#scope-projection — the trusted out-of-band mapping.
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),

@@ -23,6 +23,7 @@ import {
   type JWK,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import {
   buildAuthorizationServer,
   deriveCrossOrgRoot,
@@ -199,6 +200,9 @@ async function exchange(opts: ExchangeOpts): Promise<Response> {
   });
 }
 
+/** The token endpoint's DPoP replay cache, switchable to full (#1173). */
+const replay = switchableDpopReplay();
+
 beforeAll(async () => {
   originKeys = await newKeys();
   const originPubJwk = { ...(await exportJWK(originKeys.publicKey)), kid: "as-token", alg: "ES256" };
@@ -257,6 +261,8 @@ beforeAll(async () => {
   };
 
   as = await buildAuthorizationServer({
+    // @spec #1173 (D375): switchable to full for the cache-bound cases.
+    dpopProofReplay: replay,
     issuer: ISSUER,
     crossOrg: crossOrgOptions,
     scopeProjection: SCOPE_MAPPING as never,
@@ -288,6 +294,32 @@ describe("leaf proof of possession (@spec cross-org-delegation#projection-exchan
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(400);
     expect(body.error).toBe("invalid_dpop_proof");
+  });
+
+  // @spec RFC 9449 Section 11.1 (#1173, D375): at the replay cache's bound.
+  it("at the replay cache's bound refuses a new leaf proof temporarily_unavailable with Retry-After, and keeps a seen proof a replay", async () => {
+    const first = await buildChain();
+    const accepted = await dpopProof(first.leafKeys);
+    expect((await exchange({ subjectToken: present(first.chain), dpop: accepted })).status).toBe(200);
+    const second = await buildChain();
+    replay.full = true;
+    try {
+      const label = "a new proof";
+      const res = await exchange({ subjectToken: present(second.chain), leafKeys: second.leafKeys });
+      const body = (await res.json()) as { error?: string; access_token?: string };
+      expect(res.status, `${label}: ${JSON.stringify(body)}`).toBe(503);
+      expect(body.error, label).toBe("temporarily_unavailable");
+      expect(res.headers.get("retry-after"), label).toBe(String(SWITCHED_RETRY_AFTER_S));
+      expect(body.access_token, label).toBeUndefined();
+      const replayed = await exchange({ subjectToken: present(first.chain), dpop: accepted });
+      const replayedBody = (await replayed.json()) as { error?: string; error_description?: string };
+      expect(replayed.status, "a seen proof").toBe(400);
+      expect(replayedBody.error, "a seen proof").toBe("invalid_dpop_proof");
+      expect(replayedBody.error_description, "a seen proof").toContain("replayed");
+    } finally {
+      replay.full = false;
+    }
+    expect((await exchange({ subjectToken: present(second.chain), leafKeys: second.leafKeys })).status).toBe(200);
   });
 
   // @spec RFC 9449 Section 4.3 (#1173): the leaf key's proof is complete and fresh.
