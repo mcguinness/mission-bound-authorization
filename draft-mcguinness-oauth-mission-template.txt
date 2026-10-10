@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             9 October 2026
-Expires: 12 April 2027
+Intended status: Experimental                            10 October 2026
+Expires: 13 April 2027
 
 
                      Mission Template for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 April 2027.
+   This Internet-Draft will expire on 13 April 2027.
 
 Copyright Notice
 
@@ -85,6 +85,7 @@ Table of Contents
    6.  Dispatch
      6.1.  The template lineage member
      6.2.  Grant Type
+     6.3.  Dispatch Handoff
    7.  Prohibited Classes
    8.  The Denial Reasons
    9.  Instance Composition
@@ -748,8 +749,9 @@ Table of Contents
    dispatch_event_id: the adjudication order of Section 6 runs once for
    a new identifier, and a repeated identifier is gated to the
    previously committed instance rather than a fresh derivation.  This
-   is the single gated derivation this document permits per dispatch
-   event.
+   is the single gated derivation the Dispatch performs per dispatch
+   event; a Dispatch Handoff's redemption (Section 6.3) is a further
+   derivation.
 
    On success the Mission Issuer responds with an access token bound to
    the instance, sender-constrained to the Dispatcher's key:
@@ -776,6 +778,104 @@ Table of Contents
    A Dispatch refused under Section 6 or Section 7 carries the OAuth
    error member together with mission_denial_reason (Section 8), exactly
    as any other adjudication denial in this family.
+
+6.3.  Dispatch Handoff
+
+   A dispatched instance's approved agent is its selected Agent
+   (Section 4), but the Dispatch returns the instance's access token to
+   the Dispatcher, sender-constrained to the Dispatcher's key
+   (Section 6.2).  The Dispatch Handoff conveys the instance to its
+   Agent: the Dispatcher exchanges that token for a handoff grant naming
+   the Agent as its only redeemer, and the Agent redeems the grant for a
+   token of its own.  The handoff uses the token endpoint and existing
+   grant types; it adds one token request parameter.
+
+   The Dispatcher requests a handoff with a Token Exchange ([RFC8693])
+   whose subject_token is the instance's access token
+   (subject_token_type urn:ietf:params:oauth:token-type:access_token),
+   whose requested_token_type is urn:ietf:params:oauth:token-type:jwt,
+   and which carries mission_dispatch_handoff with the value true, the
+   parameter that selects this operation.  It MAY carry
+   authorization_details ([RFC9396]) naming a narrower subset.  It
+   presents a DPoP proof ([RFC9449]) under the key the subject token is
+   bound to.
+
+   The Mission Issuer MUST refuse with invalid_request a
+   mission_dispatch_handoff with any value other than true, and one
+   combined with a parameter that selects another exchange, such as
+   request_refresh_token or a Child Mission creation parameter
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]); it never
+   treats such a request as another exchange.  A
+   mission_dispatch_handoff sent without a value is treated as omitted
+   (Section 3.2 of [RFC6749]), not as a value other than true.  It then
+   MUST:
+
+   1.  verify the subject token, and that the DPoP proof's key is the
+       key the token is bound to;
+
+   2.  verify that the authenticated client is the client the subject
+       token was issued to, the Dispatcher;
+
+   3.  verify that the Mission carries the template lineage member
+       (Section 6.1) and is active;
+
+   4.  take the recipient from the instance's recorded client_id, the
+       selected Agent, never from the request; and
+
+   5.  confine the handed-off authority to the subject token's authority
+       and the instance's current Effective Authority Set
+       ([I-D.draft-mcguinness-oauth-mission]), refusing with
+       invalid_authorization_details a requested authorization_details
+       that is not a subset of both; absent a request, the handed-off
+       authority is the subject token's authority narrowed by the
+       Effective Authority Set.
+
+   A failure of steps 1 or 2, or a Mission without the template lineage
+   member, is refused with invalid_grant.  A Mission that is not active
+   is refused with invalid_request (Section 2.2.2 of [RFC8693]),
+   carrying the mission_error member
+   ([I-D.draft-mcguinness-oauth-mission]).
+
+   On success the response carries the handoff grant as access_token,
+   with issued_token_type urn:ietf:params:oauth:token-type:jwt and
+   token_type N_A ([RFC8693]).  The handoff grant is a JWT the Mission
+   Issuer signs with typ mission-dispatch-handoff+jwt: iss identifies
+   the Mission Issuer, aud identifies its token endpoint, client_id
+   names the selected Agent as the only redeemer, sub is the instance's
+   Subject, mission is the instance's mission claim,
+   authorization_details is the handed-off authority, and jti, iat and
+   exp bound it.  Its lifetime is short and never outlasts the
+   instance's expires_at.
+
+   The Agent redeems the handoff grant with the JWT bearer authorization
+   grant ([RFC7523]), authenticating as itself and presenting a DPoP
+   proof under its own key.  The Mission Issuer MUST:
+
+   1.  verify the grant's signature, typ and exp, and that its aud
+       identifies its own token endpoint;
+
+   2.  verify that the grant's client_id, the authenticated client, and
+       the instance's recorded client_id are one client;
+
+   3.  verify that the instance is active;
+
+   4.  consume the grant's jti atomically, and remember a consumed grant
+       for as long as it would otherwise be accepted, clock skew
+       included, refusing any further presentation with invalid_grant,
+       while a redemption that issues no token leaves the grant
+       unconsumed; and
+
+   5.  issue the Agent a token for the instance, bound to the key of its
+       DPoP proof, whose authority is the grant's narrowed by the
+       instance's current Effective Authority Set.
+
+   The token issued at redemption is the Agent's delegation handle: its
+   audience identifies the Agent and it is sender-constrained to the
+   Agent's key, so the Agent continues the instance as its approved
+   agent on the continuation profile's async delegation transport
+   ([I-D.draft-mcguinness-oauth-mission-continuation]).  The redemption
+   is a derivation from the instance, gated and counted as the issuance
+   profile requires ([I-D.draft-mcguinness-oauth-mission]).
 
 7.  Prohibited Classes
 
@@ -888,7 +988,8 @@ Table of Contents
       continuation profile's transports
       ([I-D.draft-mcguinness-oauth-mission-continuation]).  Async
       delegation is the natural scheduled-dispatch path: a scheduled run
-      dispatches an instance and carries it forward on that transport.
+      dispatches an instance, hands it to its selected Agent
+      (Section 6.3), and the Agent carries it forward on that transport.
 
    *  *Expandable, but not by the template.* A dispatched Mission MAY be
       expanded through a human-approved expansion
@@ -1081,7 +1182,7 @@ Table of Contents
    document in advance of registration completing; this document is the
    specification that names and defines it.
 
-   This document also registers one parameter in the "OAuth Parameters"
+   This document also registers two parameters in the "OAuth Parameters"
    registry:
 
    *  Name: dispatch_event_id
@@ -1092,6 +1193,50 @@ Table of Contents
 
    *  Reference: this document, Section 6.2, Section 6
 
+   *  Name: mission_dispatch_handoff
+
+   *  Parameter Usage Location: token request
+
+   *  Change Controller: IETF
+
+   *  Reference: this document, Section 6.3
+
+   IANA is also requested to register one media type per [RFC6838]:
+
+   *  Type name: application
+
+   *  Subtype name: mission-dispatch-handoff+jwt
+
+   *  Required parameters: none
+
+   *  Optional parameters: none
+
+   *  Encoding considerations: binary; JWS Compact Serialization
+
+   *  Security considerations: see Section 11
+
+   *  Interoperability considerations: see this document
+
+   *  Published specification: this document, Section 6.3
+
+   *  Applications that use this media type: Mission Issuers and OAuth
+      authorization servers implementing this profile
+
+   *  Fragment identifier considerations: n/a
+
+   *  Additional information: n/a
+
+   *  Person and email address to contact for further information: see
+      the Authors' Addresses section
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: see the Authors' Addresses section
+
+   *  Change controller: IETF
+
    dispatch_event_id is a distinct name from the expansion profile's
    creation_request_id ([I-D.draft-mcguinness-oauth-mission-expansion]),
    even though it plays the identifier-and-reservation-key role that
@@ -1101,8 +1246,8 @@ Table of Contents
    (Section 6.2), so this document keeps the name rather than reusing
    the expansion profile's own registered parameter under op: dispatch.
 
-   Beyond these two registrations, this document requests no further
-   IANA action.  Following the restraint of the sibling profiles:
+   Beyond these registrations, this document requests no further IANA
+   action.  Following the restraint of the sibling profiles:
 
    *  template_hash is a Mission integrity anchor whose typ, mission-
       template, follows the issuance profile's collision-resistant typ
@@ -1170,18 +1315,42 @@ Table of Contents
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
 
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6749>.
+
    [RFC6755]  Campbell, B. and H. Tschofenig, "An IETF URN Sub-Namespace
               for OAuth", RFC 6755, DOI 10.17487/RFC6755, October 2012,
               <https://www.rfc-editor.org/rfc/rfc6755>.
+
+   [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
+              Specifications and Registration Procedures", BCP 13,
+              RFC 6838, DOI 10.17487/RFC6838, January 2013,
+              <https://www.rfc-editor.org/rfc/rfc6838>.
+
+   [RFC7523]  Jones, M., Campbell, B., and C. Mortimore, "JSON Web Token
+              (JWT) Profile for OAuth 2.0 Client Authentication and
+              Authorization Grants", RFC 7523, DOI 10.17487/RFC7523, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7523>.
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/rfc/rfc8693>.
+
    [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
               Rich Authorization Requests", RFC 9396,
               DOI 10.17487/RFC9396, May 2023,
               <https://www.rfc-editor.org/rfc/rfc9396>.
+
+   [RFC9449]  Fett, D., Campbell, B., Bradley, J., Lodderstedt, T.,
+              Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof of
+              Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
+              September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
 
 15.2.  Informative References
 
@@ -1232,6 +1401,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Dispatch Handoff conveys a dispatched instance to its selected
+      Agent: the Dispatcher exchanges the instance's token
+      (mission_dispatch_handoff) for a single-use grant naming the
+      Agent, which the Agent redeems for its own delegation handle
+      (#1158).  Its redemption is a further derivation.
 
    *  A dispatched instance's accountable principal is its
       approval_basis.consent_principal.  The template keeps its own
