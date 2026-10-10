@@ -242,6 +242,38 @@ describe("child mission creation (@spec child-delegation#child-creation, #parent
     }
   });
 
+  it("bounds the child by the presented token's authority, naming that bound in the evidence (@spec child-delegation#attenuation, D353)", () => {
+    const parent = approveParent(["payments:invoice.read", "payments:payment.execute"]);
+    // The presented token carries the parent's invoice read only.
+    const token = parent.authority_set
+      .map((e) => ({ ...e, actions: e.actions.filter((a) => a === "payments:invoice.read") }))
+      .filter((e) => e.actions.length > 0);
+    const within = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: childIntent(["payments:invoice.read"]),
+      proposedAuthority: proposed(["payments:invoice.read"]),
+      childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+      presentedAuthority: token,
+    });
+    expect(within.child.authority_set.flatMap((e) => e.actions)).toEqual(["payments:invoice.read"]);
+    try {
+      createChildMission(kernel, {
+        parentId: parent.id,
+        intent: childIntent(["payments:invoice.read", "payments:payment.execute"]),
+        proposedAuthority: proposed(["payments:invoice.read", "payments:payment.execute"]),
+        childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+        presentedAuthority: token,
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(ChildDelegationError);
+      expect((e as ChildDelegationError).reason).toBe("not_strict_subset");
+      const ev = (e as ChildDelegationError).evidence;
+      expect(ev?.decision).toBe("denied");
+      expect(ev?.attenuation.result).toBe("exceeds_presented_authority");
+    }
+  });
+
   it("clamps the child expires_at to the parent's (@spec child-delegation#attenuation)", () => {
     const parent = approveParent();
     const { child } = createChild(parent.id, ["payments:invoice.read"], {
