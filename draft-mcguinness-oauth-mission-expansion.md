@@ -583,8 +583,9 @@ The Mission Issuer MUST resolve the predecessor from `subject_token`
 and verify it is in the `active` state before adjudicating, and MUST
 re-verify it at completion when adjudication is deferred or interactive
 ({{deferred-window}}). An expansion request against a predecessor that
-is not `active` MUST be refused with `invalid_grant` and a
-reconciliation status ({{reconciliation}}):
+is not `active` MUST be refused with `invalid_request`
+({{Section 2.2.2 of RFC8693}}) and a reconciliation status
+({{reconciliation}}):
 
 - if the predecessor made a terminal exit from `active` (it is
   `terminated`, with reason `revoked`, `expired`, already `superseded`
@@ -1250,7 +1251,10 @@ predecessor, the Mission Issuer MUST verify:
 
 If any check fails, the Mission Issuer MUST refuse the completion
 with `invalid_grant` and the applicable reconciliation status from the
-closed set below. The losing or otherwise stale expansion is rejected
+closed set below; where the token-exchange response completes the
+expansion, a failed first or second check, a predecessor no longer
+`active`, is refused with `invalid_request` instead
+({{predecessor-active}}). The losing or otherwise stale expansion is rejected
 at completion; it activates no successor. The third check catches
 narrowing that lands between adjudication and activation: authority
 contained or discharged after the approval returns only through a new
@@ -1300,7 +1304,7 @@ non-terminal state, so it invites the retry the terminal codes forbid.
 
 The Mission Issuer conveys the reconciliation status in a
 `mission_expansion_status` member of the OAuth error response body,
-alongside the `invalid_grant` error:
+alongside the OAuth error:
 
 `mission_expansion_status`:
 : A string carrying one reconciliation status from this document's
@@ -1621,9 +1625,9 @@ wherever it appears.
 Two failure classes are not denial reasons and use the issuance
 profile's error vocabulary directly: an expansion request whose
 `predecessor` cross-check does not match the `subject_token`-resolved
-Mission, or whose predecessor is not `active`, fails with
-`invalid_grant` ({{request-binding}}, {{predecessor-active}}); an
-expansion Mission
+Mission fails with `invalid_grant` ({{request-binding}}), or with
+`invalid_request` where its predecessor is not `active`
+({{predecessor-active}}); an expansion Mission
 Intent the Mission Issuer cannot parse fails with `invalid_request`; one
 it can parse but cannot derive a valid Authority Set from fails with
 `invalid_authorization_details` ({{RFC9396}}) where the client submitted
@@ -1723,8 +1727,9 @@ A conforming **expansion-capable Mission Issuer** MUST:
   reject a refresh token as the `subject_token`;
 - resolve the predecessor from `subject_token`, verify possession
   against the token's own confirmation key, refuse a `predecessor`
-  cross-check that does not match the resolved Mission or a predecessor
-  that is not `active` with `invalid_grant`, and evaluate the request in
+  cross-check that does not match the resolved Mission with
+  `invalid_grant` and a predecessor that is not `active` with
+  `invalid_request`, and evaluate the request in
   the verification order of {{verification-order}}
   ({{request-binding}}, {{predecessor-active}});
 - require a `creation_request_id` on every expansion exchange,
@@ -1851,8 +1856,8 @@ Mitigations:
   activate the successor ({{deferred-window}}), and serializes the
   completions that activate a successor of the same predecessor
   ({{reconciliation}}).
-- A failed check refuses with `invalid_grant` and a reconciliation
-  status that tells the client whether to discover an existing
+- A failed check refuses with a reconciliation status
+  ({{reconciliation}}) that tells the client whether to discover an existing
   successor or stop, without leaking the predecessor's new internal
   state beyond that ({{reconciliation}}).
 
@@ -2137,6 +2142,11 @@ composition with the issuance flow.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A predecessor that is not `active` refuses the expansion exchange
+  with `invalid_request`, following the issuance profile's Token
+  Exchange rule; a predecessor cross-check mismatch, and a completion
+  by code redemption or deferred poll, keep `invalid_grant` (#1154).
 
 - Supersession terminates the predecessor: it becomes `terminated` with
   reason `superseded`, registered in the Mission Termination Reasons

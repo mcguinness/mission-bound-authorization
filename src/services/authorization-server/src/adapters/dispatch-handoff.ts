@@ -33,6 +33,7 @@ import {
   gateErrorToMissionError,
   lifecycleMissionError,
   markDelegationHandle,
+  MissionExchangeError,
   MissionGrantError,
   newResourceServer,
   resourceServerInfoFor,
@@ -197,10 +198,7 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
   // invalid_grant.
   const active = kernel.applyExpiry(record);
   if (active.state !== "active") {
-    txError(ctx, 400, "invalid_request", `dispatched instance is ${active.state}`);
-    const missionError = lifecycleMissionError(active);
-    if (missionError) (ctx.body as Record<string, unknown>).mission_error = missionError;
-    return;
+    throw new MissionExchangeError(`dispatched instance is ${active.state}`, lifecycleMissionError(active));
   }
   const presented = presentedTokenAuthority(resolved.claims);
   if (!presented) {

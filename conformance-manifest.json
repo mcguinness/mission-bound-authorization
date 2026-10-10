@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "1f11bbe47aa41369c0445cc5c7f1ce1ff86b0da4",
-    "content_sha256": "68d8931fb89539f56d4fdf529babbc92b01ed8d71148d04e32e43cde1fcfb57e"
+    "revision": "71b224155a509f76052bcc190ca56aace3752d79",
+    "content_sha256": "5f3904b1ff9fe79f60a1ec37e3a7d167fdae9550cb7991ea8fac5ff56ac77068"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
@@ -35,12 +35,12 @@
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "562b8648cf7e3ad55223995dee9b0333bad2db55a956acfc860a1321836476f6"
+    "revision": "96abef0ac2491ba242cca31d8960eb242def5e47",
+    "content_sha256": "99be424ca19917bed51384a000c3c0f9dc6c770d8b4fce13c8fdfffe367431dc"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "4469c9bf1e57b95d9285e624e4667544fc40174f",
-    "content_sha256": "76dfcb657478434b0a71bf39f72d9176c4818432a160fde30a4e335f024fa230"
+    "revision": "67644b7324de546514770950e99147a2fd9470ff",
+    "content_sha256": "1f9ce1eb326c6c3024cc35235064cced8030d58d78cc2ff6f1da12b25dc34fe3"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "cd08db072fc48e80ac1e4c7a20b55c2cd2694400c5555e21d36a3e0c0d34783a"
+    "revision": "e7ac28e2b05e674aefafbeaf921e7fa07b91af30",
+    "content_sha256": "760f57faebe1cc63e70798dec013e3fa9d96ddf6df5756ce439e66909f585ab8"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -99,16 +99,16 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "e6d514ce5ebf4ae47dee9bad3eaff6c2544ae64e",
-    "content_sha256": "f47ce123511fcb11509c380b8cd5e3131a5c7782739b9b19f2410a32dbcadadb"
+    "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
+    "content_sha256": "df4b3cc03ebb756aa96ff79abcefd906cf3d990bb77920b5902143f3f7ad677e"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
     "revision": "b89f2d2f937b0f912669c67f5fcf64b507f07a6e",
     "content_sha256": "76a97a3d37d7540977fd5dc29f8b56024b8b079b3a82e6de41b3f9c5e8c05385"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "c74a85acc97dc6ba157b26721f18767d76085b80",
-    "content_sha256": "ae693e62093b5de105aabc0df10b335856e3f16b6af189e646bf8451dce2d33e"
+    "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
+    "content_sha256": "5fcca87b0e0a1460daf3b7282e00f491bf559ef5b5645e5fe8155b2064ae5e70"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -1965,6 +1965,29 @@
     }
    ],
    "notes": "#787 item 1 settles the child-creation term of this comparison. `delegation.children.child_creation_policy` is an issuer-recorded reference that becomes a policy-adjudicated child's approval-basis `root_commitment`, so the destination ceiling compares it rather than setting it aside: where the ceiling entry and the candidate both retain the `children` grant the reference has equal presence and is byte-identical, and a candidate that lacks it, alters it, or drops it while keeping the grant is refused. A ceiling declaring no `children` grant drops the entry carrying one, exactly as an introduced delegation is dropped, so the minted set conveys no child-creation authority. `capability_sources` stays the only member set aside at this config boundary (mission-core withoutCapabilitySources), so a surviving entry carries the reference and its retained-action bindings verbatim into the minted `authorization_details`, and a child creation drawing on that entry records the reference in the existing `approval_basis.activation.policy_id` and `root_commitment` (ApprovalBasisPolicyDrawdown), with no member invented for it. A client cannot inject the reference: derivation carries unrecognized `children` members from the policy ceiling and never from the proposal (derive.ts narrowChildren)."
+  },
+  {
+   "id": "cross-domain.cross-domain-grant.inactive-mission-invalid-request",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "cross-domain-grant",
+   "text": "that the Mission is `active`, failing otherwise with `invalid_request` ({{Section 2.2.2 of RFC8693}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the originating AS refuses a cross-domain grant exchange whose Mission is not `active` with `invalid_request` and issues no grant",
+    "local": "the reference issues cross-domain grants only on the ICA continuation path, whose own codes apply"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1154 (D369)."
   },
   {
    "id": "cross-domain.resource-as.derivation-record",
@@ -4339,7 +4362,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "derivation past the established derivation_limit fails invalid_grant at the token endpoint",
-    "local": "covered at the kernel gate only; no wire test observes invalid_grant for exhaustion"
+    "local": "covered at the kernel gate, and observed at the wire as invalid_grant on the async-delegation exchange (#1154); the refresh and code-exchange paths are not observed at the wire"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -4349,8 +4372,50 @@
      "name": "lifecycle (@spec status#legal-transitions) > gates derivation on state and derivation cap (@spec mission#lifecycle)",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > a Mission at its derivation limit refuses a new async-delegation exchange with invalid_grant, a limit and not a lifecycle refusal, opening no family (@spec derivation-limits, mission#issuance-gating, #1154)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "derivation-limits.enforcement.cap-refusal-code-every-path",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "enforcement",
+   "text": "The refusal is `invalid_grant` ({{Section 5.2 of RFC6749}}) on every derivation path, a Token Exchange included, with `mission_error` as the optional detail.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derivation refused at the derivation limit is `invalid_grant` on a Token Exchange as on any other grant, never the exchange's lifecycle `invalid_request`",
+    "local": "observed at the wire on the async-delegation exchange; the shared refusal mapping is pinned by unit test; the refresh and code-exchange paths are not observed at the wire"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > a Mission at its derivation limit refuses a new async-delegation exchange with invalid_grant, a limit and not a lifecycle refusal, opening no family (@spec derivation-limits, mission#issuance-gating, #1154)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-exchange-refusal-codes.test.ts",
+     "name": "token-endpoint Mission gate refusal by grant (@spec mission#issuance-gating, #1154) > a limit or empty-authority refusal stays invalid_grant on a Token Exchange",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1154 (D369)."
   },
   {
    "id": "core.lifecycle.effective-active-before-reliance",
@@ -4609,7 +4674,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "lifecycle refusals carry mission_error with one of revoked, expired, superseded, derivations_exhausted, or a value a companion defines (Mission Status's suspended and completed, Child Delegation's parent_terminated)",
-    "local": "fixed (#636/#706 cut): oidc-provider 9.10's InvalidGrant/err_out.js copy only error/error_description/scope/state from a thrown error, so mission_error never reached the client before this change; MissionGrantError plus a grant.error listener now splice it into the body wherever gateDerivation/gateActive refuses a still-valid grant. Proven positively at the wire with a real, non-undefined value for derivations_exhausted (a Mission capped at requested_derivation_limit 1, second derivation refused). This demo's own /lifecycle route additionally destroys the underlying OAuth Grant on a terminal transition (documented in provider.ts), so a revoked or expired-via-that-route Mission fails through oidc-provider's own grant lookup instead, never reaching this mechanism; mission_revoked and mission_expired are therefore reachable in deployments that gate purely on Mission state (a raw state change, or natural wall-clock expiry) but are untested at the wire here for that reason. mission_superseded is not yet defined by any companion in this codebase."
+    "local": "fixed (#636/#706 cut): oidc-provider 9.10's InvalidGrant/err_out.js copy only error/error_description/scope/state from a thrown error, so mission_error never reached the client before this change; MissionGrantError plus a grant.error listener now splice it into the body wherever gateDerivation/gateActive refuses a still-valid grant. Proven positively at the wire with a real, non-undefined value for derivations_exhausted (a Mission capped at requested_derivation_limit 1, second derivation refused). This demo's own /lifecycle route additionally destroys the underlying OAuth Grant on a terminal transition (documented in provider.ts), so a revoked or expired-via-that-route Mission fails through oidc-provider's own grant lookup instead, never reaching this mechanism; mission_revoked and mission_expired are therefore reachable in deployments that gate purely on Mission state (a raw state change, or natural wall-clock expiry) but are untested at the wire here for that reason. mission_superseded is not yet defined by any companion in this codebase. On a Token Exchange the gate's lifecycle refusal is invalid_request and carries the same mission_error (#1154)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -4631,8 +4696,209 @@
      "name": "mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint) > the value is the observed termination reason, unprefixed: superseded and parent_terminated map, an unknown reason carries none (@spec mission#termination)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused invalid_request with mission_error expired and saves no family refresh token (@spec mission#mission-bound-tokens, mission#issuance-gating)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "core.issuance-gating.inactive-refused-by-grant",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "issuance-gating",
+   "text": "Unless the referenced Mission is `active`, the AS MUST refuse a request to derive a token at the token endpoint: a Token Exchange ({{RFC8693}}) with the `invalid_request` error code ({{Section 2.2.2 of RFC8693}}), and any other grant, refresh included, with the `invalid_grant` error code.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derivation from a Mission that is not `active` issues nothing: a Token Exchange is refused `invalid_request` and a refresh `invalid_grant`, on the explicit state checks and on the save-time gate and lifetime clamp alike",
+    "local": "Token Exchange witnessed on async delegation (explicit check and lifetime clamp), expansion and child creation; refresh on the async-delegation family. The authorization-code and JWT-bearer paths keep invalid_grant through the same refusal mapping, pinned by its unit test."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused invalid_request with mission_error expired and saves no family refresh token (@spec mission#mission-bound-tokens, mission#issuance-gating)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused invalid_grant with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens, mission#issuance-gating)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > revoke Mission -> a new async-delegation exchange is refused invalid_request, opening no family and counting no derivation (@spec mission#issuance-gating, #1154)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > revoke Mission -> next refresh invalid_grant + the family is destroyed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a suspended predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > a parent that is not active refuses the child-creation exchange with invalid_request and parent_not_active, creating no child (@spec child-delegation#denial-reasons, mission#issuance-gating, #1154)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-exchange-refusal-codes.test.ts",
+     "name": "token-endpoint Mission gate refusal by grant (@spec mission#issuance-gating, #1154) > a lifecycle refusal is invalid_request on a Token Exchange and invalid_grant on every other grant, with mission_error kept",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-exchange-refusal-codes.test.ts",
+     "name": "token-endpoint Mission gate refusal by grant (@spec mission#issuance-gating, #1154) > identifies a Token Exchange request by its grant_type alone",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1154 (D369)."
+  },
+  {
+   "id": "core.issuance-gating.after-acknowledged-revocation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "issuance-gating",
+   "text": "The AS MUST refuse a derivation request it answers after it has acknowledged a revocation of the Mission, with the same error code.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "after a revocation is acknowledged, a Token Exchange is refused `invalid_request` and a refresh `invalid_grant`, and nothing is issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > revoke Mission -> a new async-delegation exchange is refused invalid_request, opening no family and counting no derivation (@spec mission#issuance-gating, #1154)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > revoke Mission -> next refresh invalid_grant + the family is destroyed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > a parent that is not active refuses the child-creation exchange with invalid_request and parent_not_active, creating no child (@spec child-delegation#denial-reasons, mission#issuance-gating, #1154)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1154 (D369)."
+  },
+  {
+   "id": "core.issuance-gating.profile-code-override",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "issuance-gating",
+   "text": "Where a profile of a Token Exchange that the AS implements assigns its own error code to either refusal, such as a continuation profile's code for an ended chain, the AS uses that profile's code instead",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at the ICA continuation exchange a lifecycle refusal carries ICA's code (`invalid_continuation` for a terminal Mission, `unauthorized_client` for a suspended one), never the issuance profile's `invalid_request`",
+    "local": "the reference's only Token Exchange profile that assigns its own codes is the ICA transport; its refusal-codes witnesses are reused"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b1) a Mission past its expiry at the gate -> invalid_continuation with mission_error (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (g) revoking the Mission terminates its handles (onLifecycleCommit fan-out) -> invalid_continuation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b4) a revoked Mission whose hop the store has not yet ended -> invalid_continuation at the gate, not unauthorized_client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b2) a Mission whose authority is fully contained -> invalid_target (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b3) an exhausted derivation cap -> invalid_grant with mission_error (a limit, ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation hop-count limit (@spec id-continuation-assertion) > refuses a continuation past the chain's limit with invalid_grant, recording no hop and counting no derivation; another chain of the same Mission is unaffected",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1154 (D369)."
   },
   {
    "id": "core.termination.present-exactly-when-terminated",
@@ -5791,7 +6057,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "no derived credential's exp exceeds the Mission's expires_at",
-    "local": "every credential the issuer derives under a Mission, driven per path against a Mission (or Child, successor or dispatched instance) ending inside the credential's configured lifetime: the code exchange's access token, refresh token, authorization code and ID Token; non-rotating and rotating refresh (access token and rotated refresh token); the async-delegation initial access token, family refresh token (which lives exactly until expires_at, with no 1 s floor, and is refused at the fractional-second boundary on both the exchange and the family refresh), family refresh access token and rotated family refresh token; the AROP deferred access token; the child-bound assertion and child access token; the dispatched instance access token; the expansion successor access token; the ID-JAG continuation grant; and the transaction token. A Mission past expires_at, or with under one second left, is refused rather than minted: invalid_grant mission_expired at the token endpoint, and access_denied at the authorization endpoint's resume, where the authorization code is minted. Not driven here, because this AS does not derive them from its own Mission: the cross-org audience-local token (bounded by the presented chain's leaf exp, whose nesting the chain verifier enforces; the cross-org companion governs that transitive bound), attenuation roots (clamped to expires_at in kernel/attenuation.ts but not reachable from an AS endpoint) and holder-signed attenuation children"
+    "local": "every credential the issuer derives under a Mission, driven per path against a Mission (or Child, successor or dispatched instance) ending inside the credential's configured lifetime: the code exchange's access token, refresh token, authorization code and ID Token; non-rotating and rotating refresh (access token and rotated refresh token); the async-delegation initial access token, family refresh token (which lives exactly until expires_at, with no 1 s floor, and is refused at the fractional-second boundary on both the exchange and the family refresh), family refresh access token and rotated family refresh token; the AROP deferred access token; the child-bound assertion and child access token; the dispatched instance access token; the expansion successor access token; the ID-JAG continuation grant; and the transaction token. A Mission past expires_at, or with under one second left, is refused rather than minted: invalid_grant mission_expired at the token endpoint (invalid_request, still with mission_error, on a Token Exchange; #1154), and access_denied at the authorization endpoint's resume, where the authorization code is minted. Not driven here, because this AS does not derive them from its own Mission: the cross-org audience-local token (bounded by the presented chain's leaf exp, whose nesting the chain verifier enforces; the cross-org companion governs that transitive bound), attenuation roots (clamped to expires_at in kernel/attenuation.ts but not reachable from an AS endpoint) and holder-signed attenuation children"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -5846,13 +6112,13 @@
     },
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
-     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused with mission_error expired and saves no family refresh token (@spec mission#mission-bound-tokens)",
+     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused invalid_request with mission_error expired and saves no family refresh token (@spec mission#mission-bound-tokens, mission#issuance-gating)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
-     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens)",
+     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused invalid_grant with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens, mission#issuance-gating)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -31318,6 +31584,47 @@
    ]
   },
   {
+   "id": "child-delegation.denial-reasons.parent-not-active-code",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "denial-reasons",
+   "text": "`parent_mismatch` accompanies `invalid_grant`; `parent_not_active` accompanies `invalid_request` on the child-creation exchange ({{Section 2.2.2 of RFC8693}}) and `invalid_grant` on the poll or code redemption that completes a deferred or interactive creation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "child creation under a parent that is not `active` is refused `invalid_request` with `mission_denial_reason` `parent_not_active` and creates no child; a parent cross-check mismatch is refused `invalid_grant` with `parent_mismatch`",
+    "local": "the exchange half is witnessed; the reference has no deferred or interactive child creation, so the completion half is not exercised"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > a parent that is not active refuses the child-creation exchange with invalid_request and parent_not_active, creating no child (@spec child-delegation#denial-reasons, mission#issuance-gating, #1154)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > parent cross-check != the Mission resolved from subject_token -> parent_mismatch (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-exchange-refusal-codes.test.ts",
+     "name": "token-endpoint Mission gate refusal by grant (@spec mission#issuance-gating, #1154) > child creation: parent_not_active rides invalid_request and parent_mismatch keeps invalid_grant (@spec child-delegation#denial-reasons)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1154 (D369)."
+  },
+  {
    "id": "child-delegation.child-state.legacy-parent-no-instant",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "child-state",
@@ -33357,6 +33664,65 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
+  },
+  {
+   "id": "expansion.predecessor-active.refused-invalid-request",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "predecessor-active",
+   "text": "An expansion request against a predecessor that is not `active` MUST be refused with `invalid_request` ({{Section 2.2.2 of RFC8693}}) and a reconciliation status ({{reconciliation}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion exchange whose predecessor is revoked or suspended is refused `invalid_request` with a reconciliation status (`predecessor_state_changed` for a terminal predecessor, `predecessor_not_active` for a suspended one), creating no successor and counting no derivation",
+    "local": "the error code and the absence of any successor are witnessed; the reference does not attach mission_expansion_status on this request-time check (pre-existing)"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a suspended predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1154 (D369)."
+  },
+  {
+   "id": "expansion.reconciliation.completion-refusal-code",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "reconciliation",
+   "text": "If any check fails, the Mission Issuer MUST refuse the completion with `invalid_grant` and the applicable reconciliation status from the closed set below",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused `invalid_grant` with the reconciliation status on a code redemption or deferred poll, and `invalid_request` for a predecessor no longer `active` where the token-exchange response completes it",
+    "local": "the reference's deferred poll answers a predecessor revoked during the window with access_denied rather than invalid_grant and a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1154 (D369)."
   },
   {
    "id": "expansion.interactive.response-shape",

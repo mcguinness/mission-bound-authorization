@@ -128,6 +128,56 @@ export class MissionGrantError extends errors.InvalidGrant {
 }
 
 /**
+ * @spec mission#issuance-gating (#1154, D369): a Token Exchange refused
+ * because its Mission is not `active`. The Mission makes the subject token
+ * unacceptable for the exchange, so the refusal is `invalid_request` (RFC 8693
+ * Section 2.2.2), with the same `mission_error` diagnostic as
+ * {@link MissionGrantError}, the refusal every other grant keeps.
+ */
+export class MissionExchangeError extends errors.InvalidRequest {
+  constructor(
+    message: string,
+    readonly missionError?: MissionErrorValue,
+  ) {
+    super(message);
+  }
+}
+
+/** The gate reasons that are lifecycle refusals (the Mission is not `active`), not a limit or an empty authority. */
+const LIFECYCLE_GATE_REASONS: ReadonlySet<string> = new Set(["mission_not_active", "mission_expired"]);
+
+/** Whether `ctx` is a token-endpoint request on the RFC 8693 Token Exchange grant. */
+export function isTokenExchangeRequest(ctx: unknown): boolean {
+  return (
+    (ctx as { oidc?: { params?: { grant_type?: unknown } } } | undefined)?.oidc?.params?.grant_type ===
+    TOKEN_EXCHANGE_GRANT_TYPE
+  );
+}
+
+/**
+ * @spec mission#issuance-gating (#1154, D369): the token endpoint's refusal for
+ * a Mission gate failure. A lifecycle refusal on a Token Exchange is
+ * `invalid_request`; a limit or empty-authority refusal, and every refusal on
+ * any other grant (authorization code, refresh, JWT bearer), is
+ * `invalid_grant`. Both carry `mission_error` where a value applies.
+ */
+export function tokenEndpointGateRefusal(
+  reason: GateError["reason"],
+  message: string,
+  missionError: MissionErrorValue | undefined,
+  exchange: boolean,
+): Error {
+  return exchange && LIFECYCLE_GATE_REASONS.has(reason)
+    ? new MissionExchangeError(message, missionError)
+    : new MissionGrantError(message, missionError);
+}
+
+/** The refusal vocabulary of a token-endpoint mint: a Token Exchange's, or every other grant's. */
+function mintSurface(ctx: unknown): "token-endpoint" | "token-exchange" {
+  return isTokenExchangeRequest(ctx) ? "token-exchange" : "token-endpoint";
+}
+
+/**
  * The `mission_error` values this deployment emits: the OAuth binding's
  * `revoked`, `expired` and `superseded` (Expansion defines supersession),
  * Mission Status's `completed` and `suspended`, Child Delegation's
@@ -841,10 +891,21 @@ export function buildProvider(opts: AdapterOptions): Provider {
     return mode === "issue" ? kernel.gateDerivation(target.record.id) : kernel.checkDerivation(target.record.id);
   }
 
-  /** A {@link GateError} as the token endpoint's `invalid_grant` (with `mission_error` where a value applies). */
-  function missionGateRefusal(e: unknown, missionId: string): unknown {
+  /**
+   * A {@link GateError} as the token endpoint's refusal
+   * ({@link tokenEndpointGateRefusal}): `invalid_request` for a lifecycle
+   * refusal on a Token Exchange, otherwise `invalid_grant`, with
+   * `mission_error` where a value applies. `ctx` is the token request; the
+   * refresh pre-check passes none, so it refuses `invalid_grant`.
+   */
+  function missionGateRefusal(e: unknown, missionId: string, ctx?: unknown): unknown {
     return e instanceof GateError
-      ? new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.observedRecord(missionId)))
+      ? tokenEndpointGateRefusal(
+          e.reason,
+          e.message,
+          gateErrorToMissionError(e.reason, kernel.observedRecord(missionId)),
+          isTokenExchangeRequest(ctx),
+        )
       : e;
   }
 
@@ -907,7 +968,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * is refused the same way rather than given a token that outlives it.
    *
    * `surface` selects the refusal's error vocabulary. A token-endpoint mint
-   * refuses `invalid_grant` (with `mission_error`). The authorization code is
+   * refuses `invalid_grant` (with `mission_error`), and a Token Exchange mint
+   * `invalid_request` (with `mission_error`; @spec mission#issuance-gating,
+   * #1154). The authorization code is
    * minted at the authorization endpoint's resume, whose response RFC 6749
    * Section 4.1.2.1 defines without `invalid_grant`, so it refuses
    * `access_denied` (@spec mission#error-mapping: an authorization decision
@@ -916,13 +979,19 @@ export function buildProvider(opts: AdapterOptions): Provider {
   function clampToMission(
     configured: number,
     grantId: string | undefined,
-    surface: "token-endpoint" | "authorization-endpoint" = "token-endpoint",
+    surface: "token-endpoint" | "token-exchange" | "authorization-endpoint" = "token-endpoint",
   ): number {
     const authorization = surface === "authorization-endpoint";
+    const exchange = surface === "token-exchange";
     const expiring = (): Error =>
       authorization
         ? new errors.AccessDenied("the Mission expires before the authorization can complete")
-        : new MissionGrantError("the Mission expires before a credential can be issued", "expired");
+        : tokenEndpointGateRefusal(
+            "mission_expired",
+            "the Mission expires before a credential can be issued",
+            "expired",
+            exchange,
+          );
     let record: MissionRecord | undefined;
     try {
       record = missionForGrant(grantId);
@@ -942,7 +1011,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
         if (authorization) {
           throw e.reason === "mission_expired" ? expiring() : new errors.AccessDenied("the Mission is not active");
         }
-        throw new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.observedRecord(record.id)));
+        throw tokenEndpointGateRefusal(
+          e.reason,
+          e.message,
+          gateErrorToMissionError(e.reason, kernel.observedRecord(record.id)),
+          exchange,
+        );
       }
       throw e;
     }
@@ -1453,7 +1527,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
               : kernel.missionClaim(famRecord);
           return { mission: claim };
         } catch (e) {
-          throw missionGateRefusal(e, famRecord.id);
+          throw missionGateRefusal(e, famRecord.id, _ctx);
         }
       }
       const record = target.record;
@@ -1486,7 +1560,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
             : kernel.missionClaim(gated);
         return { mission: claim };
       } catch (e) {
-        throw missionGateRefusal(e, record.id);
+        throw missionGateRefusal(e, record.id, _ctx);
       }
     },
     // @spec async-delegation — MANDATORY family rotation. A per-delegation family
@@ -1584,7 +1658,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // The resource server's lifetime (resourceServerInfoFor), or 1 hour.
       AccessToken: function AccessTokenTTL(_ctx, token) {
         const t = token as { grantId?: string; resourceServer?: { accessTokenTTL?: number } };
-        return clampToMission(t.resourceServer?.accessTokenTTL || 60 * 60, t.grantId);
+        return clampToMission(t.resourceServer?.accessTokenTTL || 60 * 60, t.grantId, mintSurface(_ctx));
       },
       // Minted at the authorization endpoint's resume: its refusal is an
       // authorization-response error, never invalid_grant.
@@ -1597,7 +1671,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
       IdToken: function IdTokenTTL(ctx) {
         const at = (ctx as { oidc?: { entities?: { AccessToken?: { grantId?: string } } } } | undefined)?.oidc
           ?.entities?.AccessToken;
-        return clampToMission(60 * 60, at?.grantId);
+        return clampToMission(60 * 60, at?.grantId, mintSurface(ctx));
       },
       // @spec async-delegation — absolute-lifetime clamp. A per-delegation family
       // refresh token lives exactly until its Mission's expires_at (no
@@ -1610,7 +1684,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // Uncapped only when the family's Mission resolves, so the clamp always
         // bounds it; otherwise the ordinary 14-day value applies.
         const familyBound = fam !== undefined && kernel.get(fam.missionId) !== undefined;
-        return clampToMission(familyBound ? Number.POSITIVE_INFINITY : 14 * 24 * 60 * 60, grantId);
+        return clampToMission(familyBound ? Number.POSITIVE_INFINITY : 14 * 24 * 60 * 60, grantId, mintSurface(_ctx));
       },
     },
   };
@@ -1656,7 +1730,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
     "grant.error",
     (ctx: unknown, err: unknown) => {
       const body = (ctx as { body?: Record<string, unknown> }).body;
-      if (err instanceof MissionGrantError && err.missionError && body?.error === "invalid_grant") {
+      // @spec mission#issuance-gating (#1154): the gate's `invalid_request` on
+      // a Token Exchange carries the same diagnostic as its `invalid_grant`.
+      if (
+        (err instanceof MissionGrantError || err instanceof MissionExchangeError) &&
+        err.missionError &&
+        body?.error === (err instanceof MissionExchangeError ? "invalid_request" : "invalid_grant")
+      ) {
         body.mission_error = err.missionError;
       }
     },
@@ -3674,15 +3754,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
 }
 
 /**
- * @spec child-delegation#denial-reasons — map a symbolic child denial reason to
- * its layered OAuth error code: `parent_not_active`/`parent_mismatch` ride
- * `invalid_grant`; `delegation_not_permitted`/`child_actor_not_allowed`/
- * `not_strict_subset`/`fanout_exceeded` ride `invalid_request`; `policy_denied`
- * rides `access_denied`.
+ * @spec child-delegation#denial-reasons: map a symbolic child denial reason to
+ * its layered OAuth error code on the child-creation exchange: `parent_mismatch`
+ * rides `invalid_grant`; `parent_not_active` rides `invalid_request`, the
+ * issuance profile's Token Exchange refusal of a Mission that is not `active`
+ * (#1154, D369), as do `delegation_not_permitted`/`child_actor_not_allowed`/
+ * `not_strict_subset`/`fanout_exceeded`; `policy_denied` rides `access_denied`.
  */
 export function childErrorCode(reason: ChildDenialReason): string {
   switch (reason) {
-    case "parent_not_active":
     case "parent_mismatch":
       return "invalid_grant";
     case "policy_denied":
