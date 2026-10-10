@@ -29,6 +29,7 @@ import {
   type ProviderCapability,
 } from "../src/index.js";
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14797;
 const ISSUER = `http://localhost:${PORT}`;
@@ -163,19 +164,26 @@ async function issue(): Promise<{ missionId: string; accessToken: string; refres
 const refresh = (refreshToken: string, keys: Keys) =>
   token({ grant_type: "refresh_token", refresh_token: refreshToken }, keys);
 
-/** An async-delegation exchange over the Mission's own access token. */
-const delegate = async (baseAccessToken: string) =>
-  token(
+/** The delegation-handle request (#1157): an exchange of the Mission's access token, under its own key. */
+const handleRequest = (baseAccessToken: string, keys: Keys) =>
+  token(delegationHandleParams(baseAccessToken, "ap-agent"), keys);
+
+/** An async-delegation family over the Mission's access token, through its handle; it keeps the base token's key. */
+async function delegate(baseAccessToken: string, keys: Keys): Promise<{ status: number; body: Json }> {
+  const handle = await handleRequest(baseAccessToken, keys);
+  expect(handle.status, JSON.stringify(handle.body)).toBe(200);
+  return token(
     {
       grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
       request_refresh_token: "true",
-      subject_token: baseAccessToken,
+      subject_token: handle.body.access_token as string,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       resource: RESOURCE,
       creation_request_id: crypto.randomUUID(),
     },
-    await newKeys(),
+    keys,
   );
+}
 
 /** A Lifecycle request; the response's exact text and parsed body. */
 async function lifecycle(
@@ -241,9 +249,14 @@ afterEach(() => {
 describe("revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182)", () => {
   it("a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing", async () => {
     const m = await issue();
-    const fam = await delegate(m.accessToken);
+    // The family keeps the base token's key (#1157). Prove its refresh works
+    // with that key before the revocation, so the refusal below is the
+    // revocation's and not a key mismatch.
+    const fam = await delegate(m.accessToken, m.keys);
     expect(fam.status, JSON.stringify(fam.body)).toBe(200);
-    const familyRefresh = fam.body.refresh_token as string;
+    const usable = await refresh(fam.body.refresh_token as string, m.keys);
+    expect(usable.status, JSON.stringify(usable.body)).toBe(200);
+    const familyRefresh = usable.body.refresh_token as string;
 
     const revoked = await lifecycle(m.missionId, { operation: "revoke", nonce: crypto.randomUUID() });
     expect(revoked.status, revoked.text).toBe(200);
@@ -253,14 +266,16 @@ describe("revoke-only Lifecycle deployment: revocation by a party holding no tok
     const after = await countingSaves(async () => [
       await refresh(m.refreshToken, m.keys),
       await refresh(familyRefresh, m.keys),
-      await delegate(m.accessToken),
+      await handleRequest(m.accessToken, m.keys),
     ]);
     for (const res of after.result) {
       expect(res.status, JSON.stringify(res.body)).toBe(400);
       expect(res.body.access_token).toBeUndefined();
       expect(res.body.refresh_token).toBeUndefined();
     }
+    // Both refreshes, with the keys that worked before the revocation, refuse invalid_grant.
     expect(after.result[0]?.body.error).toBe("invalid_grant");
+    expect(after.result[1]?.body.error).toBe("invalid_grant");
     expect(after.saved).toBe(0);
     expect(as.kernel.get(m.missionId)?.derivation_count).toBe(derivations);
   });
@@ -288,7 +303,7 @@ describe("revoke-only Lifecycle deployment: revocation by a party holding no tok
 });
 
 describe("revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182)", () => {
-  it("refuses every other operation invalid_request before looking up the Mission, leaving it unchanged", async () => {
+  it("refuses every operation the deployment has not adopted invalid_request before looking up the Mission, leaving it unchanged", async () => {
     const m = await issue();
     const before = as.kernel.get(m.missionId);
     for (const operation of ["suspend", "resume", "complete", "discharge", "contain"]) {
@@ -301,6 +316,26 @@ describe("revoke-only Lifecycle deployment: operations outside the class (@spec 
       // unknown Mission get the same response.
       expect(unknown.status, operation).toBe(known.status);
       expect(unknown.json, operation).toEqual(known.json);
+    }
+    const after = as.kernel.get(m.missionId);
+    expect(after?.state).toBe("active");
+    expect(after?.version).toBe(before?.version);
+  });
+
+  it("refuses an unrecognized or absent operation invalid_request before looking up the Mission", async () => {
+    const m = await issue();
+    const before = as.kernel.get(m.missionId);
+    for (const body of [
+      { operation: "unadopted_extension", nonce: "nonce-unrecognized" },
+      { operation: "constructor", nonce: "nonce-prototype-key" },
+      { nonce: "nonce-absent-operation" },
+    ]) {
+      const known = await lifecycle(m.missionId, body);
+      const unknown = await lifecycle("msn_unknown_0000000000000000000000", body);
+      expect(known.status, `${JSON.stringify(body)}: ${known.text}`).toBe(400);
+      expect(known.json.error).toBe("invalid_request");
+      expect(unknown.status).toBe(400);
+      expect(unknown.json).toEqual(known.json);
     }
     const after = as.kernel.get(m.missionId);
     expect(after?.state).toBe("active");
