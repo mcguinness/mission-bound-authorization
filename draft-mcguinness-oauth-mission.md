@@ -2428,6 +2428,30 @@ The following is an example of a Mission Record.
 }
 ~~~
 
+The excerpt below, other members omitted, is from a Mission for an
+agent acting for its own workload principal: `subject` is the workload
+principal, `client_id` is the agent, and `consent_principal` is the
+administrator who approved it under the `service_owned` source.
+
+~~~ json
+{
+  "subject": { "iss": "https://login.example.com",
+    "sub": "agt_ledger_reconciler" },
+  "client_id": "ledger-reconciler",
+  "authority_source": { "type": "service_owned" },
+  "approval_basis": {
+    "type": "direct",
+    "consent_principal": { "iss": "https://login.example.com",
+      "sub": "adm_4Hq9Tz" },
+    "activation": { "approval_event_id": "ape_2Lw7Kq9Rv4" },
+    "activation_actor": { "iss": "https://login.example.com",
+      "sub": "adm_4Hq9Tz" },
+    "root_commitment":
+      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQo"
+  }
+}
+~~~
+
 The hash values above are illustrative: the test vectors
 ({{test-vectors}}) compute anchors over a reduced Mission Intent and
 Authority Set, not over these objects. A companion that extends this
@@ -6045,6 +6069,10 @@ Cross-Domain:
 - Applicability points to the architecture's map of Mission creation
   paths, including a Mission for an agent acting on its own authority
   (#1186). No requirement changes.
+
+- Mission Record: a record excerpt after the worked example shows a
+  Mission for an agent acting for its own workload principal under the
+  `service_owned` source. No requirement changes. (#1194)
 
 - Mission Intent: an informative summary table gives each member,
   whether it is required, and what the AS does with it, after a
