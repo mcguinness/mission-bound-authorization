@@ -3589,6 +3589,36 @@
    ]
   },
   {
+   "id": "core.authority-sources.actor-model-source-independent",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-sources",
+   "text": "The actor model does not vary by source: `client_id` names the Agent, and delegates are carried in the `act` chain",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "under a `service_owned` or `organizational` source, as under `user_delegated`, a derived token's `client_id` names the Agent and the Subject stays in `sub`; a delegate appears in `act`, never in `sub` or in place of the Subject"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 3 (token): the access token's sub is the workload principal, its client_id the agent, and it carries no act",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1194. Partial: the client_id half is witnessed for a service_owned source (the agent ledger-reconciler, its workload Subject in sub, no act). The act half needs the delegated exchange of Delegation Within a Mission, which the reference AS does not implement (#869); the test records that step as a todo. Proved by overwriting client_id with the Subject in the JWT customizer (provider.ts)."
+  },
+  {
    "id": "core.approval-event.approver-establishment-not-from-client-input",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-event",
@@ -3665,6 +3695,37 @@
     }
    ],
    "notes": "#759: enabled-path identity tests pass, including identity-body refusal, scoped-service and independent-browser resolution, achieved authentication strength, Subject authorization, and agent/console separation. #761's normative core sentence was already landed; no duplicate core edit."
+  },
+  {
+   "id": "core.approval-event.approve-for-subject-authorized",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "MUST authorize the Approver to approve for that Subject under local policy",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Approver who is not the Subject and whom local policy does not authorize to approve for the selected Subject is refused at the approval decision, and no Mission is created",
+    "local": "the reference's local policy is identity.json's approves_for list; the refusal is HTTP 403 approval_forbidden at the decision, before derivation, the source gates or any record"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 1a (approval authorization): an Approver not authorized to approve for the workload principal is refused before any Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1194. Proved by disabling the approves_for check at the decision (provider.ts): bob's approval for the workload principal then proceeds past the decision and the 403 assertion fails."
   },
   {
    "id": "core.approval-event.authority-source-trusted-establishment",
@@ -6195,6 +6256,84 @@
      "surface": "authorization-endpoint"
     }
    ]
+  },
+  {
+   "id": "core.tokens.sub-is-mission-subject",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-bound-tokens",
+   "text": "sets `sub` to the AS-local `sub` the AS maps the Mission's Subject to",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-bound access token's `sub` is the Mission Subject's AS-local `sub`, on the code exchange and on refresh, and not the Approver's when the Approver is a different principal"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 3 (token): the access token's sub is the workload principal, its client_id the agent, and it carries no act",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 4 (refresh): the refreshed token keeps the workload principal as sub and the agent as client_id, with no act",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1194: a workload Subject (agt_ledger_reconciler) approved by a different principal (dana). Proved by disabling the JWT customizer's sub assignment (provider.ts): both tokens then carry the Approver's sub."
+  },
+  {
+   "id": "core.tokens.client-id-requesting-client",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-bound-tokens",
+   "text": "carries `client_id` with its ordinary meaning ({{Section 4.3 of RFC8693}}, {{Section 2.2 of RFC9068}}): the client that requested this particular token",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a derived token's `client_id` is the client that requested that token, on the code exchange, refresh, and Token Exchange; it is never the Subject"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 3 (token): the access token's sub is the workload principal, its client_id the agent, and it carries no act",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 4 (refresh): the refreshed token keeps the workload principal as sub and the agent as client_id, with no act",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 6 (the agent's own exchange): a no-actor Token Exchange by the agent succeeds while the Mission is active, keeping the workload principal as sub",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1194. Partial: in every witnessed issuance the requesting client is also the Mission's approved agent, so the tests do not distinguish the requesting client from the record's client_id. That case is the delegated token of Delegation Within a Mission, which the reference AS does not implement (#869). Proved by overwriting client_id with the Subject in the JWT customizer (provider.ts): steps 3 and 4 fail, and step 6 is refused."
   },
   {
    "id": "core.tokens.scope-ceiling",
@@ -9425,6 +9564,65 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the AS's schedule and audit record read after arming a schedule and after an authorized replacement by a different acting party; no wire member carries the committing party."
+  },
+  {
+   "id": "status.lifecycle.authorization-required",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS MUST refuse a caller that carries no such authorization.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authenticated caller holding no `mission_lifecycle` grant or deployment-defined equivalent is refused `revoke`, and the Mission's state is unchanged",
+    "local": "the reference authenticates operational callers as service-token principals; the refused caller is the approval service's credential, scoped `mission_approval` only, so approving for a Subject confers no lifecycle authority"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 7 (lifecycle authorization): a caller without the lifecycle grant, the approval service included, is refused revoke with the not-found response and the Mission stays active",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1194. Proved by disabling the mission_lifecycle scope check on the lifecycle route (provider.ts): the approval service's revoke then returns 200."
+  },
+  {
+   "id": "status.lifecycle.unauthorized-not-found",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS MUST refuse an unauthorized lifecycle request with the not-found response shape of {{mission-status-errors}}, so the endpoint does not act as a Mission enumeration oracle.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an unauthorized lifecycle request against an existing Mission receives the same not-found status and body as a request naming an unknown Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 7 (lifecycle authorization): a caller without the lifecycle grant, the approval service included, is refused revoke with the not-found response and the Mission stays active",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1194. Proved by answering the unauthorized caller 403 forbidden instead of the not-found response (provider.ts): step 7 fails."
   },
   {
    "id": "status.lifecycle.schedule-applied-at-deadline",
