@@ -723,43 +723,45 @@ Table of Contents
 
    Wire error codes (carried in the error member of a JSON body):
 
-   +=================+======+=========================================+
-   | error           | HTTP | Description                             |
-   +=================+======+=========================================+
-   | invalid_request | 400  | Malformed request: an unparseable body, |
-   |                 |      | a required member missing or malformed, |
-   |                 |      | an invalid member combination, or a     |
-   |                 |      | retransmitted nonce paired with a       |
-   |                 |      | request that is not byte-identical to   |
-   |                 |      | the original (Section 5.7).             |
-   +-----------------+------+-----------------------------------------+
-   | invalid_client  | 400  | Direct client authentication (mTLS or   |
-   |                 |      | private-key JWT) failed, or no          |
-   |                 |      | credential was presented where no       |
-   |                 |      | access-token scheme is accepted         |
-   |                 |      | (Section 3.2.1).                        |
-   +-----------------+------+-----------------------------------------+
-   | unauthorized    | 401  | Access-token authentication failed, or  |
-   |                 |      | no credential was presented where an    |
-   |                 |      | access-token scheme is accepted; the    |
-   |                 |      | response carries the challenges of      |
-   |                 |      | Section 3.2.1.                          |
-   +-----------------+------+-----------------------------------------+
-   | not_found       | 404  | Reference does not exist OR is not      |
-   |                 |      | visible.                                |
-   +-----------------+------+-----------------------------------------+
-   | conflict        | 409  | Lifecycle operation not legal from the  |
-   |                 |      | current state (Section 5.7).            |
-   +-----------------+------+-----------------------------------------+
-   | stale_version   | 409  | expected_version differs from the       |
-   |                 |      | current state version (Section 5.7).    |
-   +-----------------+------+-----------------------------------------+
-   | rate_limited    | 429  | Consumer is rate-limited.               |
-   +-----------------+------+-----------------------------------------+
-   | unavailable     | 503  | AS temporarily cannot serve status.     |
-   +-----------------+------+-----------------------------------------+
+     +=================+======+======================================+
+     | error           | HTTP | Description                          |
+     +=================+======+======================================+
+     | invalid_request | 400  | Malformed request: an unparseable    |
+     |                 |      | body, a required member missing or   |
+     |                 |      | malformed, an invalid member         |
+     |                 |      | combination, a Lifecycle operation   |
+     |                 |      | the AS does not serve (Section 5),   |
+     |                 |      | or a retransmitted nonce paired with |
+     |                 |      | a request that is not byte-identical |
+     |                 |      | to the original (Section 5.7).       |
+     +-----------------+------+--------------------------------------+
+     | invalid_client  | 400  | Direct client authentication (mTLS   |
+     |                 |      | or private-key JWT) failed, or no    |
+     |                 |      | credential was presented where no    |
+     |                 |      | access-token scheme is accepted      |
+     |                 |      | (Section 3.2.1).                     |
+     +-----------------+------+--------------------------------------+
+     | unauthorized    | 401  | Access-token authentication failed,  |
+     |                 |      | or no credential was presented where |
+     |                 |      | an access-token scheme is accepted;  |
+     |                 |      | the response carries the challenges  |
+     |                 |      | of Section 3.2.1.                    |
+     +-----------------+------+--------------------------------------+
+     | not_found       | 404  | Reference does not exist OR is not   |
+     |                 |      | visible.                             |
+     +-----------------+------+--------------------------------------+
+     | conflict        | 409  | Lifecycle operation not legal from   |
+     |                 |      | the current state (Section 5.7).     |
+     +-----------------+------+--------------------------------------+
+     | stale_version   | 409  | expected_version differs from the    |
+     |                 |      | current state version (Section 5.7). |
+     +-----------------+------+--------------------------------------+
+     | rate_limited    | 429  | Consumer is rate-limited.            |
+     +-----------------+------+--------------------------------------+
+     | unavailable     | 503  | AS temporarily cannot serve status.  |
+     +-----------------+------+--------------------------------------+
 
-                                 Table 2
+                                  Table 2
 
    Note the distinction between the access failures: unauthorized (401)
    and invalid_client (400) mean the request carried no valid
@@ -1003,6 +1005,12 @@ Table of Contents
 
    *  complete: mark the Mission completed; transition to terminated
       with reason completed.
+
+   The AS MUST refuse an operation value it does not serve, a base
+   operation its conformance claim omits (Section 9) or an extension
+   operation it has not adopted, with invalid_request (Section 3.7)
+   before looking up the Mission, leaving the Mission unchanged, so the
+   refusal discloses nothing about it.
 
    A companion profile MAY register a further operation value on this
    endpoint that changes no Mission-level state, provided it defines the
@@ -1727,6 +1735,24 @@ Table of Contents
       state, and advertise mission_lifecycle_endpoint and
       mission_lifecycle_endpoint_auth_methods_supported.
 
+   *  *Mission Lifecycle, revoke only*: serve the management endpoint
+      (Section 5) with the revoke operation, under its authentication,
+      its explicit lifecycle authorization (Section 5.5), the
+      idempotency and conflict rules of Section 5.7, and the not-found
+      refusal of an unauthorized request; answer each revoke with the
+      signed, state-only Mission Status Response, whose aud is the
+      authenticated requester and whose nonce is the request's
+      (Section 3.4); refuse any operation the implementation has not
+      adopted (Section 5, Operations); and advertise
+      mission_lifecycle_endpoint,
+      mission_lifecycle_endpoint_auth_methods_supported, and
+      mission_status_signing_alg_values_supported.  The class requires
+      no other operation and not the Mission Status operation; an
+      implementation that adopts one meets its requirements as well, and
+      the suspended state and completed termination arrive only with the
+      operations that introduce them.  An implementation claiming
+      Mission Lifecycle meets this class.
+
    *  *Revocation propagation*: advertise mission_max_stale_seconds and
       size Mission-bound access-token TTLs to it (Section 6).
 
@@ -2173,6 +2199,13 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Conformance gains a revoke-only Mission Lifecycle class: the
+      Lifecycle endpoint with revoke alone, under its authentication,
+      lifecycle authorization, idempotency and signed state-only
+      response, without the Mission Status operation.  An operation the
+      AS does not serve is refused invalid_request before the Mission is
+      looked up (#1182).
 
    *  Mission lifecycle: the states are active, suspended and
       terminated.  A terminated Mission's mission.termination carries

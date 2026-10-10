@@ -2086,7 +2086,7 @@ consumer recognizes it.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
                 <code>invalid_request</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">400</td>
-              <td class="text-left" rowspan="1" colspan="1">Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, or a retransmitted <code>nonce</code> paired with a request that is not byte-identical to the original (<a href="#idempotency" class="auto internal xref">Section 5.7</a>).</td>
+              <td class="text-left" rowspan="1" colspan="1">Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, a Lifecycle <code>operation</code> the AS does not serve (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>), or a retransmitted <code>nonce</code> paired with a request that is not byte-identical to the original (<a href="#idempotency" class="auto internal xref">Section 5.7</a>).</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2420,14 +2420,19 @@ reason <code>revoked</code>.<a href="#section-5.1-5.1.1" class="pilcrow">¶</a><
 with reason <code>completed</code>.<a href="#section-5.1-5.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.1-6">A companion profile <span class="bcp14">MAY</span> register a further <code>operation</code> value on this
+<p id="section-5.1-6">The AS <span class="bcp14">MUST</span> refuse an <code>operation</code> value it does not serve, a base
+operation its conformance claim omits (<a href="#conformance" class="auto internal xref">Section 9</a>) or an extension
+operation it has not adopted, with <code>invalid_request</code>
+(<a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>) before looking up the Mission, leaving the
+Mission unchanged, so the refusal discloses nothing about it.<a href="#section-5.1-6" class="pilcrow">¶</a></p>
+<p id="section-5.1-7">A companion profile <span class="bcp14">MAY</span> register a further <code>operation</code> value on this
 endpoint that changes no Mission-level state, provided it defines the
 value's request members, authorization, anti-oracle behavior, and
 result shape completely. The Entry Discharge companion registers
 <code>discharge</code> this way: it commits that a completion condition has
 fired, discharging a Mission-record entry, and is defined in full by
-that companion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>).<a href="#section-5.1-6" class="pilcrow">¶</a></p>
-<p id="section-5.1-7">A <code>suspend</code> <span class="bcp14">MAY</span> carry <code>suspend_until</code> with a <span class="bcp14">REQUIRED</span> <code>on_expiry</code>; the
+that companion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>).<a href="#section-5.1-7" class="pilcrow">¶</a></p>
+<p id="section-5.1-8">A <code>suspend</code> <span class="bcp14">MAY</span> carry <code>suspend_until</code> with a <span class="bcp14">REQUIRED</span> <code>on_expiry</code>; the
 pair is the Mission's schedule. When the <code>suspend_until</code> of a current
 schedule passes, the AS <span class="bcp14">MUST</span> apply <code>on_expiry</code> (transition to
 <code>active</code> for <code>resume</code>, or to <code>terminated</code> with reason <code>revoked</code> for
@@ -2435,8 +2440,8 @@ schedule passes, the AS <span class="bcp14">MUST</span> apply <code>on_expiry</c
 request. While the Mission
 is <code>suspended</code> under a deadline, both <code>suspend_until</code> and <code>on_expiry</code>
 surface in the signed Mission Status Response (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>)
-so a consumer sees the pending outcome.<a href="#section-5.1-7" class="pilcrow">¶</a></p>
-<p id="section-5.1-8">The AS authorizes a schedule when it commits it
+so a consumer sees the pending outcome.<a href="#section-5.1-8" class="pilcrow">¶</a></p>
+<p id="section-5.1-9">The AS authorizes a schedule when it commits it
 (<a href="#lifecycle-authorization" class="auto internal xref">Section 5.5</a>) and does not re-authorize it at the
 deadline: a later expiry or withdrawal of the committing party's grant
 does not by itself cancel it. A schedule is current until its
@@ -2444,7 +2449,7 @@ suspension ends or an authorized replacement supersedes it
 (<a href="#idempotency" class="auto internal xref">Section 5.7</a>). The AS <span class="bcp14">MUST NOT</span> apply a schedule that is no longer
 current, so an earlier deadline never acts on a later suspension. A
 deadline applies only a transition legal from the Mission's current
-state (<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>) and never changes a <code>terminated</code> Mission.<a href="#section-5.1-8" class="pilcrow">¶</a></p>
+state (<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>) and never changes a <code>terminated</code> Mission.<a href="#section-5.1-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="legal-transitions">
@@ -3443,9 +3448,29 @@ gates on non-<code>active</code> state, and advertise <code>mission_lifecycle_en
 <code>mission_lifecycle_endpoint_auth_methods_supported</code>.<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-3.4">
-          <p id="section-9-3.4.1"><strong>Revocation propagation</strong>: advertise <code>mission_max_stale_seconds</code>
+          <p id="section-9-3.4.1"><strong>Mission Lifecycle, revoke only</strong>: serve the management endpoint
+(<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>) with the <code>revoke</code> operation, under
+its authentication, its explicit lifecycle authorization
+(<a href="#lifecycle-authorization" class="auto internal xref">Section 5.5</a>), the idempotency and conflict rules of
+<a href="#idempotency" class="auto internal xref">Section 5.7</a>, and the not-found refusal of an unauthorized
+request; answer each <code>revoke</code> with the signed, state-only Mission
+Status Response, whose <code>aud</code> is the authenticated requester and whose
+<code>nonce</code> is the request's (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>); refuse any
+operation the implementation has not adopted
+(<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>, Operations); and advertise
+<code>mission_lifecycle_endpoint</code>,
+<code>mission_lifecycle_endpoint_auth_methods_supported</code>, and
+<code>mission_status_signing_alg_values_supported</code>. The class requires no
+other operation and not the Mission Status operation; an
+implementation that adopts one meets its requirements as well, and
+the <code>suspended</code> state and <code>completed</code> termination arrive only with
+the operations that introduce them. An implementation claiming
+Mission Lifecycle meets this class.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.5">
+          <p id="section-9-3.5.1"><strong>Revocation propagation</strong>: advertise <code>mission_max_stale_seconds</code>
 and size Mission-bound access-token TTLs to it
-(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-9-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-9-4">A companion profile <span class="bcp14">MAY</span> register a further extension operation on the
@@ -4000,68 +4025,76 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Mission lifecycle: the states are <code>active</code>, <code>suspended</code> and
+          <p id="appendix-A-2.1.1">Conformance gains a revoke-only Mission Lifecycle class: the
+Lifecycle endpoint with <code>revoke</code> alone, under its authentication,
+lifecycle authorization, idempotency and signed state-only response,
+without the Mission Status operation. An <code>operation</code> the AS does not
+serve is refused <code>invalid_request</code> before the Mission is looked up
+(#1182).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Mission lifecycle: the states are <code>active</code>, <code>suspended</code> and
 <code>terminated</code>. A terminated Mission's <code>mission.termination</code> carries
 its reason, <code>terminated_at</code> and the <code>version</code> of the committing
 transition; <code>completed</code> is a termination reason, <code>successor</code> and
 <code>carried_to</code> live in <code>termination</code>, an operation is idempotent only
 when its resulting state and reason both match, the <code>mission_error</code>
 values are <code>suspended</code> and <code>completed</code>, and a Discharge Result
-carries <code>new_version</code> (#705).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+carries <code>new_version</code> (#705).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">A <code>suspend</code> whose <code>on_expiry</code> is <code>resume</code> needs the authorization
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">A <code>suspend</code> whose <code>on_expiry</code> is <code>resume</code> needs the authorization
 the deployment requires for a direct <code>resume</code> as well as for
 <code>suspend</code>, including when it replaces the schedule of a Mission
 already suspended, and the AS records each schedule's committing
 party. Omitting both schedule members preserves the recorded
 schedule. A schedule applies only while current, never to a later
 suspension, and expiry governs a <code>suspend_until</code> at or after
-<code>expires_at</code> (#1002).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+<code>expires_at</code> (#1002).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Authentication failures at the Status and Lifecycle endpoints: a
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Authentication failures at the Status and Lifecycle endpoints: a
 failed access token gets a 401 <code>WWW-Authenticate</code> challenge in its
 scheme (<code>Bearer</code> or <code>DPoP</code>); a request with no credential gets a
 challenge for each accepted access-token scheme, always with
 <code>resource_metadata</code>; failed mTLS or private-key-JWT client
 authentication, or no credential where no access-token scheme is
-accepted, gets 400 <code>invalid_client</code> (#972 item 18).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">A derivation refused because the Mission is <code>suspended</code> or
-<code>completed</code> carries the <code>mission_error</code> value <code>mission_suspended</code> or
-<code>mission_completed</code>, so a client can tell a refusal that a <code>resume</code>
-lifts from a terminal one.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+accepted, gets 400 <code>invalid_client</code> (#972 item 18).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">A caller may request the projection for an audience other than its
+          <p id="appendix-A-2.5.1">A derivation refused because the Mission is <code>suspended</code> or
+<code>completed</code> carries the <code>mission_error</code> value <code>mission_suspended</code> or
+<code>mission_completed</code>, so a client can tell a refusal that a <code>resume</code>
+lifts from a terminal one.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">A caller may request the projection for an audience other than its
 own, such as each resource a Mission Issuance Grant consuming
 Authorization Server serves, only where the Mission Issuer's
 configuration authorizes it; the consumer checks <code>aud</code> against the
-<code>audience</code> its request named (#963).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">The mutual-TLS method value is <code>tls_client_auth</code>, the registered
-<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> spelling, and an absent endpoint auth-methods member is
-never read from token-endpoint metadata. The Mission Authority Server
-publishes the same per-endpoint members.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+<code>audience</code> its request named (#963).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">A refresh against a suspended Mission is checked, and refused, before
-its refresh token is consumed, so a <code>resume</code> restores refresh with the
-same token; issuance-time validation still governs a concurrent
-suspension (#914).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.7.1">The mutual-TLS method value is <code>tls_client_auth</code>, the registered
+<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> spelling, and an absent endpoint auth-methods member is
+never read from token-endpoint metadata. The Mission Authority Server
+publishes the same per-endpoint members.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.8">
-          <p id="appendix-A-2.8.1">Added conditional carryover correlation on an old child's cascaded
-observation; no state or authority is inferred from the pointer (#576).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.8.1">A refresh against a suspended Mission is checked, and refused, before
+its refresh token is consumed, so a <code>resume</code> restores refresh with the
+same token; issuance-time validation still governs a concurrent
+suspension (#914).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.9">
-          <p id="appendix-A-2.9.1">Operational Considerations added (#310): recovery sizing for the
+          <p id="appendix-A-2.9.1">Added conditional carryover correlation on an old child's cascaded
+observation; no state or authority is inferred from the pointer (#576).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.10">
+          <p id="appendix-A-2.10.1">Operational Considerations added (#310): recovery sizing for the
 advertised propagation ceiling, the per-surface distribution posture,
 and the operator observations after a degraded surface recovers. No
-freshness window is extended and no member is added.<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
+freshness window is extended and no member is added.<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
