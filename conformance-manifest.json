@@ -103,8 +103,8 @@
     "content_sha256": "f47ce123511fcb11509c380b8cd5e3131a5c7782739b9b19f2410a32dbcadadb"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "52b3baaa59a419a1e0f7ad49f85ea936c7fc086b",
-    "content_sha256": "704ebbf5230cd8c8b2500ff74be01aa51d2098bbe2337c05587643b485573bc5"
+    "revision": "b89f2d2f937b0f912669c67f5fcf64b507f07a6e",
+    "content_sha256": "76a97a3d37d7540977fd5dc29f8b56024b8b079b3a82e6de41b3f9c5e8c05385"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "c74a85acc97dc6ba157b26721f18767d76085b80",
@@ -31419,10 +31419,56 @@
    "notes": "#825 PR 2c follow-up (D353), the child-grant counterpart of the OAuth binding's Self-Exchange rule 2. The presented tokens are real family access tokens of the parent Mission, bound to one acting key; the unreadable one is signed by a test-held AS token key, since the AS never mints a Mission token without authorization_details. Capability sources are bindings, not authority, so the comparison sets them aside (they are checked against the parent); a delegation right is authority, so a token that dropped it mints no child. Proved by disabling each check (the kernel bound, the evidence name, the adapter's pass-through, the recovery bound, the unreadable-authority guard): each is killed by the tests cited."
   },
   {
+   "id": "child-delegation.attenuation.presented-token-authorizes-creation",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "attenuation",
+   "text": "the presented `subject_token` MUST authorize this child-creation operation: each entry of its authority that a child entry is a subset of MUST carry a `children` object, and that object's `allowed_child_actors`, `max_child_depth`, and `max_children` ({{fanout}}) constrain the creation alongside the parent entry's, its `max_children` bounding the same count ({{fanout-accounting}}); a token without that delegation right authorizes no child, and carrying the token's restrictions into the child does not satisfy this",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token whose children object admits no child actor refuses creation with child_actor_not_allowed, and one whose max_children is 0 refuses it with fanout_exceeded, though the parent permits both and the child carries the same restricted delegation; the token's max_children bounds the parent's own count of active children on the entry (a second child under max_children 1 is refused, while the broad token still creates); a grandchild beyond the token's max_child_depth is refused; a token without a children object refuses as not_strict_subset; each deny Child Evidence records attenuation result exceeds_presented_authority"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > the presented token's children control %s refuses this creation, though the parent permits it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > the presented token's max_children bounds the parent's count; the broad token still creates",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > refuses a child from a token without the delegation right, though the parent carries it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "child mission creation (@spec child-delegation#child-creation, #parent-member) > the presented token's children controls govern this creation, the evidence naming the bound (@spec child-delegation#attenuation, #fanout, #1192 review)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1192 review (P1): the token's delegation restrictions govern creation, not only the authority copied into the child. Shown over HTTP before the fix (a token with allowed_child_actors [] or max_children 0 created a child, 200). The depth control is witnessed at the kernel: the authorization_details schema admits no max_child_depth below 1, so only a grandchild can exceed it. Proved by disabling each gate (the token's actor, depth and count controls at creation, the recovery controls, the recorded child counted once): each is killed by the tests cited. The token's children-object presence needs no separate gate: a child always carries its parent entry's children object or a narrower one, so the authority bound refuses a token without one."
+  },
+  {
    "id": "child-delegation.creation-idempotency.recovery-within-presented-token",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "creation-idempotency",
-   "text": "A repetition whose `subject_token` carries less authority than the recorded Child Mission's Authority Set is refused with `not_strict_subset` ({{attenuation}}): recovery never delivers a child broader than the token presented.",
+   "text": "A repetition whose `subject_token` does not authorize the recorded creation under {{attenuation}}, both its authority bound and its `children` controls, with the recorded child counted once toward `max_children`, is refused with the corresponding denial reason: recovery never delivers a child the presented token could not have created.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -31432,7 +31478,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a retry of a completed child creation with the same client, key and request but a narrower subject_token is refused invalid_request with mission_denial_reason not_strict_subset and delivers no grant, while an equivalent token recovers the same child"
+    "normative": "a retry of a completed child creation with the same client, key and request is refused, delivering no grant, when the presented token is narrower than the recorded child (not_strict_subset), admits no child actor (child_actor_not_allowed), or has a max_children below the active count including the recorded child (fanout_exceeded); an equivalent token, or one whose max_children admits the count with the recorded child counted once, recovers the same child"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -31442,9 +31488,15 @@
      "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > a retry recovers a recorded child only within the presented token; an equivalent token recovers it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > a retry recovers a recorded child only when the presented token's controls admit it (actor, count)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "The creation fingerprint does not bind the presented token, so without this check a narrower token presenting the same request recovered the broader child (shown before the fix). Mirrors the async-delegation recovery bound (D353). Proved by disabling each check (the kernel bound, the evidence name, the adapter's pass-through, the recovery bound, the unreadable-authority guard): each is killed by the tests cited."
+   "notes": "The creation fingerprint does not bind the presented token, so without this check a narrower token presenting the same request recovered the broader child (shown before the fix). Mirrors the async-delegation recovery bound (D353). Proved by disabling each check (the kernel bound, the evidence name, the adapter's pass-through, the recovery bound, the unreadable-authority guard): each is killed by the tests cited. #1192 review: recovery applies the token's children controls too, counting the recorded child once."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
