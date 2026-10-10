@@ -1701,6 +1701,12 @@ The control still cannot close within-scope data laundering
 forcing a human or a fresh approval between untrusted input and
 egress.
 
+The control's trust rests on authorization, not on role. When the
+governed agent acts for its own workload principal, being the Subject
+exempts nothing: its content is classed like any other source, and
+every reset and egress direction comes through the surface
+{{session-taint}} requires.
+
 # Privacy Considerations {#privacy-considerations}
 
 Harness Evidence and Mission bindings can reveal task graphs,
@@ -1774,6 +1780,15 @@ exists.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The taint baseline, taint reset and egress direction no longer key
+  on the Subject. Content from the Approver or from the delegating
+  person of a user-delegated Mission does not taint, and a workload or
+  organizational Subject confers no baseline trust. A reset or an
+  egress direction is a trusted direction, given through a surface the
+  governed agent cannot invoke; being the Subject, identity alone, and
+  administrative metadata authorize none. Inherited taint and the
+  transformed-content rule are unchanged (#1193).
 
 - The Mission binding and Harness Evidence carry `termination` beside
   a `terminated` state. The stop-behavior matrix is keyed on
