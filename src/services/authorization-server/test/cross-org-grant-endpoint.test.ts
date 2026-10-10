@@ -167,6 +167,8 @@ interface ExchangeOpts {
   audience?: string;
   dpop?: string; // a raw override; when absent, a fresh proof is signed with `leafKeys`
   leafKeys?: Keys;
+  /** Extra request parameters. */
+  extra?: Record<string, string>;
 }
 
 async function exchange(opts: ExchangeOpts): Promise<Response> {
@@ -183,6 +185,7 @@ async function exchange(opts: ExchangeOpts): Promise<Response> {
       subject_token: opts.subjectToken,
       subject_token_type: CHAIN_TOKEN_TYPE,
       audience: opts.audience ?? RESOURCE,
+      ...opts.extra,
       client_assertion: await clientAssertion(),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     }).toString(),
@@ -353,6 +356,21 @@ describe("origin-principal mapping and local-ceiling intersection (@spec cross-o
 });
 
 describe("the minted token and derivation evidence (@spec cross-org-delegation#projection-exchange, #projection)", () => {
+  // @spec continuation#transport-async (#1157 review P2): the delegation-handle
+  // request's pre-routing conflict check leaves the Chain Presentation
+  // exchange, which takes audience itself, to its own route.
+  it("serves a Chain Presentation carrying audience, resource and the access-token requested_token_type", async () => {
+    const { chain, leafKeys } = await buildChain();
+    const res = await exchange({
+      subjectToken: present(chain),
+      leafKeys,
+      extra: { resource: RESOURCE, requested_token_type: "urn:ietf:params:oauth:token-type:access_token" },
+    });
+    const body = (await res.json()) as { access_token?: string; issued_token_type?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.issued_token_type).toBe("urn:ietf:params:oauth:token-type:access_token");
+  });
+
   it("mints a local access token with the expected claims and records derivation evidence", async () => {
     const before = evidence.length;
     const { chain, leafKeys, missionId } = await buildChain();
