@@ -793,7 +793,9 @@ order, refusing on the first failure:
    carries a `children` object permitting child creation, and that
    `child_actor` satisfies its constraints ({{fanout}}).
 8. Derive the child Authority Set, verify strict subset
-   ({{strict-subset}}), and apply fan-out controls.
+   ({{strict-subset}}) and that it is within the authority the
+   `subject_token` carries ({{attenuation}}), and apply fan-out
+   controls.
 9. Determine subset derivation versus fresh approval and complete per
    {{completion}}: synchronous, deferred, or interactive.
 10. At the creation commit, re-verify parent state ({{creation-race}})
@@ -846,6 +848,11 @@ of the same `(client, creation_request_id)`:
   Mission, count a second time against `max_children`
   ({{fanout-accounting}}), or record a second Child Evidence object
   ({{child-evidence}}).
+
+A repetition whose `subject_token` carries less authority than the
+recorded Child Mission's Authority Set is refused with
+`not_strict_subset` ({{attenuation}}): recovery never delivers a child
+broader than the token presented.
 
 ## Worked Example {#worked-example}
 
@@ -953,7 +960,8 @@ This profile defines these symbolic denial reasons:
 
 `not_strict_subset`:
 : The proposed child authority is not a strict subset of parent
-  authority ({{strict-subset}}).
+  authority ({{strict-subset}}), or exceeds the authority the presented
+  `subject_token` carries ({{attenuation}}).
 
 `fanout_exceeded`:
 : Creating the child would exceed a fan-out control.
@@ -1180,6 +1188,10 @@ A Child Mission MUST be bounded by the Parent Mission:
 
 - every child Authority Set entry MUST be a subset of a parent entry
   under the subset rule of {{I-D.draft-mcguinness-oauth-mission}};
+- every child Authority Set entry MUST also be a subset, under the same
+  rule, of an entry of the authority the presented `subject_token`
+  carries, so a down-scoped token never mints a child broader than
+  itself;
 - the child MUST NOT include a resource, action, constraint relaxation,
   or delegation right not present in the parent;
 - the child's effective `expires_at` MUST NOT be later than the child
@@ -1234,8 +1246,9 @@ resource containment and `.*` action families) apply as that rule
 defines them, and nothing beyond them applies.
 
 If the Mission Issuer cannot prove the child Authority Set is a strict
-subset of the parent, it MUST refuse child creation with
-`not_strict_subset`.
+subset of the parent, and within the authority the presented
+`subject_token` carries ({{attenuation}}), it MUST refuse child
+creation with `not_strict_subset`.
 
 ## Derivation Budget Is Not Inherited {#derivation-budget}
 
@@ -2308,6 +2321,11 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The authority the presented `subject_token` carries bounds the
+  child as well as the parent's does, at creation and on recovery, so
+  a down-scoped token never mints or recovers a child broader than
+  itself; `not_strict_subset` covers both bounds (#825).
 
 - Cascade terminates a Child Mission with reason `parent_terminated`,
   registered in the Mission Termination Reasons registry, whose
