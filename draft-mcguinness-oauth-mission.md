@@ -472,7 +472,11 @@ task's lifetime, ordinary machine-to-machine service credentials
 among them; those use OAuth unchanged. The boundary is that lifetime
 equality, not the absence of a human: a workload's durable
 multi-step task is in scope as a service-owned Mission
-({{authority-sources}}).
+({{authority-sources}}). The direct realization creates each Mission
+at an approval interaction on the authorization endpoint;
+{{I-D.draft-mcguinness-mission-architecture}} (Section "Mission
+Creation Paths") maps the paths where an administrator, or a policy a
+human consented to, decides without one.
 
 A Mission is intended to cover one concrete task, not an agent's whole
 lifetime: narrow, per-task Missions, each separately approved and
@@ -6033,6 +6037,10 @@ Cross-Domain:
   lowercase ("authorization server", "resource server") in prose; the
   defined Mission-aware Resource Server, Mission Issuer, Mission Client
   and Resource AS keep their capitals. No requirement changes.
+
+- Applicability points to the architecture's map of Mission creation
+  paths, including a Mission for an agent acting on its own authority
+  (#1186). No requirement changes.
 
 - Mission Intent: an informative summary table gives each member,
   whether it is required, and what the AS does with it, after a

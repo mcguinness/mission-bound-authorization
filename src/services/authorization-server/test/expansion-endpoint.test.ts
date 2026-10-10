@@ -75,9 +75,9 @@ let apev = 0;
 /**
  * @spec child-delegation#carryover-commit — a TEST-ONLY child actor registered
  * for the token-exchange grant, so a carryover REPLACEMENT's own child actor
- * can authenticate at /token and retrieve its committed result. The shipped
- * child actor carries only the jwt-bearer grant, and `config/clients.json` is
- * untouched (the builder's `testClients` seam adds, never redefines).
+ * can authenticate at /token and retrieve its committed result.
+ * `config/clients.json` is untouched (the builder's `testClients` seam adds,
+ * never redefines).
  */
 const CARRY_ACTOR = "test-carryover-child";
 let carryActorKey: CryptoKey;

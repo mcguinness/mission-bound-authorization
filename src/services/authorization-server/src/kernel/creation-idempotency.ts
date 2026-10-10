@@ -146,9 +146,8 @@ export interface MissionCreationFingerprintInput {
  *  - `iss` / `client`: as the expansion profile defines them.
  *  - `source`: the RESOLVED base Mission identifier (from subject_token
  *    resolution) — never the raw subject_token.
- *  - `cnf`: the ACTING client's verified confirmation — this exchange
- *    deliberately re-binds the family to the acting key rather than proving
- *    possession of the subject token's own confirmation.
+ *  - `cnf`: the acting client's verified confirmation, which is the delegation
+ *    handle's own key: the exchange proves possession of it (#1157).
  *  - `proposal`: the parsed `authorization_details` array naming the requested
  *    confined subset, when present.
  *  - `resource`: the target the family is audienced to.
