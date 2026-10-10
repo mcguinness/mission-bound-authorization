@@ -775,6 +775,95 @@ describe("the presented token's authority bounds a Child Mission (@spec child-de
     };
   }
 
+  /**
+   * A family token for the invoice read whose delegation right carries the
+   * Mission entry's `children` object changed by `restrict`, and the matching
+   * child proposal (the same restricted delegation), so the authority bound
+   * passes and the token's child-creation controls decide (#1192 review).
+   */
+  async function restricted(
+    baseAccessToken: string,
+    missionId: string,
+    restrict: (children: Record<string, unknown>) => void,
+  ): Promise<{ token: string; proposal: unknown }> {
+    const entry = as.kernel.get(missionId)?.authority_set.find((e) => e.actions.includes("payments:invoice.read"));
+    const delegation = structuredClone(entry?.delegation) as Record<string, unknown>;
+    restrict(delegation.children as Record<string, unknown>);
+    const proposal = confinedAuthority().map((e) => ({ ...e, delegation }));
+    const res = await asyncDelegate(baseAccessToken, { authorizationDetails: proposal });
+    const body = (await res.json()) as { access_token: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    return { token: body.access_token, proposal };
+  }
+
+  it.each([
+    ["allowed_child_actors: []", (c: Record<string, unknown>) => { c.allowed_child_actors = []; }, "child_actor_not_allowed"],
+    ["max_children: 0", (c: Record<string, unknown>) => { c.max_children = 0; }, "fanout_exceeded"],
+  ] as const)(
+    "the presented token's children control %s refuses this creation, though the parent permits it",
+    async (_label, restrict, reason) => {
+      const { missionId, baseAccessToken } = await issueBaseMission();
+      const { token, proposal } = await restricted(baseAccessToken, missionId, restrict);
+      const before = as.kernel.findChildren(missionId).length;
+      const res = await createChild(token, missionId, { authorizationDetails: proposal });
+      const body = (await res.json()) as { error?: string; mission_denial_reason?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.mission_denial_reason).toBe(reason);
+      expect(as.kernel.findChildren(missionId)).toHaveLength(before);
+    },
+  );
+
+  it("the presented token's max_children bounds the parent's count; the broad token still creates", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const { token, proposal } = await restricted(baseAccessToken, missionId, (c) => { c.max_children = 1; });
+    const first = await createChild(token, missionId, { authorizationDetails: proposal });
+    expect(first.status, JSON.stringify(await first.clone().json())).toBe(200);
+    const second = await createChild(token, missionId, { authorizationDetails: proposal });
+    const body = (await second.json()) as { mission_denial_reason?: string };
+    expect(second.status, JSON.stringify(body)).toBe(400);
+    expect(body.mission_denial_reason).toBe("fanout_exceeded");
+    const broadRes = await asyncDelegate(baseAccessToken);
+    const broad = ((await broadRes.json()) as { access_token: string }).access_token;
+    const third = await createChild(broad, missionId, { authorizationDetails: proposal });
+    expect(third.status, JSON.stringify(await third.clone().json())).toBe(200);
+  });
+
+  it("a retry recovers a recorded child only when the presented token's controls admit it (actor, count)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const broadRes = await asyncDelegate(baseAccessToken);
+    const broad = ((await broadRes.json()) as { access_token: string }).access_token;
+
+    // Actor eligibility: a child recorded under the broad token is not recovered by a token that admits no child actor.
+    const actors = await restricted(baseAccessToken, missionId, (c) => { c.allowed_child_actors = []; });
+    const cridA = crypto.randomUUID();
+    const createdA = await createChild(broad, missionId, { authorizationDetails: actors.proposal, creationRequestId: cridA });
+    const createdABody = (await createdA.json()) as { mission_id?: string };
+    expect(createdA.status, JSON.stringify(createdABody)).toBe(200);
+    const refusedA = await createChild(actors.token, missionId, { authorizationDetails: actors.proposal, creationRequestId: cridA });
+    const refusedABody = (await refusedA.json()) as { mission_denial_reason?: string; access_token?: string };
+    expect(refusedA.status, JSON.stringify(refusedABody)).toBe(400);
+    expect(refusedABody.mission_denial_reason).toBe("child_actor_not_allowed");
+    expect(refusedABody.access_token).toBeUndefined();
+
+    // Fan-out: the recorded child counts once. max_children 0 refuses its recovery; max_children 2 admits it.
+    const none = await restricted(baseAccessToken, missionId, (c) => { c.max_children = 0; });
+    const cridC = crypto.randomUUID();
+    const createdC = await createChild(broad, missionId, { authorizationDetails: none.proposal, creationRequestId: cridC });
+    const createdCBody = (await createdC.json()) as { mission_id?: string };
+    expect(createdC.status, JSON.stringify(createdCBody)).toBe(200);
+    const refusedC = await createChild(none.token, missionId, { authorizationDetails: none.proposal, creationRequestId: cridC });
+    const refusedCBody = (await refusedC.json()) as { mission_denial_reason?: string };
+    expect(refusedC.status, JSON.stringify(refusedCBody)).toBe(400);
+    expect(refusedCBody.mission_denial_reason).toBe("fanout_exceeded");
+    // Two non-terminal children are now drawn on the entry: a token whose max_children admits them recovers.
+    const room = await restricted(baseAccessToken, missionId, (c) => { c.max_children = 2; });
+    const recovered = await createChild(room.token, missionId, { authorizationDetails: none.proposal, creationRequestId: cridC });
+    const recoveredBody = (await recovered.json()) as { mission_id?: string };
+    expect(recovered.status, JSON.stringify(recoveredBody)).toBe(200);
+    expect(recoveredBody.mission_id).toBe(createdCBody.mission_id);
+  });
+
   it("creates a child within the presented token's authority", async () => {
     const { missionId, narrow } = await tokens();
     const res = await createChild(narrow, missionId);
