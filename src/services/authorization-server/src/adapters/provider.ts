@@ -2857,8 +2857,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       const operationCapability = Object.hasOwn(LIFECYCLE_OPERATION_CAPABILITY, operation)
         ? LIFECYCLE_OPERATION_CAPABILITY[operation]
         : undefined;
-      if (operationCapability === undefined || !enabled(operationCapability)) {
-        sendInvalidRequest(`operation ${operation} is not served by this deployment`);
+      if (operationCapability === undefined) {
+        sendInvalidRequest(`operation ${operation} is not supported`);
+        return;
+      }
+      if (!enabled(operationCapability)) {
+        sendInvalidRequest(`operation ${operation} is not enabled on this deployment`);
         return;
       }
       // @spec discharge#discharge-operation, discharge#discharge-commit ("States")
