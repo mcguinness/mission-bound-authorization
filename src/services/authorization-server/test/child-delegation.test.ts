@@ -272,6 +272,24 @@ describe("child mission creation (@spec child-delegation#child-creation, #parent
       expect(ev?.decision).toBe("denied");
       expect(ev?.attenuation.result).toBe("exceeds_presented_authority");
     }
+    // A token carrying the same action without the delegation right: the
+    // child's delegation right exceeds it, so this bound refuses (the parent
+    // carries the right, so the parent bound would not).
+    const undelegable = token.map(({ delegation: _dropped, ...rest }) => rest as AuthorityEntry);
+    try {
+      createChildMission(kernel, {
+        parentId: parent.id,
+        intent: childIntent(["payments:invoice.read"]),
+        proposedAuthority: proposed(["payments:invoice.read"]),
+        childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+        presentedAuthority: undelegable,
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(ChildDelegationError);
+      expect((e as ChildDelegationError).reason).toBe("not_strict_subset");
+      expect((e as ChildDelegationError).evidence?.attenuation.result).toBe("exceeds_presented_authority");
+    }
   });
 
   it("clamps the child expires_at to the parent's (@spec child-delegation#attenuation)", () => {
