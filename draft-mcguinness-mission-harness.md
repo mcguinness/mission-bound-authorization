@@ -1139,7 +1139,7 @@ approval ({{I-D.draft-mcguinness-mission-runtime}}) or downgrade that
 authority (suppress the action), rather than let the agent egress on
 the strength of injected content. This is the plan-then-execute
 pattern: untrusted content may inform the agent's planning, but it
-MUST NOT, on its own, drive an egress the Subject did not direct.
+MUST NOT, on its own, drive an egress that no trusted direction gave.
 
 A deployment MAY instead route the taint determination through the
 decision request where the binding carries it
