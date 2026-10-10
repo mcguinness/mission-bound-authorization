@@ -135,7 +135,7 @@ export {
   DPOP_PROOF_REPLAY_WINDOW_S,
   type DpopProofAdmission,
   type DpopProofReplay,
-  dpopProofIatInWindow,
+  dpopProofIatAcceptableAt,
   newDpopProofReplay,
 } from "./dpop-replay.js";
 export {

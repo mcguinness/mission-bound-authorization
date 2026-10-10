@@ -64,7 +64,7 @@ import {
   splitScope,
 } from "@mission/core";
 import { UniqueViolationError } from "@mission/store";
-import { dpopProofIatInWindow, refuseTokenEndpointProof, type TokenEndpointProofFailure } from "./dpop-replay.js";
+import { dpopProofIatAcceptableAt, refuseTokenEndpointProof, type TokenEndpointProofFailure } from "./dpop-replay.js";
 import {
   type CreationOperation,
   type CreationReservation,
@@ -283,7 +283,7 @@ export async function verifyTokenEndpointDpop(
     return { ok: false, description: "invalid DPoP proof" };
   }
   if (typeof payload.iat !== "number") return { ok: false, description: "DPoP proof has no iat" };
-  if (!dpopProofIatInWindow(payload.iat, Math.floor(Date.now() / 1000))) {
+  if (!dpopProofIatAcceptableAt(payload.iat, Date.now())) {
     return { ok: false, description: "DPoP proof iat is outside the acceptance window" };
   }
   // @spec RFC 9449 Section 11.1, #1173 (D375): the jti is single-use; at the

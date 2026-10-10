@@ -44,7 +44,7 @@ import { mintTransactionToken } from "../kernel/transaction-token.js";
 import type { OperationProfileRegistry } from "../kernel/operation-profile.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { TxnWorkflowStore, type TxnWorkflowRecord } from "../kernel/txn-workflow-store.js";
-import { type DpopProofReplay, dpopProofIatInWindow } from "./dpop-replay.js";
+import { type DpopProofReplay, dpopProofIatAcceptableAt } from "./dpop-replay.js";
 
 /** @spec RFC 9449 Section 11.1, #1173 (D375): the replay cache is at its bound; refuse retryably. */
 interface ReplayUnavailable {
@@ -1114,7 +1114,7 @@ async function verifyDpop(deps: TxnAuthorizationDeps, ctx: TxnCtx): Promise<stri
     // future-dated one never starts. The whole acceptance interval fits inside
     // the replay cache's memory of the jti.
     if (typeof payload.iat !== "number") return undefined;
-    if (!dpopProofIatInWindow(payload.iat, Math.floor(deps.now().getTime() / 1000))) return undefined;
+    if (!dpopProofIatAcceptableAt(payload.iat, deps.now().getTime())) return undefined;
     if (typeof payload.jti !== "string") return undefined;
     const admission = deps.dpopProofReplay.admit(payload.jti);
     if (!admission.admitted) {

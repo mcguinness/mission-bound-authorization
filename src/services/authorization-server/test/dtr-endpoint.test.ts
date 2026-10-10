@@ -24,6 +24,7 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import {
   buildAuthorizationServer,
   DEFERRED_GRANT_TYPE,
@@ -226,8 +227,17 @@ function subset(actions: string[]): AuthorityEntry[] {
   return out;
 }
 
+/** The token endpoint's DPoP replay cache, switchable to full (#1173). */
+const replay = switchableDpopReplay();
+
 beforeAll(async () => {
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS });
+  as = await buildAuthorizationServer({
+    issuer: ISSUER,
+    allowHeadlessAdjudication: true,
+    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    // @spec #1173 (D375): switchable to full for the cache-bound case.
+    dpopProofReplay: replay,
+  });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   dpopKeys = await generateKeyPair("ES256", { extractable: true });
@@ -464,5 +474,29 @@ describe("DPoP proof freshness at the deferred grant's mint (@spec RFC 9449 Sect
       expect(replayBody.error, `iat ${offset}, replayed`).toBe("invalid_dpop_proof");
       expect(replayBody.error_description, `iat ${offset}, replayed`).toContain("replayed");
     }
+  });
+});
+
+describe("the deferred grant at the DPoP replay cache's bound (@spec RFC 9449 Section 11.1, #1173, #1199 review)", () => {
+  it("refuses the poll temporarily_unavailable without consuming the approved deferral, which then redeems with a fresh proof", async () => {
+    const res = await initiate(subset(["payments:remittance.send"]));
+    const { deferral_code: code } = (await res.json()) as { deferral_code: string };
+    as.deferrals.approve(code, new Date(Date.now() + 120_000).toISOString());
+    replay.full = true;
+    try {
+      const busy = await poll(code);
+      const body = (await busy.json()) as { error?: string; access_token?: string };
+      expect(busy.status, JSON.stringify(body)).toBe(503);
+      expect(body.error).toBe("temporarily_unavailable");
+      expect(busy.headers.get("retry-after")).toBe(String(SWITCHED_RETRY_AFTER_S));
+      expect(body.access_token).toBeUndefined();
+    } finally {
+      replay.full = false;
+    }
+    // The same deferral, a fresh proof: the refusal took nothing.
+    const retry = await poll(code);
+    const retryBody = (await retry.json()) as { access_token?: string };
+    expect(retry.status, JSON.stringify(retryBody)).toBe(200);
+    expect(retryBody.access_token).toBeTruthy();
   });
 });

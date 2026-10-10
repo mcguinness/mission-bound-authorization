@@ -56,4 +56,19 @@ describe("the Resource Server's DPoP proof verifier (@spec RFC 9449 Section 4.3,
     expect((refused as DpopReplayUnavailableError).retryAfterS).toBeGreaterThan(0);
     await expect(verify(seen, replay)).rejects.toThrow("missing or replayed");
   });
+
+  // @spec RFC 9449 Section 11.1 (#1199 review): no replay gap at the window's end.
+  it("refuses a proof again at every instant it is still acceptable: a replay at the final instant, outside the window just after", async () => {
+    let ms = Math.floor(Date.now() / 1000) * 1000;
+    const replay = newDpopProofReplay(300, () => ms);
+    const p = await proof({ iat: ms / 1000 + 60 });
+    const input = { proof: p, accessToken: ACCESS_TOKEN, expectedJkt: jkt, htu: HTU, htm: HTM, replay, now: () => new Date(ms) };
+    const first = ms;
+    await expect(verifyDpopProof(input)).resolves.toBe(jkt);
+    // The proof's last acceptable instant: iat + 240 s, 300 s after first sight.
+    ms = first + 300_000;
+    await expect(verifyDpopProof(input)).rejects.toThrow("missing or replayed");
+    ms = first + 300_500;
+    await expect(verifyDpopProof(input)).rejects.toThrow("outside the acceptance window");
+  });
 });

@@ -2078,6 +2078,19 @@ async function handleDeferredGrant(
 
   // --- Poll/redeem: the client presents the deferral_code. ---
   if (typeof params.deferral_code === "string" && params.deferral_code) {
+    // @spec RFC 9449 Section 4.3 (#1173, #1199 review): the proof is verified
+    // BEFORE the deferral is redeemed, so a refused proof (a retryable refusal
+    // at the replay cache's bound included) leaves an approved deferral
+    // redeemable. The verified key binds the minted token. The token endpoint
+    // does not pre-validate DPoP for custom grants; nonce handling is not
+    // required here.
+    const proofJws = ctx.get("DPoP");
+    if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
+    const verified = await verifyTokenEndpointDpop(opts, proofJws);
+    if (!verified.ok) {
+      refuseTokenEndpointProof(ctx, verified);
+      return;
+    }
     const r = deferrals.redeem(params.deferral_code);
     if ("error" in r) {
       switch (r.error) {
@@ -2093,7 +2106,7 @@ async function handleDeferredGrant(
           throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
       }
     }
-    await mintDeferredToken(opts, provider, ctx, r);
+    await mintDeferredToken(opts, provider, ctx, r, verified.proof.jkt);
     return;
   }
 
@@ -2158,25 +2171,13 @@ async function mintDeferredToken(
   provider: Provider,
   ctx: KoaContextWithOIDC,
   deferred: DeferredToken,
+  /** The verified DPoP proof key's thumbprint (handleDeferredGrant): the minted token's binding. */
+  jkt: string,
 ): Promise<void> {
   const record = opts.kernel.get(deferred.mission.id);
   if (!record || !record.grant_id) {
     throw new errors.InvalidGrant("mission grant not found for deferral");
   }
-
-  // DPoP-bind the minted token: derive the jkt from the request's DPoP proof
-  // (the token endpoint does not pre-validate DPoP for custom grants), exactly
-  // like the /transaction handler. Nonce handling is not required here.
-  const proofJws = ctx.get("DPoP");
-  if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
-  // shared token-endpoint verifier (iat window and jti replay included).
-  const verified = await verifyTokenEndpointDpop(opts, proofJws);
-  if (!verified.ok) {
-    refuseTokenEndpointProof(ctx, verified);
-    return;
-  }
-  const { jkt } = verified.proof;
 
   // Containment: derive the resource fallback from the EFFECTIVE set (a fresh
   // mission has no containment, so this is the approved set as-is).

@@ -28,14 +28,19 @@ export const DPOP_PROOF_REPLAY_WINDOW_S = 300;
 export const DPOP_PROOF_FUTURE_SKEW_S = 60;
 
 /**
- * @spec RFC 9449 §4.3 — whether a proof's `iat` (seconds) is inside the
- * acceptance window at `nowS`: at most {@link DPOP_PROOF_FUTURE_SKEW_S} ahead,
- * and at most the replay window less that skew behind.
+ * @spec RFC 9449 §4.3 — whether a proof's `iat` (seconds) is acceptable at
+ * `nowMs`: at most {@link DPOP_PROOF_FUTURE_SKEW_S} ahead and at most the
+ * replay window less that skew behind, both bounds inclusive and compared in
+ * milliseconds, never rounded. A proof first accepted at `t` has
+ * `iat <= t + skew`, so its last acceptable instant is no later than
+ * `t + window`: exactly as long as the replay cache remembers its `jti`
+ * (#1199 review).
  */
-export function dpopProofIatInWindow(iat: number, nowS: number): boolean {
+export function dpopProofIatAcceptableAt(iat: number, nowMs: number): boolean {
+  const iatMs = iat * 1000;
   return (
-    iat <= nowS + DPOP_PROOF_FUTURE_SKEW_S &&
-    iat >= nowS - (DPOP_PROOF_REPLAY_WINDOW_S - DPOP_PROOF_FUTURE_SKEW_S)
+    iatMs <= nowMs + DPOP_PROOF_FUTURE_SKEW_S * 1000 &&
+    iatMs >= nowMs - (DPOP_PROOF_REPLAY_WINDOW_S - DPOP_PROOF_FUTURE_SKEW_S) * 1000
   );
 }
 
@@ -70,18 +75,20 @@ export function newDpopProofReplay(
   return {
     admit(jti) {
       const t = now();
+      // An entry is live through its expiry instant (inclusive), the last
+      // instant a proof bearing it can be accepted.
       for (const [k, exp] of seen) {
-        if (exp <= t) seen.delete(k);
+        if (exp < t) seen.delete(k);
         else break;
       }
       const existing = seen.get(jti);
-      if (existing !== undefined && existing > t) return { admitted: false, reason: "replay" };
+      if (existing !== undefined && existing >= t) return { admitted: false, reason: "replay" };
       if (seen.size >= maxEntries) {
         // Capacity frees when the oldest entry expires; with no entry at all
         // (a zero bound) it never does, so a whole window is the answer.
         const oldest = seen.values().next().value;
         const retryAfterS =
-          oldest === undefined ? windowSeconds : Math.max(1, Math.ceil((oldest - t) / 1000));
+          oldest === undefined ? windowSeconds : Math.max(1, Math.ceil((oldest + 1 - t) / 1000));
         return { admitted: false, reason: "full", retryAfterS };
       }
       seen.set(jti, t + windowSeconds * 1000);

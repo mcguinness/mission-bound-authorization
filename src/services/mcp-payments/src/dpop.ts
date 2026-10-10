@@ -28,7 +28,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { type DpopProofReplay, dpopProofIatInWindow } from "@mission/core";
+import { type DpopProofReplay, dpopProofIatAcceptableAt } from "@mission/core";
 import { calculateJwkThumbprint, decodeProtectedHeader, type JWK, jwtVerify } from "jose";
 
 /** The signing algorithms this resource accepts on a DPoP proof. */
@@ -86,8 +86,7 @@ export async function verifyDpopProof(input: {
   });
   if (payload.htu !== input.htu || payload.htm !== input.htm) throw new Error("DPoP htu/htm mismatch");
   if (typeof payload.iat !== "number") throw new Error("DPoP proof has no iat");
-  const nowS = Math.floor((input.now?.() ?? new Date()).getTime() / 1000);
-  if (!dpopProofIatInWindow(payload.iat, nowS)) {
+  if (!dpopProofIatAcceptableAt(payload.iat, (input.now?.() ?? new Date()).getTime())) {
     throw new Error("DPoP proof iat is outside the acceptance window");
   }
   if (typeof payload.ath !== "string") throw new Error("DPoP proof has no ath");
