@@ -1062,10 +1062,15 @@ harness the one layer that can apply a taint rule against the case
 where untrusted content drives an agent to exfiltrate within its
 authority.
 
-Taint is classed by source. Content from the Subject or the Approver
-does not taint; the deployment's **content trust list** extends that
-baseline to the sources it vouches for, such as first-party tools, its
-own catalogs, and designated corpora. Content from an unlisted source,
+Taint is classed by source. Content from the Approver, or from the
+delegating person of a user-delegated Mission, does not taint; the
+deployment's **content trust list** extends that baseline to the
+sources it vouches for, such as first-party tools, its own catalogs,
+and designated corpora. No content is trusted solely because its
+source is the Subject: a workload or organizational Subject
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority
+Sources"), which can be the governed agent's own principal, confers
+no baseline trust. Content from an unlisted source,
 or from a source the deployment explicitly marks untrusted (web
 fetches, inbound messages, third-party documents), is **tainted**.
 
@@ -1078,6 +1083,17 @@ for the store. Otherwise a tainted session launders content across
 the session boundary by writing it to a vouched store that a later
 session reads as trusted, defeating the fresh-session reset below.
 
+A **trusted direction**, a taint reset or an egress direction, is one
+given by the delegating person of a user-delegated Mission, the
+Approver, or another principal the deployment authorizes for that
+Mission, through a surface the governed agent cannot invoke from its
+tool plane or from any channel it drives, such as that person's own
+input to the session or an operator's control surface. The surface
+establishes the principal's identity itself, never from caller
+input. No principal gives a trusted direction solely because it is
+the Subject, and identity alone, administrative metadata included,
+authorizes none.
+
 The trigger is parameter provenance where the harness can establish
 it. Because the harness mediates tool input and output, it SHOULD
 track at the data plane which tainted source a value derives from. The
@@ -1089,8 +1105,8 @@ Session-level taint remains the fallback where provenance is
 unavailable: the harness applies the rule to every such action in a
 governed session that tainted content has entered. Session-level
 taint persists for the governed session's lifetime and clears only
-with a fresh session or an explicit Subject-directed reset recorded
-in Harness Evidence ({{harness-evidence}}).
+with a fresh session or an explicit reset, given as a trusted
+direction and recorded in Harness Evidence ({{harness-evidence}}).
 
 Taint follows derivation across session boundaries with the same
 polarity. A sub-agent session spawned from a tainted session
@@ -1123,7 +1139,7 @@ approval ({{I-D.draft-mcguinness-mission-runtime}}) or downgrade that
 authority (suppress the action), rather than let the agent egress on
 the strength of injected content. This is the plan-then-execute
 pattern: untrusted content may inform the agent's planning, but it
-MUST NOT, on its own, drive an egress the Subject did not direct.
+MUST NOT, on its own, drive an egress that no trusted direction gave.
 
 A deployment MAY instead route the taint determination through the
 decision request where the binding carries it
@@ -1685,6 +1701,12 @@ The control still cannot close within-scope data laundering
 forcing a human or a fresh approval between untrusted input and
 egress.
 
+The control's trust rests on authorization, not on role. When the
+governed agent acts for its own workload principal, being the Subject
+exempts nothing: its content is classed like any other source, and
+every reset and egress direction comes through the surface
+{{session-taint}} requires.
+
 # Privacy Considerations {#privacy-considerations}
 
 Harness Evidence and Mission bindings can reveal task graphs,
@@ -1758,6 +1780,15 @@ exists.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The taint baseline, taint reset and egress direction no longer key
+  on the Subject. Content from the Approver or from the delegating
+  person of a user-delegated Mission does not taint, and a workload or
+  organizational Subject confers no baseline trust. A reset or an
+  egress direction is a trusted direction, given through a surface the
+  governed agent cannot invoke; being the Subject, identity alone, and
+  administrative metadata authorize none. Inherited taint and the
+  transformed-content rule are unchanged (#1193).
 
 - The Mission binding and Harness Evidence carry `termination` beside
   a `terminated` state. The stop-behavior matrix is keyed on
