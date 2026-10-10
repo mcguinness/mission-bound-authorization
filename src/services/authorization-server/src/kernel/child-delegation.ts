@@ -33,6 +33,7 @@ import { activationPolicyMatches } from "./activation-policy.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
+import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import {
@@ -116,6 +117,13 @@ export interface CreateChildInput {
   proposedAuthority?: AuthorityEntry[];
   /** The child actor that holds/executes under the Child Mission. */
   childActor: ChildActor;
+  /**
+   * @spec child-delegation#attenuation (#825, D353): the authority the
+   * presented `subject_token` itself carries. When supplied, every child entry
+   * MUST also be a subset of it, so a down-scoped token never mints a child
+   * broader than itself. The token-endpoint exchange always supplies it.
+   */
+  presentedAuthority?: readonly AuthorityEntry[];
   /** The recorded cascade mode. Defaults to (and today only supports) `immediate`. */
   cascadeMode?: CascadeMode;
   /** Optional Mission-Issuer-defined identifier for the delegation event. */
@@ -355,6 +363,17 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
       "not_strict_subset",
       "child Authority Set is not a strict subset of the parent",
       makeEvidence("denied", "not_strict_subset", "not_strict_subset"),
+    );
+  }
+  // @spec child-delegation#attenuation (#825, D353): the presented token's own
+  // authority is a second ceiling, as Self-Exchange rule 2 bounds a family.
+  // Capability sources are bindings, not authority, so they are set aside here
+  // (they are checked against the parent above). The evidence names this bound.
+  if (input.presentedAuthority && !isSubsetSetIgnoringCapabilitySources(childAuthority, input.presentedAuthority)) {
+    throw new ChildDelegationError(
+      "not_strict_subset",
+      "child Authority Set exceeds the presented token's authority",
+      makeEvidence("denied", "exceeds_presented_authority", "not_strict_subset"),
     );
   }
 

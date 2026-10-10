@@ -1995,6 +1995,14 @@ export async function handleChildCreationExchange(
   // Step 4: acting agent (the authenticated parent client; carry actor_token).
   const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
   if (!acting) return;
+  // @spec child-delegation#attenuation (#825, D353): the presented token's own
+  // authority bounds the child. Read here, before the idempotency lookup, so a
+  // retry recovers a recorded child only within it.
+  const presentedAuthority = presentedTokenAuthority(resolved.claims);
+  if (!presentedAuthority) {
+    txError(ctx, 400, "invalid_grant", "subject_token carries no readable authorization_details");
+    return;
+  }
 
   // @spec child-delegation#creation-request-id — REQUIRED on every child
   // creation, in every completion mode (missing -> invalid_request).
@@ -2087,7 +2095,7 @@ export async function handleChildCreationExchange(
   // the one whose source Mission changed state when the first attempt succeeded.
   const existing = idem.find(client.clientId, creationRequestId);
   if (existing) {
-    await recoverChildCreation(opts, ctx, existing, fingerprint, resolved.jkt);
+    await recoverChildCreation(opts, ctx, existing, fingerprint, resolved.jkt, presentedAuthority);
     return;
   }
 
@@ -2127,6 +2135,7 @@ export async function handleChildCreationExchange(
         ...(proposedAuthority ? { proposedAuthority } : {}),
         ...(submissionEvidence?.length ? { submissionEvidence } : {}),
         childActor,
+        presentedAuthority,
       });
       return { missionId: created.child.id, value: created.child };
     });
@@ -2147,7 +2156,7 @@ export async function handleChildCreationExchange(
       // A concurrent duplicate won the reservation: recover its outcome.
       const winner = idem.find(client.clientId, creationRequestId);
       if (winner) {
-        await recoverChildCreation(opts, ctx, winner, fingerprint, resolved.jkt);
+        await recoverChildCreation(opts, ctx, winner, fingerprint, resolved.jkt, presentedAuthority);
         return;
       }
       throw e;
@@ -2217,6 +2226,10 @@ export async function handleChildCreationExchange(
  *                 remains active. The fresh mint is an ordinary issuance event:
  *                 creation accounting is NOT repeated (no fan-out increment, no
  *                 second lifecycle event, no second Child Evidence).
+ * A completed child is delivered only within the presented token's own
+ * authority (@spec child-delegation#attenuation, #825, D353): the fingerprint
+ * does not bind the token, so a narrower token presenting the same request
+ * would otherwise recover a broader child.
  */
 async function recoverChildCreation(
   opts: AdapterOptions,
@@ -2224,6 +2237,7 @@ async function recoverChildCreation(
   op: CreationOperation,
   fingerprint: string,
   presenterJkt: string,
+  presentedAuthority: readonly AuthorityEntry[],
 ): Promise<void> {
   if (op.op !== "child-creation" || op.fingerprint !== fingerprint) {
     txError(
@@ -2251,6 +2265,16 @@ async function recoverChildCreation(
   const child = op.missionId ? opts.kernel.get(op.missionId) : undefined;
   if (!child) {
     txError(ctx, 400, "invalid_grant", "recorded child mission not found");
+    return;
+  }
+  if (!isSubsetSetIgnoringCapabilitySources(child.authority_set, [...presentedAuthority])) {
+    ctx.status = 400;
+    ctx.body = {
+      error: "invalid_request",
+      error_description: "the recorded child exceeds the presented token's authority",
+      mission_denial_reason: "not_strict_subset",
+    };
+    ctx.set("cache-control", "no-store");
     return;
   }
   const state = opts.kernel.applyExpiry(child).state;
