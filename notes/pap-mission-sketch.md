@@ -167,8 +167,9 @@ The Company lists the extension in `poppy.json` beside `operations`:
   a verifiable action-bound approval, and PAP's `approved_by: "user"` is the
   agent's assertion (Ops 8). The AS therefore refuses an entry carrying
   `true` and never grants it with the key dropped, and the operations
-  endpoint fails such an entry closed. A `false` value is the same as
-  omitting the key.
+  endpoint fails such an entry closed. Resource-access defines `false` as
+  equivalent to omission, so the AS grants an entry carrying `false`
+  without the key. That removes nothing the entry granted.
 - Each action `a` yields three action identifiers on the operations
   resource: `a.read`, `a.confirm`, and `a.cancel`. An entry can name them
   separately or as the family `a.*`.
@@ -363,7 +364,8 @@ The Company's added check:
 
 ```
 confirm(op, token, body):
-  PAP checks: ownership (3.2), latest revision, approved_by allowed,
+  PAP checks: ownership (3.2), latest revision, approved_by allowed
+              (check 4: the operation's own user_approval_required),
               state proposed and unexpired                     # Ops 5.2
 
   if token has no Mission:
@@ -554,6 +556,11 @@ is a different authorization, outside this profile:
 
 ## 4. Guarantees and losses
 
+This profile bounds Mission tokens; it does not bound the agent. An agent
+that holds any ordinary write-capable credential at the Company can act
+outside every Mission on its own word (T11). The guarantees below hold for
+what is done under a Mission token.
+
 | Guarantee | Enforced by |
 | --- | --- |
 | Under a Mission token, the Company performs an action only by confirming an operation whose `action` and `terms` an active Mission entry covers | Company: existing scope checks, plus the confirm check |
@@ -570,7 +577,7 @@ is a different authorization, outside this profile:
 | Verified per-revision User approval | `approved_by: "user"` stays on trust (Ops 8). An entry with `requires_action_approval: true` is refused rather than satisfied by it. | Mission Transaction Authorization, or another action-bound approval hosted by the Company |
 | Device Sign-In and Mediated Sign-In | Agents without a redirect cannot create Missions. Mediated Sign-In has no Company-rendered approval, so it stays out. | Core issue: Intent carriage on the RFC 8628 request (Section 6.2) |
 | Conditions outside `terms` | Only `terms` and Common Constraints are checked. Summary prose is not. | Ops 3 already requires every effect in `terms` when present. A Company governing an action puts its conditions there. |
-| Other credentials the agent holds | An ordinary `poppy:write` token is not bounded by any Mission. It can confirm with `approved_by: "user"` on the agent's word (T11). | Company policy: offer agents no `poppy:write` (Spec 4.4 permits it), so every agent write goes through a Mission |
+| Other credentials the agent holds | An ordinary write-capable token, whether `poppy:write` or a narrower Company write scope, is not bounded by any Mission. It can confirm with `approved_by: "user"` on the agent's word (T11). | Company policy: issue agents no write-capable scope of any kind for the governed actions, so every agent write to them goes through a Mission |
 | Missions across Companies | Each Company sees only its own Mission. Aggregate limits are the agent's job. | Cross-Domain companion, opt-in, at the cost of correlation (Section 5) |
 
 The profile claims no assurance level beyond Baseline Issuance. It adds two
@@ -614,7 +621,7 @@ should be narrowed to Section 3. Three findings drive this.
 | Draft 00 element | Disposition | What is lost |
 | --- | --- | --- |
 | Proposal endpoint, `request_id`, `revises_operation_id`, `expected_revision` | Remove | Nothing. Ops 4 and Ops 6 cover it. |
-| `session_id` at PAR | Retain (Section 3.4) | Nothing. G8 stays open for ordinary sign-ins (Section 6.1). |
+| `session_id` at PAR | Retain (Section 3.4); it closes the redemption half of G8 | Nothing. The initiation half of G8 stays open, and all of G8 for ordinary sign-ins (Section 6.1). |
 | `account_ref` | Remove | Cross-client account comparison, which no check needs |
 | `parameter_digest` | Remove | A client-side tamper check of a revision the Company holds and cannot change (Ops 3.1) |
 | `pap_*` constraints and the retail profile | Replace with `terms`-key equality and Common Constraints | Range checks other than `max_amount` and `time_window` |
@@ -656,10 +663,10 @@ Proposed issues. None has been filed.
    authorization request is already a client-authenticated back-channel
    POST. Allowing it unblocks PAP Device Sign-In and headless agents
    generally.
-2. **Core: in-house introspected consumption.** State that an estate whose AS
-   and resource servers are one deployment satisfies introspected
-   consumption with an internal lookup. No public RFC 7662 endpoint is then
-   needed for opaque Mission-bound tokens.
+2. **Core: in-house introspected consumption.** Clarify whether an estate
+   whose AS and resource servers are one deployment satisfies introspected
+   consumption with an internal lookup. If it does, opaque Mission-bound
+   tokens need no public RFC 7662 endpoint.
 
 ## 7. Decisive tests
 
@@ -677,10 +684,10 @@ otherwise.
 | T6 | Mission A covers this exchange; Mission B covers returning `itm_9Zp` | A's token reads, cancels, and confirms B's return | `403`, `insufficient_authority` for each request. B's operation is unchanged. |
 | T7 | Two `exchange.confirm` entries: one covers the revision; the other carries a key the Company stopped enforcing after issuance | Confirm, with the entries in each order | `403`, `mission_denial="constraint_unrecognized"` in both orders. No effect. |
 | T8 | (a) An authority proposal whose `exchange.confirm` entry carries `requires_action_approval: true`. (b) A grant that carries such an entry anyway. | (a) Sign in. (b) Confirm with `user`, then with `standing_permission`. | (a) The AS refuses the entry, or omits it and the granted `authorization_details` shows the omission. It never grants the entry with the key dropped. (b) `403`, `mission_denial="constraint_unrecognized"` for both confirms. No effect. |
-| T9 | The covering entry carries `requires_action_approval: false` | Confirm with `standing_permission` | `200`. `false` is the same as absent. |
+| T9 | An authority proposal whose `exchange.confirm` entry carries `requires_action_approval: false` | Sign in, then confirm a covered revision with `standing_permission` | The granted `authorization_details` echoes the entry without the key, because `false` is the same as absent. The confirm returns `200`. |
 | T10 | The Company lists `operations` but not the extension | The agent starts the Mission workflow | The agent makes no action call and tells the User why. It submits the authority neither as bare `scope` nor as `authorization_details`. |
-| T11 | An operation proposed under the Mission token at 90.00 USD; the agent also holds an ordinary signed-in credential | Confirm with the ordinary credential and `approved_by: "user"` | (a) Where the Company offers agents `poppy:write`: `200` as an ordinary PAP confirmation, with no `confirmation.mission`. The label is the agent's assertion (Ops 8), and the record does not attribute the confirmation to the Mission. (b) Where the Company offers agents no `poppy:write` (Spec 4.4): sign-in refuses that scope with `invalid_scope`, so the credential cannot exist and the confirm cannot happen. |
-| T12 | Two open operations for the same exchange (two operation IDs) proposed in two channels | Confirm both under the Mission token | Ops 4 has the Company return the existing operation instead of a second. Where two exist anyway, each confirm is decided on its own and each operation is performed at most once. The Mission does not stop the second (Section 4). The Company's own business rule, such as an item being exchangeable once, or Metering with a `max_calls` of 1 on `exchange.confirm`, refuses it. |
+| T11 | An operation proposed under the Mission token at 90.00 USD; the agent also holds an ordinary signed-in credential | Confirm with the ordinary credential and `approved_by: "user"` | (a) Where the Company issues agents any write-capable scope for the action (`poppy:write` or a narrower Company scope): `200` as an ordinary PAP confirmation, with no `confirmation.mission`. The label is the agent's assertion (Ops 8), and the record does not attribute the confirmation to the Mission. (b) Where the Company issues agents no write-capable scope of any kind for the governed actions: no such credential exists, so the confirm cannot happen. |
+| T12 | Two open operations for the same exchange (two operation IDs) proposed in two channels | Confirm both under the Mission token | Required: each operation is performed at most once, and each admitted confirmation carries `confirmation.mission`. Documented, not required: the Mission alone does not refuse the second (Section 4); only the Company's business rule or Metering (`max_calls` of 1 on `exchange.confirm`) does. |
 | T13 | The agent's browser is joined to the Mission Session, and the website offers confirmation (Ops 4.4) | Confirm on the website and, concurrently, at the endpoint | Either the website treats the browser as signed out and offers no confirmation, or it runs the Section 3.7 check and admission. No confirmation is admitted outside the Mission. The action is performed at most once across both channels. |
 | T14 | (a) Revision 2 of the exchange adds a 10.00 USD fee to 70.00 USD. (b) A `return` operation, an action listed without `max_amount`, gains a 5.00 USD restocking fee in revision 2. | Confirm each with `standing_permission` | (a) `403`, `insufficient_authority`: the total charge, 80.00 USD, exceeds the cap. (b) `403`, `insufficient_authority`: an action listed without `max_amount` carries no charge. No effect in either case. |
 | T15 | A confirm waits on the Mission lock, held by a concurrent writer, while (a) the Mission's `expires_at`, (b) the operation's `expires_at`, or (c) the covering entry's `time_window` end passes | Release the lock | (a) `401 invalid_token`. (b) The operation is returned as it is, `expired`, with no confirmation. (c) `403`, `insufficient_authority`. No effect in any case. Every admitted confirmation's `confirmed_at` precedes the bound. |
