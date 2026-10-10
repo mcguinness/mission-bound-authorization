@@ -24,7 +24,7 @@ const base = {
   missionId: MISSION.id,
   audience: CANONICAL_RESOURCE,
   action: { name: "journal-entries.read" },
-  denial_reason: "out_of_authority",
+  denial_reason: "credential_authority_insufficient",
 };
 
 describe("Refusal Record request digest input (@spec runtime-evidence#request-digest-worked, #971)", () => {

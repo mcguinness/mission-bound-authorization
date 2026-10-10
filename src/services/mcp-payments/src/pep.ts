@@ -61,7 +61,12 @@ import {
   type ListEffectiveParams,
   parameterDigest,
 } from "./effective-params.js";
-import type { EvidenceStore, ExecutionEvidenceObject, RuntimeHopReference } from "./evidence.js";
+import type {
+  EvidenceStore,
+  ExecutionEvidenceObject,
+  PepRefusalDenialReason,
+  RuntimeHopReference,
+} from "./evidence.js";
 import type { PaymentsStore } from "./payments-store.js";
 import { operationKey } from "./transaction.js";
 import { signChallenge } from "./txn-challenge.js";
@@ -917,16 +922,33 @@ export type ReverifyOutcome =
   | { ok: true; effectiveParameterDigest?: string }
   | { ok: false; error: string; disposition: SuppressOutcome };
 
+/** Every caller-visible diagnostic this PEP refuses with on its Refusal Record path (`refuse`, `recordRefusal`). */
+export type PepRefusalDiagnostic =
+  | "unknown_tool"
+  | "invalid_request"
+  | "unknown_mission"
+  | "unknown_invoice"
+  | "unknown_vendor"
+  | "out_of_authority"
+  | "instance_revoked"
+  | "mission_reference_conflict"
+  | "state_unavailable"
+  | "capability_source_unresolvable"
+  | "decision_evidence_unverifiable"
+  | "channel_failure"
+  | "pdp_unreachable";
+
 /**
  * @spec runtime-evidence#pre-decision-refusal (issue #786) — the deployment's
  * caller-visible refusal diagnostic mapped to the enumerated value the SIGNED
  * Refusal Record carries. "This member carries an enumerated value, never a
  * deployment's own diagnostic string ... A deployment publishes the mapping it
  * uses": this constant is that mapping, and the two surfaces stay separate.
- * A diagnostic absent from this table is already an enumerated value and is
- * carried unchanged.
+ * It is exhaustive over {@link PepRefusalDiagnostic}, a diagnostic that is
+ * already an enumerated value included, so nothing reaches a signed record
+ * unmapped (#1148, D379).
  */
-export const PRE_DECISION_DENIAL_REASON: Readonly<Record<string, string>> = Object.freeze({
+export const PRE_DECISION_DENIAL_REASON: Readonly<Record<PepRefusalDiagnostic, PepRefusalDenialReason>> = Object.freeze({
   // No such action at this enforcement surface.
   unknown_tool: "request_unsupported",
   // Intake (operation-profile-payments-v1, D316, D334): the PEP established
@@ -955,11 +977,37 @@ export const PRE_DECISION_DENIAL_REASON: Readonly<Record<string, string>> = Obje
   // withdrawn, and an auditor must be able to tell those apart. The
   // operator-facing distinction stays on the caller-visible diagnostic.
   instance_revoked: "credential_authority_insufficient",
+  // Already enumerated values, carried unchanged.
+  mission_reference_conflict: "mission_reference_conflict",
+  state_unavailable: "state_unavailable",
+  capability_source_unresolvable: "capability_source_unresolvable",
+  decision_evidence_unverifiable: "decision_evidence_unverifiable",
+  channel_failure: "channel_failure",
+  pdp_unreachable: "pdp_unreachable",
 });
 
-/** The enumerated Refusal Record `denial_reason` for a caller-visible diagnostic. */
-export function signedDenialReason(diagnostic: string): string {
-  return PRE_DECISION_DENIAL_REASON[diagnostic] ?? diagnostic;
+/** Whether `diagnostic` is one this PEP refuses with on its Refusal Record path. */
+export function isPepRefusalDiagnostic(diagnostic: string): diagnostic is PepRefusalDiagnostic {
+  return Object.hasOwn(PRE_DECISION_DENIAL_REASON, diagnostic);
+}
+
+/** A refusal diagnostic with no mapping to the closed `denial_reason` set (#1148). */
+export class UnmappedRefusalDiagnosticError extends Error {
+  constructor(readonly diagnostic: string) {
+    super(`refusal diagnostic ${JSON.stringify(diagnostic)} has no mapping to a Refusal Record denial_reason`);
+    this.name = "UnmappedRefusalDiagnosticError";
+  }
+}
+
+/**
+ * The enumerated Refusal Record `denial_reason` for a caller-visible
+ * diagnostic. A diagnostic outside {@link PRE_DECISION_DENIAL_REASON} throws
+ * before anything is signed (#1148, D379): the refusal fails visibly, and no
+ * generic or mislabelled reason is substituted.
+ */
+export function signedDenialReason(diagnostic: string): PepRefusalDenialReason {
+  if (!isPepRefusalDiagnostic(diagnostic)) throw new UnmappedRefusalDiagnosticError(diagnostic);
+  return PRE_DECISION_DENIAL_REASON[diagnostic];
 }
 
 /**
@@ -2156,7 +2204,7 @@ export class Pep {
 
   private async refuse(
     token: TokenFacts,
-    reason: string,
+    reason: PepRefusalDiagnostic,
     action: string,
     view?: MissionView,
     missionIdOverride?: string,
@@ -2190,7 +2238,7 @@ export class Pep {
    */
   private async recordRefusal(
     token: TokenFacts,
-    reason: string,
+    reason: PepRefusalDiagnostic,
     action: string,
     view?: MissionView,
     missionIdOverride?: string,

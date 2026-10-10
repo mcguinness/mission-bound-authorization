@@ -534,7 +534,7 @@ const refusalInput = (n: number) => ({
   missionId: MISSION_REF.id,
   audience: CANONICAL_RESOURCE,
   action: { name: "payments:invoice.read" },
-  denial_reason: "out_of_authority",
+  denial_reason: "credential_authority_insufficient",
   mission: { ...MISSION_REF, authority_hash: "sha-256:rethash" },
   parameter_digest: `sha-256:refusal-${n}`,
 });
