@@ -25,9 +25,9 @@ and "Ops 5.1".
 - The first profile adds no endpoint of its own, no confirm request member,
   no error code, and no change to PAP's opaque tokens. The cost is
   concentrated in the Company's AS: it gains a PAR endpoint, which core
-  requires, and becomes a core Mission Issuer. The operations endpoint adds
-  one check at confirm. The Personal Agent pushes its Direct Sign-In request
-  through PAR.
+  requires, and becomes a core Mission Issuer. The operations endpoint
+  checks the carried authority at read, confirm, and cancel. The Personal
+  Agent pushes its Direct Sign-In request through PAR.
 - The earlier Draft 00 should be narrowed to this profile. Section 5 lists
   what moves out and what each cut loses.
 
@@ -103,9 +103,9 @@ defines nothing those documents already define.
 | --- | --- |
 | Company AS | Accept `mission_intent` and `authorization_details` through PAR at Direct Sign-In. Render the task and its authority on the existing consent page. Store the Mission. Issue a rotating, Mission-bound Account Token. Gate refresh on Mission state. |
 | Company APIs, MCP, Company Agent | Under a Mission Session Token, propose and never perform. Existing scope checks already refuse direct writes, because the token never carries `poppy:write`. |
-| Company operations endpoint | One added check at confirm (Section 3.7). Record the Mission in `confirmation`. |
+| Company operations endpoint | Check the carried authority at read, confirm, and cancel (Section 3.7). Admit confirmations in the same transaction as the Mission state check. Record the Mission in `confirmation`. |
 | Company account settings | List the agent's active Missions, each with its goal and a revoke control. |
-| Personal Agent | Discover the extension. Sign in with PAR for each task. Keep each task's credential in the trusted runtime, not the model. Confirm with `standing_permission`. Revoke the Mission when the task ends. |
+| Personal Agent | Discover the extension. Sign in with PAR for each task. Keep each task's credential in the trusted runtime, not the model. Stop when the Company lacks the extension. Confirm with `standing_permission`, or with `user` when the operation requires it. Revoke the Mission when the task ends. |
 
 ### 3.2 Flow
 
@@ -150,10 +150,13 @@ The Company lists the extension in `poppy.json` beside `operations`:
 - `resource` is the resource identifier for the Company's APIs and
   conversations. A read entry names it.
 - `actions` maps each operation action the Company governs to the
-  `constraints` keys it enforces for that action at confirm. A Common
-  Constraint name (`max_amount`, `time_window`, `requires_action_approval`)
-  has its resource-access meaning. Any other name is an operation `terms` key
-  and constrains that term to equal the given value.
+  `constraints` keys it enforces for that action. A Common Constraint name
+  (`max_amount`, `time_window`, `requires_action_approval`) has its
+  resource-access meaning. Any other name is an operation `terms` key and
+  constrains that term to equal the given value.
+- Each action `a` yields three action identifiers on the operations
+  resource: `a.read`, `a.confirm`, and `a.cancel`. An entry can name them
+  separately or as the family `a.*`.
 - Operation entries name the operations resource: the `operations` entry's
   `resource` when it has one, otherwise its `endpoint`. The operations
   endpoint identifies itself by that identifier for every path beneath it,
@@ -167,7 +170,8 @@ The Company's AS metadata carries what core already requires:
 its client metadata document (Spec 4.1).
 
 Operations returned to an agent that lists the extension carry `action`, the
-action identifier the confirm check matches. PAP lets extensions add fields
+identifier `a` from which the checks derive `a.read`, `a.confirm`, and
+`a.cancel`. PAP lets extensions add fields
 (Spec 3.3, 7.4).
 
 ### 3.4 Creating a Mission
@@ -206,7 +210,7 @@ The Submission envelope:
 }
 ```
 
-The authority proposal has two entries:
+The authority proposal has three entries:
 
 ```json
 [
@@ -215,7 +219,15 @@ The authority proposal has two entries:
     "actions": ["poppy:read"] },
   { "type": "mission_resource_access",
     "resource": "https://api.example.com/poppy/operations",
-    "actions": ["exchange"],
+    "actions": ["exchange.read", "exchange.cancel"],
+    "constraints": {
+      "order_id": "ord_7Hk2",
+      "item_id": "itm_4Qa",
+      "replacement_sku": "stormline-insulated-m"
+    } },
+  { "type": "mission_resource_access",
+    "resource": "https://api.example.com/poppy/operations",
+    "actions": ["exchange.confirm"],
     "constraints": {
       "order_id": "ord_7Hk2",
       "item_id": "itm_4Qa",
@@ -225,19 +237,25 @@ The authority proposal has two entries:
 ]
 ```
 
-The two entries reconcile a conflict between the two specifications. PAP
+The read entry reconciles a conflict between the two specifications. PAP
 requires `scope` on every sign-in (Spec 4.4). Core emits a `scope` only when
 it projects safely from a carried entry, and emits none for a target that
 consumes `authorization_details`. The read entry projects to `poppy:read`,
-which the Company's APIs already enforce unchanged. The operation entry is
-consumed by the operations endpoint at confirm. Because the two resources are
-distinct, each audience follows one rule. Neither specification needs an
+which the Company's APIs already enforce unchanged. The operation entries
+are consumed by the operations endpoint. Because the two resources are
+distinct, each audience follows one rule, and neither specification needs an
 exception.
+
+The operation entries are split by phase. The read and cancel entry pins
+which operation the task may see and stop, but sets no price cap, so the
+agent can inspect a quote above the cap without being able to accept it.
+The confirm entry adds the cap.
 
 The agent then opens `authorize?client_id=...&request_uri=...` in the User's
 browser. The consent page renders the goal and the structured authority, for
-example "View your account. Exchange item itm_4Qa on order ord_7Hk2 for
-Stormline Insulated Jacket (M), for at most $75.00 more. Until October 11."
+example "View your account. See or cancel an exchange of item itm_4Qa on
+order ord_7Hk2 for Stormline Insulated Jacket (M), and confirm it for at
+most $75.00 more. Until October 11."
 The User signs in and approves, which satisfies PAP's rule that the User
 signs in themselves (Spec 4.4). The code exchange is PAP's, unchanged,
 including `session_id`.
@@ -282,7 +300,10 @@ Proposals are unchanged from Ops 4: an existing endpoint, MCP tool, or the
 Company Agent proposes an operation. The extension adds two rules:
 
 1. Under a Mission Session Token, the Company proposes and never performs. A
-   proposal has no effect, so proposing needs no `poppy:write`.
+   proposal has no effect, so proposing needs no `poppy:write`. The Company
+   returns a proposal only if the token may read it (`decide(op, token,
+   op.action + ".read")`, Section 3.7); otherwise it refuses with
+   `mission_denial="insufficient_authority"` and discards the proposal.
 2. An endpoint that only executes directly refuses with `insufficient_scope`,
    as it already does for a token without `poppy:write`.
 
@@ -316,35 +337,66 @@ confirm(op, token, body):
     check poppy:write as PAP does; continue as PAP
 
   else:
-    m = mission_record(token)                                  # local read: the Company is the issuer
-    if m.state != active:          refuse 401 invalid_token
-    for each granted entry e on the operations resource with op.action in e.actions:
-      if e has a constraint key the Company does not enforce:
-        refuse 403 insufficient_scope, mission_denial="constraint_unrecognized"
-      if every constraint in e holds for op:  covered = e; stop
-    if no entry covered op:
-      refuse 403 insufficient_scope, mission_denial="insufficient_authority"
-    if covered.requires_action_approval and body.approved_by != "user":
+    C = decide(op, token, op.action + ".confirm")
+    if every entry in C has requires_action_approval = true
+       and body.approved_by != "user":
       refuse 403 user_approval_required
 
-  record confirmation (with mission), move to in_progress, perform once   # Ops 5.2, 6
+  in one transaction that locks the Mission record:            # revocation takes the same lock
+    if the token has a Mission and its state != active:
+      refuse 401 invalid_token
+    recheck op is proposed at this revision                    # concurrent confirms, Ops 6
+    record confirmation (with mission), move to in_progress
+  perform once                                                 # Ops 5.2, 6
+
+decide(op, token, action):                                     # also used for read, cancel, proposals
+  A = granted entries on the operations resource whose actions include action
+  if any entry in A has a resource_match value or constraint key the
+     Company does not enforce for op.action:
+    refuse 403 insufficient_scope, mission_denial="constraint_unrecognized"
+  C = entries in A for which every constraint holds for op
+  if C is empty:
+    refuse 403 insufficient_scope, mission_denial="insufficient_authority"
+  return C
 
 holds(key, value, op):
-  max_amount     -> op's charge <= value in the same currency, exact decimal
-  time_window    -> now is inside the window
-  any other key  -> op.terms[key] equals value
+  max_amount                -> op's charge <= value in the same currency, exact decimal
+  time_window               -> now is inside the window
+  requires_action_approval  -> holds; true adds the approval rule in confirm,
+                               false is the same as absent
+  any other enforced key    -> op.terms[key] equals value
 ```
 
-- Under a Mission token, the covering entry stands in for the second check
-  of Ops 5.2, "the token has the scopes the action needs". This is the one
-  PAP confirm rule the extension overrides.
-- Reading (`GET {endpoint}/{operation_id}`) and cancelling follow the
-  ownership rules of Ops 3.2 unchanged and need no entry. Only confirm
-  consumes Mission authority.
-- A Mission token confirms only within its Mission, whatever `approved_by`
-  says. If the User approves a revision outside the Mission, the agent
-  confirms it with an ordinary write-capable Session, if it has one and the
-  Company allows it, or gets a new Mission.
+- **Every applicable entry is checked before one is chosen.** A key the
+  Company does not enforce, in any entry that names the action, fails the
+  request closed (core and resource-access). Only then are the remaining
+  entries treated as alternative grants. Entry order never changes the
+  outcome.
+- **The covering entries replace one PAP check.** Under a Mission token,
+  they stand in for the second check of Ops 5.2, "the token has the scopes
+  the action needs". This is the one PAP confirm rule the extension
+  overrides.
+- **`requires_action_approval: true` maps to PAP's `user_approval_required`.**
+  When every covering entry carries it, the Company proposes the operation
+  with `user_approval_required: true` and accepts only `approved_by:
+  "user"`. That approval is the agent's assertion (Ops 8). A Company that
+  needs a stronger action-bound approval than that omits the key from its
+  `actions` list, so its AS refuses such entries at issuance.
+- **Admission serializes with revocation.** A confirmation is admitted only
+  if it commits while the Mission is active. Revocation updates the same
+  Mission record under the same lock, so a confirmation and a revocation
+  cannot interleave. Once the Company acknowledges a revocation, it admits
+  no further confirmation under that Mission.
+- **Read and cancel need the same check.** Under a Mission token, `GET
+  {endpoint}/{operation_id}` requires `decide(op, token, op.action +
+  ".read")`, and cancel requires `decide(op, token, op.action +
+  ".cancel")`. Ownership under Ops 3.2 applies in addition. An
+  exchange-only Mission therefore cannot read or cancel another task's
+  operation.
+- **A Mission token acts only within its Mission**, whatever `approved_by`
+  says. If the User wants a revision the Mission does not cover, the remedy
+  is a new Mission. Confirming with an ordinary credential instead is the
+  separate PAP workflow of Section 3.10, outside this profile.
 - `policy.missions_required` is the Company's adoption lever. It accepts
   `standing_permission` only when a Mission backs it, and `approved_by:
   "user"` keeps working as PAP defines it.
@@ -391,10 +443,14 @@ Afterward:
   sign-in state.
 - Refresh fails with `invalid_grant` and `mission_error` set to `revoked` or
   `expired`. Per PAP, the Session continues signed out.
+- A confirmation racing the revocation is admitted only if it committed
+  before the Company acknowledged the revocation (Section 3.7).
 - Operations confirmed before the end continue (Ops 5.2). Authority was
   checked at the commit point.
-- Any Session signed in to the account can still read or cancel those
-  operations (Ops 3.2).
+- The Mission's tokens no longer read or cancel anything. To track or stop
+  those operations, an ordinary signed-in Session follows PAP's rules (Ops
+  3.2). That is recovery under the account's own authority, not Mission
+  authority.
 
 ### 3.9 Channels
 
@@ -409,34 +465,46 @@ Afterward:
 
 ```
 company = discover(domain)                         # poppy.json + AS metadata (Spec 3)
-if company lists "karlmcguinness.com/mission":
-    cred = sign_in_with_mission(company, goal, entries)   # PAR + Direct Sign-In
-    approval = "standing_permission"
-else:
-    cred = existing_signed_in_session(company)     # PAP unchanged
-    approval = "user"                              # ask the User per revision
+if company does not list both "operations" and "karlmcguinness.com/mission":
+    tell the User the Company cannot hold this task's limits; stop
+cred = sign_in_with_mission(company, goal, entries)   # PAR + Direct Sign-In
 task.credential = cred                             # trusted runtime; the model never picks it
 
-op = call(task.credential, POST /orders/ord_7Hk2/exchanges, ...)   # 202 + operation
-r  = confirm(op, task.credential, approved_by=approval)
+op = call(cred, POST /orders/ord_7Hk2/exchanges, ...)   # 202 + operation; cred cannot execute
+if op.user_approval_required:
+    show the User op.summary; if approved: approval = "user" else: cancel(op, cred); stop
+else:
+    approval = "standing_permission"
+r = confirm(op, cred, approved_by=approval)
 if r.mission_denial == "insufficient_authority":
-    ask the User; confirm by per-revision approval or get a new Mission
+    tell the User this Mission does not cover it; a wider task is a new Mission
 when task completes: revoke(cred.account_token)
 ```
 
-Against a Company without the extension, the agent says so to the User and
-falls back to per-revision approval. This is core's no-downgrade rule for a
-client holding an Intent. The agent never submits the authority as plain
-`scope`.
+Without the extension, the Mission workflow stops, and the agent tells the
+User why. This is core's no-downgrade rule: a client holding an Intent never
+submits the authority as plain `scope`, and never treats an ordinary
+credential as the task's.
+
+The User may separately choose to run an ordinary PAP workflow instead. That
+is a different authorization, outside this profile:
+
+- The agent holds an account-wide credential.
+- It cannot assume that an action endpoint returns a proposal rather than
+  executing (G6).
+- It therefore needs the User's approval before calling any endpoint the
+  Company does not document as returning operations, and it confirms with
+  `approved_by: "user"` after showing the revision (Ops 5.1).
 
 ## 4. Guarantees and losses
 
 | Guarantee | Enforced by |
 | --- | --- |
 | Under a Mission token, the Company performs an action only by confirming an operation whose `action` and `terms` an active Mission entry covers | Company: existing scope checks, plus the confirm check |
+| Under a Mission token, reading, cancelling, and receiving a proposal stay within the Mission's `a.read` and `a.cancel` entries | Company: the same authority check, plus Ops 3.2 ownership |
 | The Company holds its own record of what the User approved, on its own page, and when | Company AS (core Mission Record) |
-| Ending a Mission immediately stops new confirmations and new tokens | Live Mission state at confirm; core issuance gating |
-| One task's credential cannot confirm another task's operations beyond its own Mission | Confirm check |
+| After the Company acknowledges a revocation, it admits no further confirmation and issues no further token under that Mission | Confirmation admitted in one transaction with the state check, serialized with revocation on the Mission record; core issuance gating |
+| One task's credential cannot read, confirm, or cancel another task's operations beyond its own Mission | Authority check |
 | The planner cannot choose a broader task credential | Agent's trusted runtime. The Company cannot verify this. |
 
 | Not provided in version 1 | Consequence | Where it comes back |
@@ -451,8 +519,8 @@ client holding an Intent. The agent never submits the authority as plain
 The profile claims no assurance level beyond Baseline Issuance. It adds two
 capabilities on top:
 
-- **A live state read at confirm**, the freshness half-step the architecture
-  describes.
+- **A state check at confirm, serialized with revocation**, the freshness
+  half-step the architecture describes.
 - **Enforcement of the carried authority at one resource server**, the
   operations endpoint, for actions that go through operations.
 
@@ -501,6 +569,8 @@ should be narrowed to Section 3. Three findings drive this.
 | One Mission per Session | Remove; governance rides the token | Nothing. The rule fought Spec 4.8. |
 | Cross-domain projection, ID-JAG (Section 16 of Draft 00) | Out of version 1 | Section 4 |
 | 30 conformance cases | Replace with the tests in Section 7 | Coverage of removed mechanisms only |
+| Separate proposal/read and commit entries | Retain, as `a.read`/`a.cancel` and `a.confirm` entries (Section 3.4) | Nothing |
+| Confirmation admission inside one transaction with the state check | Retain, narrowed to the Mission state check and the confirmation record (Section 3.7) | Nothing |
 
 ## 6. Upstream asks
 
@@ -540,12 +610,16 @@ otherwise.
 
 | # | Setup | Action | Required result |
 | --- | --- | --- | --- |
-| T1 | Revision at 90.00 USD, or with a different SKU | Confirm with `standing_permission` under the Mission token | `403`, `insufficient_scope`, `mission_denial="insufficient_authority"`. The operation stays `proposed`. No charge. |
-| T2 | Revision at 70.00 USD | Same | `200`. `confirmation.mission` is set. Exactly one exchange. |
-| T3 | Mission token (`poppy:read`) | Call a direct-execution write endpoint; ask the Company Agent to do it; call an operation-aware endpoint | The first two return `insufficient_scope` and have no effect. The third returns `202` with a proposal. |
-| T4 | Company requires Missions for standing permissions | An ordinary `poppy:write` token confirms with `standing_permission` | `403 user_approval_required` |
-| T5 | Revoke the Mission between proposal and confirm, in settings and by RFC 7009 | Confirm, then refresh | `401 invalid_token`, then `invalid_grant` with `mission_error="revoked"`. An operation confirmed before revocation still completes. |
-| T6 | Mission A covers this exchange; Mission B covers returning `itm_9Zp` | A's token confirms B's return | `403`, `mission_denial="insufficient_authority"` |
+| T1 | Revision at 90.00 USD | Read it, then confirm it with `standing_permission` under the Mission token | The read succeeds, because `exchange.read` sets no cap. The confirm returns `403`, `insufficient_scope`, `mission_denial="insufficient_authority"`. The operation stays `proposed`. No charge. |
+| T2 | Revision at 70.00 USD | Confirm it with `standing_permission` under the Mission token | `200`. `confirmation.mission` is set. Exactly one exchange. |
+| T3 | Mission token (`poppy:read`) | (a) Call a direct-execution write endpoint. (b) Ask the Company Agent to perform the exchange. (c) Request the exchange for a different SKU at an operation-aware endpoint. (d) Request the approved exchange there. | (a) and (b): `insufficient_scope`, no effect. (c): `403`, `insufficient_authority`, no operation returned. (d): `202` with a proposal. |
+| T4 | The Company requires Missions for standing permissions | An ordinary `poppy:write` token confirms with `standing_permission` | `403 user_approval_required` |
+| T5 | A revocation and a confirmation of the same proposed operation run concurrently, repeated many times, with revocation both in settings and by RFC 7009 | Confirm. After the revocation is acknowledged, confirm again and refresh. | Every admitted confirmation committed before the revocation was acknowledged, and none after. Refused attempts have no effect. After acknowledgement: confirm returns `401 invalid_token`, and refresh returns `invalid_grant` with `mission_error="revoked"`. Confirmations admitted earlier complete. |
+| T6 | Mission A covers this exchange; Mission B covers returning `itm_9Zp` | A's token reads, cancels, and confirms B's return | `403`, `insufficient_authority` for each request. B's operation is unchanged. |
+| T7 | Two `exchange.confirm` entries: one covers the revision; the other carries a key the Company stopped enforcing after issuance | Confirm, with the entries in each order | `403`, `mission_denial="constraint_unrecognized"` in both orders. No effect. |
+| T8 | The only covering confirm entry has `requires_action_approval: true` | Read the proposal. Confirm with `standing_permission`, then with `user`. | The operation shows `user_approval_required: true`. The `standing_permission` confirm returns `403 user_approval_required`; the `user` confirm returns `200`. |
+| T9 | (a) The same entry with `requires_action_approval: false`. (b) A second covering entry without the key. | Confirm with `standing_permission` | `200` in both cases. `false` is the same as absent, and entries are alternative grants. |
+| T10 | The Company lists `operations` but not the extension | The agent starts the Mission workflow | The agent makes no action call, tells the User why, and never signs in with the authority as plain `scope` |
 
 ## 8. Adoption path
 
