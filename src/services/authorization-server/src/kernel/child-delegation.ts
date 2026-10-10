@@ -33,7 +33,7 @@ import { activationPolicyMatches } from "./activation-policy.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
-import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import { withoutCapabilitySources } from "@mission/core";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import {
@@ -221,6 +221,89 @@ export function countChildBuckets(kernel: MissionKernel, parent: MissionRecord):
   return buckets;
 }
 
+/** A refusal the presented token's child-creation controls produce. */
+export interface PresentedTokenRefusal {
+  reason: ChildDenialReason;
+  message: string;
+  fanout?: { active_children: number; max_children: number };
+}
+
+/**
+ * @spec child-delegation#attenuation, child-delegation#fanout (#825, D353,
+ * #1192 review): the presented `subject_token` must authorize THIS
+ * child-creation operation, not only bound the authority copied into the
+ * child. Each child entry is attributed to the entry of the token's authority
+ * it is a subset of (capability sources set aside, as for the authority bound);
+ * that token entry's `children` object (present, since the child's is a subset
+ * of it) MUST admit the child actor (`allowed_child_actors`) and the child's
+ * depth (`max_child_depth`), alongside the parent entry's controls. The count control is
+ * {@link presentedTokenFanoutRefusal}, run inside the creation transaction.
+ */
+export function presentedTokenChildRefusal(
+  kernel: MissionKernel,
+  childAuthority: readonly AuthorityEntry[],
+  childActorSub: string,
+  depth: number,
+  presentedAuthority: readonly AuthorityEntry[],
+): PresentedTokenRefusal | undefined {
+  const token = withoutCapabilitySources(presentedAuthority);
+  const tokenIdx = withoutCapabilitySources(childAuthority).map((ce) => token.findIndex((te) => isSubsetEntry(ce, te)));
+  if (tokenIdx.some((ti) => ti < 0)) {
+    return { reason: "not_strict_subset", message: "child Authority Set exceeds the presented token's authority" };
+  }
+  // A child entry always carries its justifying parent entry's `children`
+  // object or a narrower one, so the authority bound above already refuses a
+  // token entry without one (a token without the delegation right).
+  const drawn = [...new Set(tokenIdx)].map((ti) => token[ti] as AuthorityEntry);
+  const candidate: DelegateCandidate = { sub: childActorSub, assertedProfile: kernel.actorProfile(childActorSub) };
+  if (drawn.some((te) => !delegatePermitted(candidate, childrenOf(te)?.allowed_child_actors))) {
+    return { reason: "child_actor_not_allowed", message: "child actor is not permitted by the presented token's allowed_child_actors" };
+  }
+  for (const te of drawn) {
+    const maxChildDepth = asNum(childrenOf(te)?.max_child_depth) ?? 1;
+    if (depth > maxChildDepth) {
+      return {
+        reason: "fanout_exceeded",
+        message: `child-generation depth ${depth} exceeds the presented token's max_child_depth ${maxChildDepth}`,
+      };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * @spec child-delegation#fanout-accounting (#825, D353, #1192 review): the
+ * presented token's `max_children` bounds the SAME count as the parent
+ * entry's: the parent's non-terminal children drawn on the parent entry each
+ * child entry is justified by. At creation this child would add one; on
+ * recovery the recorded child is already counted (`recordedChildCounted`).
+ */
+export function presentedTokenFanoutRefusal(
+  kernel: MissionKernel,
+  parent: MissionRecord,
+  childAuthority: readonly AuthorityEntry[],
+  presentedAuthority: readonly AuthorityEntry[],
+  recordedChildCounted: boolean,
+): PresentedTokenRefusal | undefined {
+  const token = withoutCapabilitySources(presentedAuthority);
+  const child = withoutCapabilitySources(childAuthority);
+  const buckets = countChildBuckets(kernel, parent);
+  for (let i = 0; i < childAuthority.length; i++) {
+    const te = token.find((t) => isSubsetEntry(child[i] as AuthorityEntry, t));
+    const maxChildren = te ? asNum(childrenOf(te)?.max_children) : undefined;
+    if (maxChildren === undefined) continue;
+    const active = buckets.get(justifyingIndex(childAuthority[i] as AuthorityEntry, parent.authority_set)) ?? 0;
+    if ((recordedChildCounted ? active : active + 1) > maxChildren) {
+      return {
+        reason: "fanout_exceeded",
+        message: `this child exceeds the presented token's max_children ${maxChildren}`,
+        fanout: { active_children: active, max_children: maxChildren },
+      };
+    }
+  }
+  return undefined;
+}
+
 /** @spec child-delegation#child-evidence-canonical — the record's JCS bytes. */
 export function childEvidenceBytes(evidence: ChildEvidence): string {
   return canonicalize(evidence as unknown as JsonValue);
@@ -366,15 +449,20 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     );
   }
   // @spec child-delegation#attenuation (#825, D353): the presented token's own
-  // authority is a second ceiling, as Self-Exchange rule 2 bounds a family.
-  // Capability sources are bindings, not authority, so they are set aside here
-  // (they are checked against the parent above). The evidence names this bound.
-  if (input.presentedAuthority && !isSubsetSetIgnoringCapabilitySources(childAuthority, input.presentedAuthority)) {
-    throw new ChildDelegationError(
-      "not_strict_subset",
-      "child Authority Set exceeds the presented token's authority",
-      makeEvidence("denied", "exceeds_presented_authority", "not_strict_subset"),
-    );
+  // authority is a second ceiling, as Self-Exchange rule 2 bounds a family, and
+  // the token MUST authorize this creation: its `children` controls apply
+  // alongside the parent entry's (#1192 review). Capability sources are
+  // bindings, not authority, so they are set aside here (they are checked
+  // against the parent above). The evidence names this bound.
+  if (input.presentedAuthority) {
+    const refusal = presentedTokenChildRefusal(kernel, childAuthority, input.childActor.sub, depth, input.presentedAuthority);
+    if (refusal) {
+      throw new ChildDelegationError(
+        refusal.reason,
+        refusal.message,
+        makeEvidence("denied", "exceeds_presented_authority", refusal.reason),
+      );
+    }
   }
 
   // @spec child-delegation#fanout-accounting — attribute each child entry to its
@@ -475,6 +563,16 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
             active_children: active,
             max_children: maxChildren,
           }),
+        );
+      }
+    }
+    if (input.presentedAuthority) {
+      const refusal = presentedTokenFanoutRefusal(kernel, parent, childAuthority, input.presentedAuthority, false);
+      if (refusal) {
+        throw new ChildDelegationError(
+          refusal.reason,
+          refusal.message,
+          makeEvidence("denied", "exceeds_presented_authority", refusal.reason, refusal.fanout),
         );
       }
     }

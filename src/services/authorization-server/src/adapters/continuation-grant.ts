@@ -73,7 +73,12 @@ import {
 } from "../kernel/creation-idempotency.js";
 import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, ExpansionDeferralError } from "../kernel/deferred.js";
 import { CarryoverRetrievalError } from "../kernel/carryover.js";
-import { ChildDelegationError, createChildMission } from "../kernel/child-delegation.js";
+import {
+  ChildDelegationError,
+  createChildMission,
+  presentedTokenChildRefusal,
+  presentedTokenFanoutRefusal,
+} from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
 import {
@@ -2226,10 +2231,12 @@ export async function handleChildCreationExchange(
  *                 remains active. The fresh mint is an ordinary issuance event:
  *                 creation accounting is NOT repeated (no fan-out increment, no
  *                 second lifecycle event, no second Child Evidence).
- * A completed child is delivered only within the presented token's own
- * authority (@spec child-delegation#attenuation, #825, D353): the fingerprint
- * does not bind the token, so a narrower token presenting the same request
- * would otherwise recover a broader child.
+ * A completed child is delivered only when the presented token authorizes
+ * its creation (@spec child-delegation#attenuation, #825, D353, #1192
+ * review): its authority bounds the child and its `children` controls admit
+ * the child actor, depth and count, the recorded child counted once. The
+ * fingerprint does not bind the token, so a narrower token presenting the same
+ * request would otherwise recover a broader child.
  */
 async function recoverChildCreation(
   opts: AdapterOptions,
@@ -2267,19 +2274,22 @@ async function recoverChildCreation(
     txError(ctx, 400, "invalid_grant", "recorded child mission not found");
     return;
   }
-  if (!isSubsetSetIgnoringCapabilitySources(child.authority_set, [...presentedAuthority])) {
-    ctx.status = 400;
-    ctx.body = {
-      error: "invalid_request",
-      error_description: "the recorded child exceeds the presented token's authority",
-      mission_denial_reason: "not_strict_subset",
-    };
-    ctx.set("cache-control", "no-store");
-    return;
-  }
   const state = opts.kernel.applyExpiry(child).state;
   if (state !== "active") {
     txError(ctx, 400, "invalid_grant", `recorded child mission is ${state}`);
+    return;
+  }
+  const recordedParent = child.parent ? opts.kernel.get(child.parent.id) : undefined;
+  const refusal =
+    presentedTokenChildRefusal(opts.kernel, child.authority_set, child.client_id, child.parent?.depth ?? 1, presentedAuthority) ??
+    (recordedParent
+      ? presentedTokenFanoutRefusal(opts.kernel, recordedParent, child.authority_set, presentedAuthority, true)
+      : undefined);
+  if (refusal) {
+    const code = childErrorCode(refusal.reason);
+    ctx.status = code === "access_denied" ? 403 : 400;
+    ctx.body = { error: code, error_description: `the presented token does not authorize the recorded child: ${refusal.message}`, mission_denial_reason: refusal.reason };
+    ctx.set("cache-control", "no-store");
     return;
   }
   const stored = op.delivery as { assertion?: string; exp?: number } | undefined;
