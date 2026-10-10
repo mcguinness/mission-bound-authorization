@@ -414,7 +414,7 @@ export async function handleTokenExchangeGrant(
         ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
         tokenKey: opts.childGrantKey as CryptoKey,
         tokenKid: opts.childGrantKid as string,
-        proofJtiFresh: (jti) => freshProofJti(opts, jti),
+        verifyDpop: (proofJws) => verifyTokenEndpointDpop(opts, proofJws),
         now: () => opts.kernel.nowDate(),
         ...(opts.scopeProjection ? { scopeProjection: opts.scopeProjection } : {}),
       },
@@ -557,31 +557,20 @@ export async function handleTokenExchangeGrant(
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const currentActor = { iss: opts.issuer, sub: client.clientId };
 
-  // DPoP: derive the presenter jkt exactly as mintDeferredToken does.
+  // DPoP: the presenter's key proof.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) {
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    txError(ctx, 400, "invalid_dpop_proof", verified.description);
     return;
   }
-  if (!freshProofJti(opts, proofJti)) {
-    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
-    return;
-  }
+  const { jkt } = verified.proof;
   // The DPoP key MUST be the ICA's confirmed key: an ICA is never a bearer
   // token.
   if (ica.cnf.jkt !== jkt) {
@@ -1908,20 +1897,14 @@ async function retrieveCarryoverResult(
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  let jkt: string;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    if (!freshProofJti(opts, proof.jti)) throw new Error("replayed jti");
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    txError(ctx, 400, "invalid_dpop_proof", verified.description);
     return;
   }
+  const { jkt } = verified.proof;
   let retrieved: ReturnType<typeof store.retrieve>;
   try {
     retrieved = store.retrieve({ replacementId, actor: { sub: client.clientId } });
@@ -2574,25 +2557,14 @@ async function pollDeferredExpansion(
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    txError(ctx, 400, "invalid_dpop_proof", verified.description);
     return;
   }
-  if (!freshProofJti(opts, proofJti)) {
-    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
-    return;
-  }
+  const { jkt } = verified.proof;
   const recordedJkt = store.recordedJkt(deferralCode);
   if (recordedJkt !== undefined && recordedJkt !== jkt) {
     txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");

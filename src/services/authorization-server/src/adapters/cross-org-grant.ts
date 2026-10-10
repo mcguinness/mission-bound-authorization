@@ -105,7 +105,8 @@ interface HandlerOpts {
   crossOrg?: CrossOrgOptions;
   tokenKey: CryptoKey;
   tokenKid: string;
-  proofJtiFresh: (jti: unknown) => boolean;
+  /** @spec RFC 9449 Section 4.3 (#1173): the shared token-endpoint proof verifier (iat window, jti replay). */
+  verifyDpop: (proofJws: string) => Promise<{ ok: true; proof: { jkt: string } } | { ok: false; description: string }>;
   now: () => Date;
   /** @spec mission#scope-projection — the AS's mapping; absent, every audience is unknown. */
   scopeProjection?: ScopeProjectionMapping;
@@ -167,20 +168,12 @@ export async function handleCrossOrgChainExchange(
     fail(ctx, "invalid_request", "DPoP proof of the leaf key is required");
     return;
   }
-  let dpopJkt: string;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    dpopJkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    if (!opts.proofJtiFresh(proof.jti)) throw new Error("DPoP proof jti missing or replayed");
-  } catch {
-    fail(ctx, "invalid_dpop_proof", "invalid DPoP proof");
+  const verifiedProof = await opts.verifyDpop(proofJws);
+  if (!verifiedProof.ok) {
+    fail(ctx, "invalid_dpop_proof", verifiedProof.description);
     return;
   }
+  const dpopJkt = verifiedProof.proof.jkt;
 
   const nowS = Math.floor(opts.now().getTime() / 1000);
   let verified;
@@ -313,8 +306,8 @@ export async function handleCrossOrgChainExchange(
   // already-expired token when the tightest bound (mapping validity or
   // entitlement freshness horizon) has already elapsed. Mirrors the RAS's
   // exp-before-consumption fix (ras/src/index.ts); here the presenter's
-  // one-time DPoP proof jti was already consumed earlier (line ~169,
-  // `opts.proofJtiFresh`), a structural difference from the RAS's grant jti
+  // one-time DPoP proof jti was already consumed earlier (the leaf proof,
+  // `opts.verifyDpop`), a structural difference from the RAS's grant jti
   // this endpoint does not resolve: DPoP proof-of-possession validation
   // runs, by design, before the chain/mapping/entitlement checks that
   // determine exp, and reordering it was judged out of scope here. A
