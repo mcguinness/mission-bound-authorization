@@ -5401,9 +5401,28 @@
     "normative": "outside the configured-mapping lookup, submissions that differ only in purpose (a value, a different value, or none) receive no wider Authority Set, no relaxed or refreshed authority, and no skipped check; any difference purpose makes is a refusal or stricter treatment"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "A prohibition every AS meets; the reference AS meets it trivially. No purpose decision path in the reference AS: kernel/intent.ts only validates purpose as a string, and deriveAuthoritySet (kernel/derive.ts) keys configured-mapping mode on target_resources and never reads purpose. Planned test surface: derivation, an output-bound invariance test over deriveAuthoritySet (kernel.test.ts) with Intents differing only in purpose, once a purpose path exists. Runtime decision points are covered by the runtime.classification purpose rows."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "purpose never widens derivation (@spec mission#mission-intent, #1102, D397) > a submitted proposal derives the same ceiling-bounded set whatever the purpose, an over-broad proposal included",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "purpose never widens derivation (@spec mission#mission-intent, #1102, D397) > the resource-keyed configured mapping derives the same ceiling-bounded set whatever the purpose",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "purpose never widens derivation (@spec mission#mission-intent, #1102, D397) > an input that derives no authority is refused the same way whatever the purpose: invalid_authorization_details for a submitted proposal, access_denied for the configured mapping",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Witnessed for derivation only (D397). Through kernel.derive, Intents that differ only in purpose (absent, one URI, another URI) derive identical, ceiling-bounded sets for a submitted proposal, within the ceiling and over it, and for the resource-keyed configured mapping, and an input that derives nothing is refused identically (invalid_authorization_details for a submitted proposal, access_denied for the configured mapping). A mutation letting purpose bypass the ceiling, or turn a refusal into a grant, fails them. The equality holds because this implementation ignores purpose (kernel/intent.ts validates it as a string; deriveAuthoritySet keys the configured mapping on target_resources); a configured purpose lookup, which the specification permits, could select different bounded candidates. Partial: no expiry, refresh or runtime coverage, where the reference has no purpose path. Runtime decision points are covered by the runtime.classification purpose rows."
   },
   {
    "id": "core.record.effective-not-later-than-requested",
@@ -12968,12 +12987,12 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the purpose a PDP's classification consults is the approved Mission's; a decision request that carries a different purpose, or none, gets the same classification, and no class falls below the floor"
+    "normative": "Classification uses the committed Mission's purpose or a validated projection. Request-asserted purpose cannot replace it or reduce required controls. If a required validated purpose input is unavailable, the operation is refused."
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "No purpose path: the PEP's static action-to-class map (mcp-payments/src/pep.ts) and evaluate() (services/pdp) never read purpose, and the PDP's Mission view carries no purpose member. Planned surface: decision-request, a PDP test that a request-asserted purpose differing from the Mission's changes no classification, once the PDP reads the Mission's purpose."
+   "notes": "No purpose path: the PEP's static action-to-class map (mcp-payments/src/pep.ts) and evaluate() (services/pdp) never read purpose, and the PDP's Mission view carries no purpose member. Planned surface: decision-request, a PDP test that a request-asserted purpose cannot replace the Mission's or reduce required controls, and that an unavailable required validated purpose input refuses, once the PDP reads the Mission's purpose. The observation admits that fail-closed refusal rather than requiring the same classification (D397)."
   },
   {
    "id": "runtime.classification.no-evasion-and-write-floor",
