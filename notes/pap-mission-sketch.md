@@ -161,8 +161,8 @@ The Company lists the extension in `poppy.json` beside `operations`:
 - An action listed with `max_amount` is chargeable. The AS refuses an entry
   that grants its `a.confirm`, directly or through `a.*`, without
   `max_amount`, so every confirm authority for a chargeable action has a
-  money bound. An action listed
-  without `max_amount` never carries a charge.
+  money bound. An action listed without `max_amount` never carries a charge
+  component (Section 3.7), not even a deduction from a refund.
 - Version 1 never lists `requires_action_approval`. Its `true` value needs
   a verifiable action-bound approval, and PAP's `approved_by: "user"` is the
   agent's assertion (Ops 8). The AS therefore refuses an entry carrying
@@ -170,9 +170,29 @@ The Company lists the extension in `poppy.json` beside `operations`:
   endpoint fails such an entry closed. Resource-access defines `false` as
   equivalent to omission, so the AS grants an entry carrying `false`
   without the key. That removes nothing the entry granted.
+- **The agent never drops a limit the Company cannot hold.** The agent maps
+  every limit in the User's permission to a constraint key the Company
+  lists for that action. It never omits a limit the Company does not list,
+  and never widens one to a key the Company does list.
+  - A money limit on an action listed without `max_amount` is already held,
+    because such an action carries no charge component (Section 3.7).
+  - When a limit has no listed key, the agent tells the User which limit
+    the Company cannot hold. It proceeds only on the User's choice:
+    - the task without that limit, which the consent page then renders as
+      the broader authority it is;
+    - per-revision approval with `approved_by: "user"`, outside this
+      profile (Section 3.10);
+    - not proceeding.
+
+    The choice is taken through the agent's own interface (Ops 5.1), never
+    from the planner that did the mapping.
+
+  This is this profile's rule, the per-constraint counterpart of core's
+  Downgrade by Omission.
 - Each governed action has a **contract version**: the documented meaning
   of the action and the complete set of `terms` keys that describe its
-  effects.
+  effects. For a chargeable action, it also defines how the action's
+  charge components, credits, and net charge are computed (Section 3.7).
   - The AS records in the Mission Record the version of each governed
     action current at the approval event.
   - The operations endpoint evaluates a confirmation against the recorded
@@ -288,7 +308,8 @@ The agent then opens `authorize?client_id=...&request_uri=...` in the User's
 browser. The consent page renders the goal and the structured authority, for
 example "View your account. See or cancel an exchange of item itm_4Qa on
 order ord_7Hk2 for Stormline Insulated Jacket (M), and confirm it for at
-most $75.00 more. Until October 11."
+most $75.00 more after the credit for this jacket, fees and tax included.
+Until October 11."
 The User signs in and approves, which satisfies PAP's rule that the User
 signs in themselves (Spec 4.4).
 
@@ -371,10 +392,14 @@ write-capable scope, whether `poppy:write` or one the Company defines (Spec
    `mission_denial="insufficient_authority"` and discards the proposal.
 2. An endpoint that only executes directly refuses with `insufficient_scope`,
    as it already does for a token without `poppy:write` or any other
-   write-capable scope.
+   write-capable scope. Where it recognizes the Mission token, it adds
+   `mission_denial="insufficient_authority"` and omits `scope`. A legacy
+   endpoint may still send `scope`; the agent's obligations in Section 3.7
+   hold either way.
 
 Rule 2 gives the no-direct-execution property without a dedicated proposal
-endpoint, so G6 cannot bite an agent holding only a Mission token. It also
+endpoint, and the Company's existing scope checks need no change to provide
+it, so G6 cannot bite an agent holding only a Mission token. It also
 covers the Company Agent, which is "held to the same scopes" (Spec 7.9,
 7.11).
 
@@ -418,14 +443,15 @@ confirm(op, token, body):
         refuse 401 invalid_token
       if no entry in C holds time_window at t:
         refuse 403 insufficient_scope, mission_denial="insufficient_authority"
+    record confirmation at t (with mission)
     recheck at t the Company's eligibility rules that depend on mutable
-      state, such as one exchange per order item; if one fails, the
-      operation fails under the Company's business rules, with no effect
-    record confirmation at t (with mission), move to in_progress
+      state, such as one exchange per order item; if one fails:
+      move to failed, result "nothing changed"; return 200 with op   # no effect
+    move to in_progress
   perform once                                                 # Ops 5.2, 6
 
 decide(op, token, action, t):                                  # also used for read, cancel, proposals
-  if op has a charge and the Company lists op.action without max_amount:
+  if op has a charge component and the Company lists op.action without max_amount:
     refuse 403 insufficient_scope, mission_denial="insufficient_authority"
   A = granted entries on the operations resource whose actions include action,
       each with any requires_action_approval: false removed     # false = absent
@@ -438,7 +464,8 @@ decide(op, token, action, t):                                  # also used for r
   return C
 
 holds(key, value, op, t):
-  max_amount              -> op's total charge, every fee and tax included,
+  max_amount              -> op's net charge, as the recorded contract version
+                             computes it: charge components minus credits;
                              <= value in the same currency, exact decimal
   time_window             -> t is inside the window
   any other enforced key  -> op.terms[key] equals value
@@ -459,11 +486,18 @@ holds(key, value, op, t):
   It is not mapped to PAP's `user_approval_required`. That flag stays the
   Company's own per-operation choice, and the `approved_by: "user"` that
   satisfies it is the agent's assertion (Ops 8).
-- **Charges are bounded, never inferred.** `max_amount` bounds the
-  operation's total charge: everything the User pays for it, every fee and
-  tax included. An action listed without `max_amount` carries no charge, so
-  a fee added in a later revision is refused rather than covered by
-  omission.
+- **Charges are bounded, never inferred.** The recorded contract version
+  (Section 3.3) defines the money an operation moves:
+  - **Charge components** are every amount the User pays, every fee and tax
+    included, plus any deduction from a credit. A deduction is any amount by
+    which a credit falls short of what the contract version computes for it.
+  - **Net charge** is the charge components minus the credits.
+
+  `max_amount` bounds the net charge, so for an exchange it bounds the
+  replacement's price, less the credit for the returned item, plus fees and
+  tax. An action listed without `max_amount` carries no charge component.
+  A fee added in a later revision, including one taken out of a refund, is
+  therefore refused rather than covered by omission.
 - **Admission is judged at one instant and serializes with revocation.** A
   confirmation is admitted only if, at the instant it commits, three things
   hold:
@@ -479,8 +513,11 @@ holds(key, value, op, t):
   Mission.
 
   The same transaction rechecks the Company's own eligibility rules that
-  depend on mutable state, such as one exchange per order item. When two
-  operations race on such a rule, at most one is admitted.
+  depend on mutable state, such as one exchange per order item. PAP has no
+  transition from `proposed` to `failed`, so a confirmation that fails such
+  a rule is recorded and then ends `failed`, with a result stating that
+  nothing changed. When two operations race on such a rule, both
+  confirmations can be recorded, but at most one is performed.
 - **The approved contract governs.** A confirmation is evaluated against the
   contract version the Mission Record holds for the action (Section 3.3).
   A revision that adds a `terms` key outside that version, or that needs a
@@ -498,19 +535,42 @@ holds(key, value, op, t):
 - `policy.missions_required` is the Company's adoption lever. It accepts
   `standing_permission` only when a Mission backs it, and `approved_by:
   "user"` keeps working as PAP defines it.
-- The refusal reuses PAP's token error and core's `mission_denial`
-  attribute, with the current operation in the body (Ops 9):
+**Refusals.** PAP sends token errors in `WWW-Authenticate` (Spec 6), and
+Operations sends operation errors as a JSON body with the operation (Ops 9).
+Pairing the two on one refusal is this extension's choice.
 
-```
-HTTP/1.1 403 Forbidden
-WWW-Authenticate: DPoP error="insufficient_scope", mission_denial="insufficient_authority"
-Content-Type: application/json
+| Condition | Status | `WWW-Authenticate` | Body |
+| --- | --- | --- | --- |
+| Mission token: no granted entry covers the request at read, cancel, confirm, or proposal (amount, terms, contract version, time window, or an action not granted) | 403 | `DPoP error="insufficient_scope", mission_denial="insufficient_authority"`, no `scope` attribute | `{ "error": "insufficient_scope", "operation": … }` with the operation as it stands. At proposal there is no operation, because the proposal is discarded. |
+| Mission token: a granted entry names the action with a key or `resource_match` the Company does not enforce | 403 | `… mission_denial="constraint_unrecognized"`, no `scope` | As above |
+| Mission token at an endpoint that only executes directly (Section 3.6, rule 2) | 403 | `DPoP error="insufficient_scope"`, as that endpoint answers any token without a write-capable scope. It carries `mission_denial="insufficient_authority"` and no `scope` where the endpoint recognizes the Mission token. | Whatever the endpoint returns today |
+| Mission not active, or past its `expires_at`, at admission or on any request | 401 | `DPoP error="invalid_token"` | None |
+| Ordinary token confirming with `standing_permission` where the Company requires Missions | 403 | None (an Ops 9 error) | `{ "error": "user_approval_required", "operation": … }` |
+| A Company eligibility rule fails at admission | 200 | None | The operation, `failed`, with `result` stating that nothing changed |
 
-{ "error": "insufficient_scope", "operation": { "operation_id": "exc_5Rt2", "revision": 2, "state": "proposed", "…": "…" } }
-```
+- **No `scope` on a Mission refusal.** Where the Company recognizes the
+  Mission token, its `insufficient_scope` carries no `scope` attribute,
+  because no scope remedies a Mission refusal. RFC 6750 makes the attribute
+  optional, and PAP's "The response names them in the `scope` attribute"
+  (Spec 6) describes the ordinary case rather than requiring it.
+- **Who sees `mission_denial`.** The Company sends it only in a response to
+  a validly signed, audience-correct Mission token (core). An agent treats a
+  value it does not recognize as `insufficient_authority` (core).
+- **What the agent does on any `insufficient_scope` under a Mission
+  token**, with or without `mission_denial` and with or without a `scope`
+  attribute:
+  - It never requests more scopes.
+  - It never retries the request with another credential.
+  - It never confirms the same revision again under this Mission.
+  - It may read the operation where `a.read` covers it.
+  - It tells the User. Proceeding needs a new Mission, or the User acting
+    on their own authority.
 
-An agent that sees `mission_denial` does not sign in for more scopes, which
-is PAP's usual reaction to `insufficient_scope`. It asks the User.
+  This replaces PAP's usual response to `insufficient_scope`, a new sign-in
+  (Spec 6), for Mission tokens only. Only an agent that lists the extension
+  holds Mission tokens, so every agent this reaches implements it.
+- **On `invalid_token`**, the agent refreshes once. If the refresh fails
+  with `mission_error`, the agent stops the task.
 
 A successful confirmation records the Mission, using core's `mission` claim
 shape:
@@ -567,6 +627,11 @@ Afterward:
 company = discover(domain)                         # poppy.json + AS metadata (Spec 3)
 if company does not list both "operations" and "karlmcguinness.com/mission":
     tell the User the Company cannot hold this task's limits; stop
+for each limit in the User's permission:                # Section 3.3
+    if the Company lists no key for it on the action:  # a money limit on an uncapped action is held
+        tell the User the Company cannot hold this limit
+        continue only on the User's choice, taken in the agent's own interface:
+            the task without the limit, per-revision approval, or stop
 session = start_session(company)                   # signed-out; one Session per Mission (3.5)
 cred = sign_in_with_mission(company, session, goal, entries)   # PAR + Direct Sign-In
 task.credential = cred                             # trusted runtime; the model never picks it
@@ -577,8 +642,8 @@ if op.user_approval_required:
 else:
     approval = "standing_permission"
 r = confirm(op, cred, approved_by=approval)
-if r.mission_denial == "insufficient_authority":
-    tell the User this Mission does not cover it; a wider task is a new Mission
+if r is insufficient_scope:                        # with or without mission_denial or scope
+    tell the User this Mission does not cover it; no new scopes, no other credential
 when task completes: revoke(cred.account_token)
 ```
 
@@ -614,7 +679,8 @@ what is done under a Mission token.
 | Under a Mission token, reading, cancelling, and receiving a proposal stay within the Mission's `a.read` and `a.cancel` entries | Company: the same authority check, plus Ops 3.2 ownership |
 | The Company holds its own record of what the User approved, on its own page, and when | Company AS (core Mission Record) |
 | After the Company acknowledges a revocation, it admits no further confirmation and issues no further token under that Mission. No confirmation is admitted after the Mission's or the operation's `expires_at`, or outside a covering `time_window`. | Confirmation admitted in one transaction with the state check, serialized with revocation on the Mission record and judged at its commit instant; core issuance gating |
-| A chargeable action is confirmed only within a money bound, and an action listed without one is never charged | AS refuses an uncapped `a.confirm` entry; confirm check on the total charge |
+| A chargeable action is confirmed only within a bound on its net charge, and an action listed without one carries no charge component | AS refuses an uncapped `a.confirm` entry; confirm check on the net charge, as the recorded contract version computes it |
+| No limit the User set is dropped silently | Agent maps every limit to a listed key, or takes the User's choice through its own interface (Section 3.3) |
 | A confirmation is held to the action contract the User approved; a changed contract needs a new Mission | Contract version recorded in the Mission Record; confirm check |
 | Revoking one Mission never signs out another Mission's Session or changes what its browser may do | One Session per Mission, enforced with `invalid_session` (Section 3.5) |
 | One task's credential cannot read, confirm, or cancel another task's operations beyond its own Mission | Authority check |
@@ -731,7 +797,7 @@ otherwise.
 
 | # | Setup | Action | Required result |
 | --- | --- | --- | --- |
-| T1 | Revision at 90.00 USD | Read it, then confirm it with `standing_permission` under the Mission token | The read succeeds, because `exchange.read` sets no cap. The confirm returns `403`, `insufficient_scope`, `mission_denial="insufficient_authority"`. The operation stays `proposed`. No charge. |
+| T1 | Revision at 90.00 USD | Read it, then confirm it with `standing_permission` under the Mission token | The read succeeds, because `exchange.read` sets no cap. The confirm returns `403`, `insufficient_scope`, `mission_denial="insufficient_authority"`, with no `scope` attribute. The operation stays `proposed`. No charge. Afterward, the agent sends the Company's AS no pushed or authorization request and makes no retry with another credential. |
 | T2 | Revision at 70.00 USD | Confirm it with `standing_permission` under the Mission token | `200`. `confirmation.mission` is set. Exactly one exchange. |
 | T3 | Mission token (`poppy:read`) | (a) Call a direct-execution write endpoint. (b) Ask the Company Agent to perform the exchange. (c) Request the exchange for a different SKU at an operation-aware endpoint. (d) Request the approved exchange there. | (a) and (b): `insufficient_scope`, no effect. (c): `403`, `insufficient_authority`, no operation returned. (d): `202` with a proposal. |
 | T4 | The Company requires Missions for standing permissions | An ordinary `poppy:write` token confirms with `standing_permission` | `403 user_approval_required` |
@@ -742,13 +808,15 @@ otherwise.
 | T9 | An authority proposal whose `exchange.confirm` entry carries `requires_action_approval: false` | Sign in, then confirm a covered revision with `standing_permission` | The granted `authorization_details` echoes the entry without the key, because `false` is the same as absent. The confirm returns `200`. |
 | T10 | The Company lists `operations` but not the extension | The agent starts the Mission workflow | The agent makes no action call and tells the User why. It submits the authority neither as bare `scope` nor as `authorization_details`. |
 | T11 | An operation proposed under the Mission token at 90.00 USD; the agent also holds an ordinary signed-in credential | Confirm with the ordinary credential and `approved_by: "user"` | (a) Where the Company issues agents any write-capable scope for the action (`poppy:write` or a narrower Company scope): `200` as an ordinary PAP confirmation, with no `confirmation.mission`. The label is the agent's assertion (Ops 8), and the record does not attribute the confirmation to the Mission. (b) Where the Company issues agents no write-capable scope of any kind for the governed actions: no such credential exists, so the confirm cannot happen. |
-| T12a | Two open operations for the same exchange (two operation IDs), proposed in two channels; the Company relies on a one-exchange-per-item rule | Confirm both concurrently under the Mission token | Exactly one is admitted and performed once, carrying `confirmation.mission`. The other has no effect. |
+| T12a | Two open operations for the same exchange (two operation IDs), proposed in two channels; the Company relies on a one-exchange-per-item rule | Confirm both concurrently under the Mission token | Both confirmations are recorded, each carrying `confirmation.mission`. Exactly one is performed, once. The other returns `200` and ends `failed`, with a result stating that nothing changed. |
 | T12b | The same two operations; the Company has no such rule | Confirm both under the Mission token | Required: each is performed at most once. Documented, not required: both may be admitted, because the Mission alone does not count them (Section 4). Only Metering's `max_calls` of 1 on `exchange.confirm` refuses the second. |
 | T13 | The agent's browser is joined to the Mission Session, and the website offers confirmation (Ops 4.4) | Confirm on the website and, concurrently, at the endpoint | Either the website treats the browser as signed out and offers no confirmation, or it runs the Section 3.7 check and admission. No confirmation is admitted outside the Mission. The action is performed at most once across both channels. |
-| T14 | (a) Revision 2 of the exchange adds a 10.00 USD fee to 70.00 USD. (b) A `return` operation, an action listed without `max_amount`, gains a 5.00 USD restocking fee in revision 2. | Confirm each with `standing_permission` | (a) `403`, `insufficient_authority`: the total charge, 80.00 USD, exceeds the cap. (b) `403`, `insufficient_authority`: an action listed without `max_amount` carries no charge. No effect in either case. |
+| T14 | (a) Revision 2 of the exchange adds a 10.00 USD fee to a 70.00 USD net. (b) A `return` operation, an action listed without `max_amount`, takes a 5.00 USD restocking fee out of its refund in revision 2. (c) A revision charges 170.00 USD for the replacement, credits 100.00 USD for the returned jacket, and adds 3.00 USD tax. | Confirm each with `standing_permission` | (a) `403`, `insufficient_authority`: the net charge, 80.00 USD, exceeds the cap. (b) `403`, `insufficient_authority`: the deduction from the refund is a charge component, which an action listed without `max_amount` never carries. (c) `200`: the net charge, 73.00 USD, is within the cap, which a gross reading would wrongly refuse. No effect in (a) or (b). |
 | T15 | A confirm waits on the Mission lock, held by a concurrent writer, while (a) the Mission's `expires_at`, (b) the operation's `expires_at`, or (c) the covering entry's `time_window` end passes | Release the lock | (a) `401 invalid_token`. (b) The operation is returned as it is, `expired`, with no confirmation. (c) `403`, `insufficient_authority`. No effect in any case. Every admitted confirmation's `confirmed_at` precedes the bound. |
 | T16 | The jacket Mission is approved under `exchange` contract v1. The Company then deploys v2, which adds a `protection_plan` term with a monthly charge. | Propose the exchange under v2, then confirm with `standing_permission` under the Mission token | `403`, `insufficient_authority`; the operation stays `proposed`. A new Mission approved under v2 confirms it. |
 | T17 | Missions A (the jacket exchange) and B (returning `itm_9Zp`), for the same client, User, and account | (a) Sign in B with A's `session_id`. (b) With separate Sessions, revoke A in settings, then repeat the case with RFC 7009 revocation. | (a) `invalid_session`. (b) A's Session is signed out and its tokens fail. B's Session and tokens keep working, and B's return confirms with `200`. |
+| T18 | The Company lists `exchange` with `order_id`, `item_id`, and `max_amount`, but not `replacement_sku`. The User's permission names the insulated replacement. | The agent starts the Mission workflow | The agent sends no pushed request with an `exchange.confirm` entry that leaves out the replacement until the User chooses, in the agent's own interface. If the User accepts the broader task, the consent page shows an `exchange.confirm` entry with no replacement constraint. If the User chooses per-revision approval, the agent confirms each revision with `user` after showing it, outside the Mission. |
+| T19 | A Mission token, at a direct-execution endpoint, both legacy (it sends `scope="poppy:write"`) and Mission-aware | Call the endpoint | `403`, `insufficient_scope`, no effect. The Mission-aware endpoint sends `mission_denial="insufficient_authority"` and no `scope`. In both cases the agent requests no scope, starts no sign-in, and makes no retry with another credential. |
 
 ## 8. Adoption path
 
