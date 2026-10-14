@@ -44,7 +44,7 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { MTLS_CNF, resignWithCnf, tokenRequestOnce } from "./subject-possession.helper.js";
+import { asTokenSigningKeyPair, MTLS_CNF, resignWithCnf, tokenRequestOnce } from "./subject-possession.helper.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   JWT_TOKEN_TYPE,
@@ -318,7 +318,7 @@ beforeAll(async () => {
     alg: "ES256",
     use: "sig",
   };
-  const asSigning = await generateKeyPair("RS256", { extractable: true });
+  const asSigning = await asTokenSigningKeyPair();
   asSigningKey = asSigning.privateKey;
   as = await buildAuthorizationServer({
     issuer: ISSUER,

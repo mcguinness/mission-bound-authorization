@@ -6,10 +6,16 @@
  * its `cnf` removed or replaced, and sends one token request whose client
  * authentication is fresh and whose DPoP proof is exactly the one given.
  */
-import { type CryptoKey, decodeJwt, SignJWT } from "jose";
+import { TOPOLOGY } from "@mission/demo-data";
+import { type CryptoKey, decodeJwt, generateKeyPair, SignJWT } from "jose";
 
 /** The AS access-token signing key's header (`TOPOLOGY.keys.asToken`). */
-const AS_TOKEN_HEADER = { alg: "RS256", kid: "as-token", typ: "at+jwt" } as const;
+const AS_TOKEN_HEADER = { alg: TOPOLOGY.keys.asToken.alg, kid: TOPOLOGY.keys.asToken.kid, typ: "at+jwt" };
+
+/** A key pair of the AS access-token signing algorithm, for a suite's `testTokenSigningJwk`. */
+export function asTokenSigningKeyPair(): ReturnType<typeof generateKeyPair> {
+  return generateKeyPair(TOPOLOGY.keys.asToken.alg, { extractable: true });
+}
 
 /** Re-sign `token`'s claims under the injected AS signing key, with `cnf` replaced (`undefined` removes it). */
 export async function resignWithCnf(

@@ -33,6 +33,7 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
+import { resignWithCnf } from "./subject-possession.helper.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
@@ -1249,5 +1250,15 @@ describe("the Dispatch Handoff at the DPoP replay cache's bound (@spec RFC 9449 
     }
     // The refused redemption took nothing: the grant redeems once capacity frees.
     expect((await redeem(grant)).status).toBe(200);
+  });
+});
+
+describe("the Dispatch Handoff exchange's unconstrained subject_token (@spec mission-template#dispatch-handoff, #1210)", () => {
+  it("refuses a subject_token that is not sender-constrained with invalid_grant, the Template's code for steps 1 and 2", async () => {
+    const instance = await dispatchInstance();
+    const res = await err(await handoff(await resignWithCnf(instance.token, tokenKey, undefined)));
+    expect(res.status, JSON.stringify(res)).toBe(400);
+    expect(res.error).toBe("invalid_grant");
+    expect(res.error_description).toContain("not sender-constrained");
   });
 });
