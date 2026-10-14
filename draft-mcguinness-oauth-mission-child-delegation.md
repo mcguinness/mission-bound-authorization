@@ -1201,13 +1201,15 @@ A Child Mission MUST be bounded by the Parent Mission:
   carries, so a down-scoped token never mints a child broader than
   itself;
 - the presented `subject_token` MUST authorize this child-creation
-  operation: each entry of its authority that a child entry is a subset
-  of MUST carry a `children` object, and that object's
-  `allowed_child_actors`, `max_child_depth`, and `max_children`
-  ({{fanout}}) constrain the creation alongside the parent entry's, its
-  `max_children` bounding the same count ({{fanout-accounting}}); a
-  token without that delegation right authorizes no child, and carrying
-  the token's restrictions into the child does not satisfy this;
+  operation: each child entry is attributed to the first entry of the
+  token's authority, in order, that it is a subset of, as
+  {{fanout-accounting}} attributes it to a parent entry; that token
+  entry MUST carry a `children` object, and its `allowed_child_actors`,
+  `max_child_depth`, and `max_children` ({{fanout}}) constrain the
+  creation alongside the parent entry's, its `max_children` bounding the
+  same count; a token without that delegation right authorizes no child,
+  and carrying the token's restrictions into the child does not satisfy
+  this;
 - the child MUST NOT include a resource, action, constraint relaxation,
   or delegation right not present in the parent;
 - the child's effective `expires_at` MUST NOT be later than the child
