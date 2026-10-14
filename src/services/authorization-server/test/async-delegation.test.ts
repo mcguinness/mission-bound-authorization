@@ -814,6 +814,80 @@ describe("the presented token's authority bounds a Child Mission (@spec child-de
     },
   );
 
+  /**
+   * A token whose authority carries two entries the child entry is a subset
+   * of, in the given order: the Mission entry's delegation right as is
+   * (permissive) and with its `children` object changed by `restrict`
+   * (restrictive). Returns both orders' tokens and the child proposal (the
+   * restrictive delegation, a subset of both entries).
+   */
+  async function overlapping(
+    baseAccessToken: string,
+    missionId: string,
+    restrict: (children: Record<string, unknown>) => void,
+  ): Promise<{ permissiveFirst: string; restrictiveFirst: string; proposal: unknown }> {
+    const entry = as.kernel.get(missionId)?.authority_set.find((e) => e.actions.includes("payments:invoice.read"));
+    const permissive = confinedAuthority().map((e) => ({ ...e, delegation: structuredClone(entry?.delegation) }));
+    const restrictive = structuredClone(permissive);
+    restrict(restrictive[0]?.delegation?.children as Record<string, unknown>);
+    const issue = async (authorizationDetails: unknown[]): Promise<string> => {
+      const res = await asyncDelegate(baseAccessToken, { authorizationDetails });
+      const body = (await res.json()) as { access_token: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      expect(decodeJwt(body.access_token).authorization_details).toHaveLength(2);
+      return body.access_token;
+    };
+    return {
+      permissiveFirst: await issue([...permissive, ...restrictive]),
+      restrictiveFirst: await issue([...restrictive, ...permissive]),
+      proposal: restrictive,
+    };
+  }
+
+  it.each([
+    ["actor", (c: Record<string, unknown>) => { c.allowed_child_actors = []; }, "child_actor_not_allowed"],
+    ["count", (c: Record<string, unknown>) => { c.max_children = 0; }, "fanout_exceeded"],
+  ] as const)(
+    "a child entry is attributed to the first matching token entry at creation (%s; #1192 re-review)",
+    async (_label, restrict, reason) => {
+      const { missionId, baseAccessToken } = await issueBaseMission();
+      const { permissiveFirst, restrictiveFirst, proposal } = await overlapping(baseAccessToken, missionId, restrict);
+      const refused = await createChild(restrictiveFirst, missionId, { authorizationDetails: proposal });
+      const refusedBody = (await refused.json()) as { mission_denial_reason?: string };
+      expect(refused.status, JSON.stringify(refusedBody)).toBe(400);
+      expect(refusedBody.mission_denial_reason).toBe(reason);
+      const admitted = await createChild(permissiveFirst, missionId, { authorizationDetails: proposal });
+      expect(admitted.status, JSON.stringify(await admitted.clone().json())).toBe(200);
+    },
+  );
+
+  it.each([
+    ["actor", (c: Record<string, unknown>) => { c.allowed_child_actors = []; }, "child_actor_not_allowed"],
+    ["count", (c: Record<string, unknown>) => { c.max_children = 0; }, "fanout_exceeded"],
+  ] as const)(
+    "a child entry is attributed to the first matching token entry on recovery (%s; #1192 re-review)",
+    async (_label, restrict, reason) => {
+      const { missionId, baseAccessToken } = await issueBaseMission();
+      const { permissiveFirst, restrictiveFirst, proposal } = await overlapping(baseAccessToken, missionId, restrict);
+      const broadRes = await asyncDelegate(baseAccessToken);
+      const broad = ((await broadRes.json()) as { access_token: string }).access_token;
+      const creationRequestId = crypto.randomUUID();
+      const created = await createChild(broad, missionId, { authorizationDetails: proposal, creationRequestId });
+      const createdBody = (await created.json()) as { mission_id?: string };
+      expect(created.status, JSON.stringify(createdBody)).toBe(200);
+      const refused = await createChild(restrictiveFirst, missionId, { authorizationDetails: proposal, creationRequestId });
+      const refusedBody = (await refused.json()) as { mission_denial_reason?: string; access_token?: string };
+      expect(refused.status, JSON.stringify(refusedBody)).toBe(400);
+      expect(refusedBody.mission_denial_reason).toBe(reason);
+      expect(refusedBody.access_token).toBeUndefined();
+      const recovered = await createChild(permissiveFirst, missionId, { authorizationDetails: proposal, creationRequestId });
+      const recoveredBody = (await recovered.json()) as { mission_id?: string; access_token?: string };
+      expect(recovered.status, JSON.stringify(recoveredBody)).toBe(200);
+      expect(recoveredBody.mission_id).toBe(createdBody.mission_id);
+      expect(typeof recoveredBody.access_token).toBe("string");
+    },
+  );
+
   it("the presented token's max_children bounds the parent's count; the broad token still creates", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
     const { token, proposal } = await restricted(baseAccessToken, missionId, (c) => { c.max_children = 1; });
