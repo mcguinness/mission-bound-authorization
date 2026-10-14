@@ -388,6 +388,55 @@ describe("derivation (@spec mission#authorization-derivation)", () => {
   });
 });
 
+describe("purpose never widens derivation (@spec mission#mission-intent, #1102, D397)", () => {
+  // This implementation consults `purpose` nowhere in derivation, so Intents
+  // that differ only in it derive identical results. The equality is this
+  // implementation's: a configured purpose lookup, which the specification
+  // permits, could select different candidates, each still bounded by the
+  // ceiling. What holds for every implementation is the bound.
+  const PURPOSES = [undefined, "https://purpose.example/payables-close", "https://purpose.example/expedite-all"];
+  const OTHER = "https://unmapped.example.com";
+  const withPurpose = (purpose: string | undefined, over: Record<string, unknown> = {}) =>
+    validateMissionIntent(intent({ ...over, ...(purpose !== undefined ? { purpose } : {}) }));
+  const proposalOf = (entries: unknown[], targets = [RESOURCE]) => validateAuthorityProposal(JSON.stringify(entries), targets);
+
+  it("a submitted proposal derives the same ceiling-bounded set whatever the purpose, an over-broad proposal included", () => {
+    const withinCeiling = proposalOf([
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } },
+    ]);
+    const overBroad = proposalOf([
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:payment.execute", "payments:vendor.delete", "payments:invoice.read"],
+        constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme", "globex", "evilcorp"] },
+      },
+    ]);
+    for (const proposal of [withinCeiling, overBroad]) {
+      const derived = PURPOSES.map((p) => kernel.derive(withPurpose(p), proposal));
+      for (const d of derived) expect(d).toEqual(derived[0]);
+      expect(isSubsetSet(derived[0] as never, DERIVATION_POLICY.ceiling as never)).toBe(true);
+    }
+  });
+
+  it("the resource-keyed configured mapping derives the same ceiling-bounded set whatever the purpose", () => {
+    const derived = PURPOSES.map((p) => kernel.derive(withPurpose(p)));
+    for (const d of derived) expect(d).toEqual(derived[0]);
+    expect(derived[0]?.length).toBeGreaterThan(0);
+    expect(isSubsetSet(derived[0] as never, DERIVATION_POLICY.ceiling as never)).toBe(true);
+  });
+
+  it("an input that derives no authority is refused the same way whatever the purpose: invalid_authorization_details for a submitted proposal, access_denied for the configured mapping", () => {
+    const outsideCeiling = proposalOf([{ type: "mission_resource_access", resource: OTHER, actions: ["payments:invoice.read"] }], [RESOURCE, OTHER]);
+    for (const p of PURPOSES) {
+      const submitted = refuse(() => kernel.derive(withPurpose(p, { target_resources: [RESOURCE, OTHER] }), outsideCeiling));
+      expect((submitted as IntentError).code, String(p)).toBe("invalid_authorization_details");
+      const mapped = refuse(() => kernel.derive(withPurpose(p, { target_resources: [OTHER] })));
+      expect((mapped as IntentError).code, String(p)).toBe("access_denied");
+    }
+  });
+});
+
 describe("approval event and record (@spec mission#integrity-anchors)", () => {
   it("creates an active record with both anchors and is idempotent by approval_event_id", () => {
     const record = approve(intent(), 1);
