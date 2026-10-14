@@ -103,8 +103,8 @@
     "content_sha256": "df4b3cc03ebb756aa96ff79abcefd906cf3d990bb77920b5902143f3f7ad677e"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "f6fff13fcc75fc8d86f3915914c6f0452a229302",
-    "content_sha256": "569e73d27fe483df2ab196c38c26cc07af173909909f1438d66d9d6676bcf409"
+    "revision": "c610f72718beabdc5f86bdd0825a5f92b0403cd2",
+    "content_sha256": "abecea64b9f889195bab9d3cb812caad6efbc867b4487ede72ddf1cab699a038"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
@@ -32029,7 +32029,7 @@
    "id": "child-delegation.attenuation.presented-token-authorizes-creation",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "attenuation",
-   "text": "the presented `subject_token` MUST authorize this child-creation operation: each entry of its authority that a child entry is a subset of MUST carry a `children` object, and that object's `allowed_child_actors`, `max_child_depth`, and `max_children` ({{fanout}}) constrain the creation alongside the parent entry's, its `max_children` bounding the same count ({{fanout-accounting}}); a token without that delegation right authorizes no child, and carrying the token's restrictions into the child does not satisfy this",
+   "text": "the presented `subject_token` MUST authorize this child-creation operation: each child entry is attributed to the first entry of the token's authority, in order, that it is a subset of, as {{fanout-accounting}} attributes it to a parent entry; that token entry MUST carry a `children` object, and its `allowed_child_actors`, `max_child_depth`, and `max_children` ({{fanout}}) constrain the creation alongside the parent entry's, its `max_children` bounding the same count; a token without that delegation right authorizes no child, and carrying the token's restrictions into the child does not satisfy this",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -32039,7 +32039,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a token whose children object admits no child actor refuses creation with child_actor_not_allowed, and one whose max_children is 0 refuses it with fanout_exceeded, though the parent permits both and the child carries the same restricted delegation; the token's max_children bounds the parent's own count of active children on the entry (a second child under max_children 1 is refused, while the broad token still creates); a grandchild beyond the token's max_child_depth is refused; a token without a children object refuses as not_strict_subset; each deny Child Evidence records attenuation result exceeds_presented_authority"
+    "normative": "a token whose children object admits no child actor refuses creation with child_actor_not_allowed, and one whose max_children is 0 refuses it with fanout_exceeded, though the parent permits both and the child carries the same restricted delegation; the token's max_children bounds the parent's own count of active children on the entry (a second child under max_children 1 is refused, while the broad token still creates); a grandchild beyond the token's max_child_depth is refused; a token without a children object refuses as not_strict_subset; each deny Child Evidence records attenuation result exceeds_presented_authority; with two token entries the child entry is a subset of, the first in order governs: a token carrying a permissive then a restrictive entry admits the creation and the recovery, and one carrying them in the reverse order refuses both with the restrictive entry's reason"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -32067,9 +32067,21 @@
      "name": "child mission creation (@spec child-delegation#child-creation, #parent-member) > the presented token's children controls govern this creation, the evidence naming the bound (@spec child-delegation#attenuation, #fanout, #1192 review)",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > a child entry is attributed to the first matching token entry at creation (%s; #1192 re-review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > a child entry is attributed to the first matching token entry on recovery (%s; #1192 re-review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1192 review (P1): the token's delegation restrictions govern creation, not only the authority copied into the child. Shown over HTTP before the fix (a token with allowed_child_actors [] or max_children 0 created a child, 200). The depth control is witnessed at the kernel: the authorization_details schema admits no max_child_depth below 1, so only a grandchild can exceed it. Proved by disabling each gate (the token's actor, depth and count controls at creation, the recovery controls, the recorded child counted once): each is killed by the tests cited. The token's children-object presence needs no separate gate: a child always carries its parent entry's children object or a narrower one, so the authority bound refuses a token without one."
+   "notes": "#1192 review (P1): the token's delegation restrictions govern creation, not only the authority copied into the child. Shown over HTTP before the fix (a token with allowed_child_actors [] or max_children 0 created a child, 200). The depth control is witnessed at the kernel: the authorization_details schema admits no max_child_depth below 1, so only a grandchild can exceed it. Proved by disabling each gate (the token's actor, depth and count controls at creation, the recovery controls, the recorded child counted once): each is killed by the tests cited. The token's children-object presence needs no separate gate: a child always carries its parent entry's children object or a narrower one, so the authority bound refuses a token without one. #1192 re-review: attribution to the first matching token entry is stated and witnessed with overlapping entries in both orders, for the actor and count controls, at creation and on recovery (the rule lives in one helper, presentedTokenJustification; taking the last match instead is killed by those tests)."
   },
   {
    "id": "child-delegation.creation-idempotency.recovery-within-presented-token",
