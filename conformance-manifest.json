@@ -32068,7 +32068,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a DPoP proof whose key is not the subject_token's cnf jkt is refused invalid_grant, a missing proof invalid_dpop_proof, and an mTLS-bound subject_token as a sender constraint the exchange cannot verify"
+    "normative": "a child-creation exchange whose DPoP proof is missing or not under the subject_token's own confirmation key is refused",
+    "local": "the reference AS answers a missing proof invalid_dpop_proof and a wrong-key proof invalid_grant (#1178); the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -32092,7 +32093,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1210 (D398). The mTLS arm is not exercised: the reference AS verifies DPoP proofs only, and refuses an mTLS-bound subject_token as a sender constraint it cannot verify."
+   "notes": "#1210 (D398). The possession arm is partial: see observation.local."
   },
   {
    "id": "child-delegation.creation.jti-single-use",
@@ -32241,7 +32242,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "possession is verified after step 1: a request missing creation_request_id and its DPoP proof is refused invalid_request; a wrong-key proof is refused invalid_grant, a replayed one invalid_dpop_proof, and an mTLS-bound subject_token as a constraint the exchange cannot verify"
+    "normative": "possession is verified after step 1: a request missing both creation_request_id and its DPoP proof is refused for the missing creation_request_id (invalid_request, RFC 6749 Section 5.2), and a proof not under the subject_token's confirmation key, or a replayed one, is refused",
+    "local": "the reference AS answers a wrong-key proof invalid_grant (#1178) and a replayed one invalid_dpop_proof; the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -32271,7 +32273,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1210 (D398). The mTLS arm is not exercised: the reference AS verifies DPoP proofs only, and refuses an mTLS-bound subject_token as a sender constraint it cannot verify. The lead-in carries the MUST."
+   "notes": "#1210 (D398). The possession arm is partial: see observation.local. The lead-in carries the MUST."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
@@ -34500,7 +34502,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a DPoP proof whose key is not the subject_token's cnf jkt is refused invalid_grant, and an mTLS-bound subject_token is refused as a sender constraint the exchange cannot verify"
+    "normative": "an expansion exchange whose DPoP proof is not under the subject_token's own confirmation key is refused",
+    "local": "the reference AS answers that refusal invalid_grant (whether a Token Exchange answers invalid_request is #1178's question); the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -34518,7 +34521,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1210 (D398). The mTLS arm is not exercised: the reference AS verifies DPoP proofs only, and refuses an mTLS-bound subject_token as a sender constraint it cannot verify."
+   "notes": "#1210 (D398). The possession arm is partial: see observation.local."
   },
   {
    "id": "expansion.request-binding.unconstrained-refused",
@@ -34622,7 +34625,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "possession is verified after step 1: a request missing creation_request_id and its DPoP proof is refused invalid_request; a wrong-key proof is refused invalid_grant, a replayed one invalid_dpop_proof, and an mTLS-bound subject_token as a constraint the exchange cannot verify"
+    "normative": "possession is verified after step 1: a request missing both creation_request_id and its DPoP proof is refused for the missing creation_request_id (invalid_request, RFC 6749 Section 5.2), and a proof not under the subject_token's confirmation key, or a replayed one, is refused",
+    "local": "the reference AS answers a wrong-key proof invalid_grant (#1178) and a replayed one invalid_dpop_proof; the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -34652,7 +34656,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1210 (D398). The mTLS arm is not exercised: the reference AS verifies DPoP proofs only, and refuses an mTLS-bound subject_token as a sender constraint it cannot verify. The lead-in carries the MUST."
+   "notes": "#1210 (D398). The possession arm is partial: see observation.local. The lead-in carries the MUST."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
