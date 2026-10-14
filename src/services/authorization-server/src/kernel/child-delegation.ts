@@ -221,6 +221,18 @@ export function countChildBuckets(kernel: MissionKernel, parent: MissionRecord):
   return buckets;
 }
 
+/**
+ * @spec child-delegation#attenuation (#1192 re-review): the token entry a
+ * child entry is attributed to: the FIRST entry of the token's authority, in
+ * order, that the child entry is a subset of, as fan-out accounting attributes
+ * it to a parent entry ({@link justifyingIndex}). Both entries are compared
+ * with capability sources set aside. -1 when no token entry covers it.
+ */
+export function presentedTokenJustification(childEntry: AuthorityEntry, token: readonly AuthorityEntry[]): number {
+  const [candidate] = withoutCapabilitySources([childEntry]);
+  return withoutCapabilitySources(token).findIndex((te) => isSubsetEntry(candidate as AuthorityEntry, te));
+}
+
 /** A refusal the presented token's child-creation controls produce. */
 export interface PresentedTokenRefusal {
   reason: ChildDenialReason;
@@ -232,10 +244,10 @@ export interface PresentedTokenRefusal {
  * @spec child-delegation#attenuation, child-delegation#fanout (#825, D353,
  * #1192 review): the presented `subject_token` must authorize THIS
  * child-creation operation, not only bound the authority copied into the
- * child. Each child entry is attributed to the entry of the token's authority
- * it is a subset of (capability sources set aside, as for the authority bound);
- * that token entry's `children` object (present, since the child's is a subset
- * of it) MUST admit the child actor (`allowed_child_actors`) and the child's
+ * child. Each child entry is attributed to one token entry,
+ * {@link presentedTokenJustification} (first match, as for the parent); that
+ * token entry's `children` object (present, since the child's is a subset of
+ * it) MUST admit the child actor (`allowed_child_actors`) and the child's
  * depth (`max_child_depth`), alongside the parent entry's controls. The count control is
  * {@link presentedTokenFanoutRefusal}, run inside the creation transaction.
  */
@@ -247,7 +259,7 @@ export function presentedTokenChildRefusal(
   presentedAuthority: readonly AuthorityEntry[],
 ): PresentedTokenRefusal | undefined {
   const token = withoutCapabilitySources(presentedAuthority);
-  const tokenIdx = withoutCapabilitySources(childAuthority).map((ce) => token.findIndex((te) => isSubsetEntry(ce, te)));
+  const tokenIdx = childAuthority.map((ce) => presentedTokenJustification(ce, presentedAuthority));
   if (tokenIdx.some((ti) => ti < 0)) {
     return { reason: "not_strict_subset", message: "child Authority Set exceeds the presented token's authority" };
   }
@@ -275,7 +287,8 @@ export function presentedTokenChildRefusal(
  * @spec child-delegation#fanout-accounting (#825, D353, #1192 review): the
  * presented token's `max_children` bounds the SAME count as the parent
  * entry's: the parent's non-terminal children drawn on the parent entry each
- * child entry is justified by. At creation this child would add one; on
+ * child entry is justified by. The token entry is the one
+ * {@link presentedTokenJustification} attributes the child entry to. At creation this child would add one; on
  * recovery the recorded child is already counted (`recordedChildCounted`).
  */
 export function presentedTokenFanoutRefusal(
@@ -286,10 +299,9 @@ export function presentedTokenFanoutRefusal(
   recordedChildCounted: boolean,
 ): PresentedTokenRefusal | undefined {
   const token = withoutCapabilitySources(presentedAuthority);
-  const child = withoutCapabilitySources(childAuthority);
   const buckets = countChildBuckets(kernel, parent);
   for (let i = 0; i < childAuthority.length; i++) {
-    const te = token.find((t) => isSubsetEntry(child[i] as AuthorityEntry, t));
+    const te = token[presentedTokenJustification(childAuthority[i] as AuthorityEntry, presentedAuthority)];
     const maxChildren = te ? asNum(childrenOf(te)?.max_children) : undefined;
     if (maxChildren === undefined) continue;
     const active = buckets.get(justifyingIndex(childAuthority[i] as AuthorityEntry, parent.authority_set)) ?? 0;
