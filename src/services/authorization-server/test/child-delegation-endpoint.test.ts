@@ -568,6 +568,8 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
       subject_token: parent.accessToken,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: JWT_TOKEN_TYPE,
+      // Otherwise valid (step 1's creation_request_id), so possession is what fails.
+      creation_request_id: crypto.randomUUID(),
       login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: {
@@ -594,6 +596,8 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
         subject_token: parent.accessToken,
         subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
         requested_token_type: JWT_TOKEN_TYPE,
+        // Otherwise valid (step 1's creation_request_id), so possession is what fails.
+        creation_request_id: crypto.randomUUID(),
         login_hint: "alice",
         mission_intent: JSON.stringify({
           intent: {

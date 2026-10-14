@@ -986,6 +986,8 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
       subject_token: pred.accessToken,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      // Otherwise valid (step 1's creation_request_id), so possession is what fails.
+      creation_request_id: crypto.randomUUID(),
       login_hint: "alice",
       mission_intent: intentJson("Read invoices only", ["payments:invoice.read"]),
       authorization_details: JSON.stringify(authority(["payments:invoice.read"])),
