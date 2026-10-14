@@ -61,7 +61,7 @@ import {
   type TxnCredential,
   type WriteReservationScope,
 } from "./pep.js";
-import { type DpopPresentation, verifyDpopProof } from "./dpop.js";
+import { type DpopPresentation, DpopReplayUnavailableError, verifyDpopProof } from "./dpop.js";
 import { readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
 import { type KeyResolver, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
 import {
@@ -841,7 +841,10 @@ export class McpPaymentsServer {
     //    the credential itself is bound to and naming THIS credential (`ath`).
     try {
       await this.verifyPresentation(txnToken, cnf.jkt, pop);
-    } catch {
+    } catch (e) {
+      // @spec runtime-evidence#pre-decision-refusal, #1173 (D375): replay state
+      // at capacity is a transient refusal, not a proof verdict.
+      if (e instanceof DpopReplayUnavailableError) return { ok: false, refusal_reason: "state_unavailable" };
       return { ok: false, refusal_reason: "txn_cnf_mismatch" };
     }
 

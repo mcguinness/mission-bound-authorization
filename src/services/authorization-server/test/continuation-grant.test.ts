@@ -36,6 +36,7 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import { TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import {
   AuthorityNarrowedToEmptyError,
@@ -273,6 +274,13 @@ async function dpopProof(
     .sign(keys.privateKey);
 }
 
+/** A DPoP proof with exactly the given claims beside htu, htm and jti: no `iat` unless `claims` sets one. */
+async function rawProof(claims: Record<string, unknown>, keys: Keys = agentKeys): Promise<string> {
+  return new SignJWT({ htu: `${ISSUER}/token`, htm: "POST", jti: crypto.randomUUID(), ...claims })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(keys.publicKey) })
+    .sign(keys.privateKey);
+}
+
 interface ExchangeFields {
   subjectToken: string;
   actorToken?: string;
@@ -287,6 +295,8 @@ interface ExchangeFields {
   repeated?: Array<[string, string]>;
   /** Send no DPoP header. */
   noDpop?: boolean;
+  /** Replaces the default fresh proof (the freshness cases). */
+  makeProof?: (extra: Record<string, unknown>) => Promise<string>;
 }
 
 /** POST /token with the token-exchange grant + private_key_jwt + DPoP (nonce retry). */
@@ -315,7 +325,9 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded",
-        ...(f.noDpop ? {} : { dpop: await dpopProof(htu, "POST", extra, t.dpopKeys) }),
+        ...(f.noDpop
+          ? {}
+          : { dpop: await (f.makeProof ?? ((e: Record<string, unknown>) => dpopProof(htu, "POST", e, t.dpopKeys)))(extra) }),
       },
       body: body.toString(),
     });
@@ -325,6 +337,9 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
   if (res.status === 400 && nonce) res = await send({ nonce });
   return res;
 }
+
+/** The token endpoint's DPoP replay cache, switchable to full (#1173). */
+const replay = switchableDpopReplay();
 
 beforeAll(async () => {
   caiKeys = await generateKeyPair("ES256", { extractable: true });
@@ -355,6 +370,8 @@ beforeAll(async () => {
   });
 
   as = await buildAuthorizationServer({
+    // @spec #1173 (D375): switchable to full for the cache-bound cases.
+    dpopProofReplay: replay,
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     // Further token-exchange clients, so a hop can be continued by an actor
@@ -397,6 +414,80 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const grant = decodeJwt(body.access_token as string) as { iat: number; exp: number };
     expect(grant.exp).toBeLessThanOrEqual(missionExp);
     expect(grant.exp - grant.iat).toBeLessThan(300);
+  });
+
+  // @spec RFC 9449 Section 11.1 (#1173, D375): at the replay cache's bound.
+  it("at the replay cache's bound refuses a new key proof temporarily_unavailable with Retry-After, and keeps a seen proof a replay", async () => {
+    const { handle } = newLineage("apev-dpop-capacity");
+    let accepted = "";
+    const ok = await tokenExchange({
+      subjectToken: await mintICA(handle),
+      makeProof: async (extra) => {
+        accepted = await dpopProof(`${ISSUER}/token`, "POST", extra);
+        return accepted;
+      },
+    });
+    expect(ok.status).toBe(200);
+    replay.full = true;
+    try {
+      const label = "a new proof";
+      const res = await tokenExchange({ subjectToken: await mintICA(handle) });
+      const body = (await res.json()) as { error?: string; access_token?: string };
+      expect(res.status, `${label}: ${JSON.stringify(body)}`).toBe(503);
+      expect(body.error, label).toBe("temporarily_unavailable");
+      expect(res.headers.get("retry-after"), label).toBe(String(SWITCHED_RETRY_AFTER_S));
+      expect(body.access_token, label).toBeUndefined();
+      const replayed = await tokenExchange({ subjectToken: await mintICA(handle), makeProof: async () => accepted });
+      const replayedBody = (await replayed.json()) as { error?: string; error_description?: string };
+      expect(replayed.status, "a seen proof").toBe(400);
+      expect(replayedBody.error, "a seen proof").toBe("invalid_dpop_proof");
+      expect(replayedBody.error_description, "a seen proof").toContain("replayed");
+    } finally {
+      replay.full = false;
+    }
+    expect((await tokenExchange({ subjectToken: await mintICA(handle) })).status).toBe(200);
+  });
+
+  // @spec RFC 9449 Section 4.3 (#1173): rule 5's key proof is complete and fresh.
+  it("refuses a key proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused", async () => {
+    const nowS = (): number => Math.floor(Date.now() / 1000);
+    const outside = [
+      { label: "no iat", claims: {}, description: "DPoP proof has no iat" },
+      { label: "a non-numeric iat", claims: { iat: "now" }, description: "invalid DPoP proof" },
+      { label: "a boolean iat", claims: { iat: true }, description: "invalid DPoP proof" },
+      { label: "a day old", claims: { iat: nowS() - 86_400 }, description: "outside the acceptance window" },
+      { label: "past the window", claims: { iat: nowS() - 260 }, description: "outside the acceptance window" },
+      { label: "an hour ahead", claims: { iat: nowS() + 3_600 }, description: "outside the acceptance window" },
+    ];
+    const { handle } = newLineage("apev-dpop-freshness");
+    for (const { label, claims, description } of outside) {
+      const res = await tokenExchange({
+        subjectToken: await mintICA(handle),
+        makeProof: (extra) => rawProof({ ...claims, ...extra }),
+      });
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, label).toBe(400);
+      expect(body.error, label).toBe("invalid_dpop_proof");
+      expect(body.error_description, label).toContain(description);
+      expect(body.access_token, label).toBeUndefined();
+    }
+    for (const offset of [-230, 50]) {
+      let sent = "";
+      const ok = await tokenExchange({
+        subjectToken: await mintICA(handle),
+        makeProof: async (extra) => {
+          sent = await rawProof({ iat: nowS() + offset, ...extra });
+          return sent;
+        },
+      });
+      expect(ok.status, `iat ${offset}: ${JSON.stringify(await ok.clone().json())}`).toBe(200);
+      // A new assertion, so only the replayed proof can refuse it.
+      const replay = await tokenExchange({ subjectToken: await mintICA(handle), makeProof: async () => sent });
+      const replayBody = (await replay.json()) as { error?: string; error_description?: string };
+      expect(replay.status, `iat ${offset}, replayed`).toBe(400);
+      expect(replayBody.error, `iat ${offset}, replayed`).toBe("invalid_dpop_proof");
+      expect(replayBody.error_description, `iat ${offset}, replayed`).toContain("replayed");
+    }
   });
 
   it("happy path: mints a Mission-rooted ID-JAG with a fresh handle, deterministic sub, collapsed act, and carried envelope", async () => {

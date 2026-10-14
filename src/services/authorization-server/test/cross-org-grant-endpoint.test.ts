@@ -23,6 +23,7 @@ import {
   type JWK,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import {
   buildAuthorizationServer,
   deriveCrossOrgRoot,
@@ -162,6 +163,13 @@ async function dpopProof(keys: Keys, extra: Record<string, unknown> = {}): Promi
     .sign(keys.privateKey);
 }
 
+/** A DPoP proof with exactly the given claims beside htu, htm and jti: no `iat` unless `claims` sets one. */
+async function rawProof(keys: Keys, claims: Record<string, unknown>): Promise<string> {
+  return new SignJWT({ htu: `${ISSUER}/token`, htm: "POST", jti: crypto.randomUUID(), ...claims })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(keys.publicKey) })
+    .sign(keys.privateKey);
+}
+
 interface ExchangeOpts {
   subjectToken: string;
   audience?: string;
@@ -191,6 +199,9 @@ async function exchange(opts: ExchangeOpts): Promise<Response> {
     }).toString(),
   });
 }
+
+/** The token endpoint's DPoP replay cache, switchable to full (#1173). */
+const replay = switchableDpopReplay();
 
 beforeAll(async () => {
   originKeys = await newKeys();
@@ -250,6 +261,8 @@ beforeAll(async () => {
   };
 
   as = await buildAuthorizationServer({
+    // @spec #1173 (D375): switchable to full for the cache-bound cases.
+    dpopProofReplay: replay,
     issuer: ISSUER,
     crossOrg: crossOrgOptions,
     scopeProjection: SCOPE_MAPPING as never,
@@ -281,6 +294,65 @@ describe("leaf proof of possession (@spec cross-org-delegation#projection-exchan
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(400);
     expect(body.error).toBe("invalid_dpop_proof");
+  });
+
+  // @spec RFC 9449 Section 11.1 (#1173, D375): at the replay cache's bound.
+  it("at the replay cache's bound refuses a new leaf proof temporarily_unavailable with Retry-After, and keeps a seen proof a replay", async () => {
+    const first = await buildChain();
+    const accepted = await dpopProof(first.leafKeys);
+    expect((await exchange({ subjectToken: present(first.chain), dpop: accepted })).status).toBe(200);
+    const second = await buildChain();
+    replay.full = true;
+    try {
+      const label = "a new proof";
+      const res = await exchange({ subjectToken: present(second.chain), leafKeys: second.leafKeys });
+      const body = (await res.json()) as { error?: string; access_token?: string };
+      expect(res.status, `${label}: ${JSON.stringify(body)}`).toBe(503);
+      expect(body.error, label).toBe("temporarily_unavailable");
+      expect(res.headers.get("retry-after"), label).toBe(String(SWITCHED_RETRY_AFTER_S));
+      expect(body.access_token, label).toBeUndefined();
+      const replayed = await exchange({ subjectToken: present(first.chain), dpop: accepted });
+      const replayedBody = (await replayed.json()) as { error?: string; error_description?: string };
+      expect(replayed.status, "a seen proof").toBe(400);
+      expect(replayedBody.error, "a seen proof").toBe("invalid_dpop_proof");
+      expect(replayedBody.error_description, "a seen proof").toContain("replayed");
+    } finally {
+      replay.full = false;
+    }
+    expect((await exchange({ subjectToken: present(second.chain), leafKeys: second.leafKeys })).status).toBe(200);
+  });
+
+  // @spec RFC 9449 Section 4.3 (#1173): the leaf key's proof is complete and fresh.
+  it("refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused", async () => {
+    const nowS = (): number => Math.floor(Date.now() / 1000);
+    const outside = [
+      { label: "no iat", claims: {}, description: "DPoP proof has no iat" },
+      { label: "a non-numeric iat", claims: { iat: "now" }, description: "invalid DPoP proof" },
+      { label: "a boolean iat", claims: { iat: true }, description: "invalid DPoP proof" },
+      { label: "a day old", claims: { iat: nowS() - 86_400 }, description: "outside the acceptance window" },
+      { label: "past the window", claims: { iat: nowS() - 260 }, description: "outside the acceptance window" },
+      { label: "an hour ahead", claims: { iat: nowS() + 3_600 }, description: "outside the acceptance window" },
+    ];
+    const { chain, leafKeys } = await buildChain();
+    for (const { label, claims, description } of outside) {
+      const res = await exchange({ subjectToken: present(chain), dpop: await rawProof(leafKeys, claims) });
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, label).toBe(400);
+      expect(body.error, label).toBe("invalid_dpop_proof");
+      expect(body.error_description, label).toContain(description);
+      expect(body.access_token, label).toBeUndefined();
+    }
+    for (const offset of [-230, 50]) {
+      const fresh = await buildChain();
+      const proof = await rawProof(fresh.leafKeys, { iat: nowS() + offset });
+      const ok = await exchange({ subjectToken: present(fresh.chain), dpop: proof });
+      expect(ok.status, `iat ${offset}: ${JSON.stringify(await ok.clone().json())}`).toBe(200);
+      const replay = await exchange({ subjectToken: present(fresh.chain), dpop: proof });
+      const replayBody = (await replay.json()) as { error?: string; error_description?: string };
+      expect(replay.status, `iat ${offset}, replayed`).toBe(400);
+      expect(replayBody.error, `iat ${offset}, replayed`).toBe("invalid_dpop_proof");
+      expect(replayBody.error_description, `iat ${offset}, replayed`).toContain("replayed");
+    }
   });
 
   it("refuses a DPoP proof over a key that is not the leaf's cnf key (invalid_grant)", async () => {

@@ -16,8 +16,38 @@
  * AS-local (D27).
  */
 
+import type { KoaContextWithOIDC } from "oidc-provider";
+
 export {
+  DPOP_PROOF_FUTURE_SKEW_S,
   DPOP_PROOF_REPLAY_WINDOW_S,
+  type DpopProofAdmission,
   type DpopProofReplay,
+  dpopProofIatAcceptableAt,
   newDpopProofReplay,
 } from "@mission/core";
+
+/** A token-endpoint proof the shared verifier did not accept. */
+export interface TokenEndpointProofFailure {
+  description: string;
+  /** Set when the replay cache is at its bound: the refusal is retryable. */
+  retryAfterS?: number;
+}
+
+/**
+ * @spec RFC 9449 Section 4.3, #1173 (D375): the token endpoint's refusal for a
+ * proof the shared verifier did not accept. A proof that fails a check is
+ * `invalid_dpop_proof`. A new proof refused only because the replay cache is
+ * at its bound is `temporarily_unavailable` (HTTP 503) with `Retry-After`: a
+ * retry with a fresh proof may succeed once capacity frees.
+ */
+export function refuseTokenEndpointProof(ctx: KoaContextWithOIDC, failure: TokenEndpointProofFailure): void {
+  const unavailable = failure.retryAfterS !== undefined;
+  ctx.status = unavailable ? 503 : 400;
+  ctx.body = {
+    error: unavailable ? "temporarily_unavailable" : "invalid_dpop_proof",
+    error_description: failure.description,
+  };
+  ctx.set("cache-control", "no-store");
+  if (unavailable) ctx.set("Retry-After", String(failure.retryAfterS));
+}

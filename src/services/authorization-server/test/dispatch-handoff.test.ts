@@ -32,6 +32,7 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
@@ -274,12 +275,17 @@ const contain = (missionId: string, remove: Array<{ resource: string; actions?: 
     remove,
   });
 
+/** The token endpoint's DPoP replay cache, switchable to full (#1173). */
+const replay = switchableDpopReplay();
+
 beforeAll(async () => {
   const { alg } = TOPOLOGY.keys.asToken;
   const tokenKeys = await generateKeyPair(alg, { extractable: true });
   tokenKey = tokenKeys.privateKey;
   const intruderKeys = await generateKeyPair("ES256", { extractable: true });
   as = await buildAuthorizationServer({
+    // @spec #1173 (D375): switchable to full for the cache-bound cases.
+    dpopProofReplay: replay,
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     testTokenSigningJwk: (await exportJWK(tokenKeys.privateKey)) as JWK,
@@ -1198,5 +1204,50 @@ describe("the consumed-grant store (unit, @spec mission-template#dispatch-handof
     store.reserve({ jti: "j3", missionId: "m", expMs: now + 1000 });
     const rows = store.db.prepare("SELECT jti FROM dispatch_handoff_consumed ORDER BY jti").all() as Array<{ jti: string }>;
     expect(rows.map((r) => r.jti)).toEqual(["j2", "j3"]);
+  });
+});
+
+describe("the Dispatch Handoff at the DPoP replay cache's bound (@spec RFC 9449 Section 11.1, #1173, D375)", () => {
+  it("both legs refuse a new proof temporarily_unavailable with Retry-After, a seen proof stays a replay, and the grant redeems once capacity frees", async () => {
+    const handoffParams = (token: string) => ({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: token,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      mission_dispatch_handoff: "true",
+    });
+    // While the cache is open: a grant for the redemption leg, and a proof it has seen.
+    const h = await handoff((await dispatchInstance()).token);
+    expect(h.status).toBe(200);
+    const grant = ((await h.json()) as { access_token: string }).access_token;
+    let accepted = "";
+    const seen = await tokenRequest("dispatcher", dispatcherDpop, handoffParams((await dispatchInstance()).token), async (extra) => {
+      accepted = await rawProof(dispatcherDpop, { iat: nowS(), ...extra });
+      return accepted;
+    });
+    expect(seen.status).toBe(200);
+    const fresh = await dispatchInstance();
+    replay.full = true;
+    try {
+      for (const [label, res] of [
+        ["the exchange", await handoff(fresh.token)],
+        ["the redemption", await redeem(grant)],
+      ] as const) {
+        const body = (await res.json()) as { error?: string; access_token?: string };
+        expect(res.status, `${label}: ${JSON.stringify(body)}`).toBe(503);
+        expect(body.error, label).toBe("temporarily_unavailable");
+        expect(res.headers.get("retry-after"), label).toBe(String(SWITCHED_RETRY_AFTER_S));
+        expect(body.access_token, label).toBeUndefined();
+      }
+      const replayed = await tokenRequest("dispatcher", dispatcherDpop, handoffParams(fresh.token), async () => accepted);
+      const replayedBody = (await replayed.json()) as { error?: string; error_description?: string };
+      expect(replayed.status, "a seen proof").toBe(400);
+      expect(replayedBody.error, "a seen proof").toBe("invalid_dpop_proof");
+      expect(replayedBody.error_description, "a seen proof").toContain("replayed");
+    } finally {
+      replay.full = false;
+    }
+    // The refused redemption took nothing: the grant redeems once capacity frees.
+    expect((await redeem(grant)).status).toBe(200);
   });
 });
