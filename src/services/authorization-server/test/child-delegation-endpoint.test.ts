@@ -36,10 +36,12 @@ import {
   exportJWK,
   generateKeyPair,
   importJWK,
+  type JWK,
   jwtVerify,
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { MTLS_CNF, resignWithCnf, tokenRequestOnce } from "./subject-possession.helper.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   JWT_TOKEN_TYPE,
@@ -323,13 +325,19 @@ async function createChildViaExchange(fields: {
 
 let parent: { missionId: string; refreshToken: string };
 
+/** The injected AS token signing key: the possession cases re-sign a real token's claims (#1210). */
+let asSigningKey: CryptoKey;
+
 beforeAll(async () => {
+  const asSigning = await generateKeyPair("RS256", { extractable: true });
+  asSigningKey = asSigning.privateKey;
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     // subagent-extractor / subagent-invoice-extractor are shipped in config;
     // these are the endpoint suite's additional child actors.
     actorProfiles: aiAgents("subagent-actor-ok", "subagent-other", "subagent-a", "subagent-b"),
+    testTokenSigningJwk: (await exportJWK(asSigning.privateKey)) as JWK,
   });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
@@ -908,5 +916,80 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
     const body = (await res.json()) as { error?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_grant");
+  });
+});
+
+describe("subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210)", () => {
+  const childParams = (subjectToken: string, extra: Record<string, string> = {}): Record<string, string> => ({
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    subject_token: subjectToken,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    requested_token_type: JWT_TOKEN_TYPE,
+    creation_request_id: crypto.randomUUID(),
+    login_hint: "alice",
+    mission_intent: JSON.stringify({
+      intent: { goal: "Extract Acme invoices", target_resources: [RESOURCE], expires_at: PARENT_EXP },
+    }),
+    authorization_details: JSON.stringify(childAuthority()),
+    child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
+    ...extra,
+  });
+  const send = async (params: Record<string, string>, proof: string | null): Promise<Response> =>
+    tokenRequestOnce(ISSUER, params, await clientAssertion(), proof);
+  const freshProof = (): Promise<string> => dpopProof(`${ISSUER}/token`, "POST");
+  const refusal = async (res: Response) => ({
+    status: res.status,
+    ...((await res.json()) as { error?: string; error_description?: string; access_token?: string }),
+  });
+
+  it("refuses a subject_token that is not sender-constrained with invalid_request, creating and counting nothing", async () => {
+    const p = await issueParentMission();
+    const count = as.kernel.get(p.missionId)?.derivation_count;
+    const children = as.kernel.findChildren(p.missionId).length;
+    const res = await refusal(await send(childParams(await resignWithCnf(p.accessToken, asSigningKey, undefined)), await freshProof()));
+    expect(res.status, JSON.stringify(res)).toBe(400);
+    expect(res.error).toBe("invalid_request");
+    expect(res.error_description).toContain("not sender-constrained");
+    expect(res.access_token).toBeUndefined();
+    expect(as.kernel.get(p.missionId)?.derivation_count).toBe(count);
+    expect(as.kernel.findChildren(p.missionId).length).toBe(children);
+  });
+
+  it("refuses an mTLS-bound subject_token as a sender constraint it cannot verify, never as unconstrained", async () => {
+    const p = await issueParentMission();
+    const res = await refusal(await send(childParams(await resignWithCnf(p.accessToken, asSigningKey, MTLS_CNF)), await freshProof()));
+    expect(res.status, JSON.stringify(res)).toBe(400);
+    expect(res.error).toBe("invalid_grant");
+    expect(res.error_description).toContain("sender constraint");
+    expect(res.error_description).not.toContain("not sender-constrained");
+  });
+
+  it("refuses a replayed DPoP proof presented with fresh client authentication", async () => {
+    const p = await issueParentMission();
+    const proof = await freshProof();
+    const first = await send(childParams(p.accessToken), proof);
+    expect(first.status, JSON.stringify(await first.clone().json())).toBe(200);
+    // A new operation and a new client assertion: only the proof repeats.
+    const res = await refusal(await send(childParams(p.accessToken), proof));
+    expect(res.status, JSON.stringify(res)).toBe(400);
+    expect(res.error).toBe("invalid_dpop_proof");
+    expect(res.error_description).toContain("replayed");
+  });
+
+  it("refuses a request missing both creation_request_id and its DPoP proof at step 1 (invalid_request), before possession", async () => {
+    const { creation_request_id: _omitted, ...params } = childParams((await issueParentMission()).accessToken);
+    const res = await refusal(await send(params, null));
+    expect(res.status, JSON.stringify(res)).toBe(400);
+    expect(res.error).toBe("invalid_request");
+    expect(res.error_description).toContain("creation_request_id");
+  });
+
+  it("refuses an exchange carrying both child_actor and predecessor with invalid_request", async () => {
+    const p = await issueParentMission();
+    const res = await refusal(await send(childParams(p.accessToken, { predecessor: p.missionId }), await freshProof()));
+    expect(res.status, JSON.stringify(res)).toBe(400);
+    expect(res.error).toBe("invalid_request");
+    expect(res.error_description).toContain("predecessor");
+    expect(as.kernel.findChildren(p.missionId)).toHaveLength(0);
   });
 });
