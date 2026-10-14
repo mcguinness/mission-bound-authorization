@@ -31993,6 +31993,287 @@
    "notes": "#1118 (D326) specification slice. Unconditional, as for child-delegation.source.inherited-from-parent. The reference AS re-asserts the inherited source's ceiling against the root's current declaration before computing the child's anchors (kernel assertInheritedAuthoritySource); the candidate witness 'a drawdown refuses access_denied when the source narrowed since approval' in authority-source.test.ts is not mapped or mutation-proved under this row, and the reference AS has no deferred child creation to exercise the pending window. No error code is pinned: the draft names none."
   },
   {
+   "id": "child-delegation.creation.child-actor-with-predecessor-refused",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-creation",
+   "text": "an exchange carrying both `child_actor` and the expansion profile's `predecessor` cross-check ({{I-D.draft-mcguinness-oauth-mission-expansion}}) MUST be refused with `invalid_request`, since the operations do not combine.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an exchange carrying both child_actor and predecessor is refused invalid_request at the child-creation and the expansion exchange, creating no child and opening no deferral"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses an exchange carrying both child_actor and predecessor with invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses an exchange carrying both predecessor and child_actor with invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398)."
+  },
+  {
+   "id": "child-delegation.creation.resolve-parent",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-creation",
+   "text": "The Mission Issuer MUST resolve the parent from `subject_token`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the parent is the Mission the subject_token resolves to: a parent cross-check naming another Mission is refused (parent_mismatch)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > parent cross-check != the Mission resolved from subject_token -> parent_mismatch (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398)."
+  },
+  {
+   "id": "child-delegation.creation.possession",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-creation",
+   "text": "verify that the presenter controls the token's own confirmation key ({{RFC9449}} DPoP proof `jkt`, or {{RFC8705}} mTLS `x5t#S256`)",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a DPoP proof whose key is not the subject_token's cnf jkt is refused invalid_grant, a missing proof invalid_dpop_proof, and an mTLS-bound subject_token as a sender constraint the exchange cannot verify"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange with no DPoP proof is refused (invalid_dpop_proof)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses an mTLS-bound subject_token as a sender constraint it cannot verify, never as unconstrained",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398). The mTLS arm is not exercised: the reference AS verifies DPoP proofs only, and refuses an mTLS-bound subject_token as a sender constraint it cannot verify."
+  },
+  {
+   "id": "child-delegation.creation.jti-single-use",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-creation",
+   "text": "for a DPoP proof, that the proof `jti` is single-use per {{RFC9449}}",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a DPoP proof already accepted is refused invalid_dpop_proof when presented again with fresh client authentication"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses a replayed DPoP proof presented with fresh client authentication",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398)."
+  },
+  {
+   "id": "child-delegation.creation.parent-cross-check",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-creation",
+   "text": "verify that any `parent` cross-check names the resolved Mission",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a parent cross-check naming a Mission other than the one the subject_token resolves to is refused (parent_mismatch)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > parent cross-check != the Mission resolved from subject_token -> parent_mismatch (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398)."
+  },
+  {
+   "id": "child-delegation.creation.parent-active",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-creation",
+   "text": "verify that the parent is `active`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a parent that is not active refuses the child-creation exchange with invalid_request and parent_not_active, creating no child"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > a parent that is not active refuses the child-creation exchange with invalid_request and parent_not_active, creating no child (@spec child-delegation#denial-reasons, mission#issuance-gating, #1154)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398)."
+  },
+  {
+   "id": "child-delegation.creation.children-object",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-creation",
+   "text": "verify that the applicable parent Authority Set entry's `delegation` member carries a `children` object ({{fanout}}) that permits child creation for the requested authority",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child creation whose parent Authority Set entry carries no children object permitting it is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1210 (D398)."
+  },
+  {
+   "id": "child-delegation.creation.unconstrained-refused",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-creation",
+   "text": "A `subject_token` that is not sender-constrained cannot carry this proof, so the Mission Issuer MUST refuse it with `invalid_request`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a subject_token with no cnf is refused invalid_request, creating no child and leaving the parent's derivation count unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses a subject_token that is not sender-constrained with invalid_request, creating and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398)."
+  },
+  {
+   "id": "child-delegation.request-processing.possession-step",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "request-processing",
+   "text": "Verify possession: the presenter controls the `subject_token`'s own confirmation key ({{RFC9449}} DPoP proof `jkt`, or {{RFC8705}} mTLS `x5t#S256`), and, for a DPoP proof, the proof `jti` is single-use.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "possession is verified after step 1: a request missing creation_request_id and its DPoP proof is refused invalid_request; a wrong-key proof is refused invalid_grant, a replayed one invalid_dpop_proof, and an mTLS-bound subject_token as a constraint the exchange cannot verify"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses a request missing both creation_request_id and its DPoP proof at step 1 (invalid_request), before possession",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses a replayed DPoP proof presented with fresh client authentication",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses an mTLS-bound subject_token as a sender constraint it cannot verify, never as unconstrained",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398). The mTLS arm is not exercised: the reference AS verifies DPoP proofs only, and refuses an mTLS-bound subject_token as a sender constraint it cannot verify. The lead-in carries the MUST."
+  },
+  {
    "id": "child-delegation.carryover.expansion-disclosure",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "deferred-window",
@@ -34174,6 +34455,204 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1118 (D326) specification slice; capability as for expansion.successor.subject-source-preserved. The reference AS asserts the successor's set against the source it establishes before computing anchors (expansion.ts), but no test is mapped or mutation-proved under this row and no completion exercises a narrowing that lands between adjudication and activation."
+  },
+  {
+   "id": "expansion.request-binding.resolve-from-subject-token",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "request-binding",
+   "text": "The Mission Issuer MUST resolve the predecessor Mission from `subject_token`, applying the issuance profile's token-to-Mission resolution for a Mission-bound access token.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion exchange resolves the predecessor from the subject_token: a predecessor cross-check naming another Mission is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/creation-idempotency.test.ts",
+     "name": "expansion idempotency (@spec expansion#creation-request-id) > predecessor cross-check != the subject_token-resolved Mission -> invalid_grant; a MATCHING cross-check leaves the fingerprint/idempotency behavior unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398)."
+  },
+  {
+   "id": "expansion.request-binding.possession",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "request-binding",
+   "text": "The Mission Issuer MUST verify that the presenter controls the `subject_token`'s own confirmation key: a {{RFC9449}} DPoP proof whose key matches the token's `cnf` `jkt`, or the {{RFC8705}} mutual-TLS certificate whose thumbprint matches the token's `cnf` `x5t#S256`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a DPoP proof whose key is not the subject_token's cnf jkt is refused invalid_grant, and an mTLS-bound subject_token is refused as a sender constraint the exchange cannot verify"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: possession (@spec expansion, #448) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses an mTLS-bound subject_token as a sender constraint it cannot verify, never as unconstrained",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398). The mTLS arm is not exercised: the reference AS verifies DPoP proofs only, and refuses an mTLS-bound subject_token as a sender constraint it cannot verify."
+  },
+  {
+   "id": "expansion.request-binding.unconstrained-refused",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "request-binding",
+   "text": "A `subject_token` that is not sender-constrained cannot carry this proof, so the Mission Issuer MUST refuse it with `invalid_request`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a subject_token with no cnf is refused invalid_request, leaving the predecessor active, nothing deferred and its derivation count unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses a subject_token that is not sender-constrained with invalid_request, leaving the predecessor and its count untouched",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398)."
+  },
+  {
+   "id": "expansion.request-binding.replay-rejected",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "request-binding",
+   "text": "Where the proof is a DPoP proof, its `jti` is single-use per {{RFC9449}}: the Mission Issuer MUST reject a replayed proof.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a DPoP proof already accepted is refused invalid_dpop_proof when presented again with fresh client authentication"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses a replayed DPoP proof presented with fresh client authentication",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398)."
+  },
+  {
+   "id": "expansion.request-binding.predecessor-cross-check",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "request-binding",
+   "text": "When `predecessor` is present, the Mission Issuer MUST verify the resolved Mission is the one it names ({{submission}}).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a predecessor naming a Mission other than the one the subject_token resolves to is refused invalid_grant, and a matching one leaves the operation unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/creation-idempotency.test.ts",
+     "name": "expansion idempotency (@spec expansion#creation-request-id) > predecessor cross-check != the subject_token-resolved Mission -> invalid_grant; a MATCHING cross-check leaves the fingerprint/idempotency behavior unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398)."
+  },
+  {
+   "id": "expansion.verification-order.possession-step",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "verification-order",
+   "text": "Verify possession: the presenter controls the `subject_token`'s own confirmation key ({{RFC9449}} DPoP proof `jkt`, or {{RFC8705}} mTLS `x5t#S256`), and, for a DPoP proof, the proof `jti` is single-use ({{request-binding}}).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "possession is verified after step 1: a request missing creation_request_id and its DPoP proof is refused invalid_request; a wrong-key proof is refused invalid_grant, a replayed one invalid_dpop_proof, and an mTLS-bound subject_token as a constraint the exchange cannot verify"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses a request missing both creation_request_id and its DPoP proof at step 1 (invalid_request), before possession",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: possession (@spec expansion, #448) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses a replayed DPoP proof presented with fresh client authentication",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses an mTLS-bound subject_token as a sender constraint it cannot verify, never as unconstrained",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1210 (D398). The mTLS arm is not exercised: the reference AS verifies DPoP proofs only, and refuses an mTLS-bound subject_token as a sender constraint it cannot verify. The lead-in carries the MUST."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
