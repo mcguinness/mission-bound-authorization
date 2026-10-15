@@ -1418,12 +1418,16 @@ The AS MUST deduplicate
 lifecycle requests by the
 triple (client, `mission_id`, `nonce`) for a bounded window. On a
 retransmit carrying a `nonce` already seen for that client and
-`mission_id`, together with a request byte-identical to the original,
-the AS MUST replay the original response rather than re-execute the
-operation. The same `nonce` paired with a request that is not
-byte-identical to the original MUST be refused `invalid_request`
-({{mission-status-errors}}); the AS MUST NOT answer it with the
-unrelated original response.
+`mission_id`, together with request members identical to the
+original's, the AS MUST replay the original response rather than
+re-execute the operation. The comparison covers the operation's
+request members (`operation`, `reason`, `suspend_until`, `on_expiry`,
+`expected_version`, and any member an extension operation defines),
+present or absent alike, and excludes client authentication
+parameters and HTTP headers, which a retry regenerates. The same
+`nonce` paired with request members that differ from the original's
+MUST be refused `invalid_request` ({{mission-status-errors}}); the AS
+MUST NOT answer it with the unrelated original response.
 
 The window MUST be at least the validity
 span of the signed response the AS would replay (its `iat` to `exp`,
