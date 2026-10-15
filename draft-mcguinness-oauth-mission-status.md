@@ -2040,8 +2040,8 @@ Authorization work for feedback that shaped these extensions.
   accepted, gets 400 `invalid_client` (#972 item 18).
 
 - A derivation refused because the Mission is `suspended` or
-  `completed` carries the `mission_error` value `mission_suspended` or
-  `mission_completed`, so a client can tell a refusal that a `resume`
+  `completed` carries the `mission_error` value `suspended` or
+  `completed`, so a client can tell a refusal that a `resume`
   lifts from a terminal one.
 - A caller may request the projection for an audience other than its
   own, such as each resource a Mission Issuance Grant consuming
