@@ -223,7 +223,7 @@ describe("the Mission access-token profile is met before any claim is trusted (@
     await expect(server.validateMissionToken(token)).rejects.toThrow();
   });
 
-  it("answers a token with no typ and a valid DPoP proof 401 at the HTTP route, before the PEP: no evidence and no decision", async () => {
+  it("answers a token with no typ and a valid DPoP proof 401 on the holder's open MCP session, before the PEP: no evidence and no decision", async () => {
     const x = pepDeciding();
     const routed = new McpPaymentsServer({
       writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
@@ -236,31 +236,35 @@ describe("the Mission access-token profile is met before any claim is trusted (@
     });
     const channel = await createHttpMcpChannel(routed);
     try {
-      const token = await mint({}, { typ: undefined });
-      const res = await fetch(channel.url, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          accept: "application/json, text/event-stream",
-          authorization: `DPoP ${token}`,
-          dpop: await dpopProofFor(holder, canonicalHtu(channel.url), "POST", token),
-        },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_invoice", arguments: { invoice_id: "inv-1" } } }),
-      });
-      await res.text();
-      expect(res.status).toBe(401);
-      expect(x.decided).toHaveLength(0);
-      expect(x.evidence.all()).toHaveLength(0);
-      // The same route carries a conforming token under the same key to the
-      // PDP, so the zeros above are the profile's refusal.
-      const { client, close } = await createHttpMediatedClient(channel.url, await mint(), holder);
+      // The holder opens a session with a conforming token, so a request on it
+      // that passed validation would be dispatched to the PEP: only the
+      // profile refusal keeps the malformed token from a decision.
+      const { client, sessionId, close } = await createHttpMediatedClient(channel.url, await mint(), holder);
       try {
+        expect(sessionId).toBeTruthy();
+        const token = await mint({}, { typ: undefined });
+        const res = await fetch(channel.url, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json, text/event-stream",
+            authorization: `DPoP ${token}`,
+            dpop: await dpopProofFor(holder, canonicalHtu(channel.url), "POST", token),
+            "mcp-session-id": sessionId as string,
+          },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_invoice", arguments: { invoice_id: "inv-1" } } }),
+        });
+        await res.text();
+        expect(res.status).toBe(401);
+        expect(x.decided).toHaveLength(0);
+        expect(x.evidence.all()).toHaveLength(0);
+        // The session's own conforming credential reaches the PDP.
         const read = await client.callTool("get_invoice", { invoice_id: "inv-1" });
         expect(read.ok, JSON.stringify(read)).toBe(true);
+        expect(x.decided).toHaveLength(1);
       } finally {
         await close();
       }
-      expect(x.decided).toHaveLength(1);
     } finally {
       await channel.close();
     }

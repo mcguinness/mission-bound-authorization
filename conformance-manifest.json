@@ -14112,12 +14112,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/token-profile.test.ts",
-     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > answers a token with no typ and a valid DPoP proof 401 at the HTTP route, before the PEP: no evidence and no decision",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > answers a token with no typ and a valid DPoP proof 401 on the holder's open MCP session, before the PEP: no evidence and no decision",
      "level": "cross-component",
      "surface": "resource-operation"
     }
    ],
-   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class. Validity includes the signing key's role (#825 PR 2a, D312): each token class verifies only under the kids locally pinned to it, so a token signed by a key this resource trusts for another class (or naming no kid) is refused like an untrusted key, before any claim is used; key-roles.test.ts proves it for access tokens on both transports, attenuation roots and transaction tokens. At the HTTP route (#825 acceptance item 5), a token that fails the profile (no `typ`) with a valid DPoP proof is answered 401 before the PEP, with no evidence and no decision request, while a conforming token on the same route reaches the PDP."
+   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class. Validity includes the signing key's role (#825 PR 2a, D312): each token class verifies only under the kids locally pinned to it, so a token signed by a key this resource trusts for another class (or naming no kid) is refused like an untrusted key, before any claim is used; key-roles.test.ts proves it for access tokens on both transports, attenuation roots and transaction tokens. At the HTTP route (#825 acceptance item 5), a token that fails the profile (no `typ`) with a valid DPoP proof, sent on the holder's open MCP session so that a validated request would be dispatched, is answered 401 before the PEP, with no evidence and no decision request, while a conforming token on the same route reaches the PDP."
   },
   {
    "id": "runtime.token-validation.audience-and-pop",
@@ -14630,21 +14630,9 @@
      "name": "a vendor lookup carries the store-resolved vendor to both bounds and to resource policy (live OpenFGA, D324) > refuses a vendor the Mission excludes though the credential allows it, parameter_violation",
      "level": "endpoint",
      "surface": "resource-operation"
-    },
-    {
-     "file": "src/services/mcp-payments/test/token-profile.test.ts",
-     "name": "on the same broad Mission and allowing policy, the credential alone decides a vendor lookup (@spec runtime#input-authority, #825) > over %s, refuses an invoice-only token before the PDP and permits a broad token",
-     "level": "endpoint",
-     "surface": "resource-operation"
-    },
-    {
-     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
-     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > over the %s channel, refuses vendor lookup under an invoice-only credential before the PDP and permits it under a broad one, on the same broad Mission",
-     "level": "endpoint",
-     "surface": "resource-operation"
     }
    ],
-   "notes": "#825 PR 2b (D312): both bounds are witnessed at the PDP itself, with the PEP pre-check bypassed. The credential bound arrives as `context.credential.authority` and is matched whole-entry, independently of the Mission entry: a narrower credential refuses an action the allowing Mission and policy permit, including its vendor (one object or every collection member) and amount constraints, embedded and over the remote channel. The current-effective-authority bound keeps its witnesses: a Mission narrowed after issuance refuses what the broader credential covers. The PEP still refuses, before any decision request, what it can establish itself (resource, action, vendors, amount). A vendor read carries the vendor the store resolved, as the vendor object it targets, so both bounds evaluate that target (D324); the live OpenFGA tests cover the same three outcomes against resource policy. On one broad Mission under an allowing policy, only the credential differs (#825 acceptance item 2): an invoice-only credential is refused vendor lookup before any decision request, with one Refusal Record naming the store-resolved vendor, and a broad credential is permitted, over HTTP and the mediated channel with the embedded PDP and over the remote and co-resident decision channels."
+   "notes": "#825 PR 2b (D312): both bounds are witnessed at the PDP itself, with the PEP pre-check bypassed. The credential bound arrives as `context.credential.authority` and is matched whole-entry, independently of the Mission entry: a narrower credential refuses an action the allowing Mission and policy permit, including its vendor (one object or every collection member) and amount constraints, embedded and over the remote channel. The current-effective-authority bound keeps its witnesses: a Mission narrowed after issuance refuses what the broader credential covers. The PEP still refuses, before any decision request, what it can establish itself (resource, action, vendors, amount). A vendor read carries the vendor the store resolved, as the vendor object it targets, so both bounds evaluate that target (D324); the live OpenFGA tests cover the same three outcomes against resource policy."
   },
   {
    "id": "runtime.decision-inputs.no-substitute-approved-set",
@@ -23678,9 +23666,21 @@
      "name": "the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > a PEP record carrying a diagnostic or another role's value is refused unsigned, while every closed PEP value signs",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "on the same broad Mission and allowing policy, the credential alone decides a vendor lookup (@spec runtime#input-authority, #825) > over %s, refuses an invoice-only token before the PDP and permits a broad token",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > over the %s channel, refuses vendor lookup under an invoice-only credential before the PDP and permits it under a broad one, on the same broad Mission",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, and decision_evidence_unverifiable. Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",

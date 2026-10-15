@@ -233,9 +233,10 @@ credential's own authority does not cover, one whole entry at a time, on the
 resource, action, vendors and amount it resolved; an approval requirement is
 honored only with a verified transaction credential's approval
 (`pep.ts:1434-1458`):
-`on the same broad Mission and allowing policy, the credential alone decides a vendor lookup (@spec runtime#input-authority, #825) > over %s, refuses an invoice-only token before the PDP and permits a broad token`.
+`on the same broad Mission and allowing policy, the credential alone decides a vendor lookup (@spec runtime#input-authority, #825) > over %s, refuses an invoice-only token before the PDP and permits a broad token` and
+`configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > over the %s channel, refuses vendor lookup under an invoice-only credential before the PDP and permits it under a broad one, on the same broad Mission`.
 A token that fails the profile is answered 401 at the HTTP route, before the
-PEP: `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > answers a token with no typ and a valid DPoP proof 401 at the HTTP route, before the PEP: no evidence and no decision`.
+PEP: `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > answers a token with no typ and a valid DPoP proof 401 on the holder's open MCP session, before the PEP: no evidence and no decision`.
 The PEP carries the credential's authority and expiry to the PDP as
 `context.credential` (`pep.ts:1538-1545`). The PDP enforces that authority as
 its own bound, one whole entry at a time, embedded and over the remote
@@ -244,7 +245,7 @@ channel, and refuses a missing or unreadable carrier or a passed expiry
 (`services/pdp/src/evaluate.ts:803-818`, `:1282-1309`):
 `the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > refuses an action the allowing Mission and policy permit but the narrower credential omits`,
 `credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a credential whose expiry has passed or cannot be read` and
-`configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > over the %s channel, refuses vendor lookup under an invoice-only credential before the PDP and permits it under a broad one, on the same broad Mission`.
+`Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)`.
 Decision Evidence names the bound that refused (`authority_bound`, D348). The
 Mission-bound path does not read `scope`. Remaining under #825: introspection
 does not yet validate a token's authority the way the PEP does before
