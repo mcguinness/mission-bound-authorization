@@ -17,9 +17,12 @@ import {
   AAT_TYP,
   type AuthorityEntry,
   type CredentialAuthorityEntry,
+  type Confirmation,
+  CredentialProfileError,
   credentialEntriesFromAuthority,
-  parseCredentialAuthority,
-  readTxnMissionClaim,
+  mediaTypeOf,
+  readCredentialProfileClaims,
+  readMissionAccessProfile,
   type TxnMissionClaim,
 } from "@mission/core";
 import type { JWTPayload } from "jose";
@@ -36,11 +39,8 @@ export function credentialAuthorityFrom(
   return credentialEntriesFromAuthority(entries as readonly AuthorityEntry[]);
 }
 
-/** RFC 9068 Section 2.1: the JWT access token type. */
-export const MISSION_ACCESS_TOKEN_TYP = "at+jwt";
-
-/** Accepted clock skew, in seconds, for an `iat` that reads slightly ahead of this resource's clock. */
-export const ISSUED_AT_SKEW_S = 60;
+/** The Mission access-token profile's type and `iat` skew, shared with AS introspection. */
+export { ISSUED_AT_SKEW_S, MISSION_ACCESS_TOKEN_TYP } from "@mission/core";
 
 /** Thrown when a verified payload does not meet its credential profile. */
 export class TokenProfileError extends Error {}
@@ -69,33 +69,34 @@ export interface VerifiedAttenuationRootClaims extends VerifiedCredentialClaims 
 }
 
 const nonEmptyString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
-const numericDate = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
-
-/** RFC 7515 Section 4.1.9: `typ` is a media type, compared without its `application/` prefix, case-insensitively. */
-function typeOf(typ: unknown): string | undefined {
-  if (typeof typ !== "string") return undefined;
-  const lower = typ.toLowerCase();
-  return lower.startsWith("application/") ? lower.slice("application/".length) : lower;
-}
 
 function requireType(typ: unknown, expected: string): void {
-  if (typeOf(typ) !== expected) throw new TokenProfileError(`token typ must be ${expected}`);
+  if (mediaTypeOf(typ) !== expected) throw new TokenProfileError(`token typ must be ${expected}`);
+}
+
+/** Read through the profile reader shared with AS introspection, refusing as this resource's {@link TokenProfileError}. */
+function asTokenProfile<T>(read: () => T): T {
+  try {
+    return read();
+  } catch (e) {
+    if (e instanceof CredentialProfileError) throw new TokenProfileError(e.message);
+    throw e;
+  }
+}
+
+/**
+ * @spec runtime-oauth#token-validation (#825, D402): the binding's structure is
+ * read as introspection reads it; this resource proves possession by DPoP
+ * only, so its profile requires `cnf.jkt`.
+ */
+function requireDpopKey(confirmation: Confirmation | undefined): string {
+  if (confirmation?.jkt === undefined) throw new TokenProfileError("token cnf.jkt must be a non-empty string");
+  return confirmation.jkt;
 }
 
 function requireCredentialClaims(payload: JWTPayload, nowS: number): VerifiedCredentialClaims {
-  if (!numericDate(payload.exp)) throw new TokenProfileError("token exp must be a NumericDate");
-  if (!numericDate(payload.iat)) throw new TokenProfileError("token iat must be a NumericDate");
-  if (payload.nbf !== undefined && !numericDate(payload.nbf)) throw new TokenProfileError("token nbf must be a NumericDate");
-  if (payload.exp <= nowS) throw new TokenProfileError("token is expired");
-  if (payload.iat > nowS + ISSUED_AT_SKEW_S) throw new TokenProfileError("token iat is in the future");
-  if (!nonEmptyString(payload.jti)) throw new TokenProfileError("token jti must be a non-empty string");
-  if (!nonEmptyString(payload.sub)) throw new TokenProfileError("token sub must be a non-empty string");
-  if (!nonEmptyString(payload.client_id)) throw new TokenProfileError("token client_id must be a non-empty string");
-  const cnf = payload.cnf as { jkt?: unknown } | undefined;
-  if (typeof cnf !== "object" || cnf === null || Array.isArray(cnf) || !nonEmptyString(cnf.jkt)) {
-    throw new TokenProfileError("token cnf.jkt must be a non-empty string");
-  }
-  return { sub: payload.sub, clientId: payload.client_id, jti: payload.jti, iat: payload.iat, exp: payload.exp, cnfJkt: cnf.jkt };
+  const { confirmation, ...claims } = asTokenProfile(() => readCredentialProfileClaims(payload, nowS));
+  return { ...claims, cnfJkt: requireDpopKey(confirmation) };
 }
 
 /**
@@ -106,17 +107,8 @@ function requireCredentialClaims(payload: JWTPayload, nowS: number): VerifiedCre
  * demotes the credential to another class.
  */
 export function readMissionAccessClaims(typ: unknown, payload: JWTPayload, nowS: number): VerifiedMissionAccessClaims {
-  requireType(typ, MISSION_ACCESS_TOKEN_TYP);
-  const base = requireCredentialClaims(payload, nowS);
-  const mission = readTxnMissionClaim(payload.mission);
-  if (!mission || !mission.id || !mission.issuer) throw new TokenProfileError("token mission claim is missing or malformed");
-  let credentialAuthority: readonly CredentialAuthorityEntry[];
-  try {
-    credentialAuthority = parseCredentialAuthority(payload.authorization_details);
-  } catch (e) {
-    throw new TokenProfileError(`token authorization_details: ${(e as Error).message}`);
-  }
-  return { ...base, mission, credentialAuthority };
+  const { confirmation, ...claims } = asTokenProfile(() => readMissionAccessProfile(typ, payload, nowS));
+  return { ...claims, cnfJkt: requireDpopKey(confirmation) };
 }
 
 /**
