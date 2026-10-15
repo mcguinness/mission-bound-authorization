@@ -149,6 +149,16 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-schrock-action-evidence-boundary:
+    title: "The Action Evidence Boundary for Consequential Agent Effects"
+    target: https://datatracker.ietf.org/doc/html/draft-schrock-action-evidence-boundary-07
+    author:
+      -
+        ins: I. Schrock
+        name: Iman Schrock
+    date: 2026-09-25
+    seriesinfo:
+      Internet-Draft: draft-schrock-action-evidence-boundary-07
 
 --- abstract
 
@@ -1972,6 +1982,47 @@ state and does not show that a task's goal was achieved. This
 document does not define how records are collected across producers,
 including across trust domains that share no evidence store.
 
+## Relationship to the Action Evidence Boundary {#aeb-relationship}
+
+The Action Evidence Boundary (AEB)
+({{I-D.draft-schrock-action-evidence-boundary}}) is a processing model
+for the executor-side boundary that controls a consequential effect:
+artifact verification, exact-action binding, consumption, provider
+entry, outcome classification, and reconciliation. That boundary is
+where a PEP or executor emits Execution Evidence. The two are
+complementary layers: AEB defines no execution-evidence format, and
+this document defines no admission lifecycle. They align as follows:
+
+- **Exact-action binding.** An AEB action digest covers every material
+  field that a pinned operation profile declares, including facts the
+  boundary resolves from the system of record, and no other field.
+  The runtime profile commits an action in two digests instead:
+  `parameter_digest` over the whole normalized parameter object and,
+  under Evaluation-Context Binding, `evaluation_context_digest` over
+  the resource-resolved facts an Operation Profile declares.
+- **Trusted mappings.** AEB joins independently encoded
+  representations of one action only under mappings the relying party
+  pins, never by guessing equivalence from names or descriptions, and
+  treats a missing or ambiguous mapping as indeterminate. The
+  comparing party applies the same discipline ({{comparing-party}}).
+  The scope differs: AEB joins representations of one action at one
+  boundary and does not define semantic equivalence between actions,
+  so it does not compare different actions at different resource
+  servers either.
+- **Satisfaction.** AEB's SATISFIED decision means that verified,
+  matched evidence fills every slot of the relying party's evidence
+  requirement for one action. Neither it nor a cross-entry comparison
+  result shows that a task's goal was achieved.
+- **Outcomes and reconciliation.** AEB classifies an invoked effect as
+  EXECUTED, FAILED, or INDETERMINATE, and holds an INDETERMINATE
+  attempt until authenticated reconciliation resolves it. Execution
+  Evidence is emitted once a final outcome exists: EXECUTED and FAILED
+  correspond to `outcome` `completed` and `failed`, and an AEB refusal
+  under a permit before provider entry corresponds to `suppressed`. An
+  attempt that stays INDETERMINATE leaves its Decision Evidence
+  orphaned, which a consumer classifies as undetermined-outcome
+  ({{security-considerations}}).
+
 # Extension Members {#evidence-extensions}
 
 A Decision Evidence Object, Execution Evidence Object, and Refusal
@@ -2509,7 +2560,8 @@ evidence representation their shared envelope carries (using the
   to its entry, and a party the deployment defines compares them,
   with an inconclusive result when a required record is missing. It
   states what the records cannot detect and that history does not
-  establish a reservation's current validity (#1019).
+  establish a reservation's current validity, and relates the records
+  to the Action Evidence Boundary (#1019).
 - Terminology: a Mission reference (`id`, `issuer`) is a binding's
   Mission Reference identifier and Controller namespace in that
   binding's representation, with the OAuth realization unchanged; the
