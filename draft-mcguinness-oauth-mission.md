@@ -2949,7 +2949,7 @@ the AS MUST NOT omit values from it: the response states exactly the
 authoritative statement of what was granted, which the client
 compares with its proposal ({{authority-proposal}}). The
 `mission_id` response parameter carries the Mission reference beside
-it ({{grant-binding}}).
+it ({{mission-response-parameters}}).
 
 The following is an example of a refresh request that narrows the
 canonical ERP Mission (the worked example of {{mission-record}}) to a
@@ -4297,7 +4297,8 @@ A **Mission Client** implements the client surfaces:
 - reading its granted authority from the token-response
   `authorization_details` echo ({{mission-bound-tokens}}); and
 - obtaining `mission_id` from the `mission_id` token-response parameter
-  or the `mission` claim's `id` ({{grant-binding}}), treating it as a
+  or the `mission` claim's `id` ({{mission-response-parameters}}),
+  treating it as a
   reference, not a credential.
 
 Beyond these mandatory roles, an implementation can additionally claim
