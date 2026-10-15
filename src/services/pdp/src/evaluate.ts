@@ -1427,11 +1427,11 @@ async function evaluateInner(
 
   // 6a. @spec runtime#read-binding: a bound bulk/cross-tenant read names a
   // COLLECTION, not one object: the check above names only the entry's first
-  // (representative) member, which proves Resource policy permits THAT
-  // member, never that it permits every OTHER member the read actually
-  // returns. `entry_digest` (Decision Evidence) anchors the Mission
-  // ceiling (what the Authority Set allows), not what Resource policy
-  // independently permits per object. When the request names the full
+  // (representative) member, which proves the Mission's relation holds for
+  // THAT member, never for every OTHER member the read actually returns.
+  // `entry_digest` (Decision Evidence) anchors the Mission ceiling (what the
+  // Authority Set allows), not the relation each member holds; Resource
+  // policy checks every member at step 6b. When the request names the full
   // collection (`resource.properties.vendor_ids`), every member is checked
   // independently here; the FIRST refusal denies the WHOLE read
   // out_of_authority. Narrowing the response to just the permitted subset
