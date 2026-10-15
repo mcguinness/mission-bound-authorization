@@ -371,8 +371,12 @@ Nothing else about the deferral changes. Polling, cancellation,
 client binding, and token delivery follow the deferred substrate and
 this profile, and a completed activation moves the pending approval
 to `approved` ({{state-machine}}). An evaluation that does not
-authorize activation creates no Mission; the pending approval remains
-open to human review or resolves to `denied`. Each pending approval
+authorize activation creates no Mission. The pending approval then
+either remains open for a separately authenticated, full `direct`
+approval by a human, or resolves to `denied`. That human path never
+turns a failed `governed_policy` check into a `governed_policy`
+activation: it is a `direct` approval event with its own record. Each
+pending approval
 resolves under one `approval_event_id`, so retried and concurrent
 completions yield one Mission and one record. The client selects no
 approval basis: this profile defines no grant or request parameter
@@ -564,7 +568,10 @@ the deferred grant type are registered by the deferred substrate
 - Policy Completion: a pending approval can complete under Mission
   Approval Governance's `governed_policy` basis, with the deferral's
   polling, cancellation, client binding, and token delivery unchanged
-  and no client-selected approval basis (#1185).
+  and no client-selected approval basis. A policy evaluation that does
+  not authorize activation leaves the request for a full `direct`
+  human approval or `denied`, never a `governed_policy` activation
+  (#1185).
 
 # Acknowledgments
 {:numbered="false"}
