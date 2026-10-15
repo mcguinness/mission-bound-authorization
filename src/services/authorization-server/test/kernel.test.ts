@@ -950,7 +950,10 @@ describe("signed status (@spec status#mission-status-response)", () => {
     const payload = JSON.parse(Buffer.from(p as string, "base64url").toString());
     expect(header.typ).toBe("mission-status-response+jwt");
     expect(payload.mission.state).toBe("active");
-    expect(payload.mission.fresh_until).toBeDefined();
+    // @spec status#mission-status-response — `state`, `expires_at` and
+    // `fresh_until` are REQUIRED on the dedicated response.
+    expect(payload.mission.expires_at).toBe(r.expires_at);
+    expect(Number.isNaN(Date.parse(payload.mission.fresh_until))).toBe(false);
     expect(payload.nonce).toBe("n1");
     expect(payload.authorization_details[0].resource).toBe(RESOURCE);
   });
