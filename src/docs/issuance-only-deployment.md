@@ -8,9 +8,8 @@ no separate Mission runtime PEP or PDP; ordinary Resource Server credential
 validation and authorization still apply. Every behavioral statement below is
 true of the reference implementation at this revision and cites the function
 or the exact test (`describe > it`) that shows it. A path with no witnessing
-test says "no test yet". This document is the documentation foundation for
-#873; §10 lists what that issue still requires. §7 shows how to run both
-configurations.
+test says "no test yet". §10 records #873's final acceptance, under D408. §7
+shows how to run both configurations.
 
 ## 1. Scope and claims
 
@@ -23,9 +22,17 @@ What the deployment is:
 - **Scope-only Resource Servers get a safe projection or no token.** A
   `scope`-only Resource Server receives only a `scope` projection the AS proved
   safe, or no token.
-- **Revocation cutoff.** Revocation stops at the issuance gate. Outstanding
-  tokens run to their own `exp`, or to the next request at a Resource Server
-  that introspects.
+- **Revocation cutoff.** Revocation stops new issuance at the issuance gate.
+  Outstanding tokens run to their own `exp` plus the Resource Server's clock
+  tolerance, or to the next request at a Resource Server that introspects. A
+  check completed before a revocation does not cancel admitted work, and an
+  issuance already past the state gate when a revocation commits still
+  completes (§4, Issuance failure and revocation boundaries; #250).
+- **One adopted operation.** The demonstrated path is `reports.read` at
+  `plain-rs`. `reports.write` is in the mapping and the ceiling so that the
+  negative vectors have a value to refuse; it is not an adopted operation of
+  this deployment, and adopting it would need its own classification and test
+  (§2).
 
 What it is not:
 
@@ -280,6 +287,60 @@ honest workarounds, not protocol requirements.
   plus the projected values, so the refresh token records what was granted,
   and oidc-provider's own RFC 6749 §6 check refuses a refresh naming more.
 
+### Issuance failure and revocation boundaries
+
+The code-flow access-token path, the one this deployment runs, has no
+derivation reservation and no authoritative acceptance point across the
+provider and Mission stores: the provider's access-token hook counts inside
+its own token save, with no operation identity and no acceptance callback
+([provider-integration-port.md](provider-integration-port.md) §4.2). The
+kernel reservation paths (the ID-JAG continuation and attenuation roots) are
+not on this path, and their tests are not evidence for it. Under D408 the
+unsupported cases below are accepted for this reference deployment; #250
+keeps the work, and no applicable requirement is thereby satisfied.
+
+| Case | Outcome on this deployment | Evidence or owner |
+|---|---|---|
+| A revocation committing between the state gate and signing | The issuance already past the gate completes: the token is signed, indexed and returned. A JWT-only Resource Server accepts it until its `exp` plus tolerance; an introspecting one refuses it on its next request, because introspection reads the current Mission state | Unsupported: revocation is not serialized against an in-flight issuance (#250). Code reading (port §3.5); no test |
+| A failure after the derivation is counted: a customizer refusal, a signing failure, a throw from the index listener, or on the code path a refresh-token or ID-token failure | The derivation stays counted; nothing refunds it | `a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > residual: the provider access-token hook counts before signing, so a code exchange that fails after the count leaves the failed derivation counted (#250)` (`derivation-counting.test.ts`). Refund unsupported (#250) |
+| A failure after signing or index acceptance | A token can exist that the client never received. The issuance index answers `active: true` for it until `exp`; nothing reconciles or revokes it | Unsupported (#250). No test |
+| A lost delivery or acknowledgement | A retry is a fresh derivation, counted again. An earlier token, if it was signed, stays valid until `exp`. No recorded artifact is replayed | Unsupported: there is no operation identity or idempotent replay (#250). No test |
+
+None of these is claimed as a safe refund, an idempotent replay, or a
+refusal of every issuance completed after an acknowledged revocation.
+
+### Restart and recovery
+
+The shipped launcher (`pnpm issuance-only`, `startIssuanceOnly` in
+`demo/src/issuance-only.ts`) builds the AS with the default in-memory stores,
+so a restart loses every store. The Mission kernel also accepts a file-backed
+single-writer store as an opt-in (`kernelStore`,
+[control-plane-deployment.md](control-plane-deployment.md)); it restores the
+Mission kernel only, never the provider.
+
+| State | Shipped launcher (in memory) | File-backed Mission kernel |
+|---|---|---|
+| Approval evidence and Mission Records (anchors, authority-source roots, `derivation_count`, `grant_id`), lifecycle events, tombstones | Lost | Retained (port §4.5); kernel-level test only: `restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart` (`control-plane-fanout.test.ts`) |
+| Provider interactions, grants, authorization codes, refresh tokens | Lost | Lost: an outstanding refresh token is unknown, and oidc-provider refuses it `invalid_grant` |
+| The issuance index (`TokenIssuanceStore`), `MissionBoundGrantStore`, `DelegationFamilyStore` | Lost | Empty |
+| Signing identity | Regenerated under the same `kid` (D25) | Regenerated |
+| A Mission after the restart | None exists | Stranded: an `active` Mission whose grant is gone stays `active` until `expires_at` or a revocation, and nothing can derive from it |
+
+Consequences, in both configurations:
+
+- A pre-restart access token fails introspection: the AS holds neither its
+  key nor its index row. An introspecting Resource Server refuses it.
+- A JWT-only consumer that cached the old key keeps accepting it until `exp`
+  plus tolerance, and `plain-rs` rejects post-restart tokens until its JWKS
+  cache refreshes (§2). A restart is not revocation.
+- Every outstanding refresh token is refused; the client starts a new
+  authorization.
+
+No test boots the assembled AS across a restart, so the file-backed outcomes
+come from the code (port §4.5). Recovery this deployment does not support is
+unsupported, not partially durable: cross-store recovery and fencing are
+#250's, and durable signing identities are #831's.
+
 ## 5. Deployment Profile instance
 
 This uses the architecture's issuance-only example shape, filled with this
@@ -293,6 +354,11 @@ deployment's values: the reference AS and `plain-rs`.
 - "approved-record integrity" is claimed only in its defined sense: the
   anchors reproduce from the retained record. It is not independent proof
   against an issuer that substitutes both the record and its hashes.
+- The retained records are the Mission Record with its approval evidence and
+  anchors, its lifecycle events, and the per-token issuance index. At the
+  shipped launcher all are in memory and a restart loses them (§4, Restart and
+  recovery); durability is not inferred from the optional file-backed kernel,
+  which never restores the provider.
 
 ~~~ json
 {
@@ -327,12 +393,16 @@ deployment's values: the reference AS and `plain-rs`.
     "a restart is not revocation: consumers holding the old key keep accepting pre-restart tokens until exp, and plain-rs rejects post-restart tokens until its JWKS cache refreshes (up to 10 minutes)",
     "an introspection call that exceeds its timeout (default 2000 ms) or fails refuses service with 503; the plain RS never falls back to the JWT alone",
     "provider token acceptance and derivation counting are not coupled atomically (#250)",
-    "grants, the issuance index and the delegation-family store are in memory",
+    "a revocation committing while an issuance is past the state gate does not stop that issuance (#250)",
+    "a failure after the derivation is counted is never refunded (#250)",
+    "a token signed and indexed but never delivered is neither reconciled nor revoked (#250)",
+    "a retry after a lost response is a fresh, counted derivation; no artifact is replayed (#250)",
+    "the shipped launcher keeps every store in memory: a restart loses Missions, grants, refresh tokens and the indexes; a file-backed Mission kernel restores the kernel only, never the provider (#250)",
     "the scope-projection mapping's integrity is repository review; it is not fetched or signed",
     "Intent-only requests depend on an oidc-provider workaround (a marked, AS-written authorization_details)",
     "the decision-time scope check projects the derived set without capability_sources, so a catalog-sourced scope_only entry can pass at the decision and refuse at the token endpoint",
     "a repeated decision on one interaction binds a second grant to the committed record",
-    "the JWT-customizer backstop has no test yet"
+    "the JWT-customizer backstop has no test yet (#870)"
   ]
 }
 ~~~
@@ -659,16 +729,19 @@ introspection response carries the OAuth binding's `mission` member
 
 ## 10. Status
 
-A proposed reference deployment. It is not an owner-accepted conformance
-class and makes no production-readiness claim.
+A reference deployment of the issuance-only floor, accepted under D408 as a
+bounded reference deliverable. It is not an owner-accepted conformance class,
+not full floor conformance, and makes no production-readiness claim. Provider
+acceptance and recovery guarantees are unsupported and owned by #250, and the
+mandatory requirements they bear on are not waived. #253's AS-native
+deployment builds on this floor and inherits these limits.
 
-This document is the documentation foundation for #873: the deployment
-contract, the claim and residual matrix, a hook inventory, and an index of
-existing evidence. The full obligation matrix is in
-[provider-integration-port.md](provider-integration-port.md) (#893, D184).
-#873 still requires the following before it closes:
+#873's acceptance, item by item:
 
-- **The executable acceptance pack's missing cases:**
-  - revoke-during-issuance and failure after reservation or artifact
-    acceptance (tied to #250);
-  - restart and uncertain-recovery behavior for any persistence claim.
+| Acceptance item | Evidence |
+|---|---|
+| `provider-integration-port.md` with the eight-column matrix and visible unsupported obligations | [provider-integration-port.md](provider-integration-port.md) (#893, D184) |
+| Each revoke-during-issuance and failure-after-counting, signing or acceptance case has a test or an explicit unsupported outcome and owner; no kernel reservation witness is claimed as provider evidence | §4, Issuance failure and revocation boundaries |
+| Every persistence claim states its restart outcome or cites its test; nothing durable is inferred from a file-backed Mission kernel | §4, Restart and recovery; port §4.5 |
+| Every advertised claim cites a test or is narrowed to an explicit residual; the implementation and the complete applicable specification set are pinned | §1 to §6 (every `describe > it` citation in this document and the port resolves to a test); §9 |
+| Final checks and a completion D-row; no normative text, #424 schema, or high-consequence or runtime claim | The closing PR's checks; its D-row on merge |

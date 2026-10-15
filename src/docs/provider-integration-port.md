@@ -676,7 +676,11 @@ order:
 A JWT-only Resource Server accepts the token from step 3 on, without the AS
 knowing it was delivered. No authoritative issuance commit exists across the
 provider and Mission stores. Defining one is #250's first acceptance item
-(§4.6).
+(§4.6). The boundary cases this leaves open (a revocation between the gate
+and signing, a failure after counting, a failure after signing or index
+acceptance, a lost delivery), each with its outcome and owner, are listed in
+[issuance-only-deployment.md](issuance-only-deployment.md) §4; D408 accepts
+them as unsupported for that reference deployment.
 
 ### 4.3 Failed-issuance counting
 
@@ -737,8 +741,9 @@ provider and Mission stores. Defining one is #250's first acceptance item
 `buildAuthorizationServer` awaits `kernel.recoverAtBoot()` after the provider
 exists. It marks deliveries owed to removed subscribers, drains the outbox,
 prunes settled rows and tombstone detail, and marks unreleased reservations
-`unacknowledged` (`kernel.ts`). For this path, a restart on the file-backed
-kernel leaves:
+`unacknowledged` (`kernel.ts`). The shipped issuance-only launcher uses the
+in-memory default, so a restart there loses the Mission kernel as well. For
+this path, a restart on the file-backed kernel leaves:
 
 - **Retained:** Mission Records, their committed authority-source roots,
   `derivation_count`, `grant_id`, lifecycle events and tombstones.
@@ -752,6 +757,10 @@ kernel leaves:
   `exp` (`issuance-only-deployment.md` §2).
 - **Stranded:** an `active` Mission whose grant is gone. Nothing can derive
   from it, and it stays `active` until `expires_at` or a revocation.
+
+A restart is not revocation: a consumer holding the old key keeps accepting
+pre-restart tokens until `exp` plus tolerance. Durable signing identities are
+#831's.
 
 Committed authority-source roots are the one thing reconciled at kernel
 construction (#827). A row that predates them gains one only from trusted
