@@ -23,7 +23,7 @@ console above is the runnable interactive surface.
 
 ## The headless scenario runner
 
-`pnpm demo` runs scenarios 0–14 against the composed in-process stack. The
+`pnpm demo` runs scenarios 0–15 against the composed in-process stack. The
 scenario bodies are the per-milestone integration tests (they compose the
 services in one process; OpenFGA must be up). Boot:
 
@@ -31,7 +31,7 @@ services in one process; OpenFGA must be up). Boot:
 docker compose up -d          # OpenFGA (TLS + preshared) + Jaeger
 pnpm -C src setup             # dev certs + .env
 pnpm -C src install
-pnpm -C src demo              # scenarios 0-14 + scorecard
+pnpm -C src demo              # scenarios 0-15 + scorecard
 ```
 
 ## Decision-channel mode
@@ -72,6 +72,35 @@ alongside its other service listeners. The agent tool surface has no such hook.
 | 12 | Cross-domain via EMA/ID-JAG (LedgerCloud, lifetime-bounded) | M9 |
 | 13 | Sub-agent delegation (two-hop chain, per-instance revocation) | M12 |
 | 14 | The 02:00 resume (harness stop-on-non-active) | M12 |
+| 15 | An agent acting for its own workload principal (headless PAR -> Dana approves -> `sub` is the workload) | #1194 |
+
+### Scenario 15: an agent acting for its own workload principal
+
+`services/authorization-server/test/workload-principal-agent.test.ts`
+needs no OpenFGA:
+
+```
+pnpm -C src exec vitest run services/authorization-server/test/workload-principal-agent.test.ts
+```
+
+1. The `ledger-reconciler` agent pushes its own request (PAR) and runs the
+   authorization request with no user present.
+2. Dana, authorized to approve for the workload principal
+   `agt_ledger_reconciler` and to activate its `service_owned` source,
+   approves on the trusted approval service. Bob, who may not approve for
+   that Subject, is refused, and a request beyond the source's read-only
+   ceiling is refused `access_denied`.
+3. The record names `agt_ledger_reconciler` as Subject, `ledger-reconciler`
+   as client and Dana as consent principal. The access token's `sub` is the
+   workload principal, its `client_id` is the agent, and it carries no
+   `act`.
+4. Refresh and the agent's own Token Exchange keep that Subject and client.
+5. A caller without the lifecycle grant gets the not-found response. Dana's
+   lifecycle credential revokes the Mission; refresh and the exchange are
+   then refused.
+
+Delegation to a sub-agent within the same Mission, with `act` naming the
+sub-agent, waits on #869.
 
 Exhibit mode (annotated wire captures, handbook Appendix B) is a follow-on
 (O-28); the scenario runner is the reproducible path today.

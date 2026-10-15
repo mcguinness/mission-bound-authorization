@@ -840,8 +840,10 @@ operations directly:
 
 - **Compromised Subject.** Filter `subject`, enumerate to triage, then
   bulk `revoke` (the worked examples above).
-- **Decommissioned client.** Filter `client_id`, bulk `revoke`; every
-  Mission the retired Agent submitted stops deriving.
+- **Compromised or retired agent.** Filter `client_id`, then bulk
+  `revoke`; every Mission the Agent submitted stops deriving, whatever
+  its authority source, an agent acting for its own workload principal
+  included.
 - **Key or approval-surface compromise.** Filter `created_after` and
   `created_before` around the compromise window, bulk `revoke`; every
   Mission approved while the surface was suspect is terminated,
