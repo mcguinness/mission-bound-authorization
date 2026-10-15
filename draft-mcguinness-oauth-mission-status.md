@@ -720,7 +720,8 @@ Caching follows these rules:
   (`mission_id`, audience), or on (`mission_id`, requester
   identifier) for a state-only response, until `mission.fresh_until`.
 - **Hard stop.** Consumers MUST NOT use a cached response after
-  `mission.fresh_until`. In particular, a consumer MUST NOT extend
+  `mission.fresh_until`, subject only to the skew tolerance below. In
+  particular, a consumer MUST NOT extend
   reliance on a cached `suspended` (or any non-`active`) response
   beyond `mission.fresh_until`.
 - **Freshness cap.** When the AS advertises
