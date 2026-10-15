@@ -37,15 +37,15 @@ async function closeStack(stack: DemoStack): Promise<void> {
 }
 
 describe("the composed stack's declared outcome reconciler (@spec runtime#evidence outcome reconciliation, #1103)", () => {
-  let fgaConnect: MockInstance;
+  let fgaBootstrap: MockInstance;
   beforeAll(() => {
-    fgaConnect = vi.spyOn(Fga, "connect").mockResolvedValue({
-      fga: { checkWithContext: async () => true } as unknown as Fga,
+    fgaBootstrap = vi.spyOn(Fga, "bootstrap").mockResolvedValue({
+      fga: { checkWithContext: async () => true, checkStored: async () => true, client: { write: async () => ({}) }, modelId: "test" } as unknown as Fga,
       storeId: "test",
       modelId: "test",
     });
   });
-  afterAll(() => fgaConnect.mockRestore());
+  afterAll(() => fgaBootstrap.mockRestore());
 
   for (const pdpMode of ["co-resident", "remote"] as const) {
     it(`composeStack returns the declared reconciler stopped, a third of the PT15M window apart, and one run over the ${pdpMode} channel completes every step`, async () => {
@@ -55,6 +55,7 @@ describe("the composed stack's declared outcome reconciler (@spec runtime#eviden
         pdpMode,
         claimsFile: tempClaimsFile(),
         writeReservationsFile: tempReservationsFile(),
+        resourcePolicyStore: { bootstrap: "development" },
       });
       try {
         expect(stack.reconciler.started).toBe(false);
@@ -73,7 +74,13 @@ describe("the composed stack's declared outcome reconciler (@spec runtime#eviden
   it("a prior process's unsettled claim raises one operator_alert JSON line on stderr when the restarted stack's reconciler runs past its window", async () => {
     const claimsFile = tempClaimsFile();
     const writeReservationsFile = tempReservationsFile();
-    const options = { openfgaUrl: "http://unused.test", presharedKey: "unused", claimsFile, writeReservationsFile };
+    const options = {
+      openfgaUrl: "http://unused.test",
+      presharedKey: "unused",
+      claimsFile,
+      writeReservationsFile,
+      resourcePolicyStore: { bootstrap: "development" } as const,
+    };
     const startedAt = Date.now();
     // The first process obtains a wire permit and stops before redeeming it.
     const before = await composeStack(options);
@@ -86,6 +93,7 @@ describe("the composed stack's declared outcome reconciler (@spec runtime#eviden
       missionId = view.id;
       const token: TokenFacts = {
         sub: "alice",
+        iss: before.issuer,
         clientId: "ap-agent",
         cnfJkt: "jkt",
         mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
