@@ -70,10 +70,11 @@ redirect-capable user agent, such as a command-line agent on a remote
 host, cannot complete that flow. This document defines an optional,
 experimental profile of the OAuth 2.0 Device Authorization Grant for
 that client: the client submits its Mission Intent and authority
-proposal at the device authorization endpoint, the user approves the
-derived authority on a second device, and the client's polling token
-request completes the Mission's creation. A dedicated metadata member
-advertises support; generic device-grant support never implies it.
+proposal at the device authorization endpoint, the user's approval of
+the derived authority on a second device creates the Mission, and the
+client's polling token request delivers the Mission's credentials. A
+dedicated metadata member advertises support; generic device-grant
+support never implies it.
 
 --- middle
 
