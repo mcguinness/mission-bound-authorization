@@ -3481,6 +3481,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           jti,
           ...(typeof payload.scope === "string" ? { scope: payload.scope } : {}),
           ...(cnf ? { cnf } : {}),
+          // @spec mission#introspected-consumption, RFC 8693 Section 4.1 (#904):
+          // a delegated token's actor chain, carried unchanged. Only this active
+          // body carries it; every inactive or unauthorized answer is built
+          // without it.
+          ...(payload.act !== undefined ? { act: payload.act } : {}),
           token_type: confirmation?.jkt ? "DPoP" : "Bearer",
           authorization_details,
           mission: disclosedMission,
