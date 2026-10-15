@@ -383,10 +383,11 @@ grant lineage, a profile-defined reusable grant in the OAuth binding's
 sense, and the refresh-token family its redemption emits inherits
 that binding atomically with its issuance. Issuance gating applies to
 the first redemption as to any later derivation. The OAuth binding's
-token rules apply unchanged, including its rule that Mission-bound
-refresh tokens are sender-constrained or rotated; a client can
-sender-constrain the issued tokens with DPoP {{RFC9449}} on the
-device access token request.
+token rules apply unchanged ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission-Bound Access Tokens"); they require a public client's
+Mission-bound refresh token to be sender-constrained or rotated. A
+client can sender-constrain the issued tokens with DPoP {{RFC9449}}
+on the device access token request.
 
 A client MUST NOT use the tokens of a successful device access token
 response unless the response carries `mission_id`,
