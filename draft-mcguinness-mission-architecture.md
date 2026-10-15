@@ -223,6 +223,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -1415,6 +1423,7 @@ The same mechanisms, placed on the authority path
 | --- | --- | --- |
 | Direct approval | a proposal to an approval event (`direct` basis) | `oauth-mission` |
 | Template dispatch | a template ceiling to an approval event (`template` basis) | `oauth-mission-template` |
+| Governed policy approval | a proposal to an approval event a policy decides under a policy version a human approved (`governed_policy` basis) | `mission-approval-governance` |
 | Expansion | a freshly adjudicated successor Authority Set, for widening or restoration | `oauth-mission-expansion` |
 | Progressive authorization | an Expansion successor adjudicated by policy within a pre-consented ceiling (`ceiling_drawdown` basis) | `oauth-mission-progressive` |
 | Containment | narrows the Effective Authority Set; restored only through an Expansion successor | `oauth-mission-containment` |
@@ -1497,9 +1506,10 @@ that principal authorized, and the proposer is never the approver.
 
 A deterministic, versioned policy can adjudicate activation at machine
 speed within a ceiling a human consented to (the `template`,
-`policy_drawdown`, and `ceiling_drawdown` authorization bases that
-companion profiles define on the OAuth binding's extension point; see
-Authorization bases in {{invariants}}). The policy is the instance's
+`policy_drawdown`, `ceiling_drawdown`, and `governed_policy`
+authorization bases that companion profiles define on the OAuth
+binding's extension point; see Authorization bases in
+{{invariants}}). The policy is the instance's
 adjudication mechanism; the human or human-accountable principal who
 consented to the policy or the template stays the accountable Approver
 (`consent_principal`), and `policy_version` keeps that chain
@@ -1516,7 +1526,10 @@ Approver's check ({{I-D.draft-mcguinness-oauth-mission}}). A generated
 approver reading attacker-influenced proposals is itself an injection
 surface. The high-consequence classes stay on a fresh human decision,
 per the progressive profile's prohibited set
-({{I-D.draft-mcguinness-oauth-mission-progressive}}).
+({{I-D.draft-mcguinness-oauth-mission-progressive}}); under
+`governed_policy`, a policy decides one only under a committed,
+class-named exception
+({{I-D.draft-mcguinness-mission-approval-governance}}).
 
 ### Mission Creation Paths {#creation-paths}
 
@@ -1536,6 +1549,7 @@ which task it may perform.
 | A user approves, on a second device, the task of an agent with no redirect (`oauth-mission-device-authorization`, experimental) | the user's (`user_delegated`) | that user, at the approval event on the verification page | a device authorization request, then device-code polling |
 | An administrator approves an agent's own task (`oauth-mission` with `oauth-mission-approval`, or `mission-authority-server`) | the agent's (`service_owned`) or a governed policy's (`organizational`) | the administrator, at the approval event | the authorization endpoint, or a pending request resolved later with no user present |
 | A policy approves each run of a recurring task (`oauth-mission-template`, experimental) | the source retained at template consent | a dispatch policy, within a template a human consented to once | one token request from a listed dispatcher |
+| A policy approves an agent's own task (`mission-approval-governance` with `oauth-mission-approval`) | a source the approved policy admits (`service_owned` or `organizational`) | a policy version a human approved, evaluated at the creation commit (`governed_policy`) | a pending request the policy resolves with no human present |
 | An agent starts a sub-agent (`oauth-mission-child-delegation`) | the Parent Mission's | a fresh human approval, or the parent's delegation policy (`policy_drawdown`) | a child-creation token exchange |
 {: #creation-paths-table title="Mission creation paths"}
 
@@ -1953,6 +1967,9 @@ Authorization bases:
   - `ceiling_drawdown`: a successor a policy adjudicates within an
     authority ceiling the Approver consented to at the initial
     approval.
+  - `governed_policy`: an agent's own proposal a policy adjudicates
+    under a policy version a human approved
+    ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
   Every basis fixes the same accountable human as `consent_principal`;
   the bases differ only in what activated this instance and what root
@@ -2705,11 +2722,16 @@ Each level includes the one before it:
   are issued, the subset rule.
 
   Where the binding gates issuance, a deployment that adds only a
-  freshness surface (Mission Status or introspection with a published
-  staleness bound, {{I-D.draft-mcguinness-oauth-mission-status}})
-  gains state-aware reliance: a revocation cutoff within that bound,
-  without per-action enforcement. That is a half-step into the next
-  level, not a level of its own.
+  freshness surface (Mission Status, introspection, or the OAuth
+  binding's issuer-local resolution, with a published staleness
+  bound, {{I-D.draft-mcguinness-oauth-mission-status}},
+  {{I-D.draft-mcguinness-oauth-mission}}) gains state-aware reliance:
+  a revocation cutoff within that bound, without per-action
+  enforcement. That is a half-step into the next level, not a level
+  of its own. A per-use read stops requests that arrive after the
+  revocation commits; it does not exclude an effect admitted before
+  it, which needs a serialization boundary between the revocation and
+  the effect.
 
   **Verification**: illustrative scenarios for this level, each traced
   to the rule its home document states, are in
@@ -3361,9 +3383,10 @@ The OAuth binding's invariants carry the deployment:
 
 The deployment sizes token lifetime to its tolerated staleness. Where
 the authorization server offers introspection, a resource server that
-introspects per request stops honoring a token at its next request
-once the Mission leaves `active`, with no Mission-specific code
-({{I-D.draft-mcguinness-oauth-mission}}).
+introspects per request, or uses the binding's issuer-local resolution
+inside the issuer's boundary, stops honoring a token at its next
+request once the Mission leaves `active`, with no Mission-specific
+code ({{I-D.draft-mcguinness-oauth-mission}}).
 
 The deployment claims approved-record integrity and bounded revocation
 latency ({{assurance-claims-axis}}); {{deployment-profile-examples}}
@@ -3445,7 +3468,11 @@ Without the progressive profile, the same pattern runs as ordinary,
 freshly approved unit Missions with deferred approval
 ({{I-D.draft-mcguinness-oauth-mission-approval}}) absorbing the
 volume: the experimental profile changes the unit economics, not the
-governance shape.
+governance shape. A single agent can also propose each unit Mission
+itself and have a policy approve it under a policy version a human
+approved (`governed_policy`,
+{{I-D.draft-mcguinness-mission-approval-governance}}), resolving the
+pending request with no reviewer.
 
 ## The Mission Deployment Profile {#deployment-profile}
 
@@ -4200,7 +4227,7 @@ with no `suspended` state and its own termination reasons, served by
 | `oauth-mission-consent-evidence` | The `consent_rendering_hash` anchor and signed evidence of what the Approver was shown. |
 | `oauth-mission-approval` | Asynchronous approval over the deferred substrate. |
 | `oauth-mission-device-authorization` | Experimental: Mission Intent carriage on the RFC 8628 device grant, approved on a second device, for a client with no redirect. |
-| `mission-approval-governance` | The Approval Governance Record: authenticated assertions behind an approval, committed atomically with activation. |
+| `mission-approval-governance` | The Approval Governance Record: authenticated assertions behind an approval, committed atomically with activation; and the `governed_policy` basis it backs. |
 | `oauth-mission-approval-revision` | Experimental: in-review narrowing revision of a deferred proposal. |
 | `oauth-mission-template` | Experimental: one consent to a template's ceiling; each dispatch is an ordinary, policy-instantiated Mission. |
 
@@ -4282,6 +4309,20 @@ with no `suspended` state and its own termination reasons, served by
   companion: a client with no redirect submits its Mission Intent at
   the RFC 8628 device authorization endpoint, and the user approves
   on a second device (#1202). No profile's requirements change.
+
+- The policy-adjudicated authorization bases, Authorization bases,
+  Mission creation paths, the transition table, and the
+  Standing-Agent Pattern include `governed_policy`, Approval
+  Governance's basis for a policy version a human approved; under it,
+  a high-consequence class needs a committed, class-named exception
+  (#1185).
+
+- The freshness half-step names the OAuth binding's issuer-local
+  resolution of opaque tokens beside Mission Status and
+  introspection, and the issuance-only deployment names it as the
+  local equivalent of per-request introspection; a fresh read does
+  not by itself exclude an effect admitted before a revocation
+  commits (#1203).
 
 - Approval and Lifecycle states the OAuth lifecycle as `active`,
   Mission Status's `suspended`, and `terminated` with a reason from

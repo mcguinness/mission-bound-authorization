@@ -292,6 +292,7 @@
     "draft-mcguinness-aauth-mission-expiry",
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-aauth-management",
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-authzen",
@@ -1120,6 +1121,7 @@
     "draft-mcguinness-mission-capability-binding",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-shaping",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approved-set-verification",
@@ -1380,6 +1382,7 @@
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
@@ -2195,6 +2198,7 @@
     "draft-mcguinness-oauth-mission"
    ],
    "references": [
+    "draft-mcguinness-mission-metering",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-cross-domain"
    ]

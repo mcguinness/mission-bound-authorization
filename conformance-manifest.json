@@ -15,8 +15,8 @@
     "content_sha256": "d674f8e075e2ca6797a7882264edb52e475f847aecbd1f60d987f9a45956dcde"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "27ea2fc059d9063aac5f99516bd01fa6f0b0658c",
-    "content_sha256": "90f4ba51c9752c26ad7aef7e68aff078b4f5ff6e6e19467b57b3c0c65759946a"
+    "revision": "77099bab921490c038b68590fce7ea5257c7de78",
+    "content_sha256": "3d0b6ce4af7bb061e0a4acf7497ab123f4c96b36bc6b90204ffe265f11c3c04c"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
@@ -71,8 +71,8 @@
     "content_sha256": "8ba3ac1771c2caa2541e65201b6e335e412e4b8aeb8c27a3539dc6bff6a741e6"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
-    "content_sha256": "1929eef4d3128482f7ce4ed5cff9f79b63eef818262e15f8ecb3d155d3dc64b7"
+    "revision": "1c07de2093994575b1b4d39c6fd21cfe2848c045",
+    "content_sha256": "96d11f6058db7d7be65345cb50d004ef82835140ef0001c43a7b3cd743193101"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
@@ -91,8 +91,8 @@
     "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
-    "content_sha256": "2825d7ecba19859737d4d31a0b07485c45616db1d4fca50f2f31e41aa9442e44"
+    "revision": "9d077906dd19a39794a7ce4c6c6db5faa5e720df",
+    "content_sha256": "d547739684cfda29b0ea24a14118e4d57b624bc64380d3ffd5dcacd20895e6b3"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
@@ -133,6 +133,10 @@
    "draft-mcguinness-mission-mandate.md": {
     "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
     "content_sha256": "4f8b85890777de9b580a511bfcc15e31cba4284603f2438b152ef4aeb26840b9"
+   },
+   "draft-mcguinness-oauth-mission-approval.md": {
+    "revision": "62a7c5bbea04dcc7bf598d791c788b0b9f2def31",
+    "content_sha256": "26b6d44e7435641dd9a7d515f816eef5c0db707ecd870abf7f27c17ea5d1fe29"
    },
    "draft-mcguinness-oauth-mission-device-authorization.md": {
     "revision": "6c1c73f0955c0837c2c8435cc4c50db6b7ce3ffc",
@@ -242,6 +246,8 @@
    "core.standing-consent",
    "core.standing-consent-recency",
    "core.governance-record",
+   "approval-governance.governed-policy",
+   "deferred-approval.policy-completion",
    "template.dispatch",
    "progressive.ceiling-drawdown",
    "progressive.drawdown-derivation-limits",
@@ -3177,7 +3183,7 @@
    "id": "core.approval-basis.adjudication-direct-human",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
-   "text": "Where `adjudication` is present for `direct`, `kind` MUST be `human` unless `governance_record` is `true`",
+   "text": "Where `adjudication` is present for `direct`, `kind` MUST be `human`, with or without `governance_record`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -3190,12 +3196,12 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where a directly approved Mission populates approval_basis.adjudication, kind is human, naming no principal beyond consent_principal, unless governance_record is true, in which case kind instead follows the Approval Governance Record override"
+    "normative": "where a directly approved Mission populates approval_basis.adjudication, kind is human, naming no principal beyond consent_principal, whether or not governance_record is true; a direct Mission never reports kind: policy"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New member (#701, revised per #716 review): now OPTIONAL, not REQUIRED, since no implementation yet emits approval_basis.adjudication and the family's standing-consent constructors (Template dispatch, Child Delegation, Ceiling drawdown) do not populate it in this revision. Round-trips without a redundant authority-bearing field: kind: human carries no further members since consent_principal already names the deciding human."
+   "notes": "New member (#701, revised per #716 review): now OPTIONAL, not REQUIRED, since no implementation yet emits approval_basis.adjudication and the family's standing-consent constructors (Template dispatch, Child Delegation, Ceiling drawdown) do not populate it in this revision. Round-trips without a redundant authority-bearing field: kind: human carries no further members since consent_principal already names the deciding human. #1185 (D387): the governance_record override that let a direct approval report kind: policy is removed; a policy decides an instance only under a standing-consent basis such as governed_policy."
   },
   {
    "id": "core.approval-basis.adjudication-standing-consent-policy",
@@ -3371,9 +3377,9 @@
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
-   "text": "When `true`, `kind` MUST equal the record's accountable assertion's own `kind`",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "issuance-relationship",
+   "text": "Where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `kind`.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -3384,12 +3390,34 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "whenever adjudication.governance_record is true, kind is derived from the Approval Governance Record's own accountable assertion (human or policy) rather than from approval_basis.type, so a direct Mission governed by a policy-kind assertion under the recency exception reports kind: policy, never a value that names the record itself"
+    "normative": "where a governed Mission populates approval_basis.adjudication with governance_record true and the Approval Governance Record carries an accountable assertion, that assertion's kind equals adjudication.kind, which the approval basis fixes (human for direct, policy for governed_policy); governance_record never changes kind and kind never names the record itself"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New member (#701, redesigned per #716 review): replaces the earlier kind: agr value, which conflated a decision mechanism with a storage location and lost whether an AGR-backed decision was human- or policy-adjudicated. kind stays semantic (human or policy); governance_record is an independent boolean flag, not a duplicate reference, since the record is already joined by this Mission's own approval_event_id. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows."
+   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it."
+  },
+  {
+   "id": "approval-governance.assertion.direct-accountable-human",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-requirements",
+   "text": "For `direct`, it MUST be the `human` assertion of `consent_principal`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Approval Governance Record for a direct approval whose accountable assertion is a policy or service assertion does not commit and no Mission is created active; contributing policy and service assertions alongside the human accountable assertion are accepted"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows. Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention)."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -4413,6 +4441,30 @@
     }
    ],
    "notes": "#760 extended this row's citation instead of adding a semantic row: `authority_source` is named beside `approval_basis` in the introspection member list and its issuer-only sentence, the member-scoped disclosure sentence, the Mission Issuer conformance bullet, and the OAuth Token Introspection Response registration. The cited disclosure test asserts the disclosed shape exactly (`type` plus organizational `policy.id`/`policy.version`, no `digest`)."
+  },
+  {
+   "id": "core.discovery.held-credential-no-substitution",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "discovery",
+   "text": "A client performing a task under a Mission MUST NOT present, for that task, a credential that is not Mission-bound, such as an ordinary access token it already holds, unless a deployment-defined, trusted enforcement path establishes that Mission for the request and applies the Mission's authority and lifecycle controls to it.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a client holding both a Mission-bound token and an ordinary credential for the same resource sends no request for the Mission's task under the ordinary credential, including after a Mission refusal or once the Mission is no longer active, except through a deployment-defined enforcement path that establishes the Mission for the request and applies its authority and lifecycle controls; a Mission identifier the client supplies, or documentation alone, is not such a path"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D412 (#1205). Observable at the client, by a harness that drives it, or by a layer that mediates its requests: an AS or resource server cannot generally tell that an ordinary-credential request serves a Mission, and the Mission-governed registration tests in rar-carriage.test.ts witness the AS, not this client rule. Todo until a client implementation witnesses held-credential fallback refusal and an explicitly enforced joined path."
   },
   {
    "id": "derivation-limits.enforcement.derivation-cap-exhaustion",
@@ -6394,6 +6446,62 @@
    "notes": "#1194. Partial: in every witnessed issuance the requesting client is also the Mission's approved agent, so the tests do not distinguish the requesting client from the record's client_id. That case is the delegated token of Delegation Within a Mission, which the reference AS does not implement (#869). Proved by overwriting client_id with the Subject in the JWT customizer (provider.ts): steps 3 and 4 fail, and step 6 is refused."
   },
   {
+   "id": "core.tokens.refresh-confidential-client-binding",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-bound-tokens",
+   "text": "For a confidential client, client authentication supplies the binding: on refresh, the AS authenticates the client and verifies that the refresh token was issued to it ({{Section 6 of RFC6749}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refresh of a confidential client's Mission-bound refresh token is refused when it carries no client authentication, and refused when the authenticated client is not the client the token was issued to (the errors of Section 5.2 of RFC 6749: invalid_client and invalid_grant); the issuing client's authenticated refresh succeeds",
+    "local": "the cited test proves, for a refresh token issued to ap-agent (private_key_jwt): a refresh carrying only client_id, with no client authentication, is refused 401 invalid_client; a refresh authenticated as governed-agent with a DPoP proof for the same key is refused 400 invalid_grant, so the refusal comes from the client binding rather than a key mismatch; and the issuing client's authenticated refresh of the same token then succeeds. It exercises the async-delegation family refresh lineage only (a token also bound to the DPoP key); the code-flow refresh lineage, bound by client authentication alone, is not exercised. No mutation proof exists, because the authentication and client-mismatch checks are the provider library's (oidc-provider 9.10.0), outside src/"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "refresh preserved on a projection refusal (@spec mission#scope-projection) > an unauthenticated or wrong-client refresh of a projection-failing token gets the ordinary client error, never a projection error",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1204 (D412, option A): client authentication is a confidential client's refresh-token binding (RFC 6749 Section 6; RFC 9449 Section 5), with no further sender constraint or rotation required. Partial: the witness covers the async-delegation family lineage only, the code-flow refresh lineage is unexercised, and the provider-library checks carry no mutation proof (observation.local). The cited test also witnesses core.scope-projection.refresh-preserved-on-projection-refusal; its client-error assertions run while the projection would fail, so they also show the client binding is checked first."
+  },
+  {
+   "id": "core.tokens.refresh-public-client-sender-constrained-or-rotated",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-bound-tokens",
+   "text": "A public client's refresh token MUST be sender-constrained or use refresh token rotation ({{Section 2.2.2 of RFC9700}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a public client's Mission-bound refresh token is either sender-constrained, so a refresh without proof of the bound key is refused, or rotated, so every refresh returns a new refresh token and a consumed one is refused when presented again"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1204 (D412, option A). The reference AS registers only private_key_jwt (confidential) clients (src/config/clients.json), so no test drives a public client. Its rotateRefreshToken hook (provider.ts) keeps oidc-provider's default of rotating a public client's refresh token that is not sender-constrained, unwitnessed here. The async-delegation family rotation and reuse tests use a confidential client, for which rotation is permitted, not required, so they do not witness this row, and rotation would not witness the sender-constrained alternative."
+  },
+  {
    "id": "core.tokens.scope-ceiling",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "scope-projection",
@@ -7301,7 +7409,7 @@
    "id": "core.introspection.opaque-requires-introspection",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "introspected-consumption",
-   "text": "an AS issuing opaque Mission-bound tokens MUST offer introspection for them with the members this mode names",
+   "text": "an AS issuing opaque Mission-bound tokens MUST offer introspection for them with the members this mode names, unless every resource server that consumes them uses issuer-local resolution",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -7312,7 +7420,7 @@
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment issuing opaque Mission-bound tokens exposes introspection for them carrying the mode's members"
+    "normative": "a deployment issuing opaque Mission-bound tokens that any resource server consumes other than through issuer-local resolution exposes introspection for them carrying the mode's members"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -7384,6 +7492,182 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
+  },
+  {
+   "id": "core.introspection.local-resolution-own-record",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST resolve the presented token to that token's own issuer-qualified issuance or grant record",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "issuer-local resolution takes expiry, revocation and grant validity, audience, composite active state and authority from the presented token's own issuer-qualified issuance or grant record; an unknown, expired, revoked or wrong-audience token is refused at the resource while its Mission is active"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness presents unknown, expired, revoked and wrong-audience tokens under an active Mission."
+  },
+  {
+   "id": "core.introspection.local-resolution-not-mission-lookup",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "Mission state alone, or a lookup by Mission identifier, never establishes a token's validity or authority",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token whose own record is absent or invalid is refused although a lookup by its Mission identifier finds an active Mission"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness presents an unknown token that names an active Mission's identifier."
+  },
+  {
+   "id": "core.introspection.local-resolution-caller-authorization",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST authorize the resource server and minimize disclosure to it as {{caller-authorization-and-minimization}} requires for an introspection caller",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "issuer-local resolution yields nothing to a resource server that is not an audience of the token, and yields to an audience only its audience-filtered entries and the member-scoped Mission data it may receive"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. The qualification of a resolving resource server (inside the issuer's trusted implementation boundary, authorized to read its committed state) is a deployment trust input, not an observable obligation. A witness resolves a token at an unauthorized resource server and at a wrong audience."
+  },
+  {
+   "id": "core.introspection.local-resolution-projection",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST yield, when the token is active, only what an active response for that token carries in this mode",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an active issuer-local resolution yields the token's own audience-filtered authorization_details, mission, aud, act where delegated and cnf where sender-constrained, never the Mission's Authority Set or authority the token does not carry"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness resolves a token narrower than its Mission and a delegated token, and checks that only the token's own authority is enforced."
+  },
+  {
+   "id": "core.introspection.local-resolution-inactive-or-unavailable",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "resolves as inactive and yields no authority; missing or unavailable state yields no valid resolution",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an unknown, invalid, expired or revoked token or a non-active Mission resolves as inactive with no authority, and missing or unavailable state yields no resolution, so the resource refuses"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness makes the committed state unavailable, and terminates the Mission between two requests."
+  },
+  {
+   "id": "core.introspection.local-resolution-rs-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "cannot obtain a valid introspection response or issuer-local resolution for an opaque Mission-bound token MUST refuse the request",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS that cannot obtain a valid issuer-local resolution for an opaque Mission-bound token refuses the request rather than serve it from a cached or out-of-band belief"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. The issuer-local facet of the clause core.introspection.opaque-rs-fail-closed quotes; that row keeps the introspection facet."
+  },
+  {
+   "id": "core.introspection.local-resolution-rs-stands-in",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "the resolution stands in for the introspection response, possession proof and fail-closed refusal included",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS consuming an issuer-local resolution verifies active, its own identity in aud and possession of the key cnf names, and enforces the resolved authorization_details as it would an introspection response; a request without the bound key's proof is refused"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. The introspection-response form of these RS duties is #904's inventory; this row covers only the issuer-local form. A witness presents a sender-constrained token without valid proof."
+  },
+  {
+   "id": "core.introspection.local-resolution-per-use",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "each resolution is one per-use observation, not a cacheable assertion",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS resolves on every use, so a token revoked or a Mission terminated after an earlier successful resolution is refused on its next request"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A per-use read stops later requests only; excluding an effect admitted before a revocation commits needs a serialization boundary (#250), which this row does not claim."
   },
   {
    "id": "core.anchors.entry-commitment",
@@ -15413,9 +15697,21 @@
      "name": "independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > Mission authority refusing still denies where the stored entitlement permits",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > a policy refusing one vendor refuses the whole unconstrained read resource_policy with no result, while a read naming the other vendor permits",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > an unconstrained list names every invoice vendor to the stored policy: revoking only one vendor's entitlement refuses the whole read resource_policy, a read of the other vendor still permits, and restoring it permits both, the same over both channels (#828 step 5)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#828. The PDP now has an independent Resource-policy conjunct: a ResourcePolicy bound to the decision point, asked at evaluate() step 6b with the authenticated subject, client, action and targets and nothing Mission-derived, denying resource_policy. The unit truth table controls the Mission-authority and Resource-policy outcomes separately with named fixtures, and each cell was verified by disabling the step-6b refusal. A policy that cannot answer yields no decision, never a permit. Moved partial -> tested under #828's ledger rule, which required the real-OpenFGA assertion: the two OpenFGA citations (revoking only the stored entitlement denies resource_policy where the Mission permits, and restoring it permits; the Mission refusing denies where the entitlement permits) passed against a live OpenFGA in impl-ci at faf9250d. Since main's merge their requests carry the neutral credential authority #825 PR 2b requires (D341) and nothing else changed; they skip locally, so the impl-ci run at the merged head confirms them, and this row reverts to partial if it does not."
+   "notes": "#828. The PDP now has an independent Resource-policy conjunct: a ResourcePolicy bound to the decision point, asked at evaluate() step 6b with the authenticated subject, client, action and targets and nothing Mission-derived, denying resource_policy. The unit truth table controls the Mission-authority and Resource-policy outcomes separately with named fixtures, and each cell was verified by disabling the step-6b refusal. A policy that cannot answer yields no decision, never a permit. Moved partial -> tested under #828's ledger rule, which required the real-OpenFGA assertion: the two OpenFGA citations (revoking only the stored entitlement denies resource_policy where the Mission permits, and restoring it permits; the Mission refusing denies where the entitlement permits) passed against a live OpenFGA in impl-ci at faf9250d. Since main's merge their requests carry the neutral credential authority #825 PR 2b requires (D341) and nothing else changed; they skip locally, so the impl-ci run at the merged head confirms them, and this row reverts to partial if it does not. #828 step 5: a collection read names every vendor it returns as a target, so a policy refusing any one refuses the whole read resource_policy with no result, shown with a fixture over both channels and against the live stored policy."
   },
   {
    "id": "runtime.decision-inputs.constraint-evaluation-and-unenforceable-refusal",
@@ -17100,9 +17396,21 @@
      "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an unconstrained read names every vendor the store holds invoices for: the policy is asked about each, and the parameter digest binds that set",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an invoice for a vendor the decision never named is never returned: before the last check it is a parameter mismatch, after it the bound filter drops it",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> parameter_violation, #801: the entry is matched, only this vendor is excluded by its own constraint; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. #612 finding 3 fix: the FGA/PDP request now names the FULL collection (resource.properties.vendor_ids, populated in pep.ts's bindsVendorScope \"entry\" branch), and evaluateInner's step 6a checks every named member independently, denying the WHOLE read the moment any one member is refused (out_of_authority for an independent policy denial; parameter_violation for a member the entry's own vendors constraint excludes, #801) (fail-closed choice: the response contract has no lane for a partially narrowed permit). Proven with a stub Fga (denies one specific vendor object) at both the pure evaluateInner level and the full pep.ts->server.ts integration level, since this domain model's contextual-tuple-only grant mechanism has no way to make a LIVE OpenFGA check independently disagree with the Mission's own allowlist. There is still no genuine persisted Resource-policy layer distinct from the Mission's authority_set in this deployment (a `resource_policy` denial reason is named in the draft's failure classification but implemented nowhere here), so the stub proves the MECHANISM (every named member is actually checked) rather than a real independent policy disagreement. entry_digest still anchors only the Mission ceiling; it was never evidence of Resource-policy's independent say and still is not."
+   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> parameter_violation, #801: the entry is matched, only this vendor is excluded by its own constraint; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga, although their titles say Resource policy. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: an unconstrained read's normal form carries every vendor the payments store holds invoices for, so its parameter digest binds the read's actual targets; a change to them between decision and execution is parameter_mismatch, and the result is filtered to the bound set."
   },
   {
    "id": "runtime.read-binding.floor-and-no-misclassification",
@@ -17196,9 +17504,21 @@
      "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an unconstrained read names every vendor the store holds invoices for: the policy is asked about each, and the parameter digest binds that set",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an invoice for a vendor the decision never named is never returned: before the last check it is a parameter mismatch, after it the bound filter drops it",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3 fix: the FGA/PDP request now names the FULL collection (resource.properties.vendor_ids, populated in pep.ts's bindsVendorScope \"entry\" branch), and evaluateInner's step 6a checks every named member independently, denying the WHOLE read the moment any one member is refused (out_of_authority for an independent policy denial; parameter_violation for a member the entry's own vendors constraint excludes, #801) (fail-closed choice: the response contract has no lane for a partially narrowed permit). Proven with a stub Fga (denies one specific vendor object) at both the pure evaluateInner level and the full pep.ts->server.ts integration level, since this domain model's contextual-tuple-only grant mechanism has no way to make a LIVE OpenFGA check independently disagree with the Mission's own allowlist. There is still no genuine persisted Resource-policy layer distinct from the Mission's authority_set in this deployment (a `resource_policy` denial reason is named in the draft's failure classification but implemented nowhere here), so the stub proves the MECHANISM (every named member is actually checked) rather than a real independent policy disagreement. entry_digest still anchors only the Mission ceiling; it was never evidence of Resource-policy's independent say and still is not."
+   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga, although their titles say Resource policy. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: the unconstrained bulk form is bound to the vendors the store holds invoices for, named as targets and digested, not to a placeholder."
   },
   {
    "id": "runtime.metering.unmetered-bound-refusal",
@@ -31757,6 +32077,600 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Defines authority for the service kind, previously defined only for human and policy assertions."
+  },
+  {
+   "id": "approval-governance.governed-policy.agr-every-activation",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy",
+   "text": "Every activation under this basis MUST record an Approval Governance Record, committed with the Mission",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "no Mission is created active under governed_policy without a signed Approval Governance Record committed in the same commit; a failure to record leaves no active Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.root-contents",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-root",
+   "text": "The consented root is the retained `approval_policy` snapshot that a human approved",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval_policy a governed_policy record references is the human-approved root, and its retained snapshot commits the eligible clients, Subjects and sources, the authority ceiling and lifetime limits, the decision rules, the recency terms, and any separate evaluator's activation policy reference"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.consent-from-trusted-state",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-root",
+   "text": "The issuer MUST establish the standing consent, the consenting human, and that human's approval of the exact root version from retained, authenticated governance state, never from the activating request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation request or proposal that names or carries its own standing consent, consenting human or approval instant does not activate a Mission unless retained, authenticated governance state establishes that consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.digest-domains",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-root",
+   "text": "The issuer MUST NOT accept either digest in place of the other",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation whose root is checked against a mission-activation-policy digest, or whose separate evaluator is checked against the mission-approval-policy digest, is refused"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.record-members",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-record",
+   "text": "A Mission activated under this basis records these `approval_basis` members",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a governed_policy Mission records type governed_policy, consent_principal the approving human, approved_at that approval's instant, root_commitment equal to approval_policy.digest, activation with approval_event_id and the deciding policy's id, version and digest, activation_actor the authenticated requesting client, and adjudication kind policy with governance_record true"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.deciding-policy",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-record",
+   "text": "The deciding policy is the root itself or the separate evaluator the root commits, never another policy",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation whose deciding policy is neither the consented root nor the evaluator it commits is refused, and activation.policy.digest carries the typed digest of the policy that decided"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.approval-event-per-activation",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-record",
+   "text": "a retried or concurrent activation of the same proposal resolves to one Mission and one record, and each distinct activation creates its own Mission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "concurrent and retried activations of one proposal produce one Mission and one Approval Governance Record; distinct activations carry distinct approval_event_id values, never the root approval's identifier"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.accountable-policy-assertion",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-record",
+   "text": "The record's accountable assertion ({{assertion-requirements}}) MUST be a `policy` assertion whose `principal` is `consent_principal`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a governed_policy record whose accountable assertion is not a policy assertion naming consent_principal, with the deciding policy's id and version and approved_at equal to approval_basis.approved_at, does not commit"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-consent-active",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Resolve the standing consent from retained, authenticated state and confirm that it still admits new activations",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation under missing or withdrawn standing consent is refused and creates no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-root-approval",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Verify that the consenting human was authorized to approve the exact root version and approved it at `approved_at`, and recompute `approval_policy.digest` over the retained snapshot",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation is refused when the consenting human was not authorized to approve the root, when approved_at does not match the retained approval, or when the retained snapshot's bytes or version no longer reproduce approval_policy.digest"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-evaluator-digest",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Where the root commits a separate evaluator, recompute that evaluator's digest over the exact snapshot evaluated",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation is refused when the separate evaluator's snapshot differs from the mission-activation-policy digest the root commits"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-client-subject-source",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "verify that the requesting client, the Subject, and the source are ones the root admits",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation for a client, Subject or authority source the root does not admit is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-authority-expiry-bounds",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "within the source's ceiling and the root's authority ceiling, and bound the effective expiry by the Mission Intent and the root's lifetime limits",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation whose derived Authority Set exceeds the source ceiling or the root's authority ceiling, or whose effective expiry exceeds the Intent or the root's lifetime limits, does not create a Mission with that authority or expiry"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-policy-evaluation",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Evaluate the deciding policy, at its exact version, over recorded inputs",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "re-evaluating the deciding policy's recorded version over the recorded inputs reproduces the activation decision"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-recency-high-risk",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "across the whole derived Mission, including any consumption bound, so a high-risk class activates only under a committed, class-named exception",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation is refused when approved_at is older than the strictest applicable ceiling or later than the evaluation instant beyond the skew allowance, and when the derived Mission carries a high-risk class without a committed, class-named exception"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-event-binding",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Bind every assertion and the record to this instance's `approval_event_id`, `intent_hash`, and `authority_hash`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "replay",
+   "observation": {
+    "normative": "an assertion captured for one activation's approval event is not counted for another activation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-atomic-commit",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Sign the record and commit it with the `active` Mission",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a signing or persistence failure leaves no active Mission, no committed record, and no issued credential"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.failure-no-mission",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "A failure at any step creates no Mission and issues no credential.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "any failed activation check leaves no Mission and no credential"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.model-input-only",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "it can refuse an activation or narrow the authority activated, and never supplies authority or decides the approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a recorded model output can only refuse an activation or narrow its authority; it never adds authority and is never the deciding policy"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.withdrawal-stops-activations",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Withdrawing the standing consent stops every later activation under it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "after the standing consent is withdrawn, no further Mission activates under it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.withdrawal-not-retroactive",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "A Mission already activated keeps its ordinary lifecycle: withdrawal does not revoke it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission activated before the standing consent was withdrawn stays active under its ordinary lifecycle"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "deferred-approval.policy-completion.issuer-selects-policy",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "The Mission Issuer selects a configured governed policy whose consented root admits the pending proposal",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the policy that completes a pending approval is one the issuer configured and whose root admits the proposal, never one the client names"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "deferred-approval.policy-completion.deferral-unchanged",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "Polling, cancellation, client binding, and token delivery follow the deferred substrate and this profile",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy-completed pending approval is polled, cancelled, client-bound and delivered exactly as a human-completed one"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "deferred-approval.policy-completion.refusal-no-mission",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "An evaluation that does not authorize activation creates no Mission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a policy evaluation that does not authorize activation leaves no Mission, and the pending approval either awaits a separately authenticated, full direct approval or resolves to denied"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "deferred-approval.policy-completion.human-fallback-direct",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "That human path never turns a failed `governed_policy` check into a `governed_policy` activation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created by a human after a policy evaluation did not authorize activation records approval_basis type direct with its own approval event and human accountable assertion, never type governed_policy"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows. Owner review of #1227 accepted the human fallback with this guard."
+  },
+  {
+   "id": "deferred-approval.policy-completion.one-mission",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "Each pending approval resolves under one `approval_event_id`, so retried and concurrent completions yield one Mission and one record",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "retried and concurrent completions of one pending approval produce one Mission and one Approval Governance Record"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "deferred-approval.policy-completion.no-client-basis-selector",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "The client selects no approval basis",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "no request parameter selects the approval basis; a client cannot cause a pending approval to complete under governed_policy"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
   },
   {
    "id": "child-delegation.carryover.no-progressive-drawdown",

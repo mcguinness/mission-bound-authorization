@@ -115,7 +115,10 @@ function payments(): PaymentsStore {
 }
 
 /** A PEP whose decision function records each request it is asked, and declines to decide. */
-function pepRecording(extra: { requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean } = {}) {
+function pepRecording(
+  extra: { requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean } = {},
+  view: MissionView = VIEW,
+) {
   const decided: unknown[] = [];
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const pep = new Pep({
@@ -128,8 +131,8 @@ function pepRecording(extra: { requiresActionApproval?: (action: string, actionC
     fga: {} as unknown as Fga,
     modelId: "m",
     loadView: (ref) =>
-      ref.id === VIEW.id && ref.issuer === VIEW.issuer
-        ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+      ref.id === view.id && ref.issuer === view.issuer
+        ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined,
     instanceEpoch: "epoch-825",
     allowedFreshnessSources: new Set(["load_view"]),
@@ -280,8 +283,8 @@ describe("the Mission access-token profile is met before any claim is trusted (@
 
 describe("the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825)", () => {
   /** Enforce `tool` under a token carrying `details`, validated over HTTP. */
-  async function attempt(details: unknown[], tool: string, args: Record<string, unknown>) {
-    const x = pepRecording();
+  async function attempt(details: unknown[], tool: string, args: Record<string, unknown>, view: MissionView = VIEW) {
+    const x = pepRecording({}, view);
     const facts = await overHttp(await mint({ authorization_details: details }));
     const result = await x.pep.enforce(tool, args, facts);
     return { ...x, result };
@@ -330,6 +333,18 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
       id: "acme",
     });
     expect((await attempt([entry(["payments:invoice.list"], { vendors: ["acme", "globex"] })], "list_invoices", {})).decided).toHaveLength(1);
+  });
+
+  it("checks every vendor an unconstrained Mission's collection read returns: the store's invoice vendors, not a placeholder (#828 step 5)", async () => {
+    // The Mission's list entry carries no vendor constraint, so the read
+    // returns every vendor the store holds invoices for: acme and globex. A
+    // credential covering only acme does not cover it.
+    const unconstrained: MissionView = { ...VIEW, authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.list"] }] };
+    refusedBeforePdp(await attempt([entry(["payments:invoice.list"], { vendors: ["acme"] })], "list_invoices", {}, unconstrained), {
+      type: "vendor",
+      id: "acme",
+    });
+    expect((await attempt([entry(["payments:invoice.list"], { vendors: ["acme", "globex"] })], "list_invoices", {}, unconstrained)).decided).toHaveLength(1);
   });
 
   it("resolves a vendor lookup's target from store state, so a vendor-bound credential covers only its own vendors", async () => {
