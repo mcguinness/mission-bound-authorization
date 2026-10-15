@@ -270,12 +270,18 @@ deployment's OpenFGA administrator (`FgaDomainAdmin`). `composeStack` attaches
 to a configured store and model, or, as a development operation, bootstraps
 one and provisions `config/seed/resource-policy.json`:
 [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > a stored entitlement permits; an external revocation of only that entitlement denies resource_policy on the next decision with signed evidence; restoring it permits`.
+A collection read names every vendor it returns: an unconstrained
+`list_invoices` names each vendor the payments store holds invoices for,
+binds that set into its parameter digest and its result, and is refused
+whole when the policy refuses any one vendor (the Operation Profile's List
+form): `list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > a policy refusing one vendor refuses the whole unconstrained read resource_policy with no result, while a read naming the other vendor permits`,
+`list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an invoice for a vendor the decision never named is never returned: before the last check it is a parameter mismatch, after it the bound filter drops it` and
+[FGA] `the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > an unconstrained list names every invoice vendor to the stored policy: revoking only one vendor's entitlement refuses the whole read resource_policy, a read of the other vendor still permits, and restoring it permits both, the same over both channels (#828 step 5)`.
 Remaining under #828: the live witnesses run only in CI; no policy requires
-a client; `lookup_vendor` names the vendor the store resolved (D324), but a
-vendor the store does not hold keeps the server target, and an unconstrained
-`list_invoices` names the unscoped vendor object, so the policy refuses both;
-the payments Operation Profile and the Enforcement Scope Statement do not yet
-declare the policy.
+a client; a vendor the store does not hold keeps `lookup_vendor`'s server
+target (D324), which a vendor constraint or the policy refuses; the payments
+Operation Profile and the Enforcement Scope Statement do not yet name the
+policy's owner or freshness.
 
 Deployment-administered gates that do exist: the action-bound approval for
 `payments:remittance.send` (§3), the action-to-relation map (`out_of_authority`,

@@ -130,6 +130,42 @@ recomputes it immediately before commit after conditionally re-reading the
 same record versions; any mismatch (record changed, parameter mutated) is
 a refusal with reason `parameter_mismatch`.
 
+## Targets
+
+Every target is resolved from the payments store, never taken from an
+argument (#828). An invoice-scoped tool targets the invoice; an invoice the
+store does not hold is refused `unknown_invoice` before any decision
+request. `lookup_vendor` targets the vendor the store resolves (D324); a
+vendor the store does not hold names the server resource and no vendor, so
+a vendor constraint on the credential or the Mission refuses it, and
+otherwise Resource policy, which administers no server resource, refuses it
+`resource_policy`. `list_invoices` targets the vendors of its list form,
+below.
+
+## List form
+
+`list_invoices` returns a collection, so its effective parameters are the
+list form: `action`, `resource`, `vendor_scope` and `vendor_scope_source`,
+digested as above.
+
+| `vendor_scope_source` | When | `vendor_scope` |
+|---|---|---|
+| `requested` | `vendor_id` is supplied | the vendor the store resolves for it; empty when the matched entry's `vendors` excludes it |
+| `entry` | no `vendor_id`; the matched entry carries `vendors` | that allowlist, sorted |
+| `all` | no `vendor_id`; the matched entry carries no `vendors` | every vendor the store holds invoices for, sorted and deduplicated |
+
+- A `vendor_id` the store does not hold is refused `unknown_vendor`
+  (`target_unresolvable`) before any decision request.
+- The decision request names every member of `vendor_scope` as a target
+  (`resource.properties.vendor_ids`). The Mission's own check and Resource
+  policy each evaluate every member, and a refusal of any member refuses
+  the whole read; no response carries a narrowed subset.
+- An empty `vendor_scope` names no target any policy entitles, so the read
+  is refused.
+- Before release the PEP recomputes the list form from the current Mission
+  and store; a difference is `parameter_mismatch`. Execution returns only
+  invoices whose vendor is in `vendor_scope`.
+
 ## Idempotency keys
 
 `op:<mission_id>:<action id>:<parameter_digest>` — passed to the ledger
