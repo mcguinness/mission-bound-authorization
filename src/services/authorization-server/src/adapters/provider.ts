@@ -2777,8 +2777,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       const principal = authenticateService(ctx);
       if (!principal) return;
       const missionId = lifecycleMatch[1] as string;
-      // Read the body ONCE and keep the digest of the exact bytes: the `nonce`
-      // rule of @spec status#idempotency is byte-identity of the request.
+      // Read the body ONCE and keep the digest of its operation members: the
+      // `nonce` rule of @spec status#idempotency compares those, not the bytes.
       const { body, digest } = await readBodyWithDigest(ctx.req);
       const rawNonce = body.nonce;
       const nonce =
@@ -2860,9 +2860,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (nonceKey) {
         const stored = lifecycleResponses.find(nonceKey);
         // ONE clock, the nonce window: both halves of the rule run on it. A
-        // divergent retry is refused for the whole window, and a byte-identical
-        // retransmit replays the original response for the whole window, which
-        // the profile requires and the window is sized to cover.
+        // divergent retry is refused for the whole window, and a retransmit with
+        // the original's operation members replays the original response for
+        // the whole window, which the profile requires and the window is sized
+        // to cover.
         if (stored?.requestDigest !== undefined && stored.requestDigest !== digest) {
           // Never answered with the unrelated original response, and never
           // retained in its place.
@@ -4716,34 +4717,71 @@ async function handleDischarge(input: {
 }
 
 /**
+ * @spec status#idempotency — client authentication parameters a retry
+ * regenerates (a fresh `client_assertion`, for one), so the retransmission
+ * comparison excludes them. HTTP headers never enter it.
+ */
+const CLIENT_AUTHENTICATION_MEMBERS: ReadonlySet<string> = new Set([
+  "client_assertion",
+  "client_assertion_type",
+  "client_id",
+  "client_secret",
+]);
+
+/** Object keys sorted at every depth, so equal members serialize equally. */
+function canonicalMember(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalMember);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value as Record<string, unknown>)
+        .sort()
+        .map((k) => [k, canonicalMember((value as Record<string, unknown>)[k])]),
+    );
+  }
+  return value;
+}
+
+/**
+ * @spec status#idempotency — the digest a retransmission is compared on: the
+ * operation's request members, present or absent alike, in a canonical
+ * serialization, excluding client authentication parameters. A retry that
+ * regenerates its client assertion or reorders its members is the same
+ * request; one whose operation members differ is not.
+ */
+function requestMembersDigest(body: Record<string, unknown>): string {
+  const members = Object.keys(body)
+    .filter((k) => !CLIENT_AUTHENTICATION_MEMBERS.has(k))
+    .sort()
+    .map((k) => [k, canonicalMember(body[k])]);
+  return `${DIGEST_PREFIX}${createHash("sha256").update(JSON.stringify(members)).digest("base64url")}`;
+}
+
+/**
  * @spec status#idempotency — read the body ONCE, returning both the parsed
- * members and the digest of the EXACT bytes received. The `nonce` retry rule is
- * byte-identity of the request, so the comparison must be over what arrived,
- * not over a re-serialization of the parse.
+ * members and the digest of its operation members ({@link requestMembersDigest}).
  */
 async function readBodyWithDigest(
   req: IncomingMessage,
 ): Promise<{ body: Record<string, unknown>; digest: string }> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(chunk as Buffer);
-  const bytes = Buffer.concat(chunks);
-  const digest = `${DIGEST_PREFIX}${createHash("sha256").update(bytes).digest("base64url")}`;
-  const text = bytes.toString("utf8");
-  if (!text) return { body: {}, digest };
+  const text = Buffer.concat(chunks).toString("utf8");
+  if (!text) return { body: {}, digest: requestMembersDigest({}) };
+  let body: Record<string, unknown>;
   try {
     const parsed: unknown = JSON.parse(text);
     // A valid-JSON body that is not an object (`null`, an array, a number, a
     // string) must land as an EMPTY member set — request-shape validation
     // then refuses it as `invalid_request` — never reach member access and
     // turn into a 500.
-    const body =
+    body =
       parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
         ? (parsed as Record<string, unknown>)
         : {};
-    return { body, digest };
   } catch {
-    return { body: Object.fromEntries(new URLSearchParams(text)), digest };
+    body = Object.fromEntries(new URLSearchParams(text));
   }
+  return { body, digest: requestMembersDigest(body) };
 }
 
 /** Read a raw text body (e.g. a compact JWS protected-event report). */
