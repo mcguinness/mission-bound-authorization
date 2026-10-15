@@ -193,31 +193,17 @@ describe("the Mission access-token profile is met before any claim is trusted (@
   });
 
   const now = () => Math.floor(Date.now() / 1000);
-  it.each([
-    ["no typ", {}, { typ: undefined }],
-    ["typ JWT", {}, { typ: "JWT" }],
-    ["typ mission-status+jwt", {}, { typ: "mission-status+jwt" }],
-    ["typ aat+jwt", {}, { typ: "aat+jwt" }],
-    ["no exp", { exp: undefined }, {}],
-    ["a string exp", { exp: String(now() + 300) }, {}],
-    ["no iat", { iat: undefined }, {}],
-    ["an iat in the future", { iat: now() + 3600, exp: now() + 7200 }, {}],
-    ["an nbf in the future", { nbf: now() + 3600 }, {}],
-    ["an expired exp", { iat: now() - 600, exp: now() - 10 }, {}],
-    ["no jti", { jti: undefined }, {}],
-    ["an empty jti", { jti: "" }, {}],
-    ["no sub", { sub: undefined }, {}],
-    ["no client_id", { client_id: undefined }, {}],
-    ["a numeric client_id", { client_id: 7 }, {}],
-    ["no mission claim", { mission: undefined }, {}],
-    ["a mission claim with an empty id", { mission: { id: "", issuer: ISSUER } }, {}],
-    // The credential profile's authority and sender-constraint vectors, shared
-    // with AS introspection (#825, D402). This resource's profile requires
-    // sender constraint, so it refuses an absent `cnf` too.
-    ...credentialProfileVectors(CANONICAL_RESOURCE, "payments:invoice.read").map(
-      (v) => [v.label, v.claims, {}] as [string, Record<string, unknown>, Record<string, unknown>],
-    ),
-  ])("refuses a token with %s on both transports, yielding no facts", async (_label, claims, header) => {
+  // @spec mission#introspection (#825, D402): the profile's negative vectors
+  // are the list AS introspection also runs. This resource's profile requires
+  // sender constraint, so it refuses an absent `cnf` too.
+  it.each(
+    credentialProfileVectors({
+      resource: CANONICAL_RESOURCE,
+      action: "payments:invoice.read",
+      mission: MISSION,
+      nowS: now(),
+    }).map((v) => [v.label, v.claims, v.header ?? {}] as const),
+  )("refuses a token with %s on both transports, yielding no facts", async (_label, claims, header) => {
     const token = await mint(claims, header);
     // A proof that would verify for this token: the refusal is the profile's.
     await expect(overHttp(token)).rejects.toThrow();

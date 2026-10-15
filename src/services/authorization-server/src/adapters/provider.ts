@@ -28,12 +28,11 @@ import {
 } from "jose";
 import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
 import {
-  type Confirmation,
   delegatedRoutingRefusal,
   earlyScopeRefusal,
-  parseConfirmation,
-  parseCredentialAuthority,
+  type MissionAccessProfile,
   projectScope,
+  readMissionAccessProfile,
   type RequestedScope,
   type ScopeProjectionMapping,
   type ScopeProjectionOutcome,
@@ -3358,110 +3357,39 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       try {
         // Strict resolution: signature over the published keys, the expected
         // issuer, the at+jwt token class, and time validity.
-        const { payload } = await jwtVerify(token, jwksResolver, {
+        const { payload, protectedHeader } = await jwtVerify(token, jwksResolver, {
           issuer: opts.issuer,
           typ: "at+jwt",
         });
 
-        // @spec mission#introspection, RFC 9068 — the REQUIRED, TYPED claim
-        // set, checked BEFORE any Mission resolution. jose validates iss/typ
-        // (and exp/iat/nbf ONLY when present) but does not itself require
-        // exp/iat/jti/sub/client_id to exist: an AS-signed at+jwt omitting
-        // one would otherwise still resolve. Missing or mistyped -> bare
-        // false; no Mission or token detail is recovered from failure.
-        if (
-          typeof payload.exp !== "number" ||
-          typeof payload.iat !== "number" ||
-          typeof payload.jti !== "string" ||
-          !payload.jti ||
-          typeof payload.sub !== "string" ||
-          !payload.sub ||
-          typeof payload.client_id !== "string" ||
-          !payload.client_id
-        ) {
-          ctx.body = inactive;
-          return;
-        }
-        const jti: string = payload.jti;
-        const sub: string = payload.sub;
-        const clientId: string = payload.client_id;
-        const exp: number = payload.exp;
-        const iat: number = payload.iat;
-
-        // @spec mission#the-mission-claim (#702) — the baseline Mission
-        // profile claim shape is exactly `{id, issuer}`, when a `mission`
-        // member is present at all; its total ABSENCE is the pre-existing,
-        // distinct "unresolvable" case handled by the Mission lookup below
-        // (never Mission-bound), not a malformed shape. `authority_hash` is
-        // NOT part of the baseline claim; where a companion profile carries
-        // it (e.g. a child-delegation `parent` ref), it is typed but never
-        // REQUIRED here, and its absence is never grounds to reject an
-        // otherwise well-formed baseline claim.
-        const missionClaimRaw = payload.mission;
-        if (missionClaimRaw !== undefined) {
-          const m = missionClaimRaw as Record<string, unknown> | null;
-          if (
-            typeof m !== "object" ||
-            m === null ||
-            typeof m.id !== "string" ||
-            !m.id ||
-            typeof m.issuer !== "string" ||
-            !m.issuer ||
-            (m.authority_hash !== undefined && (typeof m.authority_hash !== "string" || !m.authority_hash))
-          ) {
-            ctx.body = inactive;
-            return;
-          }
-        }
-
-        // @spec mission#authorization-derivation — every access token this AS
-        // mints carries `authorization_details` (possibly an empty array);
-        // its absence is malformed, not merely undisclosed. Each entry MUST
-        // carry a non-empty string `type` + `resource` and an actions array
-        // (the mission_resource_access minimum this endpoint's intersection
-        // needs downstream). Malformed (e.g. an array of bare strings) ->
-        // bare false.
-        const rawDetails = payload.authorization_details;
-        const isWellFormedEntry = (d: unknown): d is AuthorityEntry => {
-          if (typeof d !== "object" || d === null) return false;
-          const e = d as Record<string, unknown>;
-          return (
-            typeof e.type === "string" &&
-            e.type !== "" &&
-            typeof e.resource === "string" &&
-            e.resource !== "" &&
-            Array.isArray(e.actions) &&
-            e.actions.every((a) => typeof a === "string")
-          );
-        };
-        if (!Array.isArray(rawDetails) || !rawDetails.every(isWellFormedEntry)) {
-          ctx.body = inactive;
-          return;
-        }
-        const credentialAuthority = rawDetails as AuthorityEntry[];
-
         // @spec mission#introspection, runtime-oauth#token-validation (#825,
-        // D402) — the credential profile's validation, shared with the
-        // resource: an authority the resource would refuse to read in full,
-        // or a malformed present `cnf`, makes the token malformed here too.
-        // The authority check only gates; the projection below still reads
-        // the raw entries, delegation and capability bindings included.
+        // D402) — the Mission access-token profile, read by the resource's own
+        // reader BEFORE any Mission resolution: the typed RFC 9068 claim set
+        // and its clock bounds (jose checks exp and nbf only when present, and
+        // never a future iat), the `mission` claim's profiled members, the
+        // credential's authority read in full, and a present `cnf`'s
+        // structure. A token the resource would refuse is malformed here too:
+        // bare false, with no Mission or token detail recovered from failure.
+        // The authority read only gates; the projection below still reads the
+        // raw entries, delegation and capability bindings included. A token
+        // with no `mission` claim is unresolvable, and answers the same way.
         // Possession of the `cnf` key stays the resource's to prove.
-        let confirmation: Confirmation | undefined;
+        let profile: MissionAccessProfile;
         try {
-          parseCredentialAuthority(rawDetails);
-          confirmation = parseConfirmation(payload.cnf);
+          profile = readMissionAccessProfile(protectedHeader.typ, payload, Math.floor(Date.now() / 1000));
         } catch {
           ctx.body = inactive;
           return;
         }
+        const { jti, sub, clientId, exp, iat, confirmation } = profile;
+        const credentialAuthority = payload.authorization_details as AuthorityEntry[];
 
         // Mission resolution: a token the AS cannot bind to a known Mission
         // is unresolvable; no Mission or token detail is recovered from
         // failure.
-        const missionIdent = payload.mission as { id?: string; issuer?: string } | undefined;
-        const missionId = missionIdent?.id;
-        const record = missionId ? kernel.get(missionId) : undefined;
+        const missionIdent = profile.mission;
+        const missionId = missionIdent.id;
+        const record = kernel.get(missionId);
         if (!record) {
           ctx.body = inactive;
           return;
@@ -3475,15 +3403,19 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // normalized to the record's issuer. This adapter only ever serves
         // introspection for Missions it itself holds, so `record.issuer`
         // is also always this AS's own issuer.
-        if (missionIdent?.issuer !== record.issuer) {
+        if (missionIdent.issuer !== record.issuer) {
           ctx.body = inactive;
           return;
         }
-        // @spec mission#delegation, child-delegation#attenuation (#825, D402)
-        // — the profiles that require sender constraint require the binding:
-        // a delegated token (`act`) and a Child Mission's token. A primary
-        // token may be a bearer token, so its `cnf` may be absent.
-        if (!confirmation && (payload.act !== undefined || record.parent !== undefined)) {
+        // @spec mission#delegation, child-delegation#attenuation,
+        // mission-template#grant-type (#825, D402) — the profiles that require
+        // sender constraint require the binding: a delegated token (`act`), a
+        // Child Mission's token, and a dispatched template instance's token
+        // (the record's template basis). A primary token may be a bearer
+        // token, so its `cnf` may be absent.
+        const senderConstrainedProfile =
+          payload.act !== undefined || record.parent !== undefined || record.approval_basis.type === "template";
+        if (!confirmation && senderConstrainedProfile) {
           ctx.body = inactive;
           return;
         }

@@ -605,15 +605,16 @@ the store.
   2. A `token` parameter; 400 `invalid_request` otherwise.
   3. `jwtVerify` against the AS's keys, with the expected issuer and
      `typ: at+jwt`.
-  4. The RFC 9068 claim set, a well-formed `mission` claim, and well-formed
-     `authorization_details`, read with the resource's own credential
-     validation (#825, D402): `parseCredentialAuthority` gates, while the raw
-     entries are still what step 9 projects, and a present `cnf` must be
-     well-formed (`parseConfirmation`). Possession stays the resource's to
+  4. The Mission access-token profile, read by the resource's own reader
+     (`readMissionAccessProfile`, #825, D402): the typed RFC 9068 claim set
+     and its clock bounds, the `mission` claim's profiled members, the
+     authority read in full (it only gates; step 9 projects the raw entries),
+     and a present `cnf`'s structure. Possession stays the resource's to
      prove.
   5. `kernel.get(mission.id)`, with `mission.issuer` equal to the record's
-     issuer. A delegated token (`act`) or a Child Mission's token must carry
-     `cnf`; a primary token may be a bearer token.
+     issuer. A delegated token (`act`), a Child Mission's token, or a
+     dispatched template instance's token must carry `cnf`; a primary token
+     may be a bearer token.
   6. An audience the caller is registered for.
   7. `kernel.introspectionProjection`, which applies the expiry clock. A
      non-active Mission answers `active: false` with `mission.state`.
@@ -639,7 +640,7 @@ the store.
   - `caller authentication (@spec mission#caller-authorization-and-minimization) > refuses an unauthenticated call with 401 + WWW-Authenticate` (`introspection-endpoint.test.ts`)
   - `strict token resolution: bare active:false, no Mission or token detail > wrong-audience caller: the ENTIRE response is minimized` (`introspection-endpoint.test.ts`)
   - `strict token resolution: bare active:false, no Mission or token detail > a correctly signed token whose jti has no issuance record is never returned active` (`introspection-endpoint.test.ts`)
-  - `the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402) > answers a token with %s with a bare active:false, as the resource refuses it`, with its bearer, delegated-token and Child Mission cases (`introspection-endpoint.test.ts`). The vectors are `@mission/core/test-vectors`, which the resource's `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a token with %s on both transports, yielding no facts` also runs.
+  - `the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402) > answers a token with %s with a bare active:false, as the resource refuses it`, with its bearer, delegated-token and Child Mission cases (`introspection-endpoint.test.ts`), and `a dispatched instance's token is sender-constrained at introspection too (@spec mission-template#grant-type, mission#introspection, #825 D402) > answers a dispatched token re-signed without cnf with a bare active:false, while the token as issued introspects active as DPoP` (`dispatch-handoff.test.ts`). The vectors are `@mission/core/test-vectors`, which the resource's `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a token with %s on both transports, yielding no facts` also runs.
   - `Mission-bound refresh tokens (@spec mission#introspection) > Mission revocation reports the composite even though it destroys the grant` (`introspection-endpoint.test.ts`)
   - The revocation test of §3.6 runs `plain-rs` against the reference AS. The `plain-rs introspection failure contract (#873) > ...` tests (`services/plain-rs/test/plain-rs.test.ts`) run it against a stub endpoint (`issuance-only-deployment.md` §2).
 - **Residual.**

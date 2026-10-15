@@ -255,9 +255,13 @@ async function introspect(
  */
 async function craftToken(
   payload: Record<string, unknown>,
-  opts: { typ?: string; expiresIn?: number; omitExp?: boolean; omitIat?: boolean } = {},
+  opts: { typ?: string; expiresIn?: number; omitExp?: boolean; omitIat?: boolean; header?: Record<string, unknown> } = {},
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
+  // A header override of `undefined` removes the member; a payload that names
+  // `iat` or `exp` (even as `undefined`, which removes it) sets its own.
+  const header: Record<string, unknown> = { alg: "RS256", kid: "as-token", typ: opts.typ ?? "at+jwt", ...opts.header };
+  for (const [k, v] of Object.entries(header)) if (v === undefined) delete header[k];
   let builder = new SignJWT({
     iss: ISSUER,
     sub: "alice",
@@ -265,9 +269,9 @@ async function craftToken(
     client_id: "ap-agent",
     authorization_details: PAYMENTS_PROPOSAL,
     ...payload,
-  }).setProtectedHeader({ alg: "RS256", kid: "as-token", typ: opts.typ ?? "at+jwt" });
-  if (!opts.omitIat) builder = builder.setIssuedAt(now);
-  if (!opts.omitExp) builder = builder.setExpirationTime(now + (opts.expiresIn ?? 300));
+  }).setProtectedHeader(header as never);
+  if (!opts.omitIat && !("iat" in payload)) builder = builder.setIssuedAt(now);
+  if (!opts.omitExp && !("exp" in payload)) builder = builder.setExpirationTime(now + (opts.expiresIn ?? 300));
   return builder.sign(testSigningKey);
 }
 
@@ -607,15 +611,27 @@ describe("the credential profile's shared negative vectors (@spec mission#intros
   // crafted token fails only the vector under test.
   const baseline = () => ({ jti: flow1.jti, mission: { id: flow1.missionId, issuer: ISSUER } });
   const cnf = { jkt: "test-confirmation-thumbprint" };
-  const vectors = credentialProfileVectors(PAYMENTS, "payments:invoice.read");
+  // flow1 exists only once the suite starts, so the vectors are listed by
+  // label here and built against flow1's Mission and the clock in each test.
+  const vectorsFor = (missionId: string) =>
+    credentialProfileVectors({
+      resource: PAYMENTS,
+      action: "payments:invoice.read",
+      mission: { id: missionId, issuer: ISSUER },
+      nowS: Math.floor(Date.now() / 1000),
+    });
+  const labels = vectorsFor("listing-only")
+    .filter((v) => !v.senderConstrainedProfileOnly)
+    .map((v) => v.label);
 
-  it.each(vectors.filter((v) => !v.senderConstrainedProfileOnly).map((v) => [v.label, v.claims] as const))(
-    "answers a token with %s with a bare active:false, as the resource refuses it",
-    async (_label, claims) => {
-      const res = await introspect(await craftToken({ ...baseline(), ...claims }), { principal: RS_PAYMENTS });
-      expect(res.body).toEqual({ active: false });
-    },
-  );
+  it.each(labels)("answers a token with %s with a bare active:false, as the resource refuses it", async (label) => {
+    const v = vectorsFor(flow1.missionId).find((x) => x.label === label);
+    if (!v) throw new Error(`no vector ${label}`);
+    const res = await introspect(await craftToken({ ...baseline(), ...v.claims }, { header: v.header }), {
+      principal: RS_PAYMENTS,
+    });
+    expect(res.body).toEqual({ active: false });
+  });
 
   it("introspects a primary token with no cnf as an active bearer token, and one with a well-formed cnf as DPoP", async () => {
     const bearer = await introspect(await craftToken(baseline()), { principal: RS_PAYMENTS });

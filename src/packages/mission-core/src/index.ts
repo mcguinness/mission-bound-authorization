@@ -168,6 +168,16 @@ export {
   resolveLocalPrincipal,
 } from "./local-principal-mapping.js";
 export {
+  type CredentialProfileClaims,
+  CredentialProfileError,
+  ISSUED_AT_SKEW_S,
+  MISSION_ACCESS_TOKEN_TYP,
+  type MissionAccessProfile,
+  mediaTypeOf,
+  readCredentialProfileClaims,
+  readMissionAccessProfile,
+} from "./mission-access-profile.js";
+export {
   MCP_REFERENCE_META_KEY,
   MISSION_REFERENCE_HEADER,
   type PropagatedMissionReference,
