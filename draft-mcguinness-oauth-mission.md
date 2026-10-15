@@ -551,6 +551,9 @@ Mission Issuer (authorization server):
   event, records the Mission, and derives tokens. It is the Mission's
   `issuer`; this document also calls it the "issuer AS" or the "AS".
 
+Mission-aware Resource Server:
+: The resource server conformance role, defined in {{conformance}}.
+
 Resource AS:
 : An authorization server in another trust domain that honors a
   Mission it did not issue, minting its own tokens for its resources;
