@@ -1513,13 +1513,13 @@ a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
 
 At a direct approval event the AS MUST, in order:
 
-1. Authenticate the Approver, subject to the approval-authentication
+1. **Authenticate the Approver**, subject to the approval-authentication
    floor and any client-requested strength
    ({{approval-authentication}}). The AS MUST NOT take the Approver's
    identity or achieved authentication context from unauthenticated
    client input; the authenticated surface that resolved the approval
    establishes both.
-2. Establish the Subject: the principal the task is for, recorded as
+2. **Establish the Subject**: the principal the task is for, recorded as
    the Mission's `subject` and mapped to the `sub` of every derived
    token ({{mission-bound-tokens}}). The Subject can be a workload or
    organizational principal ({{authority-sources}}), established and
@@ -1541,7 +1541,7 @@ At a direct approval event the AS MUST, in order:
      same local `sub`). A derived token's (`iss`, `sub`) pair then
      denotes exactly one Subject. Adopting the external `sub` verbatim
      is valid only where it collides with no other principal's `sub`.
-3. Establish the authority source: whose authority the approval
+3. **Establish the authority source**: whose authority the approval
    draws on, recorded as the Mission's `authority_source`
    ({{authority-sources}}, {{mission-record}}). The AS MUST establish
    it from trusted configuration or authenticated governance state,
@@ -1554,12 +1554,12 @@ At a direct approval event the AS MUST, in order:
    activate policy without personally holding every operational
    permission. The AS MUST refuse when either relationship cannot be
    established.
-4. Establish the effective Mission expiry: the requested
+4. **Establish the effective Mission expiry**: the requested
    `intent.expires_at` ceiling narrowed by applicable AS policy and
    any ceiling an applicable Mission-creating profile defines. The
    value is bounded as `expires_at` requires ({{mission-record}}) and
    is rechecked at the creation commit (step 7).
-5. Render for consent the derived Authority Set in human-meaningful
+5. **Render for consent** the derived Authority Set in human-meaningful
    terms, with the `goal`, `task_bounds`, and the effective
    `expires_at` (and, when it differs, the requested
    `intent.expires_at`, so the Approver sees the narrowing) as
@@ -1578,12 +1578,12 @@ At a direct approval event the AS MUST, in order:
      ({{authority-proposal}}), the rendering MUST distinguish the
      entries the client proposed from any narrowing or restructuring
      the AS applied.
-6. Compute the integrity anchors ({{integrity-anchors}}):
+6. **Compute the integrity anchors** ({{integrity-anchors}}):
    `authority_hash` over the consented Authority Set, `intent_hash`
    over the approved Mission Intent, and, when an authority proposal
    was submitted ({{authority-proposal}}), `proposal_hash` over the
    submitted `authorization_details` array.
-7. Create the Mission Record ({{mission-record}}) in the `active`
+7. **Create the Mission Record** ({{mission-record}}) in the `active`
    state, atomically with issuance of the authorization code. The
    commit MUST verify atomically that the effective expiry is
    strictly later than the creation instant: acceptance of the
