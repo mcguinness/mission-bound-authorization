@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "63c5f6bd0bbd623f69453cfa8ea0f8c6340024ed",
-    "content_sha256": "b6130b911604bf053e963784d51b44475f1f890ab8f06716b77d09215426ead5"
+    "revision": "418209e2b4ea5c7da2827d04b77210c86053c276",
+    "content_sha256": "1758e27bdc7d014bd5d7a5edba34b8ed6bef1f3d41f3e2d94baa12dce70a81f1"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "1c07de2093994575b1b4d39c6fd21cfe2848c045",
@@ -91,8 +91,8 @@
     "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
-    "content_sha256": "2825d7ecba19859737d4d31a0b07485c45616db1d4fca50f2f31e41aa9442e44"
+    "revision": "9d077906dd19a39794a7ce4c6c6db5faa5e720df",
+    "content_sha256": "d547739684cfda29b0ea24a14118e4d57b624bc64380d3ffd5dcacd20895e6b3"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
@@ -133,6 +133,10 @@
    "draft-mcguinness-mission-mandate.md": {
     "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
     "content_sha256": "4f8b85890777de9b580a511bfcc15e31cba4284603f2438b152ef4aeb26840b9"
+   },
+   "draft-mcguinness-oauth-mission-approval.md": {
+    "revision": "62a7c5bbea04dcc7bf598d791c788b0b9f2def31",
+    "content_sha256": "26b6d44e7435641dd9a7d515f816eef5c0db707ecd870abf7f27c17ea5d1fe29"
    }
   }
  },
@@ -237,6 +241,8 @@
    "core.standing-consent",
    "core.standing-consent-recency",
    "core.governance-record",
+   "approval-governance.governed-policy",
+   "deferred-approval.policy-completion",
    "template.dispatch",
    "progressive.ceiling-drawdown",
    "progressive.drawdown-derivation-limits",
@@ -3171,7 +3177,7 @@
    "id": "core.approval-basis.adjudication-direct-human",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
-   "text": "Where `adjudication` is present for `direct`, `kind` MUST be `human` unless `governance_record` is `true`",
+   "text": "Where `adjudication` is present for `direct`, `kind` MUST be `human`, with or without `governance_record`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -3184,12 +3190,12 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where a directly approved Mission populates approval_basis.adjudication, kind is human, naming no principal beyond consent_principal, unless governance_record is true, in which case kind instead follows the Approval Governance Record override"
+    "normative": "where a directly approved Mission populates approval_basis.adjudication, kind is human, naming no principal beyond consent_principal, whether or not governance_record is true; a direct Mission never reports kind: policy"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New member (#701, revised per #716 review): now OPTIONAL, not REQUIRED, since no implementation yet emits approval_basis.adjudication and the family's standing-consent constructors (Template dispatch, Child Delegation, Ceiling drawdown) do not populate it in this revision. Round-trips without a redundant authority-bearing field: kind: human carries no further members since consent_principal already names the deciding human."
+   "notes": "New member (#701, revised per #716 review): now OPTIONAL, not REQUIRED, since no implementation yet emits approval_basis.adjudication and the family's standing-consent constructors (Template dispatch, Child Delegation, Ceiling drawdown) do not populate it in this revision. Round-trips without a redundant authority-bearing field: kind: human carries no further members since consent_principal already names the deciding human. #1185 (D387): the governance_record override that let a direct approval report kind: policy is removed; a policy decides an instance only under a standing-consent basis such as governed_policy."
   },
   {
    "id": "core.approval-basis.adjudication-standing-consent-policy",
@@ -3365,9 +3371,9 @@
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
-   "text": "When `true`, `kind` MUST equal the record's accountable assertion's own `kind`",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "issuance-relationship",
+   "text": "Where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `kind`.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -3378,12 +3384,34 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "whenever adjudication.governance_record is true, kind is derived from the Approval Governance Record's own accountable assertion (human or policy) rather than from approval_basis.type, so a direct Mission governed by a policy-kind assertion under the recency exception reports kind: policy, never a value that names the record itself"
+    "normative": "where a governed Mission populates approval_basis.adjudication with governance_record true and the Approval Governance Record carries an accountable assertion, that assertion's kind equals adjudication.kind, which the approval basis fixes (human for direct, policy for governed_policy); governance_record never changes kind and kind never names the record itself"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New member (#701, redesigned per #716 review): replaces the earlier kind: agr value, which conflated a decision mechanism with a storage location and lost whether an AGR-backed decision was human- or policy-adjudicated. kind stays semantic (human or policy); governance_record is an independent boolean flag, not a duplicate reference, since the record is already joined by this Mission's own approval_event_id. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows."
+   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it."
+  },
+  {
+   "id": "approval-governance.assertion.direct-accountable-human",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-requirements",
+   "text": "For `direct`, it MUST be the `human` assertion of `consent_principal`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Approval Governance Record for a direct approval whose accountable assertion is a policy or service assertion does not commit and no Mission is created active; contributing policy and service assertions alongside the human accountable assertion are accepted"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows. Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention)."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -32043,6 +32071,600 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Defines authority for the service kind, previously defined only for human and policy assertions."
+  },
+  {
+   "id": "approval-governance.governed-policy.agr-every-activation",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy",
+   "text": "Every activation under this basis MUST record an Approval Governance Record, committed with the Mission",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "no Mission is created active under governed_policy without a signed Approval Governance Record committed in the same commit; a failure to record leaves no active Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.root-contents",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-root",
+   "text": "The consented root is the retained `approval_policy` snapshot that a human approved",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval_policy a governed_policy record references is the human-approved root, and its retained snapshot commits the eligible clients, Subjects and sources, the authority ceiling and lifetime limits, the decision rules, the recency terms, and any separate evaluator's activation policy reference"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.consent-from-trusted-state",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-root",
+   "text": "The issuer MUST establish the standing consent, the consenting human, and that human's approval of the exact root version from retained, authenticated governance state, never from the activating request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation request or proposal that names or carries its own standing consent, consenting human or approval instant does not activate a Mission unless retained, authenticated governance state establishes that consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.digest-domains",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-root",
+   "text": "The issuer MUST NOT accept either digest in place of the other",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation whose root is checked against a mission-activation-policy digest, or whose separate evaluator is checked against the mission-approval-policy digest, is refused"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.record-members",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-record",
+   "text": "A Mission activated under this basis records these `approval_basis` members",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a governed_policy Mission records type governed_policy, consent_principal the approving human, approved_at that approval's instant, root_commitment equal to approval_policy.digest, activation with approval_event_id and the deciding policy's id, version and digest, activation_actor the authenticated requesting client, and adjudication kind policy with governance_record true"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.deciding-policy",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-record",
+   "text": "The deciding policy is the root itself or the separate evaluator the root commits, never another policy",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation whose deciding policy is neither the consented root nor the evaluator it commits is refused, and activation.policy.digest carries the typed digest of the policy that decided"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.approval-event-per-activation",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-record",
+   "text": "a retried or concurrent activation of the same proposal resolves to one Mission and one record, and each distinct activation creates its own Mission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "concurrent and retried activations of one proposal produce one Mission and one Approval Governance Record; distinct activations carry distinct approval_event_id values, never the root approval's identifier"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.accountable-policy-assertion",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-record",
+   "text": "The record's accountable assertion ({{assertion-requirements}}) MUST be a `policy` assertion whose `principal` is `consent_principal`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a governed_policy record whose accountable assertion is not a policy assertion naming consent_principal, with the deciding policy's id and version and approved_at equal to approval_basis.approved_at, does not commit"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-consent-active",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Resolve the standing consent from retained, authenticated state and confirm that it still admits new activations",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation under missing or withdrawn standing consent is refused and creates no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-root-approval",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Verify that the consenting human was authorized to approve the exact root version and approved it at `approved_at`, and recompute `approval_policy.digest` over the retained snapshot",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation is refused when the consenting human was not authorized to approve the root, when approved_at does not match the retained approval, or when the retained snapshot's bytes or version no longer reproduce approval_policy.digest"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-evaluator-digest",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Where the root commits a separate evaluator, recompute that evaluator's digest over the exact snapshot evaluated",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation is refused when the separate evaluator's snapshot differs from the mission-activation-policy digest the root commits"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-client-subject-source",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "verify that the requesting client, the Subject, and the source are ones the root admits",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation for a client, Subject or authority source the root does not admit is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-authority-expiry-bounds",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "within the source's ceiling and the root's authority ceiling, and bound the effective expiry by the Mission Intent and the root's lifetime limits",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation whose derived Authority Set exceeds the source ceiling or the root's authority ceiling, or whose effective expiry exceeds the Intent or the root's lifetime limits, does not create a Mission with that authority or expiry"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-policy-evaluation",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Evaluate the deciding policy, at its exact version, over recorded inputs",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "re-evaluating the deciding policy's recorded version over the recorded inputs reproduces the activation decision"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-recency-high-risk",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "across the whole derived Mission, including any consumption bound, so a high-risk class activates only under a committed, class-named exception",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation is refused when approved_at is older than the strictest applicable ceiling or later than the evaluation instant beyond the skew allowance, and when the derived Mission carries a high-risk class without a committed, class-named exception"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-event-binding",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Bind every assertion and the record to this instance's `approval_event_id`, `intent_hash`, and `authority_hash`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "replay",
+   "observation": {
+    "normative": "an assertion captured for one activation's approval event is not counted for another activation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.check-atomic-commit",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Sign the record and commit it with the `active` Mission",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a signing or persistence failure leaves no active Mission, no committed record, and no issued credential"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.failure-no-mission",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "A failure at any step creates no Mission and issues no credential.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "any failed activation check leaves no Mission and no credential"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.model-input-only",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "it can refuse an activation or narrow the authority activated, and never supplies authority or decides the approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a recorded model output can only refuse an activation or narrow its authority; it never adds authority and is never the deciding policy"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.withdrawal-stops-activations",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "Withdrawing the standing consent stops every later activation under it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "after the standing consent is withdrawn, no further Mission activates under it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "approval-governance.governed-policy.withdrawal-not-retroactive",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "governed-policy-activation",
+   "text": "A Mission already activated keeps its ordinary lifecycle: withdrawal does not revoke it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission activated before the standing consent was withdrawn stays active under its ordinary lifecycle"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "deferred-approval.policy-completion.issuer-selects-policy",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "The Mission Issuer selects a configured governed policy whose consented root admits the pending proposal",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the policy that completes a pending approval is one the issuer configured and whose root admits the proposal, never one the client names"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "deferred-approval.policy-completion.deferral-unchanged",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "Polling, cancellation, client binding, and token delivery follow the deferred substrate and this profile",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy-completed pending approval is polled, cancelled, client-bound and delivered exactly as a human-completed one"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "deferred-approval.policy-completion.refusal-no-mission",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "An evaluation that does not authorize activation creates no Mission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a policy evaluation that does not authorize activation leaves no Mission, and the pending approval either awaits a separately authenticated, full direct approval or resolves to denied"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "deferred-approval.policy-completion.human-fallback-direct",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "That human path never turns a failed `governed_policy` check into a `governed_policy` activation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created by a human after a policy evaluation did not authorize activation records approval_basis type direct with its own approval event and human accountable assertion, never type governed_policy"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows. Owner review of #1227 accepted the human fallback with this guard."
+  },
+  {
+   "id": "deferred-approval.policy-completion.one-mission",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "Each pending approval resolves under one `approval_event_id`, so retried and concurrent completions yield one Mission and one record",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "retried and concurrent completions of one pending approval produce one Mission and one Approval Governance Record"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "deferred-approval.policy-completion.no-client-basis-selector",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "The client selects no approval basis",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "no request parameter selects the approval basis; a client cannot cause a pending approval to complete under governed_policy"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
   },
   {
    "id": "child-delegation.carryover.no-progressive-drawdown",
