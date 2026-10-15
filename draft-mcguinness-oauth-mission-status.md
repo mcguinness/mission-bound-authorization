@@ -1650,7 +1650,7 @@ through standard {{RFC8414}} discovery.
   `private_key_jwt`.
 
 `mission_status_signing_alg_values_supported`:
-: OPTIONAL. A JSON array of strings. The JWS {{RFC7515}} algorithm
+: CONDITIONAL. A JSON array of strings. The JWS {{RFC7515}} algorithm
   values the AS uses to sign the Mission Status Response shape
   ({{mission-status-response}}), on whichever surfaces of this
   profile family serve it (the dedicated Mission Status operation,
