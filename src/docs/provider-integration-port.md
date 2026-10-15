@@ -805,8 +805,8 @@ operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) or naming a later merged
-issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `8e499b8c`, and every
-`file:line` citation is read at `8e499b8c`.
+issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `338436fb`, and every
+`file:line` citation is read at `338436fb`.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
