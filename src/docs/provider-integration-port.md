@@ -824,8 +824,8 @@ operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) or naming a later merged
-issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `8c2dd42a`, and every
-`file:line` citation is read at `8c2dd42a`.
+issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `74184bac`, and every
+`file:line` citation is read at `74184bac`.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -893,9 +893,9 @@ drives an AS-issued Mission-bound token through that assembled path.
   own `authorization_details`, read as the credential's authority. A token
   that fails the profile is refused, never demoted to the ordinary class.
   Before the PDP is asked, the PEP refuses `out_of_authority` for an action
-  outside that authority, one whole entry at a time (`pep.ts:1435-1459`). It
+  outside that authority, one whole entry at a time (`pep.ts:1446-1470`). It
   carries the authority and the credential's expiry to the PDP as
-  `context.credential` (`pep.ts:1539-1546`). The PDP enforces that authority
+  `context.credential` (`pep.ts:1550-1557`). The PDP enforces that authority
   as its own bound, embedded and remote, and refuses a missing or unreadable
   carrier or a passed expiry `credential_invalid`, never falling back to the
   Mission (`services/pdp/src/evaluate.ts:856-871`, `:1335-1362`; D341).
@@ -1013,16 +1013,16 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Hook.** `buildEffectiveParams`
   (`services/mcp-payments/src/effective-params.ts:27-44`) builds the effective
   parameters from the payments store, never from tool arguments, and
-  `parameterDigest` (`:83`) commits them into the decision request. Three
+  `parameterDigest` (`:84`) commits them into the decision request. Three
   separate PEP checks run at use:
-  - `verifyPermitAtUse` (`pep.ts:2072`) runs the permit-use table
-    (`pep.ts:425-465`): the permit's bound phase against the crossing's phase
+  - `verifyPermitAtUse` (`pep.ts:2083`) runs the permit-use table
+    (`pep.ts:431-471`): the permit's bound phase against the crossing's phase
     (`phase_mismatch`), then `valid_until` (`permit_expired`). It compares no
     digest.
-  - `reverifyCapability` (`pep.ts:2193`) re-checks the capability snapshot
+  - `reverifyCapability` (`pep.ts:2204`) re-checks the capability snapshot
     (`capability_source_unresolvable`).
-  - `reverify` (`pep.ts:2104`, a single-record operation) and `reverifyList`
-    (`pep.ts:2144`, a list read) re-derive the effective parameters and
+  - `reverify` (`pep.ts:2115`, a single-record operation) and `reverifyList`
+    (`pep.ts:2155`, a list read) re-derive the effective parameters and
     compare the digest (`parameter_mismatch`; a target that no longer resolves
     is also `parameter_mismatch`).
 - **Order and boundary, by dispatch path** (`dispatchPathFor`, called from
@@ -1046,7 +1046,7 @@ drives an AS-issued Mission-bound token through that assembled path.
     transaction token is presented, and the connector commit (`:1720-1771`).
     A refusal after redemption marks the operation `abandoned` and records
     suppressed Execution Evidence, which settles the PDP claim `failed`
-    because the attempt is redeemed (`pep.ts:2001-2003`). The permit is spent;
+    because the attempt is redeemed (`pep.ts:2012-2014`). The permit is spent;
     a retry needs a fresh decision (code reading).
 - **Asynchronous work.** None.
 - **Crash and recovery.** The payments store is in memory and reseeded per
@@ -1170,11 +1170,11 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Hook.** The PDP emits Decision Evidence for every decision. The PEP
   verifies it (byte equality, signature, emitter-bound key, role, audience)
   before release, refusing `decision_evidence_unverifiable` otherwise
-  (`pep.ts:1657-1669`). The PEP emits Refusal Records (`pep.ts:2208-2269`), whose
+  (`pep.ts:1668-1680`). The PEP emits Refusal Records (`pep.ts:2219-2280`), whose
   `denial_reason` the exhaustive `PRE_DECISION_DENIAL_REASON` supplies; an
   unmapped diagnostic, or a value outside the emitting role's closed set, is
   refused before signing (#1148). It also emits
-  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1968-2011`). The
+  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1979-2022`). The
   executor emits `completed` Execution Evidence after a connector commit
   (`server.ts:1802-1835`). The record table is the contract's §6.
 - **Boundary.** Synchronous, inside the request.
