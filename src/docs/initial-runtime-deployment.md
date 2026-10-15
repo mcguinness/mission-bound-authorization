@@ -17,7 +17,7 @@ production-readiness or interoperability claim (D284 ruling 1).
 Every behavioral statement is true of the reference implementation read at
 origin/main `e9001b2f`, and each statement about the as-native target and its
 launcher (#1105), or naming a later merged issue (such as #1103 or #1104), at
-`583e3806`, and each statement about token authority (#825) at `360eefca`. Each cites the function (`file:line`, read at
+`583e3806`. Each cites the function (`file:line`, read at
 `583e3806`, paths relative to `src/`) or the exact test (`describe > it`)
 that shows it. A path with no
 witnessing test says "no test yet". Tests marked [FGA] are skipped without a
