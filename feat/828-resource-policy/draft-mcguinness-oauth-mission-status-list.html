@@ -1059,7 +1059,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 11 April 2027</td>
+<td class="center">Expires 18 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1072,12 +1072,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-status-list-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-08" class="published">8 October 2026</time>
+<time datetime="2026-10-15" class="published">15 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-18">18 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1131,7 +1131,7 @@ that does not adopt it is unaffected.<a href="#section-abstract-1" class="pilcro
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 18 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1282,13 +1282,13 @@ already reads.<a href="#section-3-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-4.2">
           <p id="section-3-4.2.1"><strong>Mapping.</strong> VALID (0x00) reports <code>active</code>; SUSPENDED (0x02)
-reports <code>suspended</code>; INVALID (0x01) reports every terminal state.
-A consumer treats any other value as non-active, per the fail-safe
-rule. The list carries reliance bits only: which terminal state,
-the <code>successor</code>, and the state version stay on the Status
-profile's authoritative surfaces, and a consumer that observes a
-bit other than VALID re-establishes state there before any further
-reliance.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
+reports <code>suspended</code>; INVALID (0x01) reports <code>terminated</code>, with any
+termination reason. A consumer treats any other value as non-active,
+per the fail-safe rule. The list carries reliance bits only: which
+termination reason and its references, and the state version stay
+on the Status profile's authoritative surfaces, and a consumer that
+observes a bit other than VALID re-establishes state there before
+any further reliance.<a href="#section-3-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-4.3">
           <p id="section-3-4.3.1"><strong>Freshness.</strong> The Status List Token's <code>ttl</code> and <code>exp</code> are a

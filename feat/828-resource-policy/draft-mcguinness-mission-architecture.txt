@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            8 October 2026
-Expires: 11 April 2027
+Intended status: Informational                           15 October 2026
+Expires: 18 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 April 2027.
+   This Internet-Draft will expire on 18 April 2027.
 
 Copyright Notice
 
@@ -93,6 +93,7 @@ Table of Contents
    7.  The Mission Verbs
      7.1.  Propose
      7.2.  Approve and Record
+       7.2.1.  Mission Creation Paths
      7.3.  Govern
      7.4.  Enforce Each Action
      7.5.  Run and Wind Down
@@ -344,8 +345,8 @@ Table of Contents
 
    7.  *Stop.* Revocation or expiry turns every gate: issuance refuses
        at once, the PDP denies within its state source's staleness
-       bound, the harness pauses bound sessions and queues, and the
-       orchestrator unwinds in-flight work
+       bound, the harness suppresses or terminates bound sessions and
+       queues, and the orchestrator unwinds in-flight work
        ([I-D.draft-mcguinness-mission-harness],
        [I-D.draft-mcguinness-mission-orchestration]); a token no state-
        aware gate reaches runs to its own expiry (Section 10.4).
@@ -482,21 +483,27 @@ Table of Contents
    envelope with fixed canonicalization, so an auditor can reproduce
    each digest from the record alone (the OAuth binding's Mission
    Approval, Integrity Anchors, and Canonicalization Rules sections).
-   The record is immutable except for its state (the Mission Record
-   section).
+   The record is immutable except for its state and, written once when
+   the Mission terminates, its termination (the Mission Record section).
 
-   In the OAuth binding the lifecycle states are active, revoked, and
-   expired, and only active permits issuance or a new positive
-   governance decision.  A non-active state stops further derivation and
-   refresh at once.  A credential already issued ends at the earliest of
-   an applicable revocation, a state-aware or runtime check that reaches
-   it, or its own expiry (Section 10.4).
+   In the OAuth binding the lifecycle states are active and terminated,
+   and only active permits issuance or a new positive governance
+   decision.  A terminated Mission's termination gives the reason:
+   revoked or expired in the OAuth binding.  A non-active state stops
+   further derivation and refresh at once.  A credential already issued
+   ends at the earliest of an applicable revocation, a state-aware or
+   runtime check that reaches it, or its own expiry (Section 10.4).
 
-   Companions add states (suspended, completed, superseded, cascaded).
-   One rule keeps these additions safe without a registry: a consumer
-   treats every state other than the exact value active, including one
-   it does not recognize, as non-active, so an unrecognized state fails
-   safe (the OAuth binding's Mission Lifecycle and Gating section).
+   Mission Status adds the reversible suspended state.  A companion that
+   defines a further way for a Mission to end registers a termination
+   reason, not a state (completed, superseded, parent_terminated); the
+   OAuth binding's Mission Lifecycle States and Mission Termination
+   Reasons registries hold both.  One rule keeps these additions safe: a
+   consumer treats every state other than the exact value active,
+   including one it does not recognize, as non-active, so an
+   unrecognized state fails safe, and a reason it does not recognize
+   still leaves the Mission terminated (the OAuth binding's Mission
+   Lifecycle and Gating and Mission Termination sections).
 
    AAuth has its own counterparts to the OAuth commitment and lifecycle.
    Its exact-byte s256 commits the private approved mission blob.  The
@@ -512,8 +519,12 @@ Table of Contents
    Server policy, and optionally AAuth Rich Resource Requests (R3,
    [I-D.draft-hardt-aauth-r3]) carry deterministic resource
    authorization.  AAuth does not add the OAuth Authority Set or its two
-   anchors, and its native lifecycle remains exactly active or
-   terminated.
+   anchors.  Its native lifecycle is active or terminated, with no
+   suspended state, and it records why a mission ended in flat
+   termination_reason and terminated_at members from its own open reason
+   set, which includes administrative; the OAuth binding nests a
+   registered reason in a termination object.  The AAuth binding maps
+   the two reason sets ([I-D.draft-mcguinness-mission-aauth]).
 
 4.2.  The Authority Path
 
@@ -1389,6 +1400,91 @@ Table of Contents
    decision, per the progressive profile's prohibited set
    ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
+7.2.1.  Mission Creation Paths
+
+   Each Mission's creation answers three questions: whose authority it
+   draws on (authority_source), who decides and when (approval_basis),
+   and how the request reaches the Mission Issuer.  An agent with no
+   delegating user holds a service_owned Mission, drawing on its own
+   provisioned authority, or an organizational Mission, drawing on a
+   governed policy; its Subject is a workload or organizational
+   principal, never a person.  Client authentication or a workload
+   identity system says who the agent is; the Mission records which task
+   it may perform.
+
+   +==============+==================+===================+=============+
+   |Situation     | Whose authority  | Who decides       |How the      |
+   |(home)        |                  |                   |request      |
+   |              |                  |                   |arrives      |
+   +==============+==================+===================+=============+
+   |A user        | the user's       | that user, at the |the          |
+   |approves an   | (user_delegated) | approval event    |authorization|
+   |agent's task  |                  |                   |endpoint     |
+   |(oauth-       |                  |                   |             |
+   |mission)      |                  |                   |             |
+   +--------------+------------------+-------------------+-------------+
+   |An            | the agent's      | the               |the          |
+   |administrator | (service_owned)  | administrator, at |authorization|
+   |approves an   | or a governed    | the approval      |endpoint, or |
+   |agent's own   | policy's         | event             |a pending    |
+   |task (oauth-  | (organizational) |                   |request      |
+   |mission with  |                  |                   |resolved     |
+   |oauth-        |                  |                   |later with no|
+   |mission-      |                  |                   |user present |
+   |approval, or  |                  |                   |             |
+   |mission-      |                  |                   |             |
+   |authority-    |                  |                   |             |
+   |server)       |                  |                   |             |
+   +--------------+------------------+-------------------+-------------+
+   |A policy      | the source       | a dispatch        |one token    |
+   |approves each | retained at      | policy, within a  |request from |
+   |run of a      | template consent | template a human  |a listed     |
+   |recurring     |                  | consented to once |dispatcher   |
+   |task (oauth-  |                  |                   |             |
+   |mission-      |                  |                   |             |
+   |template,     |                  |                   |             |
+   |experimental) |                  |                   |             |
+   +--------------+------------------+-------------------+-------------+
+   |An agent      | the Parent       | a fresh human     |a child-     |
+   |starts a sub- | Mission's        | approval, or the  |creation     |
+   |agent (oauth- |                  | parent's          |token        |
+   |mission-      |                  | delegation policy |exchange     |
+   |child-        |                  | (policy_drawdown) |             |
+   |delegation)   |                  |                   |             |
+   +--------------+------------------+-------------------+-------------+
+
+                      Table 3: Mission creation paths
+
+   The administrator's authority to approve for that Subject and to
+   activate that source is checked at approval steps 2 and 3 of the
+   OAuth binding ([I-D.draft-mcguinness-oauth-mission], Section "Mission
+   Approval").  The record excerpt below, other members omitted, shows
+   the administrator row: subject and client_id name the agent, and
+   consent_principal names the administrator.
+
+   {
+     "subject": {
+       "iss": "https://login.example.com",
+       "sub": "agt_ledger_reconciler"
+     },
+     "client_id": "ledger-reconciler",
+     "authority_source": { "type": "service_owned" },
+     "approval_basis": {
+       "type": "direct",
+       "consent_principal": {
+         "iss": "https://login.example.com",
+         "sub": "adm_4Hq9Tz"
+       },
+       "activation": { "approval_event_id": "ape_2Lw7Kq9Rv4" },
+       "activation_actor": {
+         "iss": "https://login.example.com",
+         "sub": "adm_4Hq9Tz"
+       },
+       "root_commitment":
+         "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQo"
+     }
+   }
+
 7.3.  Govern
 
    Question:  How do consumers observe Mission state, and how does
@@ -2069,7 +2165,7 @@ Table of Contents
        |                           | admission                     |
        +---------------------------+-------------------------------+
 
-                  Table 3: Derivation modes by portability
+                  Table 4: Derivation modes by portability
 
    A deployment seeking interoperable authority uses narrowing; a model-
    assisted extension stays local policy unless a profile pins it with a
@@ -2243,7 +2339,7 @@ Table of Contents
    |              |                        |                |analysis      |
    +--------------+------------------------+----------------+--------------+
 
-          Table 4: Substrate primitives in their OAuth realization
+          Table 5: Substrate primitives in their OAuth realization
 
    The anchors in the envelope row are *commitment anchors*, not
    enforcement proofs (Section 9.2).  A resource server holding a
@@ -2511,7 +2607,7 @@ Table of Contents
    |            |         |          |              |              |Status       |
    +------------+---------+----------+--------------+--------------+-------------+
 
-               Table 5: How the binding architectures differ
+               Table 6: How the binding architectures differ
 
    A MAS deployment that holds the same Mission as an AS deployment does
    not thereby provide AS-native semantics, so a comparison of
@@ -2628,7 +2724,7 @@ Table of Contents
      | Profile     | the above                             | 12.6    |
      +-------------+---------------------------------------+---------+
 
-                         Table 6: Assurance frames
+                         Table 7: Assurance frames
 
    The levels are *adoption bundles*: named sets of the documents a
    deployment runs, so a deployment, a procurement, or a review can cite
@@ -2822,7 +2918,7 @@ Table of Contents
      |                  | approval                                  |
      +------------------+-------------------------------------------+
 
-            Table 7: What each level makes defensible to grant
+            Table 8: What each level makes defensible to grant
 
    The mapping is informative: the action classes are the runtime
    profile's ([I-D.draft-mcguinness-mission-runtime]), resource policy
@@ -3012,7 +3108,7 @@ Table of Contents
    |                            | projection     |                     |
    +----------------------------+----------------+---------------------+
 
-                    Table 8: Mission binding properties
+                    Table 9: Mission binding properties
 
    The mapping join and the Mission Join Assertion are the MAS's
    ([I-D.draft-mcguinness-mission-authority-server]).
@@ -3118,7 +3214,8 @@ Table of Contents
     |           | and the credential's derivation link to it          |
     +-----------+-----------------------------------------------------+
 
-    Table 9: How the OAuth binding establishes credential-mission-bound
+      Table 10: How the OAuth binding establishes credential-mission-
+                                   bound
 
    Sender constraint is not among the six conditions.  Issuance-time key
    targeting and presentation-time proof are presenter-key-bound, a
@@ -3248,7 +3345,7 @@ Table of Contents
     | permit      |                                                   |
     +-------------+---------------------------------------------------+
 
-                    Table 10: Mission binding mechanisms
+                    Table 11: Mission binding mechanisms
 
    The property names above are stable identifiers.  A claim is a per-
    path declaration, not prose: each claimed property or composition
@@ -3325,7 +3422,7 @@ Table of Contents
     |            |                                    | controls      |
     +------------+------------------------------------+---------------+
 
-                      Table 11: The containment matrix
+                      Table 12: The containment matrix
 
    The issuer-held containment overlay is defined by
    [I-D.draft-mcguinness-oauth-mission-containment], and cascade
@@ -3498,7 +3595,7 @@ Table of Contents
    |        |(note 6)    |             |                 |             |
    +--------+------------+-------------+-----------------+-------------+
 
-      Table 12: What a capability kill stops, and what runs to its own
+      Table 13: What a capability kill stops, and what runs to its own
                                    bound
 
    Notes:
@@ -3610,7 +3707,7 @@ Table of Contents
     |              | committed facts     | facts      | none)        |
     +--------------+---------------------+------------+--------------+
 
-         Table 13: What each layer prevents, detects, and leaves
+         Table 14: What each layer prevents, detects, and leaves
 
    In each layer, the family commits and checks what a party was shown,
    decided, or did.  It does not make the human attentive, the producer
@@ -3691,7 +3788,7 @@ Table of Contents
    |               | needs it   |                                     |
    +---------------+------------+-------------------------------------+
 
-                     Table 14: Entry ramps by estate
+                     Table 15: Entry ramps by estate
 
    Grant redemption and the issuance join are defined by
    [I-D.draft-mcguinness-oauth-mission-issuance-grant].  Every row
@@ -4000,9 +4097,9 @@ Table of Contents
               Looker, T., Bastian, P., and C. Bormann, "OAuth 2.0
               Attestation-Based Client Authentication", Work in
               Progress, Internet-Draft, draft-ietf-oauth-attestation-
-              based-client-auth-11, 3 September 2026,
+              based-client-auth-12, 12 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              attestation-based-client-auth-11>.
+              attestation-based-client-auth-12>.
 
    [I-D.draft-ietf-oauth-rar-metadata-remediation]
               Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
@@ -4561,7 +4658,7 @@ Appendix B.  Comparison to a Conventional Stack
    |             |               | (Section 8)         |               |
    +-------------+---------------+---------------------+---------------+
 
-     Table 15: Where a conventional stack meets Mission standardization
+     Table 16: Where a conventional stack meets Mission standardization
 
    The OAuth binding's sections named in the table are in
    [I-D.draft-mcguinness-oauth-mission].  Past these crossovers, a
@@ -4603,7 +4700,7 @@ Appendix C.  A Worked Composition
      | PEP/PDP    |                       | routes                  |
      +------------+-----------------------+-------------------------+
 
-           Table 16: Provider claims in the worked composition
+           Table 17: Provider claims in the worked composition
 
    The runtime profile and its evidence companion supply action-time
    enforcement and decision evidence at the gateway
@@ -4678,7 +4775,7 @@ Appendix C.  A Worked Composition
       |             | gateway    | evidence                         |
       +-------------+------------+----------------------------------+
 
-                        Table 17: Composition result
+                        Table 18: Composition result
 
    AAuth supplies work continuity, the payment authority decides
    permission in its own vocabulary, and the gateway is the scoped
@@ -5015,9 +5112,10 @@ Appendix G.  Mission Document Map
 
    Within Lifecycle, Status is the OAuth lifecycle suite's root
    document, with Signals (the push channel) and Management (the
-   operator plane) as its satellites; AAuth keeps its native two-state
-   lifecycle, served by mission-aauth-management, with the expiry bound
-   profiled by aauth-mission-expiry.
+   operator plane) as its satellites; AAuth keeps its native lifecycle,
+   with no suspended state and its own termination reasons, served by
+   mission-aauth-management, with the expiry bound profiled by aauth-
+   mission-expiry.
 
    *Architecture mappings:*
 
@@ -5029,7 +5127,7 @@ Appendix G.  Mission Document Map
         |             | defines no binding or mechanism.         |
         +-------------+------------------------------------------+
 
-                                 Table 18
+                                 Table 19
 
    *The substrate and the bindings:*
 
@@ -5076,7 +5174,7 @@ Appendix G.  Mission Document Map
     |                               | than OAuth publish Statements.  |
     +-------------------------------+---------------------------------+
 
-                                  Table 19
+                                  Table 20
 
    *Approval time:*
 
@@ -5129,83 +5227,78 @@ Appendix G.  Mission Document Map
      |                                   | instantiated Mission.     |
      +-----------------------------------+---------------------------+
 
-                                  Table 20
+                                  Table 21
 
    *Lifecycle:*
 
-     +=================================+============================+
-     | Document                        | Role                       |
-     +=================================+============================+
-     | oauth-mission-status            | The signed pull surface    |
-     |                                 | and lifecycle endpoint,    |
-     |                                 | with suspended and         |
-     |                                 | completed.                 |
-     +---------------------------------+----------------------------+
-     | oauth-mission-status-list       | A signed, compressed       |
-     |                                 | Status List read locally   |
-     |                                 | per action instead of per- |
-     |                                 | Mission status reads.      |
-     +---------------------------------+----------------------------+
-     | oauth-mission-discharge         | Per-entry discharge via    |
-     |                                 | terminal_when, an          |
-     |                                 | extension operation on the |
-     |                                 | Status lifecycle endpoint. |
-     +---------------------------------+----------------------------+
-     | oauth-mission-signals           | A signed event per         |
-     |                                 | lifecycle transition, push |
-     |                                 | or poll.                   |
-     +---------------------------------+----------------------------+
-     | mission-control-plane           | Experimental: issuer       |
-     |                                 | consistency, durable       |
-     |                                 | transition publication,    |
-     |                                 | rollback resistance, and   |
-     |                                 | the availability boundary. |
-     +---------------------------------+----------------------------+
-     | oauth-mission-expansion         | Widening through an        |
-     |                                 | approved successor         |
-     |                                 | Mission.                   |
-     +---------------------------------+----------------------------+
-     | oauth-mission-containment       | Event-triggered monotonic  |
-     |                                 | narrowing of a live        |
-     |                                 | Mission's effective        |
-     |                                 | authority; restoration     |
-     |                                 | only by successor.         |
-     +---------------------------------+----------------------------+
-     | oauth-mission-derivation-limits | An issuer-enforced cap on  |
-     |                                 | derivations under one      |
-     |                                 | Mission, refused at        |
-     |                                 | issuance once reached.     |
-     +---------------------------------+----------------------------+
-     | oauth-mission-progressive       | Experimental: policy-      |
-     |                                 | adjudicated expansion      |
-     |                                 | within a pre-consented     |
-     |                                 | ceiling.                   |
-     +---------------------------------+----------------------------+
-     | mission-discovery               | Experimental: the open-    |
-     |                                 | world encounter as a       |
-     |                                 | governed operation, with   |
-     |                                 | identity pinning and       |
-     |                                 | adjudication floors.       |
-     +---------------------------------+----------------------------+
-     | oauth-mission-management        | Fleet enumeration and bulk |
-     |                                 | lifecycle operations for   |
-     |                                 | operators; dry-run-first,  |
-     |                                 | per-Mission semantics.     |
-     +---------------------------------+----------------------------+
-     | mission-aauth-management        | AAuth-native status,       |
-     |                                 | termination, optional      |
-     |                                 | expiry, and delegation-    |
-     |                                 | tree queries at the Person |
-     |                                 | Server.                    |
-     +---------------------------------+----------------------------+
-     | aauth-mission-expiry            | Profile of AAuth's         |
-     |                                 | expires_at lifetime bound: |
-     |                                 | precision, skew            |
-     |                                 | documentation, prompt      |
-     |                                 | termination.               |
-     +---------------------------------+----------------------------+
+    +=================================+===============================+
+    | Document                        | Role                          |
+    +=================================+===============================+
+    | oauth-mission-status            | The signed pull surface and   |
+    |                                 | lifecycle endpoint, with the  |
+    |                                 | suspended state and the       |
+    |                                 | completed termination reason. |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-status-list       | A signed, compressed Status   |
+    |                                 | List read locally per action  |
+    |                                 | instead of per-Mission status |
+    |                                 | reads.                        |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-discharge         | Per-entry discharge via       |
+    |                                 | terminal_when, an extension   |
+    |                                 | operation on the Status       |
+    |                                 | lifecycle endpoint.           |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-signals           | A signed event per lifecycle  |
+    |                                 | transition, push or poll.     |
+    +---------------------------------+-------------------------------+
+    | mission-control-plane           | Experimental: issuer          |
+    |                                 | consistency, durable          |
+    |                                 | transition publication,       |
+    |                                 | rollback resistance, and the  |
+    |                                 | availability boundary.        |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-expansion         | Widening through an approved  |
+    |                                 | successor Mission.            |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-containment       | Event-triggered monotonic     |
+    |                                 | narrowing of a live Mission's |
+    |                                 | effective authority;          |
+    |                                 | restoration only by           |
+    |                                 | successor.                    |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-derivation-limits | An issuer-enforced cap on     |
+    |                                 | derivations under one         |
+    |                                 | Mission, refused at issuance  |
+    |                                 | once reached.                 |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-progressive       | Experimental: policy-         |
+    |                                 | adjudicated expansion within  |
+    |                                 | a pre-consented ceiling.      |
+    +---------------------------------+-------------------------------+
+    | mission-discovery               | Experimental: the open-world  |
+    |                                 | encounter as a governed       |
+    |                                 | operation, with identity      |
+    |                                 | pinning and adjudication      |
+    |                                 | floors.                       |
+    +---------------------------------+-------------------------------+
+    | oauth-mission-management        | Fleet enumeration and bulk    |
+    |                                 | lifecycle operations for      |
+    |                                 | operators; dry-run-first,     |
+    |                                 | per-Mission semantics.        |
+    +---------------------------------+-------------------------------+
+    | mission-aauth-management        | AAuth-native status,          |
+    |                                 | termination, optional expiry, |
+    |                                 | and delegation-tree queries   |
+    |                                 | at the Person Server.         |
+    +---------------------------------+-------------------------------+
+    | aauth-mission-expiry            | Profile of AAuth's expires_at |
+    |                                 | lifetime bound: precision,    |
+    |                                 | skew documentation, prompt    |
+    |                                 | termination.                  |
+    +---------------------------------+-------------------------------+
 
-                                 Table 21
+                                  Table 22
 
    *Cross-domain projection and continuity:*
 
@@ -5235,7 +5328,7 @@ Appendix G.  Mission Document Map
    |                                    | hop.                        |
    +------------------------------------+-----------------------------+
 
-                                 Table 22
+                                 Table 23
 
    *Runtime enforcement:*
 
@@ -5283,7 +5376,7 @@ Appendix G.  Mission Document Map
    |                                         | domain decision.        |
    +-----------------------------------------+-------------------------+
 
-                                  Table 23
+                                  Table 24
 
    *Agent runtime:*
 
@@ -5303,7 +5396,7 @@ Appendix G.  Mission Document Map
     |                            | compensation after a stop.        |
     +----------------------------+-----------------------------------+
 
-                                 Table 24
+                                 Table 25
 
    *Sub-agents:*
 
@@ -5320,7 +5413,7 @@ Appendix G.  Mission Document Map
     |                                | preserved by runtime re-check. |
     +--------------------------------+--------------------------------+
 
-                                  Table 25
+                                  Table 26
 
    *Proof and portability:*
 
@@ -5353,7 +5446,7 @@ Appendix G.  Mission Document Map
    |                                         | kinds.                 |
    +-----------------------------------------+------------------------+
 
-                                 Table 26
+                                 Table 27
 
    *Security model:*
 
@@ -5371,11 +5464,18 @@ Appendix G.  Mission Document Map
       |                             | compromise costs.             |
       +-----------------------------+-------------------------------+
 
-                                  Table 27
+                                  Table 28
 
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Approval and Lifecycle states the OAuth lifecycle as active,
+      Mission Status's suspended, and terminated with a reason from the
+      Mission Termination Reasons registry; the record's mutable members
+      are its state and termination; and the AAuth contrast names
+      AAuth's flat reason members and its lack of a suspended state
+      (#705).
 
    *  The Approve and Record discussion names the authorized policy as
       an instance's adjudication mechanism and the human who consented

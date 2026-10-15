@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 11 April 2027</td>
+<td class="center">Expires 18 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1076,12 +1076,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-cross-domain-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-08" class="published">8 October 2026</time>
+<time datetime="2026-10-15" class="published">15 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-18">18 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1139,7 +1139,7 @@ of the issuance profile are unaffected by this document.<a href="#section-abstra
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 18 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1768,7 +1768,7 @@ assertion that carries no Mission binding (<a href="#error-responses" class="aut
 <ul class="normal">
 <li class="normal" id="section-8-11.1">
           <p id="section-8-11.1.1">that the Mission is <code>active</code>, failing otherwise with
-<code>invalid_grant</code>; and<a href="#section-8-11.1.1" class="pilcrow">¶</a></p>
+<code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>); and<a href="#section-8-11.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-11.2">
           <p id="section-8-11.2.1">that the target Resource AS is authorized for the requested
@@ -2313,10 +2313,16 @@ conditions so both surfaces fail uniformly.<a href="#section-11-1" class="pilcro
 </td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">The subject token does not resolve to a Mission, or the Mission is not <code>active</code>
-</td>
+            <td class="text-left" rowspan="1" colspan="1">The subject token does not resolve to a Mission</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_grant</code>
+</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">The Mission is not <code>active</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_request</code>
 </td>
           </tr>
           <tr>
@@ -2376,11 +2382,12 @@ Section "Mission State via Token Introspection"). This section
 specifies the non-issuer half of that rule.<a href="#section-12-1" class="pilcrow">¶</a></p>
 <p id="section-12-2">A Resource AS that supports introspection for a local token it minted
 from a cross-domain grant returns the claim-shape members only: <code>id</code>,
-<code>issuer</code>, and <code>authority_hash</code>. It <span class="bcp14">MUST</span> omit <code>mission.state</code> rather
-than report a stale value as current. It holds the token, not the
-Mission: it knows the Mission state only as of grant validation and
-has no query to the issuer keyed by <code>mission_id</code> (neither this
-document nor the issuance profile defines one).<a href="#section-12-2" class="pilcrow">¶</a></p>
+<code>issuer</code>, and <code>authority_hash</code>. It <span class="bcp14">MUST</span> omit <code>mission.state</code> and
+<code>mission.termination</code> rather than report a stale value as current. It
+holds the token, not the Mission: it knows the Mission state only as
+of grant validation and has no query to the issuer keyed by
+<code>mission_id</code> (neither this document nor the issuance profile defines
+one).<a href="#section-12-2" class="pilcrow">¶</a></p>
 <p id="section-12-3"><code>authority_hash</code>, when included, is the issuer's commitment carried
 through the grant, not a value the Resource AS recomputes from its
 audience-scoped subset (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
@@ -2801,7 +2808,7 @@ defined by that profile's Mission Resource Access Profile
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-actor-receipts">[I-D.draft-mcguinness-oauth-actor-receipts]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor Receipts for Delegation Provenance"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-receipts-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-00</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor Receipts for Delegation Provenance"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-receipts-01</span>, <time datetime="2026-10-08" class="refDate">8 October 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-domain-authorized-issuer">[I-D.draft-mcguinness-oauth-domain-authorized-issuer]</dt>
         <dd>
@@ -2912,9 +2919,9 @@ additionally carries, for that resource, an <code>invoices.read</code> entry
 <code>journal-entries.write</code> entry capped at a <code>max_amount</code> of 500.00
 USD. The
 Mission was recorded <code>active</code> with <code>authority_hash</code>
-        <code>sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ</code> and
+        <code>sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg</code> and
 <code>intent_hash</code>
-        <code>sha-256:Zb8mR3nX5pV4lE6sQqYwQ7p4LHnX9Md0LqJ6sZJ2xT5f</code> (illustrative;
+        <code>sha-256:SSDZGp4CRwv7ZL4_ttfKb-qTWn-aHy8Ffc8a_dE4Nkk</code> (illustrative;
 this Mission's Intent and Authority Set extend the single-domain
 walkthrough's, so its anchors differ from that example's). The partner ERP
 is behind the Resource AS <code>ras.partner.example.com</code>, so the agent's
@@ -2961,7 +2968,7 @@ audience-scoped authority for the ERP:<a href="#appendix-A.1-1" class="pilcrow">
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
   }
 }
 </pre><a href="#appendix-A.1-2" class="pilcrow">¶</a>
@@ -3020,7 +3027,7 @@ registration, not the agent's home-domain <code>client_id</code>:<a href="#appen
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
   }
 }
 </pre><a href="#appendix-A.2-2" class="pilcrow">¶</a>
@@ -3111,7 +3118,7 @@ operation:<a href="#appendix-A.4-2" class="pilcrow">¶</a></p>
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:Gv2nD9bM7sX1cF8gH0pVl3KvZ4mP5x0wQrR6tY2jE5kQ"
+      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
   }
 }
 </pre><a href="#appendix-A.4-3" class="pilcrow">¶</a>
@@ -3192,21 +3199,31 @@ exceeds the Mission's <code>expires_at</code>. The ID-JAG carried identity
 <p id="appendix-B-2">-01<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-3.1">
-          <p id="appendix-B-3.1.1">Issuing the Cross-Domain Grant: the comparison with the primary
-access token names the RFC 9700 recommendation the issuance profile
-adopts; the issuance profile sets no BCP 14 level of its own there.
-No requirement changed.<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.1.1">Grant issuance at the originating AS refuses a Mission that is not
+<code>active</code> with <code>invalid_request</code>, following the issuance profile's
+Token Exchange rule; redemption at the Resource AS keeps
+<code>invalid_grant</code> (#1154).<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.2">
-          <p id="appendix-B-3.2.1">Controls taxonomy retirement (#636): <code>max_derivations</code> renamed
+          <p id="appendix-B-3.2.1">Introspection at a Resource AS: a non-issuer Resource AS omits
+<code>mission.termination</code> as well as <code>mission.state</code> (#705).<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.3">
+          <p id="appendix-B-3.3.1">Issuing the Cross-Domain Grant: the comparison with the primary
+access token names the RFC 9700 recommendation the issuance profile
+adopts; the issuance profile sets no BCP 14 level of its own there.
+No requirement changed.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.4">
+          <p id="appendix-B-3.4.1">Controls taxonomy retirement (#636): <code>max_derivations</code> renamed
 <code>derivation_limit</code> at its one normative reference (Issuing the
 Cross-Domain Grant). The Document History entry below is left
 unchanged: it is a historical record of the disclosure pattern this
 document mirrored at the time, under that pattern's then-current
-name.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+name.<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.3">
-          <p id="appendix-B-3.3.1">Reshaped Per-Domain Delegation Depth's disclosure from a flat
+        <li class="normal" id="appendix-B-3.5">
+          <p id="appendix-B-3.5.1">Reshaped Per-Domain Delegation Depth's disclosure from a flat
 <span class="bcp14">SHOULD</span> to a conditional, interface-addressed <span class="bcp14">MUST</span>, mirroring the
 child delegation profile's <code>max_derivations</code> disclosure pattern,
 and corrected the composed-bound arithmetic: the disclosed bound is
@@ -3214,18 +3231,18 @@ the sum of each distinct Resource AS domain's applicable
 <code>max_depth</code> (or a conservative per-domain maximum), not one
 per-domain <code>max_depth</code> times a flat domain count, and domains are
 counted by distinct Resource AS from the resource-to-AS mapping,
-never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.4">
-          <p id="appendix-B-3.4.1">Editorial density pass: split several overlong paragraphs (no BCP-14
+        <li class="normal" id="appendix-B-3.6">
+          <p id="appendix-B-3.6.1">Editorial density pass: split several overlong paragraphs (no BCP-14
 keyword sentence changed) and merged a duplicated sentence in
 Per-Domain Delegation Depth (the unconditional "a Resource AS of
 this document begins its delegation depth at 0" restated what the
 preceding, correctly conditioned sentence already said; the
-citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
+citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.5">
-          <p id="appendix-B-3.5.1">Added an explicit Resource AS requirement to authenticate the
+        <li class="normal" id="appendix-B-3.7">
+          <p id="appendix-B-3.7.1">Added an explicit Resource AS requirement to authenticate the
 redeeming client at redemption, distinct from the cross-domain
 grant's sender-constraint, and restated local-token client
 identification as a property-level requirement bound to that
@@ -3235,7 +3252,7 @@ the RFC 9068 case) rather than naming <code>client_id</code> directly (S-12).
 Scoped the origin-identity-carriage sentence to the Origin
 Principal profile when claimed, and separately barred reinterpreting
 the cross-domain grant's own <code>client_id</code> claim as the local
-identifier under any profile.<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
+identifier under any profile.<a href="#appendix-B-3.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

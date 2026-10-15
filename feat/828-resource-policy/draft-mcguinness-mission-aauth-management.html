@@ -1068,7 +1068,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 11 April 2027</td>
+<td class="center">Expires 18 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1081,12 +1081,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-aauth-management-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-08" class="published">8 October 2026</time>
+<time datetime="2026-10-15" class="published">15 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-18">18 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1149,7 +1149,7 @@ to report and bound the residual window honestly.<a href="#section-abstract-3" c
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 18 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1804,6 +1804,13 @@ channel, and <span class="bcp14">MUST NOT</span> apply the service's administrat
 How the service conveys the human's identity is a deployment trust
 relationship this document does not define, and the PS relies on it
 only for a service it registers for that purpose.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
+<p id="section-5.3-4">A supervision server (<span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>) is not a
+Management Principal by virtue of supervising: it only answers the PS
+(Section 7.1 of <span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>).  The PS <span class="bcp14">MAY</span>
+register the server's operator as a management service under this
+section; the registered metadata then needs the <code>jwks_uri</code> that AAuth
+Supervision leaves optional (Section 5 of
+<span>[<a href="#I-D.draft-hardt-aauth-supervision" class="cite xref">I-D.draft-hardt-aauth-supervision</a>]</span>).<a href="#section-5.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="owning-agent">
@@ -1887,6 +1894,8 @@ Content-Digest: sha-256=:...:
   "termination_reason": "revoked",
   "observed_at": "2026-04-10T09:15:02Z",
   "fresh_until": "2026-04-10T09:15:32Z",
+  "accepted_updates": 2,
+  "latest_update_s256": "DCPMK1mFVV7rRr2gXYhuIoHABzG8_FrKIuAKTUuqYQA",
   "token_residual": {
     "tracked": 4,
     "revocation_attempted": 4,
@@ -1913,7 +1922,17 @@ while it is <code>active</code>.  <code>token_residual</code> (<a href="#termina
 it is <code>active</code>; it reports the residual as of <code>observed_at</code>, which
 gives an authorized caller the current revocation state of a
 terminated mission.<a href="#section-6-6" class="pilcrow">¶</a></p>
-<p id="section-6-7">The response reports state as of <code>observed_at</code> and is reliable until
+<p id="section-6-7"><code>accepted_updates</code> and <code>latest_update_s256</code> are <span class="bcp14">OPTIONAL</span>.  A PS that
+supports them returns <code>accepted_updates</code> in every status response, as
+the number of <code>update</code> actions it has accepted for the mission
+(Section 8.4 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), and returns
+<code>latest_update_s256</code>, the <code>s256</code> of the most recently accepted update,
+exactly when that number is greater than zero; with no accepted
+update, <code>accepted_updates</code> is <code>0</code> and <code>latest_update_s256</code> is absent.
+Both describe the same observation as <code>observed_at</code>.  Together they
+identify the observed update position; they are not a commitment to
+the update history or a substitute for reading it.<a href="#section-6-7" class="pilcrow">¶</a></p>
+<p id="section-6-8">The response reports state as of <code>observed_at</code> and is reliable until
 <code>fresh_until</code>; it is not a promise that the state will remain active.
 A consumer <span class="bcp14">MUST NOT</span> rely on a response after its <code>fresh_until</code>, and a
 failed, invalid, unrecognized, or stale response establishes nothing:
@@ -1921,7 +1940,7 @@ the consumer <span class="bcp14">MUST</span> fail closed and <span class="bcp14"
 <code>active</code> on its basis.  An Agent that reads status here <span class="bcp14">MUST</span> stop
 initiating work when it receives <code>terminated</code>.  Polling is a
 freshness mechanism, not the safety floor: every PS endpoint still
-enforces mission state itself.<a href="#section-6-7" class="pilcrow">¶</a></p>
+enforces mission state itself.<a href="#section-6-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="terminate">
@@ -2018,6 +2037,8 @@ attempts <span class="bcp14">MAY</span> continue asynchronously.<a href="#sectio
   "termination_reason": "revoked",
   "observed_at": "2026-04-10T09:12:44Z",
   "fresh_until": "2026-04-10T09:13:14Z",
+  "accepted_updates": 2,
+  "latest_update_s256": "DCPMK1mFVV7rRr2gXYhuIoHABzG8_FrKIuAKTUuqYQA",
   "token_residual": {
     "tracked": 4,
     "revocation_attempted": 4,
@@ -2131,6 +2152,12 @@ processing the mission:<a href="#section-8-5" class="pilcrow">¶</a></p>
       "tokens": [
         { "iss": "https://as.search.example", "jti": "token-19" }
       ]
+    },
+    {
+      "agent": "aauth:booking@flights.example",
+      "relationship": "call_chain",
+      "upstream_token": { "iss": "https://ps.example", "jti": "auth-31" },
+      "person_token": { "iss": "https://ps.example", "jti": "pt-57" }
     }
   ],
   "complete": true
@@ -2140,11 +2167,27 @@ processing the mission:<a href="#section-8-5" class="pilcrow">¶</a></p>
 <p id="section-8-7"><code>mission_s256</code>, <code>as_of</code>, <code>nodes</code>, and <code>complete</code> are <span class="bcp14">REQUIRED</span>.  When another
 page exists, <code>next_cursor</code> is <span class="bcp14">REQUIRED</span> and <code>complete</code> is false.<a href="#section-8-7" class="pilcrow">¶</a></p>
 <p id="section-8-8">A node contains an <code>agent</code> and one of <code>root</code>, <code>sub_agent</code>, or
-<code>call_chain</code> as <code>relationship</code>.  A non-root node contains
-<code>parent_agent</code>.  <code>tokens</code> <span class="bcp14">MAY</span>
-be returned to a Person or authorized administrator and <span class="bcp14">SHOULD</span> be
-omitted from a response to an admitted Owning Agent unless required
-for that Agent's own revocation accounting.<a href="#section-8-8" class="pilcrow">¶</a></p>
+<code>call_chain</code> as <code>relationship</code>.  A <code>sub_agent</code> node contains
+<code>parent_agent</code>.  A <code>call_chain</code> node is one chained hop.  Its <code>agent</code>
+is the intermediary, whose identity the PS establishes from the
+intermediary's authenticated agent token and its own records.  It
+contains <code>upstream_token</code> and <code>person_token</code>, each an object with the
+<code>iss</code> and <code>jti</code> of, respectively, the upstream token the intermediary
+presented and the Person Token the PS issued on it, and it does not
+contain <code>parent_agent</code>.  One upstream token can support several
+downstream requests (Section 10.1.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), so a hop is identified by
+both token references and the intermediary's agent identifier, never
+by the upstream token alone.  In the example, the upstream token is an
+Auth Token the PS issued.  <code>tokens</code> lists the Auth Tokens issued or
+provided for the node's agent under the Mission; a <code>call_chain</code> node's
+<code>person_token</code> is the hop's own Person Token and is not repeated in
+<code>tokens</code>.  <code>tokens</code>, <code>upstream_token</code>, and
+<code>person_token</code> <span class="bcp14">MAY</span> be returned to a Person or authorized administrator
+and <span class="bcp14">SHOULD</span> be omitted from a response to an admitted Owning Agent
+unless required for that Agent's own revocation accounting;
+<code>upstream_token</code> and <code>person_token</code> are returned together or omitted
+together.<a href="#section-8-8" class="pilcrow">¶</a></p>
 <p id="section-8-9">The result is observational, not exhaustive proof.  Agent identity
 calls and resource-managed access can occur without a PS token request.
 An intermediary can make a downstream call outside the PS's view.
@@ -2826,6 +2869,10 @@ otherwise untracked access.<a href="#section-15-4" class="pilcrow">¶</a></p>
 <a href="#section-16.2" class="section-number selfRef">16.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-hardt-aauth-supervision">[I-D.draft-hardt-aauth-supervision]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Supervision"</span>, <span class="refContent">Work in Progress, editor's copy at commit 70d67375, not submitted as an Internet-Draft</span>, <time datetime="2026-10-03" class="refDate">3 October 2026</time>, <span>&lt;<a href="https://github.com/dickhardt/AAuth/blob/70d67375deb0bb002af7da0711fc58f6e8926e7e/draft-hardt-aauth-supervision.md">https://github.com/dickhardt/AAuth/blob/70d67375deb0bb002af7da0711fc58f6e8926e7e/draft-hardt-aauth-supervision.md</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-aauth-mission-expiry">[I-D.draft-mcguinness-aauth-mission-expiry]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"AAuth Mission Expiry"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html</a>&gt;</span>. </dd>
@@ -2861,14 +2908,35 @@ native choices.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Person Tokens are Tracked Credentials: the PS retains them, counts
+          <p id="appendix-B-2.1.1">A <code>call_chain</code> node is one chained hop: its <code>agent</code> is the
+intermediary, and it carries <code>upstream_token</code> and <code>person_token</code>,
+the <code>(iss, jti)</code> of the upstream token and of the Person Token the PS
+issued on it, instead of <code>parent_agent</code>, which stays for <code>sub_agent</code>
+nodes. Both token references follow the existing disclosure rule for
+<code>tokens</code> and are returned together or omitted together (#966).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Status gains optional <code>accepted_updates</code> and <code>latest_update_s256</code>:
+the count of accepted updates and the latest one's <code>s256</code>, from the
+same observation as <code>observed_at</code>, with the digest absent when the
+count is zero. They identify the observed update position, not a
+commitment to the update history (#965).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">A supervision server is not a Management Principal by virtue of
+supervising; the PS may register its operator as a management
+service, whose metadata then needs the <code>jwks_uri</code> AAuth Supervision
+leaves optional (#967).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">Person Tokens are Tracked Credentials: the PS retains them, counts
 them in <code>token_residual</code>, revokes them at the Resource in <code>aud</code> and at
 each AS it presented them to, and reports <code>complete</code> false while any
 is live and unconfirmed. The residual bounds name a live Person Token
-at a Resource serving person identity access (#834).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+at a Resource serving person identity access (#834).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">A Person reaches status and termination through the PS's own
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">A Person reaches status and termination through the PS's own
 interface, by internal invocation or by a backend calling the control
 plane as a management service; the PS authorizes and records the
 action as the authenticated Person and never applies a management
@@ -2877,7 +2945,7 @@ a human is authorized and recorded as that human, with the service as
 the channel. A browser session never authenticates a control-plane
 request, and Person Interfaces security considerations cover
 cross-site submission, account or tenant switching, stale sessions,
-and the service-principal confused deputy (#839).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+and the service-principal confused deputy (#839).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
