@@ -685,6 +685,51 @@ contributing assertion, it is authenticated and bound to this
 approval event. It records the policy's decision under that human's
 standing authorization, not a fresh human action.
 
+## Activation {#governed-policy-activation}
+
+At the atomic creation commit ({{atomic-commitment}}), the issuer
+MUST, before it creates the Mission `active`:
+
+1. Resolve the standing consent from retained, authenticated state
+   and confirm that it still admits new activations.
+2. Verify that the consenting human was authorized to approve the
+   exact root version and approved it at `approved_at`, and recompute
+   `approval_policy.digest` over the retained snapshot.
+3. Where the root commits a separate evaluator, recompute that
+   evaluator's digest over the exact snapshot evaluated
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section
+   "Standing-Consent Bases").
+4. Establish the Subject and the authority source as the issuance
+   profile requires, and verify that the requesting client, the
+   Subject, and the source are ones the root admits.
+5. Derive the Authority Set under the issuance profile's derivation
+   and authority-proposal rules, within the source's ceiling and the
+   root's authority ceiling, and bound the effective expiry by the
+   Mission Intent and the root's lifetime limits.
+6. Evaluate the deciding policy, at its exact version, over recorded
+   inputs.
+7. Apply the policy-approval recency rules
+   ({{policy-approval-recency}}) across the whole derived Mission,
+   including any consumption bound, so a high-risk class activates
+   only under a committed, class-named exception.
+8. Bind every assertion and the record to this instance's
+   `approval_event_id`, `intent_hash`, and `authority_hash`
+   ({{assertion-requirements}}, {{record}}).
+9. Sign the record and commit it with the `active` Mission
+   ({{atomic-commitment}}).
+
+A failure at any step creates no Mission and issues no credential.
+
+A model's output enters only as a recorded input at step 6: it can
+refuse an activation or narrow the authority activated, and never
+supplies authority or decides the approval
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+Bases").
+
+Withdrawing the standing consent stops every later activation under
+it (step 1). A Mission already activated keeps its ordinary
+lifecycle: withdrawal does not revoke it.
+
 # Envelope and Verification {#envelope}
 
 An Approval Governance Record carries its integrity protection in an
@@ -1415,6 +1460,9 @@ A **Recording Issuer** MUST:
   the committed Mission's derived Authority Set or Mission Intent
   carries a high-risk class, unless a committed
   class-named exception applies ({{policy-approval-recency}});
+- under `governed_policy`, record the members of
+  {{governed-policy-record}} and complete the activation checks of
+  {{governed-policy-activation}};
 - commit the record atomically with Mission creation and let failure
   prevent activation ({{atomic-commitment}});
 - sign the committed record and keep it immutable
