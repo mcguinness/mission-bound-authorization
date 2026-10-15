@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "d9331739bc8014cf5703ac9f146b77521602f93a",
-    "content_sha256": "77eba526e555cab5c3f4bb6aa34aa8eb9f01157b33584a6ae1a6b47951fc009f"
+    "revision": "5b378de9aa3af2b321181ffea94d09d3f7d54549",
+    "content_sha256": "3c89c27cf334bf3a4d9e734a3487feb3c2fbd497b64935e11f709a19c0ae68fd"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -91,8 +91,8 @@
     "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "d9331739bc8014cf5703ac9f146b77521602f93a",
-    "content_sha256": "d4f8a0697172d74aaf5d715dd09e0ea8321ce902b2dcfa795785ce62bc2d6b2e"
+    "revision": "9d077906dd19a39794a7ce4c6c6db5faa5e720df",
+    "content_sha256": "d547739684cfda29b0ea24a14118e4d57b624bc64380d3ffd5dcacd20895e6b3"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
@@ -135,8 +135,8 @@
     "content_sha256": "4f8b85890777de9b580a511bfcc15e31cba4284603f2438b152ef4aeb26840b9"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
-    "revision": "573af24c49d918fa7eadb6859e01d32ade21cd37",
-    "content_sha256": "661a63fa99def58b0073470777de6da3fbdd78e1011270c4e22e2d3ab01a3e5c"
+    "revision": "62a7c5bbea04dcc7bf598d791c788b0b9f2def31",
+    "content_sha256": "26b6d44e7435641dd9a7d515f816eef5c0db707ecd870abf7f27c17ea5d1fe29"
    }
   }
  },
@@ -3368,50 +3368,6 @@
     }
    ],
    "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is not implemented."
-  },
-  {
-   "id": "core.approval-basis.adjudication-governance-record-override",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
-   "text": "When `true`, `kind` MUST equal the record's accountable assertion's own `kind` wherever the record carries an accountable assertion",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "core.governance-record"
-   },
-   "profiles": [],
-   "surface": "derivation",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "whenever adjudication.governance_record is true and the Approval Governance Record carries an accountable assertion, kind equals that assertion's kind, which the basis already fixes (human for direct, policy for governed_policy); governance_record never changes kind and kind never names the record itself"
-   },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "New member (#701, redesigned per #716 review): replaces the earlier kind: agr value, which conflated a decision mechanism with a storage location and lost whether an AGR-backed decision was human- or policy-adjudicated. kind stays semantic (human or policy); governance_record is an independent boolean flag, not a duplicate reference, since the record is already joined by this Mission's own approval_event_id. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows. #1185 (D387): no longer an override. kind follows approval_basis.type, and this clause is a consistency check; a template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it."
-  },
-  {
-   "id": "core.approval-basis.direct-governance-record-human",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
-   "text": "Where an Approval Governance Record backs a `direct` approval ({{I-D.draft-mcguinness-mission-approval-governance}}), its accountable assertion MUST be the `human` assertion of `consent_principal`",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "core.governance-record"
-   },
-   "profiles": [],
-   "surface": "governance-record",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "an Approval Governance Record for a direct approval whose accountable assertion is a policy or service assertion does not commit and no Mission is created active; contributing policy and service assertions alongside the human accountable assertion are accepted"
-   },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows. Gated on core.governance-record like the other governance_record rows: it binds only where an Approval Governance Record backs a direct approval."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -31737,6 +31693,50 @@
    "notes": "#699 exercises the baseline-claim half only: the kernel's missionClaim is asserted to be exactly {id, issuer}. The descriptor half (a companion-minted credential-bound Mission descriptor, for example the MAS Join Assertion) has no minting path in this implementation, which resolves the MAS Join from a propagated reference at the PDP, so it stays unexercised and coverage stays partial."
   },
   {
+   "id": "core.approval-basis.adjudication-governance-record-override",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "issuance-relationship",
+   "text": "Where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `kind`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a governed Mission populates approval_basis.adjudication with governance_record true and the Approval Governance Record carries an accountable assertion, that assertion's kind equals adjudication.kind, which the approval basis fixes (human for direct, policy for governed_policy); governance_record never changes kind and kind never names the record itself"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it."
+  },
+  {
+   "id": "approval-governance.assertion.direct-accountable-human",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-requirements",
+   "text": "For `direct`, it MUST be the `human` assertion of `consent_principal`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Approval Governance Record for a direct approval whose accountable assertion is a policy or service assertion does not commit and no Mission is created active; contributing policy and service assertions alongside the human accountable assertion are accepted"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows. Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention)."
+  },
+  {
    "id": "approval-governance.assertion.accountable-kind-human-or-policy",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "assertion-requirements",
@@ -32301,12 +32301,34 @@
    "surface": "token-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a policy evaluation that does not authorize activation leaves no Mission, and the pending approval stays pending or resolves to denied"
+    "normative": "a policy evaluation that does not authorize activation leaves no Mission, and the pending approval either awaits a separately authenticated, full direct approval or resolves to denied"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
    "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+  },
+  {
+   "id": "deferred-approval.policy-completion.human-fallback-direct",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "policy-completion",
+   "text": "That human path never turns a failed `governed_policy` check into a `governed_policy` activation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.policy-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created by a human after a policy evaluation did not authorize activation records approval_basis type direct with its own approval event and human accountable assertion, never type governed_policy"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows. Owner review of #1227 accepted the human fallback with this guard."
   },
   {
    "id": "deferred-approval.policy-completion.one-mission",
