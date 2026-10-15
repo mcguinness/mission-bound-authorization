@@ -6062,6 +6062,17 @@ Cross-Domain:
 
 -01
 
+- Downgrade by Omission covers a client acting under a Mission with an
+  ordinary credential it already holds. A client performing a
+  Mission's task presents no credential that is not Mission-bound
+  for that task unless a deployment-defined, trusted enforcement path
+  establishes the Mission for the request and applies its authority
+  and lifecycle controls; the section names designation and mandatory
+  mediation as the controls and the unmediated residual. The
+  Mission-governed client registration rule is described as rejecting
+  an `authorization_details` request that omits the Intent, not every
+  ungoverned request (#1205).
+
 - Issuance Gating refuses a derivation from a Mission that is not
   `active` with `invalid_request` on a Token Exchange, as Section 2.2.2
   of RFC 8693 requires for an unacceptable subject token, and with
