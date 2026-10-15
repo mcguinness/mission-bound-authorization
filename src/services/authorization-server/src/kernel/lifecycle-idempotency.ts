@@ -6,7 +6,7 @@
  *
  *  - `nonce` is the HTTP retry key for the WHOLE endpoint
  *    ({@link LifecycleResponseStore}): a retransmission with the same `nonce`
- *    and a byte-identical request returns the STORED SIGNED RESPONSE verbatim;
+ *    and the same operation members returns the STORED SIGNED RESPONSE verbatim;
  *    the same `nonce` with a different request is refused `invalid_request`,
  *    never answered with the unrelated original response. Keyed by (endpoint,
  *    client, `mission_id`, `nonce`), so one endpoint's nonce space is its own.
@@ -75,7 +75,8 @@ CREATE TABLE IF NOT EXISTS discharge_events (
 
 /**
  * @spec status#idempotency — the replay window. ONE clock governs the whole
- * window: a byte-identical retransmit MUST replay the original response, and
+ * window: a retransmit with the same operation members MUST replay the original
+ * response, and
  * the same nonce with a different request MUST be refused `invalid_request`,
  * for as long as the window lasts. The window MUST be at least the validity
  * span of the signed response the AS would replay (its `iat` to `exp`, 60s
@@ -187,8 +188,8 @@ export class LifecycleResponseStore {
    *
    * @spec status#idempotency — ONE clock, the nonce window. A retained response
    * is replayable for the whole of it, whatever validity the response itself
-   * carries: the profile requires the ORIGINAL response on a byte-identical
-   * retransmit, and the window is required to be at least that validity span
+   * carries: the profile requires the ORIGINAL response on a retransmit with
+   * the same operation members, and the window is required to be at least that validity span
    * and permitted to be longer. A replayed acknowledgement is a historical
    * record of a completed operation, not a fresh observation, and a signed
    * envelope's own `exp` says so to its consumer.
