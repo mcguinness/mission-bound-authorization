@@ -443,12 +443,15 @@ requirements that realize them:
 {{conformance}} is the complete statement of roles and optional
 capabilities. The starting path is one client, one authorization
 server, direct approval, and a single resource audience. It needs no
-runtime profile, delegated token, or cross-domain projection.
+runtime profile, delegated token, or cross-domain projection. The
+worked flow ({{first-mission}}) follows one Mission along this path
+with concrete times, and the table lists where each implementer reads
+next.
 
 | Implementer | Responsibility on the starting path | Defining sections |
 | --- | --- | --- |
-| Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{grant-binding}}, {{mission-bound-tokens}} |
-| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, and gate every issuance and refresh on its state and limits | {{submission-processing}}, {{authorization-derivation}}, {{approval-event}}, {{mission-record}}, {{issuance-gating}} |
+| Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{mission-bound-tokens}}, {{mission-response-parameters}} |
+| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, and gate every issuance and refresh on its state and limits | {{submission-processing}}, {{authorization-derivation}}, {{approval-event}}, {{grant-binding}}, {{mission-record}}, {{issuance-gating}} |
 | Mission-aware Resource Server | Validate the credential and any sender constraint, enforce the carried authority, and apply any configured Mission requirement | {{rs-enforcement}}, {{introspected-consumption}} |
 {: title="Who implements the issuance path"}
 
