@@ -1867,11 +1867,12 @@ signed form it requires.
 The AS signs Mission Status and Lifecycle responses with a key from
 its `jwks_uri`. The AS MUST keep the public JWK for every `kid` it
 has signed such a response under resolvable in its `jwks_uri` for at
-least the Mission record retention period, so an archived
+least the Mission's audit horizon
+({{I-D.draft-mcguinness-oauth-mission}}), so an archived
 `application/mission-status-response+jwt` remains verifiable for
 audit and dispute. This is the issuance profile's retired-key rule
-({{I-D.draft-mcguinness-oauth-mission}}), with the record retention
-period as the bound. A key known or suspected
+({{I-D.draft-mcguinness-oauth-mission}}), with the audit horizon as the
+bound. A key known or suspected
 compromised is the exception: the AS removes it, and the Mandate
 profile's compromise-time rule governs how artifacts signed under it
 are then classified.
