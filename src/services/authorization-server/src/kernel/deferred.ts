@@ -825,13 +825,10 @@ export class ExpansionDeferralStore {
   ): { successor: MissionRecord; predecessorId: string; carryover?: ApplyCarryoverOutcome } | undefined {
     return withTransaction(this.kernel.db, () => {
       // Read-only effective-active re-check inside the transaction (nothing is
-      // materialized here; lazy expiry stays with the ordinary gates).
+      // materialized here; lazy expiry stays with the ordinary gates). The
+      // OBSERVED state: its own expiry and any ancestor's termination apply.
       const predNow = this.kernel.get(row.predecessor_id as string);
-      if (
-        !predNow ||
-        predNow.state !== "active" ||
-        Date.parse(predNow.expires_at) <= this.kernel.nowDate().getTime()
-      ) {
+      if (!predNow || predNow.state !== "active" || this.kernel.observe(predNow).state !== "active") {
         return undefined;
       }
       // @spec child-delegation#carryover-manifest — completion uses EXACTLY the
@@ -882,6 +879,7 @@ export class ExpansionDeferralStore {
       // A committed manifest reaching here is always executed: the disabled
       // case refused above rather than falling through to ordinary cascade.
       let carryover: ApplyCarryoverOutcome | undefined;
+      let cascadeAt: string | undefined;
       if (batch) {
         const applied = applyCarryoverInCallerTx(this.kernel, this.carryover, {
           planId: row.carryover_plan_id as string,
@@ -904,12 +902,18 @@ export class ExpansionDeferralStore {
           evidenceJws: applied.evidenceJws,
           replacements: applied.replacements,
         };
+        cascadeAt = applied.terminatedAt;
       }
       // @spec control-plane#fanout — the supersession CAS enqueues its own
       // durable event, its tombstone and the mandatory child cascade inside
       // THIS transaction, so nothing has to be suppressed and reconstructed
-      // from state that has since moved.
-      const cas = this.kernel.supersedeInCallerTx(res.successor.id);
+      // from state that has since moved. @spec child-delegation#cascade: when
+      // carryover already terminated the subtree, the predecessor records the
+      // same instant its rows did.
+      const cas = this.kernel.supersedeInCallerTx(
+        res.successor.id,
+        cascadeAt ? { terminatedAt: cascadeAt } : {},
+      );
       // Single-writer SQLite makes a lost CAS unreachable after the in-tx
       // check; the throw is the invariant's tripwire, and it rolls the
       // successor back rather than ever leaving both lineages live.

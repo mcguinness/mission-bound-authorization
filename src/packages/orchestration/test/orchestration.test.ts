@@ -122,7 +122,8 @@ describe("unwind plan integrity (@spec orchestration#unwind-plan-integrity, miss
 describe("state-change behavior (@spec orchestration#state-change-behavior)", () => {
   it("3: established revoked runs the full 5-step sequence; committed step gets post-completion", () => {
     const res = onMissionStateChange({
-      state: "revoked",
+      state: "terminated",
+      termination: { reason: "revoked", terminated_at: "2026-11-02T08:15:00Z", version: 7 },
       stale: false,
       steps: [
         {
@@ -144,6 +145,7 @@ describe("state-change behavior (@spec orchestration#state-change-behavior)", ()
       "emit_evidence",
     ]);
     expect(res.runs_post_completion).toBe(true);
+    expect(res.successor).toBeUndefined(); // only a superseded termination names one
     const s1 = res.steps[0];
     expect(s1?.orchestration_decision).toBe("compensate");
     expect(s1?.post_completion_deferred).toBe(false);
@@ -153,13 +155,19 @@ describe("state-change behavior (@spec orchestration#state-change-behavior)", ()
       mission: MISSION,
       workflow_id: "wf_invoice_recon_2026q3",
       step_id: "s1",
-      mission_state: "revoked",
+      mission_state: "terminated",
+      mission_termination: { reason: "revoked", terminated_at: "2026-11-02T08:15:00Z", version: 7 },
       state_source: "status",
       orchestration_decision: "suppress",
       reason: "mission_revoked",
       occurred_at: "2026-11-02T08:16:00Z",
     });
-    expect(ev.mission_state).toBe("revoked");
+    expect(ev.mission_state).toBe("terminated");
+    expect(ev.mission_termination).toEqual({
+      reason: "revoked",
+      terminated_at: "2026-11-02T08:15:00Z",
+      version: 7,
+    });
   });
 
   it("4: staleness alone runs items 1,2,3,5 and skips post-completion (item 4)", () => {
@@ -195,18 +203,107 @@ describe("state-change behavior (@spec orchestration#state-change-behavior)", ()
   });
 
   it("established non-active takes precedence over staleness (revoked + stale => 5 steps)", () => {
-    const res = onMissionStateChange({ state: "revoked", stale: true, steps: [] });
+    const res = onMissionStateChange({
+      state: "terminated",
+      termination: { reason: "revoked", terminated_at: "2026-11-02T08:15:00Z" },
+      stale: true,
+      steps: [],
+    });
     expect(res.trigger).toBe("established_non_active");
     expect(res.sequence).toContain("post_completion");
     expect(res.sequence).toHaveLength(5);
   });
 
-  it("any non-active state (incl. cascaded) is a trigger; active+fresh is not", () => {
-    expect(onMissionStateChange({ state: "cascaded", stale: false }).trigger).toBe(
+  it("any non-active state (terminated with any reason or none, suspended, an unrecognized value) is a trigger; active+fresh is not", () => {
+    for (const reason of [
+      "revoked",
+      "expired",
+      "completed",
+      "superseded",
+      "parent_terminated",
+      "future_reason",
+    ]) {
+      expect(
+        onMissionStateChange({ state: "terminated", termination: { reason }, stale: false })
+          .trigger,
+        reason,
+      ).toBe("established_non_active");
+    }
+    expect(onMissionStateChange({ state: "terminated", stale: false }).trigger).toBe(
       "established_non_active",
     );
-    expect(onMissionStateChange({ state: "superseded", stale: false }).triggered).toBe(true);
+    expect(onMissionStateChange({ state: "suspended", stale: false }).triggered).toBe(true);
+    expect(onMissionStateChange({ state: "paused", stale: false }).triggered).toBe(true);
     expect(onMissionStateChange({ state: "active", stale: false }).triggered).toBe(false);
+  });
+
+  it("keys the superseded successor guidance on termination.reason, never on a state string or another reason", () => {
+    const superseded = onMissionStateChange({
+      state: "terminated",
+      termination: {
+        reason: "superseded",
+        terminated_at: "2026-11-02T08:15:00Z",
+        successor: "msn_successor",
+      },
+      stale: false,
+    });
+    expect(superseded.successor).toBe("msn_successor");
+    // The guidance changes nothing in the stop sequence: the predecessor still stops.
+    expect(superseded.trigger).toBe("established_non_active");
+    expect(superseded.sequence).toHaveLength(5);
+
+    const none: Array<[string, Parameters<typeof onMissionStateChange>[0]]> = [
+      [
+        "revoked with a stray successor",
+        {
+          state: "terminated",
+          termination: { reason: "revoked", successor: "msn_successor" },
+          stale: false,
+        },
+      ],
+      [
+        "superseded without a successor",
+        { state: "terminated", termination: { reason: "superseded" }, stale: false },
+      ],
+      [
+        "a legacy superseded state string",
+        {
+          state: "superseded",
+          termination: { reason: "superseded", successor: "msn_successor" },
+          stale: false,
+        },
+      ],
+      ["no termination", { state: "terminated", stale: false }],
+    ];
+    for (const [label, input] of none) {
+      expect(onMissionStateChange(input).successor, label).toBeUndefined();
+    }
+  });
+
+  it("evidence carries mission_termination only beside mission_state terminated", () => {
+    const base = {
+      event_id: "orch_t",
+      mission: MISSION,
+      workflow_id: "wf",
+      state_source: "status" as const,
+      orchestration_decision: "suppress" as const,
+      reason: "mission_not_active",
+      occurred_at: "2026-11-02T08:16:00Z",
+    };
+    expect(
+      buildOrchestrationEvidence({ ...base, mission_state: "suspended" }).mission_termination,
+    ).toBeUndefined();
+    expect(() =>
+      buildOrchestrationEvidence({
+        ...base,
+        mission_state: "suspended",
+        mission_termination: { reason: "revoked" },
+      }),
+    ).toThrow(/mission_termination/);
+    // A terminated state whose source reported no termination records none.
+    expect(buildOrchestrationEvidence({ ...base, mission_state: "terminated" })).not.toHaveProperty(
+      "mission_termination",
+    );
   });
 });
 
@@ -322,7 +419,12 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
         mission: MISSION,
         workflow_id: "wf_invoice_recon_2026q3",
         step_id: "post_journal_entry",
-        mission_state: "revoked",
+        mission_state: "terminated",
+        mission_termination: {
+          reason: "revoked",
+          terminated_at: "2026-11-02T08:30:00Z",
+          version: 7,
+        },
         state_source: "status",
         orchestration_decision: "compensate",
         reason: "committed_step_reversed_after_review",
@@ -362,6 +464,10 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
     const payload = Buffer.from(payloadB64 ?? "", "base64url").toString("utf8");
     expect(payload).toContain('"compensates_evaluation_id":"dec_8K2nP4qV9rL3tY6sB1zN0eF7jB"');
     expect(payload).not.toContain("compensates_decision_id");
+    // The signed record carries the termination beside the terminated state.
+    expect(payload).toContain(
+      '"mission_state":"terminated","mission_termination":{"reason":"revoked","terminated_at":"2026-11-02T08:30:00Z","version":7}',
+    );
   });
 
   it("5c: high-risk compensation without a signer fails closed", () => {
@@ -370,7 +476,7 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
         event_id: "orch_bad",
         mission: MISSION,
         workflow_id: "wf",
-        mission_state: "revoked",
+        mission_state: "terminated",
         state_source: "status",
         orchestration_decision: "compensate",
         reason: "reversed",
@@ -391,7 +497,7 @@ describe("compensation authority (@spec orchestration#compensation)", () => {
         event_id: "orch_bad2",
         mission: MISSION,
         workflow_id: "wf",
-        mission_state: "revoked",
+        mission_state: "terminated",
         state_source: "status",
         orchestration_decision: "compensate",
         reason: "reversed",

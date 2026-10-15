@@ -32,6 +32,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14620;
 const RS_PORT = 14621;
@@ -137,6 +138,17 @@ async function token(
   const nonce = res.headers.get("dpop-nonce");
   if (res.status === 400 && nonce) res = await send({ nonce });
   return { status: res.status, body: (await res.json()) as Json };
+}
+
+/**
+ * The acting client's delegation handle for `base` (#1157, D358), the async
+ * transport's subject_token: requested under the base token's own key, which
+ * the handle and the family it opens keep.
+ */
+async function handle(base: string, keys: Keys): Promise<string> {
+  const res = await token(delegationHandleParams(base, "ap-agent"), keys);
+  if (res.status !== 200) throw new Error(`delegation handle refused: ${res.status} ${JSON.stringify(res.body)}`);
+  return res.body.access_token as string;
 }
 
 /** The trusted browser login, for the approvals an ID Token can describe (#826). */
@@ -480,13 +492,14 @@ describe("scope projection on derived tokens (@spec mission#scope-projection)", 
   it("Token Exchange projects the family token's scope from its confined subset, keeps it on the family refresh, and refuses an unenforced constraint before creating a family", async () => {
     const base = await issue([entry([READ, WRITE])]);
     expect(base.status, JSON.stringify(base.body)).toBe(200);
-    const acting = await newKeys();
+    const acting = base.keys;
+    const subject = await handle(base.body.access_token as string, acting);
     const exchange = (authorizationDetails: AuthorityEntry[]) =>
       token(
         {
           grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
           request_refresh_token: "true",
-          subject_token: base.body.access_token as string,
+          subject_token: subject,
           subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
           resource: PLAIN,
           creation_request_id: crypto.randomUUID(),
@@ -547,22 +560,23 @@ describe("unsupported actor context on the async-delegation exchange (@spec cont
     expect(base.status, JSON.stringify(base.body)).toBe(200);
     const baseToken = base.body.access_token as string;
     const missionId = (decodeJwt(baseToken).mission as { id: string }).id;
+    const acting = base.keys;
+    const subject = await handle(baseToken, acting);
     const count = as.kernel.get(missionId)?.derivation_count;
-    const acting = await newKeys();
     const actor = {
       actor_token: await actorAssertion(acting),
       actor_token_type: "urn:ietf:params:oauth:token-type:jwt",
     };
 
     for (const target of [PLAIN, PAYMENTS]) {
-      const refused = await delegate(baseToken, target, acting, actor);
+      const refused = await delegate(subject, target, acting, actor);
       expect(refused.status, JSON.stringify(refused.body)).toBe(400);
       expect(refused.body.error).toBe("invalid_request");
       expect(refused.body.error_description).toBe("actor_token is not supported on this exchange");
     }
     expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
 
-    const self = await delegate(baseToken, PLAIN, acting);
+    const self = await delegate(subject, PLAIN, acting);
     expect(self.status, JSON.stringify(self.body)).toBe(200);
     expect(self.body.scope).toBe("reports.read");
     const claims = decodeJwt(self.body.access_token as string);
@@ -585,6 +599,12 @@ describe("unsupported actor context on the async-delegation exchange (@spec cont
     expect(refused.body.error).toBe("invalid_request");
     expect(refused.body.error_description).toMatch(/actor context \(act\) is not supported/);
     expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+    // The delegation-handle request refuses it too, rather than minting a
+    // handle that silently drops the actor context (#1157).
+    const handleRefused = await token(delegationHandleParams(withAct, "ap-agent"), base.keys);
+    expect(handleRefused.status, JSON.stringify(handleRefused.body)).toBe(400);
+    expect(handleRefused.body.error).toBe("invalid_request");
+    expect(handleRefused.body.error_description).toMatch(/actor context \(act\) is not supported/);
   });
 });
 
@@ -828,13 +848,14 @@ describe("ungrantable requested scope (@spec mission#scope-projection, mission#e
   it("refuses invalid_scope a Token Exchange naming a value no carried entry makes safe, or an OIDC value where no id_token is issued, and grants a safe requested value", async () => {
     const base = await issue([entry([READ])]);
     expect(base.status, JSON.stringify(base.body)).toBe(200);
-    const acting = await newKeys();
+    const acting = base.keys;
+    const subject = await handle(base.body.access_token as string, acting);
     const exchange = (scope: string) =>
       token(
         {
           grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
           request_refresh_token: "true",
-          subject_token: base.body.access_token as string,
+          subject_token: subject,
           subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
           resource: PLAIN,
           creation_request_id: crypto.randomUUID(),
@@ -878,13 +899,14 @@ describe("async-delegation idempotency covers the requested scope (@spec continu
     expect(base.status, JSON.stringify(base.body)).toBe(200);
     const baseToken = base.body.access_token as string;
     const missionId = (decodeJwt(baseToken).mission as { id: string }).id;
-    const acting = await newKeys();
+    const acting = base.keys;
+    const subject = await handle(baseToken, acting);
     const id = crypto.randomUUID();
-    const first = await exchange(baseToken, acting, id, "reports.read reports.write");
+    const first = await exchange(subject, acting, id, "reports.read reports.write");
     expect(first.status, JSON.stringify(first.body)).toBe(200);
     const count = as.kernel.get(missionId)?.derivation_count;
 
-    const reused = await exchange(baseToken, acting, id, "reports.read");
+    const reused = await exchange(subject, acting, id, "reports.read");
     expect(reused.status, JSON.stringify(reused.body)).toBe(400);
     expect(reused.body.error).toBe("invalid_request");
     expect(reused.body.error_description).toContain("different creation request");
@@ -897,13 +919,14 @@ describe("async-delegation idempotency covers the requested scope (@spec continu
     expect(base.status, JSON.stringify(base.body)).toBe(200);
     const baseToken = base.body.access_token as string;
     const missionId = (decodeJwt(baseToken).mission as { id: string }).id;
-    const acting = await newKeys();
+    const acting = base.keys;
+    const subject = await handle(baseToken, acting);
     const id = crypto.randomUUID();
-    const first = await exchange(baseToken, acting, id, "reports.write reports.read");
+    const first = await exchange(subject, acting, id, "reports.write reports.read");
     expect(first.status, JSON.stringify(first.body)).toBe(200);
     const count = as.kernel.get(missionId)?.derivation_count;
 
-    const retry = await exchange(baseToken, acting, id, "reports.read  reports.write");
+    const retry = await exchange(subject, acting, id, "reports.read  reports.write");
     expect(retry.status, JSON.stringify(retry.body)).toBe(200);
     expect(retry.body.refresh_token).toBe(first.body.refresh_token);
     expect(retry.body.access_token).toBe(first.body.access_token);
@@ -916,12 +939,13 @@ describe("refresh preserved on a projection refusal (@spec mission#scope-project
   async function family(): Promise<{ rt: string; acting: Keys }> {
     const base = await issue([entry([READ, WRITE])]);
     expect(base.status, JSON.stringify(base.body)).toBe(200);
-    const acting = await newKeys();
+    const acting = base.keys;
+    const subject = await handle(base.body.access_token as string, acting);
     const fam = await token(
       {
         grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
         request_refresh_token: "true",
-        subject_token: base.body.access_token as string,
+        subject_token: subject,
         subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
         resource: PLAIN,
         creation_request_id: crypto.randomUUID(),

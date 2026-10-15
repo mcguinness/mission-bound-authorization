@@ -69,7 +69,7 @@ describe("approval resolution establishes identity from the surface (#759, #761)
     // Same real pending interaction still completes: none of the refusals finished it.
     expect(await resolveMissionApproval(ISSUER, TRUSTED, p, "approve")).toBeTruthy();
     const record = as.kernel.allMissions().at(-1)!;
-    expect(record.approver.sub).toBe("bob");
+    expect(record.approval_basis.consent_principal.sub).toBe("bob");
     expect(record.subject.sub).toBe("alice");
   });
 
@@ -98,7 +98,7 @@ describe("approval resolution establishes identity from the surface (#759, #761)
     expect((await decide(other, { decision: "approve" }, { ...headers, cookie: jarClosures(other.jar).cookieHeader() + "; " + login.cookie })).status).toBe(401);
     expect((await decide(p, { decision: "approve", approver: "alice" }, headers)).status).toBe(400);
     expect((await decide(p, { decision: "approve" }, headers)).status).toBe(303);
-    expect(as.kernel.allMissions().at(-1)!.approver.sub).toBe("bob");
+    expect(as.kernel.allMissions().at(-1)!.approval_basis.consent_principal.sub).toBe("bob");
   });
 
   it("a service token without the approval scope cannot resolve, even though it authenticates other console operations", async () => {

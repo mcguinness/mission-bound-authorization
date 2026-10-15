@@ -23,6 +23,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { gateErrorToMissionError } from "../src/adapters/provider.js";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14783;
 const ISSUER = `http://localhost:${PORT}`;
@@ -156,14 +157,26 @@ async function issue(intentOver: Json = {}): Promise<{
 const refresh = (refreshToken: string, keys: Keys) =>
   token({ grant_type: "refresh_token", refresh_token: refreshToken }, keys);
 
+/**
+ * The acting client's delegation handle for `base` (#1157, D358), the async
+ * transport's subject_token, requested under the base token's own key.
+ */
+async function handle(base: string, keys: Keys): Promise<string> {
+  const res = await token(delegationHandleParams(base, "ap-agent"), keys);
+  if (res.status !== 200) throw new Error(`delegation handle refused: ${res.status} ${JSON.stringify(res.body)}`);
+  return res.body.access_token as string;
+}
+
 /** An async-delegation family over the Mission's own access token: its rotating refresh token. */
-async function family(baseAccessToken: string): Promise<{ refreshToken: string; keys: Keys }> {
-  const acting = await newKeys();
+async function family(baseAccessToken: string, baseKeys: Keys): Promise<{ refreshToken: string; keys: Keys }> {
+  // #1157: the family keeps the base token's key, through its delegation handle.
+  const acting = baseKeys;
+  const subject = await handle(baseAccessToken, acting);
   const res = await token(
     {
       grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
       request_refresh_token: "true",
-      subject_token: baseAccessToken,
+      subject_token: subject,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       resource: RESOURCE,
       creation_request_id: crypto.randomUUID(),
@@ -242,7 +255,7 @@ describe("refresh pre-check: a refused refresh consumes nothing (@spec mission#i
     const refused = await countingRefreshSaves(() => refresh(m.refreshToken, m.keys));
     expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
     expect(refused.result.body.error).toBe("invalid_grant");
-    expect(refused.result.body.mission_error).toBe("mission_suspended");
+    expect(refused.result.body.mission_error).toBe("suspended");
     expect(refused.saved).toBe(0);
     expect(derivations(m.missionId)).toBe(before);
 
@@ -263,12 +276,12 @@ describe("refresh pre-check: a refused refresh consumes nothing (@spec mission#i
 
   it("delegation-family grant: a family refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse", async () => {
     const m = await issue();
-    const f = await family(m.accessToken);
+    const f = await family(m.accessToken, m.keys);
     await lifecycle(m.missionId, "suspend");
     const refused = await countingRefreshSaves(() => refresh(f.refreshToken, f.keys));
     expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
     expect(refused.result.body.error).toBe("invalid_grant");
-    expect(refused.result.body.mission_error).toBe("mission_suspended");
+    expect(refused.result.body.mission_error).toBe("suspended");
     expect(refused.saved).toBe(0);
 
     await lifecycle(m.missionId, "resume");
@@ -300,17 +313,18 @@ describe("refresh pre-check: a refused refresh consumes nothing (@spec mission#i
   });
 
   it("delegation-family grant over an exhausted cap: the family refresh is not refused for the Mission's cap and counts nothing", async () => {
-    // The code exchange counts 1 and the family's creating exchange counts 2.
-    const m = await issue({ requested_derivation_limit: 2 });
-    const f = await family(m.accessToken);
-    expect(derivations(m.missionId)).toBe(2);
+    // The code exchange counts 1, the delegation-handle request 2 (#1157), and
+    // the family's creating exchange 3.
+    const m = await issue({ requested_derivation_limit: 3 });
+    const f = await family(m.accessToken, m.keys);
+    expect(derivations(m.missionId)).toBe(3);
     // The approval grant is out of derivations...
     const approval = await refresh(m.refreshToken, m.keys);
     expect(approval.body.mission_error).toBe("derivations_exhausted");
     // ...and the family's refreshes are not counted, so they continue.
     const refreshed = await refresh(f.refreshToken, f.keys);
     expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
-    expect(derivations(m.missionId)).toBe(2);
+    expect(derivations(m.missionId)).toBe(3);
   });
 
   it("residual: a suspension landing between the pre-check and the save-time gate is still refused by that gate, after rotation (#250)", async () => {
@@ -341,23 +355,42 @@ describe("refresh pre-check: a refused refresh consumes nothing (@spec mission#i
 });
 
 describe("mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint)", () => {
-  it("approval grant on a completed Mission: the refresh is refused invalid_grant with mission_completed", async () => {
+  it("approval grant on a completed Mission: the refresh is refused invalid_grant with mission_error completed", async () => {
     const m = await issue();
     // The demo's /lifecycle route also destroys the OAuth grant on a terminal
     // transition, so a refresh would fail at the grant lookup before the
     // Mission gate. The raw kernel transition leaves the grant for the gate.
-    expect(as.kernel.transition(m.missionId, "complete").state).toBe("completed");
+    const completed = as.kernel.transition(m.missionId, "complete");
+    expect(completed.state).toBe("terminated");
+    expect(completed.termination?.reason).toBe("completed");
     const refused = await refresh(m.refreshToken, m.keys);
     expect(refused.status, JSON.stringify(refused.body)).toBe(400);
     expect(refused.body.error).toBe("invalid_grant");
-    expect(refused.body.mission_error).toBe("mission_completed");
+    expect(refused.body.mission_error).toBe("completed");
   });
 
   it("the value names the Mission's own state: a lineage refusal while its own state is active carries none", () => {
-    expect(gateErrorToMissionError("mission_not_active", "suspended")).toBe("mission_suspended");
-    expect(gateErrorToMissionError("mission_not_active", "completed")).toBe("mission_completed");
-    expect(gateErrorToMissionError("mission_not_active", "revoked")).toBe("mission_revoked");
-    expect(gateErrorToMissionError("mission_not_active", "active")).toBeUndefined();
+    const terminated = (reason: string) => ({ state: "terminated", termination: { reason } });
+    expect(gateErrorToMissionError("mission_not_active", { state: "suspended" })).toBe("suspended");
+    expect(gateErrorToMissionError("mission_not_active", terminated("completed"))).toBe("completed");
+    expect(gateErrorToMissionError("mission_not_active", terminated("revoked"))).toBe("revoked");
+    expect(gateErrorToMissionError("mission_not_active", { state: "active" })).toBeUndefined();
     expect(gateErrorToMissionError("mission_not_active", undefined)).toBeUndefined();
+  });
+
+  it("the value is the observed termination reason, unprefixed: superseded and parent_terminated map, an unknown reason carries none (@spec mission#termination)", () => {
+    const terminated = (reason: string) => ({ state: "terminated", termination: { reason } });
+    expect(gateErrorToMissionError("mission_not_active", terminated("superseded"))).toBe("superseded");
+    expect(gateErrorToMissionError("mission_not_active", terminated("parent_terminated"))).toBe("parent_terminated");
+    // A recorded earlier cause wins over expiry: the observed reason is the
+    // recorded one, so a revoked Mission past its expires_at still says revoked.
+    expect(gateErrorToMissionError("mission_not_active", terminated("expired"))).toBe("expired");
+    expect(gateErrorToMissionError("mission_expired", terminated("expired"))).toBe("expired");
+    // Fail closed without a misleading diagnostic: an unrecognized reason, or
+    // a terminated Mission with no readable termination, gets plain invalid_grant.
+    expect(gateErrorToMissionError("mission_not_active", terminated("unknown"))).toBeUndefined();
+    expect(gateErrorToMissionError("mission_not_active", terminated("quantum_supervened"))).toBeUndefined();
+    expect(gateErrorToMissionError("mission_not_active", { state: "terminated" })).toBeUndefined();
+    expect(gateErrorToMissionError("derivation_cap_exhausted", { state: "active" })).toBe("derivations_exhausted");
   });
 });

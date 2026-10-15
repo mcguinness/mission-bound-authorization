@@ -39,6 +39,7 @@
  *  - Mission-bound refresh tokens introspect under the SAME composite rule.
  */
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 import type { Server } from "node:http";
 import { DERIVATION_POLICY, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
@@ -91,6 +92,8 @@ interface FlowResult {
   missionId: string;
   jti: string;
   payload: Record<string, unknown>;
+  /** The DPoP key the flow's access token is bound to (#1157: its delegation handle keeps it). */
+  dpopKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
 }
 
 async function clientAssertion(): Promise<string> {
@@ -207,6 +210,7 @@ async function runFlow(input: {
     missionId: (payload.mission as { id: string }).id,
     jti: payload.jti as string,
     payload,
+    dpopKeys,
   };
 }
 
@@ -755,7 +759,9 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
 
 describe("individual revocation is grant/family-scoped, never Mission-scoped (@spec mission#introspection — issue #541 P1-2)", () => {
   it("destroying ONLY an async-delegation family leaves ITS tokens active:false while the Mission-grant token stays active", async () => {
-    const actingDpop = await generateKeyPair("ES256", { extractable: true });
+    // #1157: the family is opened through ap-agent's delegation handle, under
+    // the flow token's own key.
+    const actingDpop = flow5.dpopKeys;
     const actingPub = await exportJWK(actingDpop.publicKey);
     const dpopProof = async (extra: Record<string, unknown> = {}): Promise<string> =>
       new SignJWT({ htu: `${ISSUER}/token`, htm: "POST", ...extra })
@@ -764,6 +770,24 @@ describe("individual revocation is grant/family-scoped, never Mission-scoped (@s
         .setJti(crypto.randomUUID())
         .sign(actingDpop.privateKey);
 
+    const post = async (params: Record<string, string>, extra: Record<string, unknown> = {}): Promise<Response> =>
+      fetch(`${ISSUER}/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(extra) },
+        body: new URLSearchParams({
+          ...params,
+          client_assertion: await clientAssertion(),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        }).toString(),
+      });
+    const withNonce = async (params: Record<string, string>): Promise<Response> => {
+      const first = await post(params);
+      const n = first.headers.get("dpop-nonce");
+      return first.status === 400 && n ? post(params, { nonce: n }) : first;
+    };
+    const handleRes = await withNonce(delegationHandleParams(flow5.at, "ap-agent"));
+    const handleBody = (await handleRes.json()) as { access_token: string };
+    expect(handleRes.status, JSON.stringify(handleBody)).toBe(200);
     const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
       fetch(`${ISSUER}/token`, {
         method: "POST",
@@ -771,7 +795,7 @@ describe("individual revocation is grant/family-scoped, never Mission-scoped (@s
         body: new URLSearchParams({
           grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
           request_refresh_token: "true",
-          subject_token: flow5.at,
+          subject_token: handleBody.access_token,
           subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
           resource: PAYMENTS,
           creation_request_id: crypto.randomUUID(),
@@ -814,7 +838,7 @@ describe("individual revocation is grant/family-scoped, never Mission-scoped (@s
 });
 
 describe("composite non-active: active:false WITH mission.state (@spec mission#composite-active)", () => {
-  it("revoked Mission + valid token: only { active, mission }, state revoked, NO top-level or mission authorization_details", async () => {
+  it("revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details", async () => {
     as.kernel.transition(flow1.missionId, "revoke");
     const res = await introspect(flow1.at, { principal: RS_PAYMENTS });
     expect(res.status).toBe(200);
@@ -823,13 +847,20 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
     expect(Object.keys(res.body).sort()).toEqual(["active", "mission"]);
     expect(res.body.active).toBe(false);
     const mission = res.body.mission as Record<string, unknown>;
-    expect(mission.state).toBe("revoked");
+    expect(mission.state).toBe("terminated");
+    // @spec mission#introspection, mission#termination: `termination` beside
+    // `state`, with its reason, instant and committing version.
+    expect(mission.termination).toEqual({
+      reason: "revoked",
+      terminated_at: expect.any(String),
+      version: mission.version,
+    });
     expect(mission.id).toBe(flow1.missionId);
     expect("authorization_details" in mission).toBe(false);
     // The Mission-bound refresh token reports the SAME composite.
     const rt = await introspect(flow1.rt, { principal: RS_PAYMENTS, hint: "refresh_token" });
     expect(Object.keys(rt.body).sort()).toEqual(["active", "mission"]);
-    expect((rt.body.mission as { state: string }).state).toBe("revoked");
+    expect(rt.body.mission).toMatchObject({ state: "terminated", termination: { reason: "revoked" } });
   });
 
   it("the inactive response is member-scoped too: a privilege-less principal sees no budget or provenance metadata", async () => {
@@ -855,18 +886,21 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
     expect("proposal_hash" in mission).toBe(false);
     expect("authority_hash" in mission).toBe(false);
     expect("approval_basis" in mission).toBe(false);
-    expect(mission.state).toBe("revoked");
-    expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "version"]);
+    expect(mission.state).toBe("terminated");
+    expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "termination", "version"]);
   });
 
-  it("Mission-expired composite: active:false with state expired", async () => {
+  it("Mission-expired composite: active:false with state terminated, termination expired", async () => {
     as.kernel.db
       .prepare("UPDATE missions SET expires_at = ? WHERE id = ?")
       .run("2020-01-01T00:00:00.000Z", flow2.missionId);
     const res = await introspect(flow2.at, { principal: RS_PAYMENTS });
     expect(Object.keys(res.body).sort()).toEqual(["active", "mission"]);
     expect(res.body.active).toBe(false);
-    expect((res.body.mission as { state: string }).state).toBe("expired");
+    expect(res.body.mission).toMatchObject({
+      state: "terminated",
+      termination: { reason: "expired", terminated_at: "2020-01-01T00:00:00.000Z" },
+    });
   });
 });
 
@@ -928,7 +962,7 @@ describe("Mission-bound refresh tokens (@spec mission#introspection)", () => {
     as.kernel.transition(flow4.missionId, "revoke");
     const res = await introspect(flow4.at, { principal: RS_PAYMENTS });
     expect(Object.keys(res.body).sort()).toEqual(["active", "mission"]);
-    expect((res.body.mission as { state: string }).state).toBe("revoked");
+    expect(res.body.mission).toMatchObject({ state: "terminated", termination: { reason: "revoked" } });
   });
 });
 
@@ -994,7 +1028,7 @@ describe("discharge_selectors in the introspection projection (@spec discharge#c
       event_id: "close-q3-introspected",
       outcome: "discharged",
       prior_version: 1,
-      current_version: 2,
+      new_version: 2,
     });
     // The discharged entry leaves the projection, and so does its selector.
     const after = await introspect(flow6.at, { principal: RS_PAYMENTS });

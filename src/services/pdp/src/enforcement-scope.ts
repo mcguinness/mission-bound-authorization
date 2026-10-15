@@ -199,11 +199,32 @@ export interface EnforcementExtensionDeclarations {
     agent_isolated_evidence_emission?: ReadonlyArray<{ emitter: string; declaration: string }>;
   };
   high_assurance_agent?: ReadonlyArray<{ row: string; eat_selection: string }>;
-  outcome_reconciliation?: {
-    window: string;
-    responsible_component: string;
-    alerting: string;
-  };
+  outcome_reconciliation?: OutcomeReconciliationDeclaration;
+}
+
+/**
+ * @spec runtime#evidence (outcome reconciliation) (#1103): what the
+ * responsible component can establish about an outcome a prior process of
+ * itself left unresolved. `indeterminate_at_window_close`: its reconciliation inputs (the
+ * redemption records, the connector ledger, the retained Execution Evidence)
+ * do not survive a restart, so such a claim closes `indeterminate` when its
+ * window closes and raises the declared alert; nothing reconciles it.
+ */
+export const PRIOR_PROCESS_OUTCOMES = ["indeterminate_at_window_close"] as const;
+
+/**
+ * @spec runtime#runtime-conformance, runtime#evidence (outcome
+ * reconciliation): the reconciliation window, the responsible component and
+ * the alerting obligation the runtime profile names. `prior_process_outcomes`
+ * (#1103) states the restart bound the reference realizes
+ * ({@link PRIOR_PROCESS_OUTCOMES}). A reference-statement representation of
+ * that bound, not a Runtime wire member.
+ */
+export interface OutcomeReconciliationDeclaration {
+  window: string;
+  responsible_component: string;
+  alerting: string;
+  prior_process_outcomes: (typeof PRIOR_PROCESS_OUTCOMES)[number];
 }
 
 export interface EnforcementScopeStatement extends EnforcementScopeBaseline {
@@ -481,6 +502,10 @@ export function validateEnforcementScopeStatement(
       }
       if (!isNonEmptyString(reconciliation.alerting)) {
         push(member, "missing the alerting an unresolved outcome raises");
+      }
+      // #1103: the restart bound is stated, never left implicit.
+      if (!(PRIOR_PROCESS_OUTCOMES as readonly unknown[]).includes(reconciliation.prior_process_outcomes)) {
+        push(member, `prior_process_outcomes must be one of ${PRIOR_PROCESS_OUTCOMES.join(", ")}`);
       }
     }
   }

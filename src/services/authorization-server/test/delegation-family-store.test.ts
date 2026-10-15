@@ -8,10 +8,11 @@ import { describe, expect, it } from "vitest";
 import { DelegationFamilyStore } from "../src/kernel/delegation-family-store.js";
 import type { LifecycleCommit } from "../src/kernel/types.js";
 
-const commit = (id: string, state: LifecycleCommit["state"]): LifecycleCommit => ({
+const commit = (id: string, state: LifecycleCommit["state"], reason?: string): LifecycleCommit => ({
   id,
   issuer: "https://as.test",
   state,
+  ...(reason ? { termination: { reason, terminated_at: new Date().toISOString(), version: 2 } } : {}),
   version: 2,
   committed_at: new Date().toISOString(),
   expires_at: new Date(Date.now() + 3600_000).toISOString(),
@@ -46,7 +47,7 @@ describe("DelegationFamilyStore.onLifecycleCommit", () => {
     store.record({ grantId: "grant_1", missionId: "msn_1" });
     expect(store.resolve("grant_1")).toBeDefined();
 
-    store.onLifecycleCommit(commit("msn_1", "revoked"));
+    store.onLifecycleCommit(commit("msn_1", "terminated", "revoked"));
 
     // Marked terminal, not deleted: resolve stops, but the grant is still
     // enumerable so a caller can drive its revocation.
@@ -65,7 +66,7 @@ describe("DelegationFamilyStore.onLifecycleCommit", () => {
     const store = new DelegationFamilyStore();
     store.record({ grantId: "grant_1", missionId: "msn_1" });
     store.record({ grantId: "grant_2", missionId: "msn_2" });
-    store.onLifecycleCommit(commit("msn_1", "completed"));
+    store.onLifecycleCommit(commit("msn_1", "terminated", "completed"));
     expect(store.resolve("grant_1")).toBeUndefined();
     expect(store.resolve("grant_2")).toBeDefined();
   });

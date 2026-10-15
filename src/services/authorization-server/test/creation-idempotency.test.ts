@@ -19,7 +19,7 @@
  *  - the deferral dedup key is CLIENT-scoped (two clients, same request, two
  *    deferrals) for BOTH the AROP and the expansion stores;
  *  - a reused DPoP proof jti is rejected (bounded replay cache);
- *  - the lookup-order rule: a retry whose predecessor moved to `superseded`
+ *  - the lookup-order rule: a retry whose predecessor was terminated `superseded`
  *    when the first attempt succeeded recovers its completed operation, and a
  *    pending retry returns the SAME deferral_code.
  */
@@ -523,7 +523,7 @@ describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
     };
     expect(poll.status, JSON.stringify(polled)).toBe(200);
     const successorId = (decodeJwt(polled.access_token) as { mission: { id: string } }).mission.id;
-    expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
+    expect(as.kernel.get(pred.missionId)?.termination?.reason).toBe("superseded");
     // @spec mission#grant-binding, expansion#successor-expiry (issue #647) —
     // expansion COMPLETES a creation, so the resolving poll carries the
     // successor's identifier and its committed effective expiry.
@@ -531,7 +531,7 @@ describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
     expect(polled.mission_expires_at).toBe(as.kernel.get(successorId)?.expires_at);
 
     // THE LOOKUP-ORDER RULE: the retry recovered here is exactly the one whose
-    // predecessor moved to `superseded` when the first attempt succeeded; the
+    // predecessor was terminated `superseded` when the first attempt succeeded; the
     // idempotency lookup runs BEFORE the predecessor lifecycle gate, so the
     // completed operation is recovered instead of "predecessor is superseded".
     const retry = await tokenRequest(expansionParams(pred.accessToken, crid, widened));

@@ -231,10 +231,10 @@ This document depends normatively on the expansion profile
 profile {{I-D.draft-mcguinness-oauth-mission}}, and is not
 implementable alone. It reuses, without restating, the expansion
 profile's expansion request, adjudication, `predecessor` member,
-`superseded` state, and reconciliation, and the issuance profile's
-approval event, integrity-anchor envelope, and subset rule. It uses
-Predecessor Mission, Successor Mission, and Expansion request as the
-expansion profile defines them.
+`superseded` termination reason, and reconciliation, and the issuance
+profile's approval event, integrity-anchor envelope, and subset rule.
+It uses Predecessor Mission, Successor Mission, and Expansion request
+as the expansion profile defines them.
 
 # Conventions and Terminology {#conventions-and-terminology}
 
@@ -856,6 +856,9 @@ convention, none of which require registration.
 
 -01
 
+- Relationship to the Expansion Profile: `superseded` is the
+  expansion profile's termination reason, not a lifecycle state
+  (#705).
 - In-ceiling expansion: a `ceiling_drawdown` successor keeps its
   predecessor's `subject` and `authority_source`, and its activating
   commit checks that source's ceiling, as the expansion profile

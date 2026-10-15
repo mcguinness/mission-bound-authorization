@@ -352,7 +352,7 @@ The protected header MUST carry:
 
 `approver`:
 : REQUIRED. An object with `iss` and `sub`, the Mission record's
-  `approver`.
+  `approval_basis.consent_principal`.
 
 `client_id`:
 : REQUIRED. A string. The Mission record's `client_id`.
@@ -363,6 +363,12 @@ The protected header MUST carry:
 `state_at_issuance`:
 : REQUIRED. A string. The Mission's lifecycle state at `iat`
   ({{state-at-issuance}}).
+
+`termination_at_issuance`:
+: CONDITIONAL. An object, present exactly when `state_at_issuance` is
+  `terminated`: the Mission's `termination` at `iat`
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+  Termination"; {{state-at-issuance}}).
 
 `created_at`:
 : OPTIONAL. An RFC 3339 {{RFC3339}} date-time: the time the Mission
@@ -430,15 +436,21 @@ leeway to time comparisons ({{verification}}).
 
 ## State at Issuance {#state-at-issuance}
 
-`state_at_issuance` records history, not currency. A Mandate proves
-the Mission's committed facts as of `iat`; it MUST NOT be treated as
-proof of the Mission's current state.
+`state_at_issuance` and `termination_at_issuance` record history, not
+currency. A Mandate proves the Mission's committed facts as of `iat`;
+it MUST NOT be treated as proof of the Mission's current state.
 
 A verifier reads the value under the issuance profile's fail-safe
 rule: any value other than the exact string `active`, including one it
 does not recognize, means the Mission was not active at minting. The
 Mission may have transitioned since minting, and nothing in the
-artifact would show it.
+artifact would show it. A `state_at_issuance` of `revoked`, `expired`,
+`completed`, `superseded`, or `cascaded` is read under the issuance
+profile's transition-period rule
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+Termination"), over the Mandate's verified original bytes; like
+`termination_at_issuance`, it describes the Mission at `iat`, never
+its current status.
 
 Current state comes from a state surface, not from the Mandate:
 
@@ -464,11 +476,12 @@ check.
 ## Minting {#minting}
 
 The Mission Issuer MAY mint a Mandate at any time within the Mission's
-audit horizon, including after the Mission reaches a terminal state.
+audit horizon, including after the Mission terminates.
 Each claim MUST be populated from the Mission record's committed
 members. `state_at_issuance` MUST equal the Mission's lifecycle state
-at `iat`. The issuer MUST NOT mint a Mandate whose facts diverge from
-the record.
+at `iat`. When that state is `terminated`, `termination_at_issuance`
+MUST equal the Mission's `termination` at `iat`. The issuer MUST NOT
+mint a Mandate whose facts diverge from the record.
 
 To whom Mandates are issued, and through what request surface, is
 deployment policy; this document defines the artifact, not a delivery
@@ -981,7 +994,9 @@ A **Mandate Issuer** MUST:
 - be the Mission `issuer` and set `iss` to it;
 - mint only over an existing Mission record, populating every claim
   from its committed members ({{minting}});
-- set `state_at_issuance` to the Mission's lifecycle state at `iat`;
+- set `state_at_issuance` to the Mission's lifecycle state at `iat`
+  and, when that state is `terminated`, `termination_at_issuance` to
+  the Mission's `termination` at `iat`;
 - when including `authority_set`, include the consented Authority Set
   exactly as recorded, in recorded order;
 - sign with a key resolvable by `kid` in its published key material,

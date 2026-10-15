@@ -15,6 +15,7 @@ import {
   type ChallengeIssuers,
   CatalogProvider,
   type DeferralStore,
+  type DischargeAuthorityPolicy,
   issueCrossDomainGrant,
   type IssuerEvidenceStore,
   MissionKernel,
@@ -56,11 +57,13 @@ import {
   EvidenceRetentionStore,
   EvidenceStore,
   type HttpMcpChannel,
+  indeterminateClaimAlert,
   type KeyRoles,
   type LoadedView,
   McpPaymentsServer,
   type MediatedToolResult,
   type MissionReference,
+  OutcomeReconciler,
   PaymentsStore,
   Pep,
   type PepDeps,
@@ -68,6 +71,7 @@ import {
   redemptionStatusFor,
   type ResourceMetadataServer,
   startResourceMetadataServer,
+  stderrAlertSink,
   type TokenFacts,
   TransactionEngine,
   openWriteReservationStore,
@@ -104,6 +108,11 @@ export interface AuthServerExtras {
   asUrl: string;
   /** The agent confidential client's private JWK (private_key_jwt signer). */
   agentClientJwk: Record<string, unknown>;
+  /**
+   * The sub-agent client's private JWK: a dispatched instance's selected Agent,
+   * which redeems the Dispatch Handoff as itself (@spec mission-template#dispatch-handoff).
+   */
+  childClientJwk: Record<string, unknown>;
   /** Trusted console/driver only. Never included in agent dependencies or tool results. */
   approverServiceToken: string;
   /** AROP Deferred Token Response store (drive open/approve/deny headlessly). */
@@ -221,6 +230,13 @@ export interface DemoStack {
    * file for this stack's lifetime, beside (never inside) the PDP's claims.
    */
   writeReservations: WriteReservationStore;
+  /**
+   * @spec runtime#evidence (outcome reconciliation) (#1103): the declared
+   * reconciler, built from the statement's `outcome_reconciliation`. Returned
+   * stopped: the launchers (`pnpm as-native`, `pnpm demo:serve`) start it, and
+   * a test runs it with `runOnce()`. Every close path stops it first.
+   */
+  reconciler: OutcomeReconciler;
   /** The issuer this stack's kernel/tokens use (ISS, or the AS URL). */
   issuer: string;
   viewFor: (missionId: string) => MissionView | undefined;
@@ -287,6 +303,14 @@ export async function composeStack(opts: {
    * less the payments resource under the `as-native` target.
    */
   masGovernedResources?: readonly string[];
+  /**
+   * @spec discharge#discharge-authority (#1144): the policy resolving a
+   * `terminal_when` condition's `discharge_authority`, given to the AS and the
+   * kernel. The shipped demo registers none, so its Missions carry no
+   * completion condition; a composition that registers one gets the discharge
+   * operation and, through `viewFor`, the PDP's point-of-use refusal.
+   */
+  dischargeAuthority?: DischargeAuthorityPolicy;
 }): Promise<DemoStack> {
   const asNative = opts.target === "as-native";
   const masGovernedResources =
@@ -407,6 +431,7 @@ export async function composeStack(opts: {
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
       },
       ...(capabilities ? { capabilities } : {}),
+      ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
       // @spec authority-server#mission-join (#557) — the demo's MAS-governed
       // route acts under an ORDINARY OAuth credential, and no other path in
       // this deployment mints one. The AS itself is unchanged by the Join;
@@ -578,6 +603,7 @@ export async function composeStack(opts: {
     authServer = {
       asUrl,
       agentClientJwk: as.agentClientJwk,
+      childClientJwk: as.childClientJwk,
       approverServiceToken,
       deferrals: as.deferrals,
       ras,
@@ -610,7 +636,15 @@ export async function composeStack(opts: {
     // @spec mission#authority-sources — the same shipped catalog the wired AS
     // runs with: the kernel takes one REQUIRED catalog on every path, so the
     // no-AS-server composition cannot approve against an invented source.
-    kernel = new MissionKernel({ issuer: ISS, policy: DERIVATION_POLICY as never, containmentPolicy: CONTAINMENT_POLICY as never, authoritySourceCatalog: AUTHORITY_SOURCES as never, statusKey: asKeys.privateKey, statusKid: TOPOLOGY.keys.asStatus.kid });
+    kernel = new MissionKernel({
+      issuer: ISS,
+      policy: DERIVATION_POLICY as never,
+      containmentPolicy: CONTAINMENT_POLICY as never,
+      authoritySourceCatalog: AUTHORITY_SOURCES as never,
+      statusKey: asKeys.privateKey,
+      statusKid: TOPOLOGY.keys.asStatus.kid,
+      ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
+    });
     issuer = ISS;
     serverJwks = { keys: [] };
     // No AS, so no AS-signed token is verified on this path.
@@ -658,11 +692,17 @@ export async function composeStack(opts: {
   // process holds, or a statement it cannot run, refuses the stack at boot.
   const claimsFile = opts.claimsFile ?? TOPOLOGY.stores.pdpIdempotencyClaims.file;
   mkdirSync(dirname(claimsFile), { recursive: true });
+  // @spec runtime#evidence (outcome reconciliation) (#1103): the declared
+  // alerting obligation, one JSON line on stderr per alert. A claim that
+  // closes indeterminate alerts where the claim domain moves it, after the
+  // move commits, so a prior process's claim alerts too.
+  const operatorAlerts = stderrAlertSink();
   const pdpClaims = openIdempotencyClaimDomain({
     file: claimsFile,
     owner: RUNTIME_POSTURE.pdps[0] as string,
     statement: RUNTIME_POSTURE,
     settlementKeys: buildEvidenceKeyResolver(evidenceKeys.verification.filter((k) => k.role !== "pdp")),
+    onIndeterminate: (claim) => operatorAlerts.alert(indeterminateClaimAlert(claim)),
   });
   // @spec runtime#input-resource-policy (#828): the independently
   // administered Resource policy, stored OpenFGA entitlements read with no
@@ -755,6 +795,12 @@ export async function composeStack(opts: {
     const r = kernel.get(missionId);
     if (!r) return undefined;
     const fresh = kernel.applyExpiry(r);
+    // @spec discharge#runtime, discharge#visibility (#1144, D335): the committed
+    // discharge DELTA beside the committed set, so the PDP refuses a discharged
+    // entry at the point of use (`authority_discharged`, step 5b) and reads a
+    // credential's discharge condition through its source entries (step 5c).
+    // The PDP cannot detect a missing delta, so this loader supplies it.
+    const dischargedDigests = kernel.dischargedEntryDigests(fresh);
     return {
       id: fresh.id,
       issuer: fresh.issuer,
@@ -783,6 +829,7 @@ export async function composeStack(opts: {
             },
           }
         : {}),
+      ...(dischargedDigests.length > 0 ? { discharged: { entry_digests: dischargedDigests } } : {}),
     };
   };
 
@@ -841,8 +888,9 @@ export async function composeStack(opts: {
   // the channel binds, and its read-only answer is retransmission condition 6.
   const engine = new TransactionEngine("demo-epoch");
   const redemption = redemptionStatusFor(engine);
+  const pepId = "mcp-payments-pep";
   const decisionChannel = await createDecisionChannel(decisionPoint, {
-    mode, pepId: "mcp-payments-pep", audience: CANONICAL_RESOURCE,
+    mode, pepId, audience: CANONICAL_RESOURCE,
     pepEpoch: redemption.epoch,
     consumptionStatus: redemption.status,
     redeemingExecution: redemption.redeemer,
@@ -922,6 +970,20 @@ export async function composeStack(opts: {
     ...(txnChallengePublication ? { txnChallenge: txnChallengePublication } : {}),
   });
   paymentsServerRef = server;
+  // @spec runtime#evidence (outcome reconciliation) (#1103): this PEP is the
+  // statement's responsible component, so it runs the reconciliation over its
+  // own claim channel, redemption store, connectors, evidence and
+  // reservations. Constructed here and not started: see `DemoStack.reconciler`.
+  const reconciler = new OutcomeReconciler({
+    statement: RUNTIME_POSTURE,
+    component: pepId,
+    claims: decisionChannel.claims,
+    evidence,
+    redemption,
+    connectors,
+    writeReservations,
+    alerts: operatorAlerts,
+  });
 
   // @spec authority-server#mission-join (#557) — the MAS-governed route, on
   // its own listener, started only for a resource this deployment declares
@@ -942,6 +1004,7 @@ export async function composeStack(opts: {
     // A failed startup releases what it already opened: the AS and discovery
     // listeners, the decision channel and both single-writer store files.
     const release = async (): Promise<void> => {
+      await reconciler.stop();
       await authServer?.closeAuthServer();
       await decisionChannel.close();
       pdpClaims.close();
@@ -1002,6 +1065,7 @@ export async function composeStack(opts: {
     decisionChannel,
     pdpClaims,
     writeReservations,
+    reconciler,
     fga,
     modelId,
     payments,

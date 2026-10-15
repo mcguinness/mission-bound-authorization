@@ -498,7 +498,7 @@ Mission's feed; a row registers nothing on its own.
 
 | Evidence type | Canonical bytes (hashed) | `payload-preimage-content-type` | Operational `typ` | Producer |
 |---|---|---|---|---|
-| Approval event | Mission record at creation, `state` excluded, canonicalized | `application/mission-approval-record+json` | none | `issuer` |
+| Approval event | Mission record at creation, `state` and `termination` excluded, canonicalized | `application/mission-approval-record+json` | none | `issuer` |
 | Lifecycle transition | Signals SET as issued, as the signals profile fixes; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `secevent+jwt`, else none | `issuer` |
 | Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | none | `issuer` |
 | Consent evidence | complete retained object, `evidence_envelope` included (JCS) | `application/mission-consent-evidence+json` | `mission-consent-evidence+jws` | `issuer` |
@@ -613,7 +613,8 @@ The media types and type identifiers are defined as follows:
   ({{I-D.draft-mcguinness-oauth-mission-containment}}).
 
 The approval event's canonical bytes are the whole Mission record at
-creation with `state` excluded, canonicalized ({{evidence-types}}):
+creation with its mutable members, `state` and `termination`,
+excluded, canonicalized ({{evidence-types}}):
 every committed member is included, the record's own optional members
 where present (for example, `proposed_authority` and `proposal_hash`,
 {{I-D.draft-mcguinness-oauth-mission}}), and members companion
@@ -653,8 +654,15 @@ transition as a minimal JSON object with these members, JCS-canonicalized
 - `mission_id` (string, required): the Mission `id`.
 - `issuer` (string, required): the Mission `issuer`.
 - `state` (string, required): the new lifecycle state.
+- `termination` (object, conditional): present exactly when `state` is
+  `terminated`: the Mission's `termination`
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+  Termination").
 - `prior_state` (string, optional): the state immediately before the
-  transition.
+  transition, never `terminated` (for example `active`, or the status
+  profile's `suspended`, {{I-D.draft-mcguinness-oauth-mission}},
+  Section "Mission Lifecycle States Registry"): a `terminated` Mission
+  makes no further transition.
 - `transitioned_at` (string, required): an RFC 3339 {{RFC3339}}
   date-time at which the transition was committed.
 - `salt` (string, required): a random salt of at least 128 bits,
@@ -678,7 +686,11 @@ one per record:
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "issuer": "https://as.example.com",
   "salt": "q7hJ2mXv9pTzR4kW5nB8dQ",
-  "state": "revoked",
+  "state": "terminated",
+  "termination": {
+    "reason": "revoked",
+    "terminated_at": "2026-11-02T08:30:00Z"
+  },
   "transitioned_at": "2026-11-02T08:30:00Z"
 }
 ~~~
@@ -687,12 +699,13 @@ Its JCS canonical bytes (one line; breaks are for display only):
 
 ~~~ text
 {"issuer":"https://as.example.com","mission_id":"msn_8RfX2Lqv9TqMv
-4z7sA2bN1k0YpEdHc9-","salt":"q7hJ2mXv9pTzR4kW5nB8dQ","state":"revo
-ked","transitioned_at":"2026-11-02T08:30:00Z"}
+4z7sA2bN1k0YpEdHc9-","salt":"q7hJ2mXv9pTzR4kW5nB8dQ","state":"term
+inated","termination":{"reason":"revoked","terminated_at":"2026-11
+-02T08:30:00Z"},"transitioned_at":"2026-11-02T08:30:00Z"}
 ~~~
 
 The committed digest is the SHA-256 of those bytes; its base64url
-form is `SD3SCb7vm3b_Ivsm19ENQAGAv7pjLS-mNWGcaXqslmc`. The Signed
+form is `n7MnMBoJTOuPTZvgNvb5Kp3-iwVkP25t-9VdMU_uQCY`. The Signed
 Statement carries the digest bytes inline as its payload, with this
 protected header ({{hash-commitment}}, {{feed}}):
 
@@ -1210,10 +1223,11 @@ nothing ({{I-D.draft-mcguinness-oauth-mission}}).
 
 A Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
 is its own Mission with its own `id` and `issuer`, so its evidence forms
-its own feed; its lifecycle events, including a `cascaded` transition,
-appear in that feed. The event that triggered the cascade is in the
-parent's feed. Lineage is navigable in both directions: the child's
-lineage to the parent is the `parent` member of its `mission` claim,
+its own feed; its lifecycle events, including a transition to
+`terminated` with reason `parent_terminated`, appear in that feed.
+The event that triggered the cascade is in the parent's feed.
+Lineage is navigable in both directions: the child's lineage to the
+parent is the `parent` member of its `mission` claim,
 which an auditor follows to the parent's `sub` to see that trigger,
 and the parent's children are enumerated by the Child Evidence
 records on the parent's feed ({{evidence-types}}), each carrying the
@@ -1622,6 +1636,11 @@ rather than registering a new identifier.
 
 \[\[ To be removed from the final specification ]]
 
+- The Lifecycle Transition Object records a terminated Mission as
+  `state` `terminated` with a `termination` object, and `prior_state`
+  is never `terminated`; the computed example is regenerated.
+  The approval event excludes both mutable record members, `state` and
+  `termination` (#705).
 - The Discovery Evidence, Containment evidence, Protected event
   receipt, and Work Product Binding front-matter references moved
   from normative to informative, meeting the reference

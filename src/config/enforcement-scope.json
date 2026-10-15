@@ -88,7 +88,8 @@
     "outcome_reconciliation": {
       "window": "PT15M",
       "responsible_component": "mcp-payments-pep",
-      "alerting": "an operator alert for every idempotency claim that closes indeterminate"
+      "alerting": "an operator alert for every idempotency claim that closes indeterminate",
+      "prior_process_outcomes": "indeterminate_at_window_close"
     }
   }
 }

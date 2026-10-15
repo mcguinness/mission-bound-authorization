@@ -10,7 +10,12 @@
  * reversibility class is high-risk, matching the draft.
  */
 
-import { canonicalize, type JsonValue, type StateSource } from "@mission/core";
+import {
+  canonicalize,
+  type JsonValue,
+  type MissionTermination,
+  type StateSource,
+} from "@mission/core";
 import type { AuthorityBasis } from "./compensation.js";
 import type { OutcomeClass } from "./in-flight.js";
 import { HIGH_RISK_REVERSIBILITY, type ReversibilityClass } from "./reversibility.js";
@@ -40,6 +45,12 @@ export interface OrchestrationEvidence {
   workflow_id: string;
   step_id?: string;
   mission_state: string;
+  /**
+   * @spec orchestration#orchestration-evidence: the Mission's `termination`
+   * (@spec mission#termination) beside `mission_state` `terminated`, when the
+   * state source reported one; absent otherwise.
+   */
+  mission_termination?: MissionTermination;
   state_source: StateSource;
   orchestration_decision: OrchestrationDecision;
   reason: string;
@@ -77,6 +88,8 @@ export interface BuildOrchestrationEvidenceInput {
   workflow_id: string;
   step_id?: string;
   mission_state: string;
+  /** Beside `mission_state` `terminated` only; one beside any other state is refused. */
+  mission_termination?: MissionTermination;
   state_source: StateSource;
   orchestration_decision: OrchestrationDecision;
   reason: string;
@@ -111,12 +124,18 @@ export function buildOrchestrationEvidence(
   input: BuildOrchestrationEvidenceInput,
   opts: { signEnvelope?: EnvelopeSigner } = {},
 ): OrchestrationEvidence {
+  if (input.mission_termination !== undefined && input.mission_state !== "terminated") {
+    throw new Error("mission_termination is carried only beside mission_state terminated");
+  }
   const rec: OrchestrationEvidence = {
     event_id: input.event_id,
     mission: input.mission,
     workflow_id: input.workflow_id,
     ...(input.step_id !== undefined ? { step_id: input.step_id } : {}),
     mission_state: input.mission_state,
+    ...(input.mission_termination !== undefined
+      ? { mission_termination: input.mission_termination }
+      : {}),
     state_source: input.state_source,
     orchestration_decision: input.orchestration_decision,
     reason: input.reason,

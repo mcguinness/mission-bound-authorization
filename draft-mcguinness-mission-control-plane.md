@@ -136,7 +136,7 @@ A retaining consumer MUST key its high-water mark by the canonical (issuer, miss
 
 The Mission Issuer MUST retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon.
 
-A tombstone identifies the canonical issuer/Mission tuple, terminal state, final version, and transition time or commit reference. After detailed retention expires, the issuer MUST retain enough namespace state to prevent identifier reuse or a return to active. This composes retention horizons; it does not weaken the binding's existing identifier-nonreuse requirement.
+A tombstone identifies the canonical issuer/Mission tuple, the `terminated` state and its termination reason, final version, and transition time or commit reference. After detailed retention expires, the issuer MUST retain enough namespace state to prevent identifier reuse or a return to active. This composes retention horizons; it does not weaken the binding's existing identifier-nonreuse requirement.
 
 ## 6. Authoritative mutation under partition {#partitions}
 
@@ -237,6 +237,8 @@ This document requests no IANA actions.
 
 \[\[ To be removed from the final specification ]]
 
+- Terminal-state tombstones: a tombstone records the `terminated`
+  state and its termination reason (#705).
 - Initial topology-neutral consistency foundation (#250): ten issuer
   invariant groups, the shared consistency and availability rule, the
   deployment declaration riding existing surfaces, and the fault

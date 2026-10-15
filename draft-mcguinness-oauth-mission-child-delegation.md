@@ -257,8 +257,9 @@ Status and Lifecycle profile
 ({{I-D.draft-mcguinness-oauth-mission-status}}) and the Mission
 Expansion profile ({{I-D.draft-mcguinness-oauth-mission-expansion}})
 where a deployment runs them, because those profiles define the
-`suspended`, `completed`, and `superseded` parent states the cascade
-rules react to. A deployment that runs neither still implements this
+`suspended` parent state and the `completed` and `superseded`
+termination reasons the cascade rules react to. A deployment that runs
+neither still implements this
 profile: under the issuance profile's forward-compatibility rule, the
 cascade treats any non-active parent state as a terminal trigger.
 
@@ -790,9 +791,13 @@ order, refusing on the first failure:
    lineage chain is non-active.
 7. Verify the applicable parent Authority Set entry's `delegation`
    carries a `children` object permitting child creation, and that
-   `child_actor` satisfies its constraints ({{fanout}}).
+   `child_actor` satisfies its constraints ({{fanout}}); verify the same
+   of the presented `subject_token`'s applicable entry
+   ({{attenuation}}).
 8. Derive the child Authority Set, verify strict subset
-   ({{strict-subset}}), and apply fan-out controls.
+   ({{strict-subset}}) and that it is within the authority the
+   `subject_token` carries ({{attenuation}}), and apply the fan-out
+   controls of both.
 9. Determine subset derivation versus fresh approval and complete per
    {{completion}}: synchronous, deferred, or interactive.
 10. At the creation commit, re-verify parent state ({{creation-race}})
@@ -846,6 +851,13 @@ of the same `(client, creation_request_id)`:
   ({{fanout-accounting}}), or record a second Child Evidence object
   ({{child-evidence}}).
 
+A repetition whose `subject_token` does not authorize the recorded
+creation under {{attenuation}}, both its authority bound and its
+`children` controls, with the recorded child counted once toward
+`max_children`, is refused with the corresponding denial reason:
+recovery never delivers a child the presented token could not have
+created.
+
 ## Worked Example {#worked-example}
 
 Under the Q3 reconciliation Mission
@@ -874,6 +886,7 @@ mission_intent=%7B%22intent%22%3A
 parent=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
 child_actor=%7B%22sub%22%3A%22subagent-invoice-extractor%22%2C
   %22sub_profile%22%3A%22ai_agent%22%7D&
+creation_request_id=812d8100-565d-5f56-9cd3-66783a16259e&
 client_id=s6BhdRkqt3
 ~~~
 
@@ -946,12 +959,14 @@ This profile defines these symbolic denial reasons:
   ({{fanout}}).
 
 `child_actor_not_allowed`:
-: The child actor does not satisfy the parent entry's
-  `allowed_child_actors` ({{fanout}}) or equivalent policy.
+: The child actor does not satisfy the parent entry's or the presented
+  `subject_token`'s `allowed_child_actors` ({{fanout}},
+  {{attenuation}}), or equivalent policy.
 
 `not_strict_subset`:
 : The proposed child authority is not a strict subset of parent
-  authority ({{strict-subset}}).
+  authority ({{strict-subset}}), or exceeds the authority the presented
+  `subject_token` carries ({{attenuation}}).
 
 `fanout_exceeded`:
 : Creating the child would exceed a fan-out control.
@@ -961,7 +976,10 @@ This profile defines these symbolic denial reasons:
 
 These symbolic strings appear in error bodies, evidence, and audit,
 layered on the OAuth error codes the issuance profile uses:
-`parent_not_active` and `parent_mismatch` accompany `invalid_grant`;
+`parent_mismatch` accompanies `invalid_grant`; `parent_not_active`
+accompanies `invalid_request` on the child-creation exchange
+({{Section 2.2.2 of RFC8693}}) and `invalid_grant` on the poll or code
+redemption that completes a deferred or interactive creation;
 `delegation_not_permitted`, `child_actor_not_allowed`,
 `not_strict_subset`, and `fanout_exceeded` accompany `invalid_request`;
 and `policy_denied` accompanies `access_denied`. In an error response
@@ -1089,10 +1107,10 @@ creation, that human is accountable. The Child Mission's
 
 Where the deployment requires a human approval event for child
 creation ({{child-creation}}), that event meets the issuance
-profile's approval-event requirements in full, its human Approver is
-the record's `approver`, and `approval_basis.type` is `direct`:
+profile's approval-event requirements in full, and
+`approval_basis.type` is `direct`:
 
-- `consent_principal` is that Approver;
+- `consent_principal` is that event's human Approver;
 - `activation` is `{ approval_event_id }`;
 - `activation_actor` equals `consent_principal`; and
 - `root_commitment` is the child's own `authority_hash`, exactly as
@@ -1103,7 +1121,8 @@ Where creation is adjudicated by policy with no human interaction
 `policy_drawdown`:
 
 - `consent_principal` is the Parent Mission's own
-  `approver`, the accountable human standing behind the delegation that
+  `approval_basis.consent_principal`, the accountable human standing
+  behind the delegation that
   permits child creation ({{fanout}});
 - `activation_actor` is the
   requesting parent agent, the Parent Mission's `client_id`, distinct
@@ -1132,7 +1151,7 @@ artifact: `activation` omits `policy_id` and carries only the
 delegation event identifier as `activation_event_id`. In both forms
 the record's `approval_event_id` is that `activation_event_id`, never
 the Parent Mission's approval event. The record's
-`approver` is `consent_principal`: the Parent Mission's human
+`approval_basis.consent_principal` is the Parent Mission's human
 Approver, never the policy and never the requesting agent.
 
 `approved_at` (the issuance profile's standing-consent requirement)
@@ -1177,6 +1196,20 @@ A Child Mission MUST be bounded by the Parent Mission:
 
 - every child Authority Set entry MUST be a subset of a parent entry
   under the subset rule of {{I-D.draft-mcguinness-oauth-mission}};
+- every child Authority Set entry MUST also be a subset, under the same
+  rule, of an entry of the authority the presented `subject_token`
+  carries, so a down-scoped token never mints a child broader than
+  itself;
+- the presented `subject_token` MUST authorize this child-creation
+  operation: each child entry is attributed to the first entry of the
+  token's authority, in order, that it is a subset of, as
+  {{fanout-accounting}} attributes it to a parent entry; that token
+  entry MUST carry a `children` object, and its `allowed_child_actors`,
+  `max_child_depth`, and `max_children` ({{fanout}}) constrain the
+  creation alongside the parent entry's, its `max_children` bounding the
+  same count; a token without that delegation right authorizes no child,
+  and carrying the token's restrictions into the child does not satisfy
+  this;
 - the child MUST NOT include a resource, action, constraint relaxation,
   or delegation right not present in the parent;
 - the child's effective `expires_at` MUST NOT be later than the child
@@ -1231,8 +1264,9 @@ resource containment and `.*` action families) apply as that rule
 defines them, and nothing beyond them applies.
 
 If the Mission Issuer cannot prove the child Authority Set is a strict
-subset of the parent, it MUST refuse child creation with
-`not_strict_subset`.
+subset of the parent, and within the authority the presented
+`subject_token` carries ({{attenuation}}), it MUST refuse child
+creation with `not_strict_subset`.
 
 ## Derivation Budget Is Not Inherited {#derivation-budget}
 
@@ -1409,19 +1443,20 @@ any Parent Mission transition to a non-active state. This profile
 distinguishes terminal triggers from the one reversible trigger.
 
 Terminal triggers:
-: Parent `revoked` or `expired`
-  ({{I-D.draft-mcguinness-oauth-mission}}), `completed`
+: Parent `terminated`, whatever its termination reason: `revoked` or
+  `expired` ({{I-D.draft-mcguinness-oauth-mission}}), `completed`
   ({{I-D.draft-mcguinness-oauth-mission-status}}), `superseded`
-  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or `cascaded`
-  ({{child-state}}, when the parent is itself a Child Mission that was
-  cascade-terminated).
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
+  `parent_terminated` ({{child-state}}, when the parent is itself a
+  Child Mission that was cascade-terminated), or another.
 
   On a terminal trigger the Mission Issuer MUST stop new derivation
   under dependent Child Missions and, under `immediate` cascade, MUST
-  transition each dependent child to the terminal `cascaded` state
-  ({{child-state}}).
+  transition each dependent child to `terminated` with reason
+  `parent_terminated` ({{child-state}}).
 
-  Cascade is transitive: the children of a `cascaded` parent cascade
+  Cascade is transitive: the children of a parent terminated with
+  reason `parent_terminated` cascade
   in turn under the same mode, in generation order, so a terminal
   trigger reaches every descendant.
 
@@ -1435,10 +1470,10 @@ Reversible trigger:
   derive again. Reporting of a dependent child while its parent is
   suspended is governed by {{child-state}}.
 
-A `superseded` parent does not transfer its Child Missions to the
-successor. The Mission Issuer MUST treat `superseded` as a terminal
-cascade trigger and MUST NOT silently re-bind children to the
-successor.
+A superseded parent does not transfer its Child Missions to the
+successor. The Mission Issuer MUST treat a `superseded` termination as
+a terminal cascade trigger and MUST NOT silently re-bind children to
+the successor.
 
 The reason is how successor authority is derived: the successor
 Mission carries a freshly derived Authority Set that does not inherit
@@ -1475,8 +1510,9 @@ MUST implement the `immediate` cascade mode and record the mode on the
 Child Mission:
 
 `immediate`:
-: On a terminal trigger the Child Mission transitions to the `cascaded`
-  state when the parent transition commits. On the reversible trigger
+: On a terminal trigger the Child Mission transitions to `terminated`
+  with reason `parent_terminated` when the parent transition commits.
+  On the reversible trigger
   the child is held non-active while the parent is suspended and
   restored to its prior state on parent resume.
 
@@ -1506,30 +1542,59 @@ The cascade behavior by trigger:
 
 | Trigger | Resulting child state | Who observes |
 |---------|-----------------------|--------------|
-| Terminal (`revoked`, `expired`, `completed`, `superseded`, `cascaded`) | `cascaded` (terminal) | Mission Issuer sets it; consumers read it from Mission Status or a lifecycle event |
+| Terminal (parent `terminated`, any reason) | `terminated`, reason `parent_terminated` | Mission Issuer sets it; consumers read it from Mission Status or a lifecycle event |
 | Reversible (`suspended`) | reported `suspended`; restored on resume | Issuer reports it; consumers read it ({{child-state}}) |
 
 ## Child Mission State {#child-state}
 
 A Child Mission has its own state, drawn from the issuance profile's
 lifecycle state space ({{I-D.draft-mcguinness-oauth-mission}}). This
-profile defines one child-specific terminal state:
+profile defines one child-specific termination reason
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+Termination"):
 
-`cascaded`:
-: A terminal state a Child Mission enters when a terminal cascade
+`parent_terminated`:
+: The reason a Child Mission is `terminated` when a terminal cascade
   trigger on its Parent Mission terminates it under `immediate` cascade
   ({{cascade}}). It is distinct from `revoked` (the child itself was not
   revoked) and `expired` (the child's own expiry was not reached), so
   audit can tell a cascade-terminated child from a directly terminated
   one.
 
+  Its `terminated_at` is the Parent Mission's `terminated_at`: a
+  cascade propagates one instant, so every Child Mission one cascade
+  terminates reports the same `terminated_at`, whenever its own
+  transition commits. Where the Parent Mission's termination retained
+  no `terminated_at` ({{I-D.draft-mcguinness-oauth-mission}}, Section
+  "Mission Termination"), the child's has none either: the child's
+  commit time is its transition's, never its `terminated_at`. Its
+  `termination` carries these further members:
+
+  `parent`:
+  : REQUIRED. A string. The Mission identifier of the immediate Parent
+    Mission, equal to the child's `parent.id` ({{parent-member}}).
+
+  `origin`:
+  : OPTIONAL. A string. The Mission identifier of the ancestor whose
+    termination started the cascade. Provenance only: `parent` remains
+    the reference a consumer follows.
+
+  `origin_reason`:
+  : OPTIONAL. A string. That ancestor's termination reason.
+
+  `carried_to`:
+  : CONDITIONAL. A string. The replacement Mission identifier that
+    Child Mission Carryover committed for this child
+    ({{carryover-records}}), present exactly when a replacement was
+    committed. Correlation, never authority.
+
   Following the issuance profile's forward-compatibility rule, a
-  consumer treats `cascaded` as non-active, as it treats any state other
-  than `active`. Mission Status
-  ({{I-D.draft-mcguinness-oauth-mission-status}}) reports it among the
-  terminal states, and a Mission lifecycle-change event
-  ({{I-D.draft-mcguinness-oauth-mission-signals}}) carries it on the
-  cascade transition.
+  consumer treats a Child Mission terminated with this reason as
+  non-active, as it treats any state other than `active`. Mission
+  Status ({{I-D.draft-mcguinness-oauth-mission-status}}) reports it as
+  `terminated` with its `termination`, and a Mission lifecycle-change
+  event ({{I-D.draft-mcguinness-oauth-mission-signals}}) carries it on
+  the cascade transition.
 
 A Child Mission also depends on ancestor state. For derivation under a
 Child Mission, both conditions MUST hold:
@@ -1541,7 +1606,11 @@ Child Mission, both conditions MUST hold:
 If either condition fails, the Mission Issuer MUST refuse derivation.
 A cascade in progress ({{cascade}}) opens no window: a descendant
 whose root ancestor is non-active is refused derivation even before
-its own cascade transition commits.
+its own cascade transition commits. When the refused Child Mission is
+`terminated` with reason `parent_terminated`, or reported so ahead of
+its own transition (below), the refusal's `mission_error` value is
+`parent_terminated` ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Issuance Gating").
 
 Where a deployment also runs the Entry Discharge companion's
 completion machinery ({{I-D.draft-mcguinness-oauth-mission-discharge}}),
@@ -1570,8 +1639,8 @@ Mission Status operation and token introspection,
 child's own state when the parent resumes to `active`.
 
 A child whose own `expires_at` passes during the suspension is
-`expired`: expiry takes precedence over the projected `suspended`
-state.
+`terminated` with reason `expired`: expiry takes precedence over the
+projected `suspended` state.
 
 Projection onset and lift are not silent. Each is a committed
 metadata-only change on every affected child for the purposes of the
@@ -1583,8 +1652,9 @@ deployment runs Lifecycle Signals
 event is emitted for each affected child.
 
 Likewise, once a terminal cascade trigger ({{cascade}}) commits at any
-ancestor, the issuer MUST report each dependent descendant's state as
-`cascaded` on every state-reporting surface (the Mission Status
+ancestor, the issuer MUST report each dependent descendant as
+`terminated` with reason `parent_terminated` on every state-reporting
+surface (the Mission Status
 operation and token introspection,
 {{I-D.draft-mcguinness-oauth-mission-status}}) from that commit, ahead
 of each descendant's own per-generation transition.
@@ -1592,22 +1662,32 @@ of each descendant's own per-generation transition.
 The transitive transitions still commit in generation order
 ({{cascade}}); this rule bounds only what a consumer reads, so a
 consumer keying on a descendant's own state never reads `active`
-mid-cascade.
+mid-cascade. This ancestor-termination projection holds at every
+decision, whether or not a descendant's own transition has been
+persisted, including when persisting it fails or rolls back. Until
+that transition commits, the reported `termination` carries no state
+version ({{I-D.draft-mcguinness-oauth-mission-status}}); committing it
+preserves the projected reason and references. A descendant already
+`terminated` when the trigger commits keeps its own `termination`.
 
-Expiry takes precedence over `cascaded` as it does over the projected
-`suspended` state: where a child's own `expires_at` coincides with a
-terminal cascade of its parent (for example, a child whose `expires_at`
-equals the parent's on parent expiry), the child's own `expired` state
-wins and it is reported `expired`, not `cascaded`. This matches the
-`cascaded` state, which a child enters only when its own expiry was not
-reached.
+A child's own expiry takes precedence over `parent_terminated` as it
+does over the projected `suspended` state: where a child's own
+`expires_at` is at or before a terminal cascade of its parent (for
+example, a child whose `expires_at` equals the parent's on parent
+expiry), the child is `terminated` with reason `expired`, not
+`parent_terminated`. This matches `parent_terminated`, which a child
+receives only when its own expiry was not reached. The same precedence
+applies on the Child Mission Carryover path ({{carryover-cas}}).
 
 Mission Status for a Child Mission SHOULD also include a parent
 projection for authorized callers, as additional context:
 
 `parent`:
 : Object containing parent `id`, `issuer`, current parent `state` when
-  known, `cascade_mode`, and freshness information.
+  known, the parent's `termination`
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+  Termination") when that `state` is `terminated`, `cascade_mode`, and
+  freshness information.
 
 Under `immediate` cascade a consumer needs no parent-state check of its
 own: it relies on the Mission Issuer's child state transition, read
@@ -1693,9 +1773,13 @@ the committed policy. Excluding a prospective replacement parent excludes
 every dependent descendant: no replacement attaches to a missing parent.
 New descendants absent from the manifest are never carried; under
 disclosed-exclusions they cascade and appear in the completion evidence.
-Already-terminal old children retain their terminal state and are recorded as
-excluded, never transitioned again to `cascaded`. Each final outcome is recorded
-against its rendered row, not inferred from set equality over the subtree.
+Already-terminated old children retain their termination and are recorded as
+excluded, never terminated again with reason `parent_terminated`. An old child
+whose own `expires_at` is at or before the completion commit is among them: it
+is `terminated` with reason `expired`, whether or not that transition has been
+persisted, never `parent_terminated` ({{child-state}}). Each final outcome is
+recorded against its rendered row, not inferred from set equality over the
+subtree.
 
 ## Generation-by-Generation Eligibility {#carryover-generations}
 
@@ -1757,9 +1841,10 @@ rendered replacement `authority_source`. There is no `expansion_carryover`
 standing-consent basis.
 
 The replacement records `related_to` as correlation with the qualified old
-child, under expansion's existing correlation semantics. The old child gains
-`carried_to`, a string containing the replacement Mission identifier under
-the same issuer, only when its `cascaded` transition and replacement commit.
+child, under expansion's existing correlation semantics. The old child's
+`termination` carries `carried_to` ({{child-state}}), a string containing the
+replacement Mission identifier under the same issuer, only when its
+`parent_terminated` transition and replacement commit.
 `carried_to` is immutable thereafter, absent for excluded children, and grants
 nothing. Neither pointer selects authority or rebinds a credential.
 
@@ -1807,8 +1892,9 @@ For a carried row the map includes `replacement_id`, its child-specific
 with at most one counterpart per old entry. The discharge companion forwards
 a delayed discharge through these pairings
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}, Section "Discharge After
-Carryover"). For an excluded row the map includes `reason` and observed
-terminal state or committed cascade. Unrendered descendants are listed
+Carryover"). For an excluded row the map includes `reason` and the observed
+terminal state with its termination reason, or the committed cascade.
+Unrendered descendants are listed
 explicitly. The map, not `related_to`, is the normative record of replacement.
 
 A replacement's ordinary Child Evidence object is extended with
@@ -1819,8 +1905,8 @@ reference to the retained batch map). Its existing `parent`, `child`,
 map does not replace ordinary Child Evidence or become authority.
 
 When Status or Signals is deployed, the issuer MUST carry the committed
-`carried_to` correlation on the old child's `cascaded` observation as defined
-by those profiles.
+`carried_to` correlation in the `termination` of the old child's
+`parent_terminated` observation as defined by those profiles.
 
 A consumer MUST NOT infer absence of a replacement from receiving a cascade
 before the replacement's creation event.
@@ -2005,8 +2091,8 @@ A conforming Child-Mission-capable Mission Issuer MUST:
 - record the Child Mission's `approval_basis` ({{record-requirements}}):
   `direct` for a human-approved child, with the child's human Approver
   as `consent_principal`, and `policy_drawdown` for one policy
-  adjudicates, with the Parent Mission's human `approver` as
-  `consent_principal`;
+  adjudicates, with the Parent Mission's
+  `approval_basis.consent_principal` as `consent_principal`;
 - record each child's `subject` per its basis and the parent's
   `authority_source`, verifying that source at the creation commit
   ({{record-requirements}});
@@ -2149,13 +2235,13 @@ reason of {{denial-reasons}}, each with its semantics as defined
 there, Change Controller IETF, and Reference this document,
 {{denial-reasons}}.
 
-It requests registration of one state in the issuance profile's
-Mission Lifecycle States registry
+It requests registration of one reason in the issuance profile's
+Mission Termination Reasons registry
 ({{I-D.draft-mcguinness-oauth-mission}}):
 
-| Value | Terminal | Semantics | Change Controller | Reference |
+| Value | Semantics | Members | Change Controller | Reference |
 |---|---|---|---|---|
-| `cascaded` | yes | A terminal state a Child Mission enters when a terminal cascade trigger on its Parent Mission terminates it under `immediate` cascade. | IETF | this document, {{child-state}} |
+| `parent_terminated` | A terminal cascade trigger on the Child Mission's Parent Mission terminated it under `immediate` cascade. | `parent` (REQUIRED), `origin` (OPTIONAL), `origin_reason` (OPTIONAL), `carried_to` (CONDITIONAL) | IETF | this document, {{child-state}} |
 
 ## Media Type Registration
 
@@ -2254,6 +2340,24 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- The authority the presented `subject_token` carries bounds the
+  child as well as the parent's does, and the token's own `children`
+  controls govern the creation alongside the parent's, at creation and
+  on recovery, so a down-scoped token never mints or recovers a child
+  it could not authorize; the denial reasons cover both (#825).
+
+- A Parent Mission that is not `active` refuses the child-creation
+  exchange with `invalid_request`, following the issuance profile's
+  Token Exchange rule; a deferred or interactive creation that fails
+  the parent re-check at completion keeps `invalid_grant` (#1154).
+
+- Cascade terminates a Child Mission with reason `parent_terminated`,
+  registered in the Mission Termination Reasons registry, whose
+  `termination` names the immediate `parent`, takes the parent's
+  `terminated_at` (none where the parent's retained none), and carries
+  Carryover's `carried_to`; the child's own
+  expiry takes precedence on both paths, and the record's accountable
+  human is `approval_basis.consent_principal` (#705).
 - Derivation Budget Is Not Inherited: for a `policy_drawdown` entry,
   the rendered per-child derivation limit is Mission Derivation
   Limits' standing-consent maximum, taken from the policy state the

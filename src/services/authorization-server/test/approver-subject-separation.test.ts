@@ -248,7 +248,7 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
     const missionId = (at.mission as { id: string }).id;
     const record = as.kernel.get(missionId);
     expect(record?.subject).toEqual({ iss: ISSUER, sub: "alice" });
-    expect(record?.approver).toEqual({ iss: ISSUER, sub: "bob" });
+    expect(record?.approval_basis.consent_principal).toEqual({ iss: ISSUER, sub: "bob" });
     // The provider grant belongs to the account that authenticated.
     const grant = (await as.provider.Grant.find(record?.grant_id as string)) as { accountId?: string };
     expect(grant.accountId).toBe("bob");

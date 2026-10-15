@@ -176,7 +176,7 @@ describe("authority source establishment (@spec mission#authority-sources, missi
     // authority is never read as possession.
     const record = approve(makeKernel(), { clientId: "svc-agent", subject: "svc-reconciler" });
     expect(record.authority_source).toEqual({ type: "service_owned" });
-    expect(record.approver).toEqual({ iss: ISS, sub: "bob" });
+    expect(record.approval_basis.consent_principal).toEqual({ iss: ISS, sub: "bob" });
     expect(record.authority_set.length).toBeGreaterThan(0);
   });
 
@@ -650,7 +650,7 @@ describe("issuer-qualified principals at the source gates (@spec mission#authori
     expect(kernel.findByApprovalEvent(eventId)).toBeUndefined();
     expect(commits).toHaveLength(0);
     // Control: the same approval with local bob succeeds.
-    expect(approveTuple(kernel, { iss: ISS, sub: "alice" }, { iss: ISS, sub: "bob" }).approver).toEqual({ iss: ISS, sub: "bob" });
+    expect(approveTuple(kernel, { iss: ISS, sub: "alice" }, { iss: ISS, sub: "bob" }).approval_basis.consent_principal).toEqual({ iss: ISS, sub: "bob" });
   });
 
   it("refuses a foreign principal before derivation runs: an approval whose derivation would also fail reports the namespace refusal", () => {
@@ -755,7 +755,7 @@ describe("issuer-qualified principals at the source gates (@spec mission#authori
     const kernel = makeKernel({ principalIssuer: IDP });
     const record = approveTuple(kernel, { iss: IDP, sub: "alice" }, { iss: IDP, sub: "bob" });
     expect(record.issuer).toBe(ISS);
-    expect(record.approver).toEqual({ iss: IDP, sub: "bob" });
+    expect(record.approval_basis.consent_principal).toEqual({ iss: IDP, sub: "bob" });
     refused(() => approveTuple(kernel, { iss: ISS, sub: "alice" }, { iss: ISS, sub: "bob" }), /not a principal/);
     expect(() => makeKernel({ principalIssuer: "" })).toThrow(/principal issuer must be a non-empty string/);
   });
@@ -773,7 +773,7 @@ describe("issuer-qualified principals at the source gates (@spec mission#authori
     const kernel = makeKernel();
     const upstream = { iss: PARTNER, sub: "p-bob" };
     const mapped = approveTuple(kernel, { iss: ISS, sub: "alice" }, mapToLocal(upstream));
-    expect(mapped.approver).toEqual({ iss: ISS, sub: "bob" });
+    expect(mapped.approval_basis.consent_principal).toEqual({ iss: ISS, sub: "bob" });
     refused(() => approveTuple(kernel, { iss: ISS, sub: "alice" }, upstream), /approver is not a principal/);
     // Changing only the issuer does not authenticate a mapping: the upstream
     // `sub` is not a local activator.
@@ -1007,7 +1007,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     const kernel = k();
     // ops-reviewer is in no ceiling and owns no resource: activation is not possession.
     const record = approveFor(kernel, "wl-payer", "svc-agent", [grant(SCHEDULE, "globex", "200.00")], "ops-reviewer");
-    expect(record.approver).toEqual({ iss: ISS, sub: "ops-reviewer" });
+    expect(record.approval_basis.consent_principal).toEqual({ iss: ISS, sub: "ops-reviewer" });
     refusedWith(
       () => approveFor(kernel, "wl-payer", "svc-agent", [grant(SCHEDULE, "globex", "200.00")], "rita"),
       /approver 'rita' is not authorized to activate the service_owned authority source 'wl-payer'/,

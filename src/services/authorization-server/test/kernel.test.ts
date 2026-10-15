@@ -388,6 +388,55 @@ describe("derivation (@spec mission#authorization-derivation)", () => {
   });
 });
 
+describe("purpose never widens derivation (@spec mission#mission-intent, #1102, D397)", () => {
+  // This implementation consults `purpose` nowhere in derivation, so Intents
+  // that differ only in it derive identical results. The equality is this
+  // implementation's: a configured purpose lookup, which the specification
+  // permits, could select different candidates, each still bounded by the
+  // ceiling. What holds for every implementation is the bound.
+  const PURPOSES = [undefined, "https://purpose.example/payables-close", "https://purpose.example/expedite-all"];
+  const OTHER = "https://unmapped.example.com";
+  const withPurpose = (purpose: string | undefined, over: Record<string, unknown> = {}) =>
+    validateMissionIntent(intent({ ...over, ...(purpose !== undefined ? { purpose } : {}) }));
+  const proposalOf = (entries: unknown[], targets = [RESOURCE]) => validateAuthorityProposal(JSON.stringify(entries), targets);
+
+  it("a submitted proposal derives the same ceiling-bounded set whatever the purpose, an over-broad proposal included", () => {
+    const withinCeiling = proposalOf([
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } },
+    ]);
+    const overBroad = proposalOf([
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:payment.execute", "payments:vendor.delete", "payments:invoice.read"],
+        constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme", "globex", "evilcorp"] },
+      },
+    ]);
+    for (const proposal of [withinCeiling, overBroad]) {
+      const derived = PURPOSES.map((p) => kernel.derive(withPurpose(p), proposal));
+      for (const d of derived) expect(d).toEqual(derived[0]);
+      expect(isSubsetSet(derived[0] as never, DERIVATION_POLICY.ceiling as never)).toBe(true);
+    }
+  });
+
+  it("the resource-keyed configured mapping derives the same ceiling-bounded set whatever the purpose", () => {
+    const derived = PURPOSES.map((p) => kernel.derive(withPurpose(p)));
+    for (const d of derived) expect(d).toEqual(derived[0]);
+    expect(derived[0]?.length).toBeGreaterThan(0);
+    expect(isSubsetSet(derived[0] as never, DERIVATION_POLICY.ceiling as never)).toBe(true);
+  });
+
+  it("an input that derives no authority is refused the same way whatever the purpose: invalid_authorization_details for a submitted proposal, access_denied for the configured mapping", () => {
+    const outsideCeiling = proposalOf([{ type: "mission_resource_access", resource: OTHER, actions: ["payments:invoice.read"] }], [RESOURCE, OTHER]);
+    for (const p of PURPOSES) {
+      const submitted = refuse(() => kernel.derive(withPurpose(p, { target_resources: [RESOURCE, OTHER] }), outsideCeiling));
+      expect((submitted as IntentError).code, String(p)).toBe("invalid_authorization_details");
+      const mapped = refuse(() => kernel.derive(withPurpose(p, { target_resources: [OTHER] })));
+      expect((mapped as IntentError).code, String(p)).toBe("access_denied");
+    }
+  });
+});
+
 describe("approval event and record (@spec mission#integrity-anchors)", () => {
   it("creates an active record with both anchors and is idempotent by approval_event_id", () => {
     const record = approve(intent(), 1);
@@ -561,8 +610,13 @@ describe("approval basis (@spec mission#approval-basis)", () => {
       activation_actor: { iss: ISS, sub: "bob" },
       root_commitment: record.authority_hash,
     });
-    // approver IS approval_basis.consent_principal (D48/O-38 convergence).
-    expect(stored?.approver).toEqual(stored?.approval_basis.consent_principal);
+    // The Approver IS approval_basis.consent_principal (D48/O-38 convergence):
+    // the record carries no separate `approver` alias (#705), and the
+    // NOT NULL approver_* columns hold the identical value without being read.
+    expect(stored).not.toHaveProperty("approver");
+    expect(
+      kernel.db.prepare("SELECT approver_iss AS iss, approver_sub AS sub FROM missions WHERE id = ?").get(record.id),
+    ).toEqual(stored?.approval_basis.consent_principal);
     // Not folded into either integrity anchor: recomputing both from `intent`
     // and `authority_set` alone still matches, so approval_basis carries no
     // weight in the digests (the lock's hashing decision, made checkable).
@@ -750,9 +804,16 @@ describe("lifecycle (@spec status#legal-transitions)", () => {
     expect(kernel.transition(r.id, "suspend").state).toBe("suspended"); // idempotent
     expect(kernel.transition(r.id, "resume").state).toBe("active");
     expect(() => kernel.transition(r.id, "resume")).toThrow(LifecycleConflictError); // resume exception
-    expect(kernel.transition(r.id, "revoke").state).toBe("revoked");
+    const revoked = kernel.transition(r.id, "revoke");
+    expect(revoked.state).toBe("terminated");
+    expect(revoked.termination?.reason).toBe("revoked");
     expect(() => kernel.transition(r.id, "suspend")).toThrow(LifecycleConflictError); // terminal
-    expect(kernel.transition(r.id, "revoke").state).toBe("revoked"); // idempotent on terminal
+    // idempotent on terminal: same resulting state AND reason, no new version
+    expect(kernel.transition(r.id, "revoke")).toMatchObject({
+      state: "terminated",
+      termination: { reason: "revoked" },
+      version: revoked.version,
+    });
   });
 
   it("gates derivation on state and derivation cap (@spec mission#lifecycle)", () => {
@@ -821,7 +882,10 @@ describe("lifecycle (@spec status#legal-transitions)", () => {
     expect(localKernel.gateDerivation(r.id).state).toBe("active");
     clock = new Date("2026-07-01T02:00:00Z");
     expect(() => localKernel.gateDerivation(r.id)).toThrow(GateError);
-    expect(localKernel.get(r.id)?.state).toBe("expired");
+    expect(localKernel.get(r.id)).toMatchObject({
+      state: "terminated",
+      termination: { reason: "expired", terminated_at: "2026-07-01T01:00:00Z", version: 2 },
+    });
   });
 });
 
@@ -839,12 +903,21 @@ describe("basic governance gate: state-gated issuance and derivation (@spec miss
   });
 
   it("active predicate false -> gateActive and gateDerivation refuse, for every recognized non-active state", () => {
-    const nonActive = ["suspended", "revoked", "expired", "completed", "superseded", "cascaded"] as const;
-    nonActive.forEach((state, i) => {
+    // @spec mission#lifecycle (#705): the non-active states are `suspended`
+    // and `terminated`; `terminated` is swept with every registered reason.
+    const nonActive: Array<[string, string | null]> = [
+      ["suspended", null],
+      ...["revoked", "expired", "completed", "superseded", "parent_terminated"].map(
+        (reason): [string, string | null] => ["terminated", JSON.stringify({ reason })],
+      ),
+    ];
+    nonActive.forEach(([state, termination], i) => {
       const r = approve(intent(), 401 + i);
-      kernel.db.prepare("UPDATE missions SET state = ? WHERE id = ?").run(state, r.id);
-      expect(() => kernel.gateActive(r.id), state).toThrow(GateError);
-      expect(() => kernel.gateDerivation(r.id), state).toThrow(GateError);
+      kernel.db
+        .prepare("UPDATE missions SET state = ?, termination_json = ? WHERE id = ?")
+        .run(state, termination, r.id);
+      expect(() => kernel.gateActive(r.id), `${state} ${termination}`).toThrow(GateError);
+      expect(() => kernel.gateDerivation(r.id), `${state} ${termination}`).toThrow(GateError);
     });
   });
 

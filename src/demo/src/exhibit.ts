@@ -48,6 +48,12 @@ const idem = (): string => `idem_${randomUUID()}`;
 const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-dispatch";
 const TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange";
 const ACCESS_TOKEN_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
+// @spec mission-template#dispatch-handoff: the handoff requests a JWT (the
+// grant), which the selected Agent redeems with the RFC 7523 JWT bearer grant.
+const JWT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
+const JWT_BEARER_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+/** A dispatched instance's selected Agent (the AAM template's recipient). */
+const AGENT_CLIENT_ID = "subagent-invoice-extractor";
 /** The single declared inference destination the harness egress gate mediates. */
 const ANTHROPIC = "https://api.anthropic.com";
 
@@ -244,6 +250,14 @@ function shortMission(id: string): string {
   return id.length > 14 ? `${id.slice(0, 12)}..` : id;
 }
 
+/**
+ * A Mission's lifecycle as the rail prints it: its state, with the termination
+ * reason when it is `terminated` (@spec mission#termination).
+ */
+function lifecycleText(rec: { state: string; termination?: { reason: string } }): string {
+  return rec.state === "terminated" ? `terminated(${rec.termination?.reason ?? "unknown"})` : rec.state;
+}
+
 // The mission the lifecycle rail is tracking, and a snapshot of what the rail
 // last DISPLAYED. The snapshot is used ONLY to print on-change and to name the
 // delta; the authoritative values are always re-read from the kernel below.
@@ -259,7 +273,7 @@ function readRail(stack: DemoStack): RailSnap | undefined {
   const eff = stack.kernel.effectiveAuthoritySet(rec);
   return {
     id: rec.id,
-    state: rec.state,
+    state: lifecycleText(rec),
     version: rec.version,
     policy: rec.policy_version,
     cv: rec.containment?.containment_version ?? 0,
@@ -285,7 +299,7 @@ function railLine(stack: DemoStack): string {
   const sep = `${C.dim}  ·  ${C.reset}`;
   const cells = [
     `${C.cyan}mission ${shortMission(rec.id)}${C.reset}`,
-    `${C.dim}state=${C.reset}${stateColor}${rec.state}${C.reset}`,
+    `${C.dim}state=${C.reset}${stateColor}${lifecycleText(rec)}${C.reset}`,
     `${C.dim}v${rec.version}${C.reset}`,
     `${C.dim}policy=${rec.policy_version}${C.reset}`,
     `${C.dim}authority ${effKeys.size}/${approvedKeys.length}${C.reset}`,
@@ -438,7 +452,7 @@ function aamLegend() {
     console.log(`  ${C.bold}${C.cyan}${component.padEnd(27)}${C.reset}${C.dim}${surface}${C.reset}`);
   console.log(`\n${C.bold}AAM → Mission${C.reset} ${C.dim}— each Agent Access Model component and the Mission surface that realizes it (notes/AAM.md).${C.reset}`);
   row("Task Template + ceiling", "Mission Template + POST /templates (consent once)");
-  row("Agent Identity Broker", "the mission-dispatch grant (low-consequence) + an ordinary approval (external-commitment)");
+  row("Agent Identity Broker", "the mission-dispatch grant (low-consequence), its Dispatch Handoff to the selected Agent, + an ordinary approval (external-commitment)");
   row("Task-Scoped Access Engine", "the PDP (@mission/pdp) over OpenFGA");
   row("Mediation Layer", "the payments PEP + the harness EgressGate");
   row("Trust Ratchet", "Mission Containment (signed protected-event ingestion)");
@@ -575,7 +589,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     id: dispatchedRecord.id,
     state: dispatchedRecord.state,
     subject: dispatchedRecord.subject,
-    approver: dispatchedRecord.approver,
+    approver: dispatchedRecord.approval_basis.consent_principal,
     template: dispatchedRecord.template,
     authority_hash: dispatchedRecord.authority_hash,
     expires_at: dispatchedRecord.expires_at,
@@ -591,7 +605,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     exp: dispClaims.exp,
   });
   note(
-    `machine speed, no human: approver-of-record == the template's human (${dispatchedRecord.approver.sub}); ` +
+    `machine speed, no human: approver-of-record == the template's human (${dispatchedRecord.approval_basis.consent_principal.sub}); ` +
       `template lineage template_hash ${dispatchedRecord.template?.template_hash === templateHash ? "==" : "!="} the consented template; ` +
       "the Authority Set == the template-clipped effective set, and it is READ-ONLY.",
   );
@@ -600,12 +614,12 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   const dispatchedActions = (dispBody.authorization_details as Array<{ actions: string[] }>).flatMap((e) => e.actions);
   const dispatchOk =
     dispRes.status === 200 &&
-    dispatchedRecord.approver.sub === "bob" &&
+    dispatchedRecord.approval_basis.consent_principal.sub === "bob" &&
     dispatchedRecord.template?.template_hash === templateHash &&
     !dispatchedActions.includes("payments:remittance.send");
   outcome({
     decision: "PERMIT",
-    observed: `dispatched mission ${dispatchedMissionId}, approver-of-record ${dispatchedRecord.approver.sub}, template-clipped READ-ONLY authority`,
+    observed: `dispatched mission ${dispatchedMissionId}, approver-of-record ${dispatchedRecord.approval_basis.consent_principal.sub}, template-clipped READ-ONLY authority`,
     ok: dispatchOk,
   });
 
@@ -657,33 +671,85 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     ok: overBody.mission_denial_reason === "out_of_template_ceiling",
   });
 
-  // ---- 15. Disconnected run (AAM Agent Identity Broker: async-delegation) ----
-  step(15, "Disconnected run: AAM Agent Identity Broker → the async-delegation refresh family");
+  // ---- 15. Disconnected run (AAM Agent Identity Broker: Dispatch Handoff + async-delegation) ----
+  step(15, "Disconnected run: AAM Agent Identity Broker → the Dispatch Handoff, then the async-delegation refresh family");
   goal(
-    "The scheduler exchanges the dispatched token for a rotating refresh-token family so a disconnected reconciler can run.",
-    "each issued access token is clamped to the mission expiry, and the refresh token rotates on every use.",
+    "The scheduler hands the dispatched instance to its selected Agent, which exchanges its own token for a rotating refresh-token family so a disconnected reconciler can run.",
+    "the Agent's token is bound to its own key; each issued access token is clamped to the mission expiry, and the refresh token rotates on every use.",
   );
   const missionExp = Math.floor(Date.parse(dispatchedRecord.expires_at) / 1000);
-  hop("Scheduler (ap-agent)", "AS", "POST /token (RFC 8693 request_refresh_token)", "HTTP");
+  hop("Scheduler (ap-agent)", "AS", "POST /token (RFC 8693, mission_dispatch_handoff=true)", "HTTP");
+  httpReq("POST", `${asUrl}/token`, {
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof under the dispatched token's key>" },
+    body: {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: "<dispatched mission access token>",
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      mission_dispatch_handoff: "true",
+      client_assertion: "<private_key_jwt>",
+    },
+  });
+  const handRes = await tokenGrantRequest(asUrl, as.agentClientJwk, dispatcherDpop, {
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    subject_token: dispatchedAccessToken,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    requested_token_type: JWT_TOKEN_TYPE,
+    mission_dispatch_handoff: "true",
+  });
+  const handBody = handRes.body as { access_token?: string };
+  httpRes(handRes.status, { ...handBody, ...(handBody.access_token ? { access_token: truncTok(handBody.access_token) } : {}) });
+  if (handRes.status !== 200 || !handBody.access_token) {
+    throw new Error(`dispatch handoff failed: ${handRes.status} ${JSON.stringify(handBody)}`);
+  }
+  note(`a single-use handoff grant naming ${decodeClaims(handBody.access_token).client_id} (the instance's recorded Agent) as its only redeemer.`);
+
+  // The selected Agent redeems the grant as itself, under its own key.
+  const agentDpop = await generateKeyPair("ES256", { extractable: true });
+  hop(`Agent (${AGENT_CLIENT_ID})`, "AS", "POST /token (RFC 7523 JWT bearer: redeem the handoff grant)", "HTTP");
+  httpReq("POST", `${asUrl}/token`, {
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof under the Agent's own key>" },
+    body: { grant_type: JWT_BEARER_GRANT_TYPE, assertion: "<handoff grant>", client_assertion: "<private_key_jwt>" },
+  });
+  const redRes = await tokenGrantRequest(
+    asUrl,
+    as.childClientJwk,
+    agentDpop,
+    { grant_type: JWT_BEARER_GRANT_TYPE, assertion: handBody.access_token },
+    AGENT_CLIENT_ID,
+  );
+  const redBody = redRes.body as { access_token?: string };
+  httpRes(redRes.status, { ...redBody, ...(redBody.access_token ? { access_token: truncTok(redBody.access_token) } : {}) });
+  if (redRes.status !== 200 || !redBody.access_token) {
+    throw new Error(`dispatch handoff redemption failed: ${redRes.status} ${JSON.stringify(redBody)}`);
+  }
+
+  hop(`Agent (${AGENT_CLIENT_ID})`, "AS", "POST /token (RFC 8693 request_refresh_token)", "HTTP");
   httpReq("POST", `${asUrl}/token`, {
     headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof>" },
     body: {
       grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
       request_refresh_token: "true",
-      subject_token: "<dispatched mission access token>",
+      subject_token: "<the Agent's delegation handle, audienced to the Agent>",
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       resource: CANONICAL_RESOURCE,
       creation_request_id: "<client-generated idempotency id>",
     },
   });
-  const exchRes = await tokenGrantRequest(asUrl, as.agentClientJwk, dispatcherDpop, {
-    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-    request_refresh_token: "true",
-    subject_token: dispatchedAccessToken,
-    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
-    resource: CANONICAL_RESOURCE,
-    creation_request_id: crypto.randomUUID(),
-  });
+  const exchRes = await tokenGrantRequest(
+    asUrl,
+    as.childClientJwk,
+    agentDpop,
+    {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      request_refresh_token: "true",
+      subject_token: redBody.access_token,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      resource: CANONICAL_RESOURCE,
+      creation_request_id: crypto.randomUUID(),
+    },
+    AGENT_CLIENT_ID,
+  );
   const exchBody = exchRes.body as { access_token?: string; token_type?: string; refresh_token?: string };
   httpRes(exchRes.status, {
     ...exchBody,
@@ -705,10 +771,13 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     headers: { "content-type": "application/x-www-form-urlencoded", dpop: "<DPoP proof>" },
     body: { grant_type: "refresh_token", refresh_token: "<family refresh token>" },
   });
-  const refRes = await tokenGrantRequest(asUrl, as.agentClientJwk, dispatcherDpop, {
-    grant_type: "refresh_token",
-    refresh_token: familyRefreshToken,
-  });
+  const refRes = await tokenGrantRequest(
+    asUrl,
+    as.childClientJwk,
+    agentDpop,
+    { grant_type: "refresh_token", refresh_token: familyRefreshToken },
+    AGENT_CLIENT_ID,
+  );
   const refBody = refRes.body as { access_token?: string; token_type?: string; refresh_token?: string };
   httpRes(refRes.status, {
     ...refBody,
@@ -767,7 +836,9 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   const egressGate = new EgressGate({
     statement: scopeStatement,
     missionId: dispatchedMissionId,
-    readState: async (id) => stack.kernel.get(id)?.state as MissionState | undefined,
+    // The OBSERVED state: a Mission past its `expires_at` reads `terminated`
+    // whether or not its expiry has been persisted (@spec mission#lifecycle).
+    readState: async (id) => stack.kernel.observedRecord(id)?.state as MissionState | undefined,
     authorityHash: dispatchedRecord.authority_hash,
     evidence: stack.egressEvidence,
     emitterId: "aam-egress-gate",
@@ -811,14 +882,14 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     id: humanRecord.id,
     state: humanRecord.state,
     subject: humanRecord.subject,
-    approver: humanRecord.approver,
+    approver: humanRecord.approval_basis.consent_principal,
     approval_basis: humanRecord.approval_basis,
     template: humanRecord.template,
     authority_hash: humanRecord.authority_hash,
   });
   note(
     `approval_basis.type == "${humanRecord.approval_basis.type}" (direct, not "template"); template lineage is ` +
-      `${humanRecord.template === undefined ? "absent" : "present"}; subject ${humanRecord.subject.sub} != approver ${humanRecord.approver.sub} ` +
+      `${humanRecord.template === undefined ? "absent" : "present"}; subject ${humanRecord.subject.sub} != approver ${humanRecord.approval_basis.consent_principal.sub} ` +
       "(write-bearing missions need a distinct approver, Governance D37).",
   );
   const humanRsProof = await dpopProofFor(humanIssued.dpopKeys, CANONICAL_RESOURCE, "POST", humanIssued.accessToken);
@@ -1173,7 +1244,7 @@ async function main() {
     id: record.id,
     state: record.state,
     subject: record.subject,
-    approver: record.approver,
+    approver: record.approval_basis.consent_principal,
     policy_version: record.policy_version,
     intent_hash: record.intent_hash,
     authority_hash: record.authority_hash,
@@ -1837,7 +1908,7 @@ async function main() {
     state: expansion.successor.state,
     predecessor: expansion.successor.predecessor,
     subject: expansion.successor.subject,
-    approver: expansion.successor.approver,
+    approver: expansion.successor.approval_basis.consent_principal,
     authority_hash: expansion.successor.authority_hash,
     expires_at: expansion.successor.expires_at,
   });
@@ -1855,7 +1926,8 @@ async function main() {
   // Supersession: on the successor's first redemption the predecessor is superseded atomically.
   hop("Operator", "AS", "supersede predecessor on the successor's first redemption (kernel op)", "in-process");
   stack.kernel.supersedeOnRedemption(expansion.successor.id);
-  note(`predecessor ${missionId} state → ${stack.kernel.get(missionId)?.state}`);
+  const superseded = stack.kernel.get(missionId);
+  note(`predecessor ${missionId} state → ${superseded ? lifecycleText(superseded) : "unknown"}`);
   rail(stack);
   hop("Agent", "Payments RS", "tools/call get_invoice (original token, predecessor superseded)", "in-process MCP · O-33");
   const afterSupersede = await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);

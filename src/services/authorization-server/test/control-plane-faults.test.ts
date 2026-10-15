@@ -33,8 +33,16 @@ describe("single-process control-plane fault boundaries", () => {
     try {
       kernel.transition(record.id, "suspend");
       const before = kernel.get(record.id);
-      const seam = kernel as unknown as { setState: (record: MissionRecord, state: "revoked") => MissionRecord };
-      expect(() => seam.setState(record, "revoked")).toThrow(LifecycleConflictError);
+      const seam = kernel as unknown as {
+        setState: (
+          record: MissionRecord,
+          state: "terminated",
+          opts: { termination: { reason: string } },
+        ) => MissionRecord;
+      };
+      expect(() => seam.setState(record, "terminated", { termination: { reason: "revoked" } })).toThrow(
+        LifecycleConflictError,
+      );
       expect(kernel.get(record.id)).toEqual(before);
       expect(commits).toHaveBeenCalledTimes(1);
     } finally { kernel.db.close(); }
@@ -45,14 +53,18 @@ describe("single-process control-plane fault boundaries", () => {
       expect(() => withTransaction(kernel.db, () => {
         kernel.transition(record.id, "revoke");
         expect(commits).not.toHaveBeenCalled();
-        expect(kernel.get(record.id)?.state).toBe("revoked");
+        expect(kernel.get(record.id)?.termination?.reason).toBe("revoked");
         throw new Error("outer fault");
       })).toThrow("outer fault");
       expect(kernel.get(record.id)).toEqual(record);
       expect(commits).not.toHaveBeenCalled();
       kernel.transition(record.id, "revoke");
       expect(commits).toHaveBeenCalledTimes(1);
-      expect(commits.mock.calls[0]![0]).toMatchObject({ state: "revoked", version: record.version + 1 });
+      expect(commits.mock.calls[0]![0]).toMatchObject({
+        state: "terminated",
+        termination: { reason: "revoked", version: record.version + 1 },
+        version: record.version + 1,
+      });
       expect(Object.isFrozen(commits.mock.calls[0]![0])).toBe(true);
     } finally { kernel.db.close(); }
   });
@@ -97,10 +109,11 @@ describe("single-process control-plane fault boundaries", () => {
       expect(() => kernel.transition(record.id, "revoke")).toThrow(LifecycleConflictError);
       expect(() => kernel.transition(record.id, "revoke")).toThrow("expired");
       const after = kernel.get(record.id);
-      expect(after?.state).toBe("expired");
+      expect(after?.state).toBe("terminated");
+      expect(after?.termination?.reason).toBe("expired");
       expect(after?.version).toBe(record.version + 1);
       expect(commits).toHaveBeenCalledTimes(1);
-      expect(commits.mock.calls[0]![0]).toMatchObject({ state: "expired" });
+      expect(commits.mock.calls[0]![0]).toMatchObject({ state: "terminated", termination: { reason: "expired" } });
     } finally { kernel.db.close(); }
   });
   it("one-issuer stores refuse foreign records and independent issuers can retain the same local id", () => {
@@ -116,7 +129,7 @@ describe("single-process control-plane fault boundaries", () => {
         { source: { inherited: b.kernel.committedSourceBinding(b.record.id) } },
       );
       b.kernel.transition(a.record.id, "revoke");
-      expect(b.kernel.get(a.record.id)?.state).toBe("revoked");
+      expect(b.kernel.get(a.record.id)?.termination?.reason).toBe("revoked");
       expect(a.kernel.get(a.record.id)?.state).toBe("active");
       expect(a.kernel.get(a.record.id)?.issuer).not.toBe(b.kernel.get(a.record.id)?.issuer);
     } finally { a.kernel.db.close(); b.kernel.db.close(); }
@@ -189,16 +202,17 @@ describe("control-plane state observations", () => {
       // expiry clock materialized there, so the reported state is the one that
       // committed, at the version that commit produced.
       expect(observed.payload.mission).toMatchObject({
-        state: "expired",
+        state: "terminated",
+        termination: { reason: "expired", version: record.version + 1 },
         version: record.version + 1,
       });
       const stored = kernel.get(record.id);
-      expect(stored?.state).toBe("expired");
+      expect(stored?.termination?.reason).toBe("expired");
       expect(stored?.version).toBe(record.version + 1);
       expect(observed.watermark.version).toBe(stored?.version);
       expect(commits).toHaveBeenCalledTimes(1);
       const payload = decodeJwt(await kernel.signObservation(observed));
-      expect(payload.mission).toMatchObject({ state: "expired" });
+      expect(payload.mission).toMatchObject({ state: "terminated", termination: { reason: "expired" } });
     } finally {
       kernel.db.close();
     }
@@ -335,7 +349,7 @@ describe("control-plane derivation reservations", () => {
       // returned ungated, because returning one produces nothing new.
       kernel.transition(record.id, "revoke");
       expect(() => kernel.reserveDerivation(record.id, { operationId: "op-6" })).toThrow(
-        "is revoked",
+        "is terminated (revoked)",
       );
       expect(kernel.get(record.id)?.derivation_count).toBe(1);
     } finally {

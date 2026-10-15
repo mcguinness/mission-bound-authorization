@@ -31,7 +31,8 @@ function expectCommonPath(s: Record<string, WalkthroughStep>) {
   expect(s["5."]?.status).toBe(403);
   expect(s["5."]?.result.error).toBe("insufficient_scope");
   expect(s["6."]?.status).toBe(200);
-  expect(s["6."]?.result.state).toBe("revoked");
+  expect(s["6."]?.result.state).toBe("terminated");
+  expect(s["6."]?.result.termination).toMatchObject({ reason: "revoked" });
   expect(s["6a."]?.status).toBe(400);
   expect(s["6a."]?.result.error).toBe("invalid_grant");
 }

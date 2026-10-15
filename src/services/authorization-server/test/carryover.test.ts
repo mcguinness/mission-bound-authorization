@@ -31,6 +31,8 @@ import {
   type CarryoverExclusionPolicy,
   type CarryoverExternalStateAdapter,
   type CarryoverManifest,
+  CARRYOVER_EVIDENCE_JWS_TYP,
+  CARRYOVER_EVIDENCE_MEDIA_TYPE,
   CarryoverRetrievalError,
   CarryoverStore,
   applyCarryoverInCallerTx,
@@ -46,6 +48,7 @@ import {
   type MissionRecord,
   prepareCarryover,
   validateMissionIntent,
+  verifyCarryoverEvidence,
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
@@ -262,8 +265,8 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
     expect(replacement.related_to).toBe(child.id);
     expect(typeof replacement.related_to).toBe("string");
     const oldChild = kernel.get(child.id) as MissionRecord;
-    expect(oldChild.state).toBe("cascaded");
-    expect(oldChild.carried_to).toBe(replacement.id);
+    expect(oldChild.termination?.reason).toBe("parent_terminated");
+    expect(oldChild.termination?.carried_to).toBe(replacement.id);
     expect(oldChild.parent?.id).toBe(pred.id);
     expect(oldChild.approval_event_id).toBe(child.approval_event_id);
     // The derivation budget continues; it is not reset to a fresh counter.
@@ -351,11 +354,15 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
       expect(evidence.map.some((r) => r.old_child.mission_id === id)).toBe(true);
     }
     // The rendered cascade produced no replacement and no `carried_to`.
-    expect((kernel.get(uncovered.id) as MissionRecord).carried_to).toBeUndefined();
+    expect((kernel.get(uncovered.id) as MissionRecord).termination?.carried_to).toBeUndefined();
     expect(kernel.findChildren(out.successor.id)).toHaveLength(1);
     expect(
       evidence.map.find((r) => r.old_child.mission_id === uncovered.id && r.outcome === "excluded"),
-    ).toMatchObject({ reason: "not_strict_subset", terminal_state: "cascaded" });
+    ).toMatchObject({
+      reason: "not_strict_subset",
+      terminal_state: "terminated",
+      termination: { reason: "parent_terminated", parent: pred.id, origin: pred.id, origin_reason: "superseded" },
+    });
     // The hash alone authenticates no approval: the retained manifest is the
     // approved object and its commitment recomputes over it.
     expect(carryoverManifestHash(ISS, result.manifest)).toBe(result.manifest_hash);
@@ -404,11 +411,11 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
     // The suspended child is terminated, never restored to active, and gains no
     // `carried_to`; the active sibling carries.
     const after = kernel.get(suspended.id) as MissionRecord;
-    expect(after.state).toBe("cascaded");
-    expect(after.carried_to).toBeUndefined();
+    expect(after.termination?.reason).toBe("parent_terminated");
+    expect(after.termination?.carried_to).toBeUndefined();
     const activeEntry = manifest.entries.find((e) => e.child_id === active.id);
     expect(activeEntry?.outcome).toBe("carry");
-    expect((kernel.get(active.id) as MissionRecord).carried_to).toBe(
+    expect((kernel.get(active.id) as MissionRecord).termination?.carried_to).toBe(
       activeEntry?.replacement?.replacement_id,
     );
   });
@@ -437,9 +444,9 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
     expect(newGrand.parent?.id).toBe(newChild.id);
     expect(newGrand.parent?.depth).toBe(2);
     // The whole old subtree is terminal, each with exactly one terminal commit.
-    expect((kernel.get(child.id) as MissionRecord).state).toBe("cascaded");
-    expect((kernel.get(grandchild.id) as MissionRecord).state).toBe("cascaded");
-    expect(commits.filter((c) => c.id === grandchild.id && c.state === "cascaded")).toHaveLength(1);
+    expect((kernel.get(child.id) as MissionRecord).termination?.reason).toBe("parent_terminated");
+    expect((kernel.get(grandchild.id) as MissionRecord).termination?.reason).toBe("parent_terminated");
+    expect(commits.filter((c) => c.id === grandchild.id && c.termination?.reason === "parent_terminated")).toHaveLength(1);
   });
 
   it("excludes every dependent descendant of an excluded parent rather than attaching a replacement to a missing parent", () => {
@@ -461,8 +468,8 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
     expect("error" in out).toBe(false);
     if ("error" in out) return;
     expect(kernel.findChildren(out.successor.id)).toHaveLength(0);
-    expect((kernel.get(grandchild.id) as MissionRecord).state).toBe("cascaded");
-    expect((kernel.get(grandchild.id) as MissionRecord).carried_to).toBeUndefined();
+    expect((kernel.get(grandchild.id) as MissionRecord).termination?.reason).toBe("parent_terminated");
+    expect((kernel.get(grandchild.id) as MissionRecord).termination?.carried_to).toBeUndefined();
   });
 
   it("recounts fan-out occupancy against the successor's own justifying entries as each carried generation is inserted", () => {
@@ -503,7 +510,7 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
     // Each replacement records the fan-out it was admitted under.
     const evidence = out.carryover?.map.filter((r) => r.outcome === "carried");
     expect(evidence).toHaveLength(3);
-    expect(kernel.findChildren(pred.id).every((c) => c.state === "cascaded")).toBe(true);
+    expect(kernel.findChildren(pred.id).every((c) => c.termination?.reason === "parent_terminated")).toBe(true);
     void b;
   });
 
@@ -566,9 +573,9 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
     const out = redeem(run);
     expect(out).toEqual({ error: "access_denied" });
     expect(kernel.findChildren(pred.id).map((c) => c.state)).toEqual(["active"]);
-    expect((kernel.get(child.id) as MissionRecord).carried_to).toBeUndefined();
+    expect((kernel.get(child.id) as MissionRecord).termination?.carried_to).toBeUndefined();
     expect(kernel.get(pred.id)?.state).toBe("active");
-    expect(commits.filter((c) => c.state === "cascaded")).toHaveLength(0);
+    expect(commits.filter((c) => c.termination?.reason === "parent_terminated")).toHaveLength(0);
   });
 
   it("refuses a batch whose derivation counter moved after rendering with no lifecycle version bump", () => {
@@ -619,7 +626,7 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
     // approval; the surviving sibling is NOT carried on its own.
     expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
     expect((kernel.get(b.id) as MissionRecord).state).toBe("active");
-    expect((kernel.get(a.id) as MissionRecord).state).toBe("revoked");
+    expect((kernel.get(a.id) as MissionRecord).termination?.reason).toBe("revoked");
   });
 
   it("refuses a batch when a grandchild was inserted after approval, so no unrendered descendant is silently carried", () => {
@@ -714,13 +721,14 @@ describe("Child Mission Carryover exclusion modes (@spec child-delegation#carryo
     const rowA = result.map.find((r) => r.old_child.mission_id === a.id);
     const rowB = result.map.find((r) => r.old_child.mission_id === b.id);
     expect(rowA?.outcome).toBe("excluded");
-    // An already-terminal excluded row keeps its OWN terminal state and is
-    // never transitioned again to `cascaded`.
-    expect(rowA && rowA.outcome === "excluded" ? rowA.terminal_state : undefined).toBe("revoked");
-    expect((kernel.get(a.id) as MissionRecord).state).toBe("revoked");
-    expect(commits.filter((c) => c.id === a.id && c.state === "cascaded")).toHaveLength(0);
+    // An already-terminal excluded row keeps its OWN termination and is
+    // never transitioned again to `parent_terminated`.
+    expect(rowA && rowA.outcome === "excluded" ? rowA.terminal_state : undefined).toBe("terminated");
+    expect(rowA && rowA.outcome === "excluded" ? rowA.termination?.reason : undefined).toBe("revoked");
+    expect((kernel.get(a.id) as MissionRecord).termination?.reason).toBe("revoked");
+    expect(commits.filter((c) => c.id === a.id && c.termination?.reason === "parent_terminated")).toHaveLength(0);
     expect(rowB?.outcome).toBe("carried");
-    expect((kernel.get(b.id) as MissionRecord).carried_to).toBe(
+    expect((kernel.get(b.id) as MissionRecord).termination?.carried_to).toBe(
       rowB && rowB.outcome === "carried" ? rowB.replacement_id : undefined,
     );
   });
@@ -754,8 +762,8 @@ describe("Child Mission Carryover exclusion modes (@spec child-delegation#carryo
     expect(row && row.outcome === "excluded" ? row.unrendered : undefined).toBe(true);
     // The new descendant cascades rather than being silently carried, and no
     // replacement was invented for it.
-    expect((kernel.get(inserted.id) as MissionRecord).state).toBe("cascaded");
-    expect((kernel.get(inserted.id) as MissionRecord).carried_to).toBeUndefined();
+    expect((kernel.get(inserted.id) as MissionRecord).termination?.reason).toBe("parent_terminated");
+    expect((kernel.get(inserted.id) as MissionRecord).termination?.carried_to).toBeUndefined();
     expect(kernel.findChildren(out.successor.id)).toHaveLength(0);
   });
 
@@ -766,15 +774,17 @@ describe("Child Mission Carryover exclusion modes (@spec child-delegation#carryo
     const run = openApproved(pred.id, { config: config({ exclusionPolicy: DISCLOSED }) });
     // Fault injection: the intermediate goes terminal WITHOUT its cascade, the
     // one shape in which the state-guarded walker skips a live descendant.
-    kernel.db.prepare("UPDATE missions SET state = 'revoked', version = version + 1 WHERE id = ?").run(child.id);
+    kernel.db
+      .prepare("UPDATE missions SET state = 'terminated', termination_json = ?, version = version + 1 WHERE id = ?")
+      .run(JSON.stringify({ reason: "revoked" }), child.id);
     expect((kernel.get(grandchild.id) as MissionRecord).state).toBe("active");
     const out = redeem(run);
     expect("error" in out).toBe(false);
     if ("error" in out) return;
     // The explicit traversal reached the hidden live descendant inside the
     // completion transaction: nothing is left non-terminal for a later walker.
-    expect((kernel.get(grandchild.id) as MissionRecord).state).toBe("cascaded");
-    expect((kernel.get(child.id) as MissionRecord).state).toBe("revoked");
+    expect((kernel.get(grandchild.id) as MissionRecord).termination?.reason).toBe("parent_terminated");
+    expect((kernel.get(child.id) as MissionRecord).termination?.reason).toBe("revoked");
     expect(kernel.descendantsOf(pred.id).every((d) => d.state !== "active")).toBe(true);
     const result = run.store.carryoverResultFor(run.code);
     expect(result?.map.map((r) => r.old_child.mission_id).sort()).toEqual(
@@ -854,7 +864,7 @@ describe("Child Mission Carryover budgets and external state (@spec child-delega
     }
     expect((kernel.get(a.id) as MissionRecord).state).toBe("active");
     expect((kernel.get(b.id) as MissionRecord).state).toBe("active");
-    expect(commits.filter((c) => c.state === "cascaded")).toHaveLength(0);
+    expect(commits.filter((c) => c.termination?.reason === "parent_terminated")).toHaveLength(0);
     expect(kernel.get(pred.id)?.state).toBe("active");
   });
 });
@@ -869,30 +879,36 @@ describe("Child Mission Carryover observation and retrieval (@spec child-delegat
     const out = redeem(run);
     expect("error" in out).toBe(false);
     if ("error" in out) return;
-    const replacementId = (kernel.get(carried.id) as MissionRecord).carried_to as string;
+    const replacementId = (kernel.get(carried.id) as MissionRecord).termination?.carried_to as string;
     expect(replacementId).toBeDefined();
     // The SIGNED Status response carries the committed replacement identifier
-    // on the old child's `cascaded` state, and omits it for the excluded one.
+    // inside the old child's `parent_terminated` termination, and omits it for
+    // the excluded one; neither carries a top-level `carried_to`.
     const jws = await kernel.signedStatus(carried.id, { requester: "svc-observer" });
     const { payload } = await jwtVerify(jws, pubKey, { issuer: ISS, currentDate: clock });
     const mission = payload.mission as Record<string, unknown>;
-    expect(mission.state).toBe("cascaded");
-    expect(mission.carried_to).toBe(replacementId);
+    expect(mission.state).toBe("terminated");
+    expect(mission.termination).toMatchObject({ reason: "parent_terminated", carried_to: replacementId });
+    expect(mission).not.toHaveProperty("carried_to");
     const excludedJws = await kernel.signedStatus(excludedChild.id, { requester: "svc-observer" });
     const excludedPayload = (await jwtVerify(excludedJws, pubKey, { issuer: ISS, currentDate: clock })).payload;
-    expect((excludedPayload.mission as Record<string, unknown>).carried_to).toBeUndefined();
+    const excludedMission = excludedPayload.mission as Record<string, unknown>;
+    expect(excludedMission.termination).toMatchObject({ reason: "parent_terminated" });
+    expect(excludedMission.termination).not.toHaveProperty("carried_to");
+    expect(excludedMission).not.toHaveProperty("carried_to");
     // The lifecycle commit the Signals emitter builds its SET from carries the
     // same correlation, on the carried child only.
-    const carriedCommit = commits.find((c) => c.id === carried.id && c.state === "cascaded");
-    expect(carriedCommit?.carried_to).toBe(replacementId);
-    const excludedCommit = commits.find((c) => c.id === excludedChild.id && c.state === "cascaded");
+    const carriedCommit = commits.find((c) => c.id === carried.id && c.termination?.reason === "parent_terminated");
+    expect(carriedCommit?.termination?.carried_to).toBe(replacementId);
+    const excludedCommit = commits.find((c) => c.id === excludedChild.id && c.termination?.reason === "parent_terminated");
     expect(excludedCommit).toBeDefined();
-    expect(excludedCommit?.carried_to).toBeUndefined();
+    expect(excludedCommit?.termination?.carried_to).toBeUndefined();
     // Introspection projects the same correlation.
     const projected = kernel.introspectionProjection(kernel.get(carried.id) as MissionRecord, {
       disclose: new Set(["provenance"]),
     });
-    expect(projected.carried_to).toBe(replacementId);
+    expect(projected.termination).toMatchObject({ reason: "parent_terminated", carried_to: replacementId });
+    expect(projected).not.toHaveProperty("carried_to");
   });
 
   it("lets an out-of-order consumer that saw the cascade first resolve the replacement through the verified map", async () => {
@@ -905,8 +921,8 @@ describe("Child Mission Carryover observation and retrieval (@spec child-delegat
     // A consumer that received the cascade before any creation event MUST NOT
     // infer absence of a replacement: it resynchronizes through the retained,
     // authenticated map.
-    const cascade = commits.find((c) => c.id === child.id && c.state === "cascaded");
-    expect(cascade?.carried_to).toBeDefined();
+    const cascade = commits.find((c) => c.id === child.id && c.termination?.reason === "parent_terminated");
+    expect(cascade?.termination?.carried_to).toBeDefined();
     const result = run.store.carryoverResultFor(run.code);
     expect(result).toBeDefined();
     if (!result) return;
@@ -917,7 +933,7 @@ describe("Child Mission Carryover observation and retrieval (@spec child-delegat
     const row = evidence.map.find((r) => r.old_child.mission_id === child.id);
     expect(row?.outcome).toBe("carried");
     if (!row || row.outcome !== "carried") return;
-    expect(row.replacement_id).toBe(cascade?.carried_to);
+    expect(row.replacement_id).toBe(cascade?.termination?.carried_to);
     // The map, not `related_to`, is the normative record of replacement, and
     // the pairing is by issuer-qualified identity.
     expect(row.old_child.issuer).toBe(ISS);
@@ -932,7 +948,7 @@ describe("Child Mission Carryover observation and retrieval (@spec child-delegat
     const out = redeem(run);
     expect("error" in out).toBe(false);
     if ("error" in out) return;
-    const replacementId = (kernel.get(child.id) as MissionRecord).carried_to as string;
+    const replacementId = (kernel.get(child.id) as MissionRecord).termination?.carried_to as string;
     const store = run.store.carryover;
     const retrieved = store.retrieve({ replacementId, actor: { sub: child.client_id } });
     expect(retrieved.replacement.id).toBe(replacementId);
@@ -962,7 +978,7 @@ describe("Child Mission Carryover observation and retrieval (@spec child-delegat
     const out = redeem(run);
     expect("error" in out).toBe(false);
     if ("error" in out) return;
-    const replacementId = (kernel.get(child.id) as MissionRecord).carried_to as string;
+    const replacementId = (kernel.get(child.id) as MissionRecord).termination?.carried_to as string;
     // The old child's own identity still resolves to the OLD record, which is
     // terminal: no derivation continues under it.
     expect(kernel.findByApprovalEvent(oldApprovalEvent)?.id).toBe(child.id);
@@ -1021,7 +1037,7 @@ describe("Child Mission Carryover durable recovery (@spec child-delegation#carry
     // the map is durably retained.
     const replacementId = manifest.entries[0]?.replacement?.replacement_id as string;
     expect(failing.get(replacementId)).toBeDefined();
-    expect((failing.get(child.id) as MissionRecord).carried_to).toBe(replacementId);
+    expect((failing.get(child.id) as MissionRecord).termination?.carried_to).toBe(replacementId);
     const committedResult = store.carryover.result(manifest.entries[0] ? (
       store.db.prepare("SELECT carryover_plan_id FROM expansion_deferrals WHERE deferral_code = ?")
         .get(pending.deferral_code) as { carryover_plan_id: string }
@@ -1032,16 +1048,16 @@ describe("Child Mission Carryover durable recovery (@spec child-delegation#carry
     const delivered: LifecycleCommit[] = [];
     const recovered = mkKernel({ file, onCommit: (c) => delivered.push(c) });
     await recovered.recoverAtBoot();
-    const carriedEvent = delivered.find((c) => c.id === child.id && c.state === "cascaded");
+    const carriedEvent = delivered.find((c) => c.id === child.id && c.termination?.reason === "parent_terminated");
     expect(carriedEvent).toBeDefined();
     // Redelivery is the SAME event: the identity, the commit instant and the
     // carried correlation are the committed payload, never rebuilt from state.
-    expect(carriedEvent?.carried_to).toBe(replacementId);
+    expect(carriedEvent?.termination?.carried_to).toBe(replacementId);
     expect(carriedEvent?.event_id).toBeDefined();
     const again: LifecycleCommit[] = [];
     const third = mkKernel({ file, onCommit: (c) => again.push(c) });
     await third.recoverAtBoot();
-    expect(again.filter((c) => c.id === child.id && c.state === "cascaded")).toHaveLength(0);
+    expect(again.filter((c) => c.id === child.id && c.termination?.reason === "parent_terminated")).toHaveLength(0);
     // The authenticated result survives the restart and is read back, never
     // recomputed.
     const reopened = new CarryoverStore(third, () => clock);
@@ -1094,9 +1110,9 @@ describe("Child Mission Carryover with the switch turned off (@spec child-delega
     // Above all, the live subtree was NOT torn down in place of the approved
     // plan, and no carried correlation was invented.
     expect(kernel.get(child.id)?.state).toBe("active");
-    expect(kernel.get(child.id)?.carried_to).toBeUndefined();
+    expect(kernel.get(child.id)?.termination?.carried_to).toBeUndefined();
     expect(kernel.get(grandchild.id)?.state).toBe("active");
-    expect(commits.filter((c) => c.state === "cascaded")).toHaveLength(0);
+    expect(commits.filter((c) => c.termination?.reason === "parent_terminated")).toHaveLength(0);
     // The approval is not consumed and not denied: it is still exactly what the
     // Approver authenticated.
     expect(
@@ -1121,7 +1137,7 @@ describe("Child Mission Carryover with the switch turned off (@spec child-delega
     expect(out.carryover.manifestHash).toBe(carryoverManifestHash(ISS, manifest));
     const replacementId = manifest.entries[0]?.replacement?.replacement_id as string;
     expect(kernel.get(replacementId)?.state).toBe("active");
-    expect(kernel.get(child.id)?.carried_to).toBe(replacementId);
+    expect(kernel.get(child.id)?.termination?.carried_to).toBe(replacementId);
   });
 });
 
@@ -1279,5 +1295,132 @@ CREATE TABLE IF NOT EXISTS expansion_deferrals (
     expect(second.deferral_code).toMatch(/^xdfr_/);
     expect(second.deferral_code).not.toBe(pending.deferral_code);
     reopened.db.close();
+  });
+});
+
+
+describe("Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705)", () => {
+  it("a rendered excluded child whose own expires_at arrives at completion terminates expired, not parent_terminated, in its record and in the authenticated map", () => {
+    const pred = approvePredecessor();
+    const expiring = createChildMission(kernel, {
+      parentId: pred.id,
+      // Validated against the kernel's clock: the child's own expiry falls
+      // inside the expansion's deferral window.
+      intent: kernel.validateIntent(
+        JSON.stringify({
+          goal: "Pay Acme invoices",
+          target_resources: [RESOURCE],
+          expires_at: "2026-07-01T00:05:00Z",
+        }),
+      ),
+      proposedAuthority: proposed(["payments:invoice.read"]),
+      childActor: { sub: "child-a", sub_profile: "ai_agent" },
+    }).child;
+    const sibling = addChild(pred.id, "child-b");
+    const suspended = kernel.transition(expiring.id, "suspend");
+    const run = openApproved(pred.id);
+    expect(manifestOf(run).entries.find((e) => e.child_id === expiring.id)?.outcome).toBe("cascade");
+    // The completion's cascade instant coincides with the child's own expiry.
+    clock = new Date(expiring.expires_at);
+    const out = redeem(run);
+    expect("error" in out).toBe(false);
+    if ("error" in out) return;
+    // Precedence: the child's own expiry is its cause.
+    expect(kernel.get(expiring.id)?.termination).toEqual({
+      reason: "expired",
+      terminated_at: expiring.expires_at,
+      version: suspended.version + 1,
+    });
+    // The carried sibling is `parent_terminated` at the predecessor's own
+    // `superseded` instant, naming its immediate parent, the origin of the
+    // cascade, and its committed replacement.
+    const predecessor = kernel.get(pred.id) as MissionRecord;
+    expect(predecessor.termination).toMatchObject({ reason: "superseded", successor: out.successor.id });
+    expect(kernel.get(sibling.id)?.termination).toMatchObject({
+      reason: "parent_terminated",
+      parent: pred.id,
+      terminated_at: predecessor.termination?.terminated_at,
+      origin: pred.id,
+      origin_reason: "superseded",
+      carried_to: expect.any(String),
+    });
+    const result = run.store.carryoverResultFor(run.code);
+    const row = result?.map.find((r) => r.old_child.mission_id === expiring.id);
+    expect(row).toMatchObject({
+      outcome: "excluded",
+      terminal_state: "terminated",
+      termination: { reason: "expired", terminated_at: expiring.expires_at },
+    });
+  });
+
+  it("verifies a retained legacy Carryover Evidence envelope carrying cascaded over its stored bytes, and normalizes only after verification", async () => {
+    const store = new CarryoverStore(kernel, () => clock);
+    const legacyMap = [
+      {
+        old_child: { issuer: ISS, mission_id: "msn_legacy_excluded" },
+        outcome: "excluded",
+        reason: "not_strict_subset",
+        terminal_state: "cascaded",
+      },
+      {
+        old_child: { issuer: ISS, mission_id: "msn_legacy_revoked" },
+        outcome: "excluded",
+        reason: "unrendered_descendant",
+        terminal_state: "revoked",
+        unrendered: true,
+      },
+    ];
+    const legacy = {
+      evidence_id: "cry_legacy",
+      media_type: CARRYOVER_EVIDENCE_MEDIA_TYPE,
+      manifest_hash: "sha-256:legacy",
+      predecessor: { issuer: ISS, mission_id: "msn_legacy_pred" },
+      successor: { issuer: ISS, mission_id: "msn_legacy_succ" },
+      exclusion_policy: ALL_OR_NOTHING,
+      map: legacyMap,
+      created_at: "2026-06-01T00:00:00Z",
+    };
+    // Signed exactly as the issuer signed evidence before the termination
+    // vocabulary, and retained as committed.
+    const signer = kernel.statusSigner();
+    const enc = (v: unknown) => Buffer.from(JSON.stringify(v), "utf8").toString("base64url");
+    const signingInput = `${enc({ alg: "ES256", kid: signer.kid, typ: CARRYOVER_EVIDENCE_JWS_TYP })}.${enc(legacy)}`;
+    const jws = `${signingInput}.${signer.sign(signingInput).toString("base64url")}`;
+    kernel.db
+      .prepare(
+        `INSERT INTO carryover_results (plan_id, issuer, predecessor_id, successor_id, manifest_hash,
+           manifest_json, map_json, evidence_hash, evidence_jws, committed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "cryp_legacy",
+        ISS,
+        "msn_legacy_pred",
+        "msn_legacy_succ",
+        "sha-256:legacy",
+        "{}",
+        JSON.stringify(legacyMap),
+        "sha-256:legacy-evidence",
+        jws,
+        "2026-06-01T00:00:00Z",
+      );
+    const retained = store.result("cryp_legacy");
+    // The envelope is retained byte for byte; its signed payload still says `cascaded`.
+    expect(retained?.evidence_jws).toBe(jws);
+    expect(decodeCarryoverEvidence(jws).map[0]).toMatchObject({ terminal_state: "cascaded" });
+    // It verifies over those stored bytes; only the verified payload is read
+    // normalized (`cascaded` as `parent_terminated`), inventing no member.
+    const verified = await verifyCarryoverEvidence(jws, pubKey);
+    expect(verified.map[0]).toMatchObject({ terminal_state: "terminated", termination: { reason: "parent_terminated" } });
+    expect((verified.map[0] as { termination?: unknown }).termination).toEqual({ reason: "parent_terminated" });
+    expect(verified.map[1]).toMatchObject({ terminal_state: "terminated", termination: { reason: "revoked" } });
+    // The retained map copy reads normalized as well.
+    expect(retained?.map[0]).toMatchObject({ terminal_state: "terminated", termination: { reason: "parent_terminated" } });
+    // Normalization never touches signed bytes: a payload rewritten into the
+    // normalized form under the original signature does not verify.
+    const [header, , signature] = jws.split(".");
+    await expect(
+      verifyCarryoverEvidence(`${header}.${enc({ ...legacy, map: verified.map })}.${signature}`, pubKey),
+    ).rejects.toThrow();
   });
 });

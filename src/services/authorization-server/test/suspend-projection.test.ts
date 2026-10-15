@@ -3,7 +3,7 @@
  *
  * Suspend-projection and restore-on-resume: when a PARENT Mission is suspended,
  * its active descendants are projected to the REVERSIBLE `suspended` hold (not
- * the terminal `cascaded` cascade), recorded via `projected_from`; on parent
+ * the terminal `parent_terminated` cascade), recorded via `projected_from`; on parent
  * resume they are restored to their pre-suspension state, with expiry precedence
  * and independent-suspend safety. Plus the ancestor-active derivation gate. All
  * deterministic, no network.
@@ -156,7 +156,7 @@ describe("suspend-projection (@spec child-delegation#cascade reversible trigger)
     kernel.transition(parent.id, "resume");
 
     // Expiry precedence: expired, NOT restored to active.
-    expect(kernel.get(child.id)?.state).toBe("expired");
+    expect(kernel.get(child.id)?.termination?.reason).toBe("expired");
     expect(() => kernel.gateDerivation(child.id)).toThrow(GateError);
   });
 
@@ -209,10 +209,11 @@ describe("suspend-projection (@spec child-delegation#cascade reversible trigger)
     expect(kernel.get(child.id)?.state).toBe("suspended");
     expect(kernel.get(child.id)?.projected_from).toBe("active");
 
-    // Terminal wins: revoking the suspended parent drives descendants to `cascaded`.
+    // Terminal wins: revoking the suspended parent terminates descendants
+    // (`parent_terminated`).
     kernel.transition(parent.id, "revoke");
-    expect(kernel.get(child.id)?.state).toBe("cascaded");
-    expect(kernel.get(grandchild.id)?.state).toBe("cascaded");
+    expect(kernel.get(child.id)?.termination?.reason).toBe("parent_terminated");
+    expect(kernel.get(grandchild.id)?.termination?.reason).toBe("parent_terminated");
   });
 });
 

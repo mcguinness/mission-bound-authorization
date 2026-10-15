@@ -309,9 +309,10 @@ Discharge gates at the entry, not the Mission. The Mission remains
 Mission therefore completes partially, one entry at a time, as each
 entry's task finishes. The issuance profile's Mission states are
 unchanged; a deployment that also tracks Mission-level completion MAY
-transition a Mission whose entries are all discharged to the
-`completed` state the Status profile's Mission Lifecycle endpoint
-defines ({{I-D.draft-mcguinness-oauth-mission-status}}), but this
+transition a Mission whose entries are all discharged to `terminated`
+with reason `completed`, the termination reason the Status profile's
+Mission Lifecycle endpoint defines
+({{I-D.draft-mcguinness-oauth-mission-status}}), but this
 section does not require it. Such a transition is performed through
 the Status profile's `complete` operation, as an issuer-initiated
 lifecycle operation, so the consolidated state machine's event sources
@@ -460,10 +461,10 @@ semantics:
   ({{I-D.draft-mcguinness-oauth-mission}}).
 - **States.** Discharge applies while the Mission is `active` or
   `suspended`: a suspended Mission still narrows monotonically. A
-  discharge determined after the Mission reaches `completed`,
-  `revoked`, `expired`, or another terminal state MUST NOT create a
-  transition or a version increment. Discharge never changes
-  Mission-level state; a deployment that also tracks all-entry
+  discharge determined after the Mission is `terminated`, whatever its
+  termination reason (`completed`, `revoked`, `expired`, or another),
+  MUST NOT create a transition or a version increment. Discharge never
+  changes Mission-level state; a deployment that also tracks all-entry
   completion invokes the Status profile's `complete` operation
   separately ({{I-D.draft-mcguinness-oauth-mission-status}}).
 - **Atomicity.** The entry latch (or its equivalence-class latch), the
@@ -707,8 +708,9 @@ Semantics, beyond those every committed discharge has
   the entry again or increment the version again; an exact event
   replay (the same tuple and the same fingerprint) is handled first by
   the dedup rule of {{discharge-idempotency}}.
-- **Terminal Missions.** A delivery reaching the endpoint after
-  `completed`, `revoked`, `expired`, or another terminal state returns
+- **Terminal Missions.** A delivery reaching the endpoint after the
+  Mission is `terminated`, with reason `completed`, `revoked`,
+  `expired`, or another, returns
   an authenticated `terminal_noop` acknowledgement
   ({{discharge-result}}). The AS reaches this determination only after
   the selector and authorization validation of
@@ -831,7 +833,7 @@ signed response verbatim. Two cases follow:
   work: no re-latch, no version increment. It issues a new signed
   envelope that echoes the new `nonce` and carries the stored
   operation result: the same `outcome` and resolved target, and the
-  original `prior_version` and `current_version` the first commit
+  original `prior_version` and `new_version` the first commit
   produced. The echoed target form and `event_id` are the current
   request's ({{discharge-result}}), so a selector-form retry of a
   digest-form original never receives digests.
@@ -897,13 +899,15 @@ carrying a `discharge_result` object as a sibling of `mission`:
   ({{discharge-idempotency}}), never reaching this determination as a
   fresh `already_discharged`.
 
-`prior_version`, `current_version`:
+`prior_version`, `new_version`:
 : the Mission's state version immediately before and after the
   commit this result reports. For a request that itself commits, that
   commit is this request's own. For the new-`nonce` fresh-envelope
   case of {{discharge-idempotency}}, which commits nothing, these are
   the versions the original commit produced, unchanged. They are equal
-  for `already_discharged` and `terminal_noop`.
+  for `already_discharged` and `terminal_noop`. An envelope that
+  carries `current_version` in place of `new_version` verifies over its
+  original bytes with that name.
 
 `forwarded_from`:
 : present only when the discharge was forwarded after carryover
@@ -1285,6 +1289,11 @@ entry carrying a `terminal_when` constraint it does not understand
 
 \[\[ To be removed from the final specification ]]
 
+- A Discharge Result carries `prior_version` and `new_version`, an
+  envelope signed with `current_version` verifies over its original
+  bytes, and completing an all-discharged Mission terminates it with
+  reason `completed`; a terminated Mission answers `terminal_noop`
+  whatever its reason (#705).
 - The Mission Intent no longer carries `success_criteria`, following
   the OAuth binding. `terminal_when` is described as the enforceable
   statement of one entry's completion, not of the task's success, and

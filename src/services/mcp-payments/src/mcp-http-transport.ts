@@ -37,7 +37,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { ACCEPT_TXN_CHALLENGE_HEADER, acceptsTxnChallenge } from "@mission/core";
 import { exportJWK, SignJWT } from "jose";
-import { accessTokenHash } from "./dpop.js";
+import { accessTokenHash, DpopReplayUnavailableError } from "./dpop.js";
 import type { MediatedToolResult } from "./mcp-transport.js";
 import { MISSION_REFERENCE_HEADER, parseMissionReferenceField } from "@mission/core";
 import { TOOL_ACTIONS, type RequestSignals, type TokenFacts } from "./pep.js";
@@ -218,6 +218,18 @@ function unauthorized(res: ServerResponse, description: string): void {
 }
 
 /**
+ * @spec runtime-evidence#pre-decision-refusal, #1173 (D375): the proof's
+ * replay state is unavailable (the cache is at its bound), so the request is
+ * refused before any decision, retryably, and never dispatched.
+ */
+function replayStateUnavailable(res: ServerResponse, retryAfterS: number): void {
+  res.writeHead(503, { "content-type": "application/json", "retry-after": String(retryAfterS) });
+  res.end(
+    JSON.stringify({ refusal_reason: "state_unavailable", error_description: "DPoP proof replay state is at capacity" }),
+  );
+}
+
+/**
  * The DPoP-auth middleware, run for EVERY HTTP request before dispatch to MCP,
  * including every request on an established session. Missing/malformed
  * credential or failed proof-of-possession -> 401, and the request is NEVER
@@ -262,7 +274,11 @@ async function authenticate(
     facts = masGoverned
       ? await paymentsServer.validateGatewayCredential(accessToken, { proof, htu, htm }, true)
       : await paymentsServer.validateCredential(accessToken, { proof, htu, htm });
-  } catch {
+  } catch (e) {
+    if (e instanceof DpopReplayUnavailableError) {
+      replayStateUnavailable(res, e.retryAfterS);
+      return undefined;
+    }
     unauthorized(res, "DPoP proof-of-possession failed");
     return undefined;
   }

@@ -155,6 +155,27 @@ describe("egress gate: mission-state guard runs FIRST and fails closed", () => {
     expect(decision.resume?.stale).toBe(true);
     expect((egressRecords(evidence)[0] as EgressEvidence).refusal_reason).toBe("mission_status_stale:active");
   });
+
+  it("refuses mission_not_active:terminated for a terminated Mission whatever its reason, a declared destination included", async () => {
+    for (const reason of ["revoked", "completed", "superseded", "future_termination_reason"]) {
+      const lease = {
+        state: "terminated",
+        termination: { reason, terminated_at: "2026-01-02T01:00:00Z" },
+        status_checked_at: "2026-01-02T01:59:00Z",
+        status_expires_at: "2026-01-02T03:00:00Z",
+        state_source: "status",
+      } as MissionStatusLease;
+      const { gate, evidence } = makeGate({
+        readStatus: async () => lease,
+        now: () => new Date("2026-01-02T02:00:00Z"),
+      });
+      const decision = await gate.request("inference_api", `${ANTHROPIC}/v1/messages`);
+      expect(decision.permitted, reason).toBe(false);
+      expect(decision.refusal_reason, reason).toBe("mission_not_active:terminated");
+      expect(decision.resume?.termination?.reason, reason).toBe(reason);
+      expect((egressRecords(evidence)[0] as EgressEvidence).refusal_reason, reason).toBe("mission_not_active:terminated");
+    }
+  });
 });
 
 describe("egress gate: statement/allowlist consistency", () => {

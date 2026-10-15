@@ -61,7 +61,7 @@ import {
   type TxnCredential,
   type WriteReservationScope,
 } from "./pep.js";
-import { type DpopPresentation, verifyDpopProof } from "./dpop.js";
+import { type DpopPresentation, DpopReplayUnavailableError, verifyDpopProof } from "./dpop.js";
 import { readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
 import { type KeyResolver, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
 import {
@@ -72,7 +72,7 @@ import {
 } from "./txn-store.js";
 import type { PaymentsStore } from "./payments-store.js";
 import type { CommitResult, Connectors } from "./connectors.js";
-import type { EvidenceStore } from "./evidence.js";
+import type { EvidenceStore, ExecutionEvidence, ExecutionEvidenceInput } from "./evidence.js";
 import { operationKey, type TransactionEngine } from "./transaction.js";
 import { recordRedeemingAttempt } from "./redemption-status.js";
 import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
@@ -466,6 +466,14 @@ export interface TransactionToolResult {
   error?: string;
   transaction_challenge?: string;
   insufficient_authorization?: InsufficientAuthorization;
+  /**
+   * @spec runtime-evidence#execution-evidence-object (#1104): present only
+   * when the connector effect committed and its `completed` Execution
+   * Evidence could not be recorded after one retry. Never a refusal: `result`
+   * describes the effect that stands, and no `refusal_reason` or
+   * `denial_reason` is set.
+   */
+  gap?: "emission_failed";
 }
 
 export class McpPaymentsServer {
@@ -833,7 +841,10 @@ export class McpPaymentsServer {
     //    the credential itself is bound to and naming THIS credential (`ath`).
     try {
       await this.verifyPresentation(txnToken, cnf.jkt, pop);
-    } catch {
+    } catch (e) {
+      // @spec runtime-evidence#pre-decision-refusal, #1173 (D375): replay state
+      // at capacity is a transient refusal, not a proof verdict.
+      if (e instanceof DpopReplayUnavailableError) return { ok: false, refusal_reason: "state_unavailable" };
       return { ok: false, refusal_reason: "txn_cnf_mismatch" };
     }
 
@@ -1787,7 +1798,8 @@ export class McpPaymentsServer {
     // `resolvedMission.id`, never `token.mission.id` -- a baseline-Join
     // credential carries no `mission` claim at all, and this write path
     // (execute_wire_transfer / send_email) is reachable on that path too.
-    const executed = await tx.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
+    const result = { executed: true, invoice_id: res.effective.invoice_id, op_key: opKey, payee: invoice?.payee_account };
+    const completed: ExecutionEvidenceInput = {
       permitId,
       opKey,
       // One execution identity per disposition attempt, the completed
@@ -1811,7 +1823,26 @@ export class McpPaymentsServer {
             },
           }
         : {}),
-    });
+    };
+    let executed: ExecutionEvidence | undefined;
+    for (let tries = 0; tries < 2 && executed === undefined; tries += 1) {
+      try {
+        executed = await tx.evidence.recordExecution(CANONICAL_RESOURCE, "executor", completed);
+      } catch {
+        /* one retry, on the SAME execution identity: a retained record is
+           returned rather than duplicated, so this cannot double-emit. */
+      }
+    }
+    if (executed === undefined) {
+      // @spec runtime-evidence#execution-evidence-object (#1104): the effect
+      // stands and its record does not exist. This is not a refusal, so it
+      // carries no `refusal_reason`: the caller is told the effect committed
+      // and its evidence is missing. Nothing here executes again. The
+      // operation stays `connector_committed` and the PDP claim unsettled,
+      // so the key stays refused and reconciliation settles the claim from
+      // the connector ledger (#1103).
+      return { ok: false, gap: "emission_failed", deduped: commit.deduped, result };
+    }
     tx.engine.advance(opKey, "evidence_emitted");
     // @spec runtime#idempotency (#917, owner ruling 2026-10-02): the completed
     // record settles the PDP's claim, so the key stays refused as completed
@@ -1820,11 +1851,7 @@ export class McpPaymentsServer {
     await this.deps.pep.settleClaim(executed.content);
     tx.engine.advance(opKey, "reconciled");
 
-    return {
-      ok: true,
-      deduped: commit.deduped,
-      result: { executed: true, invoice_id: res.effective.invoice_id, op_key: opKey, payee: invoice?.payee_account },
-    };
+    return { ok: true, deduped: commit.deduped, result };
   }
 
   /**

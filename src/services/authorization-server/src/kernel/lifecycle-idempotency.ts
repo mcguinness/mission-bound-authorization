@@ -408,7 +408,8 @@ export interface StoredDischargeEvent {
   fingerprint: string;
   outcome: DischargeOutcome;
   priorVersion: number;
-  currentVersion: number;
+  /** The result's `new_version` (stored in the internal `current_version` column). */
+  newVersion: number;
   /**
    * @spec discharge#discharge-carryover ("Replay") — the target the operation
    * RESOLVED to at first processing, when it was forwarded after carryover:
@@ -469,7 +470,7 @@ export class DischargeEventStore {
       fingerprint: row.fingerprint as string,
       outcome: row.outcome as DischargeOutcome,
       priorVersion: row.prior_version as number,
-      currentVersion: row.current_version as number,
+      newVersion: row.current_version as number,
       ...(row.resolved_mission_id != null && row.resolved_entry_digest != null
         ? {
             resolved: {
@@ -520,7 +521,7 @@ export class DischargeEventStore {
         fingerprint,
         result.outcome,
         result.prior_version,
-        result.current_version,
+        result.new_version,
         audit.receivedAt,
         audit.evidenceRef ?? null,
         audit.evidenceDigest ?? null,

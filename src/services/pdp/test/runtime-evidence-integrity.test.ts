@@ -19,6 +19,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DECISION_EVIDENCE_MEDIA_TYPE,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
+  REFUSAL_RECORD_MEDIA_TYPE,
   RUNTIME_EVIDENCE_JWS_TYP,
   signEvidenceEnvelope,
   verifyEvidenceEnvelope,
@@ -123,6 +124,24 @@ describe("runtime-evidence-integrity: sign/verify", () => {
     const signed = await sign();
     const result = await verifyEvidenceEnvelope(signed, DECISION_EVIDENCE_MEDIA_TYPE, resolvePdpKey);
     expect(result).toEqual({ valid: true });
+  });
+
+  it("verifies a Refusal Record the PDP emitted against the PDP's key (Integrity: the emitter is the refusing component, the PEP or the PDP; #1167)", async () => {
+    // The draft's PDP-side refusal: an in-scope request reached the PDP without
+    // Mission decision context, so no Mission reference is established.
+    const refusal = {
+      refusal_id: "ref_9NcT4wQ1xM6rB3sK7eV0jY2wLz",
+      audience: "https://erp.example.com",
+      action: { name: "journal-entries.write" },
+      parameter_digest: "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+      decision: "deny",
+      denial_reason: "mission_context_missing",
+      emitter: { id: "pdp.example.com", role: "pdp" },
+      evaluated_at: "2026-11-02T08:17:02Z",
+    };
+    const envelope = await signEvidenceEnvelope(refusal, REFUSAL_RECORD_MEDIA_TYPE, { kid: "pdp-key-1", key: privateKey });
+    expect(await verifyEvidenceEnvelope({ ...refusal, evidence_envelope: envelope }, REFUSAL_RECORD_MEDIA_TYPE, resolvePdpKey))
+      .toEqual({ valid: true });
   });
 
   it("embeds the mandatory-to-implement alg, typ, and cty in the protected header", async () => {

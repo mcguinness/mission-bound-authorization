@@ -212,7 +212,7 @@ describe("durable lifecycle fan-out", () => {
         ).n,
       ).toBe(0);
       expect(kernel.tombstones.find(ISSUER, record.id)).toBeUndefined();
-      expect(commits.filter((c) => c.state === "revoked")).toHaveLength(0);
+      expect(commits.filter((c) => c.termination?.reason === "revoked")).toHaveLength(0);
       expect(seen).toEqual([]);
     } finally {
       kernel.db.close();
@@ -228,7 +228,7 @@ describe("durable lifecycle fan-out", () => {
       // Publication throws AFTER the state transaction commits: the crash
       // window this table exists to close.
       expect(() => kernel.transition(record.id, "revoke")).toThrow("publication lost");
-      expect(kernel.get(record.id)?.state).toBe("revoked");
+      expect(kernel.get(record.id)?.termination?.reason).toBe("revoked");
       expect(commits).toHaveLength(0);
       expect(kernel.outbox.pendingEventCount()).toBe(1);
       const persisted = JSON.parse(
@@ -534,6 +534,27 @@ describe("durable lifecycle fan-out", () => {
         "set_legacy_supersession",
       ]);
       expect(reopened.commits[0]?.committed_at).toBe(T0);
+      // @spec mission#termination (#705): the migrated rows predate the
+      // termination vocabulary: their bytes are copied as written and tagged
+      // with the legacy payload version, and a subscriber receives them
+      // normalized in memory (`superseded` reads as `terminated` with that
+      // reason and the facts the commit retained: its version, and its commit
+      // time, which a supersession's commit is the effect of), never a legacy
+      // state value.
+      expect(reopened.commits[1]).toMatchObject({
+        state: "terminated",
+        prior_state: "active",
+      });
+      expect(reopened.commits[1]?.termination).toEqual({
+        reason: "superseded",
+        terminated_at: T0,
+        version: 2,
+      });
+      expect(
+        reopened.kernel.db
+          .prepare("SELECT payload_version, commit_json FROM lifecycle_events WHERE event_id = ?")
+          .get("set_legacy_supersession"),
+      ).toEqual({ payload_version: 1, commit_json: JSON.stringify(legacySupersession) });
     } finally {
       reopened.kernel.db.close();
     }
@@ -592,12 +613,13 @@ describe("terminal tombstones and identifier nonreuse", () => {
       const record = approve();
       expect(kernel.tombstones.find(ISSUER, record.id)).toBeUndefined();
       kernel.transition(record.id, "revoke");
-      const terminal = commits.find((c) => c.state === "revoked");
+      const terminal = commits.find((c) => c.termination?.reason === "revoked");
       const tombstone = kernel.tombstones.find(ISSUER, record.id);
       expect(tombstone).toMatchObject({
         issuer: ISSUER,
         missionId: record.id,
-        terminalState: "revoked",
+        terminalState: "terminated",
+        terminationReason: "revoked",
         finalVersion: record.version + 1,
         commitEventId: terminal?.event_id,
         detailPruned: false,
@@ -687,7 +709,8 @@ describe("terminal tombstones and identifier nonreuse", () => {
       clock.at = new Date(new Date(T0).getTime() + (year - 1) * 1000);
       expect(kernel.tombstones.pruneDetails()).toBe(0);
       expect(kernel.tombstones.find(ISSUER, record.id)).toMatchObject({
-        terminalState: "revoked",
+        terminalState: "terminated",
+        terminationReason: "revoked",
         finalVersion: record.version + 1,
         detailPruned: false,
       });
@@ -789,9 +812,10 @@ describe("restart recovery on the declared file-backed store", () => {
       // No lower version is served after recovery: the durable row is the
       // high-water mark, and the terminal tombstone survived with it.
       expect(after.kernel.get(missionId)?.version).toBe(finalVersion);
-      expect(after.kernel.get(missionId)?.state).toBe("revoked");
+      expect(after.kernel.get(missionId)?.termination?.reason).toBe("revoked");
       expect(after.kernel.tombstones.find(ISSUER, missionId)).toMatchObject({
-        terminalState: "revoked",
+        terminalState: "terminated",
+        terminationReason: "revoked",
         finalVersion,
       });
       await after.kernel.recoverAtBoot();

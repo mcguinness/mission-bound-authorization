@@ -10,7 +10,7 @@
  */
 
 import type { AccessRequestService } from "@mission/access-request";
-import type { ContainmentEvidence, MissionKernel, MissionRecord } from "@mission/authorization-server";
+import type { ContainmentEvidence, MissionKernel, MissionRecord, Termination } from "@mission/authorization-server";
 import type { Evidence, IngestionEvidence } from "@mission/mcp-payments";
 import {
   type SignedStatement,
@@ -80,9 +80,13 @@ export interface ConsoleDeps {
 
 export interface FleetRow {
   id: string;
+  /** The OBSERVED lifecycle state: `active`, `suspended` or `terminated`. */
   state: string;
+  /** @spec mission#termination: present exactly when `state` is `terminated`. */
+  termination?: Termination;
   version: number;
   subject: string;
+  /** The Approver's subject, from the record's `approval_basis.consent_principal`. */
   approver: string;
   predecessor?: string;
 }
@@ -123,14 +127,18 @@ export class ConsoleBff {
   /** @spec mission-management: fleet enumeration. */
   fleet(session: Session | undefined): FleetRow[] {
     requireRole(session, "operator");
-    return this.deps.kernel.allMissions().map((m: MissionRecord) => ({
-      id: m.id,
-      state: this.deps.kernel.applyExpiry(m).state,
-      version: m.version,
-      subject: m.subject.sub,
-      approver: m.approver.sub,
-      ...(m.predecessor ? { predecessor: m.predecessor } : {}),
-    }));
+    return this.deps.kernel.allMissions().map((m: MissionRecord) => {
+      const observed = this.deps.kernel.applyExpiry(m);
+      return {
+        id: m.id,
+        state: observed.state,
+        ...(observed.termination ? { termination: observed.termination } : {}),
+        version: observed.version,
+        subject: m.subject.sub,
+        approver: m.approval_basis.consent_principal.sub,
+        ...(m.predecessor ? { predecessor: m.predecessor } : {}),
+      };
+    });
   }
 
   /** @spec status#legal-transitions: operator lifecycle operations. */
@@ -139,10 +147,10 @@ export class ConsoleBff {
     missionId: string,
     op: "revoke" | "suspend" | "resume" | "complete",
     csrf: string,
-  ): { id: string; state: string } {
+  ): { id: string; state: string; termination?: Termination } {
     requireRole(session, "operator", { write: true, csrf });
     const r = this.deps.kernel.transition(missionId, op);
-    return { id: r.id, state: r.state };
+    return { id: r.id, state: r.state, ...(r.termination ? { termination: r.termination } : {}) };
   }
 
   /**

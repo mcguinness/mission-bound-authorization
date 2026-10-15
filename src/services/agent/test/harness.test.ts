@@ -46,14 +46,18 @@ describe("M12 scenario 14: 02:00 resume (harness stop-on-non-active)", () => {
     // At 02:00 the agent wakes: the harness reads state and refuses to resume.
     const decision = await checkOnResume(m.id, readState);
     expect(decision.proceed).toBe(false);
-    expect(decision.state).toBe("completed");
-    expect(decision.reason).toContain("completed");
+    expect(decision.state).toBe("terminated");
+    expect(decision.reason).toContain("terminated");
   });
 
   it("fails closed when mission state is unavailable", async () => {
     const decision = await checkOnResume("msn_unknown", async () => undefined);
     expect(decision.proceed).toBe(false);
     expect(decision.reason).toContain("fail closed");
+    // The synthetic fail-closed state is `terminated` with no termination: the
+    // harness never fabricates a cause such as `revoked`.
+    expect(decision.state).toBe("terminated");
+    expect(decision.termination).toBeUndefined();
   });
 });
 

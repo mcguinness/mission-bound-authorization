@@ -38,6 +38,153 @@ export type StateSource =
 export type StopPolicy = "suppress" | "pause" | "terminate" | "handoff";
 
 /**
+ * @spec mission#termination: a Mission's `termination` as a consumer reads it
+ * beside a reported `state` of `terminated` (Status, Signals, the harness
+ * binding). `reason` is a Mission Termination Reasons registry value carried
+ * as an open string: a reason the reader does not recognize still means
+ * terminated (stop governed work, follow no absent reference, infer no
+ * cause-specific action). The other members are optional here because a
+ * termination recorded before its reason defined a member, or an `expired` or
+ * `parent_terminated` termination observed before it is committed, omits what
+ * it has no value for; a reader never invents one.
+ */
+export interface MissionTermination {
+  /** REQUIRED. The termination reason (`revoked`, `expired`, `completed`,
+   *  `superseded`, `parent_terminated`, or a reason this reader does not know). */
+  reason: string;
+  /** RFC 3339: the instant the termination took effect. */
+  terminated_at?: string;
+  /** The state version of the transition that committed the termination (Status). */
+  version?: number;
+  /** `superseded`: the successor Mission's `id` (same issuer). */
+  successor?: string;
+  /** `parent_terminated`: the immediate parent Mission's `id`. */
+  parent?: string;
+  /** `parent_terminated`: the ancestor whose termination started the cascade (provenance only). */
+  origin?: string;
+  /** `parent_terminated`: that ancestor's termination reason. */
+  origin_reason?: string;
+  /** `parent_terminated`: the Carryover replacement Mission's `id` (correlation, never authority). */
+  carried_to?: string;
+}
+
+const TERMINATION_STRING_MEMBERS = [
+  "terminated_at",
+  "successor",
+  "parent",
+  "origin",
+  "origin_reason",
+  "carried_to",
+] as const;
+
+/**
+ * Read a received `termination` value. Returns `undefined` when it is not an
+ * object with a non-empty string `reason`; otherwise the known members that
+ * are well typed, each other member dropped. Never throws and never fills a
+ * member in: a malformed termination yields no termination facts, and the
+ * caller still treats a `terminated` state as terminated (fail closed).
+ */
+export function readMissionTermination(value: unknown): MissionTermination | undefined {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const t = value as Record<string, unknown>;
+  if (typeof t.reason !== "string" || t.reason === "") return undefined;
+  const out: MissionTermination = { reason: t.reason };
+  for (const member of TERMINATION_STRING_MEMBERS) {
+    const v = t[member];
+    if (typeof v === "string" && v !== "") out[member] = v;
+  }
+  if (typeof t.version === "number" && Number.isSafeInteger(t.version) && t.version >= 0) {
+    out.version = t.version;
+  }
+  return out;
+}
+
+/** The terminal state values a report could carry before the termination vocabulary. */
+const LEGACY_TERMINAL_STATES: ReadonlyMap<string, string> = new Map([
+  ["revoked", "revoked"],
+  ["expired", "expired"],
+  ["completed", "completed"],
+  ["superseded", "superseded"],
+  ["cascaded", "parent_terminated"],
+]);
+
+/**
+ * @spec mission#termination: the reasons whose committing transition IS the
+ * termination's effect, so a retained commit time is its `terminated_at`. An
+ * `expired` termination takes effect at `expires_at`, and a cascade
+ * (`parent_terminated`) at its parent's instant, either of which can precede
+ * the commit, so neither is one.
+ */
+export const COMMIT_IS_EFFECT_REASONS: ReadonlySet<string> = new Set([
+  "revoked",
+  "completed",
+  "superseded",
+]);
+
+/**
+ * The facts a report made before the termination vocabulary retained beside
+ * its legacy terminal `state`, as read from it. Each is optional and read
+ * only when well typed.
+ */
+export interface LegacyRetainedFacts {
+  /** The state version of the transition that committed the legacy state. */
+  version?: unknown;
+  /** The Mission's `expires_at`: an `expired` termination's instant. */
+  expires_at?: unknown;
+  /** The commit time: the instant only for a {@link COMMIT_IS_EFFECT_REASONS} reason. */
+  committed_at?: unknown;
+  /** `superseded`: the successor Mission's `id`. */
+  successor?: unknown;
+  /** `cascaded`: the Carryover replacement Mission's `id`. */
+  carried_to?: unknown;
+}
+
+/**
+ * @spec mission#termination (transition-period reading): a consumer of a
+ * report that still carries `revoked`, `expired`, `completed`, `superseded`
+ * or `cascaded` as a Mission's `state` MAY read it as `terminated` with that
+ * reason (`cascaded` as `parent_terminated`) and the facts the report
+ * retained ({@link LegacyRetainedFacts}): the committing `version`; the
+ * reason's reference (`successor` for `superseded`, `carried_to` for
+ * `parent_terminated`); and a `terminated_at` of `expires_at` for `expired`,
+ * or of the commit time for a {@link COMMIT_IS_EFFECT_REASONS} reason. A
+ * fact the report did not retain is never filled in, so a `parent_terminated`
+ * reading has no `terminated_at`. The result is a local view the caller never
+ * re-emits or re-signs; a caller holding a signed artifact verifies it over
+ * its original bytes, and retains them, BEFORE calling this. Any other state
+ * value is returned unchanged (`active`, `suspended`, `terminated`, or an
+ * unrecognized value, which stays non-active), and `retained` is not read.
+ */
+export function normalizeLegacyMissionState(
+  state: string,
+  retained: LegacyRetainedFacts = {},
+): {
+  state: string;
+  termination?: MissionTermination;
+} {
+  const reason = LEGACY_TERMINAL_STATES.get(state);
+  if (reason === undefined) return { state };
+  const termination: MissionTermination = { reason };
+  const str = (value: unknown) => (typeof value === "string" && value !== "" ? value : undefined);
+  const at =
+    reason === "expired"
+      ? str(retained.expires_at)
+      : COMMIT_IS_EFFECT_REASONS.has(reason)
+        ? str(retained.committed_at)
+        : undefined;
+  if (at !== undefined) termination.terminated_at = at;
+  const { version } = retained;
+  if (typeof version === "number" && Number.isSafeInteger(version) && version >= 1) {
+    termination.version = version;
+  }
+  const successor = str(retained.successor);
+  if (reason === "superseded" && successor !== undefined) termination.successor = successor;
+  const carriedTo = str(retained.carried_to);
+  if (reason === "parent_terminated" && carriedTo !== undefined) termination.carried_to = carriedTo;
+  return { state: "terminated", termination };
+}
+
+/**
  * A status lease: the ONE status shape the harness consumes and the Status List
  * / Lifecycle Signals surfaces produce. `status_expires_at` is the RFC 3339
  * instant after which the status MUST NOT be used for continuation
@@ -46,6 +193,12 @@ export type StopPolicy = "suppress" | "pause" | "terminate" | "handoff";
 export interface MissionStatusLease {
   /** The last Mission state established for this lease (e.g. `active`). */
   state: string;
+  /**
+   * @spec mission#termination: the Mission's `termination` as the producing
+   * surface reported it, beside a `state` of `terminated`; absent for any
+   * other state, and absent when the report carried none.
+   */
+  termination?: MissionTermination;
   /** RFC 3339 timestamp: when status was checked. */
   status_checked_at: string;
   /** RFC 3339 timestamp: after this instant the lease MUST NOT be relied upon. */
@@ -70,6 +223,8 @@ export interface MissionBinding {
   authority_hash?: string;
   /** REQUIRED when known. The last Mission state established by the harness. */
   state?: string;
+  /** Present exactly when `state` is `terminated` and the surface reported it. */
+  termination?: MissionTermination;
   /** REQUIRED when `state` is present. The surface that established `state`. */
   state_source?: StateSource;
   /** REQUIRED when the harness has checked status. An RFC 3339 timestamp. */

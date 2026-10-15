@@ -166,8 +166,9 @@ record is evidence: immutable, signed, and consumed by audit, never
 by enforcement.
 
 This document is optional. A deployment that records nothing beyond
-the Mission record's accountable `approver` is fully conformant to
-its Mission binding and unaffected by this document. Profiles MAY
+the Mission record's accountable `approval_basis.consent_principal`
+is fully conformant to its Mission binding and unaffected by this
+document. Profiles MAY
 require this record; the Enterprise Mission Authority Profile does
 so under its recording triggers
 ({{I-D.draft-mcguinness-mission-authority-server}}).
@@ -221,10 +222,11 @@ Recording trigger:
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 
-The Mission record carries exactly one accountable `approver`, and
-this document does not change that: the accountable Approver remains
-the only principal any downstream projection, token, or enforcement
-point consumes. The record captures the standing behind that
+The Mission record carries exactly one accountable principal,
+`approval_basis.consent_principal`, and this document does not change
+that: the accountable Approver remains the only principal any
+downstream projection, token, or enforcement point consumes. The
+record captures the standing behind that
 approval, never a second authorization surface visible outside the
 issuer.
 
@@ -399,12 +401,13 @@ plus the integrity `envelope` {{envelope}} defines.
 }
 ~~~
 
-The Mission record's accountable `approver` in this example is
-`manager@example.com`; `ast_1` is that principal's own `approve`
-assertion, satisfying the accountable-approver rule of
-{{assertion-requirements}} directly. `ast_2` is a `policy` assertion
-carrying its own provenance chain, recorded alongside rather than in
-place of the accountable approver's assertion. The `envelope`
+The Mission record's accountable `approval_basis.consent_principal`
+in this example is `manager@example.com`; `ast_1` is that
+principal's own `approve` assertion, satisfying the
+accountable-approver rule of {{assertion-requirements}} directly.
+`ast_2` is a `policy` assertion carrying its own provenance chain,
+recorded alongside rather than in place of the accountable
+approver's assertion. The `envelope`
 member's `value` is the JWS whose payload is the JCS canonical bytes
 of this object with `envelope` itself removed ({{envelope}}).
 
@@ -427,8 +430,9 @@ These rules are the record's security core.
 - Denials and vetoes MUST be recorded: an assertion set that omits a
   negative assertion misrepresents the decision.
 - Exactly one assertion MUST match the Mission record's accountable
-  `approver` and carry an `approve` decision; the record supports
-  the approval it claims to govern or it does not commit. Where the
+  `approval_basis.consent_principal` and carry an `approve` decision;
+  the record supports the approval it claims to govern or it does not
+  commit. Where the
   accountable approver's approval is exercised through an authorized
   deterministic policy, the matching assertion is a `policy`
   assertion carrying that policy's provenance chain: the policy is the
@@ -441,7 +445,7 @@ These rules are the record's security core.
   Mission rooted in a named standing-consent `approval_basis`
   ({{I-D.draft-mcguinness-oauth-mission}}) satisfies this rule
   through that record instead of a contributing assertion:
-  `consent_principal` (equal to `approver`), `root_commitment`, and
+  `consent_principal`, `root_commitment`, and
   `approved_at`, already fixed at the approval event and immutable,
   stand in place of a matching assertion, subject to the same
   high-risk-class restriction. No assertion is fabricated in the
@@ -627,7 +631,8 @@ value ({{consent-evidence-relationship}}).
 Defined here so a profile cites one list. The record is REQUIRED for
 an approval event when any of the following holds:
 
-- the Mission record's `approver` differs from its `subject`;
+- the Mission record's `approval_basis.consent_principal` differs from
+  its `subject`;
 - more than one principal contributes to the decision;
 - a non-human assertion contributes to the decision;
 - a threshold, veto, or separation-of-duty rule is evaluated; or
@@ -707,7 +712,7 @@ built from Mission Record members
 | `authority_hash` | Mission Record `authority_hash` | always |
 | `ceiling_hash` | Mission Record `ceiling_hash`, verbatim ({{I-D.draft-mcguinness-oauth-mission-progressive}}) | iff the Mission Record carries it |
 | `subject` | Mission Record `subject` | always |
-| `approver` | Mission Record `approver` | always |
+| `approver` | Mission Record `approval_basis.consent_principal` | always |
 | `client_id` | Mission Record `client_id` | always |
 | `created_at` | Mission Record `created_at` | always |
 | `expires_at` | Mission Record `expires_at` | always |
@@ -734,8 +739,8 @@ and semantics belong to the Progressive profile
 Approval Context Commitment profile does not require adopting
 Progressive.
 
-The manifest excludes the Mission Record's one mutable member,
-`state`, and every value that is not itself a member of the
+The manifest excludes the Mission Record's mutable members, `state`
+and `termination`, and every value that is not itself a member of the
 immutable record: a running derivation count, and a containment or
 discharge state a companion profile tracks outside the record. This
 is not a separate exclusion rule; it follows from building the
@@ -1323,6 +1328,12 @@ version before treating the evaluation as re-checked
 
 \[\[ To be removed from the final specification ]]
 
+- The accountable principal is the Mission record's
+  `approval_basis.consent_principal`. The Approval Context Manifest
+  keeps its `approver` member, sourced from that value, so
+  `mission-approval-context-v1` and vectors 1 to 6 are unchanged; the
+  manifest excludes both mutable record members, `state` and
+  `termination` (#705).
 - Assertion Requirements and the `authority` member name a `policy`
   assertion's policy as the decision mechanism; the principal it
   matches stays the accountable approver. The policy assertion path,

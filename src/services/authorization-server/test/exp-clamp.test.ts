@@ -330,11 +330,11 @@ describe("credentials never outlive the Mission (@spec mission#mission-bound-tok
       // only check that meets the expired Mission: it refuses, and commits the
       // expiry, rather than saving a 0 s or negative lifetime.
       const rt = new as.provider.RefreshToken({ accountId: "alice", client, grantId });
-      await expect(rt.save()).rejects.toMatchObject({ error: "invalid_grant", missionError: "mission_expired" });
-      expect(as.kernel.get(id)?.state).toBe("expired");
+      await expect(rt.save()).rejects.toMatchObject({ error: "invalid_grant", missionError: "expired" });
+      expect(as.kernel.get(id)?.termination?.reason).toBe("expired");
       // An access token's lifetime is also evaluated before its gate; it is refused the same way.
       const at = new as.provider.AccessToken({ accountId: "alice", client, grantId });
-      await expect(at.save()).rejects.toMatchObject({ error: "invalid_grant", missionError: "mission_expired" });
+      await expect(at.save()).rejects.toMatchObject({ error: "invalid_grant", missionError: "expired" });
     },
     15_000,
   );
@@ -351,7 +351,7 @@ describe("credentials never outlive the Mission (@spec mission#mission-bound-tok
     const at = new as.provider.AccessToken({ accountId: "alice", client, grantId: record?.grant_id as string });
     await expect(at.save()).rejects.toMatchObject({
       error: "invalid_grant",
-      missionError: "mission_expired",
+      missionError: "expired",
       error_detail: "the Mission expires before a credential can be issued",
     });
     vi.restoreAllMocks();
@@ -400,7 +400,7 @@ describe("credentials never outlive the Mission (@spec mission#mission-bound-tok
     );
     expect(redirect.searchParams.get("code")).toBeNull();
     const mission = as.kernel.allMissions().find((m) => Date.parse(m.expires_at) === Date.parse(expiresAt));
-    expect(mission?.state).toBe("expired");
+    expect(mission?.termination?.reason).toBe("expired");
   });
 
   it("a token under a grant that is not Mission-bound keeps oidc-provider's configured lifetimes", async () => {

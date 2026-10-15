@@ -3,7 +3,7 @@
  *
  * Mission Expansion: a successor Mission created by a fresh approval that
  * widens authority. The successor carries a `predecessor` member; the
- * predecessor enters `superseded` atomically on the successor's first grant
+ * predecessor is terminated `superseded` atomically on the successor's first grant
  * redemption. The successor's authority comes only from its own approval and
  * MUST NOT broaden without one. Backs AROP token-issuance completion (D6).
  */
@@ -198,7 +198,6 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
     authority_hash: authorityHashValue,
     subject: predecessor.subject,
-    approver: input.approver,
     approval_basis: approvalBasis,
     authority_source: authoritySource,
     client_id: predecessor.client_id,

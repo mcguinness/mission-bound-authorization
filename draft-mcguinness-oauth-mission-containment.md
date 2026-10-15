@@ -473,9 +473,10 @@ increments `containment_version`. Its rules:
   `event_id` MUST NOT commit a second transition; the Mission Issuer
   answers it with the already-committed result.
 - **Legal states.** A contain transition is legal from `active` and
-  from `suspended`, and MUST be refused in every terminal state. A
-  `resume` does not clear the overlay: a Mission suspended, contained,
-  and resumed returns to `active` still contained.
+  from `suspended`, and MUST be refused when the Mission is
+  `terminated`, with any termination reason. A `resume` does not clear
+  the overlay: a Mission suspended, contained, and resumed returns to
+  `active` still contained.
 - **No state change.** The transition changes no lifecycle state: a
   contained `active` Mission remains `active`. Containment narrows
   what the Mission can do, never whether it runs.
@@ -914,7 +915,7 @@ A Protected Event Receipt is a JSON object {{RFC8259}} with:
 : CONDITIONAL. A string. REQUIRED when `outcome` is `rejected`: the
   reason the event was not applied (for example, an unverifiable
   signature, a source not trusted for the reported event type, or a
-  Mission the event does not name or that is in a terminal state). A
+  Mission the event does not name or that is `terminated`). A
   deployment MAY define additional values, which MUST be
   collision-resistant names, following the Collision-Resistant Name
   guidance of {{RFC7519}} Section 4.2.
@@ -1159,6 +1160,9 @@ This document registers two media types per {{RFC6838}}.
 
 \[\[ To be removed from the final specification ]]
 
+- The Contain Transition ({{contain-transition}}): a contain
+  transition is refused for a `terminated` Mission, whatever its
+  termination reason (#705).
 - Visibility ({{visibility}}): current-authority surfaces omit
   contained capability at action grain, keeping an entry's uncontained
   remainder; an annotation no longer substitutes for exclusion.

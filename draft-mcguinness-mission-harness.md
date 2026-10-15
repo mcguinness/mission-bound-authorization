@@ -494,6 +494,12 @@ task graph node to a Mission reference:
 : REQUIRED when known. The last Mission state established by the
   harness.
 
+`termination`:
+: REQUIRED when `state` is `terminated` and the state source reported
+  one; absent otherwise. The Mission's `termination`
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+  Termination").
+
 `state_source`:
 : REQUIRED when `state` is present. One of `status`, `signal`,
   `runtime_decision`, `harness`, `operator`, or a deployment-defined
@@ -923,9 +929,10 @@ values when Harness Evidence is emitted.
 
 # Stop Behavior {#stop-behavior}
 
-When a Mission is `revoked`, `expired`, `suspended`, `completed`, or
-otherwise non-active under the deployment's lifecycle profile, the
-harness MUST stop governed continuation. The stop behavior is one of:
+When a Mission is `terminated`, whatever its `termination.reason`,
+`suspended`, or otherwise non-active under the deployment's lifecycle
+profile, the harness MUST stop governed continuation. The stop
+behavior is one of:
 
 `suppress`:
 : Do not dispatch queued or resumable work. Preserve state for audit or
@@ -949,25 +956,29 @@ state is non-active.
 ## Stop-Behavior Matrix {#stop-matrix}
 
 The matrix below fixes the minimum stop behavior per Mission state
-and is a deployment's stop-behavior matrix as written. A deployment
+and, for `terminated`, per `termination.reason`, and is a deployment's
+stop-behavior matrix as written. A deployment
 MUST document each cell where it deviates; no other cell needs
 documentation. A deviation MUST be at least as strict as the minimum:
 
-| Mission state | Minimum behavior |
-|---|---|
-| `revoked` | suppress or terminate |
-| `expired` | suppress or terminate |
-| `suspended` | pause or suppress |
-| `completed` | suppress or terminate |
-| `superseded` | suppress, or continue by rebinding to the successor ({{supersession-continuity}}) |
-| `cascaded` | suppress or terminate |
-| unknown or stale | suppress or pause |
+| Mission state | `termination.reason` | Minimum behavior |
+|---|---|---|
+| `terminated` | `revoked` | suppress or terminate |
+| `terminated` | `expired` | suppress or terminate |
+| `suspended` | | pause or suppress |
+| `terminated` | `completed` | suppress or terminate |
+| `terminated` | `superseded` | suppress, or continue by rebinding to the successor ({{supersession-continuity}}) |
+| `terminated` | `parent_terminated` | suppress or terminate |
+| `terminated` | another reason, or no `termination` | suppress or terminate |
+| unknown or stale | | suppress or pause |
 
-The non-core states in this matrix are defined by companion profiles a
-deployment may run: `suspended` and `completed` by Mission Status
-({{I-D.draft-mcguinness-oauth-mission-status}}), `superseded` by Mission
-Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and
-`cascaded` by Mission Child Delegation
+The non-core state and reasons in this matrix are defined by companion
+profiles a deployment may run: the state `suspended` and the reason
+`completed` by Mission Status
+({{I-D.draft-mcguinness-oauth-mission-status}}), the reason
+`superseded` by Mission Expansion
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), and the reason
+`parent_terminated` by Mission Child Delegation
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The harness
 needs none of those profiles to be conformant: per the issuance
 profile's forward-compatibility rule, it treats any state other than
@@ -986,10 +997,12 @@ running session should continue under the successor rather than
 restart. Suppressing the work and losing the task graph would defeat
 the point.
 
-For `superseded` a harness therefore MAY, instead of suppressing,
-**continue by rebinding**: it keeps the task graph, queue, and
-continuation point, and rebinds the affected item to the successor
-Mission. Continuation is not resumption of the old authority. Before
+For a Mission `terminated` with `termination.reason` `superseded` a
+harness therefore MAY, instead of suppressing, **continue by
+rebinding**: it keeps the task graph, queue, and continuation point,
+and rebinds the affected item to the successor Mission that
+`termination.successor` names. Continuation is not resumption of the
+old authority. Before
 dispatching any governed work under the successor the harness MUST:
 
 - confirm the successor is `active` and passes the resume check under
@@ -1008,9 +1021,10 @@ authority, not a credential or a permit carried over from the
 predecessor. The harness records the rebinding as Harness Evidence
 with `event_type` `mission_superseded` ({{harness-evidence}}), naming
 both the predecessor and the successor, so the continuity is
-auditable. A harness that cannot establish the successor state, or for
-which the item's actions are not within the successor, suppresses per
-the matrix above.
+auditable. A harness that cannot establish the successor state, whose
+`superseded` termination names no `successor`, or for which the item's
+actions are not within the successor, suppresses per the matrix
+above.
 
 For irreversible actions, external commitments, and privileged
 administration, `handoff` or orchestration handling under a deployment
@@ -1048,10 +1062,15 @@ harness the one layer that can apply a taint rule against the case
 where untrusted content drives an agent to exfiltrate within its
 authority.
 
-Taint is classed by source. Content from the Subject or the Approver
-does not taint; the deployment's **content trust list** extends that
-baseline to the sources it vouches for, such as first-party tools, its
-own catalogs, and designated corpora. Content from an unlisted source,
+Taint is classed by source. Content from the Approver, or from the
+delegating person of a user-delegated Mission, does not taint; the
+deployment's **content trust list** extends that baseline to the
+sources it vouches for, such as first-party tools, its own catalogs,
+and designated corpora. No content is trusted solely because its
+source is the Subject: a workload or organizational Subject
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority
+Sources"), which can be the governed agent's own principal, confers
+no baseline trust. Content from an unlisted source,
 or from a source the deployment explicitly marks untrusted (web
 fetches, inbound messages, third-party documents), is **tainted**.
 
@@ -1064,6 +1083,17 @@ for the store. Otherwise a tainted session launders content across
 the session boundary by writing it to a vouched store that a later
 session reads as trusted, defeating the fresh-session reset below.
 
+A **trusted direction**, a taint reset or an egress direction, is one
+given by the delegating person of a user-delegated Mission, the
+Approver, or another principal the deployment authorizes for that
+Mission, through a surface the governed agent cannot invoke from its
+tool plane or from any channel it drives, such as that person's own
+input to the session or an operator's control surface. The surface
+establishes the principal's identity itself, never from caller
+input. No principal gives a trusted direction solely because it is
+the Subject, and identity alone, administrative metadata included,
+authorizes none.
+
 The trigger is parameter provenance where the harness can establish
 it. Because the harness mediates tool input and output, it SHOULD
 track at the data plane which tainted source a value derives from. The
@@ -1075,8 +1105,8 @@ Session-level taint remains the fallback where provenance is
 unavailable: the harness applies the rule to every such action in a
 governed session that tainted content has entered. Session-level
 taint persists for the governed session's lifetime and clears only
-with a fresh session or an explicit Subject-directed reset recorded
-in Harness Evidence ({{harness-evidence}}).
+with a fresh session or an explicit reset, given as a trusted
+direction and recorded in Harness Evidence ({{harness-evidence}}).
 
 Taint follows derivation across session boundaries with the same
 polarity. A sub-agent session spawned from a tainted session
@@ -1109,7 +1139,7 @@ approval ({{I-D.draft-mcguinness-mission-runtime}}) or downgrade that
 authority (suppress the action), rather than let the agent egress on
 the strength of injected content. This is the plan-then-execute
 pattern: untrusted content may inform the agent's planning, but it
-MUST NOT, on its own, drive an egress the Subject did not direct.
+MUST NOT, on its own, drive an egress that no trusted direction gave.
 
 A deployment MAY instead route the taint determination through the
 decision request where the binding carries it
@@ -1250,7 +1280,7 @@ non-normative summary of what a record carries:
 - `session_id`;
 - task graph node or queue item identifier;
 - prior and resulting harness state;
-- Mission state observed;
+- Mission state observed, with its termination when `terminated`;
 - status source and freshness;
 - timestamp; and
 - actor or sub-agent identifier when applicable.
@@ -1333,6 +1363,12 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
 `state`:
 : REQUIRED. The Mission state observed or `unknown`.
 
+`termination`:
+: REQUIRED when `state` is `terminated` and the state source reported
+  one; absent otherwise. The Mission's `termination`
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+  Termination").
+
 `prior_harness_state`, `resulting_harness_state`:
 : OPTIONAL. The harness execution state before and after the recorded
   decision, each a value from the harness execution states of
@@ -1408,7 +1444,11 @@ Example:
   },
   "session_id": "sess_agent_42",
   "work_item": "queue_invoice_retry_9",
-  "state": "revoked",
+  "state": "terminated",
+  "termination": {
+    "reason": "revoked",
+    "terminated_at": "2026-11-01T23:00:00Z"
+  },
   "state_source": "signal",
   "decision": "suppress",
   "reason": "mission_not_active",
@@ -1493,8 +1533,9 @@ matter.
 At 02:00 the job resumes a queued task graph. Before dispatching any
 governed work the harness re-reads Mission state ({{resume-checks}}).
 `alice` cancelled the Mission at 23:00, so the harness finds it
-`revoked`: it does not dispatch, marks cached ERP connections unusable
-({{cached-access}}), and emits the suppress evidence shown above. The
+`terminated` with reason `revoked`: it does not dispatch, marks cached
+ERP connections unusable ({{cached-access}}), and emits the suppress
+evidence shown above. The
 session was fully recoverable; the authority that justified it was gone,
 and the harness let the Mission, not the session, decide.
 
@@ -1660,6 +1701,12 @@ The control still cannot close within-scope data laundering
 forcing a human or a fresh approval between untrusted input and
 egress.
 
+The control's trust rests on authorization, not on role. When the
+governed agent acts for its own workload principal, being the Subject
+exempts nothing: its content is classed like any other source, and
+every reset and egress direction comes through the surface
+{{session-taint}} requires.
+
 # Privacy Considerations {#privacy-considerations}
 
 Harness Evidence and Mission bindings can reveal task graphs,
@@ -1734,6 +1781,21 @@ exists.
 
 \[\[ To be removed from the final specification ]]
 
+- The taint baseline, taint reset and egress direction no longer key
+  on the Subject. Content from the Approver or from the delegating
+  person of a user-delegated Mission does not taint, and a workload or
+  organizational Subject confers no baseline trust. A reset or an
+  egress direction is a trusted direction, given through a surface the
+  governed agent cannot invoke; being the Subject, identity alone, and
+  administrative metadata authorize none. Inherited taint and the
+  transformed-content rule are unchanged (#1193).
+
+- The Mission binding and Harness Evidence carry `termination` beside
+  a `terminated` state. The stop-behavior matrix is keyed on
+  `terminated` and `termination.reason`, with a row for an
+  unrecognized or absent termination, and continuation by rebinding
+  keys on reason `superseded` and follows `termination.successor`
+  (#705).
 - Interaction with Mission Containment keys the residual on the
   action class's containment property, not on a deployment's level.
   No requirement changed.

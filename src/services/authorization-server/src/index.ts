@@ -25,6 +25,7 @@ import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
+import type { DpopProofReplay } from "./adapters/dpop-replay.js";
 import {
   buildProvider,
   type ProtectedEventSource,
@@ -101,9 +102,20 @@ export {
 export {
   type DeliveryDisposition,
   type DurableCommitSubscriber,
+  LEGACY_LIFECYCLE_EVENT_PAYLOAD_VERSION,
   LIFECYCLE_EVENT_PAYLOAD_VERSION,
   LifecycleOutbox,
+  readPersistedCommit,
 } from "./kernel/lifecycle-outbox.js";
+export {
+  LEGACY_TERMINAL_REASONS,
+  normalizeLegacyCommit,
+  normalizeStoredLifecycle,
+  observeExpiry,
+  parentTerminatedTermination,
+  parseTermination,
+  UNKNOWN_TERMINATION_REASON,
+} from "./kernel/termination.js";
 export {
   composeTombstoneRetentionSeconds,
   DEFAULT_AUDIT_RETENTION_S,
@@ -344,6 +356,8 @@ export {
   commitCarryoverManifest,
   decodeCarryoverEvidence,
   prepareCarryover,
+  readCarryoverMap,
+  verifyCarryoverEvidence,
   type ApplyCarryoverInput,
   type ApplyCarryoverResult,
   type CarryoverChangeClass,
@@ -753,10 +767,9 @@ export async function buildAuthorizationServer(opts: {
    * a registration the demo deliberately does not ship registers it here and
    * signs its own `private_key_jwt` assertions with the private half of the
    * `jwks` it supplies, so this function never hands a shipped client's key
-   * back. The child-rooted async-delegation family is the motivating case: the
-   * shipped child actor is granted only the jwt-bearer grant type, so driving
-   * a family rooted at a Child Mission's own access token over real HTTP needs
-   * a child actor registered for the token-exchange grant as well. Production
+   * back. The motivating cases are child actors a test names in a Child
+   * Mission's `child_actor` (the async-delegation family rooted at its own
+   * access token, a jwt-bearer-only registration's refusal). Production
    * callers MUST omit this.
    */
   testClients?: Record<string, unknown>[];
@@ -778,6 +791,12 @@ export async function buildAuthorizationServer(opts: {
   authoritySource?: EffectiveAuthoritySource;
   /** The `Retry-After` seconds stamped on a `temporarily_unavailable`. */
   stateRecoveryRetryAfter?: number;
+  /**
+   * @spec RFC 9449 Section 11.1 — the token endpoint's DPoP proof replay
+   * cache. Defaults to a bounded in-memory one; a test of the cache's bound
+   * (#1173, D375) injects a smaller one.
+   */
+  dpopProofReplay?: DpopProofReplay;
   /**
    * @spec authority-server#mission-join (#557) — DEV ONLY: serve
    * `POST /dev/ordinary-token`, which mints an ORDINARY DPoP-bound access
@@ -1096,7 +1115,9 @@ export async function buildAuthorizationServer(opts: {
     statusListPublisher,
     clients: [
       agent.metadata,
-      ...(capabilityEnabled(opts, "child-delegation") ? [child.metadata] : []),
+      // The child actor is also the demo templates' selected Agent, which
+      // redeems a Dispatch Handoff (@spec mission-template#dispatch-handoff).
+      ...(capabilityEnabled(opts, "child-delegation") || capabilityEnabled(opts, "templates") ? [child.metadata] : []),
       governed.metadata,
       ...(opts.testClients ?? []),
     ],
@@ -1181,6 +1202,7 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.stateRecoveryRetryAfter !== undefined
       ? { stateRecoveryRetryAfter: opts.stateRecoveryRetryAfter }
       : {}),
+    ...(opts.dpopProofReplay ? { dpopProofReplay: opts.dpopProofReplay } : {}),
     // @spec mission#scope-projection — the trusted out-of-band mapping.
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),

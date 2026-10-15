@@ -39,6 +39,7 @@ import {
   type JsonValue,
 } from "@mission/core";
 import { withTransaction, type Database } from "@mission/store";
+import { compactVerify, type CryptoKey, type JWK, type KeyObject } from "jose";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import {
   asNum,
@@ -63,7 +64,9 @@ import {
   type MissionState,
   type ParentRef,
   TERMINAL_STATES,
+  type Termination,
 } from "./types.js";
+import { normalizeStoredLifecycle } from "./termination.js";
 
 /**
  * @spec child-delegation#carryover-manifest — the manifest commitment typ. The
@@ -679,7 +682,8 @@ function rowToResult(row: Record<string, unknown>): CarryoverCommittedResult {
     successor_id: row.successor_id as string,
     manifest_hash: row.manifest_hash as string,
     manifest: JSON.parse(row.manifest_json as string) as CarryoverManifest,
-    map: JSON.parse(row.map_json as string) as CarryoverMap,
+    // The retained map is read normalized; `evidence_jws` stays byte for byte.
+    map: readCarryoverMap(JSON.parse(row.map_json as string) as CarryoverMap),
     evidence_hash: row.evidence_hash as string,
     evidence_jws: row.evidence_jws as string,
     committed_at: row.committed_at as string,
@@ -710,13 +714,51 @@ export type CarryoverMapRow =
       old_child: CarryoverRef;
       outcome: "excluded";
       reason: string;
-      /** The observed terminal state, or the committed cascade this row took. */
+      /**
+       * The row's terminal state: `terminated` (the committed cascade this row
+       * took, or the termination it already held). Evidence signed before the
+       * termination vocabulary carries a legacy value here (`cascaded`,
+       * `revoked`, ...); {@link readCarryoverMap} normalizes it on read, after
+       * any signature check, and the stored bytes are never rewritten.
+       */
       terminal_state: MissionState;
+      /**
+       * @spec mission#termination: the row's `termination` beside
+       * `terminal_state`: its reason and members as committed (for a cascaded
+       * row, `parent_terminated` with its immediate `parent`).
+       */
+      termination?: Termination;
       /** True when this row was never rendered in the manifest. */
       unrendered?: true;
     };
 
 export type CarryoverMap = CarryoverMapRow[];
+
+/**
+ * @spec mission#termination (transition-period reading): a Carryover map as
+ * a reader sees it: an excluded row whose `terminal_state` is a legacy value
+ * (`cascaded`, `revoked`, ...) or any value other than `terminated` reads as
+ * `terminated` with that reason (`cascaded` as `parent_terminated`), and a
+ * row that already carries its `termination` is unchanged. Only `reason` is
+ * set on a normalized row: such a row retained no other termination member,
+ * and none is invented. A read-side view, never re-signed or re-stored; a
+ * reader of the signed envelope applies it only after verifying the
+ * signature over the stored bytes ({@link verifyCarryoverEvidence}).
+ */
+export function readCarryoverMap(map: CarryoverMap): CarryoverMap {
+  return map.map((row) => {
+    if (row.outcome !== "excluded" || (row.terminal_state === "terminated" && row.termination)) return row;
+    const lifecycle = normalizeStoredLifecycle({
+      state: row.terminal_state,
+      ...(row.termination ? { terminationJson: row.termination } : {}),
+    });
+    return {
+      ...row,
+      terminal_state: lifecycle.state,
+      ...(lifecycle.termination ? { termination: lifecycle.termination } : {}),
+    };
+  });
+}
 
 /** One carried entry's correspondence: old record entry to replacement record entry. */
 export interface CarryoverEntryPair {
@@ -803,9 +845,13 @@ export interface PrepareCarryoverInput {
   config: CarryoverConfig;
 }
 
-/** The old child's non-terminal child occupancy: a mutable eligibility input. */
+/**
+ * The old child's non-terminal child occupancy: a mutable eligibility input.
+ * Counted on the OBSERVED state, so a child past its own `expires_at` does
+ * not occupy a slot whether or not its expiry has been persisted.
+ */
 function childOccupancy(kernel: MissionKernel, id: string): number {
-  return kernel.findChildren(id).filter((c) => !TERMINAL_STATES.has(c.state)).length;
+  return kernel.findChildren(id).filter((c) => !TERMINAL_STATES.has(kernel.observe(c).state)).length;
 }
 
 /** The committed external facts for one child under this deployment's declaration. */
@@ -910,9 +956,10 @@ export function prepareCarryover(
   const issuer = predecessor.issuer;
 
   // The whole current subtree, every state, in generation order. The manifest
-  // includes every NON-TERMINAL descendant at rendering.
+  // includes every NON-TERMINAL descendant at rendering, as observed: one past
+  // its own `expires_at` is already terminated and is never rendered.
   const descendants = kernel.descendantsOf(predecessor.id);
-  const rendered = descendants.filter((d) => !TERMINAL_STATES.has(d.state));
+  const rendered = descendants.filter((d) => !TERMINAL_STATES.has(kernel.observe(d).state));
   // Nothing to carry: no plan, no reserved identifier, no manifest. Ordinary
   // cascade remains the default, and a descendant created after this point is
   // absent from every manifest and so is never carried.
@@ -1147,6 +1194,12 @@ export interface ApplyCarryoverResult {
   evidenceJws: string;
   replacements: MissionRecord[];
   childEvidence: ChildEvidence[];
+  /**
+   * @spec child-delegation#cascade: the one instant every cascaded old row
+   * recorded as `terminated_at`; the predecessor's supersession records it
+   * too, so the cascade propagates a single instant.
+   */
+  terminatedAt: string;
 }
 
 /** One detected divergence between the committed manifest and current state. */
@@ -1222,9 +1275,10 @@ export function applyCarryoverInCallerTx(
   const unrendered: MissionRecord[] = [];
   for (const [id, record] of current) {
     if (renderedIds.has(id)) continue;
-    // A row that was already terminal at rendering was never rendered and needs
-    // no cascade; anything else is a descendant created after approval.
-    if (TERMINAL_STATES.has(record.state)) continue;
+    // A row that was already terminal at rendering (as observed) was never
+    // rendered and needs no cascade; anything else is a descendant created
+    // after approval.
+    if (TERMINAL_STATES.has(kernel.observe(record).state)) continue;
     unrendered.push(record);
     divergences.push({ childId: id, class: "unrendered_descendant", detail: "descendant absent from the manifest" });
   }
@@ -1533,7 +1587,6 @@ export function applyCarryoverInCallerTx(
       intent_hash: oldChild.intent_hash,
       authority_hash: replacementAuthorityHash,
       subject: oldChild.subject,
-      approver: input.approver,
       approval_basis: approvalBasis,
       authority_source: proposal.authority_source,
       client_id: childAct.sub,
@@ -1613,6 +1666,19 @@ export function applyCarryoverInCallerTx(
   // exclusions, and unrendered descendants under carried or already-terminal
   // intermediate ancestors alike. Already-terminal rows keep their state and
   // get no second transition.
+  //
+  // @spec child-delegation#cascade, mission#termination: every cascaded row
+  // is `parent_terminated` with its immediate `parent`, the ONE instant the
+  // predecessor's supersession records (returned as `terminatedAt` so the
+  // supersession CAS stamps the same one), and `origin` naming the
+  // predecessor whose `superseded` termination started the cascade. A row
+  // whose own `expires_at` has passed terminates `expired` instead.
+  const cascadeAt = kernel.nowDate().toISOString();
+  const cascade = {
+    terminatedAt: cascadeAt,
+    origin: manifest.predecessor.mission_id,
+    originReason: "superseded",
+  };
   const map: CarryoverMap = [];
   const subtreeOrder = kernel.descendantsOf(manifest.predecessor.mission_id);
   for (const record of subtreeOrder) {
@@ -1621,9 +1687,9 @@ export function applyCarryoverInCallerTx(
     const fresh = kernel.get(record.id) as MissionRecord;
     const entry = byOldId.get(record.id);
     const replacementId = carriedTo.get(record.id);
-    const outcome = replacementId ? { carriedTo: replacementId } : {};
+    const outcome = replacementId ? { carriedTo: replacementId, cascade } : { cascade };
     const transitioned = kernel.carryTerminalInCallerTx(fresh, outcome);
-    const terminalState = (transitioned ?? fresh).state;
+    const terminal = transitioned ?? fresh;
     if (replacementId && entry?.replacement) {
       map.push({
         old_child: { issuer: record.issuer, mission_id: record.id },
@@ -1638,7 +1704,8 @@ export function applyCarryoverInCallerTx(
         old_child: { issuer: record.issuer, mission_id: record.id },
         outcome: "excluded",
         reason,
-        terminal_state: terminalState,
+        terminal_state: terminal.state,
+        ...(terminal.termination ? { termination: terminal.termination } : {}),
         ...(entry ? {} : { unrendered: true as const }),
       });
     }
@@ -1706,7 +1773,15 @@ export function applyCarryoverInCallerTx(
     manifest.successor.mission_id,
     ...replacements.map((r) => r.id),
   ]);
-  return { map, evidence, evidenceHash, evidenceJws, replacements, childEvidence: linked };
+  return {
+    map,
+    evidence,
+    evidenceHash,
+    evidenceJws,
+    replacements,
+    childEvidence: linked,
+    terminatedAt: cascadeAt,
+  };
 }
 
 /**
@@ -1726,4 +1801,25 @@ export function decodeCarryoverEvidence(jws: string): CarryoverEvidence {
     throw new Error(`unexpected carryover evidence typ: ${String(header.typ)}`);
   }
   return JSON.parse(Buffer.from(parts[1] as string, "base64url").toString("utf8")) as CarryoverEvidence;
+}
+
+/**
+ * @spec child-delegation#carryover-evidence, mission#termination: VERIFY a
+ * retained Carryover Evidence envelope, then read it: the signature is checked
+ * over the stored compact bytes FIRST (`typ`, ES256 under the issuer's Status
+ * key), and only the verified payload is normalized ({@link readCarryoverMap}),
+ * so evidence signed with a legacy `terminal_state` such as `cascaded` still
+ * verifies and reads as `terminated`. The envelope bytes are never rewritten
+ * or re-signed.
+ */
+export async function verifyCarryoverEvidence(
+  jws: string,
+  key: CryptoKey | KeyObject | JWK | Uint8Array,
+): Promise<CarryoverEvidence> {
+  const { payload, protectedHeader } = await compactVerify(jws, key, { algorithms: ["ES256"] });
+  if (protectedHeader.typ !== CARRYOVER_EVIDENCE_JWS_TYP) {
+    throw new Error(`unexpected carryover evidence typ: ${String(protectedHeader.typ)}`);
+  }
+  const evidence = JSON.parse(new TextDecoder().decode(payload)) as CarryoverEvidence;
+  return { ...evidence, map: readCarryoverMap(evidence.map) };
 }

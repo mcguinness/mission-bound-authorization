@@ -95,8 +95,13 @@ describe("M11 operator console: fleet + lifecycle", () => {
     expect(fleet.length).toBeGreaterThanOrEqual(2);
     const target = fleet[0] as { id: string };
     const res = bff.lifecycle(op, target.id, "revoke", op.csrf);
-    expect(res.state).toBe("revoked");
-    expect(bff.fleet(op).find((r) => r.id === target.id)?.state).toBe("revoked");
+    expect(res.state).toBe("terminated");
+    expect(res.termination?.reason).toBe("revoked");
+    const row = bff.fleet(op).find((r) => r.id === target.id);
+    expect(row?.state).toBe("terminated");
+    expect(row?.termination?.reason).toBe("revoked");
+    // The Approver column is the record's approval_basis.consent_principal.
+    expect(row?.approver).toBe("bob");
   });
 });
 

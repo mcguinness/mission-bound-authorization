@@ -251,15 +251,17 @@ export async function tokenGrantRequest(
   agentClientJwk: Record<string, unknown>,
   dpopKeys: DpopKeys,
   params: Record<string, string>,
+  /** The authenticating client; its key's kid is `<clientId>-auth`. */
+  clientId = "ap-agent",
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const htu = `${asUrl}/token`;
   const clientKey = (await importJWK(agentClientJwk as JWK, "ES256")) as CryptoKey;
   const dpopPubJwk = await exportJWK(dpopKeys.publicKey);
   const clientAssertion = (): Promise<string> =>
     new SignJWT({})
-      .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
-      .setIssuer("ap-agent")
-      .setSubject("ap-agent")
+      .setProtectedHeader({ alg: "ES256", kid: `${clientId}-auth` })
+      .setIssuer(clientId)
+      .setSubject(clientId)
       .setAudience(asUrl)
       .setIssuedAt()
       .setExpirationTime("2m")

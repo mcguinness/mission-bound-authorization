@@ -233,9 +233,12 @@ The terms Policy Enforcement Point (PEP), Policy Decision Point
 names consequential read, consequential write, irreversible action,
 external commitment, and privileged administration), high-consequence
 classes, and parameter-bound are used as defined in
-{{I-D.draft-mcguinness-mission-runtime}}. The Mission claim (`id`,
-`issuer`) and the integrity anchors (`intent_hash`,
-`authority_hash`) are used as defined in
+{{I-D.draft-mcguinness-mission-runtime}}. A Mission reference (`id`,
+`issuer`) is a binding's Mission Reference identifier and Controller
+namespace, in the representation that binding defines; the OAuth
+realization is the Mission claim of
+{{I-D.draft-mcguinness-oauth-mission}}. The integrity anchors
+(`intent_hash`, `authority_hash`) are used as defined in
 {{I-D.draft-mcguinness-oauth-mission}}; `authorization_details`
 entries of type `mission_resource_access` are used as defined in its
 Mission Resource Access Profile
@@ -888,9 +891,9 @@ treat a record as verified if any step fails:
 For Decision Evidence emitted by a PDP, the emitter is the PDP. For
 Execution Evidence emitted by a PEP or executor, the emitter is that
 PEP or executor. For a Refusal Record, the emitter is the refusing
-PEP. This procedure applies wherever verification of the
-`evidence_envelope` is described in this document, including for
-Execution Evidence and Refusal Records.
+component, the PEP or the PDP. This procedure applies wherever
+verification of the `evidence_envelope` is described in this
+document, including for Execution Evidence and Refusal Records.
 
 The emitter constructs the record on its own emission path, from the
 state it holds, and signs it there. A component that reconstructs a
@@ -2395,6 +2398,11 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- Terminology: a Mission reference (`id`, `issuer`) is a binding's
+  Mission Reference identifier and Controller namespace in that
+  binding's representation, with the OAuth realization unchanged; the
+  records' Mission reference members and their presence rules are
+  unchanged (#1169).
 - `authority_bound` is a coordinated Decision Evidence extension
   member, registered and owned by the AuthZEN profile: the authority
   bound that decided an `out_of_authority` or `parameter_violation`

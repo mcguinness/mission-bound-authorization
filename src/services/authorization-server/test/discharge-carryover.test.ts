@@ -195,7 +195,7 @@ function expandAndCarry(
 
 /** The replacement of `oldChild` in a carryover batch. */
 function replacementOf(batch: ReturnType<typeof expandAndCarry>, oldChild: MissionRecord): MissionRecord {
-  const id = (as.kernel.get(oldChild.id) as MissionRecord).carried_to;
+  const id = (as.kernel.get(oldChild.id) as MissionRecord).termination?.carried_to;
   const found = batch.replacements.find((r) => r.id === id);
   if (!found) throw new Error(`no replacement for ${oldChild.id}`);
   return found;
@@ -303,7 +303,7 @@ describe("discharge forwarding after carryover (@spec discharge#discharge-carryo
     const replacement = replacementOf(batch, child);
     const before = as.kernel.get(replacement.id) as MissionRecord;
     const oldBefore = as.kernel.get(child.id) as MissionRecord;
-    expect(oldBefore.state).toBe("cascaded");
+    expect(oldBefore.termination?.reason).toBe("parent_terminated");
 
     const req = body(child, "payments:invoice.list");
     const res = await lifecycle(child.id, req);
@@ -318,7 +318,7 @@ describe("discharge forwarding after carryover (@spec discharge#discharge-carryo
       event_id: req.event_id,
       outcome: "discharged",
       prior_version: before.version,
-      current_version: before.version + 1,
+      new_version: before.version + 1,
       // ...and names the targeted old child.
       forwarded_from: { issuer: ISSUER, id: child.id },
     });
@@ -458,7 +458,7 @@ describe("discharge forwarding after carryover (@spec discharge#discharge-carryo
     const payload = decodeJwt(await res.text()) as Record<string, unknown>;
     expect((payload.mission as Record<string, unknown>).id).toBe(child.id);
     const result = payload.discharge_result as Record<string, unknown>;
-    expect(result).toMatchObject({ outcome: "already_discharged", prior_version: versions.old, current_version: versions.old });
+    expect(result).toMatchObject({ outcome: "already_discharged", prior_version: versions.old, new_version: versions.old });
     expect(result.forwarded_from).toBeUndefined();
     expect((as.kernel.get(replacement.id) as MissionRecord).version).toBe(versions.rep);
     expect(latched(replacement.id)).toEqual([]);
@@ -515,7 +515,10 @@ describe("discharge forwarding after carryover (@spec discharge#discharge-carryo
     const childB = replacementOf(expandAndCarry(pred.id), childA);
     // Corrupt the retained map so B reads as carried back to A: A to B to A.
     const db = as.kernel.db;
-    db.prepare("UPDATE missions SET carried_to = ? WHERE id = ?").run(childA.id, childB.id);
+    db.prepare("UPDATE missions SET state = 'terminated', termination_json = ? WHERE id = ?").run(
+      JSON.stringify({ reason: "parent_terminated", carried_to: childA.id }),
+      childB.id,
+    );
     db.prepare(
       `INSERT INTO carryover_results (plan_id, issuer, predecessor_id, successor_id, manifest_hash,
          manifest_json, map_json, evidence_hash, evidence_jws, committed_at)

@@ -318,8 +318,8 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
   it("records the TEMPLATE approver as the human of record (not the dispatcher)", () => {
     const t = mkTemplate();
     const { mission } = dispatch(t.id);
-    expect(mission.approver).toEqual({ iss: ISS, sub: "human-approver" });
-    expect(mission.approver.sub).not.toBe("orchestrator");
+    expect(mission.approval_basis.consent_principal).toEqual({ iss: ISS, sub: "human-approver" });
+    expect(mission.approval_basis.consent_principal.sub).not.toBe("orchestrator");
     expect(mission.client_id).toBe("worker"); // recipient becomes client_id
     expect(mission.subject).toEqual({ iss: ISS, sub: "alice" });
     expect(mission.policy_version).toBe(POLICY_VERSION);
@@ -654,8 +654,9 @@ describe("approval basis (@spec mission#approval-basis, mission-template#templat
       // consent instant for this exact version, never the dispatch request's.
       approved_at: t.created_at,
     });
-    // approver IS approval_basis.consent_principal (D48/O-38 convergence).
-    expect(persisted?.approver).toEqual(persisted?.approval_basis.consent_principal);
+    // The Approver IS approval_basis.consent_principal (D48/O-38
+    // convergence); the record carries no separate `approver` alias (#705).
+    expect(persisted).not.toHaveProperty("approver");
     // The Dispatcher (activation_actor) is distinct from the consenting human.
     expect(persisted?.approval_basis.activation_actor).not.toEqual(
       persisted?.approval_basis.consent_principal,
@@ -699,7 +700,7 @@ describe("seeded demo reconciliation template (@spec mission-template)", () => {
     });
     expect(mission.state).toBe("active");
     expect(mission.client_id).toBe("subagent-invoice-extractor");
-    expect(mission.approver).toEqual({ iss: ISS, sub: "bob" });
+    expect(mission.approval_basis.consent_principal).toEqual({ iss: ISS, sub: "bob" });
     // Read-only: no write/execute action survives the template ceiling.
     const actions = mission.authority_set.flatMap((e) => e.actions);
     expect(actions).toContain("payments:invoice.read");

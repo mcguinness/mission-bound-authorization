@@ -11,10 +11,11 @@ import type { LifecycleCommit } from "../src/kernel/types.js";
 /** The exact handle shape the ICA validator accepts (continuation-assertion.ts). */
 const ICA_HANDLE = /^[A-Za-z0-9_-]{22,256}$/;
 
-const commit = (id: string, state: LifecycleCommit["state"]): LifecycleCommit => ({
+const commit = (id: string, state: LifecycleCommit["state"], reason?: string): LifecycleCommit => ({
   id,
   issuer: "https://as.test",
   state,
+  ...(reason ? { termination: { reason, terminated_at: new Date().toISOString(), version: 2 } } : {}),
   version: 2,
   committed_at: new Date().toISOString(),
   expires_at: new Date(Date.now() + 3600_000).toISOString(),
@@ -84,7 +85,7 @@ describe("ContinuationStore.lookup (@spec id-continuation-assertion)", () => {
     const active = store.lookup(handle);
     expect(active.status).toBe("active");
     expect(active.status === "active" ? active.continuation : undefined).toEqual(store.resolve(handle));
-    store.onLifecycleCommit(commit("msn_1", "revoked"));
+    store.onLifecycleCommit(commit("msn_1", "terminated", "revoked"));
     expect(store.lookup(handle)).toEqual({ status: "terminal" });
   });
 
@@ -106,7 +107,7 @@ describe("ContinuationStore hop audience (@spec id-continuation-assertion)", () 
     const child = store.mint({ anchorId, missionId: "msn_1", actor: ACTOR, priorHandle: root, audience: RAS });
     expect(store.resolve(root)?.audience).toBe("https://as.test");
     expect(store.resolve(child)?.audience).toBe(RAS);
-    store.onLifecycleCommit(commit("msn_1", "revoked"));
+    store.onLifecycleCommit(commit("msn_1", "terminated", "revoked"));
     expect(store.lookup(child)).toEqual({ status: "terminal" });
     expect(store.hopAudience(child)).toBe(RAS);
     expect(store.hopAudience("ich_nope")).toBeUndefined();
@@ -170,7 +171,7 @@ describe("ContinuationStore.onLifecycleCommit", () => {
     const anchorId = store.rootGrantAnchor({ missionId: "msn_1", authEnvelope: ENV });
     const handle = store.mint({ anchorId, missionId: "msn_1", actor: ACTOR, audience: RAS, cnfJkt: "jkt-1" });
     expect(store.resolve(handle)).toBeDefined();
-    store.onLifecycleCommit(commit("msn_1", "revoked"));
+    store.onLifecycleCommit(commit("msn_1", "terminated", "revoked"));
     expect(store.resolve(handle)).toBeUndefined();
   });
 
@@ -188,7 +189,7 @@ describe("ContinuationStore.onLifecycleCommit", () => {
     const a2 = store.rootGrantAnchor({ missionId: "msn_2", authEnvelope: ENV });
     const h1 = store.mint({ anchorId: a1, missionId: "msn_1", actor: ACTOR, audience: RAS, cnfJkt: "jkt-1" });
     const h2 = store.mint({ anchorId: a2, missionId: "msn_2", actor: ACTOR, audience: RAS, cnfJkt: "jkt-2" });
-    store.onLifecycleCommit(commit("msn_1", "completed"));
+    store.onLifecycleCommit(commit("msn_1", "terminated", "completed"));
     expect(store.resolve(h1)).toBeUndefined();
     expect(store.resolve(h2)).toBeDefined();
   });

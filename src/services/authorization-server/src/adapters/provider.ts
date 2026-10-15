@@ -128,53 +128,129 @@ export class MissionGrantError extends errors.InvalidGrant {
 }
 
 /**
- * The `mission_error` values this deployment emits: the OAuth binding's own,
- * Derivation Limits' `derivations_exhausted`, and Mission Status's
- * `mission_suspended` and `mission_completed`.
+ * @spec mission#issuance-gating (#1154, D369): a Token Exchange refused
+ * because its Mission is not `active`. The Mission makes the subject token
+ * unacceptable for the exchange, so the refusal is `invalid_request` (RFC 8693
+ * Section 2.2.2), with the same `mission_error` diagnostic as
+ * {@link MissionGrantError}, the refusal every other grant keeps.
+ */
+export class MissionExchangeError extends errors.InvalidRequest {
+  constructor(
+    message: string,
+    readonly missionError?: MissionErrorValue,
+  ) {
+    super(message);
+  }
+}
+
+/** The gate reasons that are lifecycle refusals (the Mission is not `active`), not a limit or an empty authority. */
+const LIFECYCLE_GATE_REASONS: ReadonlySet<string> = new Set(["mission_not_active", "mission_expired"]);
+
+/** Whether `ctx` is a token-endpoint request on the RFC 8693 Token Exchange grant. */
+export function isTokenExchangeRequest(ctx: unknown): boolean {
+  return (
+    (ctx as { oidc?: { params?: { grant_type?: unknown } } } | undefined)?.oidc?.params?.grant_type ===
+    TOKEN_EXCHANGE_GRANT_TYPE
+  );
+}
+
+/**
+ * @spec mission#issuance-gating (#1154, D369): the token endpoint's refusal for
+ * a Mission gate failure. A lifecycle refusal on a Token Exchange is
+ * `invalid_request`; a limit or empty-authority refusal, and every refusal on
+ * any other grant (authorization code, refresh, JWT bearer), is
+ * `invalid_grant`. Both carry `mission_error` where a value applies.
+ */
+export function tokenEndpointGateRefusal(
+  reason: GateError["reason"],
+  message: string,
+  missionError: MissionErrorValue | undefined,
+  exchange: boolean,
+): Error {
+  return exchange && LIFECYCLE_GATE_REASONS.has(reason)
+    ? new MissionExchangeError(message, missionError)
+    : new MissionGrantError(message, missionError);
+}
+
+/** The refusal vocabulary of a token-endpoint mint: a Token Exchange's, or every other grant's. */
+function mintSurface(ctx: unknown): "token-endpoint" | "token-exchange" {
+  return isTokenExchangeRequest(ctx) ? "token-exchange" : "token-endpoint";
+}
+
+/**
+ * The `mission_error` values this deployment emits: the OAuth binding's
+ * `revoked`, `expired` and `superseded` (Expansion defines supersession),
+ * Mission Status's `completed` and `suspended`, Child Delegation's
+ * `parent_terminated`, and Derivation Limits' `derivations_exhausted`. Each
+ * lifecycle value is the Mission's termination reason (or, for `suspended`,
+ * its state); none carries a `mission_` prefix.
  */
 export type MissionErrorValue =
-  | "mission_revoked"
-  | "mission_expired"
-  | "derivations_exhausted"
-  | "mission_suspended"
-  | "mission_completed";
+  | "revoked"
+  | "expired"
+  | "superseded"
+  | "completed"
+  | "suspended"
+  | "parent_terminated"
+  | "derivations_exhausted";
+
+/** The termination reasons that are also `mission_error` values. */
+const TERMINATION_MISSION_ERRORS: ReadonlySet<string> = new Set([
+  "revoked",
+  "expired",
+  "superseded",
+  "completed",
+  "parent_terminated",
+]);
+
+/**
+ * @spec mission#issuance-gating, mission#termination: the lifecycle
+ * `mission_error` for an OBSERVED Mission: `suspended` for a suspended one,
+ * the termination reason for a terminated one when it is a registered
+ * `mission_error` value, and none otherwise (an active Mission, or a reason
+ * this deployment does not recognize: the client still gets `invalid_grant`).
+ */
+export function lifecycleMissionError(
+  observed: { state: string; termination?: { reason: string } } | undefined,
+): MissionErrorValue | undefined {
+  if (!observed) return undefined;
+  if (observed.state === "suspended") return "suspended";
+  if (observed.state !== "terminated") return undefined;
+  const reason = observed.termination?.reason;
+  return reason !== undefined && TERMINATION_MISSION_ERRORS.has(reason) ? (reason as MissionErrorValue) : undefined;
+}
 
 /**
  * @spec mission#issuance-gating, status#mission-lifecycle-endpoint — map a
  * kernel {@link GateError} onto the `mission_error` diagnostic value, where
  * one applies. `reason` alone is not enough: `mission_not_active` covers
- * `revoked` and Mission Status's `suspended` and `completed`, each with its
+ * every termination reason and Mission Status's `suspended`, each with its
  * own value, and the ancestor-lineage-walk refusal (also
  * `mission_not_active`) names an ancestor's state, not `missionId`'s own.
- * `currentState`, the FRESH persisted state of `missionId` itself (read
- * after the throw, since `applyExpiry` may have just committed an `expired`
- * transition), resolves both: the value names `missionId`'s own state, so a
- * lineage-refused Mission whose own state is still `active` gets no
- * `mission_error` rather than a misleading one. A child that a parent's
- * suspension projects to `suspended` holds that state as its own, so it gets
- * `mission_suspended`. `authority_contained` and `authority_exhausted` are
- * not `mission_error` values (the former rides the Containment companion's
- * own `mission_denial_reason`; the latter has no diagnostic), so both also
- * fall through to plain `invalid_grant`, which the SHOULD permits.
+ * `observed`, the OBSERVED record of `missionId` itself (read after the
+ * throw: its own expiry, and the ancestor-termination projection, apply
+ * whether or not either was persisted), resolves both: the value is
+ * `missionId`'s own termination reason, so a terminated Mission reports its
+ * RECORDED cause (never `expired` over an earlier one), a child under a
+ * terminated parent reports `parent_terminated`, and a lineage-refused
+ * Mission whose own observed state is still `active` (under a suspended
+ * ancestor) gets no `mission_error` rather than a misleading one. A child
+ * that a parent's suspension projects to `suspended` holds that state as its
+ * own, so it gets `suspended`. `authority_contained` and
+ * `authority_exhausted` are not `mission_error` values (the former rides the
+ * Containment companion's own `mission_denial_reason`; the latter has no
+ * diagnostic), so both also fall through to plain `invalid_grant`, which the
+ * SHOULD permits.
  */
 export function gateErrorToMissionError(
   reason: GateError["reason"],
-  currentState: string | undefined,
+  observed: { state: string; termination?: { reason: string } } | undefined,
 ): MissionErrorValue | undefined {
   switch (reason) {
     case "mission_expired":
-      return "mission_expired";
+      return "expired";
     case "mission_not_active":
-      switch (currentState) {
-        case "revoked":
-          return "mission_revoked";
-        case "suspended":
-          return "mission_suspended";
-        case "completed":
-          return "mission_completed";
-        default:
-          return undefined;
-      }
+      return lifecycleMissionError(observed);
     case "derivation_cap_exhausted":
       return "derivations_exhausted";
     default:
@@ -224,7 +300,7 @@ import {
   childMissionClaim,
 } from "../kernel/child-delegation.js";
 import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
-import { type DpopProofReplay, newDpopProofReplay } from "./dpop-replay.js";
+import { type DpopProofReplay, newDpopProofReplay, refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
   handleTransactionAuthorization,
   newTxnWorkflows,
@@ -287,13 +363,14 @@ import type {
   MissionRecord,
 } from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
+import { DISPATCH_HANDOFF_TYP, handleDispatchHandoffRedemption } from "./dispatch-handoff.js";
 import type { CrossOrgOptions } from "./cross-org-grant.js";
 import {
   type ContinuationReplay,
-  freshProofJti,
   handleTokenExchangeGrant,
   type SubjectResolver,
   TOKEN_EXCHANGE_GRANT_TYPE,
+  verifyTokenEndpointDpop,
 } from "./continuation-grant.js";
 import type { ContinuationIssuer } from "../kernel/continuation-assertion.js";
 import type { ContinuationStore } from "../kernel/continuation-store.js";
@@ -680,7 +757,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
   const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
   const grantEnabled = new Map<string, boolean>([
     [DEFERRED_GRANT_TYPE, enabled("deferred")],
-    [CHILD_JWT_BEARER_GRANT_TYPE, enabled("child-delegation")],
+    // The RFC 7523 grant redeems a child grant and a Dispatch Handoff grant.
+    [CHILD_JWT_BEARER_GRANT_TYPE, enabled("child-delegation") || enabled("templates")],
     [MISSION_DISPATCH_GRANT_TYPE, enabled("templates")],
     [TOKEN_EXCHANGE_GRANT_TYPE, TOKEN_EXCHANGE_CAPABILITIES.some(enabled)],
   ]);
@@ -813,10 +891,21 @@ export function buildProvider(opts: AdapterOptions): Provider {
     return mode === "issue" ? kernel.gateDerivation(target.record.id) : kernel.checkDerivation(target.record.id);
   }
 
-  /** A {@link GateError} as the token endpoint's `invalid_grant` (with `mission_error` where a value applies). */
-  function missionGateRefusal(e: unknown, missionId: string): unknown {
+  /**
+   * A {@link GateError} as the token endpoint's refusal
+   * ({@link tokenEndpointGateRefusal}): `invalid_request` for a lifecycle
+   * refusal on a Token Exchange, otherwise `invalid_grant`, with
+   * `mission_error` where a value applies. `ctx` is the token request; the
+   * refresh pre-check passes none, so it refuses `invalid_grant`.
+   */
+  function missionGateRefusal(e: unknown, missionId: string, ctx?: unknown): unknown {
     return e instanceof GateError
-      ? new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.get(missionId)?.state))
+      ? tokenEndpointGateRefusal(
+          e.reason,
+          e.message,
+          gateErrorToMissionError(e.reason, kernel.observedRecord(missionId)),
+          isTokenExchangeRequest(ctx),
+        )
       : e;
   }
 
@@ -879,7 +968,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * is refused the same way rather than given a token that outlives it.
    *
    * `surface` selects the refusal's error vocabulary. A token-endpoint mint
-   * refuses `invalid_grant` (with `mission_error`). The authorization code is
+   * refuses `invalid_grant` (with `mission_error`), and a Token Exchange mint
+   * `invalid_request` (with `mission_error`; @spec mission#issuance-gating,
+   * #1154). The authorization code is
    * minted at the authorization endpoint's resume, whose response RFC 6749
    * Section 4.1.2.1 defines without `invalid_grant`, so it refuses
    * `access_denied` (@spec mission#error-mapping: an authorization decision
@@ -888,13 +979,19 @@ export function buildProvider(opts: AdapterOptions): Provider {
   function clampToMission(
     configured: number,
     grantId: string | undefined,
-    surface: "token-endpoint" | "authorization-endpoint" = "token-endpoint",
+    surface: "token-endpoint" | "token-exchange" | "authorization-endpoint" = "token-endpoint",
   ): number {
     const authorization = surface === "authorization-endpoint";
+    const exchange = surface === "token-exchange";
     const expiring = (): Error =>
       authorization
         ? new errors.AccessDenied("the Mission expires before the authorization can complete")
-        : new MissionGrantError("the Mission expires before a credential can be issued", "mission_expired");
+        : tokenEndpointGateRefusal(
+            "mission_expired",
+            "the Mission expires before a credential can be issued",
+            "expired",
+            exchange,
+          );
     let record: MissionRecord | undefined;
     try {
       record = missionForGrant(grantId);
@@ -914,7 +1011,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
         if (authorization) {
           throw e.reason === "mission_expired" ? expiring() : new errors.AccessDenied("the Mission is not active");
         }
-        throw new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.get(record.id)?.state));
+        throw tokenEndpointGateRefusal(
+          e.reason,
+          e.message,
+          gateErrorToMissionError(e.reason, kernel.observedRecord(record.id)),
+          exchange,
+        );
       }
       throw e;
     }
@@ -997,6 +1099,15 @@ export function buildProvider(opts: AdapterOptions): Provider {
       resourceServer?: { audience?: unknown };
     },
   ): void {
+    if (delegationHandles.has(token)) {
+      // @spec mission#scope-projection step 4: a delegation handle's consumer
+      // is this AS's own async-delegation exchange, which reads
+      // `authorization_details`: no `scope` is emitted (#1157).
+      token.scope = undefined;
+      projectedTokens.add(token);
+      responseScopes.set(token, undefined);
+      return;
+    }
     const aud = token.resourceServer?.audience;
     const audiences = typeof aud === "string" ? [aud] : Array.isArray(aud) ? (aud as string[]) : [];
     const { emitted, granted } = decideMissionScope(
@@ -1416,7 +1527,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
               : kernel.missionClaim(famRecord);
           return { mission: claim };
         } catch (e) {
-          throw missionGateRefusal(e, famRecord.id);
+          throw missionGateRefusal(e, famRecord.id, _ctx);
         }
       }
       const record = target.record;
@@ -1449,7 +1560,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
             : kernel.missionClaim(gated);
         return { mission: claim };
       } catch (e) {
-        throw missionGateRefusal(e, record.id);
+        throw missionGateRefusal(e, record.id, _ctx);
       }
     },
     // @spec async-delegation — MANDATORY family rotation. A per-delegation family
@@ -1547,7 +1658,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // The resource server's lifetime (resourceServerInfoFor), or 1 hour.
       AccessToken: function AccessTokenTTL(_ctx, token) {
         const t = token as { grantId?: string; resourceServer?: { accessTokenTTL?: number } };
-        return clampToMission(t.resourceServer?.accessTokenTTL || 60 * 60, t.grantId);
+        return clampToMission(t.resourceServer?.accessTokenTTL || 60 * 60, t.grantId, mintSurface(_ctx));
       },
       // Minted at the authorization endpoint's resume: its refusal is an
       // authorization-response error, never invalid_grant.
@@ -1560,7 +1671,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
       IdToken: function IdTokenTTL(ctx) {
         const at = (ctx as { oidc?: { entities?: { AccessToken?: { grantId?: string } } } } | undefined)?.oidc
           ?.entities?.AccessToken;
-        return clampToMission(60 * 60, at?.grantId);
+        return clampToMission(60 * 60, at?.grantId, mintSurface(ctx));
       },
       // @spec async-delegation — absolute-lifetime clamp. A per-delegation family
       // refresh token lives exactly until its Mission's expires_at (no
@@ -1573,7 +1684,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // Uncapped only when the family's Mission resolves, so the clamp always
         // bounds it; otherwise the ordinary 14-day value applies.
         const familyBound = fam !== undefined && kernel.get(fam.missionId) !== undefined;
-        return clampToMission(familyBound ? Number.POSITIVE_INFINITY : 14 * 24 * 60 * 60, grantId);
+        return clampToMission(familyBound ? Number.POSITIVE_INFINITY : 14 * 24 * 60 * 60, grantId, mintSurface(_ctx));
       },
     },
   };
@@ -1619,7 +1730,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
     "grant.error",
     (ctx: unknown, err: unknown) => {
       const body = (ctx as { body?: Record<string, unknown> }).body;
-      if (err instanceof MissionGrantError && err.missionError && body?.error === "invalid_grant") {
+      // @spec mission#issuance-gating (#1154): the gate's `invalid_request` on
+      // a Token Exchange carries the same diagnostic as its `invalid_grant`.
+      if (
+        (err instanceof MissionGrantError || err instanceof MissionExchangeError) &&
+        err.missionError &&
+        body?.error === (err instanceof MissionExchangeError ? "invalid_request" : "invalid_grant")
+      ) {
         body.mission_error = err.missionError;
       }
     },
@@ -1649,10 +1766,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // and so a child client that lists this grant type is not rejected as
   // invalid_client_metadata. `assertion` is declared in the params set or the
   // token endpoint strips it; client_assertion/_type are auth params and survive.
+  // @spec mission-template#dispatch-handoff (#1158): the same grant type
+  // redeems a Dispatch Handoff grant, selected by the assertion's own `typ`;
+  // each branch verifies its own `typ`, so neither accepts the other's grant.
   if (grantEnabled.get(CHILD_JWT_BEARER_GRANT_TYPE)) {
     provider.registerGrantType(
       CHILD_JWT_BEARER_GRANT_TYPE,
-      (ctx) => handleChildJwtBearerGrant(opts, provider, ctx),
+      (ctx) => handleJwtBearerGrant(opts, provider, ctx),
       // `scope` (@spec mission#scope-projection) narrows the projected scope.
       new Set(["assertion", "scope"]),
     );
@@ -1734,6 +1854,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // @spec mission#scope-projection — declared so an exchange's requested
         // `scope` is honored or refused, never stripped unseen.
         "scope",
+        // @spec mission-template#dispatch-handoff: the handoff selector.
+        "mission_dispatch_handoff",
       ]),
       // @spec id-continuation-assertion — the ICA continuation exchange takes
       // zero or more `resource` (ICA -02 5.5.3 rule 1), so it is the one
@@ -1883,6 +2005,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
 export const SCOPE_DECIDED_AT_SAVE = "";
 
 /**
+ * @spec continuation#transport-async (#1157, D358): the delegation handles
+ * this AS mints (the handle exchange and the Dispatch Handoff redemption): an
+ * access token audienced to the acting client itself, which presents it back
+ * to this AS's async-delegation exchange. That exchange consumes the handle's
+ * `authorization_details`, so the scope projection omits `scope` for it (core
+ * scope-projection step 4) instead of seeking a resource mapping for a client
+ * audience. Only AS code marks a token; nothing a client sends can.
+ */
+const delegationHandles = new WeakSet<object>();
+
+/** Mark `token` (an unsaved AccessToken) as a delegation handle; see {@link delegationHandles}. */
+export function markDelegationHandle(token: object): void {
+  delegationHandles.add(token);
+}
+
+/**
  * The resource-server info the AS attaches to every resource-bound JWT access
  * token: audience = the resource, JWT format, TTL. Shared by the
  * resourceIndicators config and the custom-grant mints so all project an
@@ -1940,6 +2078,19 @@ async function handleDeferredGrant(
 
   // --- Poll/redeem: the client presents the deferral_code. ---
   if (typeof params.deferral_code === "string" && params.deferral_code) {
+    // @spec RFC 9449 Section 4.3 (#1173, #1199 review): the proof is verified
+    // BEFORE the deferral is redeemed, so a refused proof (a retryable refusal
+    // at the replay cache's bound included) leaves an approved deferral
+    // redeemable. The verified key binds the minted token. The token endpoint
+    // does not pre-validate DPoP for custom grants; nonce handling is not
+    // required here.
+    const proofJws = ctx.get("DPoP");
+    if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
+    const verified = await verifyTokenEndpointDpop(opts, proofJws);
+    if (!verified.ok) {
+      refuseTokenEndpointProof(ctx, verified);
+      return;
+    }
     const r = deferrals.redeem(params.deferral_code);
     if ("error" in r) {
       switch (r.error) {
@@ -1955,7 +2106,7 @@ async function handleDeferredGrant(
           throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
       }
     }
-    await mintDeferredToken(opts, provider, ctx, r);
+    await mintDeferredToken(opts, provider, ctx, r, verified.proof.jkt);
     return;
   }
 
@@ -2020,36 +2171,12 @@ async function mintDeferredToken(
   provider: Provider,
   ctx: KoaContextWithOIDC,
   deferred: DeferredToken,
+  /** The verified DPoP proof key's thumbprint (handleDeferredGrant): the minted token's binding. */
+  jkt: string,
 ): Promise<void> {
   const record = opts.kernel.get(deferred.mission.id);
   if (!record || !record.grant_id) {
     throw new errors.InvalidGrant("mission grant not found for deferral");
-  }
-
-  // DPoP-bind the minted token: derive the jkt from the request's DPoP proof
-  // (the token endpoint does not pre-validate DPoP for custom grants), exactly
-  // like the /transaction handler. Nonce handling is not required here.
-  const proofJws = ctx.get("DPoP");
-  if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    jkt = await calculateJwkThumbprint(header.jwk as JWK);
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    throw new errors.InvalidRequest("invalid DPoP proof");
-  }
-  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
-  if (!freshProofJti(opts, proofJti)) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
-    ctx.set("cache-control", "no-store");
-    return;
   }
 
   // Containment: derive the resource fallback from the EFFECTIVE set (a fresh
@@ -2105,6 +2232,23 @@ async function mintDeferredToken(
  * equal the authenticated client, which is what makes conveying the assertion
  * through the parent safe (the parent, a different client, cannot redeem it).
  */
+async function handleJwtBearerGrant(opts: AdapterOptions, provider: Provider, ctx: KoaContextWithOIDC): Promise<void> {
+  const assertion = (ctx.oidc.params as Record<string, unknown>).assertion;
+  let typ: unknown;
+  try {
+    typ = typeof assertion === "string" ? decodeProtectedHeader(assertion).typ : undefined;
+  } catch {
+    typ = undefined;
+  }
+  if (typ === DISPATCH_HANDOFF_TYP) {
+    if (!capabilityEnabled(opts, "templates")) throw new errors.InvalidGrant("invalid dispatch handoff grant");
+    await handleDispatchHandoffRedemption(opts, provider, ctx, assertion as string);
+    return;
+  }
+  if (!capabilityEnabled(opts, "child-delegation")) throw new errors.InvalidGrant("invalid child-bound grant assertion");
+  await handleChildJwtBearerGrant(opts, provider, ctx);
+}
+
 async function handleChildJwtBearerGrant(
   opts: AdapterOptions,
   provider: Provider,
@@ -2184,26 +2328,14 @@ async function handleChildJwtBearerGrant(
   //    key; its thumbprint becomes the token's cnf.jkt.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    jkt = await calculateJwkThumbprint(header.jwk as JWK);
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    throw new errors.InvalidRequest("invalid DPoP proof");
-  }
-  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
-  if (!freshProofJti(opts, proofJti)) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
-    ctx.set("cache-control", "no-store");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
+  const { jkt } = verified.proof;
 
   // 6. Bind an oidc Grant to the child LAZILY (mirror the `decide` path). Do NOT
   //    call gateDerivation here: extraTokenClaims runs it during save() and a
@@ -2772,12 +2904,22 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           return;
         }
       }
-      // Deployment capability controls (adapters/capabilities.ts): an operation
-      // this deployment disabled is refused `invalid_request` before any Mission
-      // is looked up, so the refusal names the deployment, never the Mission.
-      const operationCapability = LIFECYCLE_OPERATION_CAPABILITY[String(body.operation)];
-      if (operationCapability && !enabled(operationCapability)) {
-        sendInvalidRequest(`operation ${String(body.operation)} is not enabled on this deployment`);
+      // @spec status#mission-lifecycle-endpoint ("Operations"): an operation this
+      // deployment does not serve, one it does not recognize (an absent value or
+      // an unadopted extension) or one its capability controls disabled
+      // (adapters/capabilities.ts), is refused `invalid_request` before any
+      // Mission is looked up, so the refusal names the deployment, never the
+      // Mission.
+      const operation = String(body.operation);
+      const operationCapability = Object.hasOwn(LIFECYCLE_OPERATION_CAPABILITY, operation)
+        ? LIFECYCLE_OPERATION_CAPABILITY[operation]
+        : undefined;
+      if (operationCapability === undefined) {
+        sendInvalidRequest(`operation ${operation} is not supported`);
+        return;
+      }
+      if (!enabled(operationCapability)) {
+        sendInvalidRequest(`operation ${operation} is not enabled on this deployment`);
         return;
       }
       // @spec discharge#discharge-operation, discharge#discharge-commit ("States")
@@ -2904,7 +3046,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // it can neither join nor roll back with this commit.
         const transitioned = withTransaction(kernel.db, () => {
           const record = kernel.transition(missionId, body.operation as LifecycleOperation);
-          const outcome = { id: record.id, state: record.state, version: record.version };
+          // @spec status#mission-lifecycle-endpoint, mission#termination: the
+          // committed outcome reports `termination` beside `state` exactly when
+          // it is `terminated` (with the committing `version`).
+          const outcome = {
+            id: record.id,
+            state: record.state,
+            ...(record.termination ? { termination: record.termination } : {}),
+            version: record.version,
+          };
           if (nonceKey) {
             lifecycleResponses.claimInCallerTx(nonceKey, {
               requestDigest: digest,
@@ -3591,15 +3741,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
 }
 
 /**
- * @spec child-delegation#denial-reasons — map a symbolic child denial reason to
- * its layered OAuth error code: `parent_not_active`/`parent_mismatch` ride
- * `invalid_grant`; `delegation_not_permitted`/`child_actor_not_allowed`/
- * `not_strict_subset`/`fanout_exceeded` ride `invalid_request`; `policy_denied`
- * rides `access_denied`.
+ * @spec child-delegation#denial-reasons: map a symbolic child denial reason to
+ * its layered OAuth error code on the child-creation exchange: `parent_mismatch`
+ * rides `invalid_grant`; `parent_not_active` rides `invalid_request`, the
+ * issuance profile's Token Exchange refusal of a Mission that is not `active`
+ * (#1154, D369), as do `delegation_not_permitted`/`child_actor_not_allowed`/
+ * `not_strict_subset`/`fanout_exceeded`; `policy_denied` rides `access_denied`.
  */
 export function childErrorCode(reason: ChildDenialReason): string {
   switch (reason) {
-    case "parent_not_active":
     case "parent_mismatch":
       return "invalid_grant";
     case "policy_denied":
@@ -3744,26 +3894,14 @@ async function handleMissionDispatchGrant(
   // verified DPoP key is the fingerprint's `cnf` and the issued token's binding.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    jkt = await calculateJwkThumbprint(header.jwk as JWK);
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    throw new errors.InvalidRequest("invalid DPoP proof");
-  }
-  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
-  if (!freshProofJti(opts, proofJti)) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
-    ctx.set("cache-control", "no-store");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
+  const { jkt } = verified.proof;
 
   // Core-consistency: the Dispatcher does NOT name the Subject; the Issuer
   // establishes it. The template carries the consenting human (approver); the
@@ -4490,15 +4628,17 @@ async function handleDischarge(input: {
   // an unknown Mission still reaches the kernel's DischargeNotFoundError and the
   // one indistinguishable not-found body; it sits outside the `try` so a storage
   // failure here is never disguised as not-found. `kernel.discharge` keeps its
-  // own expiry clock for other callers. The walk follows committed `carried_to`
-  // correlations too, so a replacement a forwarded discharge may reach keeps
-  // the expiry it discovers when the forwarded request is refused. (The walk
-  // only materializes expiry; forwarding resolves through Carryover Evidence.)
+  // own expiry clock for other callers. The walk follows committed
+  // `termination.carried_to` correlations too, so a replacement a forwarded
+  // discharge may reach keeps the expiry it discovers when the forwarded
+  // request is refused. (The walk only materializes expiry; forwarding
+  // resolves through Carryover Evidence.)
   const walked = new Set<string>();
   for (let cur = kernel.get(missionId); cur && !walked.has(cur.id); ) {
     walked.add(cur.id);
     kernel.materializeExpiry(cur.id);
-    cur = cur.carried_to ? kernel.get(cur.carried_to) : undefined;
+    const carriedTo = cur.termination?.carried_to;
+    cur = carriedTo ? kernel.get(carriedTo) : undefined;
   }
   try {
     // @spec control-plane#serialization, control-plane#fresh-observation — the

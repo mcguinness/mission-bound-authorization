@@ -14,7 +14,7 @@
   {
     "client_id": "subagent-invoice-extractor",
     "client_name": "Invoice Extraction Sub-Agent",
-    "grant_types": ["urn:ietf:params:oauth:grant-type:jwt-bearer"],
+    "grant_types": ["urn:ietf:params:oauth:grant-type:jwt-bearer", "urn:ietf:params:oauth:grant-type:token-exchange", "refresh_token"],
     "response_types": [],
     "redirect_uris": [],
     "token_endpoint_auth_method": "private_key_jwt",

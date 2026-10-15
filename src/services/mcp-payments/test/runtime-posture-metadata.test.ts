@@ -49,6 +49,7 @@ describe("runtime posture publication on the resource metadata surface", () => {
         window: "PT15M",
         responsible_component: "mcp-payments-pep",
         alerting: expect.any(String),
+        prior_process_outcomes: "indeterminate_at_window_close",
       });
       // The PDP runs exactly what is published: the statement opens as its domain.
       expect(() => openEphemeralClaimDomain({ owner: statement.pdps[0] as string, statement }).close()).not.toThrow();

@@ -558,7 +558,7 @@ worked disclosure and test vector:
         "actions": ["journal-entries.write"] }
     ]
   },
-  "policy_version": "approval-policy:v12",
+  "approval_policy_version": "approval-policy:v12",
   "sequence": 91427,
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
@@ -611,7 +611,8 @@ Cache-Control: no-store
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
       "constraints": { "period": "2026-Q3" } } ],
-  "mission_id": "msn_5Jt9wX4kP7rN2vQ8yL3sD6zB0mF1hG-" }
+  "mission_id": "msn_5Jt9wX4kP7rN2vQ8yL3sD6zB0mF1hG-",
+  "mission_expires_at": "2026-12-31T23:59:59Z" }
 ~~~
 
 The token carries the `mission` claim as the issuance profile defines

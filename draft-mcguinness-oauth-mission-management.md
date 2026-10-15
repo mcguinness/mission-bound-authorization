@@ -341,7 +341,7 @@ management-plane state associated with the record:
 `owner`:
 : The accountable operator of the Mission's agent: an (`iss`, `sub`)
   principal or a group URI. Distinct from `subject`, whom the task is
-  for, and `approver`, who approved it.
+  for, and `approval_basis.consent_principal`, who approved it.
 
 `tenant`:
 : A string naming the owning tenant. Distinct from any tenant
@@ -403,9 +403,20 @@ match against the Mission record
 `state`:
 : An array of strings. Matches a Mission whose current lifecycle
   state equals any listed value, drawn from the issuance profile's
-  open state space as extended by the profiles the deployment runs.
+  open state space as extended by the profiles the deployment runs. A
+  Mission at or past its `expires_at` is `terminated` with reason
+  `expired` for this match and in its summary, whether or not that
+  transition was persisted ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Mission Lifecycle and Gating").
   The AS MUST NOT refuse a filter for carrying a state value it does
-  not produce; such a value matches no Mission.
+  not produce; such a value matches no Mission, except that, for a
+  transition period, `revoked`, `expired`, `completed`, `superseded`,
+  or `cascaded` matches a Mission `terminated` with that termination
+  reason (`cascaded` matching `parent_terminated`), the issuance
+  profile's transition-period reading
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+  Termination"). A Mission matched this way is reported as
+  `terminated` with its `termination`, never under the filter's value.
 
 `created_after`, `created_before`:
 : RFC 3339 {{RFC3339}} date-times. Match a Mission whose `created_at`
@@ -481,12 +492,16 @@ The signed payload ({{management-endpoint}}) carries:
 
 `missions`:
 : REQUIRED. An array of Mission summary objects, each carrying
-  `id`, `state`, `version` (the Mission's state version,
+  `id`, `state`, `termination` when `state` is `terminated` (the
+  Mission's `termination` as the status profile's Mission Status
+  Response reports it, with a superseded Mission's `successor` inside
+  it),
+  `version` (the Mission's state version,
   {{I-D.draft-mcguinness-oauth-mission-status}}), `subject` (an
   object with `iss` and `sub`),
   `client_id`, `created_at`, and `expires_at` from the Mission
-  record, plus the lineage members `successor`, `predecessor`
-  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and `parent`
+  record, plus the lineage members `predecessor`
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}) and `parent`
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) where
   present on the record. A summary MUST NOT carry the Mission Intent,
   the Authority Set, or any member beyond these: enumeration answers
@@ -705,14 +720,18 @@ The outcomes:
 | Outcome | Meaning |
 |---|---|
 | `applied` | The operation succeeded: the transition was committed, or the Mission already stood in the operation's resulting non-terminal state (the status profile's idempotent case). |
-| `already_terminal` | The Mission already stood in a terminal state; when that state is the operation's own resulting state, this is the status profile's idempotent case, reported distinctly for operator clarity. |
+| `already_terminal` | The Mission was already `terminated`, whatever its termination reason, and is unchanged; when that reason is the operation's own (`revoked` for `revoke`, `completed` for `complete`), this is the status profile's idempotent case, reported distinctly for operator clarity, and otherwise it is the status profile's conflict, reported here because the bulk objective is met. |
 | `illegal_transition` | The operation is not legal from the Mission's current non-terminal state; the Mission is unchanged. |
 | `error` | The AS failed to process this Mission; its state is unverified. |
 
-A Mission in any terminal state reports `already_terminal`, taking
-precedence over the idempotent reading of `applied`; it is reported
-distinctly from `error` because, for a terminating operation, an
-already-terminal member is a satisfied objective, not a failure. After
+A `terminated` Mission, whatever its termination reason, reports
+`already_terminal`, taking precedence over the idempotent reading of
+`applied`; it is reported distinctly from `error` because, for a
+terminating operation, an already-terminal member is a satisfied
+objective, not a failure. `already_terminal` never reports a
+committed transition: a `revoke` member already terminated with
+reason `completed` is not revoked, and its recorded `termination` is
+unchanged. After
 a partial failure the spent bulk token is not reusable; the caller
 remediates with a fresh dry run over the same filter and a new
 execute: members already transitioned then report `already_terminal`,
@@ -756,8 +775,9 @@ Decoded dry-run response payload:
 ~~~
 
 The count is 3, more than the enumeration above: without `state` the
-filter also matches a suspended and a completed Mission (`revoke` is
-legal from `suspended`, so suspended Missions belong in the sweep).
+filter also matches a suspended Mission and one terminated with
+reason `completed` (`revoke` is legal from `suspended`, so suspended
+Missions belong in the sweep).
 The responder executes,
 re-sending the same `operation` and `filter` with `mode` of `execute`,
 the `bulk_token`, the same `reason`, and a fresh `nonce`
@@ -786,7 +806,8 @@ failure:
 ~~~
 
 One Mission was revoked, emitting its own lifecycle signal where
-signals run; the completed Mission needed nothing; one failed. The
+signals run; the completed Mission keeps its `completed` termination;
+one failed. The
 responder re-runs the dry run over the same filter, reviews the new
 count, and executes again: the revoked and completed members report
 `already_terminal` and only the failed one is retried.
@@ -1083,6 +1104,13 @@ this surface.
 
 \[\[ To be removed from the final specification ]]
 
+- Mission summaries carry `termination` beside `state`, and a
+  superseded Mission's `successor` inside it; for a transition period
+  a terminal state value in `filter.state` matches a Mission
+  terminated with that reason. `already_terminal` covers every
+  terminated Mission and never reports a revocation or changes the
+  recorded termination. The administrative `owner` is distinct from
+  `approval_basis.consent_principal` (#705).
 - A bulk `suspend` whose `on_expiry` is `resume` needs the distinct or
   elevated `resume` grant, checked at dry run and again at execute
   before any member changes. The caller is each committed schedule's

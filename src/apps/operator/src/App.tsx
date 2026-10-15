@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 interface FleetRow {
   id: string;
   state: string;
+  /** Present exactly when `state` is `terminated`: its `reason` says why. */
+  termination?: { reason: string };
   version: number;
   subject: string;
   approver: string;
@@ -34,13 +36,26 @@ const api = <T,>(p: string, init?: RequestInit): Promise<T> =>
 /** Map a mission state to a badge tone (@spec status#legal-transitions). */
 const STATE_TONE: Record<string, string> = {
   active: "ok",
-  completed: "ok",
   suspended: "warn",
-  revoked: "bad",
-  expired: "bad",
-  cascaded: "bad",
+  terminated: "bad",
+};
+
+/**
+ * A terminated mission's tone follows its termination reason
+ * (@spec mission#termination): a completed one ended well, a superseded one
+ * lives on in its successor, and any other reason (revoked, expired,
+ * parent_terminated, or one this console does not know) is bad.
+ */
+const REASON_TONE: Record<string, string> = {
+  completed: "ok",
   superseded: "muted",
 };
+
+const toneOf = (m: FleetRow): string =>
+  m.state === "terminated" ? (REASON_TONE[m.termination?.reason ?? ""] ?? "bad") : (STATE_TONE[m.state] ?? "muted");
+
+const stateLabel = (m: FleetRow): string =>
+  m.state === "terminated" && m.termination ? `terminated: ${m.termination.reason}` : m.state;
 
 export function App() {
   const [fleet, setFleet] = useState<Load<FleetRow[]>>({ status: "loading" });
@@ -77,7 +92,7 @@ export function App() {
           <article key={m.id} className={`card${selected === m.id ? " sel" : ""}`}>
             <div className="row">
               <code className="id">{m.id}</code>
-              <span className={`badge ${STATE_TONE[m.state] ?? "muted"}`}>{m.state}</span>
+              <span className={`badge ${toneOf(m)}`}>{stateLabel(m)}</span>
               <span className="ver">v{m.version}</span>
             </div>
             <div className="meta">

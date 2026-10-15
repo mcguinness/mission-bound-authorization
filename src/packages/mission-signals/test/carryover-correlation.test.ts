@@ -2,12 +2,14 @@
  * @spec draft-mcguinness-oauth-mission-signals (#lifecycle-event),
  * draft-mcguinness-oauth-mission-child-delegation (#carryover-evidence)
  *
- * A Child Mission Carryover cascade is an ordinary terminal commit that
- * additionally carries `carried_to`, the committed replacement Mission
- * identifier. This drives the REAL carryover completion transaction through a
- * real kernel wired to the emitter, captures the DELIVERED SET bytes from the
- * emission path (never a hand-built payload), and asserts the correlation is on
- * the carried child's `cascaded` event and absent from an excluded child's.
+ * A Child Mission Carryover cascade is an ordinary `terminated` commit with
+ * reason `parent_terminated` whose `termination` additionally carries
+ * `carried_to`, the committed replacement Mission identifier. This drives the
+ * REAL carryover completion transaction through a real kernel wired to the
+ * emitter, captures the DELIVERED SET bytes from the emission path (never a
+ * hand-built payload), and asserts the correlation is in the carried child's
+ * `termination` and absent from an excluded child's, with no top-level
+ * `carried_to` on any event.
  *
  * In-process and deterministic, mirroring the containment-commit harness.
  */
@@ -76,7 +78,7 @@ const eventOf = (set: string): Record<string, unknown> =>
   ] as Record<string, unknown>;
 
 describe("carryover cascade propagated by Mission Signals", () => {
-  it("delivers carried_to on the carried child's cascaded SET and omits it on an excluded child's", async () => {
+  it("delivers termination.carried_to on the carried child's parent_terminated SET and omits it on an excluded child's", async () => {
     const statusKeys = await generateKeyPair("ES256", { extractable: true });
     const emitter = new MissionSignalEmitter({
       key: statusKeys.privateKey,
@@ -139,29 +141,39 @@ describe("carryover cascade propagated by Mission Signals", () => {
     if ("error" in out) return;
     await emitter.drain();
 
-    const replacementId = (kernel.get(carried.id) as MissionRecord).carried_to as string;
+    const replacementId = (kernel.get(carried.id) as MissionRecord).termination
+      ?.carried_to as string;
     expect(replacementId).toBeDefined();
 
-    // The DELIVERED SET for the carried child: an ordinary `cascaded` event
-    // that additionally carries the committed replacement identifier.
-    const carriedSets = delivered.filter((set) => {
-      const event = eventOf(set);
-      return (event.mission as { id: string }).id === carried.id && event.state === "cascaded";
-    });
+    /** The delivered `parent_terminated` events for one Mission. */
+    const parentTerminated = (id: string) =>
+      delivered.filter((set) => {
+        const event = eventOf(set);
+        return (
+          (event.mission as { id: string }).id === id &&
+          event.state === "terminated" &&
+          (event.termination as { reason?: string } | undefined)?.reason === "parent_terminated"
+        );
+      });
+
+    // The DELIVERED SET for the carried child: an ordinary `parent_terminated`
+    // termination that additionally carries the committed replacement
+    // identifier, inside `termination`.
+    const carriedSets = parentTerminated(carried.id);
     expect(carriedSets).toHaveLength(1);
     const carriedEvent = eventOf(carriedSets[0] as string);
-    expect(carriedEvent.carried_to).toBe(replacementId);
+    const carriedTermination = carriedEvent.termination as Record<string, unknown>;
+    expect(carriedTermination.carried_to).toBe(replacementId);
+    expect(carriedTermination.parent).toBe(predecessor.id);
+    expect(carriedTermination.version).toBe(carriedEvent.version);
     expect(carriedEvent.prior_state).toBe("active");
     expect(decodeJwt(carriedSets[0] as string).iss).toBe(ISS);
 
-    // The excluded child's SET carries the same state and NO correlation.
-    const excludedSets = delivered.filter((set) => {
-      const event = eventOf(set);
-      return (event.mission as { id: string }).id === excluded.id && event.state === "cascaded";
-    });
+    // The excluded child's SET carries the same termination reason and NO correlation.
+    const excludedSets = parentTerminated(excluded.id);
     expect(excludedSets).toHaveLength(1);
     const excludedEvent = eventOf(excludedSets[0] as string);
-    expect(excludedEvent.carried_to).toBeUndefined();
+    expect((excludedEvent.termination as Record<string, unknown>).carried_to).toBeUndefined();
     expect(excludedEvent.prior_state).toBe("suspended");
 
     // The replacement's own activation event is an ordinary creation event: it
@@ -172,6 +184,12 @@ describe("carryover cascade propagated by Mission Signals", () => {
     );
     expect(replacementSets).toHaveLength(1);
     expect(eventOf(replacementSets[0] as string).state).toBe("active");
-    expect(eventOf(replacementSets[0] as string).carried_to).toBeUndefined();
+    expect(eventOf(replacementSets[0] as string)).not.toHaveProperty("termination");
+
+    // No delivered event carries a top-level `carried_to` or `successor`.
+    for (const set of delivered) {
+      expect(eventOf(set)).not.toHaveProperty("carried_to");
+      expect(eventOf(set)).not.toHaveProperty("successor");
+    }
   });
 });

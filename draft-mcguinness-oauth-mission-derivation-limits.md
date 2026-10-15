@@ -416,11 +416,10 @@ the `mission_error` token-error-response member
 with the value `derivations_exhausted`. The OAuth binding's rules for
 that member apply: it is diagnostic only, it grants nothing, an
 unrecognized value is ignored, and it is returned only to the
-authenticated client presenting the Mission's grant. The refusal maps
-as the OAuth binding's other token-endpoint lifecycle refusals do
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Error and Challenge
-Mapping"): `invalid_grant` ({{Section 5.2 of RFC6749}}), with
-`mission_error` as the optional detail.
+authenticated client presenting the Mission's grant. The refusal is
+`invalid_grant` ({{Section 5.2 of RFC6749}}) on every derivation path,
+a Token Exchange included, with `mission_error` as the optional
+detail.
 
 The following is an example of a token error response refusing a
 derivation under an exhausted limit:
@@ -714,6 +713,10 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 \[\[ To be removed from the final specification ]]
 
 -00
+
+- The derivation-limit refusal states its code directly,
+  `invalid_grant` on every derivation path, since the OAuth binding's
+  lifecycle refusal on a Token Exchange is `invalid_request` (#1154).
 
 - Approval Rendering and Effective Limit: the human approval of a
   standing consent renders the rule that establishes each admitted

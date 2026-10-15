@@ -176,15 +176,17 @@ export type DischargeOutcome = "discharged" | "already_discharged" | "terminal_n
  * Mission Status Response carries as a sibling of `mission`. The target form
  * and `event_id` are echoed AS THE CURRENT REQUEST SENT THEM: a selector-form
  * request's result never carries a digest it did not send. `prior_version` /
- * `current_version` are the versions of the commit THIS result reports: this
+ * `new_version` are the versions of the commit THIS result reports: this
  * request's own commit, or, for the replayed event case, the versions the
  * ORIGINAL commit produced. Equal for `already_discharged` and `terminal_noop`.
+ * An envelope signed with the earlier `current_version` member is returned
+ * from the replay store byte for byte, never re-signed.
  */
 export type DischargeResult = DischargeTargetForm & {
   event_id: string;
   outcome: DischargeOutcome;
   prior_version: number;
-  current_version: number;
+  new_version: number;
   /**
    * @spec discharge#discharge-result, discharge#discharge-carryover — present
    * only when the discharge was forwarded after carryover: the qualified

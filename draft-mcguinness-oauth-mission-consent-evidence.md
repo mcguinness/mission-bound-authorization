@@ -830,7 +830,8 @@ A Consent Evidence object has these members:
 
 `approver`:
 : REQUIRED. An object identifying the authenticated Approver. It MUST
-  carry `iss` and `sub`, per the Mission record's `approver`
+  carry `iss` and `sub`, per the Mission record's
+  `approval_basis.consent_principal`
   ({{I-D.draft-mcguinness-oauth-mission}}), so binding checks and record
   correlation are mechanical.
 
@@ -1711,6 +1712,8 @@ encoding difference to resolve before interoperating.
 
 \[\[ To be removed from the final specification ]]
 
+- The Consent Evidence `approver` correlates with the Mission record's
+  `approval_basis.consent_principal` (#705).
 - Binding to Mission Approval and the conformance floor apply at each
   human approval: a Mission instance activated by policy under a
   standing consent has no disclosure of its own (#1078).

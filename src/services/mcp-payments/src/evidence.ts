@@ -707,6 +707,37 @@ function envelopeKid(envelope: EvidenceEnvelope): string {
   }
 }
 
+/**
+ * @spec runtime-evidence#pre-decision-refusal (#1148, D379): the closed set a
+ * Refusal Record's `denial_reason` is drawn from, by the refusing component's
+ * role. A PEP names a pre-evaluation condition it established; the PDP's own
+ * refusal is `mission_context_missing`, an in-scope request that reached it
+ * without Mission decision context.
+ */
+export const REFUSAL_DENIAL_REASONS = Object.freeze({
+  pep: Object.freeze([
+    "token_invalid",
+    "mission_claim_missing",
+    "mission_reference_conflict",
+    "credential_authority_insufficient",
+    "request_unsupported",
+    "request_invalid",
+    "target_unresolvable",
+    "capability_source_unresolvable",
+    "decision_evidence_unverifiable",
+    "channel_failure",
+    "pdp_unreachable",
+    "state_unavailable",
+  ] as const),
+  pdp: Object.freeze(["mission_context_missing"] as const),
+});
+export type PepRefusalDenialReason = (typeof REFUSAL_DENIAL_REASONS.pep)[number];
+
+/** Whether `denialReason` is in the closed set for a Refusal Record the `role` emits. */
+export function isRefusalDenialReason(role: "pdp" | "pep", denialReason: string): boolean {
+  return (REFUSAL_DENIAL_REASONS[role] as readonly string[]).includes(denialReason);
+}
+
 /** Input to {@link EvidenceStore.recordRefusal}. `missionId` is store-level correlation only (see the file header note); `mission` is the spec's own OPTIONAL, established-only reference. */
 export interface RefusalRecordInput {
   missionId: string;
@@ -992,6 +1023,11 @@ export class EvidenceStore {
     input: RefusalRecordInput,
   ): Promise<RefusalRecord> {
     const signer = this.requireSigner(role);
+    // #1148, D379: a value outside the role's closed set is refused before
+    // anything is signed, sequenced or retained.
+    if (!isRefusalDenialReason(role, input.denial_reason)) {
+      throw new Error(`denial_reason ${JSON.stringify(input.denial_reason)} is not in the closed set for a "${role}" Refusal Record`);
+    }
     const sequence = input.mission !== undefined ? this.nextSequence(input.mission.id, emitterId, role) : undefined;
     // @spec runtime-evidence#request-digest-worked: a refusal that follows an
     // evaluation request digests that request as submitted; one that precedes

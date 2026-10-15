@@ -71,11 +71,16 @@ export {
   SUPPORTED_CONSTRAINT_KEYS,
   withoutCapabilitySources,
 } from "./authority-subset.js";
-export type {
-  MissionBinding,
-  MissionStatusLease,
-  StateSource,
-  StopPolicy,
+export {
+  COMMIT_IS_EFFECT_REASONS,
+  type LegacyRetainedFacts,
+  type MissionBinding,
+  type MissionStatusLease,
+  type MissionTermination,
+  normalizeLegacyMissionState,
+  readMissionTermination,
+  type StateSource,
+  type StopPolicy,
 } from "./binding.js";
 export { canonicalDigest, canonicalize, type JsonValue } from "./canonicalize.js";
 export {
@@ -125,8 +130,12 @@ export {
 } from "./cross-org-presentation.js";
 export { compareAmounts, InvalidAmountError, isValidAmount } from "./decimal-amount.js";
 export {
+  DPOP_PROOF_FUTURE_SKEW_S,
+  DPOP_PROOF_REPLAY_MAX_ENTRIES,
   DPOP_PROOF_REPLAY_WINDOW_S,
+  type DpopProofAdmission,
   type DpopProofReplay,
+  dpopProofIatAcceptableAt,
   newDpopProofReplay,
 } from "./dpop-replay.js";
 export {

@@ -127,13 +127,28 @@ async function childDpopProof(htu: string, htm: string, extra: Record<string, un
     .sign(childDpopKeys.privateKey);
 }
 
-/** POST /token as the child actor (private_key_jwt + child DPoP), with the dpop-nonce retry. */
-async function childTokenRequest(params: Record<string, string>): Promise<Response> {
+/** A child DPoP proof with exactly the given claims beside htu, htm and jti: no `iat` unless `claims` sets one. */
+async function childRawProof(claims: Record<string, unknown>): Promise<string> {
+  return new SignJWT({ htu: `${ISSUER}/token`, htm: "POST", jti: crypto.randomUUID(), ...claims })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(childDpopKeys.publicKey) })
+    .sign(childDpopKeys.privateKey);
+}
+
+/**
+ * POST /token as the child actor (private_key_jwt + child DPoP), with the
+ * dpop-nonce retry. `makeProof` replaces the default fresh proof (the
+ * freshness cases).
+ */
+async function childTokenRequest(
+  params: Record<string, string>,
+  makeProof?: (extra: Record<string, unknown>) => Promise<string>,
+): Promise<Response> {
   const htu = `${ISSUER}/token`;
+  const proof = makeProof ?? ((extra: Record<string, unknown>) => childDpopProof(htu, "POST", extra));
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(htu, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await childDpopProof(htu, "POST", extra) },
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
       body: new URLSearchParams({
         ...params,
         client_assertion: await childClientAssertion(),
@@ -423,6 +438,24 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     expect(body.error).toBe("invalid_grant");
     // @spec #denial-reasons — the symbolic reason rides in mission_denial_reason.
     expect(body.mission_denial_reason).toBe("parent_mismatch");
+  });
+
+  it("a parent that is not active refuses the child-creation exchange with invalid_request and parent_not_active, creating no child (@spec child-delegation#denial-reasons, mission#issuance-gating, #1154)", async () => {
+    const revoked = await issueParentMission();
+    as.kernel.transition(revoked.missionId, "revoke");
+    const missionCountBefore = as.kernel.allMissions().length;
+    const res = await createChildViaExchange({
+      subjectToken: revoked.accessToken,
+      parent: revoked.missionId,
+      childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+    });
+    const body = (await res.json()) as { error?: string; mission_denial_reason?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    // The exchange refuses invalid_request; the parent_mismatch cross-check above keeps invalid_grant.
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_denial_reason).toBe("parent_not_active");
+    expect(body.access_token).toBeUndefined();
+    expect(as.kernel.allMissions().length).toBe(missionCountBefore);
   });
 
   it("a refresh token as subject_token is rejected (#448: a reusable bearer refresh credential MUST NOT carry possession)", async () => {
@@ -750,6 +783,54 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
     expect(boundGrant).toBeTruthy();
     expect(as.kernel.findByGrant(boundGrant)?.id).toBe(missionId);
     expect(as.kernel.get(missionId)?.derivation_count).toBe(1);
+  });
+
+  // @spec RFC 9449 Section 4.3 (#1173): the redemption's proof is complete and fresh.
+  it("redemption refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused", async () => {
+    const nowS = (): number => Math.floor(Date.now() / 1000);
+    const outside = [
+      { label: "no iat", claims: {}, description: "DPoP proof has no iat" },
+      { label: "a non-numeric iat", claims: { iat: "now" }, description: "invalid DPoP proof" },
+      { label: "a boolean iat", claims: { iat: true }, description: "invalid DPoP proof" },
+      { label: "a day old", claims: { iat: nowS() - 86_400 }, description: "outside the acceptance window" },
+      { label: "past the window", claims: { iat: nowS() - 260 }, description: "outside the acceptance window" },
+      { label: "an hour ahead", claims: { iat: nowS() + 3_600 }, description: "outside the acceptance window" },
+    ];
+    // One child, under a dedicated parent so the block's fan-out is unchanged:
+    // a refused proof consumes nothing, and an assertion redeems again through
+    // grant reuse, so only the proof decides each case.
+    const parent = await issueParentMission();
+    const created = await createChildViaExchange({
+      subjectToken: parent.accessToken,
+      parent: parent.missionId,
+      childActor: { sub: "subagent-invoice-extractor", sub_profile: "ai_agent" },
+    });
+    const createdBody = (await created.json()) as { access_token?: string };
+    expect(created.status, JSON.stringify(createdBody)).toBe(200);
+    const assertion = createdBody.access_token as string;
+    for (const { label, claims, description } of outside) {
+      const res = await childTokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion }, (extra) =>
+        childRawProof({ ...claims, ...extra }),
+      );
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, label).toBe(400);
+      expect(body.error, label).toBe("invalid_dpop_proof");
+      expect(body.error_description, label).toContain(description);
+      expect(body.access_token, label).toBeUndefined();
+    }
+    for (const offset of [-230, 50]) {
+      let sent = "";
+      const ok = await childTokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion }, async (extra) => {
+        sent = await childRawProof({ iat: nowS() + offset, ...extra });
+        return sent;
+      });
+      expect(ok.status, `iat ${offset}: ${JSON.stringify(await ok.clone().json())}`).toBe(200);
+      const replay = await childTokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion }, async () => sent);
+      const replayBody = (await replay.json()) as { error?: string; error_description?: string };
+      expect(replay.status, `iat ${offset}, replayed`).toBe(400);
+      expect(replayBody.error, `iat ${offset}, replayed`).toBe("invalid_dpop_proof");
+      expect(replayBody.error_description, `iat ${offset}, replayed`).toContain("replayed");
+    }
   });
 
   it("ADVISOR CHECK 2 (reuse branch): the same assertion redeems again via grant reuse (no duplicate Grant)", async () => {

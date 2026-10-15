@@ -1155,7 +1155,14 @@ prior permit expires; the action is not parameter-bound, so no
     "actor": { "client_id": "s6BhdRkqt3" },
     "credential": {
       "issuer": "https://as.example.com",
-      "expires_at": "2026-11-02T09:14:00Z"
+      "expires_at": "2026-11-02T09:14:00Z",
+      "authority": [
+        {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": ["reconciliation.run"]
+        }
+      ]
     },
     "prior_evaluation_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
   }

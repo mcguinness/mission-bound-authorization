@@ -133,7 +133,9 @@ describe("authority_changed — builder emission (@spec signals#lifecycle-event)
     });
     kernel.transition(mission.id, "revoke");
 
-    const revokeCommit = commits.find((c) => c.state === "revoked");
+    const revokeCommit = commits.find(
+      (c) => c.state === "terminated" && c.termination?.reason === "revoked",
+    );
     expect(revokeCommit?.prior_state).toBe("active"); // state DID change: not metadata-only
     expect(revokeCommit?.authority_changed).toBeUndefined();
 

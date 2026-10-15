@@ -5,7 +5,9 @@
  * `transaction-authorization` and no dev ordinary-token route (D332), the
  * `mcp-payments` PEP served over HTTP MCP at the declared resource audience
  * with DPoP verified on every request (D315), the reference PDP, OpenFGA and
- * the in-process approval service. No MAS join route is mounted.
+ * the in-process approval service. No MAS join route is mounted. The declared
+ * outcome reconciler runs for the process's lifetime, its operator alerts one
+ * JSON line each on stderr (#1103).
  * src/docs/initial-runtime-deployment.md § Run it publishes the command.
  *
  * A startup failure prints one `as-native: startup failed:` line and exits 1.

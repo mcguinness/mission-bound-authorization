@@ -57,8 +57,14 @@ import {
   projectThroughEffective,
   SourceUnavailableError,
 } from "../kernel/derive.js";
-import { isSubsetSetIgnoringCapabilitySources, projectScope, splitScope } from "@mission/core";
+import {
+  DPOP_PROOF_REPLAY_WINDOW_S,
+  isSubsetSetIgnoringCapabilitySources,
+  projectScope,
+  splitScope,
+} from "@mission/core";
 import { UniqueViolationError } from "@mission/store";
+import { dpopProofIatAcceptableAt, refuseTokenEndpointProof, type TokenEndpointProofFailure } from "./dpop-replay.js";
 import {
   type CreationOperation,
   type CreationReservation,
@@ -68,7 +74,12 @@ import {
 } from "../kernel/creation-idempotency.js";
 import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, ExpansionDeferralError } from "../kernel/deferred.js";
 import { CarryoverRetrievalError } from "../kernel/carryover.js";
-import { ChildDelegationError, createChildMission } from "../kernel/child-delegation.js";
+import {
+  ChildDelegationError,
+  createChildMission,
+  presentedTokenChildRefusal,
+  presentedTokenFanoutRefusal,
+} from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
 import {
@@ -80,6 +91,12 @@ import {
   TERMINAL_STATES,
 } from "../kernel/types.js";
 import { mintChildGrant } from "./child-grant.js";
+import {
+  DISPATCH_HANDOFF_CONFLICTS,
+  DISPATCH_HANDOFF_PARAM,
+  handleDispatchHandoffExchange,
+} from "./dispatch-handoff.js";
+import { DELEGATION_HANDLE_CONFLICTS, handleDelegationHandleExchange } from "./delegation-handle.js";
 import {
   childErrorCode,
   gateErrorToMissionError,
@@ -98,6 +115,8 @@ export const TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token
 
 /** @spec RFC 8693 §3 — the access-token token type (the async-delegation subject_token). */
 export const ACCESS_TOKEN_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
+/** @spec cross-org-delegation#projection-exchange: the Chain Presentation subject_token_type. */
+const CHAIN_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:mission-delegation-chain";
 
 /** @spec RFC 8693 §3 — the JWT token type. The `requested_token_type` that selects
  *  the CHILD-CREATION exchange (a child-bound RFC 7523 JWT authorization grant is
@@ -145,7 +164,7 @@ export function defaultSubjectResolver(issuer: string): SubjectResolver {
  *  `invalid_target`, `invalid_dpop_proof`) and for the `invalid_grant` returns
  *  whose distinct `error_description` the invalid_grant renderer would
  *  otherwise overwrite. */
-function txError(ctx: KoaContextWithOIDC, status: number, error: string, description: string): void {
+export function txError(ctx: KoaContextWithOIDC, status: number, error: string, description: string): void {
   ctx.status = status;
   ctx.body = { error, error_description: description };
   ctx.set("cache-control", "no-store");
@@ -169,19 +188,24 @@ class ContinuationRefusal extends Error {
  * may still continue later: `unauthorized_client`, never `invalid_continuation`.
  * Contained or exhausted authority leaves the audience unpermitted:
  * `invalid_target`. The derivation cap is a limit: `invalid_grant`. Every other
- * exchange keeps core's `invalid_grant` (mission#issuance-gating). `state` is
- * the Mission's own state, read after a gate throw, since the gate's expiry
- * clock may have just committed `expired`; `mission_error` rides as the
- * diagnostic where core defines one.
+ * exchange keeps core's `invalid_grant` (mission#issuance-gating). `observed`
+ * is the Mission's own OBSERVED record, read after a gate throw (its expiry
+ * and any ancestor's termination apply whether or not persisted);
+ * `mission_error` rides as the diagnostic where one is defined, naming the
+ * Mission's recorded termination reason.
  */
-function refuseContinuationGate(ctx: KoaContextWithOIDC, reason: GateError["reason"], state: string | undefined): void {
+function refuseContinuationGate(
+  ctx: KoaContextWithOIDC,
+  reason: GateError["reason"],
+  observed: { state: string; termination?: { reason: string } } | undefined,
+): void {
   let error: string;
   switch (reason) {
     case "mission_expired":
       error = "invalid_continuation";
       break;
     case "mission_not_active":
-      error = state !== undefined && TERMINAL_STATES.has(state as MissionState) ? "invalid_continuation" : "unauthorized_client";
+      error = observed !== undefined && TERMINAL_STATES.has(observed.state as MissionState) ? "invalid_continuation" : "unauthorized_client";
       break;
     case "authority_contained":
     case "authority_exhausted":
@@ -191,7 +215,7 @@ function refuseContinuationGate(ctx: KoaContextWithOIDC, reason: GateError["reas
       error = "invalid_grant";
   }
   txError(ctx, 400, error, `continuation Mission gate refused issuance (${reason})`);
-  const missionError = gateErrorToMissionError(reason, state);
+  const missionError = gateErrorToMissionError(reason, observed);
   if (missionError) (ctx.body as Record<string, unknown>).mission_error = missionError;
 }
 
@@ -214,14 +238,70 @@ export function continuationAuthorityFilter(
   };
 }
 
+/** @spec RFC 9449 Section 4.3 — the proof's clock-skew allowance, one value for every verifier (`@mission/core`). */
+export { DPOP_PROOF_FUTURE_SKEW_S } from "./dpop-replay.js";
+
 /**
- * @spec RFC 9449 — record-and-check a manually verified DPoP proof's `jti` in
- * the bounded replay cache: a missing/empty jti or a reuse within the window
- * refuses (invalid_dpop_proof). Shared by every manual DPoP block at the token
- * endpoint (the custom grants); exported for the provider.ts blocks.
+ * Private JWK members: a proof key carrying any of them is not a public key.
+ * `k` is a symmetric (`oct`) key's, so this also refuses a symmetric proof key.
  */
-export function freshProofJti(opts: AdapterOptions, jti: unknown): boolean {
-  return typeof jti === "string" && jti !== "" && opts.dpopProofReplay?.check(jti) === true;
+const PRIVATE_JWK_MEMBERS = ["d", "p", "q", "dp", "dq", "qi", "k"] as const;
+
+/** A verified token-endpoint DPoP proof: its public key and that key's thumbprint. */
+export interface VerifiedTokenEndpointProof {
+  jwk: JWK;
+  jkt: string;
+}
+
+/**
+ * @spec RFC 9449 Section 4.3 (#1163 review): the token endpoint's own DPoP
+ * proof checks, for the exchanges that verify a proof themselves rather than
+ * through oidc-provider. All REQUIRED, in order: a header `jwk` that is a
+ * public, asymmetric key (no private or symmetric members); a `dpop+jwt`
+ * signature under it; `htu` this token endpoint and `htm` POST; an `iat`
+ * inside the acceptance window ({@link DPOP_PROOF_FUTURE_SKEW_S}); and a `jti`
+ * not seen within the replay window. A previously unseen `jti` alone does not
+ * establish freshness. Returns the refusal's description on failure (the
+ * caller answers `invalid_dpop_proof`); the `jti` is recorded only once every
+ * other check has passed.
+ */
+export async function verifyTokenEndpointDpop(
+  opts: AdapterOptions,
+  proofJws: string,
+): Promise<{ ok: true; proof: VerifiedTokenEndpointProof } | ({ ok: false } & TokenEndpointProofFailure)> {
+  let jwk: JWK;
+  let jkt: string;
+  let payload: Record<string, unknown>;
+  try {
+    const header = decodeProtectedHeader(proofJws);
+    const candidate = header.jwk as (JWK & Record<string, unknown>) | undefined;
+    if (!candidate || PRIVATE_JWK_MEMBERS.some((m) => candidate[m] !== undefined)) {
+      return { ok: false, description: "invalid DPoP proof" };
+    }
+    jwk = candidate;
+    jkt = await calculateJwkThumbprint(jwk);
+    ({ payload } = (await jwtVerify(proofJws, jwk, { typ: "dpop+jwt" })) as { payload: Record<string, unknown> });
+  } catch {
+    return { ok: false, description: "invalid DPoP proof" };
+  }
+  if (payload.htu !== `${opts.issuer}/token` || payload.htm !== "POST") {
+    return { ok: false, description: "invalid DPoP proof" };
+  }
+  if (typeof payload.iat !== "number") return { ok: false, description: "DPoP proof has no iat" };
+  if (!dpopProofIatAcceptableAt(payload.iat, Date.now())) {
+    return { ok: false, description: "DPoP proof iat is outside the acceptance window" };
+  }
+  // @spec RFC 9449 Section 11.1, #1173 (D375): the jti is single-use; at the
+  // cache's bound a NEW jti is refused retryably and no live entry is evicted.
+  const admission =
+    typeof payload.jti === "string" && payload.jti !== "" ? opts.dpopProofReplay?.admit(payload.jti) : undefined;
+  if (!admission || (!admission.admitted && admission.reason === "replay")) {
+    return { ok: false, description: "DPoP proof jti missing or replayed" };
+  }
+  if (!admission.admitted) {
+    return { ok: false, description: "DPoP proof replay cache is at capacity", retryAfterS: admission.retryAfterS };
+  }
+  return { ok: true, proof: { jwk, jkt } };
 }
 
 /**
@@ -259,8 +339,51 @@ export async function handleTokenExchangeGrant(
   // ICA param hard-checks below, so the ICA continuation path is byte-for-byte
   // unchanged whenever the flag is absent. The familyStore lookup (NOT a gty string)
   // is the discriminator on every subsequent hop.
-  const requestRefresh = params.request_refresh_token;
-  if (requestRefresh === "true" || requestRefresh === true) {
+  // @spec mission-template#dispatch-handoff (#1158, D361): the explicit
+  // handoff selector, checked FIRST: a malformed value, or one combined with
+  // another exchange's selector, is refused here and never falls through to
+  // that exchange (child creation included).
+  const handoff = params[DISPATCH_HANDOFF_PARAM];
+  if (handoff !== undefined) {
+    singleResource();
+    if (handoff !== "true" && handoff !== true) {
+      txError(ctx, 400, "invalid_request", `${DISPATCH_HANDOFF_PARAM} must be true`);
+      return;
+    }
+    const conflict = DISPATCH_HANDOFF_CONFLICTS.find((p) => params[p] !== undefined);
+    if (conflict) {
+      txError(ctx, 400, "invalid_request", `${DISPATCH_HANDOFF_PARAM} cannot be combined with ${conflict}`);
+      return;
+    }
+    if (params.requested_token_type !== JWT_TOKEN_TYPE) {
+      txError(ctx, 400, "invalid_request", `${DISPATCH_HANDOFF_PARAM} requires the jwt requested_token_type`);
+      return;
+    }
+    if (profileDisabled("templates")) return;
+    await handleDispatchHandoffExchange(opts, ctx);
+    return;
+  }
+
+  // @spec continuation#transport-async (#1157, review P2): `audience` selects
+  // the delegation-handle request; the async transport takes `resource`, never
+  // `audience`. A request that would route to either and combines `audience`
+  // with another exchange's parameter is refused here, before routing, so it
+  // is never served as that exchange (no family, no reservation, no derivation
+  // count). The Chain Presentation exchange, which takes `audience` itself,
+  // is not one of them.
+  const asyncSelected = params.request_refresh_token === "true" || params.request_refresh_token === true;
+  const handleSelected =
+    params.requested_token_type === ACCESS_TOKEN_TOKEN_TYPE && params.subject_token_type !== CHAIN_TOKEN_TYPE;
+  if (params.audience !== undefined && (asyncSelected || handleSelected)) {
+    singleResource();
+    const conflict = DELEGATION_HANDLE_CONFLICTS.find((p) => params[p] !== undefined);
+    if (conflict) {
+      txError(ctx, 400, "invalid_request", `audience (a delegation-handle request) cannot be combined with ${conflict}`);
+      return;
+    }
+  }
+
+  if (asyncSelected) {
     singleResource();
     if (profileDisabled("async-delegation")) return;
     await handleAsyncDelegationExchange(opts, provider, ctx);
@@ -273,13 +396,14 @@ export async function handleTokenExchangeGrant(
   // byte-for-byte unchanged whenever neither value is present:
   //   - child-creation issues a child-bound RFC 7523 JWT authorization grant (jwt);
   //   - expansion defers a Mission access token (or refuses a non-widening request).
-  // The subject_token possession rule (control the subject_token's OWN cnf) is the
-  // inverse of the async transport's deliberate re-binding; see verifySubjectPossession.
+  // The subject_token possession rule (control the subject_token's OWN cnf) is
+  // the one the async transport's delegation handle also follows (#1157); see
+  // verifySubjectPossession.
   // @spec cross-org-delegation#projection-exchange — a Chain Presentation
   // subject_token forks BEFORE the requested_token_type forks: the chain
   // exchange also requests an access token, and the subject_token_type is the
   // discriminator RFC 8693 provides for exactly this.
-  if (params.subject_token_type === "urn:ietf:params:oauth:token-type:mission-delegation-chain") {
+  if (params.subject_token_type === CHAIN_TOKEN_TYPE) {
     singleResource();
     if (profileDisabled("cross-org")) return;
     await handleCrossOrgChainExchange(
@@ -288,7 +412,7 @@ export async function handleTokenExchangeGrant(
         ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
         tokenKey: opts.childGrantKey as CryptoKey,
         tokenKid: opts.childGrantKid as string,
-        proofJtiFresh: (jti) => freshProofJti(opts, jti),
+        verifyDpop: (proofJws) => verifyTokenEndpointDpop(opts, proofJws),
         now: () => opts.kernel.nowDate(),
         ...(opts.scopeProjection ? { scopeProjection: opts.scopeProjection } : {}),
       },
@@ -304,6 +428,14 @@ export async function handleTokenExchangeGrant(
   }
   if (params.requested_token_type === ACCESS_TOKEN_TOKEN_TYPE) {
     singleResource();
+    // @spec continuation#transport-async (#1157, D358): `audience` selects the
+    // delegation-handle request (expansion never carries it); its conflicts
+    // were refused above, before routing.
+    if (params.audience !== undefined) {
+      if (profileDisabled("async-delegation")) return;
+      await handleDelegationHandleExchange(opts, provider, ctx);
+      return;
+    }
     if (profileDisabled("expansion")) return;
     await handleExpansionExchange(opts, provider, ctx);
     return;
@@ -423,31 +555,20 @@ export async function handleTokenExchangeGrant(
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const currentActor = { iss: opts.issuer, sub: client.clientId };
 
-  // DPoP: derive the presenter jkt exactly as mintDeferredToken does.
+  // DPoP: the presenter's key proof.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) {
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
-  if (!freshProofJti(opts, proofJti)) {
-    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
-    return;
-  }
+  const { jkt } = verified.proof;
   // The DPoP key MUST be the ICA's confirmed key: an ICA is never a bearer
   // token.
   if (ica.cnf.jkt !== jkt) {
@@ -483,10 +604,17 @@ export async function handleTokenExchangeGrant(
     return;
   }
   // A Mission that ended (terminal, or past its expiry) ended the chain, even
-  // where the store has not yet observed it.
-  const expired = record.state === "expired" || Date.parse(record.expires_at) <= opts.kernel.nowDate().getTime();
-  if (expired || TERMINAL_STATES.has(record.state)) {
-    refuseContinuationGate(ctx, expired ? "mission_expired" : "mission_not_active", record.state);
+  // where the store has not yet observed it. @spec mission#termination: the
+  // OBSERVED record keeps a recorded cause: a Mission revoked, completed or
+  // superseded before its `expires_at` passed still reports that reason, and
+  // only a Mission whose own termination is `expired` reports expiry.
+  const observed = opts.kernel.observe(record);
+  if (TERMINAL_STATES.has(observed.state)) {
+    refuseContinuationGate(
+      ctx,
+      observed.termination?.reason === "expired" ? "mission_expired" : "mission_not_active",
+      observed,
+    );
     return;
   }
   // Limits come after a permanently unusable hop: the chain's finite hop-count
@@ -499,7 +627,7 @@ export async function handleTokenExchangeGrant(
     return;
   }
   if (record.derivation_limit !== null && record.derivation_count >= record.derivation_limit) {
-    refuseContinuationGate(ctx, "derivation_cap_exhausted", record.state);
+    refuseContinuationGate(ctx, "derivation_cap_exhausted", observed);
     return;
   }
 
@@ -525,7 +653,7 @@ export async function handleTokenExchangeGrant(
     opts.kernel.gateActive(resolved.missionId);
   } catch (e) {
     if (e instanceof GateError) {
-      refuseContinuationGate(ctx, e.reason, opts.kernel.get(resolved.missionId)?.state);
+      refuseContinuationGate(ctx, e.reason, opts.kernel.observedRecord(resolved.missionId));
       return;
     }
     throw e;
@@ -720,7 +848,7 @@ export async function handleTokenExchangeGrant(
     // distinct description from the store path in rule 4). The checks above
     // leave this to an empty effective set, or to a state change since they ran.
     if (e instanceof GateError) {
-      refuseContinuationGate(ctx, e.reason, opts.kernel.get(resolved.missionId)?.state);
+      refuseContinuationGate(ctx, e.reason, opts.kernel.observedRecord(resolved.missionId));
       return;
     }
     // issueCrossDomainGrant throws a bare Error when no authority-set entry maps
@@ -781,6 +909,29 @@ export async function handleTokenExchangeGrant(
  * second derivation count, and never a sibling refresh token once the initial
  * one is consumed (consumption proves delivery).
  */
+/**
+ * @spec mission#self-exchange rule 2 (#825 PR 2c, D353) — the authority a
+ * verified Mission access token itself carries, or `undefined` when it cannot
+ * be read in full: a missing or empty `authorization_details`, or an entry
+ * without its type, resource and string actions. A caller refuses the
+ * exchange on `undefined`; it never substitutes the Mission's authority.
+ */
+export function presentedTokenAuthority(claims: Record<string, unknown>): AuthorityEntry[] | undefined {
+  const raw = claims.authorization_details;
+  const wellFormed = (e: unknown): boolean => {
+    if (typeof e !== "object" || e === null || Array.isArray(e)) return false;
+    const entry = e as Record<string, unknown>;
+    return (
+      typeof entry.type === "string" &&
+      typeof entry.resource === "string" &&
+      Array.isArray(entry.actions) &&
+      entry.actions.every((a) => typeof a === "string")
+    );
+  };
+  if (!Array.isArray(raw) || raw.length === 0 || !raw.every(wellFormed)) return undefined;
+  return raw as AuthorityEntry[];
+}
+
 export async function handleAsyncDelegationExchange(
   opts: AdapterOptions,
   provider: Provider,
@@ -808,31 +959,21 @@ export async function handleAsyncDelegationExchange(
   // the DPoP-derived presenter jkt (reuse the ICA handler's DPoP block). The new
   // access + refresh tokens are sender-constrained to THIS key; a disconnected client
   // presents a fresh DPoP proof per refresh, matching the refresh token's jkt.
+  // @spec RFC 9449 Section 4.3 (#1157 review P1): the proof proving the
+  // delegation handle's key is complete and fresh, through the shared
+  // token-endpoint verifier (iat window and jti replay included).
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const proofJws = ctx.get("DPoP");
   if (!proofJws) {
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  const verifiedProof = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verifiedProof.ok) {
+    refuseTokenEndpointProof(ctx, verifiedProof);
     return;
   }
-  if (!freshProofJti(opts, proofJti)) {
-    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
-    return;
-  }
+  const { jkt } = verifiedProof.proof;
 
   // Step 2: resolve the Mission from the base mission access token (mirror the
   // /transaction handler's resolution: verify on the AS jwks, read mission.id).
@@ -869,16 +1010,49 @@ export async function handleAsyncDelegationExchange(
   // @spec async-delegation: the delegation handle (the base access token) is
   // bound to the acting client. Require the base token's client_id to equal the
   // authenticated acting client, so an authenticated client cannot present a base
-  // token issued to a DIFFERENT client and continue that Mission. The continuation
-  // family is re-bound to the acting client's own DPoP key (which may differ from
-  // the base token's key, so the base cnf is deliberately NOT required to match).
+  // token issued to a DIFFERENT client and continue that Mission.
   if (baseClaims.client_id !== client.clientId) {
     txError(ctx, 400, "invalid_grant", "subject_token was not issued to the acting client");
+    return;
+  }
+  // @spec draft-zhu-oauth-async-delegation-05 Section 4.3,
+  // continuation#transport-async (#1157, D358): the subject_token is a
+  // delegation handle: its audience identifies the authenticated acting
+  // client (a single-valued `aud` equal to its client_id; a resource-audienced
+  // access token is refused), and the exchange enforces its sender constraint
+  // by possession of the handle's OWN confirmation key. Client authentication
+  // never satisfies a constraint bound to another key. Both run before the
+  // idempotency lookup, so a retry recovers a recorded family only through a
+  // handle it can present.
+  if (baseClaims.aud !== client.clientId) {
+    txError(ctx, 400, "invalid_grant", "subject_token is not a delegation handle audienced to the acting client");
+    return;
+  }
+  // A handle without `cnf.jkt` never matches a DPoP key thumbprint, so this
+  // one comparison refuses both an unconstrained token and a wrong key.
+  if ((baseClaims.cnf as { jkt?: unknown } | undefined)?.jkt !== jkt) {
+    txError(ctx, 400, "invalid_grant", "possession proof does not match the subject_token confirmation key (cnf.jkt)");
     return;
   }
   const record = kernel.get(missionId);
   if (!record) {
     txError(ctx, 400, "invalid_grant", "subject_token mission not found");
+    return;
+  }
+  // @spec mission#self-exchange rule 1 (#825 PR 2c, D353) — a no-actor
+  // exchange is refused unless the authenticated client is the Mission's
+  // approved agent, the Mission Record's own client_id, not merely the client
+  // the base token names.
+  if (record.client_id !== client.clientId) {
+    txError(ctx, 400, "invalid_request", "a no-actor exchange is open only to the Mission's approved agent");
+    return;
+  }
+  // @spec mission#self-exchange rule 2 (#825 PR 2c, D312, D353) — the presented
+  // token's own authority bounds the family. Read here, before the idempotency
+  // lookup, so a retry recovers a recorded family only within it.
+  const presentedAuthority = presentedTokenAuthority(baseClaims);
+  if (!presentedAuthority) {
+    txError(ctx, 400, "invalid_grant", "subject_token carries no readable authorization_details");
     return;
   }
 
@@ -914,8 +1088,8 @@ export async function handleAsyncDelegationExchange(
 
   // @spec continuation#transport-async — the async-delegation operation
   // fingerprint: the RESOLVED base Mission (never the raw subject_token), the
-  // ACTING client's cnf (this exchange deliberately re-binds the family to the
-  // acting key), the requested confined subset, the target, and the selecting
+  // acting client's cnf (the handle's own key, whose possession was proved
+  // above), the requested confined subset, the target, and the selecting
   // request_refresh_token parameter.
   const fingerprint = creationFingerprint({
     op: "async-delegation",
@@ -940,14 +1114,15 @@ export async function handleAsyncDelegationExchange(
   // family derivation (or whose Mission changed state) when it succeeded.
   const existing = idem.find(client.clientId, creationRequestId);
   if (existing) {
-    await recoverAsyncDelegation(opts, provider, ctx, existing, fingerprint, jkt);
+    await recoverAsyncDelegation(opts, provider, ctx, existing, fingerprint, jkt, presentedAuthority);
     return;
   }
 
   // Step 3: require the Mission ACTIVE, an intra-domain target, and a confined subset.
   const active = kernel.applyExpiry(record);
   if (active.state !== "active") {
-    txError(ctx, 400, "invalid_grant", `mission ${missionId} is ${active.state}`);
+    // @spec mission#issuance-gating (#1154): a Token Exchange refuses a Mission that is not active with invalid_request.
+    txError(ctx, 400, "invalid_request", `mission ${missionId} is ${active.state}`);
     return;
   }
   // Intra-domain only: the target MUST be served by this issuer. A cross-domain
@@ -957,7 +1132,8 @@ export async function handleAsyncDelegationExchange(
     return;
   }
   // Confine the requested authorization_details to a subset of the ACTIVE Authority
-  // Set. Absent -> the full active set (the Mission's authority is the ceiling).
+  // Set and of the presented token's own authority. Absent -> the presented
+  // token's authority as the active set narrows it (the Mission is the ceiling).
   // Containment: the ceiling (and the absent-case default) is the EFFECTIVE set,
   // so a contained capability cannot ride an async-delegation family.
   // @spec issuance-grant#effective-set-projection (#617 review 1) — resolved
@@ -975,10 +1151,18 @@ export async function handleAsyncDelegationExchange(
     }
     throw e;
   }
+  // @spec mission#self-exchange rule 2, runtime#input-authority (#825 PR 2c,
+  // D312) — this is a no-actor exchange of the agent's own token, so the family
+  // is bounded by the presented token's own authority (read above) as well as
+  // the Mission's: a down-scoped token never opens a family broader than itself.
   let confinedSubset: AuthorityEntry[];
   if (requestedSubset === undefined) {
-    confinedSubset = effective;
+    confinedSubset = projectThroughEffective(presentedAuthority, effective);
   } else {
+    if (!isSubsetSetIgnoringCapabilitySources(requestedSubset, presentedAuthority)) {
+      txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the presented token's authority");
+      return;
+    }
     if (!isSubsetSetIgnoringCapabilitySources(requestedSubset, effective)) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority");
       return;
@@ -1033,7 +1217,7 @@ export async function handleAsyncDelegationExchange(
     if (e instanceof UniqueViolationError) {
       const winner = idem.find(client.clientId, creationRequestId);
       if (winner) {
-        await recoverAsyncDelegation(opts, provider, ctx, winner, fingerprint, jkt);
+        await recoverAsyncDelegation(opts, provider, ctx, winner, fingerprint, jkt, presentedAuthority);
         return;
       }
     }
@@ -1074,7 +1258,10 @@ export async function handleAsyncDelegationExchange(
     if (e instanceof GateError) {
       familyStore.invalidate(grantId);
       await (grant as unknown as { destroy: () => Promise<void> }).destroy();
-      const body = { error: "invalid_grant", error_description: e.message };
+      // @spec mission#issuance-gating (#1154): a lifecycle refusal on this
+      // exchange is invalid_request; the derivation cap stays invalid_grant.
+      const lifecycle = e.reason === "mission_not_active" || e.reason === "mission_expired";
+      const body = { error: lifecycle ? "invalid_request" : "invalid_grant", error_description: e.message };
       idem.failReserved(client.clientId, creationRequestId, { status: 400, body });
       ctx.status = 400;
       ctx.body = body;
@@ -1219,7 +1406,7 @@ function projectRarThroughEffective(
  * the injected source, else the local kernel. Read per call (never captured at
  * build time) so provider.ts and this file always agree on the source.
  */
-function authoritySource(opts: AdapterOptions): EffectiveAuthoritySource {
+export function authoritySource(opts: AdapterOptions): EffectiveAuthoritySource {
   return opts.authoritySource ?? opts.kernel;
 }
 
@@ -1253,6 +1440,7 @@ async function recoverAsyncDelegation(
   op: CreationOperation,
   fingerprint: string,
   presenterJkt: string,
+  presentedAuthority: readonly AuthorityEntry[],
 ): Promise<void> {
   if (op.op !== "async-delegation" || op.fingerprint !== fingerprint) {
     txError(
@@ -1295,11 +1483,28 @@ async function recoverAsyncDelegation(
   }
   const active = opts.kernel.applyExpiry(record);
   if (active.state !== "active") {
-    txError(ctx, 400, "invalid_grant", `recorded mission is ${active.state}`);
+    txError(ctx, 400, "invalid_request", `recorded mission is ${active.state}`);
     return;
   }
   if (!grantId || !target || !opts.familyStore?.resolve(grantId)) {
     txError(ctx, 400, "invalid_grant", "recorded delegation family not found");
+    return;
+  }
+  // The family's recorded authority: the grant's rar, the structural subset it
+  // was created with, or for a completed delivery whose grant is gone, the
+  // authority its stored response carried.
+  const GrantModel = (provider as unknown as {
+    Grant: { find: (id: string) => Promise<{ rar?: unknown } | undefined> };
+  }).Grant;
+  const grant = await GrantModel.find(grantId);
+  const grantRar = Array.isArray(grant?.rar) ? (grant.rar as AuthorityEntry[]) : undefined;
+  // @spec mission#self-exchange rule 2 (#825 PR 2c, D353) — a retry recovers
+  // the recorded family only within the token it presents: a narrower
+  // replacement token never retrieves, or resumes, a broader family. An
+  // equivalent (or broader) replacement token still recovers.
+  const recordedAuthority = grantRar ?? (stored?.body?.authorization_details as AuthorityEntry[] | undefined);
+  if (recordedAuthority && !isSubsetSetIgnoringCapabilitySources(recordedAuthority, [...presentedAuthority])) {
+    txError(ctx, 400, "invalid_authorization_details", "the recorded delegation exceeds the presented token's authority");
     return;
   }
   if (op.state === "reserved") {
@@ -1310,11 +1515,6 @@ async function recoverAsyncDelegation(
     // authoritative structural subset; it is projected through the CURRENT
     // effective set so a capability contained since creation cannot ride the
     // resumed delivery. A grant already destroyed fails closed.
-    const GrantModel = (provider as unknown as {
-      Grant: { find: (id: string) => Promise<{ rar?: unknown } | undefined> };
-    }).Grant;
-    const grant = await GrantModel.find(grantId);
-    const grantRar = Array.isArray(grant?.rar) ? (grant.rar as AuthorityEntry[]) : undefined;
     if (!grantRar) {
       txError(ctx, 400, "invalid_grant", "recorded delegation family no longer exists");
       return;
@@ -1391,7 +1591,7 @@ async function recoverAsyncDelegation(
 // ===========================================================================
 
 /** A resolved, possession-verified subject Mission (verification order steps 1-3). */
-interface ResolvedSubject {
+export interface ResolvedSubject {
   record: MissionRecord;
   /** The verified presenter jkt (== the subject_token's own cnf.jkt). */
   jkt: string;
@@ -1408,10 +1608,10 @@ interface ResolvedSubject {
  * OWN cnf.jkt. This is the inverse of {@link handleAsyncDelegationExchange}, which
  * deliberately re-binds to the acting client's key. The DPoP `jti` is single-use
  * per RFC 9449, enforced by the shared bounded-TTL replay cache
- * ({@link freshProofJti}) like every other manual DPoP block here.
+ * (through {@link verifyTokenEndpointDpop}) like every other DPoP check here.
  * Returns null after setting the ctx error body; the caller returns immediately.
  */
-async function verifySubjectPossession(
+export async function verifySubjectPossession(
   opts: AdapterOptions,
   ctx: KoaContextWithOIDC,
 ): Promise<ResolvedSubject | null> {
@@ -1458,32 +1658,19 @@ async function verifySubjectPossession(
     txError(ctx, 400, "invalid_grant", "subject_token is not sender-constrained (no cnf.jkt)");
     return null;
   }
-  // Step 3: POSSESSION — the presenter controls the subject_token's OWN cnf key.
+  // Step 3: POSSESSION. The presenter controls the subject_token's OWN cnf key,
+  // under a complete, fresh proof (@spec RFC 9449 Section 4.3, #1163 review).
   const proofJws = ctx.get("DPoP");
   if (!proofJws) {
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return null;
   }
-  let jkt: string;
-  let dpopJwk: JWK;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuseTokenEndpointProof(ctx, verified);
     return null;
   }
-  if (!freshProofJti(opts, proofJti)) {
-    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
-    return null;
-  }
+  const { jkt, jwk: dpopJwk } = verified.proof;
   if (jkt !== cnfJkt) {
     txError(ctx, 400, "invalid_grant", "possession proof does not match the subject_token confirmation key");
     return null;
@@ -1708,20 +1895,14 @@ async function retrieveCarryoverResult(
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  let jkt: string;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    if (!freshProofJti(opts, proof.jti)) throw new Error("replayed jti");
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
+  const { jkt } = verified.proof;
   let retrieved: ReturnType<typeof store.retrieve>;
   try {
     retrieved = store.retrieve({ replacementId, actor: { sub: client.clientId } });
@@ -1740,7 +1921,7 @@ async function retrieveCarryoverResult(
   // Ordinary current lifecycle check before any credential is minted.
   const state = opts.kernel.applyExpiry(retrieved.replacement).state;
   if (state !== "active") {
-    txError(ctx, 400, "invalid_grant", `replacement mission is ${state}`);
+    txError(ctx, 400, "invalid_request", `replacement mission is ${state}`);
     return;
   }
   if (!opts.childGrantKey || !opts.childGrantKid || !opts.childGrantAlg) {
@@ -1799,6 +1980,14 @@ export async function handleChildCreationExchange(
   // Step 4: acting agent (the authenticated parent client; carry actor_token).
   const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
   if (!acting) return;
+  // @spec child-delegation#attenuation (#825, D353): the presented token's own
+  // authority bounds the child. Read here, before the idempotency lookup, so a
+  // retry recovers a recorded child only within it.
+  const presentedAuthority = presentedTokenAuthority(resolved.claims);
+  if (!presentedAuthority) {
+    txError(ctx, 400, "invalid_grant", "subject_token carries no readable authorization_details");
+    return;
+  }
 
   // @spec child-delegation#creation-request-id — REQUIRED on every child
   // creation, in every completion mode (missing -> invalid_request).
@@ -1891,7 +2080,7 @@ export async function handleChildCreationExchange(
   // the one whose source Mission changed state when the first attempt succeeded.
   const existing = idem.find(client.clientId, creationRequestId);
   if (existing) {
-    await recoverChildCreation(opts, ctx, existing, fingerprint, resolved.jkt);
+    await recoverChildCreation(opts, ctx, existing, fingerprint, resolved.jkt, presentedAuthority);
     return;
   }
 
@@ -1931,6 +2120,7 @@ export async function handleChildCreationExchange(
         ...(proposedAuthority ? { proposedAuthority } : {}),
         ...(submissionEvidence?.length ? { submissionEvidence } : {}),
         childActor,
+        presentedAuthority,
       });
       return { missionId: created.child.id, value: created.child };
     });
@@ -1951,7 +2141,7 @@ export async function handleChildCreationExchange(
       // A concurrent duplicate won the reservation: recover its outcome.
       const winner = idem.find(client.clientId, creationRequestId);
       if (winner) {
-        await recoverChildCreation(opts, ctx, winner, fingerprint, resolved.jkt);
+        await recoverChildCreation(opts, ctx, winner, fingerprint, resolved.jkt, presentedAuthority);
         return;
       }
       throw e;
@@ -2021,6 +2211,12 @@ export async function handleChildCreationExchange(
  *                 remains active. The fresh mint is an ordinary issuance event:
  *                 creation accounting is NOT repeated (no fan-out increment, no
  *                 second lifecycle event, no second Child Evidence).
+ * A completed child is delivered only when the presented token authorizes
+ * its creation (@spec child-delegation#attenuation, #825, D353, #1192
+ * review): its authority bounds the child and its `children` controls admit
+ * the child actor, depth and count, the recorded child counted once. The
+ * fingerprint does not bind the token, so a narrower token presenting the same
+ * request would otherwise recover a broader child.
  */
 async function recoverChildCreation(
   opts: AdapterOptions,
@@ -2028,6 +2224,7 @@ async function recoverChildCreation(
   op: CreationOperation,
   fingerprint: string,
   presenterJkt: string,
+  presentedAuthority: readonly AuthorityEntry[],
 ): Promise<void> {
   if (op.op !== "child-creation" || op.fingerprint !== fingerprint) {
     txError(
@@ -2059,7 +2256,20 @@ async function recoverChildCreation(
   }
   const state = opts.kernel.applyExpiry(child).state;
   if (state !== "active") {
-    txError(ctx, 400, "invalid_grant", `recorded child mission is ${state}`);
+    txError(ctx, 400, "invalid_request", `recorded child mission is ${state}`);
+    return;
+  }
+  const recordedParent = child.parent ? opts.kernel.get(child.parent.id) : undefined;
+  const refusal =
+    presentedTokenChildRefusal(opts.kernel, child.authority_set, child.client_id, child.parent?.depth ?? 1, presentedAuthority) ??
+    (recordedParent
+      ? presentedTokenFanoutRefusal(opts.kernel, recordedParent, child.authority_set, presentedAuthority, true)
+      : undefined);
+  if (refusal) {
+    const code = childErrorCode(refusal.reason);
+    ctx.status = code === "access_denied" ? 403 : 400;
+    ctx.body = { error: code, error_description: `the presented token does not authorize the recorded child: ${refusal.message}`, mission_denial_reason: refusal.reason };
+    ctx.set("cache-control", "no-store");
     return;
   }
   const stored = op.delivery as { assertion?: string; exp?: number } | undefined;
@@ -2219,7 +2429,7 @@ export async function handleExpansionExchange(
   // @spec expansion#creation-lookup-order — the idempotency lookup runs AFTER
   // client authentication and possession verification but BEFORE the
   // predecessor lifecycle gate below: the recoverable retry is exactly the one
-  // whose predecessor moved to `superseded` when the first attempt succeeded;
+  // whose predecessor was terminated `superseded` when the first attempt succeeded;
   // re-running "predecessor must be active" first would reject it.
   const existing = idem.find(client.clientId, creationRequestId);
   if (existing) {
@@ -2249,7 +2459,8 @@ export async function handleExpansionExchange(
   // The predecessor MUST be active at request time.
   const active = opts.kernel.applyExpiry(resolved.record);
   if (active.state !== "active") {
-    txError(ctx, 400, "invalid_grant", `predecessor mission is ${active.state}`);
+    // @spec expansion#predecessor-active (#1154): invalid_request on the expansion exchange.
+    txError(ctx, 400, "invalid_request", `predecessor mission is ${active.state}`);
     return;
   }
 
@@ -2373,25 +2584,14 @@ async function pollDeferredExpansion(
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    const dpopJwk = header.jwk as JWK;
-    jkt = await calculateJwkThumbprint(dpopJwk);
-    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
+  // shared token-endpoint verifier (iat window and jti replay included).
+  const verified = await verifyTokenEndpointDpop(opts, proofJws);
+  if (!verified.ok) {
+    refuseTokenEndpointProof(ctx, verified);
     return;
   }
-  if (!freshProofJti(opts, proofJti)) {
-    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
-    return;
-  }
+  const { jkt } = verified.proof;
   const recordedJkt = store.recordedJkt(deferralCode);
   if (recordedJkt !== undefined && recordedJkt !== jkt) {
     txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
@@ -2490,7 +2690,7 @@ async function pollDeferredExpansion(
  *                 expired, a FRESH Mission access token is minted for the SAME
  *                 successor (ordinary issuance accounting via extraTokenClaims;
  *                 no second creation, no second lifecycle event).
- * This path is reached by the retry whose predecessor moved to `superseded`
+ * This path is reached by the retry whose predecessor was terminated `superseded`
  * when the first attempt succeeded (the lookup-order rule).
  */
 async function recoverExpansion(
@@ -2544,7 +2744,7 @@ async function recoverExpansion(
   }
   const state = opts.kernel.applyExpiry(successor).state;
   if (state !== "active") {
-    txError(ctx, 400, "invalid_grant", `recorded successor mission is ${state}`);
+    txError(ctx, 400, "invalid_request", `recorded successor mission is ${state}`);
     return;
   }
   const stored = op.delivery as { access_token?: string; exp?: number } | undefined;

@@ -71,9 +71,11 @@ export function statusListUri(issuer: string): string {
 
 /**
  * @spec status-list#status-list Mapping: `active` -> VALID (0x00); `suspended` ->
- * SUSPENDED (0x02); every terminal state -> INVALID (0x01). Reusing
- * TERMINAL_STATES means any future terminal state flows through unchanged. Any
- * unrecognized value fails safe to INVALID (non-active). 0x03 is never emitted.
+ * SUSPENDED (0x02); `terminated` -> INVALID (0x01), whatever its termination
+ * reason (the list carries bits only). Callers pass the OBSERVED state, so a
+ * Mission past its `expires_at` maps INVALID whether or not its expiry was
+ * persisted. Any unrecognized value fails safe to INVALID (non-active). 0x03
+ * is never emitted.
  */
 export function stateToBit(state: MissionState): number {
   if (state === "active") return STATUS_VALID;
