@@ -6,15 +6,18 @@
  */
 import { existsSync } from "node:fs";
 import { TOPOLOGY } from "@mission/demo-data";
+import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.js";
 
 /**
  * The launcher's composition options, from its environment: the `as-native`
  * target, the OpenFGA connection (`OPENFGA_HTTP_URL`, `OPENFGA_PRESHARED_KEY`,
- * `OPENFGA_CA_CERT`) and the PDP mode (`MISSION_PDP_MODE`), and nothing else,
- * so never the test-only ordinary-token minting fixture. A value that is set
- * but unusable refuses startup with an error naming it, before anything
- * connects or listens.
+ * `OPENFGA_CA_CERT`), the Resource-policy store (#828: attach to
+ * `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID` when both are set, else bootstrap
+ * a development store; `resourcePolicyStoreFromEnv`) and the PDP mode
+ * (`MISSION_PDP_MODE`), and nothing else, so never the test-only
+ * ordinary-token minting fixture. A value that is set but unusable refuses
+ * startup with an error naming it, before anything connects or listens.
  */
 export function asNativeLaunchOptions(env: Readonly<Record<string, string | undefined>>): ComposeStackOptions {
   const openfgaUrl = env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url;
@@ -35,11 +38,13 @@ export function asNativeLaunchOptions(env: Readonly<Record<string, string | unde
   if (pdpMode !== undefined && pdpMode !== "co-resident" && pdpMode !== "remote") {
     throw new Error(`MISSION_PDP_MODE must be co-resident or remote, not ${pdpMode}`);
   }
+  const resourcePolicyStore = resourcePolicyStoreFromEnv(env);
   return {
     openfgaUrl,
     presharedKey: env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
     ...(ca ? { caCertPath: ca } : {}),
     ...(pdpMode ? { pdpMode } : {}),
+    resourcePolicyStore,
     target: "as-native",
   };
 }

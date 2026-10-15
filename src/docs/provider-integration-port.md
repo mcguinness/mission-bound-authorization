@@ -356,7 +356,9 @@ the store.
   - `{#approval-event}` step 7 is not met. The record commits `active` before
     the grant exists, and one request before the code is issued. A client
     that never follows the redirect leaves an `active` Mission with a bound
-    grant and no code. No test yet.
+    grant and no code. No test yet. #916 owns the local ordering (a
+    deterministic grant id or a serialized association); the cross-store
+    atomicity stays with #250.
   - A repeated decision on one interaction binds a second grant to the
     committed record. `kernel.approve` returns the stored record, and
     `decide()` saves and binds a new grant each time. `missions.grant_id`
@@ -400,7 +402,7 @@ the store.
   - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a rotating refresh: the rotated refresh token and the new access token expire no later than the Mission` (`exp-clamp.test.ts`)
   - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a credential minted with under one second of Mission left is refused, never given a 0 s or overrunning lifetime` (`exp-clamp.test.ts`)
   - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed with under one second of Mission left redirects access_denied, never invalid_grant, and issues no code` (`exp-clamp.test.ts`)
-  - `async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens)` (`async-delegation.test.ts`)
+  - `async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused invalid_grant with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens, mission#issuance-gating)` (`async-delegation.test.ts`)
 - **Tests (kernel-level):** `single-process control-plane fault boundaries > a derivation admitted from a stale snapshot cannot overshoot the cap` (`control-plane-faults.test.ts`).
 - **Unsupported or residual.**
   - The counter is not coupled to the token it pays for (§4.3; #250).
@@ -438,8 +440,10 @@ the store.
     signed and returned. `{#issuance-gating}` refuses a derivation answered
     after an acknowledged revocation. Code reading; no test yet; #250 owns the
     race (§4.6).
-  - No operation identity: a retry after a lost token response is a new,
-    separately counted derivation (§4.4).
+  - No operation identity: nothing replays a lost token response. A retry
+    of the same authorization code, or of a rotated refresh token, is reuse
+    and revokes the grant; a retry of a refresh token that has not rotated
+    is a new, separately counted derivation (§4.4).
 
 ### 3.6 Refresh and revocation gating
 
@@ -676,7 +680,12 @@ order:
 A JWT-only Resource Server accepts the token from step 3 on, without the AS
 knowing it was delivered. No authoritative issuance commit exists across the
 provider and Mission stores. Defining one is #250's first acceptance item
-(§4.6).
+(§4.6). The boundary cases this leaves open (a revocation between the gate
+and signing, a failure after counting, a failure after signing, a failure
+after index acceptance, a lost code-exchange or refresh response), each with
+its outcome and owner, are listed in
+[issuance-only-deployment.md](issuance-only-deployment.md) §4; D408 accepts
+them as unsupported for that reference deployment.
 
 ### 4.3 Failed-issuance counting
 
@@ -726,9 +735,13 @@ provider and Mission stores. Defining one is #250's first acceptance item
   `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refused rotating refresh leaves the same refresh token valid: once the trusted mapping is repaired it succeeds once, and its reuse gets the ordinary replay treatment`.
   A non-rotating refresh token can be presented again, and each use is a new
   derivation.
-- **Access-token issuance.** No operation identity. A retry after a lost
-  response is a fresh derivation, counted again. An earlier token, if it was
-  signed, stays valid until `exp`. No recorded artifact is replayed.
+- **Access-token issuance.** No operation identity, and no recorded artifact
+  is replayed. A retry after a lost response follows the two bullets above. A
+  retried code exchange is code reuse: refused `invalid_grant` before anything
+  is counted, and the grant it revokes makes the lost token introspect
+  `active: false`. A retried refresh on a refresh token that has not rotated
+  is a fresh derivation, counted again, and the lost token stays valid until
+  `exp`.
 - **Lifecycle operations.** Nonce-keyed replay of the committed outcome
   ([control-plane-deployment.md](control-plane-deployment.md)).
 
@@ -737,8 +750,9 @@ provider and Mission stores. Defining one is #250's first acceptance item
 `buildAuthorizationServer` awaits `kernel.recoverAtBoot()` after the provider
 exists. It marks deliveries owed to removed subscribers, drains the outbox,
 prunes settled rows and tombstone detail, and marks unreleased reservations
-`unacknowledged` (`kernel.ts`). For this path, a restart on the file-backed
-kernel leaves:
+`unacknowledged` (`kernel.ts`). The shipped issuance-only launcher uses the
+in-memory default, so a restart there loses the Mission kernel as well. For
+this path, a restart on the file-backed kernel leaves:
 
 - **Retained:** Mission Records, their committed authority-source roots,
   `derivation_count`, `grant_id`, lifecycle events and tombstones.
@@ -752,6 +766,10 @@ kernel leaves:
   `exp` (`issuance-only-deployment.md` §2).
 - **Stranded:** an `active` Mission whose grant is gone. Nothing can derive
   from it, and it stays `active` until `expires_at` or a revocation.
+
+A restart is not revocation: a consumer holding the old key keeps accepting
+pre-restart tokens until `exp` plus tolerance. Durable signing identities are
+#831's.
 
 Committed authority-source roots are the one thing reconciled at kernel
 construction (#827). A row that predates them gains one only from trusted
@@ -786,10 +804,11 @@ durable projections with a rollback witness, and the emergency rows and
 closure. Multi-process serialization stays with #641. This document claims
 none of that work.
 
-These gaps are not named in #250's items, and their owner is not verified:
+These gaps are not named in #250's items:
 
-- the approval commit ordering against code issuance (§3.4);
-- external Subjects (§3.2).
+- the approval commit ordering against code issuance (§3.4), whose local
+  ordering #916 owns;
+- external Subjects (§3.2), whose owner is not verified.
 
 The state gate after rotation (§3.6) is partly fixed by the refresh pre-check
 (#914). What remains, a state change between the pre-check and the save-time
@@ -805,7 +824,8 @@ operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) or naming a later merged
-issue (such as #1103 or #1104) are true at `583e3806`, and every `file:line` citation is read there.
+issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `8c2dd42a`, and every
+`file:line` citation is read at `8c2dd42a`.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -834,7 +854,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 | Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
 | Credential validation | Yes. Met (D411): the PEP and the PDP each enforce the credential's own authority; #825 item 7 binds paths that consume introspection, which this one does not | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check, and the `context.credential` carrier the PDP enforces (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport, PEP- and PDP-level (§5.1) | Introspection does not yet validate a token's authority as the PEP does (#825 item 7, D402); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
-| Independent Resource policy | Yes, not met: acceptance gate (#828) | The PDP's OpenFGA check and action-to-relation map (§5.2) | In the decision | None | Nothing durable; the tuple is injected per check | PDP-level, [FGA] (§5.2) | The shipped model cannot deny independently of Mission authority (§5.2) |
+| Independent Resource policy | Yes, not met: acceptance gate (#828) | The decision point's bound `ResourcePolicy`, OpenFGA stored entitlements in `stack.ts` (§5.2) | In the decision | None | Entitlements are stored in OpenFGA; startup attaches or bootstraps a development store (§5.2) | PDP- and PEP-level, [FGA] (§5.2) | Live witnesses CI-only; no client policy; an unresolved vendor lookup and an unconstrained list name no enumerable target; not yet declared in the profile or statement (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `Pep.intake` (closed schema, NFC) before any decision work; `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level and MCP channel, [FGA] (§5.4) | A single-record read re-derives no digest at use (§5.4) |
 | Permit redemption | Transaction tier, keyed writes, and single-use permits on the unkeyed write path | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation; `takeSingleUse` (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction. An unkeyed-write redemption is one insert, immediately before the effect; a keyed retrieval's is one insert before anything is disclosed (D342) | None; settlement is awaited | Claim, reservation and consumed-identifier records survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | One redemption per operation key per process (§5.5) |
@@ -845,7 +865,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 
 - **Hook.** Two entry points reach the same claim checks, and only one proves
   possession.
-  - **HTTP transport** (`services/mcp-payments/src/mcp-http-transport.ts:264`):
+  - **HTTP transport** (`services/mcp-payments/src/mcp-http-transport.ts:276`):
     `validateCredential` with the request's DPoP presentation calls
     `validateToken`, which runs `verifyDpopBoundToken` (`server.ts:571-588`):
     signature, issuer, audience, `cnf.jkt` and the DPoP proof over this
@@ -873,18 +893,18 @@ drives an AS-issued Mission-bound token through that assembled path.
   own `authorization_details`, read as the credential's authority. A token
   that fails the profile is refused, never demoted to the ordinary class.
   Before the PDP is asked, the PEP refuses `out_of_authority` for an action
-  outside that authority, one whole entry at a time (`pep.ts:1434-1458`). It
+  outside that authority, one whole entry at a time (`pep.ts:1435-1459`). It
   carries the authority and the credential's expiry to the PDP as
-  `context.credential` (`pep.ts:1538-1545`). The PDP enforces that authority
+  `context.credential` (`pep.ts:1539-1546`). The PDP enforces that authority
   as its own bound, embedded and remote, and refuses a missing or unreadable
   carrier or a passed expiry `credential_invalid`, never falling back to the
-  Mission (`services/pdp/src/evaluate.ts:803-818`, `:1282-1309`; D341).
+  Mission (`services/pdp/src/evaluate.ts:856-871`, `:1335-1362`; D341).
   Decision Evidence names the bound that refused (`authority_bound`, D348).
 - **Boundary.** In request, before any claim reaches a decision.
 - **Asynchronous work.** None.
 - **Crash and recovery.** The DPoP replay cache is in memory. Signing keys are
   generated per boot (D25), so a pre-restart token fails signature
-  validation. The PEP fetches the AS JWKS once at assembly (`stack.ts:497`);
+  validation. The PEP fetches the AS JWKS once at assembly (`stack.ts:509`);
   refresh is #831's.
 - **Tests:**
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
@@ -916,23 +936,45 @@ drives an AS-issued Mission-bound token through that assembled path.
 
 ### 5.2 Independent Resource policy
 
-- **Hook.** After the Mission-authority gates, the PDP asks OpenFGA for the
-  relation `policy.ts:19-31` maps the action to (`fga.ts:20-47`).
-- **Boundary.** In the decision.
+- **Hook.** The decision point's bound `ResourcePolicy`, which `evaluate()`
+  requires and asks at step 6b, after every Mission-authority gate and before
+  the parameter, approval and claim steps. The query is the verified subject
+  and its issuer, the authenticated client, the action and every target, with
+  nothing derived from the Mission. `stack.ts` binds `fgaResourcePolicy`:
+  stored `authorized_reader` and `authorized_payer` entitlements on vendors
+  and invoices, for principals authenticated under the stack's issuer,
+  checked with no contextual tuples at `HIGHER_CONSISTENCY`
+  ([fga-hygiene.md](fga-hygiene.md)). The PEP supplies no policy; the decision
+  point strips one a caller names.
+- **Boundary.** In the decision. A refusal denies `resource_policy`
+  (`next_action: none`) with Decision Evidence. A policy that cannot answer
+  yields no decision (remote: 503), so the PEP refuses `pdp_unreachable`.
 - **Asynchronous work.** None.
-- **Crash and recovery.** Nothing durable. The tuple is injected per check.
+- **Crash and recovery.** Entitlements are stored in OpenFGA, administered
+  through `FgaDomainAdmin`. `composeStack` attaches to a configured store and
+  model, verifying the model and creating nothing, or bootstraps a
+  development store seeded from `config/seed/resource-policy.json`. With the
+  development memory engine, tuples survive a stack restart only while the
+  OpenFGA container runs.
 - **Tests:**
-  - [FGA] `PDP decisions against OpenFGA (@spec authzen) > out-of-authority action -> deny out_of_authority` (PDP-level)
-  - `finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result` (PEP-level, stubbed policy)
-  - `runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority and the Resource-policy/FGA check both permit` (PDP-level)
-- **Required, not met.** The relations admit only `mission` subjects, and the
-  injected tuple mirrors the triple being checked, so the shipped model cannot
-  deny independently. A stubbed denial is `out_of_authority`,
-  indistinguishable from a Mission-authority denial. #828.
+  - `independent Resource policy in the decision (@spec runtime#input-resource-policy, #828) > truth table: permits only when both Mission authority and Resource policy permit; either refusing denies` (PDP-level, named fixtures)
+  - `the resource enforces an independent Resource-policy refusal (@spec runtime#input-resource-policy, #828) > a policy refusal of a keyed write leaves no effect: no schedule, no reservation, no ledger entry, no Execution Evidence` (PEP-level, co-resident and remote)
+  - `the resource enforces an independent Resource-policy refusal (@spec runtime#input-resource-policy, #828) > an unavailable policy refuses pdp_unreachable with no PDP decision attributed and nothing executed, the same over both channels` (PEP-level)
+  - `Fga.attach verifies the configured model and never creates a store (@spec runtime#input-resource-policy, #828) > sends the stored entitlement check with no contextual tuples, pinned to the attached model at higher consistency` (PDP-level, fake OpenFGA endpoint)
+  - [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > a stored entitlement permits; an external revocation of only that entitlement denies resource_policy on the next decision with signed evidence; restoring it permits` (PDP-level)
+  - [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > Mission-context tuples cannot satisfy a stored entitlement: the same tuples that satisfy the Mission relation leave the entitlement unsatisfied, and the model refuses a Mission subject on it` (PDP-level)
+  - [FGA] `the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > revoking only the stored entitlement refuses the next read resource_policy with no result; restoring it permits, the same over both channels` (PEP-level)
+- **Required, not met.** #828 stays an acceptance gate. Its live witnesses
+  run only where OpenFGA does (CI). No policy requires a client.
+  `lookup_vendor` names the vendor the store resolved (D324), but a vendor
+  the store does not hold keeps the server target, and an unconstrained
+  `list_invoices` names the unscoped vendor object, so the policy refuses
+  both rather than checking the vendors they touch. The payments Operation Profile and the Enforcement Scope Statement
+  do not yet declare the policy, its owner or its freshness.
 
 ### 5.3 Protected state and lifecycle
 
-- **Hook.** `loadView` (`stack.ts:828-835`) reads the kernel's committed state
+- **Hook.** `loadView` (`stack.ts:850-857`) reads the kernel's committed state
   and version for each decision, with `mode: "fresh"` and `freshness_at` set
   to now. Under PEP placement the PEP forwards that observation at
   `context.mission_state_observation`, and the PDP's own view wins on
@@ -971,38 +1013,38 @@ drives an AS-issued Mission-bound token through that assembled path.
   parameters from the payments store, never from tool arguments, and
   `parameterDigest` (`:83`) commits them into the decision request. Three
   separate PEP checks run at use:
-  - `verifyPermitAtUse` (`pep.ts:2069`) runs the permit-use table
-    (`pep.ts:424-464`): the permit's bound phase against the crossing's phase
+  - `verifyPermitAtUse` (`pep.ts:2072`) runs the permit-use table
+    (`pep.ts:425-465`): the permit's bound phase against the crossing's phase
     (`phase_mismatch`), then `valid_until` (`permit_expired`). It compares no
     digest.
-  - `reverifyCapability` (`pep.ts:2190`) re-checks the capability snapshot
+  - `reverifyCapability` (`pep.ts:2193`) re-checks the capability snapshot
     (`capability_source_unresolvable`).
-  - `reverify` (`pep.ts:2101`, a single-record operation) and `reverifyList`
-    (`pep.ts:2141`, a list read) re-derive the effective parameters and
+  - `reverify` (`pep.ts:2104`, a single-record operation) and `reverifyList`
+    (`pep.ts:2144`, a list read) re-derive the effective parameters and
     compare the digest (`parameter_mismatch`; a target that no longer resolves
     is also `parameter_mismatch`).
 - **Order and boundary, by dispatch path** (`dispatchPathFor`, called from
   both transports):
-  - Read (`callReadTool`, `server.ts:1046`): the permit-use table, the
+  - Read (`callReadTool`, `server.ts:1049`): the permit-use table, the
     capability check, `reverifyList` for a list read, the permit-use table
     again, then the read. A single-record read re-derives no digest at use.
     Nothing is written. A `consequential_write` sent down this path is
     served by the write path.
-  - Write (`callWriteTool`, `server.ts:1145`): the permit-use table, the
+  - Write (`callWriteTool`, `server.ts:1148`): the permit-use table, the
     capability check, `reverify`, the permit-use table again, then, for a
     permit carrying `use_limit`, its single-use redemption (§5.5), then the
     effect. For a keyed reversible write, the effect is the reservation
     transaction, which also redeems a carried `use_limit` (§5.5). Nothing
     else is written before the effect.
-  - Transaction tier (`callTransactionTool`, `server.ts:1521`): the
-    permit-use table at admission (`:1596`); single-use redemption (`:1638`),
+  - Transaction tier (`callTransactionTool`, `server.ts:1524`): the
+    permit-use table at admission (`:1599`); single-use redemption (`:1641`),
     which writes the engine's operation state; then the capability check
-    (`:1669`), the execution lease (`:1687`), `reverify` (`:1693`) and the
-    permit-use table again (`:1705`); then the `txn` consumption, where a
-    transaction token is presented, and the connector commit (`:1717-1768`).
+    (`:1672`), the execution lease (`:1690`), `reverify` (`:1696`) and the
+    permit-use table again (`:1708`); then the `txn` consumption, where a
+    transaction token is presented, and the connector commit (`:1720-1771`).
     A refusal after redemption marks the operation `abandoned` and records
     suppressed Execution Evidence, which settles the PDP claim `failed`
-    because the attempt is redeemed (`pep.ts:1998-2000`). The permit is spent;
+    because the attempt is redeemed (`pep.ts:2001-2003`). The permit is spent;
     a retry needs a fresh decision (code reading).
 - **Asynchronous work.** None.
 - **Crash and recovery.** The payments store is in memory and reseeded per
@@ -1031,14 +1073,14 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Hook.**
   - Transaction tier: the PDP claims (idempotency scope, `idempotency_key`)
     with the operation identity before issuing the permit
-    (`idempotency-claims.ts`). `callTransactionTool` (`server.ts:1521`)
+    (`idempotency-claims.ts`). `callTransactionTool` (`server.ts:1524`)
     redeems the permit once (`TransactionEngine.redeemPermit`,
-    `server.ts:1638`) under an execution lease, commits the connector effect,
+    `server.ts:1641`) under an execution lease, commits the connector effect,
     emits Execution Evidence and settles the claim (`settleClaim`,
-    `server.ts:1848`).
+    `server.ts:1851`).
   - Keyed reversible writes: the PEP reserves the key in its own SQLite store
     and commits the effect, the reservation and the result in one local
-    transaction (`server.ts:1471`;
+    transaction (`server.ts:1474`;
     `services/mcp-payments/src/write-reservations.ts:281`).
   - Single-use permits on the unkeyed write path: the statement publishes
     `single_use_decision_identifier` as the `consequential_write` class
@@ -1086,7 +1128,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Crash and recovery.** The claim and reservation files survive a restart,
   and with them the consumed identifiers.
   The engine's redemption records do not, and every process reuses the epoch
-  `demo-epoch` (`stack.ts:867`), so single use across a restart rests on the
+  `demo-epoch` (`stack.ts:889`), so single use across a restart rests on the
   persisted claim and reservations (the contract's §7). Surviving is not
 recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Tests:**
@@ -1126,17 +1168,17 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Hook.** The PDP emits Decision Evidence for every decision. The PEP
   verifies it (byte equality, signature, emitter-bound key, role, audience)
   before release, refusing `decision_evidence_unverifiable` otherwise
-  (`pep.ts:1654-1666`). The PEP emits Refusal Records (`pep.ts:2205-2266`), whose
+  (`pep.ts:1657-1669`). The PEP emits Refusal Records (`pep.ts:2208-2269`), whose
   `denial_reason` the exhaustive `PRE_DECISION_DENIAL_REASON` supplies; an
   unmapped diagnostic, or a value outside the emitting role's closed set, is
   refused before signing (#1148). It also emits
-  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1965-2008`). The
+  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1968-2011`). The
   executor emits `completed` Execution Evidence after a connector commit
-  (`server.ts:1799-1832`). The record table is the contract's §6.
+  (`server.ts:1802-1835`). The record table is the contract's §6.
 - **Boundary.** Synchronous, inside the request.
 - **Asynchronous work.** None.
 - **Crash and recovery.** `EvidenceRetentionStore` is in memory as shipped
-  (`stack.ts:722-724`). Retained records are lost at restart.
+  (`stack.ts:744-746`). Retained records are lost at restart.
 - **Tests (PEP-level):**
   - `a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence`
   - `retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart` (on a file-backed store, not the shipped one)

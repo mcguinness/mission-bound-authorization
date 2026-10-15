@@ -29,7 +29,9 @@ import {
   createDecisionEvidenceEmitter,
   createEphemeralDecisionPoint,
   createPdpHttpServer,
+  type DecisionFn,
   type EnforcementScopeStatement,
+  evaluate,
   evaluateRemote,
   type EvaluationRequest,
   type Fga,
@@ -71,6 +73,7 @@ import {
   verifyMissionReceipt,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 // @spec authzen#evaluation-request-digest-input: a fixture digest of a submitted
 // request (the AuthZEN profile's worked value), for emitter inputs that model one.
@@ -111,7 +114,7 @@ const view = (): MissionView => ({
 function decisionPointAndKeys(options: { emitterId?: string; audience?: string } = {}) {
   const emitterId = options.emitterId ?? CANONICAL_RESOURCE;
   const audience = options.audience ?? CANONICAL_RESOURCE;
-  const pdp = createEphemeralDecisionPoint({ emitterId, audience });
+  const pdp = createEphemeralDecisionPoint({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, emitterId, audience });
   return { pdp, keys: createEphemeralEvidenceKeys({ emitterId, audience, decisionPoint: pdp }) };
 }
 
@@ -133,10 +136,14 @@ function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withD
     ref.id === missionView.id && ref.issuer === missionView.issuer
       ? { view: missionView, observation: { state: missionView.state, version: missionView.version, mode: "fresh", freshness_at: new Date().toISOString() } }
       : undefined;
+  // Without the decision point: `evaluate` itself, with no emission path, so
+  // its decisions carry no Decision Evidence (#828: still bound to a policy).
+  const unevidenced: DecisionFn = (request, options) =>
+    evaluate(request, { ...options, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
   const pep = new Pep({
     payments,
     evidence,
-    ...(withDecisionPoint ? { decide: keys.decide } : {}),
+    decide: withDecisionPoint ? keys.decide : unevidenced,
     fga: alwaysAllowFga,
     modelId: "unit-test-model",
     loadView,
@@ -182,12 +189,12 @@ describe("the enforcement path holds no PDP evidence key (@spec runtime-evidence
   });
 
   it("the signer configuration has no `pdp` role to configure", () => {
-    const keys = createEphemeralEvidenceKeys();
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
     expect(Object.keys(keys.signing).sort()).toEqual(["executor", "pep", "receipt_issuer"]);
   });
 
   it("a store asked to sign a `pdp`-role record fails closed rather than minting one", async () => {
-    const keys = createEphemeralEvidenceKeys();
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
     const evidence = new EvidenceStore(keys.signing, keys.resolver);
     await expect(
       evidence.recordRefusal(CANONICAL_RESOURCE, "pdp", {
@@ -202,7 +209,7 @@ describe("the enforcement path holds no PDP evidence key (@spec runtime-evidence
 
 describe("retainDecision verifies before it retains (@spec runtime-evidence#decision-evidence-integrity, #741)", () => {
   it("refuses a genuinely signed record whose emitter id is not the one the key is published for", async () => {
-    const keys = createEphemeralEvidenceKeys();
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
     const impostor = createDecisionEvidenceEmitter({
       // Same key material as nothing the resolver knows: a different emitter
       // claiming this deployment's audience.
@@ -233,11 +240,12 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
 
   it("refuses a record for an audience the emitter's key is not published for", async () => {
     const foreign = createEphemeralDecisionPoint({
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       emitterId: CANONICAL_RESOURCE,
       audience: "https://other-scope.example.com",
     });
     // The store's resolver is this deployment's, bound to its own audience.
-    const deploymentKeys = createEphemeralEvidenceKeys();
+    const deploymentKeys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
     const record = await foreign.emitter.emit({
       mission: { id: "msn_ret", issuer: ISSUER, policy_view_id: "pv_1" },
       subject: { id: "alice" },
@@ -352,7 +360,7 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
 
 describe("a permit the PDP did not evidence is refused, never executed (#741)", () => {
   it("a genuinely signed Decision Evidence claiming permit does not flip an otherwise-DENY decision to executed", async () => {
-    const keys = createEphemeralEvidenceKeys();
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
     const decide = keys.decide;
     keys.decide = async (request, options) => {
       const permitted = await decide(request, options);
@@ -374,7 +382,7 @@ describe("a permit the PDP did not evidence is refused, never executed (#741)", 
   });
 
   it("refuses the action when the decision carries no Decision Evidence", async () => {
-    const keys = createEphemeralEvidenceKeys();
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
     const { server, evidence } = buildServer(keys, false);
     const res = await server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
     expect(res.ok).toBe(false);
@@ -397,7 +405,7 @@ describe("a permit the PDP did not evidence is refused, never executed (#741)", 
   });
 
   it("permits and retains when the same decision IS evidenced: the refusal above is the missing record, not the fixture", async () => {
-    const keys = createEphemeralEvidenceKeys();
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
     const { server, evidence } = buildServer(keys, true);
     const res = await server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(true);
@@ -433,6 +441,7 @@ describe("the record survives the remote decision channel byte-identically (@spe
       // the PDP side of the network hop: it is reachable from no options
       // object, and the PEP below could not sign a record if it wanted to.
       evidence: pdp.emitter,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       replayWindowSeconds: 30,
     });
 
@@ -562,7 +571,7 @@ function retainingDeployment(
   retention: EvidenceRetentionStore;
   evidence: EvidenceStore;
 } {
-  const pdp = createEphemeralDecisionPoint({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
+  const pdp = createEphemeralDecisionPoint({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: pdp });
   const clock = options.clock ?? (() => NOW.getTime());
   const retention = new EvidenceRetentionStore({

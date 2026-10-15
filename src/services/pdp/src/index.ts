@@ -1,4 +1,30 @@
-export { Fga, DOMAIN_MODEL, loadCa, type FgaConfig } from "./fga.js";
+export {
+  assertDomainTuple,
+  DomainTupleError,
+  DOMAIN_MODEL,
+  Fga,
+  FgaAttachError,
+  type FgaConfig,
+  FgaDomainAdmin,
+  loadCa,
+  modelFingerprint,
+} from "./fga.js";
+export {
+  checkResourcePolicy,
+  ENTITLEMENT_RELATIONS,
+  type EntitlementRelation,
+  fgaResourcePolicy,
+  isResourcePolicy,
+  issuerLocalPrincipals,
+  type PrincipalMapper,
+  principalObject,
+  type ResourcePolicy,
+  ResourcePolicyConfigError,
+  type ResourcePolicyQuery,
+  type ResourcePolicyResult,
+  type ResourcePolicyTarget,
+  ResourcePolicyUnavailableError,
+} from "./resource-policy.js";
 export {
   policyViewId,
   joinViewId,

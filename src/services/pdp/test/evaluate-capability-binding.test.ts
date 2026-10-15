@@ -4,6 +4,7 @@ import { evaluate as evaluateRequest, type EvaluationRequest, type EvaluateOptio
 import type { Fga } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -21,7 +22,7 @@ const makeRequest = (): EvaluationRequest => ({ subject: { id: "alice" }, resour
   mission: { id: "msn_cap", issuer: "https://as.test", authority_hash: "sha-256:test" }, capability_source: { ...presented },
 } });
 function options(view = makeView()): EvaluateOptions {
-  return { view, fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test", now: () => new Date("2026-09-04T12:00:00Z"), relationForAction, stalenessBound };
+  return { view, fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test", now: () => new Date("2026-09-04T12:00:00Z"), relationForAction, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, stalenessBound };
 }
 
 describe("recorded per-action capability verification", () => {

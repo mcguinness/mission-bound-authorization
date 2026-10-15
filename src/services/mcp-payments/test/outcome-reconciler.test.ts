@@ -64,6 +64,7 @@ import {
   TransactionEngine,
   type WriteReservationStore,
 } from "../src/index.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 const BASE_MS = Date.parse("2026-10-08T12:00:00.000Z");
@@ -158,7 +159,7 @@ async function harness(o: HarnessOptions = {}) {
     // As composeStack wires it: the declared alert where the transition happens.
     onIndeterminate: (claim) => alerts.alert(indeterminateClaimAlert(claim)),
   });
-  const point = createEphemeralDecisionPoint({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE, claims });
+  const point = createEphemeralDecisionPoint({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE, claims });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
   pepKeys = keys.resolver;
 
