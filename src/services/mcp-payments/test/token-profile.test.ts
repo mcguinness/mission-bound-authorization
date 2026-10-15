@@ -14,7 +14,10 @@ import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jos
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   CANONICAL_RESOURCE,
+  canonicalHtu,
   createEphemeralEvidenceKeys,
+  createHttpMcpChannel,
+  createHttpMediatedClient,
   type DpopKeys,
   dpopProofFor,
   EvidenceStore,
@@ -134,6 +137,32 @@ function pepRecording(extra: { requiresActionApproval?: (action: string, actionC
   return { pep, decided, evidence };
 }
 
+const allowingFga = { checkWithContext: async () => true } as unknown as Fga;
+
+/** A PEP deciding through the embedded signing PDP under an allowing policy, recording each request it sends. */
+function pepDeciding() {
+  const decided: unknown[] = [];
+  const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
+  const store = payments();
+  const loadView = (ref: { id: string; issuer: string }) =>
+    ref.id === VIEW.id && ref.issuer === VIEW.issuer
+      ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+      : undefined;
+  const pep = new Pep({
+    decide: (req, opts) => {
+      decided.push(req);
+      return EVIDENCE_KEYS.decide(req, opts);
+    },
+    payments: store,
+    evidence,
+    fga: allowingFga,
+    modelId: "m",
+    loadView,
+    instanceEpoch: "epoch-825-deciding",
+  });
+  return { pep, decided, evidence, store, loadView };
+}
+
 beforeAll(async () => {
   const kp = await generateKeyPair("ES256", { extractable: true });
   signKey = kp.privateKey;
@@ -193,6 +222,53 @@ describe("the Mission access-token profile is met before any claim is trusted (@
     // A proof that would verify for this token: the refusal is the profile's.
     await expect(overHttp(token)).rejects.toThrow();
     await expect(server.validateMissionToken(token)).rejects.toThrow();
+  });
+
+  it("answers a token with no typ and a valid DPoP proof 401 on the holder's open MCP session, before the PEP: no evidence and no decision", async () => {
+    const x = pepDeciding();
+    const routed = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
+      pep: x.pep,
+      payments: x.store,
+      loadView: x.loadView,
+      jwks: { keys: [asJwk as never] },
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
+      issuer: ISSUER,
+    });
+    const channel = await createHttpMcpChannel(routed);
+    try {
+      // The holder opens a session with a conforming token, so a request on it
+      // that passed validation would be dispatched to the PEP: only the
+      // profile refusal keeps the malformed token from a decision.
+      const { client, sessionId, close } = await createHttpMediatedClient(channel.url, await mint(), holder);
+      try {
+        expect(sessionId).toBeTruthy();
+        const token = await mint({}, { typ: undefined });
+        const res = await fetch(channel.url, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json, text/event-stream",
+            authorization: `DPoP ${token}`,
+            dpop: await dpopProofFor(holder, canonicalHtu(channel.url), "POST", token),
+            "mcp-session-id": sessionId as string,
+          },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_invoice", arguments: { invoice_id: "inv-1" } } }),
+        });
+        await res.text();
+        expect(res.status).toBe(401);
+        expect(x.decided).toHaveLength(0);
+        expect(x.evidence.all()).toHaveLength(0);
+        // The session's own conforming credential reaches the PDP.
+        const read = await client.callTool("get_invoice", { invoice_id: "inv-1" });
+        expect(read.ok, JSON.stringify(read)).toBe(true);
+        expect(x.decided).toHaveLength(1);
+      } finally {
+        await close();
+      }
+    } finally {
+      await channel.close();
+    }
   });
 
   it("refuses a transaction token and an attenuation root presented as a Mission access token", async () => {
@@ -327,7 +403,6 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
 });
 
 describe("a vendor lookup carries the store-resolved vendor, so both bounds evaluate it (@spec authzen#context-credential, authzen#runtime-denial-classification, D324)", () => {
-  const allowingFga = { checkWithContext: async () => true } as unknown as Fga;
   /** A Mission scoped to `vendors` for vendor reads, under the same reference the token carries. */
   const missionScopedTo = (vendors: string[]): MissionView => ({
     ...VIEW,
@@ -380,5 +455,28 @@ describe("a vendor lookup carries the store-resolved vendor, so both bounds eval
     expect(result).toMatchObject({ permitted: false, denial_reason: "parameter_violation" });
     const decision = evidence.all().find((e) => e.kind === "decision");
     expect(decision?.content).toMatchObject({ denial_reason: "parameter_violation", resource: { type: "vendor", id: "globex" } });
+  });
+});
+
+describe("on the same broad Mission and allowing policy, the credential alone decides a vendor lookup (@spec runtime#input-authority, #825)", () => {
+  it.each([
+    ["HTTP", (token: string) => overHttp(token)],
+    ["the mediated channel", (token: string) => server.validateMissionToken(token)],
+  ] as const)("over %s, refuses an invoice-only token before the PDP and permits a broad token", async (_path, validate) => {
+    const narrow = pepDeciding();
+    const refused = await narrow.pep.enforce("lookup_vendor", { vendor_id: "acme" }, await validate(await mint({ authorization_details: [entry(["payments:invoice.read"])] })));
+    expect(refused).toMatchObject({ permitted: false, denial_reason: "out_of_authority" });
+    expect(narrow.decided).toHaveLength(0);
+    expect(narrow.evidence.all().filter((e) => e.kind === "decision")).toHaveLength(0);
+    expect(narrow.evidence.all().find((e) => e.kind === "refusal")?.content).toMatchObject({
+      denial_reason: "credential_authority_insufficient",
+      resource: { type: "vendor", id: "acme" },
+    });
+
+    const broad = pepDeciding();
+    const permitted = await broad.pep.enforce("lookup_vendor", { vendor_id: "acme" }, await validate(await mint()));
+    expect(permitted.permitted, JSON.stringify(permitted)).toBe(true);
+    expect(broad.decided).toHaveLength(1);
+    expect(broad.evidence.all().filter((e) => e.kind === "decision")).toHaveLength(1);
   });
 });

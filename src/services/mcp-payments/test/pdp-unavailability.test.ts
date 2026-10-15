@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { canonicalDigest } from "@mission/core";
 import { createDecisionChannel, createEphemeralDecisionPoint, type DecisionEvidenceObject, type DecisionFn, type DecisionOptions, type EvaluationRequest, evaluateRemote, type Fga, isDecisionChannelRefusal, type MissionView, RUNTIME_POSTURE, loadRuntimePosture, relationForAction, stalenessBound } from "@mission/pdp";
-import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, openEphemeralWriteReservationStore, PaymentsStore, Pep, type TokenFacts } from "../src/index.js";
+import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, credentialAuthorityFrom, EvidenceStore, McpPaymentsServer, openEphemeralWriteReservationStore, PaymentsStore, Pep, type TokenFacts } from "../src/index.js";
 import { PaymentsToolCatalog } from "../src/tool-catalog.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
@@ -83,6 +83,38 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
       expect((await x.server.callReadTool("get_invoice", { invoice_id: "one" }, x.token)).ok).toBe(true);
       expect(x.getOptions).not.toHaveBeenCalled();
       expect((x.server.protectedResourceMetadata().enforcement_scope_statement as typeof RUNTIME_POSTURE).remote_decision_channels).toEqual([]);
+    } finally { await x.channel.close(); x.payments.db.close(); }
+  });
+
+  // @spec runtime#input-authority (#825): the same broad Mission and the same
+  // allowing policy on each channel; only the credential differs. The
+  // invoice-only credential is refused at the PEP, before any decision request.
+  it.each(["remote", "co-resident"] as const)("over the %s channel, refuses vendor lookup under an invoice-only credential before the PDP and permits it under a broad one, on the same broad Mission", async (mode) => {
+    const x = await build(mode);
+    try {
+      const vendorSource = new PaymentsToolCatalog().resolve("lookup_vendor");
+      if (!vendorSource.catalog_sourced) throw new Error("fixture catalog missing");
+      const [invoices] = x.view.authority_set;
+      x.view.authority_set = [{
+        ...invoices!,
+        actions: ["payments:invoice.read", "payments:vendor.read"],
+        capability_sources: [...(invoices!.capability_sources ?? []), { action: "payments:vendor.read", ...vendorSource.binding }],
+      }];
+      const invoiceOnly: TokenFacts = {
+        ...x.token,
+        credentialAuthority: credentialAuthorityFrom([{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }]),
+      };
+      const refused = await x.server.callReadTool("lookup_vendor", { vendor_id: "acme" }, invoiceOnly);
+      expect(refused).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+      expect(x.getOptions).not.toHaveBeenCalled();
+      const records = x.evidence.forMission(x.view.id);
+      expect(records.filter(e => e.kind === "decision")).toHaveLength(0);
+      expect(records.find(e => e.kind === "refusal")?.content).toMatchObject({ denial_reason: "credential_authority_insufficient", resource: { type: "vendor", id: "acme" } });
+
+      const permitted = await x.server.callReadTool("lookup_vendor", { vendor_id: "acme" }, x.token);
+      expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+      expect(x.getOptions).toHaveBeenCalledTimes(mode === "remote" ? 1 : 0);
+      expect(x.evidence.forMission(x.view.id).filter(e => e.kind === "decision")).toHaveLength(1);
     } finally { await x.channel.close(); x.payments.db.close(); }
   });
 
