@@ -18,6 +18,7 @@ import {
   type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
+import { presentedTokenChildRefusal } from "../src/kernel/child-delegation.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
@@ -240,6 +241,114 @@ describe("child mission creation (@spec child-delegation#child-creation, #parent
       expect(ev?.decision).toBe("denied");
       expect(ev?.attenuation.result).toBe("not_strict_subset");
     }
+  });
+
+  it("bounds the child by the presented token's authority, naming that bound in the evidence (@spec child-delegation#attenuation, D353)", () => {
+    const parent = approveParent(["payments:invoice.read", "payments:payment.execute"]);
+    // The presented token carries the parent's invoice read only.
+    const token = parent.authority_set
+      .map((e) => ({ ...e, actions: e.actions.filter((a) => a === "payments:invoice.read") }))
+      .filter((e) => e.actions.length > 0);
+    const within = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: childIntent(["payments:invoice.read"]),
+      proposedAuthority: proposed(["payments:invoice.read"]),
+      childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+      presentedAuthority: token,
+    });
+    expect(within.child.authority_set.flatMap((e) => e.actions)).toEqual(["payments:invoice.read"]);
+    try {
+      createChildMission(kernel, {
+        parentId: parent.id,
+        intent: childIntent(["payments:invoice.read", "payments:payment.execute"]),
+        proposedAuthority: proposed(["payments:invoice.read", "payments:payment.execute"]),
+        childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+        presentedAuthority: token,
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(ChildDelegationError);
+      expect((e as ChildDelegationError).reason).toBe("not_strict_subset");
+      const ev = (e as ChildDelegationError).evidence;
+      expect(ev?.decision).toBe("denied");
+      expect(ev?.attenuation.result).toBe("exceeds_presented_authority");
+    }
+    // A token carrying the same action without the delegation right: the
+    // child's delegation right exceeds it, so this bound refuses (the parent
+    // carries the right, so the parent bound would not).
+    const undelegable = token.map(({ delegation: _dropped, ...rest }) => rest as AuthorityEntry);
+    try {
+      createChildMission(kernel, {
+        parentId: parent.id,
+        intent: childIntent(["payments:invoice.read"]),
+        proposedAuthority: proposed(["payments:invoice.read"]),
+        childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+        presentedAuthority: undelegable,
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(ChildDelegationError);
+      expect((e as ChildDelegationError).reason).toBe("not_strict_subset");
+      expect((e as ChildDelegationError).evidence?.attenuation.result).toBe("exceeds_presented_authority");
+    }
+  });
+
+  it("the presented token's children controls govern this creation, the evidence naming the bound (@spec child-delegation#attenuation, #fanout, #1192 review)", () => {
+    const parent = approveParent(["payments:invoice.read", "payments:payment.execute"]);
+    const readOnly = (mutate: (children: Record<string, unknown>) => void) =>
+      parent.authority_set
+        .map((e) => {
+          const delegation = structuredClone(e.delegation) as Record<string, unknown>;
+          mutate(delegation.children as Record<string, unknown>);
+          return { ...e, actions: e.actions.filter((a) => a === "payments:invoice.read"), delegation } as AuthorityEntry;
+        })
+        .filter((e) => e.actions.length > 0);
+    const attempt = (token: AuthorityEntry[]) =>
+      createChildMission(kernel, {
+        parentId: parent.id,
+        intent: childIntent(["payments:invoice.read"]),
+        proposedAuthority: token.map(({ capability_sources: _s, ...rest }) => rest as AuthorityEntry),
+        childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+        presentedAuthority: token,
+      });
+    const refusedWith = (token: AuthorityEntry[]) => {
+      try {
+        attempt(token);
+      } catch (e) {
+        expect(e).toBeInstanceOf(ChildDelegationError);
+        return e as ChildDelegationError;
+      }
+      return expect.unreachable();
+    };
+    const actors = refusedWith(readOnly((c) => { c.allowed_child_actors = []; }));
+    expect(actors.reason).toBe("child_actor_not_allowed");
+    expect(actors.evidence?.attenuation.result).toBe("exceeds_presented_authority");
+    const count = refusedWith(readOnly((c) => { c.max_children = 0; }));
+    expect(count.reason).toBe("fanout_exceeded");
+    expect(count.evidence?.attenuation.result).toBe("exceeds_presented_authority");
+    expect(count.evidence?.fanout).toEqual({ active_children: 0, max_children: 0 });
+    // A grandchild (depth 2) under a token whose max_child_depth is 1: the depth control refuses.
+    const depthToken = readOnly((c) => { c.max_child_depth = 1; });
+    expect(
+      presentedTokenChildRefusal(kernel, depthToken.map(({ capability_sources: _s, ...rest }) => rest as AuthorityEntry), "subagent-extractor", 2, depthToken)?.reason,
+    ).toBe("fanout_exceeded");
+    expect(
+      presentedTokenChildRefusal(kernel, depthToken.map(({ capability_sources: _s, ...rest }) => rest as AuthorityEntry), "subagent-extractor", 1, depthToken),
+    ).toBeUndefined();
+    // A token whose delegation right carries no `children` object authorizes no
+    // child: the child carries its parent entry's `children` object, so the
+    // authority bound refuses it.
+    const noChildren = parent.authority_set
+      .map((e) => {
+        const { children: _c, ...delegation } = structuredClone(e.delegation) as Record<string, unknown>;
+        return { ...e, actions: e.actions.filter((a) => a === "payments:invoice.read"), delegation } as AuthorityEntry;
+      })
+      .filter((e) => e.actions.length > 0);
+    const childless = refusedWith(noChildren);
+    expect(childless.reason).toBe("not_strict_subset");
+    expect(childless.evidence?.attenuation.result).toBe("exceeds_presented_authority");
+    // Admitted when the token's controls admit the child.
+    expect(attempt(readOnly(() => {})).child.authority_set.flatMap((e) => e.actions)).toEqual(["payments:invoice.read"]);
   });
 
   it("clamps the child expires_at to the parent's (@spec child-delegation#attenuation)", () => {
