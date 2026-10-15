@@ -2129,8 +2129,8 @@ distinguished from one whose selectors do not resolve.<a href="#section-4.3.2-2"
 operation retry key under the Status profile's Idempotency and
 Conflicts rule (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
 "Idempotency and Conflicts"): a retransmission with the same <code>nonce</code>
-and a byte-identical request returns the stored signed response
-verbatim. The same <code>nonce</code> with a different request is refused
+and the same request members returns the stored signed response
+verbatim. The same <code>nonce</code> with different request members is refused
 <code>invalid_request</code>, never answered with an unrelated original
 response.<a href="#section-4.3.3-1" class="pilcrow">¶</a></p>
 <p id="section-4.3.3-2"><code>event_id</code> deduplicates the external occurrence, scoped by
@@ -2344,7 +2344,7 @@ requester's identifier and <code>nonce</code> to the request's own <code>nonce</
 for the Status profile's state-only response
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Response").
 The <code>nonce</code> rules of <a href="#discharge-idempotency" class="auto internal xref">Section 4.3.3</a> apply to a receipt as to
-the envelope: a byte-identical retransmission replays the stored
+the envelope: a retransmission replays the stored
 receipt bytes, and a fresh-<code>nonce</code> replay of the same event returns a
 new receipt echoing the new <code>nonce</code>. The <code>discharge_receipt</code> object
 has:<a href="#section-4.4.1-2" class="pilcrow">¶</a></p>
@@ -2796,30 +2796,34 @@ entry carrying a <code>terminal_when</code> constraint it does not understand
 <p id="section-9-1">[[ To be removed from the final specification ]]<a href="#section-9-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-2.1">
-          <p id="section-9-2.1.1">A Discharge Result carries <code>prior_version</code> and <code>new_version</code>, an
+          <p id="section-9-2.1.1">A <code>nonce</code> retransmission is compared on its request members, as in
+the Status profile, not on its bytes (#705).<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.2">
+          <p id="section-9-2.2.1">A Discharge Result carries <code>prior_version</code> and <code>new_version</code>, an
 envelope signed with <code>current_version</code> verifies over its original
 bytes, and completing an all-discharged Mission terminates it with
 reason <code>completed</code>; a terminated Mission answers <code>terminal_noop</code>
-whatever its reason (#705).<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+whatever its reason (#705).<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.2">
-          <p id="section-9-2.2.1">The Mission Intent no longer carries <code>success_criteria</code>, following
+        <li class="normal" id="section-9-2.3">
+          <p id="section-9-2.3.1">The Mission Intent no longer carries <code>success_criteria</code>, following
 the OAuth binding. <code>terminal_when</code> is described as the enforceable
 statement of one entry's completion, not of the task's success, and
 the Introduction says the Intent's prose stays inert. No requirement
-changed.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+changed.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.3">
-          <p id="section-9-2.3.1">Discharge Commit (<a href="#discharge-commit" class="auto internal xref">Section 4.1</a>): a committed discharge places
+        <li class="normal" id="section-9-2.4">
+          <p id="section-9-2.4.1">Discharge Commit (<a href="#discharge-commit" class="auto internal xref">Section 4.1</a>): a committed discharge places
 a restriction on the Mission's expansion chain, retained across later
 successors and cleared only for the authority a fresh human approval
 explicitly restores with the discharged entry and its condition
-disclosed. The discharge itself never reverts.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
+disclosed. The discharge itself never reverts.<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.4">
-          <p id="section-9-2.4.1">Relationship to Runtime Enforcement (<a href="#runtime" class="auto internal xref">Section 3.7</a>): issuance-only
+        <li class="normal" id="section-9-2.5">
+          <p id="section-9-2.5.1">Relationship to Runtime Enforcement (<a href="#runtime" class="auto internal xref">Section 3.7</a>): issuance-only
 discharge stays conforming; where the runtime profile runs, its PDP
-refuses a discharged entry.<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+refuses a discharged entry.<a href="#section-9-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

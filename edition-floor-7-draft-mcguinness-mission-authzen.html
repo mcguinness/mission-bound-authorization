@@ -2685,6 +2685,65 @@ Authorization: ...
 }
 </pre><a href="#section-6.14-3" class="pilcrow">¶</a>
 </div>
+<p id="section-6.14-4">For an agent acting for its own workload principal, <code>subject</code> names
+the workload principal and <code>context.actor</code> names the agent's client.
+The token carries no <code>act</code>, so that client is the immediate actor
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The <code>subject.type</code> value
+<code>workload</code> is deployment-profiled. The <code>ledger-reconciler</code> agent reads
+an invoice:<a href="#section-6.14-4" class="pilcrow">¶</a></p>
+<div class="breakable lang-http-message sourcecode" id="section-6.14-5">
+<pre>
+POST /pdp/access/v1/evaluation HTTP/1.1
+Host: pdp.example.com
+Content-Type: application/json
+Authorization: ...
+
+{
+  "subject": {
+    "type": "workload",
+    "id": "agt_ledger_reconciler",
+    "properties": {
+      "iss": "https://login.example.com"
+    }
+  },
+  "resource": {
+    "type": "invoice",
+    "id": "inv_2026Q3_842",
+    "properties": {
+      "audience": "https://erp.example.com"
+    }
+  },
+  "action": {
+    "name": "invoices.read"
+  },
+  "context": {
+    "mission": {
+      "id": "msn_3Jt8Vw2pQ6sN1xR4kL9zB7mD0cF5hYq2",
+      "issuer": "https://as.example.com"
+    },
+    "mission_state_observation": {
+      "state": "active",
+      "mode": "fresh",
+      "freshness_at": "2026-11-02T08:14:00Z"
+    },
+    "actor": {
+      "client_id": "ledger-reconciler"
+    },
+    "credential": {
+      "issuer": "https://as.example.com",
+      "expires_at": "2026-11-02T09:14:00Z",
+      "authority": [
+        {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": ["invoices.read"]
+        }
+      ]
+    }
+  }
+}
+</pre><a href="#section-6.14-5" class="pilcrow">¶</a>
+</div>
 </section>
 </div>
 <div id="pdp-side-consistency-checks">

@@ -791,10 +791,10 @@ Table of Contents
    discharge keeps two identities apart. nonce stays the HTTP operation
    retry key under the Status profile's Idempotency and Conflicts rule
    ([I-D.draft-mcguinness-oauth-mission-status], Section "Idempotency
-   and Conflicts"): a retransmission with the same nonce and a byte-
-   identical request returns the stored signed response verbatim.  The
-   same nonce with a different request is refused invalid_request, never
-   answered with an unrelated original response.
+   and Conflicts"): a retransmission with the same nonce and the same
+   request members returns the stored signed response verbatim.  The
+   same nonce with different request members is refused invalid_request,
+   never answered with an unrelated original response.
 
    event_id deduplicates the external occurrence, scoped by
    (authenticated discharge authority, mission_id, entry_digest,
@@ -974,9 +974,9 @@ Table of Contents
    the Status profile's state-only response
    ([I-D.draft-mcguinness-oauth-mission-status], Section "Response").
    The nonce rules of Section 4.3.3 apply to a receipt as to the
-   envelope: a byte-identical retransmission replays the stored receipt
-   bytes, and a fresh-nonce replay of the same event returns a new
-   receipt echoing the new nonce.  The discharge_receipt object has:
+   envelope: a retransmission replays the stored receipt bytes, and a
+   fresh-nonce replay of the same event returns a new receipt echoing
+   the new nonce.  The discharge_receipt object has:
 
    *  mission_id: the Mission the request targeted;
 
@@ -1304,6 +1304,9 @@ Table of Contents
 9.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  A nonce retransmission is compared on its request members, as in
+      the Status profile, not on its bytes (#705).
 
    *  A Discharge Result carries prior_version and new_version, an
       envelope signed with current_version verifies over its original

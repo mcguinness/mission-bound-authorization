@@ -2280,8 +2280,10 @@ operations directly:<a href="#section-9-1" class="pilcrow">¶</a></p>
 bulk <code>revoke</code> (the worked examples above).<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-2.2">
-          <p id="section-9-2.2.1"><strong>Decommissioned client.</strong> Filter <code>client_id</code>, bulk <code>revoke</code>; every
-Mission the retired Agent submitted stops deriving.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-9-2.2.1"><strong>Compromised or retired agent.</strong> Filter <code>client_id</code>, then bulk
+<code>revoke</code>; every Mission the Agent submitted stops deriving, whatever
+its authority source, an agent acting for its own workload principal
+included.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-2.3">
           <p id="section-9-2.3.1"><strong>Key or approval-surface compromise.</strong> Filter <code>created_after</code> and
