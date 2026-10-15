@@ -50,13 +50,14 @@ export function buildEffectiveParams(input: {
  * bind. `vendor_scope_source` is the canonical normal form's discriminator,
  * carried alongside `vendor_scope` so the digest never collapses two
  * different authorization postures that happen to enumerate the same vendor
- * ids: a caller-supplied `vendor_id` (`"requested"`), the matched entry's own
- * `constraints.vendors` allowlist (`"entry"`), and the explicit, deliberate
- * marker for an unconstrained entry (`"all"`) are three distinct normal
- * forms, never one collapsed case. `vendor_scope` is the sorted, deduped
- * vendor id set for the first two sources and empty for `"all"` (the
- * source discriminator alone carries that case's meaning, mirroring
- * `UNSCOPED_VENDOR_OBJECT`'s role as an explicit sentinel in pep.ts).
+ * ids: a caller-supplied `vendor_id` resolved by the store (`"requested"`),
+ * the matched entry's own `constraints.vendors` allowlist (`"entry"`), and
+ * an unconstrained entry (`"all"`) are three distinct normal forms, never one
+ * collapsed case. `vendor_scope` is the sorted, deduped vendor id set: for
+ * `"all"`, every vendor the payments store holds invoices for when the
+ * scope is derived (#828 step 5), so the digest binds the read's actual
+ * targets and a change to them between decision and execution is a
+ * mismatch.
  */
 export interface ListEffectiveParams {
   capability_snapshot?: CapabilitySnapshot;

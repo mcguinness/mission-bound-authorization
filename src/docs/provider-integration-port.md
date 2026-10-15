@@ -829,8 +829,8 @@ operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) or naming a later merged
-issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `8c2dd42a`, and every
-`file:line` citation is read at `8c2dd42a`.
+issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `f62b1311`, and every
+`file:line` citation is read at `f62b1311`.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -859,7 +859,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 | Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
 | Credential validation | Yes. Met (D411): the PEP and the PDP each enforce the credential's own authority, and introspection, which this path does not consume, validates as the resource does (D402) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check, and the `context.credential` carrier the PDP enforces (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport, PEP- and PDP-level (§5.1) | The mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
-| Independent Resource policy | Yes, not met: acceptance gate (#828) | The decision point's bound `ResourcePolicy`, OpenFGA stored entitlements in `stack.ts` (§5.2) | In the decision | None | Entitlements are stored in OpenFGA; startup attaches or bootstraps a development store (§5.2) | PDP- and PEP-level, [FGA] (§5.2) | Live witnesses CI-only; no client policy; an unresolved vendor lookup and an unconstrained list name no enumerable target; not yet declared in the profile or statement (§5.2) |
+| Independent Resource policy | Yes, not met: acceptance gate (#828) | The decision point's bound `ResourcePolicy`, OpenFGA stored entitlements in `stack.ts` (§5.2) | In the decision | None | Entitlements are stored in OpenFGA; startup attaches or bootstraps a development store (§5.2) | PDP- and PEP-level, [FGA] (§5.2) | Live witnesses CI-only; no client policy; an unresolved vendor lookup names no vendor (D324); its owner and freshness are not yet declared in the profile or statement (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `Pep.intake` (closed schema, NFC) before any decision work; `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level and MCP channel, [FGA] (§5.4) | A single-record read re-derives no digest at use (§5.4) |
 | Permit redemption | Transaction tier, keyed writes, and single-use permits on the unkeyed write path | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation; `takeSingleUse` (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction. An unkeyed-write redemption is one insert, immediately before the effect; a keyed retrieval's is one insert before anything is disclosed (D342) | None; settlement is awaited | Claim, reservation and consumed-identifier records survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | One redemption per operation key per process (§5.5) |
@@ -893,14 +893,14 @@ drives an AS-issued Mission-bound token through that assembled path.
 
   Both then apply `missionBoundFactsFrom` (`server.ts:599-632`) and
   `readMissionAccessClaims`
-  (`services/mcp-payments/src/token-verifier.ts:108-120`): `typ` `at+jwt`, the
+  (`services/mcp-payments/src/token-verifier.ts:109-112`): `typ` `at+jwt`, the
   RFC 9068 claims, a `mission` claim with `id` and `issuer`, and the token's
   own `authorization_details`, read as the credential's authority. A token
   that fails the profile is refused, never demoted to the ordinary class.
   Before the PDP is asked, the PEP refuses `out_of_authority` for an action
-  outside that authority, one whole entry at a time (`pep.ts:1435-1459`). It
+  outside that authority, one whole entry at a time (`pep.ts:1446-1470`). It
   carries the authority and the credential's expiry to the PDP as
-  `context.credential` (`pep.ts:1539-1546`). The PDP enforces that authority
+  `context.credential` (`pep.ts:1550-1557`). The PDP enforces that authority
   as its own bound, embedded and remote, and refuses a missing or unreadable
   carrier or a passed expiry `credential_invalid`, never falling back to the
   Mission (`services/pdp/src/evaluate.ts:856-871`, `:1335-1362`; D341).
@@ -967,13 +967,17 @@ drives an AS-issued Mission-bound token through that assembled path.
   - [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > a stored entitlement permits; an external revocation of only that entitlement denies resource_policy on the next decision with signed evidence; restoring it permits` (PDP-level)
   - [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > Mission-context tuples cannot satisfy a stored entitlement: the same tuples that satisfy the Mission relation leave the entitlement unsatisfied, and the model refuses a Mission subject on it` (PDP-level)
   - [FGA] `the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > revoking only the stored entitlement refuses the next read resource_policy with no result; restoring it permits, the same over both channels` (PEP-level)
+  - `list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > a policy refusing one vendor refuses the whole unconstrained read resource_policy with no result, while a read naming the other vendor permits` (PEP-level, co-resident and remote)
+  - `list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an invoice for a vendor the decision never named is never returned: before the last check it is a parameter mismatch, after it the bound filter drops it` (PEP-level)
+  - `list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > a named vendor the store does not hold is refused unknown_vendor before any decision: no policy query, no Decision Evidence, a signed target_unresolvable refusal` (PEP-level)
+  - [FGA] `the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > an unconstrained list names every invoice vendor to the stored policy: revoking only one vendor's entitlement refuses the whole read resource_policy, a read of the other vendor still permits, and restoring it permits both, the same over both channels (#828 step 5)` (PEP-level)
 - **Required, not met.** #828 stays an acceptance gate. Its live witnesses
-  run only where OpenFGA does (CI). No policy requires a client.
-  `lookup_vendor` names the vendor the store resolved (D324), but a vendor
-  the store does not hold keeps the server target, and an unconstrained
-  `list_invoices` names the unscoped vendor object, so the policy refuses
-  both rather than checking the vendors they touch. The payments Operation Profile and the Enforcement Scope Statement
-  do not yet declare the policy, its owner or its freshness.
+  run only where OpenFGA does (CI). No policy requires a client. A vendor
+  the store does not hold keeps `lookup_vendor`'s server target (D324),
+  which a vendor constraint or the policy refuses. The payments Operation
+  Profile specifies every tool's targets and the list form; it and the
+  Enforcement Scope Statement do not yet name the policy's owner or its
+  freshness.
 
 ### 5.3 Protected state and lifecycle
 
@@ -1014,16 +1018,16 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Hook.** `buildEffectiveParams`
   (`services/mcp-payments/src/effective-params.ts:27-44`) builds the effective
   parameters from the payments store, never from tool arguments, and
-  `parameterDigest` (`:83`) commits them into the decision request. Three
+  `parameterDigest` (`:84`) commits them into the decision request. Three
   separate PEP checks run at use:
-  - `verifyPermitAtUse` (`pep.ts:2072`) runs the permit-use table
-    (`pep.ts:425-465`): the permit's bound phase against the crossing's phase
+  - `verifyPermitAtUse` (`pep.ts:2083`) runs the permit-use table
+    (`pep.ts:431-471`): the permit's bound phase against the crossing's phase
     (`phase_mismatch`), then `valid_until` (`permit_expired`). It compares no
     digest.
-  - `reverifyCapability` (`pep.ts:2193`) re-checks the capability snapshot
+  - `reverifyCapability` (`pep.ts:2204`) re-checks the capability snapshot
     (`capability_source_unresolvable`).
-  - `reverify` (`pep.ts:2104`, a single-record operation) and `reverifyList`
-    (`pep.ts:2144`, a list read) re-derive the effective parameters and
+  - `reverify` (`pep.ts:2115`, a single-record operation) and `reverifyList`
+    (`pep.ts:2155`, a list read) re-derive the effective parameters and
     compare the digest (`parameter_mismatch`; a target that no longer resolves
     is also `parameter_mismatch`).
 - **Order and boundary, by dispatch path** (`dispatchPathFor`, called from
@@ -1047,7 +1051,7 @@ drives an AS-issued Mission-bound token through that assembled path.
     transaction token is presented, and the connector commit (`:1720-1771`).
     A refusal after redemption marks the operation `abandoned` and records
     suppressed Execution Evidence, which settles the PDP claim `failed`
-    because the attempt is redeemed (`pep.ts:2001-2003`). The permit is spent;
+    because the attempt is redeemed (`pep.ts:2012-2014`). The permit is spent;
     a retry needs a fresh decision (code reading).
 - **Asynchronous work.** None.
 - **Crash and recovery.** The payments store is in memory and reseeded per
@@ -1171,11 +1175,11 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Hook.** The PDP emits Decision Evidence for every decision. The PEP
   verifies it (byte equality, signature, emitter-bound key, role, audience)
   before release, refusing `decision_evidence_unverifiable` otherwise
-  (`pep.ts:1657-1669`). The PEP emits Refusal Records (`pep.ts:2208-2269`), whose
+  (`pep.ts:1668-1680`). The PEP emits Refusal Records (`pep.ts:2219-2280`), whose
   `denial_reason` the exhaustive `PRE_DECISION_DENIAL_REASON` supplies; an
   unmapped diagnostic, or a value outside the emitting role's closed set, is
   refused before signing (#1148). It also emits
-  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1968-2011`). The
+  suppressed Execution Evidence (`suppressExecution`, `pep.ts:1979-2022`). The
   executor emits `completed` Execution Evidence after a connector commit
   (`server.ts:1802-1835`). The record table is the contract's §6.
 - **Boundary.** Synchronous, inside the request.

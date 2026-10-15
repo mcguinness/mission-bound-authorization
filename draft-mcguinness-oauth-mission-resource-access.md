@@ -61,6 +61,14 @@ informative:
     author:
       - org: Model Context Protocol Project
     date: 2026
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
@@ -440,6 +448,12 @@ This document defines the initial Common Constraints:
   member. Subset: no broader when the candidate is `true` or equals
   the reference (narrowing may add the requirement, never remove it).
   Intersection: the logical OR of the two values.
+
+The `mission_resource_access` type does not define an interoperable
+cumulative use counter. Deployments that adopt Mission Metering
+({{I-D.draft-mcguinness-mission-metering}}) apply its accounting and
+settlement rules; the metering PDP can be embedded in the resource
+server.
 
 These comparisons are in value space, not lexical: `max_amount`
 `amount` members are compared as the decimal numbers the strings
@@ -963,6 +977,9 @@ registry.
 
 -00
 
+- Common Constraints states that the type defines no interoperable
+  cumulative use counter and points to Mission Metering's accounting
+  and settlement rules (#1206).
 - Scope Projection's action condition permits a mapped `scope` value
   to grant a proper subset of the entry's `actions`, matching the
   issuance profile's subset condition; any additional action still

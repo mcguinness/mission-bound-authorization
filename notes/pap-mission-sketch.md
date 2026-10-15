@@ -347,13 +347,13 @@ PAP's sign-in response, plus core's members:
 - The `refresh_token` is a Mission Account Token. It is added beside any
   ordinary Account Token the agent holds and replaces nothing, so the
   step-up replacement rule of Spec 4.4 does not apply.
-- It is sender-constrained under RFC 9449 Section 5, which treats an
-  authenticated confidential client's refresh token as bound by client
-  authentication. PAP accepts an Account Token only from the `client_id` it
-  was issued to, authenticated by `private_key_jwt` (Spec 4.8). Whether
-  that satisfies core's rule (sender-constrained or rotated) is #1204. A
-  Company that wants no doubt until it is settled rotates the token, which
-  PAP permits (Spec 4.8).
+- It is bound to the agent by client authentication, which is core's
+  refresh-token binding for a confidential client (RFC 6749 Section 6; RFC
+  9449 Section 5 treats it as the sender constraint). PAP accepts an
+  Account Token only from the `client_id` it was issued to, authenticated
+  by `private_key_jwt` (Spec 4.8). Core does not also require rotation. A
+  Company may still rotate the token, which PAP permits (Spec 4.8);
+  rotation detects replay and adds no binding.
 - No credential outlives `mission_expires_at`, per core.
 - Session Tokens stay opaque to the agent (Spec 4.2). Core profiles two
   forms of Mission-bound access token: an RFC 9068 JWT, or an opaque token
@@ -654,11 +654,20 @@ Intent must not submit the same authority as bare `scope` or
 nor otherwise established. It surfaces the inability instead.
 
 Stopping also keeps any ordinary credential the agent holds out of the task.
-That is this profile's rule, not core's (#1205).
+Core requires this of a client acting under a Mission, unless a
+deployment-defined enforcement path establishes the Mission for the request
+(#1205).
 
 The User may separately choose to run an ordinary PAP workflow instead. That
-is a different authorization, outside this profile:
+is a different authorization, outside this profile, and it is the User's
+conscious choice, not the agent's:
 
+- It is available only at a resource the Company has not designated
+  Mission-governed. It cannot pass around mandatory mediation where a
+  deployment requires it.
+- The agent cannot label its own fallback after a Mission refusal a new
+  workflow. Retrying the task under an ordinary credential without the
+  User's separate choice is the substitution core forbids.
 - The agent holds an account-wide credential.
 - It cannot assume that an action endpoint returns a proposal rather than
   executing (G6).
@@ -692,7 +701,7 @@ what is done under a Mission token.
 | Verified per-revision User approval | `approved_by: "user"` stays on trust (Ops 8). An entry with `requires_action_approval: true` is refused rather than satisfied by it. | Mission Transaction Authorization, or another action-bound approval hosted by the Company |
 | Device Sign-In and Mediated Sign-In | Agents without a redirect cannot create Missions. Mediated Sign-In has no Company-rendered approval, so it stays out. | #1202: Intent carriage on device sign-in (Section 6.2) |
 | Conditions outside `terms` | Only `terms` and Common Constraints are checked. Summary prose is not. | Ops 3 already requires every effect in `terms` when present. A Company governing an action puts its conditions there. |
-| Other credentials the agent holds | An ordinary write-capable token, whether `poppy:write` or a narrower Company write scope, is not bounded by any Mission. It can confirm with `approved_by: "user"` on the agent's word (T11). | Company policy: issue agents no write-capable scope of any kind for the governed actions, so every agent write to them goes through a Mission |
+| Other credentials the agent holds | An ordinary write-capable token, whether `poppy:write` or a narrower Company write scope, is not bounded by any Mission. It can confirm with `approved_by: "user"` on the agent's word (T11). Core forbids this for a Mission's task, but the Company cannot observe the violation. | Company policy: issue agents no write-capable scope of any kind for the governed actions, so every agent write to them goes through a Mission |
 | Missions across Companies | Each Company sees only its own Mission. Aggregate limits are the agent's job. | Cross-Domain companion, opt-in, at the cost of correlation (Section 5) |
 
 The profile claims no assurance level beyond Baseline Issuance. It adds two
@@ -773,7 +782,7 @@ These help PAP whether or not Mission is used.
 
 ### 6.2 To the Mission family
 
-Filed; each needs a ruling.
+Filed; each needs a ruling unless marked ruled.
 
 1. **#1202, Intent carriage on device sign-in.** An Intent travels only
    through PAR, so RFC 8628 device authorization cannot create a Mission.
@@ -783,11 +792,14 @@ Filed; each needs a ruling.
 2. **#1203, in-house introspected consumption.** Recommended: an in-house
    read of the issuer's state counts. The commit-point check needs one
    clause in the Architecture's existing freshness wording, not a new name.
-3. **#1204, refresh-token sender constraint.** Section 3.5 relies on client
-   authentication counting.
-4. **#1205, ordinary credentials.** Downgrade by Omission does not cover a
-   client that does the task with an ordinary token it holds. Section
-   3.10's rule is this profile's own.
+3. **#1204, refresh-token sender constraint.** Ruled (D412): client
+   authentication is a confidential client's refresh-token binding, which
+   Section 3.5 relies on.
+4. **#1205, ordinary credentials.** Ruled (D412). Core forbids a client
+   acting under a Mission to present an ordinary credential for the task,
+   except through a deployment-defined enforcement path that establishes
+   the Mission, and Downgrade by Omission names the controls that enforce
+   the boundary. Section 3.10's rule follows core.
 
 ## 7. Decisive tests
 
