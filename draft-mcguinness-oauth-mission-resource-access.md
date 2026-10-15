@@ -977,6 +977,9 @@ registry.
 
 -00
 
+- Common Constraints states that the type defines no interoperable
+  cumulative use counter and points to Mission Metering's accounting
+  and settlement rules (#1206).
 - Scope Projection's action condition permits a mapped `scope` value
   to grant a proper subset of the entry's `actions`, matching the
   issuance profile's subset condition; any additional action still
