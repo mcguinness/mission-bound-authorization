@@ -44,7 +44,8 @@ import { delegationHandleParams } from "./delegation-handle.helper.js";
 import type { Server } from "node:http";
 import { DERIVATION_POLICY, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { credentialProfileVectors } from "@mission/core/test-vectors";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   TOKEN_EXCHANGE_GRANT_TYPE,
@@ -254,9 +255,13 @@ async function introspect(
  */
 async function craftToken(
   payload: Record<string, unknown>,
-  opts: { typ?: string; expiresIn?: number; omitExp?: boolean; omitIat?: boolean } = {},
+  opts: { typ?: string; expiresIn?: number; omitExp?: boolean; omitIat?: boolean; header?: Record<string, unknown> } = {},
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
+  // A header override of `undefined` removes the member; a payload that names
+  // `iat` or `exp` (even as `undefined`, which removes it) sets its own.
+  const header: Record<string, unknown> = { alg: "RS256", kid: "as-token", typ: opts.typ ?? "at+jwt", ...opts.header };
+  for (const [k, v] of Object.entries(header)) if (v === undefined) delete header[k];
   let builder = new SignJWT({
     iss: ISSUER,
     sub: "alice",
@@ -264,9 +269,9 @@ async function craftToken(
     client_id: "ap-agent",
     authorization_details: PAYMENTS_PROPOSAL,
     ...payload,
-  }).setProtectedHeader({ alg: "RS256", kid: "as-token", typ: opts.typ ?? "at+jwt" });
-  if (!opts.omitIat) builder = builder.setIssuedAt(now);
-  if (!opts.omitExp) builder = builder.setExpirationTime(now + (opts.expiresIn ?? 300));
+  }).setProtectedHeader(header as never);
+  if (!opts.omitIat && !("iat" in payload)) builder = builder.setIssuedAt(now);
+  if (!opts.omitExp && !("exp" in payload)) builder = builder.setExpirationTime(now + (opts.expiresIn ?? 300));
   return builder.sign(testSigningKey);
 }
 
@@ -502,6 +507,13 @@ describe("strict token resolution: bare active:false, no Mission or token detail
     expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });
   });
 
+  it("a correctly signed token whose jti has no issuance record is never returned active", async () => {
+    // An unknown token: signed by the AS's own key and naming a live Mission,
+    // but no issuance record binds its jti to a grant.
+    const crafted = await craftToken({ jti: crypto.randomUUID(), mission: { id: flow1.missionId, issuer: ISSUER } });
+    expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+  });
+
   it("wrong-audience caller: the ENTIRE response is minimized", async () => {
     const res = await introspect(flow1.at, { principal: RS_SAAS });
     expect(res.status).toBe(200);
@@ -591,6 +603,66 @@ describe("audience-to-resource mapping (cleanup, issue #541): an OAuth aud need 
   it("mixes mapped and unmapped audiences independently, unioning the result", () => {
     const mapping = { a1: ["r1", "r2"] };
     expect(resourcesForAudiences(["a1", "a2"], mapping)).toEqual(new Set(["r1", "r2", "a2"]));
+  });
+});
+
+describe("the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402)", () => {
+  // flow1's real jti and Mission, as in the claim-set baseline above, so a
+  // crafted token fails only the vector under test.
+  const baseline = () => ({ jti: flow1.jti, mission: { id: flow1.missionId, issuer: ISSUER } });
+  const cnf = { jkt: "test-confirmation-thumbprint" };
+  // flow1 exists only once the suite starts, so the vectors are listed by
+  // label here and built against flow1's Mission and the clock in each test.
+  const vectorsFor = (missionId: string) =>
+    credentialProfileVectors({
+      resource: PAYMENTS,
+      action: "payments:invoice.read",
+      mission: { id: missionId, issuer: ISSUER },
+      nowS: Math.floor(Date.now() / 1000),
+    });
+  const labels = vectorsFor("listing-only")
+    .filter((v) => !v.senderConstrainedProfileOnly)
+    .map((v) => v.label);
+
+  it.each(labels)("answers a token with %s with a bare active:false, as the resource refuses it", async (label) => {
+    const v = vectorsFor(flow1.missionId).find((x) => x.label === label);
+    if (!v) throw new Error(`no vector ${label}`);
+    const res = await introspect(await craftToken({ ...baseline(), ...v.claims }, { header: v.header }), {
+      principal: RS_PAYMENTS,
+    });
+    expect(res.body).toEqual({ active: false });
+  });
+
+  it("introspects a primary token with no cnf as an active bearer token, and one with a well-formed cnf as DPoP", async () => {
+    const bearer = await introspect(await craftToken(baseline()), { principal: RS_PAYMENTS });
+    expect(bearer.body).toMatchObject({ active: true, token_type: "Bearer" });
+    expect(bearer.body).not.toHaveProperty("cnf");
+    const bound = await introspect(await craftToken({ ...baseline(), cnf }), { principal: RS_PAYMENTS });
+    expect(bound.body).toMatchObject({ active: true, token_type: "DPoP", cnf });
+  });
+
+  it("answers a delegated token (act) with no cnf with a bare active:false: a delegated token is sender-constrained", async () => {
+    const act = { sub: "delegate-agent" };
+    expect((await introspect(await craftToken({ ...baseline(), act }), { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+    expect((await introspect(await craftToken({ ...baseline(), act, cnf }), { principal: RS_PAYMENTS })).body.active).toBe(true);
+  });
+
+  it("answers a Child Mission's token with no cnf with a bare active:false: Child Mission tokens are sender-constrained", async () => {
+    // flow1's record as a Child Mission's: the profile follows the Mission
+    // the token is bound to.
+    const get = as.kernel.get.bind(as.kernel);
+    const spy = vi.spyOn(as.kernel, "get").mockImplementation((id: string) => {
+      const record = get(id);
+      return record && id === flow1.missionId
+        ? { ...record, parent: { id: "msn_parent", issuer: ISSUER, authority_hash: "sha-256:parent" } }
+        : record;
+    });
+    try {
+      expect((await introspect(await craftToken(baseline()), { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+      expect((await introspect(await craftToken({ ...baseline(), cnf }), { principal: RS_PAYMENTS })).body.active).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 
