@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "da5950293ae5c9bdfb4a566ab118e8adb4cd91b4",
-    "content_sha256": "9ddf980f22fd8e5bd44b79849ca4222451a7c4c972a3049a7fc8143f42aed785"
+    "revision": "3044419d3a9d6110cf42b7ec66863af4698f097c",
+    "content_sha256": "46c6e1afb7d0730c2b43ab1892f28a46a1ae02951106793aa38a288be63c5cbe"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -7209,7 +7209,7 @@
    "id": "core.introspection.opaque-requires-introspection",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "introspected-consumption",
-   "text": "an AS issuing opaque Mission-bound tokens MUST offer introspection for them with the members this mode names",
+   "text": "an AS issuing opaque Mission-bound tokens MUST offer introspection for them with the members this mode names, unless every resource server that consumes them uses issuer-local resolution",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -7220,7 +7220,7 @@
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment issuing opaque Mission-bound tokens exposes introspection for them carrying the mode's members"
+    "normative": "a deployment issuing opaque Mission-bound tokens that any resource server consumes other than through issuer-local resolution exposes introspection for them carrying the mode's members"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -7292,6 +7292,182 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
+  },
+  {
+   "id": "core.introspection.local-resolution-own-record",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST resolve the presented token to that token's own issuer-qualified issuance or grant record",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "issuer-local resolution takes expiry, revocation and grant validity, audience, composite active state and authority from the presented token's own issuer-qualified issuance or grant record; an unknown, expired, revoked or wrong-audience token is refused at the resource while its Mission is active"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness presents unknown, expired, revoked and wrong-audience tokens under an active Mission."
+  },
+  {
+   "id": "core.introspection.local-resolution-not-mission-lookup",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "Mission state alone, or a lookup by Mission identifier, never establishes a token's validity or authority",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token whose own record is absent or invalid is refused although a lookup by its Mission identifier finds an active Mission"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness presents an unknown token that names an active Mission's identifier."
+  },
+  {
+   "id": "core.introspection.local-resolution-caller-authorization",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST authorize the resource server and minimize disclosure to it as {{caller-authorization-and-minimization}} requires for an introspection caller",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "issuer-local resolution yields nothing to a resource server that is not an audience of the token, and yields to an audience only its audience-filtered entries and the member-scoped Mission data it may receive"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. The qualification of a resolving resource server (inside the issuer's trusted implementation boundary, authorized to read its committed state) is a deployment trust input, not an observable obligation. A witness resolves a token at an unauthorized resource server and at a wrong audience."
+  },
+  {
+   "id": "core.introspection.local-resolution-projection",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST yield, when the token is active, only what an active response for that token carries in this mode",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an active issuer-local resolution yields the token's own audience-filtered authorization_details, mission, aud, act where delegated and cnf where sender-constrained, never the Mission's Authority Set or authority the token does not carry"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness resolves a token narrower than its Mission and a delegated token, and checks that only the token's own authority is enforced."
+  },
+  {
+   "id": "core.introspection.local-resolution-inactive-or-unavailable",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "resolves as inactive and yields no authority; missing or unavailable state yields no valid resolution",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an unknown, invalid, expired or revoked token or a non-active Mission resolves as inactive with no authority, and missing or unavailable state yields no resolution, so the resource refuses"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness makes the committed state unavailable, and terminates the Mission between two requests."
+  },
+  {
+   "id": "core.introspection.local-resolution-rs-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "cannot obtain a valid introspection response or issuer-local resolution for an opaque Mission-bound token MUST refuse the request",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS that cannot obtain a valid issuer-local resolution for an opaque Mission-bound token refuses the request rather than serve it from a cached or out-of-band belief"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. The issuer-local facet of the clause core.introspection.opaque-rs-fail-closed quotes; that row keeps the introspection facet."
+  },
+  {
+   "id": "core.introspection.local-resolution-rs-stands-in",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "the resolution stands in for the introspection response, possession proof and fail-closed refusal included",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS consuming an issuer-local resolution verifies active, its own identity in aud and possession of the key cnf names, and enforces the resolved authorization_details as it would an introspection response; a request without the bound key's proof is refused"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. The introspection-response form of these RS duties is #904's inventory; this row covers only the issuer-local form. A witness presents a sender-constrained token without valid proof."
+  },
+  {
+   "id": "core.introspection.local-resolution-per-use",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "each resolution is one per-use observation, not a cacheable assertion",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS resolves on every use, so a token revoked or a Mission terminated after an earlier successful resolution is refused on its next request"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A per-use read stops later requests only; excluding an effect admitted before a revocation commits needs a serialization boundary (#250), which this row does not claim."
   },
   {
    "id": "core.anchors.entry-commitment",
