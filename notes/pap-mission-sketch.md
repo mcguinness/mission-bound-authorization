@@ -659,8 +659,15 @@ deployment-defined enforcement path establishes the Mission for the request
 (#1205).
 
 The User may separately choose to run an ordinary PAP workflow instead. That
-is a different authorization, outside this profile:
+is a different authorization, outside this profile, and it is the User's
+conscious choice, not the agent's:
 
+- It is available only at a resource the Company has not designated
+  Mission-governed. It cannot pass around mandatory mediation where a
+  deployment requires it.
+- The agent cannot label its own fallback after a Mission refusal a new
+  workflow. Retrying the task under an ordinary credential without the
+  User's separate choice is the substitution core forbids.
 - The agent holds an account-wide credential.
 - It cannot assume that an action endpoint returns a proposal rather than
   executing (G6).
