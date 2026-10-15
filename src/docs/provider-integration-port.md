@@ -440,8 +440,10 @@ the store.
     signed and returned. `{#issuance-gating}` refuses a derivation answered
     after an acknowledged revocation. Code reading; no test yet; #250 owns the
     race (§4.6).
-  - No operation identity: a retry after a lost token response is a new,
-    separately counted derivation (§4.4).
+  - No operation identity: nothing replays a lost token response. A retry
+    of the same authorization code, or of a rotated refresh token, is reuse
+    and revokes the grant; a retry of a refresh token that has not rotated
+    is a new, separately counted derivation (§4.4).
 
 ### 3.6 Refresh and revocation gating
 
@@ -679,8 +681,9 @@ A JWT-only Resource Server accepts the token from step 3 on, without the AS
 knowing it was delivered. No authoritative issuance commit exists across the
 provider and Mission stores. Defining one is #250's first acceptance item
 (§4.6). The boundary cases this leaves open (a revocation between the gate
-and signing, a failure after counting, a failure after signing or index
-acceptance, a lost delivery), each with its outcome and owner, are listed in
+and signing, a failure after counting, a failure after signing, a failure
+after index acceptance, a lost code-exchange or refresh response), each with
+its outcome and owner, are listed in
 [issuance-only-deployment.md](issuance-only-deployment.md) §4; D408 accepts
 them as unsupported for that reference deployment.
 
@@ -732,9 +735,13 @@ them as unsupported for that reference deployment.
   `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refused rotating refresh leaves the same refresh token valid: once the trusted mapping is repaired it succeeds once, and its reuse gets the ordinary replay treatment`.
   A non-rotating refresh token can be presented again, and each use is a new
   derivation.
-- **Access-token issuance.** No operation identity. A retry after a lost
-  response is a fresh derivation, counted again. An earlier token, if it was
-  signed, stays valid until `exp`. No recorded artifact is replayed.
+- **Access-token issuance.** No operation identity, and no recorded artifact
+  is replayed. A retry after a lost response follows the two bullets above. A
+  retried code exchange is code reuse: refused `invalid_grant` before anything
+  is counted, and the grant it revokes makes the lost token introspect
+  `active: false`. A retried refresh on a refresh token that has not rotated
+  is a fresh derivation, counted again, and the lost token stays valid until
+  `exp`.
 - **Lifecycle operations.** Nonce-keyed replay of the committed outcome
   ([control-plane-deployment.md](control-plane-deployment.md)).
 
