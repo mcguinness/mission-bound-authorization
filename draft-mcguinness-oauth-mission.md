@@ -6060,6 +6060,16 @@ Cross-Domain:
 
 -01
 
+- Editorial (#910): the Introduction leads with the Mission, its
+  guarantees and the residual of already-issued access tokens, and
+  its chain steps carry labels. The protocol flow and its worked
+  example precede the Principal Model; the Implementation Map links
+  the reading paths; Terminology points to the Mission-aware Resource
+  Server role; the approval algorithm's steps carry labels; and
+  Binding the Mission to the Grant has named subsections, one for the
+  `mission_id` and `mission_expires_at` response parameters. No
+  requirement changes.
+
 - Issuance Gating refuses a derivation from a Mission that is not
   `active` with `invalid_request` on a Token Exchange, as Section 2.2.2
   of RFC 8693 requires for an unacceptable subject token, and with
