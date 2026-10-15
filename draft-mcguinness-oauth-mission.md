@@ -2131,12 +2131,10 @@ document defines:
     ({{standing-consent-bases}}).
 
   For `direct`, `activation.approval_event_id` MUST identify a human
-  approval event ({{approval-event}}). Where an Approval Governance
-  Record backs a `direct` approval
-  ({{I-D.draft-mcguinness-mission-approval-governance}}), its
-  accountable assertion MUST be the `human` assertion of
-  `consent_principal`; `policy` and `service` assertions can
-  contribute to that record without replacing the human decision.
+  approval event ({{approval-event}}). Approval Governance states how
+  a record backing a `direct` approval keeps that human decision as
+  its accountable assertion
+  ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
   `approval_basis` is provenance: neither anchor covers it
   ({{integrity-anchors}}); a profile that commits the Mission Record
@@ -2285,12 +2283,11 @@ assertion.
     is recorded for this approval event
     ({{I-D.draft-mcguinness-mission-approval-governance}}), joined
     by this Mission's own `approval_event_id`. It never changes
-    `kind`, which follows the basis (below). When `true`, `kind`
-    MUST equal the record's accountable assertion's own `kind`
-    wherever the record carries an accountable assertion: a
-    governed decision still names its mechanism, and the record
-    supplies the fuller assertion set behind it, including any
-    multi-assertion set, never flattened into it.
+    `kind`, which follows the basis (below), and Approval Governance
+    aligns the record's accountable assertion, where it carries one,
+    with that `kind`: a governed decision still names its mechanism,
+    and the record supplies the fuller assertion set behind it,
+    including any multi-assertion set, never flattened into it.
 
 The `adjudication` member, where present, follows the basis:
 
@@ -6049,9 +6046,9 @@ Cross-Domain:
 - Standing-Consent Bases lists `governed_policy`, the basis Mission
   Approval Governance defines for a policy version a human approved.
   A `direct` approval is always a human decision: `adjudication.kind`
-  is `human` with or without `governance_record`, and an Approval
-  Governance Record backing a `direct` approval names that human's
-  assertion as its accountable assertion. Role Mapping separates
+  is `human` with or without `governance_record`, and Approval
+  Governance states how a record backing a `direct` approval keeps
+  that decision as its accountable assertion. Role Mapping separates
   AGR-backed direct approval from AGR-backed template or drawdown
   activation and adds governed policy approval (#1185).
 

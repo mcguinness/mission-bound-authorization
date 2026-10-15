@@ -250,8 +250,9 @@ this record exists, `adjudication.governance_record` is `true` and
 `direct`, and `policy` for a standing-consent basis, including
 `governed_policy` ({{governed-policy}}). It is never a value that
 names this record itself, and never a flattening of its assertion set
-into a single principal; the accountable assertion, where the record
-carries one, names the same mechanism ({{assertion-requirements}}).
+into a single principal. Where the record carries an accountable
+assertion ({{assertion-requirements}}), that assertion's own `kind`
+MUST equal `kind`.
 
 # The Approval Governance Record {#record}
 
@@ -449,10 +450,10 @@ These rules are the record's security core.
   governance input, never the accountable approver's assertion. The
   Mission's `approval_basis.type` fixes the accountable assertion:
 
-  - For `direct`, it is the accountable approver's own `human`
-    assertion, as the issuance profile requires
-    ({{I-D.draft-mcguinness-oauth-mission}}); `policy` and `service`
-    assertions can contribute without replacing it.
+  - For `direct`, it MUST be the `human` assertion of
+    `consent_principal`, the human decision a `direct` approval event
+    carries ({{I-D.draft-mcguinness-oauth-mission}}); `policy` and
+    `service` assertions can contribute without replacing it.
   - For `governed_policy`, it is a `policy` assertion carrying the
     deciding policy's provenance chain ({{governed-policy-record}}):
     the policy is the decision mechanism and the matched principal
@@ -1508,7 +1509,10 @@ version before treating the evaluation as re-checked
   at the atomic creation commit. Assertion Requirements states the
   accountable assertion each basis requires: `human` for `direct`,
   `policy` for `governed_policy`, and the `approval_basis` record for
-  the other standing-consent bases (#1185).
+  the other standing-consent bases. Where the governed Mission
+  populates `adjudication`, the accountable assertion's `kind` equals
+  `adjudication.kind`; this document, not the OAuth binding, holds
+  both rules (#1185).
 
 - The accountable principal is the Mission record's
   `approval_basis.consent_principal`. The Approval Context Manifest
