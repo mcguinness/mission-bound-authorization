@@ -79,6 +79,7 @@ import {
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { withCredential } from "../../pdp/test/with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -92,7 +93,7 @@ const idem = (): string => `idem_${randomUUID()}`;
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
 // decision point's entry point, which closes over the PDP's emission path.
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 
 const PORT = 14501;
 const ISSUER = `http://localhost:${PORT}`;
@@ -451,7 +452,7 @@ const evalAction = async (missionId: string, action: string) => {
         amount: { amount: "125.00", currency: "USD" },
       },
     },
-    { view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction },
+    { view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE },
   );
 };
 
@@ -482,7 +483,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     agentDpopKeys = await generateKeyPair("ES256", { extractable: true });
     agentJkt = await calculateJwkThumbprint(await exportJWK(agentDpopKeys.publicKey));
 
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
 

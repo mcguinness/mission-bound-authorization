@@ -64,6 +64,7 @@ d("composed stack: the MAS-governed channel joins an ordinary credential (#557)"
       withAuthServer: true,
       asPort: AS_PORT,
       claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile(),
+      resourcePolicyStore: { bootstrap: "development" },
     });
     if (stack.masGovernedChannel) cleanups.push(stack.masGovernedChannel.close);
     if (stack.authServer) cleanups.push(stack.authServer.closeAuthServer);

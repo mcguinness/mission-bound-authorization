@@ -22,6 +22,7 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const token: TokenFacts = {
   sub: "alice",
@@ -54,7 +55,7 @@ function fixture(over: { observation?: Record<string, unknown>; deps?: Partial<P
     [{ id: "acme", name: "Acme", status: "approved" }],
     [{ id: "inv-1", vendor_id: "acme", amount: "100.00", currency: "USD", payee_account: "acct", status: "payable" }],
   );
-  const keys = createEphemeralEvidenceKeys();
+  const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const observation = over.observation ?? {
     state: view.state,

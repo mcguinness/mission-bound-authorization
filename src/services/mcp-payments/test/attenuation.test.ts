@@ -41,12 +41,13 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 /** Fail-closed EvidenceStore (issue #649): every `evidence:` fixture below needs a signer. */
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per test
 // module. `signing`/`resolver` wire the PEP's store; `decide` is the decision
 // point's entry point, which closes over the PDP's emission path.
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 
 const AS_ISS = "https://as.test";
 const READ_ACTION = "payments:invoice.read";
@@ -367,7 +368,7 @@ d("attenuation chain: PEP permits an in-leaf action (OpenFGA)", () => {
   let fga: Fga;
   let modelId: string;
   beforeAll(async () => {
-    const conn = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
+    const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
     fga = conn.fga;
     modelId = conn.modelId;
   });

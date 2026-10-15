@@ -22,6 +22,7 @@ import type { MissionBoundTokenFacts } from "@mission/mcp-payments";
 import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { shapeIntent } from "@mission/agent";
 import { callWithTransactionCredential, composeStack } from "./stack.js";
+import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { ACTION_LABELS, REASON_LABELS, TOOL_LABELS } from "./labels.js";
 import {
   clientAssertionSigner,
@@ -188,6 +189,7 @@ async function main() {
   const stack = await composeStack({
     openfgaUrl: process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url,
     presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
+    resourcePolicyStore: resourcePolicyStoreFromEnv(),
     caCertPath: ca,
     withAuthServer: true,
   });
