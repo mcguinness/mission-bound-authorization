@@ -17,8 +17,8 @@ production-readiness or interoperability claim (D284 ruling 1).
 Every behavioral statement is true of the reference implementation read at
 origin/main `e9001b2f`, and each statement about the as-native target and its
 launcher (#1105), or naming a later merged issue (such as #1103 or #1104), at
-`583e3806`, and each naming #828 at `338436fb`. Each cites the function
-(`file:line`, read at `338436fb`, paths relative to `src/`) or the exact test (`describe > it`)
+`583e3806`, and each naming #828 at `8c2dd42a`. Each cites the function
+(`file:line`, read at `8c2dd42a`, paths relative to `src/`) or the exact test (`describe > it`)
 that shows it. A path with no
 witnessing test says "no test yet". Tests marked [FGA] are skipped without a
 live OpenFGA, so a local run can pass where CI with OpenFGA fails, or the
@@ -73,7 +73,7 @@ enforces Resource policy, but #828's acceptance is still open.
 
 ## 2. Dimension contract
 
-| Dimension | Adopted (D284, D293) | Reference at `e9001b2f` (citations read at `338436fb`) | Status | Gap owner |
+| Dimension | Adopted (D284, D293) | Reference at `e9001b2f` (citations read at `8c2dd42a`) | Status | Gap owner |
 |---|---|---|---|---|
 | Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `pnpm as-native` (§11) runs `composeStack({ target: "as-native" })` (`demo/src/stack.ts:251`): the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:386-388`) with the D332 capability set below, the PEP `mcp-payments-pep` (`stack.ts:891-893`) served over HTTP MCP at the resource audience `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:78`), the PDP (`stack.ts:716`), OpenFGA, and the in-process approval service: `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience`. The AS JWKS is fetched once at assembly (`stack.ts:509`) | Partial | JWKS reload: #831 |
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation over HTTP MCP, with a DPoP proof verified on every request, and the AuthZEN request (§4, §5). The in-process mediated channel is outside this target (D315). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, and the shared demo mounts a MAS join route there; the target mounts none, and a configuration that would mount one fails startup: `the as-native target excludes the MAS join route at startup (D315) > fails startup, before connecting to anything, when the payments resource is configured governed` | HTTP entry point only (D315) | #818 owns MAS; #956 Q2 its declaration in the shared demo |
@@ -232,17 +232,17 @@ Before the PDP is asked, the PEP refuses `out_of_authority` for an action the
 credential's own authority does not cover, one whole entry at a time, on the
 resource, action, vendors and amount it resolved; an approval requirement is
 honored only with a verified transaction credential's approval
-(`pep.ts:1434-1458`):
+(`pep.ts:1435-1459`):
 `on the same broad Mission and allowing policy, the credential alone decides a vendor lookup (@spec runtime#input-authority, #825) > over %s, refuses an invoice-only token before the PDP and permits a broad token` and
 `configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > over the %s channel, refuses vendor lookup under an invoice-only credential before the PDP and permits it under a broad one, on the same broad Mission`.
 A token that fails the profile is answered 401 at the HTTP route, before the
 PEP: `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > answers a token with no typ and a valid DPoP proof 401 on the holder's open MCP session, before the PEP: no evidence and no decision`.
 The PEP carries the credential's authority and expiry to the PDP as
-`context.credential` (`pep.ts:1538-1545`). The PDP enforces that authority as
+`context.credential` (`pep.ts:1539-1546`). The PDP enforces that authority as
 its own bound, one whole entry at a time, embedded and over the remote
 channel, and refuses a missing or unreadable carrier or a passed expiry
 `credential_invalid`, never falling back to the Mission
-(`services/pdp/src/evaluate.ts:803-818`, `:1282-1309`):
+(`services/pdp/src/evaluate.ts:856-871`, `:1335-1362`):
 `the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > refuses an action the allowing Mission and policy permit but the narrower credential omits`,
 `credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a credential whose expiry has passed or cannot be read` and
 `Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)`.

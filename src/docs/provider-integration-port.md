@@ -805,8 +805,8 @@ operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) or naming a later merged
-issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `338436fb`, and every
-`file:line` citation is read at `338436fb`.
+issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `8c2dd42a`, and every
+`file:line` citation is read at `8c2dd42a`.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -874,12 +874,12 @@ drives an AS-issued Mission-bound token through that assembled path.
   own `authorization_details`, read as the credential's authority. A token
   that fails the profile is refused, never demoted to the ordinary class.
   Before the PDP is asked, the PEP refuses `out_of_authority` for an action
-  outside that authority, one whole entry at a time (`pep.ts:1434-1458`). It
+  outside that authority, one whole entry at a time (`pep.ts:1435-1459`). It
   carries the authority and the credential's expiry to the PDP as
-  `context.credential` (`pep.ts:1538-1545`). The PDP enforces that authority
+  `context.credential` (`pep.ts:1539-1546`). The PDP enforces that authority
   as its own bound, embedded and remote, and refuses a missing or unreadable
   carrier or a passed expiry `credential_invalid`, never falling back to the
-  Mission (`services/pdp/src/evaluate.ts:803-818`, `:1282-1309`; D341).
+  Mission (`services/pdp/src/evaluate.ts:856-871`, `:1335-1362`; D341).
   Decision Evidence names the bound that refused (`authority_bound`, D348).
 - **Boundary.** In request, before any claim reaches a decision.
 - **Asynchronous work.** None.
