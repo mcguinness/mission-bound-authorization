@@ -1048,8 +1048,10 @@ outside a Mission, except under documented policy exceptions. If a
 client registered as Mission-governed sends an
 `authorization_details` request that carries no `mission_intent`,
 the AS MUST reject the request with the `invalid_request` error
-code, so the client cannot omit the Intent to obtain ungoverned
-tokens.
+code, so the client cannot drop the Intent from a request that still
+carries `authorization_details`. A request carrying neither is an
+ordinary request that this rule does not reach; designation is what
+keeps a resource's tokens inside a Mission.
 
 The following is an example of an authority proposal submitted
 alongside the example Intent of {{mission-intent}}. Derivation
@@ -4334,8 +4336,9 @@ A token bearing equivalent `authorization_details` but no `mission`
 claim is governed by no Mission state, revocation, or consent
 commitment. A deployment can designate a resource, or register a
 client, as Mission-governed; {{authority-proposal}} states the
-issuance-side rules that keep such a resource's tokens and such a
-client's requests inside a Mission.
+issuance-side rules that keep such a resource's tokens inside a
+Mission and refuse such a client's `authorization_details` request
+that omits the Intent.
 
 On the client side, a client holding a Mission Intent does not fall
 back to an ordinary request where Mission support is not established,
