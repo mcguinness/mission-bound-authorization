@@ -6960,6 +6960,92 @@
    ]
   },
   {
+   "id": "core.introspection.malformed-token-inactive",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspection",
+   "text": "For a malformed, unknown, individually expired, or otherwise unresolvable token, the AS responds per {{RFC7662}} (`active: false`) with no `mission` member",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspection"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a malformed, unknown (correctly signed, with no issuance record), individually expired, or unresolvable token (an unknown Mission, or none) introspects as the bare `{active: false}` with no `mission` member; malformed includes every token the resource's own Mission access-token profile reader refuses, from the same shared negative vectors: the token class, the typed claim set and its clock bounds (a future `iat` included), the `mission` claim's profiled members (`expires_at`, `subject`, `approval_basis`, `authority_hash`), an authority entry that cannot be read in full, a malformed present `cnf`, and an absent `cnf` where the token's profile requires sender constraint (a delegated token, a Child Mission's token, a dispatched template instance's token), while a primary token with no `cnf` introspects active as a bearer token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "strict token resolution: bare active:false, no Mission or token detail > malformed token",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "strict token resolution: bare active:false, no Mission or token detail > individually expired token",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "strict token resolution: bare active:false, no Mission or token detail > unknown Mission reference is never returned active",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "strict token resolution: bare active:false, no Mission or token detail > token carrying no Mission reference is unresolvable",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "strict token resolution: bare active:false, no Mission or token detail > a correctly signed token whose jti has no issuance record is never returned active",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402) > answers a token with %s with a bare active:false, as the resource refuses it",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402) > introspects a primary token with no cnf as an active bearer token, and one with a well-formed cnf as DPoP",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402) > answers a delegated token (act) with no cnf with a bare active:false: a delegated token is sender-constrained",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402) > answers a Child Mission's token with no cnf with a bare active:false: Child Mission tokens are sender-constrained",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "a dispatched instance's token is sender-constrained at introspection too (@spec mission-template#grant-type, mission#introspection, #825 D402) > answers a dispatched token re-signed without cnf with a bare active:false, while the token as issued introspects active as DPoP",
+     "level": "endpoint",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "#825 acceptance item 7 (D402): introspection and the resource read the Mission access-token profile with one reader, readMissionAccessProfile in @mission/core (the typed claim set and its clock bounds, the `mission` claim's members, the authority through parseCredentialAuthority, and `cnf` structure through parseConfirmation), and run one negative-vector list, @mission/core/test-vectors. Each adds only its own rule: the resource requires the DPoP key it proves possession of; introspection requires `cnf` where the token's profile requires sender constraint and never proves possession, as Composite Active State says. The authority read only gates; the projection still reads the raw entries, delegation and capability bindings included. Sender constraint is required where a draft requires it of the issued token: a delegated token (the OAuth binding's Delegation section), a Child Mission's token (child-delegation, Attenuation Rules) and a dispatched template instance's token (the Template's Grant Type and Dispatch Handoff), identified by the record's template basis. The Child Mission case stubs the kernel read; the dispatch case re-signs a real dispatched token."
+  },
+  {
    "id": "core.introspection.caller-authentication",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "caller-authorization-and-minimization",
@@ -14468,7 +14554,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class. Validity includes the signing key's role (#825 PR 2a, D312): each token class verifies only under the kids locally pinned to it, so a token signed by a key this resource trusts for another class (or naming no kid) is refused like an untrusted key, before any claim is used; key-roles.test.ts proves it for access tokens on both transports, attenuation roots and transaction tokens. At the HTTP route (#825 acceptance item 5), a token that fails the profile (no `typ`) with a valid DPoP proof, sent on the holder's open MCP session so that a validated request would be dispatched, is answered 401 before the PEP, with no evidence and no decision request, while a conforming token on the same route reaches the PDP."
+   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class. Validity includes the signing key's role (#825 PR 2a, D312): each token class verifies only under the kids locally pinned to it, so a token signed by a key this resource trusts for another class (or naming no kid) is refused like an untrusted key, before any claim is used; key-roles.test.ts proves it for access tokens on both transports, attenuation roots and transaction tokens. At the HTTP route (#825 acceptance item 5), a token that fails the profile (no `typ`) with a valid DPoP proof, sent on the holder's open MCP session so that a validated request would be dispatched, is answered 401 before the PEP, with no evidence and no decision request, while a conforming token on the same route reaches the PDP. The profile matrix is the shared list (@mission/core/test-vectors), which AS introspection also runs, and the resource reads the profile with the reader introspection uses, readMissionAccessProfile (#825 acceptance item 7, D402); proving possession by DPoP only, the resource adds the requirement of `cnf.jkt`."
   },
   {
    "id": "runtime.token-validation.audience-and-pop",

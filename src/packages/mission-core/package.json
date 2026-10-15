@@ -5,7 +5,8 @@
   "license": "BSD-2-Clause",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./test-vectors": "./test/credential-profile-vectors.ts"
   },
   "scripts": {
     "typecheck": "tsc --build"
