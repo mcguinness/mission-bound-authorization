@@ -586,7 +586,7 @@ The members are:
   The `aud` is the response's audience binding and the `nonce` its
   request binding. When the request omitted `audience`
   ({{mission-status-request}}), the response is state-only and the AS
-  MUST set `aud` to the authenticated requester's identifier, as the
+  MUST set `aud` to the authenticated client's `client_id`, as the
   Lifecycle endpoint does ({{mission-lifecycle-endpoint}}); the
   consumer's `aud` verification below then checks that identifier. `exp` bounds the validity of the signed response
   itself; how long the consumer MAY rely on the reported `state` is
@@ -704,7 +704,7 @@ A consumer MUST verify, before honoring a response:
    `issuer` AS;
 4. `iss` equals the expected AS issuer URL;
 5. `aud` equals the `audience` the request named or, for a
-   state-only response, the requester's identifier
+   state-only response, the requesting client's `client_id`
    ({{mission-status-request}});
 6. `sub` equals the requesting client's identifier;
 7. `nonce` equals the request's nonce;
@@ -717,8 +717,8 @@ A consumer MUST verify, before honoring a response:
 Caching follows these rules:
 
 - **Cache key.** Consumers SHOULD cache a response keyed on
-  (`mission_id`, audience), or on (`mission_id`, requester
-  identifier) for a state-only response, until `mission.fresh_until`.
+  (`mission_id`, audience), or on (`mission_id`, `client_id`) for a
+  state-only response, until `mission.fresh_until`.
 - **Hard stop.** Consumers MUST NOT use a cached response after
   `mission.fresh_until`, subject only to the skew tolerance below. In
   particular, a consumer MUST NOT extend
@@ -1304,7 +1304,7 @@ mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 Revoke success response: the AS returns the updated status as a signed
 Mission Status Response ({{mission-status-response}}). Because the
 Lifecycle request carries no `audience`, the response is state-only: the
-AS sets `aud` to the authenticated requester and omits
+AS sets `aud` to the authenticated client's `client_id` and omits
 `authorization_details` (a lifecycle confirmation reports `state`, not
 audience-scoped authority). Here the response envelope's `sub`,
 distinct from any access token's `sub`, carries the acting party: the
@@ -1781,7 +1781,8 @@ An implementation claiming an extension MUST meet its requirements:
   ({{lifecycle-authorization}}), the idempotency and conflict rules of
   {{idempotency}}, and the not-found refusal of an unauthorized
   request; answer each `revoke` with the signed, state-only Mission
-  Status Response, whose `aud` is the authenticated requester and whose
+  Status Response, whose `aud` is the authenticated client's
+  `client_id` and whose
   `nonce` is the request's ({{mission-status-response}}); refuse any
   operation the implementation has not adopted
   ({{mission-lifecycle-endpoint}}, Operations); and advertise
