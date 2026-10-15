@@ -3557,20 +3557,53 @@ profiled.
   `active: false` and the `mission` state facts
   ({{composite-active}}), never the authority itself.
 - A resource server consuming an opaque Mission-bound token MUST
-  resolve it through introspection before service, MUST verify
-  `active` is `true`, its own identity in `aud`, and the
-  sender-constraint binding `cnf` names, and MUST enforce the
-  response's `authorization_details` under the same rules as the
-  token-carried form ({{rs-enforcement}}), the fail-closed duties
-  included.
+  resolve it through introspection or issuer-local resolution
+  (below) before service, MUST verify `active` is `true`, its own
+  identity in `aud`, and the sender-constraint binding `cnf` names,
+  and MUST enforce the response's `authorization_details` under the
+  same rules as the token-carried form ({{rs-enforcement}}), the
+  fail-closed duties included.
 - A resource server that cannot obtain a valid introspection response
-  for an opaque Mission-bound token MUST refuse the request rather
-  than serve it from any cached or out-of-band belief about the
-  token's authority.
+  or issuer-local resolution for an opaque Mission-bound token MUST
+  refuse the request rather than serve it from any cached or
+  out-of-band belief about the token's authority.
 
 The per-use freshness rule of {{introspection}} covers the whole
 response in this mode: each response is one observation of the
 token's claims and Mission state, not a cacheable authority record.
+
+An AS MAY serve a resource server through issuer-local resolution: a
+direct read of the AS's authoritative committed token and grant
+state, not a call to an introspection endpoint. {{RFC7662}}
+introspection keeps its meaning as a network protocol. A resource
+server qualifies only when it is inside the issuer's trusted
+implementation boundary and the AS authorizes it to read that state;
+common ownership or a shared network does not by itself qualify it.
+For each resolution, the AS:
+
+1. MUST resolve the presented token to that token's own
+   issuer-qualified issuance or grant record, and establish from that
+   record the token's expiry, revocation and grant validity, its
+   intended audience, the composite active state
+   ({{composite-active}}), and the token's own authority;
+2. MUST authorize the resource server and minimize disclosure to it
+   as {{caller-authorization-and-minimization}} requires for an
+   introspection caller; and
+3. MUST yield, when the token is active, only what an active response
+   for that token carries in this mode, audience-filtered for that
+   resource server and with `act` and `cnf` as that response carries
+   them, and never the Mission's Authority Set or other authority the
+   token does not carry.
+
+Mission state alone, or a lookup by Mission identifier, never
+establishes a token's validity or authority. An unknown, invalid,
+expired or revoked token, or a Mission that is not `active`, resolves
+as inactive and yields no authority; missing or unavailable state
+yields no valid resolution.
+In the resource server duties above, the resolution stands in for the
+introspection response, possession proof and fail-closed refusal
+included, and each resolution is one per-use observation, not a
+cacheable assertion.
 
 ## Examples {#examples}
 
