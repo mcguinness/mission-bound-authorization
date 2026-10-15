@@ -4338,12 +4338,25 @@ issuance-side rules that keep such a resource's tokens and such a
 client's requests inside a Mission.
 
 On the client side, a client holding a Mission Intent does not fall
-back to an ordinary request where Mission support is not established
-({{discovery}}).
+back to an ordinary request where Mission support is not established,
+and a client performing a Mission's task does not present an ordinary
+credential it already holds for that task ({{discovery}}).
 
 On the enforcement side, a resource server for such a resource
 rejects a token lacking the `mission` claim and can advertise that
 requirement ({{rs-enforcement}}, {{protected-resource-metadata}}).
+
+A held ordinary credential needs no request to the AS, and neither an
+AS nor a resource server can generally tell that a request made with
+one serves a Mission. Designation closes this path at a designated
+resource. Mandatory mediation closes it where the client's requests
+must pass through a runtime layer that holds custody of the client's
+credentials ({{I-D.draft-mcguinness-mission-runtime}}). A
+decision-time join of an ordinary credential to the Mission, such as
+the Mission Join of {{I-D.draft-mcguinness-mission-authority-server}},
+is one realization of the enforcement path that {{discovery}}
+permits. An unmediated ordinary workflow at an undesignated resource
+remains a residual that only the client's own conformance closes.
 
 The `mission_bound_authorization_supported` ({{discovery}}) and
 `mission_bound_authorization_required`
