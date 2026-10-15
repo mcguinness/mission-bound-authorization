@@ -858,7 +858,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 
 | Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
-| Credential validation | Yes. Met at the PEP and the PDP; introspection's validation of the credential authority is not: acceptance gate (#825 item 7) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check, and the `context.credential` carrier the PDP enforces (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport, PEP- and PDP-level (§5.1) | Introspection does not yet validate a token's authority as the PEP does (#825 item 7, D402); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
+| Credential validation | Yes. Met (D411): the PEP and the PDP each enforce the credential's own authority; #825 item 7 binds paths that consume introspection, which this one does not | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check, and the `context.credential` carrier the PDP enforces (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport, PEP- and PDP-level (§5.1) | Introspection does not yet validate a token's authority as the PEP does (#825 item 7, D402); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
 | Independent Resource policy | Yes, not met: acceptance gate (#828) | The decision point's bound `ResourcePolicy`, OpenFGA stored entitlements in `stack.ts` (§5.2) | In the decision | None | Entitlements are stored in OpenFGA; startup attaches or bootstraps a development store (§5.2) | PDP- and PEP-level, [FGA] (§5.2) | Live witnesses CI-only; no client policy; an unresolved vendor lookup and an unconstrained list name no enumerable target; not yet declared in the profile or statement (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `Pep.intake` (closed schema, NFC) before any decision work; `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level and MCP channel, [FGA] (§5.4) | A single-record read re-derives no digest at use (§5.4) |
@@ -924,11 +924,13 @@ drives an AS-issued Mission-bound token through that assembled path.
   - [FGA] `M5 transaction-assurance tier > refuses a transaction credential on the transport that cannot prove possession (@spec txn-authorization#offline-verification)` (mediated channel)
   - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision`, `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision` and `the as-native target with the test-only ordinary-token minting fixture, OpenFGA client stubbed (D315, D332) > refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it` (HTTP transport, assembled path)
   - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > binds a session to the holder that opened it: every request on it is authenticated, and another holder's credential carrying its id is answered 404 Session not found before the PEP` (HTTP transport, assembled path) and `MCP sessions on the HTTP channel (D315, #1105) > dispatches a request on a session only for its holder: another key, subject or client is answered 404 Session not found and reaches no handler, and a refused credential is answered 401` (HTTP transport, stubbed payments server)
-- **Required, not met.** Introspection (§3.8) does not yet validate a
-  token's authority the way the PEP does before projecting it. #825 stays
-  open until the two share negative vectors and introspection validates the
-  authority first (acceptance item 7, D402). This target's PEP validates
-  tokens locally and does not introspect.
+- **Required, met for this target (D411).** This target validates tokens
+  and DPoP locally and does not consume introspection. #825 stays open for
+  acceptance item 7: introspection (§3.8) does not yet validate a token's
+  authority the way the PEP does before projecting it, and #825 closes when
+  the two share negative vectors and introspection validates the authority
+  first (D402). That requirement still binds every path that consumes
+  introspection, the JWT-plus-introspection configuration included.
 - **Residual.** On the in-process mediated channel every action, the
   high-consequence classes included, runs on a token whose possession is not
   proven. D240 requires a current proof of possession for a credential used
@@ -1254,13 +1256,14 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 
 ## 6. Unsupported and residual
 
-**Required, not met (runtime overlay).** These block the AS-native payments
-target's acceptance. Neither is unsupported, and neither can become an
-exclusion.
+**Required, not met (runtime overlay).** This blocks the AS-native payments
+target's acceptance. It is not unsupported and cannot become an exclusion.
 
-- Introspection's validation of the credential authority, aligned with the
-  PEP's (#825 acceptance item 7, D402). §5.1.
 - Independently administered Resource policy (#828). §5.2.
+
+The token-authority gate is met for this target (D411). #825's remaining
+acceptance item, introspection's validation of the credential authority
+(D402, §5.1), binds paths that consume introspection.
 
 **Unsupported.** Each is refused or visibly absent; none is partial support.
 
