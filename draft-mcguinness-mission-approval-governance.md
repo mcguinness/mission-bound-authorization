@@ -135,7 +135,10 @@ It gives an estate first-class, auditable answers to who approved,
 under which authority, and why the decision satisfied governance,
 without adding any wire artifact. The record never appears on
 tokens, protocol messages, or enforcement projections, and the
-Mission record's single accountable Approver is unchanged.
+Mission record's single accountable Approver is unchanged. The
+document also defines a governed policy approval basis, under which a
+policy version that an accountable human approved activates a Mission
+proposal.
 
 --- middle
 
@@ -157,6 +160,11 @@ governance evidence with teeth: where it is recorded, it participates
 in whether the Mission activates, so its assertions carry
 authentication and binding requirements, and its committed form is
 signed and immutable.
+
+It also defines the `governed_policy` approval basis
+({{governed-policy}}): an accountable human approves a bounded policy
+version once, and that policy then decides eligible Mission proposals,
+each activation committing a record.
 
 Before commitment, the record is part of the approval decision
 itself: an assertion that fails authentication, event binding, or
@@ -579,6 +587,17 @@ authentication-strength, rendering, and accountable-principal
 requirements the issuance profile and {{assertion-requirements}}
 otherwise impose still carry that property; this section only
 decides which assertion kind MUST be present.
+
+# Governed Policy Approval {#governed-policy}
+
+This document defines the `governed_policy` standing-consent basis on
+the issuance profile's extension point for named standing-consent
+bases ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Standing-Consent Bases"). An accountable human approves a bounded
+policy version once; that policy then activates eligible Mission
+proposals with no fresh human decision per instance. Every activation
+under this basis MUST record an Approval Governance Record, committed
+with the Mission ({{atomic-commitment}}).
 
 # Envelope and Verification {#envelope}
 
