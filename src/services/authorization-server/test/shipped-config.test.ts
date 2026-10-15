@@ -357,9 +357,29 @@ describe("shipped authority-source catalog (@spec mission#authority-sources)", (
   it("declares a trusted source for every shipped client, with no duplicate identity", () => {
     validateAuthoritySourceCatalog(AUTHORITY_SOURCES as never);
     const declared = new Set(AUTHORITY_SOURCES.entries.flatMap((e) => e.clients));
-    for (const client of ["ap-agent", "subagent-invoice-extractor", "governed-agent"]) {
+    for (const client of ["ap-agent", "subagent-invoice-extractor", "governed-agent", "ledger-reconciler"]) {
       expect(declared.has(client)).toBe(true);
     }
+  });
+
+  it("declares the service_owned source of the agent acting for its own workload principal, activated by its administrator", () => {
+    // #1194: the workload principal is the Subject, the agent is the client,
+    // and the administrator activates the source. The three are separate
+    // identities; the catalog names each one explicitly.
+    const serviceOwned = AUTHORITY_SOURCES.entries.filter((e) => e.type === "service_owned");
+    expect(serviceOwned).toHaveLength(1);
+    const source = serviceOwned[0];
+    expect(source?.clients).toEqual(["ledger-reconciler"]);
+    expect(source?.subjects).toEqual(["agt_ledger_reconciler"]);
+    expect(source?.principals).toEqual(["agt_ledger_reconciler"]);
+    expect(source?.activators).toEqual(["dana"]);
+    expect(AUTHORITY_SOURCES.humanPrincipals).toContain("dana");
+    expect(AUTHORITY_SOURCES.humanPrincipals).not.toContain("agt_ledger_reconciler");
+    // Its own provisioned authority, narrower than the deployment's: no
+    // money-bearing action.
+    const actions = source?.ceiling.flatMap((c) => c.actions) ?? [];
+    expect(actions).toContain("payments:invoice.read");
+    expect(actions).not.toContain("payments:payment.schedule");
   });
 
   it("names an activator on every declared source", () => {
