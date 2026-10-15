@@ -18,6 +18,7 @@ import {
   type AuthorityEntry,
   type CredentialAuthorityEntry,
   credentialEntriesFromAuthority,
+  parseConfirmation,
   parseCredentialAuthority,
   readTxnMissionClaim,
   type TxnMissionClaim,
@@ -91,11 +92,17 @@ function requireCredentialClaims(payload: JWTPayload, nowS: number): VerifiedCre
   if (!nonEmptyString(payload.jti)) throw new TokenProfileError("token jti must be a non-empty string");
   if (!nonEmptyString(payload.sub)) throw new TokenProfileError("token sub must be a non-empty string");
   if (!nonEmptyString(payload.client_id)) throw new TokenProfileError("token client_id must be a non-empty string");
-  const cnf = payload.cnf as { jkt?: unknown } | undefined;
-  if (typeof cnf !== "object" || cnf === null || Array.isArray(cnf) || !nonEmptyString(cnf.jkt)) {
-    throw new TokenProfileError("token cnf.jkt must be a non-empty string");
+  // @spec runtime-oauth#token-validation (#825, D402): the binding's
+  // structure is read as introspection reads it; this resource proves
+  // possession by DPoP only, so its profile requires `cnf.jkt`.
+  let cnfJkt: string | undefined;
+  try {
+    cnfJkt = parseConfirmation(payload.cnf)?.jkt;
+  } catch (e) {
+    throw new TokenProfileError(`token ${(e as Error).message}`);
   }
-  return { sub: payload.sub, clientId: payload.client_id, jti: payload.jti, iat: payload.iat, exp: payload.exp, cnfJkt: cnf.jkt };
+  if (cnfJkt === undefined) throw new TokenProfileError("token cnf.jkt must be a non-empty string");
+  return { sub: payload.sub, clientId: payload.client_id, jti: payload.jti, iat: payload.iat, exp: payload.exp, cnfJkt };
 }
 
 /**

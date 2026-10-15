@@ -10,6 +10,7 @@
 
 import { randomUUID } from "node:crypto";
 import type { Fga, MissionView } from "@mission/pdp";
+import { credentialProfileVectors } from "@mission/core/test-vectors";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -208,14 +209,14 @@ describe("the Mission access-token profile is met before any claim is trusted (@
     ["no sub", { sub: undefined }, {}],
     ["no client_id", { client_id: undefined }, {}],
     ["a numeric client_id", { client_id: 7 }, {}],
-    ["no cnf", { cnf: undefined }, {}],
-    ["an empty cnf.jkt", { cnf: { jkt: "" } }, {}],
     ["no mission claim", { mission: undefined }, {}],
     ["a mission claim with an empty id", { mission: { id: "", issuer: ISSUER } }, {}],
-    ["no authorization_details", { authorization_details: undefined }, {}],
-    ["an unknown authority type", { authorization_details: [{ type: "other", resource: CANONICAL_RESOURCE, actions: ["x"] }] }, {}],
-    ["an unknown constraint", { authorization_details: [entry(["payments:invoice.read"], { time_window: "9-5" })] }, {}],
-    ["a malformed amount cap", { authorization_details: [entry(["payments:invoice.read"], { max_amount: { amount: "ten", currency: "USD" } })] }, {}],
+    // The credential profile's authority and sender-constraint vectors, shared
+    // with AS introspection (#825, D402). This resource's profile requires
+    // sender constraint, so it refuses an absent `cnf` too.
+    ...credentialProfileVectors(CANONICAL_RESOURCE, "payments:invoice.read").map(
+      (v) => [v.label, v.claims, {}] as [string, Record<string, unknown>, Record<string, unknown>],
+    ),
   ])("refuses a token with %s on both transports, yielding no facts", async (_label, claims, header) => {
     const token = await mint(claims, header);
     // A proof that would verify for this token: the refusal is the profile's.

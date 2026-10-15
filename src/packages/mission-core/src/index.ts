@@ -102,6 +102,7 @@ export {
   type RecoveryProof,
   type SigningKeyStatus,
 } from "./compromise-boundary.js";
+export { type Confirmation, ConfirmationError, parseConfirmation } from "./confirmation.js";
 export {
   type CredentialAuthorityEntry,
   CredentialAuthorityError,
