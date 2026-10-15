@@ -4066,6 +4066,17 @@ AS cannot change, the standalone Mission Authority Server
 ({{I-D.draft-mcguinness-mission-authority-server}}) is the governed
 alternative.
 
+A client performing a task under a Mission MUST NOT present, for that
+task, a credential that is not Mission-bound, such as an ordinary
+access token it already holds, unless a deployment-defined,
+trusted enforcement path establishes that Mission for the request and
+applies the Mission's authority and lifecycle controls to it. Neither
+a Mission identifier the client supplies nor documentation alone
+establishes the Mission for a request, and the path confers no
+authority beyond the Mission's. The rule does not restrict the
+client's workflows unrelated to the Mission
+({{downgrade-by-omission}}).
+
 An AS that advertises support for this document MUST include at least
 one AS-supported type in its `authorization_details_types_supported`
 metadata ({{RFC9396}}): the approved-set commitment a Mission-aware
