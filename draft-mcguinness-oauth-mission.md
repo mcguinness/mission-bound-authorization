@@ -490,17 +490,18 @@ Mission can make approval difficult to evaluate. A useful boundary
 is a task whose purpose, authority, and bounds the Approver can
 evaluate together ({{approval-comprehension}}).
 
-For recurring or evolving work, optional, experimental companions
-can reduce repeated approvals through standing consent
-({{standing-consent-bases}}). Mission Template
+Optional companions can reduce repeated approvals through standing
+consent ({{standing-consent-bases}}). For example, Mission Template
 ({{I-D.draft-mcguinness-oauth-mission-template}}) creates bounded
-instances of recurring tasks. Progressive Authorization
+instances of recurring tasks; Progressive Authorization
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}) permits successor
 Missions within a previously approved authority ceiling as a task
-evolves. The template or ceiling still needs a meaningful human
-approval. Neither mechanism removes its profile's
-fresh-human-approval requirement for prohibited high-consequence
-authority.
+evolves; and Mission Approval Governance
+({{I-D.draft-mcguinness-mission-approval-governance}}) lets a policy
+version a human approved decide an agent's own proposals. The
+template, ceiling, or policy still needs a meaningful human approval,
+and no such mechanism removes its profile's human-approval
+requirement for high-consequence authority.
 
 The unit of governance is the action, not the content. A Mission
 bounds where an agent may act (resources, actions) and how much
@@ -2134,7 +2135,10 @@ document defines:
     ({{standing-consent-bases}}).
 
   For `direct`, `activation.approval_event_id` MUST identify a human
-  approval event ({{approval-event}}).
+  approval event ({{approval-event}}). Approval Governance states how
+  a record backing a `direct` approval keeps that human decision as
+  its accountable assertion
+  ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
   `approval_basis` is provenance: neither anchor covers it
   ({{integrity-anchors}}); a profile that commits the Mission Record
@@ -2209,9 +2213,11 @@ against an accountable human's earlier approval, with no fresh human
 approval per instance; each instance is still created at its own
 approval event ({{approval-event}}). The `type` values `template`
 ({{I-D.draft-mcguinness-oauth-mission-template}}), `policy_drawdown`
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and
-`ceiling_drawdown` ({{I-D.draft-mcguinness-oauth-mission-progressive}})
-are such bases. For a standing-consent `type`, `activation` takes the shape that
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}),
+`ceiling_drawdown` ({{I-D.draft-mcguinness-oauth-mission-progressive}}),
+and `governed_policy`
+({{I-D.draft-mcguinness-mission-approval-governance}}) are such bases.
+For a standing-consent `type`, `activation` takes the shape that
 its companion profile defines, and `activation_actor` names a
 dispatching or requesting party distinct from the consenting human.
 
@@ -2280,23 +2286,24 @@ assertion.
   : OPTIONAL. A boolean. `true` when an Approval Governance Record
     is recorded for this approval event
     ({{I-D.draft-mcguinness-mission-approval-governance}}), joined
-    by this Mission's own `approval_event_id`. When `true`, `kind`
-    MUST equal the record's accountable assertion's own `kind`: a
-    governed decision still names its mechanism, and the record
-    supplies the fuller assertion set behind it, including any
-    multi-assertion set, never flattened into it.
+    by this Mission's own `approval_event_id`. It never changes
+    `kind`, which follows the basis (below), and Approval Governance
+    aligns the record's accountable assertion, where it carries one,
+    with that `kind`: a governed decision still names its mechanism,
+    and the record supplies the fuller assertion set behind it,
+    including any multi-assertion set, never flattened into it.
 
 The `adjudication` member, where present, follows the basis:
 
 - Where `adjudication` is present for `direct`, `kind` MUST be
-  `human` unless `governance_record` is `true`, in which case
-  `kind` instead follows the override that member defines (above).
+  `human`, with or without `governance_record`: a policy decides
+  an instance only under a standing-consent basis.
 - Where a companion profile defining a standing-consent `type`
   populates `adjudication`, `kind` MUST be `policy`, naming the
   identity and version of the policy or workflow that adjudicated
-  the instance, subject to the same `governance_record` override. A
-  companion profile MUST NOT flatten a policy's or an Approval
-  Governance Record's assertion set into a single principal member.
+  the instance. A companion profile MUST NOT flatten a policy's or
+  an Approval Governance Record's assertion set into a single
+  principal member.
 
 **Activation policy commitment.** Where a standing-consent basis lets
 a separate policy artifact adjudicate activation (a dispatch,
@@ -5602,7 +5609,9 @@ each assigns the three roles.
 | Template dispatch ({{I-D.draft-mcguinness-oauth-mission-template}}) | The template's human approver, fixed at template creation | The Dispatcher that requested the Dispatch, distinct from `consent_principal` | `kind: policy`, `policy` naming the template's `dispatch_policy` `id` and `version` (already carried in the dispatched Mission's `template` lineage member), never the Template's own `id`/`template_version` nor the Dispatcher |
 | Policy drawdown ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) | The Parent Mission's human Approver | The requesting parent Agent, distinct from `consent_principal` | `kind: policy`, naming the child-creation policy's `id`/`version` where the entry carries one, otherwise the Parent Mission's approved delegation entry; never the requesting parent Agent |
 | Ceiling drawdown ({{I-D.draft-mcguinness-oauth-mission-progressive}}) | The Approver who consented the ceiling | The requesting client, distinct from `consent_principal` | `kind: policy`, naming the drawdown policy's `policy_id`/`policy_version` carried in `activation`; never the requesting client |
-| AGR-backed approval ({{I-D.draft-mcguinness-mission-approval-governance}}) | The principal the Approval Governance Record's accountable assertion names, equal to `consent_principal` | Unchanged from the underlying basis | `governance_record: true`; `kind` equals the record's accountable assertion's own mechanism (`human` or `policy`), never a value that names the record itself, and its full assertion set is never collapsed into a single principal |
+| Governed policy approval ({{I-D.draft-mcguinness-mission-approval-governance}}) | The human who approved the exact policy version the instance activates under | The authenticated client that requested the activation, distinct from `consent_principal` | `kind: policy`, `policy` naming the deciding policy's `id`/`version` (the approved policy itself or the evaluator it commits), with `governance_record: true`; never the requesting client |
+| AGR-backed direct approval ({{I-D.draft-mcguinness-mission-approval-governance}}) | The approving human, whose own `human` assertion is the Approval Governance Record's accountable assertion | Equal to `consent_principal`, as for direct approval | `kind: human`, `governance_record: true`; `policy` and `service` assertions contribute without replacing the human decision, and the full assertion set is never collapsed into a single principal |
+| AGR-backed template or drawdown activation ({{I-D.draft-mcguinness-mission-approval-governance}}) | Unchanged from the underlying basis, whose `approval_basis` stands in for an accountable assertion | Unchanged from the underlying basis | `kind: policy`, as the underlying basis assigns it, with `governance_record: true`; the full assertion set is never collapsed into a single principal |
 
 Direct approval is the degenerate case where one human fills every
 role. Where a profile or deployment does not populate `adjudication`
@@ -6108,6 +6117,17 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Standing-Consent Bases lists `governed_policy`, the basis Mission
+  Approval Governance defines for a policy version a human approved,
+  and the Introduction's standing-consent companions are examples,
+  not a closed, experimental-only list.
+  A `direct` approval is always a human decision: `adjudication.kind`
+  is `human` with or without `governance_record`, and Approval
+  Governance states how a record backing a `direct` approval keeps
+  that decision as its accountable assertion. Role Mapping separates
+  AGR-backed direct approval from AGR-backed template or drawdown
+  activation and adds governed policy approval (#1185).
 
 - Introspected Token Consumption permits issuer-local resolution: an
   AS can serve a resource server inside its trusted implementation

@@ -135,7 +135,10 @@ It gives an estate first-class, auditable answers to who approved,
 under which authority, and why the decision satisfied governance,
 without adding any wire artifact. The record never appears on
 tokens, protocol messages, or enforcement projections, and the
-Mission record's single accountable Approver is unchanged.
+Mission record's single accountable Approver is unchanged. The
+document also defines a governed policy approval basis, under which a
+policy version that an accountable human approved activates a Mission
+proposal.
 
 --- middle
 
@@ -157,6 +160,11 @@ governance evidence with teeth: where it is recorded, it participates
 in whether the Mission activates, so its assertions carry
 authentication and binding requirements, and its committed form is
 signed and immutable.
+
+It also defines the `governed_policy` approval basis
+({{governed-policy}}): an accountable human approves a bounded policy
+version once, and that policy then decides eligible Mission proposals,
+each activation committing a record.
 
 Before commitment, the record is part of the approval decision
 itself: an assertion that fails authentication, event binding, or
@@ -238,9 +246,13 @@ control-plane state. Where the governed Mission populates
 `approval_basis.adjudication`
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping") and
 this record exists, `adjudication.governance_record` is `true` and
-`kind` equals this record's accountable assertion's own mechanism,
-never a value that names this record itself, and never a flattening
-of its assertion set into a single principal.
+`kind` names the mechanism the approval basis fixes: `human` for
+`direct`, and `policy` for a standing-consent basis, including
+`governed_policy` ({{governed-policy}}). It is never a value that
+names this record itself, and never a flattening of its assertion set
+into a single principal. Where the record carries an accountable
+assertion ({{assertion-requirements}}), that assertion's own `kind`
+MUST equal `kind`.
 
 # The Approval Governance Record {#record}
 
@@ -432,25 +444,33 @@ These rules are the record's security core.
 - Exactly one assertion MUST match the Mission record's accountable
   `approval_basis.consent_principal` and carry an `approve` decision;
   the record supports the approval it claims to govern or it does not
-  commit. Where the
-  accountable approver's approval is exercised through an authorized
-  deterministic policy, the matching assertion is a `policy`
-  assertion carrying that policy's provenance chain: the policy is the
-  decision mechanism and the matched principal stays the accountable
-  approver, subject to the high-risk-class restriction of
-  {{policy-approval-recency}}. The matching
+  commit. The matching
   assertion's `kind` MUST be `human` or `policy`: a `service`
   assertion, including one a model produced, is a contributing
-  governance input, never the accountable approver's assertion. A
-  Mission rooted in a named standing-consent `approval_basis`
-  ({{I-D.draft-mcguinness-oauth-mission}}) satisfies this rule
-  through that record instead of a contributing assertion:
-  `consent_principal`, `root_commitment`, and
-  `approved_at`, already fixed at the approval event and immutable,
-  stand in place of a matching assertion, subject to the same
-  high-risk-class restriction. No assertion is fabricated in the
-  name of the activating policy or the requesting actor to stand in
-  for a fresh human decision that did not occur.
+  governance input, never the accountable approver's assertion. The
+  Mission's `approval_basis.type` fixes the accountable assertion:
+
+  - For `direct`, it MUST be the `human` assertion of
+    `consent_principal`, the human decision a `direct` approval event
+    carries ({{I-D.draft-mcguinness-oauth-mission}}); `policy` and
+    `service` assertions can contribute without replacing it.
+  - For `governed_policy`, it is a `policy` assertion carrying the
+    deciding policy's provenance chain ({{governed-policy-record}}):
+    the policy is the decision mechanism and the matched principal
+    stays the human who approved it, subject to the high-risk-class
+    restriction of {{policy-approval-recency}}.
+  - For any other named standing-consent `approval_basis`
+    ({{I-D.draft-mcguinness-oauth-mission}}), the Mission satisfies
+    this rule through that record instead of a matching assertion:
+    `consent_principal`, `root_commitment`, and `approved_at`,
+    already fixed at the approval event and immutable, stand in place
+    of it, subject to the same high-risk-class restriction. The
+    record can still carry contributing `policy` and `service`
+    assertions.
+
+  No assertion is fabricated in the name of the activating policy or
+  the requesting actor to stand in for a fresh human decision that
+  did not occur.
 - An assertion that fails authentication, event binding, or policy
   authorization MUST NOT contribute to the evaluation and MUST NOT
   be counted toward any policy rule.
@@ -560,7 +580,10 @@ Mission's derived Authority Set or Mission Intent
 assertion satisfying the accountable-approver rule of
 {{assertion-requirements}} MUST be `kind: human`, unless a committed,
 class-named exception under this section admits `kind: policy` for
-that class.
+that class. Only `governed_policy` has a `policy` accountable
+assertion ({{assertion-requirements}}), so a governed policy
+activates a Mission carrying one of these classes only under such an
+exception.
 
 The same default binds a Mission whose accountable-approver rule is
 satisfied through its own `approval_basis` record rather than an
@@ -579,6 +602,148 @@ authentication-strength, rendering, and accountable-principal
 requirements the issuance profile and {{assertion-requirements}}
 otherwise impose still carry that property; this section only
 decides which assertion kind MUST be present.
+
+# Governed Policy Approval {#governed-policy}
+
+This document defines the `governed_policy` standing-consent basis on
+the issuance profile's extension point for named standing-consent
+bases ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Standing-Consent Bases"). An accountable human approves a bounded
+policy version once; that policy then activates eligible Mission
+proposals with no fresh human decision per instance. Every activation
+under this basis MUST record an Approval Governance Record, committed
+with the Mission ({{atomic-commitment}}).
+
+## Consented Root {#governed-policy-root}
+
+The consented root is the retained `approval_policy` snapshot that a
+human approved ({{record}}). It commits:
+
+- the clients, Subjects, and authority sources that can activate
+  under it;
+- the authority ceiling and the lifetime limits of each activated
+  Mission;
+- the deterministic rules that decide an activation;
+- the recency ceilings, the clock-skew allowance, and any class-named
+  exceptions of {{policy-approval-recency}}; and
+- where a separate policy artifact decides instances, that artifact's
+  activation policy reference ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Standing-Consent Bases").
+
+The root decides whether an instance activates. It is distinct from
+an `organizational` authority source's `authority_source.policy`,
+which bounds whose authority the Mission draws on
+({{I-D.draft-mcguinness-oauth-mission}}).
+
+The issuer MUST establish the standing consent, the consenting human,
+and that human's approval of the exact root version from retained,
+authenticated governance state, never from the activating request: a
+submitted proposal cannot supply its own standing consent.
+
+The root and a separate evaluator keep distinct digest domains:
+`approval_policy.digest` commits the root under `typ`
+`mission-approval-policy` ({{record}}), and the activation policy
+reference commits the evaluator under `typ`
+`mission-activation-policy`. The issuer MUST NOT accept either digest
+in place of the other.
+
+## Instance Record {#governed-policy-record}
+
+A Mission activated under this basis records these `approval_basis`
+members ({{I-D.draft-mcguinness-oauth-mission}}), each REQUIRED:
+
+`type`:
+: `governed_policy`.
+
+`consent_principal`:
+: The human who approved the exact root version.
+
+`approved_at`:
+: The instant of that approval, verified against retained,
+  authenticated state as the issuance profile requires of every
+  standing-consent basis.
+
+`root_commitment`:
+: The root's `approval_policy.digest`; the record's own
+  `approval_policy` is that root.
+
+`activation`:
+: An object of `approval_event_id`, equal to the Mission's own
+  `approval_event_id`, and `policy`, an object of the deciding
+  policy's `id`, `version`, and `digest`.
+
+`activation_actor`:
+: The authenticated client that requested this activation, distinct
+  from `consent_principal`.
+
+`adjudication`:
+: `kind` `policy`, with `policy` naming the deciding policy's `id`
+  and `version`, and `governance_record` `true`.
+
+The deciding policy is the root itself or the separate evaluator the
+root commits, never another policy. Its digest in `activation.policy`
+is `approval_policy.digest` when the root decides, and the
+evaluator's `mission-activation-policy` digest when the evaluator
+decides.
+
+`approval_event_id` identifies this activation's approval event,
+never the human's approval of the root. The issuer allocates one per
+proposal it activates, so a retried or concurrent activation of the
+same proposal resolves to one Mission and one record, and each
+distinct activation creates its own Mission.
+
+The record's accountable assertion ({{assertion-requirements}}) MUST
+be a `policy` assertion whose `principal` is `consent_principal` and
+whose `authority` names the deciding policy's `id` and `version` with
+`approved_at` equal to `approval_basis.approved_at`. Like every
+contributing assertion, it is authenticated and bound to this
+approval event. It records the policy's decision under that human's
+standing authorization, not a fresh human action.
+
+## Activation {#governed-policy-activation}
+
+At the atomic creation commit ({{atomic-commitment}}), the issuer
+MUST, before it creates the Mission `active`:
+
+1. Resolve the standing consent from retained, authenticated state
+   and confirm that it still admits new activations.
+2. Verify that the consenting human was authorized to approve the
+   exact root version and approved it at `approved_at`, and recompute
+   `approval_policy.digest` over the retained snapshot.
+3. Where the root commits a separate evaluator, recompute that
+   evaluator's digest over the exact snapshot evaluated
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section
+   "Standing-Consent Bases").
+4. Establish the Subject and the authority source as the issuance
+   profile requires, and verify that the requesting client, the
+   Subject, and the source are ones the root admits.
+5. Derive the Authority Set under the issuance profile's derivation
+   and authority-proposal rules, within the source's ceiling and the
+   root's authority ceiling, and bound the effective expiry by the
+   Mission Intent and the root's lifetime limits.
+6. Evaluate the deciding policy, at its exact version, over recorded
+   inputs.
+7. Apply the policy-approval recency rules
+   ({{policy-approval-recency}}) across the whole derived Mission,
+   including any consumption bound, so a high-risk class activates
+   only under a committed, class-named exception.
+8. Bind every assertion and the record to this instance's
+   `approval_event_id`, `intent_hash`, and `authority_hash`
+   ({{assertion-requirements}}, {{record}}).
+9. Sign the record and commit it with the `active` Mission
+   ({{atomic-commitment}}).
+
+A failure at any step creates no Mission and issues no credential.
+
+A model's output enters only as a recorded input at step 6: it can
+refuse an activation or narrow the authority activated, and never
+supplies authority or decides the approval
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+Bases").
+
+Withdrawing the standing consent stops every later activation under
+it (step 1). A Mission already activated keeps its ordinary
+lifecycle: withdrawal does not revoke it.
 
 # Envelope and Verification {#envelope}
 
@@ -1147,7 +1312,12 @@ basis both populate it, and each profile declares its own maximum age
 against it: `review_cadence` for template, the ceiling review cadence
 for progressive
 ({{I-D.draft-mcguinness-oauth-mission-template}},
-{{I-D.draft-mcguinness-oauth-mission-progressive}}).
+{{I-D.draft-mcguinness-oauth-mission-progressive}}). Under
+`governed_policy` the two instants coincide:
+`approval_basis.approved_at` equals the accountable `policy`
+assertion's `authority.approved_at` ({{governed-policy-record}}), so
+this document's ceiling bounds that basis, alongside any
+standing-consent recency ceiling the deployment declares.
 
 The two recency paths are therefore analogous, each bounding staleness
 against a retained human-approval instant, but distinct in what they
@@ -1157,10 +1327,11 @@ stands in for one, at evaluation; a profile's own maximum age governs
 whether the dispatch or drawdown may happen at all, independent of
 whether an AGR is ever recorded.
 
-A standing-consent Mission's accountable-approver rule is satisfied by
-`approval_basis` itself ({{assertion-requirements}}), never by
-fabricating a `policy` assertion in its place; the high-risk-class
-default of this section still binds that record directly.
+Outside `governed_policy`, a standing-consent Mission's
+accountable-approver rule is satisfied by `approval_basis` itself
+({{assertion-requirements}}), never by fabricating a `policy`
+assertion in its place; the high-risk-class default of this section
+still binds that record directly.
 
 # Mission Evidence {#audit-evidence}
 
@@ -1310,6 +1481,9 @@ A **Recording Issuer** MUST:
   the committed Mission's derived Authority Set or Mission Intent
   carries a high-risk class, unless a committed
   class-named exception applies ({{policy-approval-recency}});
+- under `governed_policy`, record the members of
+  {{governed-policy-record}} and complete the activation checks of
+  {{governed-policy-activation}};
 - commit the record atomically with Mission creation and let failure
   prevent activation ({{atomic-commitment}});
 - sign the committed record and keep it immutable
@@ -1327,6 +1501,18 @@ version before treating the evaluation as re-checked
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Governed Policy Approval defines the `governed_policy`
+  standing-consent basis: a human-approved `approval_policy` snapshot
+  is the consented root, a `policy` assertion in that human's name is
+  the accountable assertion, and each activation passes nine checks
+  at the atomic creation commit. Assertion Requirements states the
+  accountable assertion each basis requires: `human` for `direct`,
+  `policy` for `governed_policy`, and the `approval_basis` record for
+  the other standing-consent bases. Where the governed Mission
+  populates `adjudication`, the accountable assertion's `kind` equals
+  `adjudication.kind`; this document, not the OAuth binding, holds
+  both rules (#1185).
 
 - The accountable principal is the Mission record's
   `approval_basis.consent_principal`. The Approval Context Manifest
