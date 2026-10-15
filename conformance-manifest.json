@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "da5950293ae5c9bdfb4a566ab118e8adb4cd91b4",
-    "content_sha256": "9ddf980f22fd8e5bd44b79849ca4222451a7c4c972a3049a7fc8143f42aed785"
+    "revision": "e586c413f282a74f7364e46cf9168325e4bfe97e",
+    "content_sha256": "37bf9dba17d8683c3b236cd10f135e9b0ab3f23f67b6fadb65923e82464f4d7a"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -6133,7 +6133,7 @@
    "id": "core.grant-binding.termination-gates-every-binding",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
-   "text": "Non-active state gates every future derivation across every binding this section defines ({{issuance-gating}}). It does not itself revoke an OAuth grant the same client or subject holds outside any Mission binding, and it does not recall an access token already issued before its `exp` absent a runtime state check the token's consumer performs ({{revocation}}, {{introspection}}).",
+   "text": "Non-active state gates every future derivation across every Mission grant binding ({{issuance-gating}}). It does not itself revoke an OAuth grant the same client or subject holds outside any Mission binding, and it does not recall an access token already issued before its `exp` absent a runtime state check the token's consumer performs ({{revocation}}, {{introspection}}).",
    "role": "AS",
    "strength": "stated",
    "applicability": {
