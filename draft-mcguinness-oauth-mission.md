@@ -344,6 +344,16 @@ separate, optional layer.
 
 # Introduction {#introduction}
 
+This document defines a **Mission**: a durable authorization object
+that binds a disclosed task to an explicitly approved Authority Set
+and governs the lifecycle of the authority derived from that
+approval. The authorization server (AS) issues tokens under a Mission
+only while it is `active`, each bounded by the approved Authority
+Set, and resource servers enforce the resulting credentials. Revoking
+or expiring a Mission stops further issuance and refresh; it does
+not, by itself, invalidate an access token already issued, which
+remains valid until it expires ({{revocation}}).
+
 Agent-identity work such as {{I-D.draft-ietf-wimse-aims}}
 establishes how an AI agent authenticates and how a user delegates
 authority to it: the agent is an OAuth 2.0 {{RFC6749}} client
@@ -356,37 +366,35 @@ later token issuance stays bound to what the user approved.
 
 In current deployments, each token is individually valid and each
 request individually in scope, but no OAuth object records the task
-the user approved. A token issued for a task remains usable after
-the user's approval lapses or is withdrawn, because nothing ties the
-token's validity to that approval.
+the user approved. A grant obtained for a task keeps yielding tokens
+after the user's approval of that task lapses or is withdrawn,
+because nothing ties further issuance to that approval.
 
-This document defines a **Mission**: a durable authorization object
-that binds a disclosed task to an explicitly approved Authority Set
-and governs the lifecycle of the authority derived from that
-approval. A Mission is created and used in a single chain:
+A Mission is created and used in a single chain:
 
-1. The client submits a structured **Mission Intent** describing the
-   task (goal, target resources, task bounds) instead of requesting
-   raw scopes, optionally proposing concrete authority alongside it
-   as standard `authorization_details`.
-2. The authorization server (AS) derives **authorization details**
+1. **Submit.** The client submits a structured **Mission Intent**
+   describing the task (goal, target resources, task bounds) instead
+   of requesting raw scopes, optionally proposing concrete authority
+   alongside it as standard `authorization_details`.
+2. **Derive authority.** The AS derives **authorization details**
    ({{RFC9396}}), the **Authority Set**: the concrete authority the
    task needs.
-3. At an **approval event**, the Approver consents to that
-   authority, and the AS commits the task as an **`intent_hash`** and
-   the authority as an **`authority_hash`** and records a durable
-   **Mission**.
-4. The AS binds the OAuth grant that the approval produces to that
-   Mission, server-side: every later derivation from that grant
-   lineage resolves to exactly this Mission, and the client never
-   selects or reassigns it ({{grant-binding}}).
-5. Every access token the agent obtains under the Mission carries the
-   derived authorization details and a **`mission` claim** identifying
-   the Mission (`id`, `issuer`) it was derived under. A resource
-   server enforces statelessly from the token.
-6. Token issuance and refresh are **gated on Mission state**, so
-   revoking or expiring the Mission stops the agent from obtaining
-   further authority.
+3. **Approve.** At an **approval event**, the Approver consents to
+   that authority, and the AS commits the task as an
+   **`intent_hash`** and the authority as an **`authority_hash`** and
+   records a durable **Mission**.
+4. **Bind the grant.** The AS binds the OAuth grant that the approval
+   produces to that Mission, server-side: every later derivation from
+   that grant lineage resolves to exactly this Mission, and the client
+   never selects or reassigns it ({{grant-binding}}).
+5. **Issue and enforce.** Every access token the agent obtains under
+   the Mission carries the derived authorization details and a
+   **`mission` claim** identifying the Mission (`id`, `issuer`) it was
+   derived under. A resource server enforces statelessly from the
+   token.
+6. **Stop issuance.** Token issuance and refresh are **gated on
+   Mission state**, so revoking or expiring the Mission stops the
+   agent from obtaining further authority.
 
 The result is that a user approves a task once, and that approval,
 not a per-request scope grant, bounds and outlives every token the
