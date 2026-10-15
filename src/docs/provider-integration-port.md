@@ -356,7 +356,9 @@ the store.
   - `{#approval-event}` step 7 is not met. The record commits `active` before
     the grant exists, and one request before the code is issued. A client
     that never follows the redirect leaves an `active` Mission with a bound
-    grant and no code. No test yet.
+    grant and no code. No test yet. #916 owns the local ordering (a
+    deterministic grant id or a serialized association); the cross-store
+    atomicity stays with #250.
   - A repeated decision on one interaction binds a second grant to the
     committed record. `kernel.approve` returns the stored record, and
     `decide()` saves and binds a new grant each time. `missions.grant_id`
@@ -795,10 +797,11 @@ durable projections with a rollback witness, and the emergency rows and
 closure. Multi-process serialization stays with #641. This document claims
 none of that work.
 
-These gaps are not named in #250's items, and their owner is not verified:
+These gaps are not named in #250's items:
 
-- the approval commit ordering against code issuance (§3.4);
-- external Subjects (§3.2).
+- the approval commit ordering against code issuance (§3.4), whose local
+  ordering #916 owns;
+- external Subjects (§3.2), whose owner is not verified.
 
 The state gate after rotation (§3.6) is partly fixed by the refresh pre-check
 (#914). What remains, a state change between the pre-check and the save-time
