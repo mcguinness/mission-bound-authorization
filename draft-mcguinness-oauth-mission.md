@@ -2862,7 +2862,8 @@ for credentials that cross a trust domain
 This document's token-carried enforcement assumes the JWT above. An
 opaque Mission-bound token is profiled only under the introspected
 consumption mode ({{introspected-consumption}}), where introspection
-is its claims carriage, with the same enforcement obligations. A
+or issuer-local resolution is its claims carriage, with the same
+enforcement obligations. A
 deployment whose AS can issue neither deploys a Mission Authority
 Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
 governs ordinary tokens at the enforcement layer.
