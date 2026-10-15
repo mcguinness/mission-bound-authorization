@@ -1445,7 +1445,10 @@ lifecycle request MAY carry `expected_version`, the state version
 ({{mission-status-response}}) the caller last observed: when present,
 the AS MUST refuse the operation with HTTP 409 and error symbol
 `stale_version`, leaving the Mission unchanged, when the Mission's
-current state version differs. A deployment SHOULD require
+current state version differs. The AS applies this check before the
+transition rule below, so a stale `expected_version` is refused even
+where the operation would otherwise be idempotent success. A
+deployment SHOULD require
 `expected_version` on the operations it classifies high-risk. The
 `nonce` remains the replay key; the two guards are independent, one
 against duplicate delivery, one against stale decisions.
