@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "9ebe50fab2ec3af302fd07a593db4f9061635d4e",
-    "content_sha256": "a1148f5a695a1e131ba4f8f7a5b14bbc6793f852f03a87366cc5f76c69f960b2"
+    "revision": "951d6242665bee2fd0214e13f1b17835dcd04f7b",
+    "content_sha256": "65f7a4cf503c1064f31f8976cff2b53d8a5fd41aac8c64dbaaa95e1b1c3ee1e3"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -6423,9 +6423,9 @@
    "id": "core.tokens.refresh-public-client-sender-constrained-or-rotated",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-bound-tokens",
-   "text": "A public client's refresh token is sender-constrained or uses refresh token rotation ({{Section 2.2.2 of RFC9700}})",
+   "text": "A public client's refresh token MUST be sender-constrained or use refresh token rotation ({{Section 2.2.2 of RFC9700}})",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
