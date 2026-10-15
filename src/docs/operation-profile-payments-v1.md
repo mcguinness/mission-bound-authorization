@@ -1,9 +1,21 @@
-# payments-runtime-profile-v1
+# payments-runtime-profile-v2
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v1`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v2`; changes bump the suffix.
+The file name is the document's stable name and does not carry the version.
+
+## Version history
+
+- **v2** (#828): the list form's `all` source enumerates every vendor the
+  payments store holds invoices for, so an unconstrained `list_invoices`
+  digest binds those vendors; a named `vendor_id` is the store-resolved
+  vendor, and one the store does not hold is refused `unknown_vendor`. A
+  `parameter_digest` over the list form is interpreted under the version in
+  force when it was computed.
+- **v1** (D34): the `all` source carries an empty `vendor_scope`, and a
+  named `vendor_id` is used as supplied.
 
 ## Canonical identifiers
 
@@ -129,6 +141,45 @@ with `@mission/core`). The digest binds decision to execution: the PEP
 recomputes it immediately before commit after conditionally re-reading the
 same record versions; any mismatch (record changed, parameter mutated) is
 a refusal with reason `parameter_mismatch`.
+
+## Targets
+
+Every target is resolved from the payments store, never taken from an
+argument (#828). An invoice-scoped tool targets the invoice; an invoice the
+store does not hold is refused `unknown_invoice` before any decision
+request. `lookup_vendor` targets the vendor the store resolves (D324); a
+vendor the store does not hold names the server resource and no vendor, so
+a vendor constraint on the credential or the Mission refuses it, and
+otherwise Resource policy, which administers no server resource, refuses it
+`resource_policy`. `list_invoices` targets the vendors of its list form,
+below.
+
+## List form
+
+`list_invoices` returns a collection, so its effective parameters are the
+list form: `action`, `resource`, `vendor_scope` and `vendor_scope_source`,
+digested as above.
+
+| `vendor_scope_source` | When | `vendor_scope` |
+|---|---|---|
+| `requested` | `vendor_id` is supplied | the vendor the store resolves for it; empty when the matched entry's `vendors` excludes it |
+| `entry` | no `vendor_id`; the matched entry carries `vendors` | that allowlist, sorted |
+| `all` | no `vendor_id`; the matched entry carries no `vendors` | every vendor the store holds invoices for, sorted and deduplicated |
+
+- A `vendor_id` the store does not hold is refused `unknown_vendor`
+  (`target_unresolvable`) before any decision request.
+- The decision request names the vendors as its targets: `resource.id`
+  names the requested vendor or one representative member, and a bulk
+  form's `resource.properties.vendor_ids` names every member of
+  `vendor_scope`. The Mission's own check and Resource policy each evaluate
+  every target, and a refusal of any one refuses the whole read; no response
+  carries a narrowed subset.
+- A bulk form with an empty `vendor_scope` names a placeholder vendor
+  object instead. An entry's empty allowlist refuses it, and no stored
+  entitlement names it, so the deployment's Resource policy refuses it.
+- Before release the PEP recomputes the list form from the current Mission
+  and store; a difference is `parameter_mismatch`. Execution returns only
+  invoices whose vendor is in `vendor_scope`.
 
 ## Idempotency keys
 

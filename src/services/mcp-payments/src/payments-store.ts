@@ -70,6 +70,11 @@ export class PaymentsStore {
   getVendor(id: string): Vendor | undefined {
     return this.db.prepare("SELECT * FROM vendors WHERE id = ?").get(id) as Vendor | undefined;
   }
+  /** The distinct vendors the store's invoices name, sorted: an unbounded `list_invoices` read's actual targets (#828). */
+  invoiceVendorIds(): string[] {
+    const rows = this.db.prepare("SELECT DISTINCT vendor_id FROM invoices ORDER BY vendor_id").all() as { vendor_id: string }[];
+    return rows.map((r) => r.vendor_id);
+  }
   listInvoices(vendorId?: string): Invoice[] {
     return (
       vendorId
