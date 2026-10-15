@@ -454,7 +454,8 @@ Some duties apply only when their condition holds: a submitted
 authority proposal, presented or required submission evidence
 ({{intent-submission-evidence}},
 {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}), or
-opaque tokens (which require introspection). The optional
+opaque tokens (which require introspection or issuer-local
+resolution). The optional
 capabilities (Delegation, Introspection as a state overlay for JWTs,
 and Cross-Domain projection) are adopted explicitly under
 {{conformance}}. Ordinary JWT consumption does not require retrieving
@@ -3177,7 +3178,7 @@ alone; no call to the AS is required. It validates the token per
 per {{Section 7.1 of RFC9449}} or {{Section 3 of RFC8705}}, locally
 even when it introspects ({{composite-active}}). An opaque
 Mission-bound token is enforced from its active introspection
-response instead, under the same rules
+response or issuer-local resolution instead, under the same rules
 ({{introspected-consumption}}).
 
 A resource server:
@@ -3422,8 +3423,8 @@ Token introspection lets a Mission-state-aware resource server observe
 a Mission's current state per request instead of waiting out a
 token's lifetime. For the JWT carriage it is a state-observable
 overlay on the lifecycle-gated baseline ({{mission-bound-tokens}});
-for opaque Mission-bound tokens it is the claims carriage
-({{introspected-consumption}}).
+for opaque Mission-bound tokens it is the claims carriage outside
+issuer-local resolution ({{introspected-consumption}}).
 
 An AS MAY support OAuth 2.0 Token Introspection {{RFC7662}} for
 Mission-bound access tokens. When it does, the response for such a
@@ -3544,7 +3545,9 @@ under it; an opaque Mission-bound token outside this mode is not
 profiled.
 
 - In this mode, an AS issuing opaque Mission-bound tokens MUST offer
-  introspection for them with the members this mode names.
+  introspection for them with the members this mode names, unless
+  every resource server that consumes them uses issuer-local
+  resolution (below).
 - An active (`active: true`) response for such a token MUST carry,
   as introspection response members, the audience-filtered granted
   `authorization_details` ({{RFC9396}}), the `mission` member above,
@@ -4202,9 +4205,10 @@ configuration. The companion defines conformance for ASs supporting
 an evidence type, whether its evidence is optional or required.
 
 A **Mission-aware Resource Server** implements resource server
-enforcement ({{rs-enforcement}}), from the token's own claims or from
-its active introspection response under the introspected consumption
-mode ({{introspected-consumption}}).
+enforcement ({{rs-enforcement}}), from the token's own claims or,
+under the introspected consumption mode, from its active
+introspection response or issuer-local resolution
+({{introspected-consumption}}).
 
 A **Mission Client** implements the client surfaces:
 
@@ -4226,8 +4230,10 @@ that supports none of them is still conformant:
   that carry the `act` delegation chain.
 - **Introspection** ({{introspection}}): reporting Mission state through
   the `mission` token introspection response member. Required where
-  the AS issues opaque Mission-bound tokens
-  ({{introspected-consumption}}).
+  the AS issues opaque Mission-bound tokens to a resource server that
+  does not use issuer-local resolution ({{introspected-consumption}}).
+  Issuer-local resolution does not by itself support a claim of this
+  capability.
 - **Cross-Domain**: projecting a Mission so it is honored by an
   authorization server in another trust domain. An implementation
   claiming this capability preserves, across the hop:
@@ -6067,6 +6073,14 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Introspected Token Consumption permits issuer-local resolution: an
+  AS can serve a resource server inside its trusted implementation
+  boundary by resolving an opaque Mission-bound token from its
+  committed token and grant state, under the same per-use,
+  token-specific, audience-filtered and fail-closed rules as an
+  introspection response. RFC 7662 keeps its meaning, and any other
+  resource server still requires introspection (#1203).
 
 - Issuance Gating refuses a derivation from a Mission that is not
   `active` with `invalid_request` on a Token Exchange, as Section 2.2.2
