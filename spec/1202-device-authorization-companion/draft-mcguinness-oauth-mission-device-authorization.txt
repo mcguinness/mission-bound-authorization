@@ -20,11 +20,11 @@ Abstract
    cannot complete that flow.  This document defines an optional,
    experimental profile of the OAuth 2.0 Device Authorization Grant for
    that client: the client submits its Mission Intent and authority
-   proposal at the device authorization endpoint, the user approves the
-   derived authority on a second device, and the client's polling token
-   request completes the Mission's creation.  A dedicated metadata
-   member advertises support; generic device-grant support never implies
-   it.
+   proposal at the device authorization endpoint, the user's approval of
+   the derived authority on a second device creates the Mission, and the
+   client's polling token request delivers the Mission's credentials.  A
+   dedicated metadata member advertises support; generic device-grant
+   support never implies it.
 
 About This Document
 
@@ -267,9 +267,14 @@ Table of Contents
    the Approver entered or confirmed, and MUST NOT resolve any other
    device_code to the Mission that decision creates.
 
-   The AS MUST refuse a device access token request for a session from
-   any client other than the bound client with the invalid_grant error
-   code (Section 5.2 of [RFC6749]).
+   The AS MUST refuse a device access token request from an
+   authenticated or identified client other than the bound client with
+   the invalid_grant error code (Section 5.2 of [RFC6749]).  A request
+   that omits or fails client authentication the bound client is
+   required to use receives invalid_client instead (Section 3.4 of
+   [RFC8628], Section 5.2 of [RFC6749]).  A public client that
+   identifies itself with the bound client_id uses no client
+   authentication and is not refused for its absence.
 
    A public client's client_id identifies the client; it does not
    authenticate it (Section 5.6 of [RFC8628]).  The Mission Record's
@@ -335,22 +340,34 @@ Table of Contents
 
 8.1.  Session Outcomes
 
-   A session ends in exactly one of these outcomes:
+   A pending session reaches exactly one of these outcomes:
 
-   approved:  The creation commit succeeded (Section 7).  The next
-      device access token request from the bound client receives the
-      success response of Section 8.2.
+   approved:  The creation commit succeeded (Section 7).  The Mission
+      exists from that commit, and the session's device_code is
+      redeemable as described below.
 
    denied:  The Approver declined, the creation commit created no
       Mission, or the AS ended the session for another reason, such as
-      suspected user_code guessing.  The next device access token
-      request receives access_denied, except that a refusal to which the
-      OAuth binding assigns invalid_scope (an openid request whose
-      Approver is not the Subject) is returned as invalid_scope.
+      suspected user_code guessing.  A device access token request
+      presenting the session's device_code receives access_denied,
+      except that a refusal to which the OAuth binding assigns
+      invalid_scope (an openid request whose Approver is not the
+      Subject) is returned as invalid_scope.
 
    expired:  The device_code lifetime elapsed while the session was
-      pending.  The next device access token request receives
+      pending.  A device access token request presenting it receives
       expired_token.
+
+   Approval does not extend the device_code lifetime.  A device access
+   token request redeems an approved session only while its device_code
+   is unexpired and unconsumed and the Mission passes the OAuth
+   binding's issuance gating; it then receives the success response of
+   Section 8.2.  A Mission no longer active yields the refusal that
+   issuance gating assigns, and a consumed device_code yields
+   invalid_grant (Section 8.2).  Once the device_code has expired
+   unredeemed, a request presenting it receives expired_token
+   (Section 3.5 of [RFC8628]), even though the session was approved and
+   its Mission is active.
 
    RFC 8628 defines no client cancellation.  A client abandons a session
    by ceasing to poll; an approval reached afterwards still creates a
@@ -381,10 +398,12 @@ Table of Contents
    binding's sense, and the refresh-token family its redemption emits
    inherits that binding atomically with its issuance.  Issuance gating
    applies to the first redemption as to any later derivation.  The
-   OAuth binding's token rules apply unchanged, including its rule that
-   Mission-bound refresh tokens are sender-constrained or rotated; a
-   client can sender-constrain the issued tokens with DPoP [RFC9449] on
-   the device access token request.
+   OAuth binding's token rules apply unchanged
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission-Bound Access
+   Tokens"); they require a public client's Mission-bound refresh token
+   to be sender-constrained or rotated.  A client can sender-constrain
+   the issued tokens with DPoP [RFC9449] on the device access token
+   request.
 
    A client MUST NOT use the tokens of a successful device access token
    response unless the response carries mission_id, mission_expires_at,
@@ -441,11 +460,15 @@ Table of Contents
    defense against authorization-code injection (PKCE or a DPoP-bound
    code) has no counterpart here.  A leaked device_code lets its holder
    redeem the Mission's first tokens as the bound client, which for a
-   public client is anyone.  High entropy (Section 5.2 of [RFC8628]),
-   one-time issuance (Section 8.2), and sender-constrained tokens limit
-   the exposure.  A refused request presenting an already redeemed
-   device_code indicates a leak, and the AS can revoke the tokens issued
-   from it.
+   public client is anyone.  DPoP [RFC9449] at redemption binds the
+   issued tokens to the redeemer's key; it neither authenticates the
+   public-client instance that started the session nor prevents a thief
+   from redeeming with a key of its own.  High entropy (Section 5.2 of
+   [RFC8628]), a short lifetime, and one-time issuance (Section 8.2)
+   limit the exposure, and sender-constrained tokens limit only what a
+   later holder of those tokens can do.  A refused request presenting an
+   already redeemed device_code indicates a leak, and the AS can revoke
+   the tokens issued from it.
 
 10.4.  Downgrade
 
@@ -631,9 +654,10 @@ Appendix B.  Document History
       exact submission and client; a direct approval event on the
       verification user agent with the record created atomically with
       the decision, client, Subject, and user_code confirmation in the
-      rendering; session outcomes; one-time issuance with required
-      mission_id and mission_expires_at; and the device grant as the
-      root of the Mission's grant lineage.
+      rendering; session outcomes, with redemption only of an unexpired,
+      unconsumed device_code under issuance gating; one-time issuance
+      with required mission_id and mission_expires_at; and the device
+      grant as the root of the Mission's grant lineage.
 
 Author's Address
 
