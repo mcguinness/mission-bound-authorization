@@ -10,6 +10,7 @@
 
 import { randomUUID } from "node:crypto";
 import type { Fga, MissionView } from "@mission/pdp";
+import { credentialProfileVectors } from "@mission/core/test-vectors";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -114,7 +115,10 @@ function payments(): PaymentsStore {
 }
 
 /** A PEP whose decision function records each request it is asked, and declines to decide. */
-function pepRecording(extra: { requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean } = {}) {
+function pepRecording(
+  extra: { requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean } = {},
+  view: MissionView = VIEW,
+) {
   const decided: unknown[] = [];
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const pep = new Pep({
@@ -127,8 +131,8 @@ function pepRecording(extra: { requiresActionApproval?: (action: string, actionC
     fga: {} as unknown as Fga,
     modelId: "m",
     loadView: (ref) =>
-      ref.id === VIEW.id && ref.issuer === VIEW.issuer
-        ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+      ref.id === view.id && ref.issuer === view.issuer
+        ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined,
     instanceEpoch: "epoch-825",
     allowedFreshnessSources: new Set(["load_view"]),
@@ -193,31 +197,17 @@ describe("the Mission access-token profile is met before any claim is trusted (@
   });
 
   const now = () => Math.floor(Date.now() / 1000);
-  it.each([
-    ["no typ", {}, { typ: undefined }],
-    ["typ JWT", {}, { typ: "JWT" }],
-    ["typ mission-status+jwt", {}, { typ: "mission-status+jwt" }],
-    ["typ aat+jwt", {}, { typ: "aat+jwt" }],
-    ["no exp", { exp: undefined }, {}],
-    ["a string exp", { exp: String(now() + 300) }, {}],
-    ["no iat", { iat: undefined }, {}],
-    ["an iat in the future", { iat: now() + 3600, exp: now() + 7200 }, {}],
-    ["an nbf in the future", { nbf: now() + 3600 }, {}],
-    ["an expired exp", { iat: now() - 600, exp: now() - 10 }, {}],
-    ["no jti", { jti: undefined }, {}],
-    ["an empty jti", { jti: "" }, {}],
-    ["no sub", { sub: undefined }, {}],
-    ["no client_id", { client_id: undefined }, {}],
-    ["a numeric client_id", { client_id: 7 }, {}],
-    ["no cnf", { cnf: undefined }, {}],
-    ["an empty cnf.jkt", { cnf: { jkt: "" } }, {}],
-    ["no mission claim", { mission: undefined }, {}],
-    ["a mission claim with an empty id", { mission: { id: "", issuer: ISSUER } }, {}],
-    ["no authorization_details", { authorization_details: undefined }, {}],
-    ["an unknown authority type", { authorization_details: [{ type: "other", resource: CANONICAL_RESOURCE, actions: ["x"] }] }, {}],
-    ["an unknown constraint", { authorization_details: [entry(["payments:invoice.read"], { time_window: "9-5" })] }, {}],
-    ["a malformed amount cap", { authorization_details: [entry(["payments:invoice.read"], { max_amount: { amount: "ten", currency: "USD" } })] }, {}],
-  ])("refuses a token with %s on both transports, yielding no facts", async (_label, claims, header) => {
+  // @spec mission#introspection (#825, D402): the profile's negative vectors
+  // are the list AS introspection also runs. This resource's profile requires
+  // sender constraint, so it refuses an absent `cnf` too.
+  it.each(
+    credentialProfileVectors({
+      resource: CANONICAL_RESOURCE,
+      action: "payments:invoice.read",
+      mission: MISSION,
+      nowS: now(),
+    }).map((v) => [v.label, v.claims, v.header ?? {}] as const),
+  )("refuses a token with %s on both transports, yielding no facts", async (_label, claims, header) => {
     const token = await mint(claims, header);
     // A proof that would verify for this token: the refusal is the profile's.
     await expect(overHttp(token)).rejects.toThrow();
@@ -293,8 +283,8 @@ describe("the Mission access-token profile is met before any claim is trusted (@
 
 describe("the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825)", () => {
   /** Enforce `tool` under a token carrying `details`, validated over HTTP. */
-  async function attempt(details: unknown[], tool: string, args: Record<string, unknown>) {
-    const x = pepRecording();
+  async function attempt(details: unknown[], tool: string, args: Record<string, unknown>, view: MissionView = VIEW) {
+    const x = pepRecording({}, view);
     const facts = await overHttp(await mint({ authorization_details: details }));
     const result = await x.pep.enforce(tool, args, facts);
     return { ...x, result };
@@ -343,6 +333,18 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
       id: "acme",
     });
     expect((await attempt([entry(["payments:invoice.list"], { vendors: ["acme", "globex"] })], "list_invoices", {})).decided).toHaveLength(1);
+  });
+
+  it("checks every vendor an unconstrained Mission's collection read returns: the store's invoice vendors, not a placeholder (#828 step 5)", async () => {
+    // The Mission's list entry carries no vendor constraint, so the read
+    // returns every vendor the store holds invoices for: acme and globex. A
+    // credential covering only acme does not cover it.
+    const unconstrained: MissionView = { ...VIEW, authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.list"] }] };
+    refusedBeforePdp(await attempt([entry(["payments:invoice.list"], { vendors: ["acme"] })], "list_invoices", {}, unconstrained), {
+      type: "vendor",
+      id: "acme",
+    });
+    expect((await attempt([entry(["payments:invoice.list"], { vendors: ["acme", "globex"] })], "list_invoices", {}, unconstrained)).decided).toHaveLength(1);
   });
 
   it("resolves a vendor lookup's target from store state, so a vendor-bound credential covers only its own vendors", async () => {

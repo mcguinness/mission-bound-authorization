@@ -162,6 +162,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -585,6 +593,27 @@ keyed on the Intent ({{I-D.draft-mcguinness-oauth-mission}}, Section
 proposal format and the narrowing rule are interoperable, so the
 result is enforceable and auditable across domains, and only the
 Mission Issuer's choice of what to narrow to stays local.
+
+When a task's entries at different resource servers concern one
+object, such as the reservation and the payment for one order, the
+shaper can propose each entry pinned to the same reference, each in
+its own resource server's vocabulary. A leg on another reference then
+falls outside its entry. A pin in the entry at approval binds the
+legs to the approved reference and the content disclosed with it.
+
+Where the object does not exist at approval, as when the agent places
+the order only after approval, the agent adds the pin later by
+narrowing its own token, for an entry type that supports narrowing
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Self-Exchange
+Down-Scoping"). That agent-chosen pin binds the legs to each other,
+not to approved content: an agent that pins the wrong order on every
+leg produces legs that agree. Approval of the object's content comes
+from an action-bound approval at the step that creates or commits it
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Action-Bound
+Approval"), or from the system of record. Mission Runtime Evidence
+describes how a comparing party checks the legs afterward
+({{I-D.draft-mcguinness-mission-runtime-evidence}}, Section
+"Cross-Entry Correspondence").
 
 The proposal MUST NOT present issuer outputs as approved authority: the
 derived Authority Set is the Mission Issuer's product
@@ -1383,6 +1412,11 @@ guessing ({{clarifications}}).
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Authority Proposal describes entries that correspond across
+  resource servers: each pinned to the same reference in its own
+  vocabulary, with a pin the agent adds after approval binding the
+  legs to each other, not to approved content (#1019).
 
 - The Mission Intent no longer carries `success_criteria`, following
   the OAuth binding. The shaper writes completion outcomes, where

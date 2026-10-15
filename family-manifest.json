@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 51,
+ "count": 52,
  "drafts": [
   {
    "file": "draft-mcguinness-mission-control-plane.md",
@@ -292,6 +292,7 @@
     "draft-mcguinness-aauth-mission-expiry",
     "draft-mcguinness-mission-aauth",
     "draft-mcguinness-mission-aauth-management",
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-authzen",
@@ -318,6 +319,7 @@
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-derivation-limits",
+    "draft-mcguinness-oauth-mission-device-authorization",
     "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
@@ -1119,6 +1121,7 @@
     "draft-mcguinness-mission-capability-binding",
     "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-shaping",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approved-set-verification",
@@ -1379,6 +1382,7 @@
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
@@ -2194,6 +2198,7 @@
     "draft-mcguinness-oauth-mission"
    ],
    "references": [
+    "draft-mcguinness-mission-metering",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-cross-domain"
    ]
@@ -2445,6 +2450,7 @@
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-cross-org-delegation",
     "draft-mcguinness-oauth-mission-derivation-limits",
+    "draft-mcguinness-oauth-mission-device-authorization",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-management",
     "draft-mcguinness-oauth-mission-progressive",
@@ -2583,6 +2589,33 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-status"
+   ]
+  },
+  {
+   "file": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "slug": "draft-mcguinness-oauth-mission-device-authorization",
+   "title": "Mission Device Authorization for OAuth 2.0",
+   "category": "exp",
+   "role": "companion",
+   "spec_maturity": "experimental",
+   "maintenance": "lab-best-effort",
+   "group": "approval-time",
+   "verbs": [
+    "approve"
+   ],
+   "summary": "Carries a Mission Intent and authority proposal on the OAuth 2.0 Device Authorization Grant for a client with no redirect: explicit discovery with no fallback to an ordinary device grant, whole-request validation, a session bound to the exact proposal and client, a direct approval on a second device with user-code confirmation, one-time issuance with the required Mission response members, and the device grant as the root of the Mission's grant lineage.",
+   "pull_when": "An agent with no redirect-capable user agent, such as a command-line agent on a remote host, must create a Mission its user approves on another device.",
+   "normative_references": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "requires_when": [],
+   "references": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-approval",
+    "draft-mcguinness-oauth-mission-consent-evidence"
    ]
   }
  ]

@@ -34,12 +34,14 @@ import {
 } from "@mission/pdp/test-support";
 import { describe, expect, it } from "vitest";
 import {
+  buildListEffectiveParams,
   CANONICAL_RESOURCE,
   Connectors,
   createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
+  parameterDigest,
   PaymentsStore,
   Pep,
   type TokenFacts,
@@ -50,7 +52,7 @@ import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 const ISSUER = "https://as.test";
 const MODES = ["co-resident", "remote"] as const;
 
-const view: MissionView = {
+const defaultView: MissionView = {
   id: "msn_rp_pep",
   issuer: ISSUER,
   state: "active",
@@ -74,20 +76,29 @@ const TOKEN: TokenFacts = {
   iss: ISSUER,
   clientId: "ap-agent",
   cnfJkt: "jkt-828",
-  mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
+  mission: { id: defaultView.id, issuer: defaultView.issuer, authority_hash: defaultView.authority_hash },
   credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
-/** One resource with its PEP and a decision point bound to `resourcePolicy`, over `mode`. The Mission check always allows. */
-async function build(mode: (typeof MODES)[number], resourcePolicy: ResourcePolicy, missionFga: Fga = { checkWithContext: async () => true } as unknown as Fga) {
-  const point = createEphemeralDecisionPoint({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE, resourcePolicy });
-  const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
-  const evidence = new EvidenceStore(keys.signing, keys.resolver);
-  const payments = new PaymentsStore();
+const seedOneInvoice = (payments: PaymentsStore) =>
   payments.seed(
     [{ id: "acme", name: "Acme", status: "approved" }],
     [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
   );
+
+/** One resource with its PEP and a decision point bound to `resourcePolicy`, over `mode`. The Mission check always allows by default. */
+async function build(
+  mode: (typeof MODES)[number],
+  resourcePolicy: ResourcePolicy,
+  missionFga: Fga = { checkWithContext: async () => true } as unknown as Fga,
+  fixture: { view: MissionView; seed: (payments: PaymentsStore) => void } = { view: defaultView, seed: seedOneInvoice },
+) {
+  const view = fixture.view;
+  const point = createEphemeralDecisionPoint({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE, resourcePolicy });
+  const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
+  const evidence = new EvidenceStore(keys.signing, keys.resolver);
+  const payments = new PaymentsStore();
+  fixture.seed(payments);
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === view.id && ref.issuer === view.issuer
       ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
@@ -113,7 +124,7 @@ async function build(mode: (typeof MODES)[number], resourcePolicy: ResourcePolic
     writeReservations,
   });
   const records = () => evidence.forMission(view.id);
-  return { server, channel, payments, connectors, writeReservations, records };
+  return { server, pep, channel, payments, connectors, writeReservations, records };
 }
 
 describe("the resource enforces an independent Resource-policy refusal (@spec runtime#input-resource-policy, #828)", () => {
@@ -200,6 +211,133 @@ describe("the resource enforces an independent Resource-policy refusal (@spec ru
   });
 });
 
+/** An unconstrained list Mission: entitled to every vendor's invoices, so the read's targets are whatever the store holds. */
+const listView: MissionView = {
+  ...defaultView,
+  id: "msn_rp_list",
+  authority_hash: "sha-256:rp-list",
+  authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.list"] }],
+};
+const LIST_TOKEN: TokenFacts = {
+  ...TOKEN,
+  mission: { id: listView.id, issuer: listView.issuer, authority_hash: listView.authority_hash },
+};
+/** Invoices for acme and globex; initech is a vendor with none yet. */
+const seedTwoVendors = (payments: PaymentsStore) =>
+  payments.seed(
+    [
+      { id: "acme", name: "Acme", status: "approved" },
+      { id: "globex", name: "Globex", status: "approved" },
+      { id: "initech", name: "Initech", status: "approved" },
+    ],
+    [
+      { id: "inv-acme-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" },
+      { id: "inv-globex-1", vendor_id: "globex", amount: "50.00", currency: "USD", payee_account: "acct-globex", status: "payable" },
+    ],
+  );
+const LIST_FIXTURE = { view: listView, seed: seedTwoVendors };
+const initechInvoice = { id: "inv-initech-1", vendor_id: "initech", amount: "75.00", currency: "USD", payee_account: "acct-initech", status: "payable" };
+const vendorsOf = (result: unknown) => (result as Array<{ vendor_id: string }>).map((i) => i.vendor_id).sort();
+
+describe("list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5)", () => {
+  it("an unconstrained read names every vendor the store holds invoices for: the policy is asked about each, and the parameter digest binds that set", async () => {
+    for (const mode of MODES) {
+      const policy = resourcePolicyFixture();
+      const x = await build(mode, policy, undefined, LIST_FIXTURE);
+      try {
+        const res = await x.server.callReadTool("list_invoices", {}, LIST_TOKEN);
+        expect(res.ok, `${mode} ${JSON.stringify(res)}`).toBe(true);
+        expect(vendorsOf(res.result), mode).toEqual(["acme", "globex"]);
+        expect(policy.queries.map((q) => q.targets), mode).toEqual([
+          [
+            { type: "vendor", id: "acme" },
+            { type: "vendor", id: "globex" },
+          ],
+        ]);
+        const bound = parameterDigest(
+          buildListEffectiveParams({ action: "payments:invoice.list", resource: CANONICAL_RESOURCE, vendor_scope: ["acme", "globex"], vendor_scope_source: "all" }),
+        );
+        expect(x.records().find((e) => e.kind === "decision")?.content, mode).toMatchObject({ decision: "permit", parameter_digest: bound });
+      } finally {
+        await x.channel.close();
+        x.payments.db.close();
+      }
+    }
+  });
+
+  it("a policy refusing one vendor refuses the whole unconstrained read resource_policy with no result, while a read naming the other vendor permits", async () => {
+    for (const mode of MODES) {
+      const refusesGlobex = resourcePolicyFixture((q) => q.targets.some((t) => t.id === "globex"));
+      const x = await build(mode, refusesGlobex, undefined, LIST_FIXTURE);
+      try {
+        const refused = await x.server.callReadTool("list_invoices", {}, LIST_TOKEN);
+        expect(refused.ok, mode).toBe(false);
+        expect(refused.result, mode).toBeUndefined();
+        expect(x.records().find((e) => e.kind === "decision")?.content, mode).toMatchObject({ decision: "deny", denial_reason: "resource_policy" });
+        expect(x.records().some((e) => e.kind === "execution"), mode).toBe(false);
+        const acme = await x.server.callReadTool("list_invoices", { vendor_id: "acme" }, LIST_TOKEN);
+        expect(acme.ok, `${mode} ${JSON.stringify(acme)}`).toBe(true);
+        expect(vendorsOf(acme.result), mode).toEqual(["acme"]);
+      } finally {
+        await x.channel.close();
+        x.payments.db.close();
+      }
+    }
+  });
+
+  it("an invoice for a vendor the decision never named is never returned: before the last check it is a parameter mismatch, after it the bound filter drops it", async () => {
+    for (const mode of MODES) {
+      const early = await build(mode, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, undefined, LIST_FIXTURE);
+      try {
+        const res = await early.server.callReadTool("list_invoices", {}, LIST_TOKEN, () => early.payments.seed([], [initechInvoice]));
+        expect(res.ok, mode).toBe(false);
+        expect(res.refusal_reason, mode).toBe("parameter_mismatch");
+        expect(res.result, mode).toBeUndefined();
+      } finally {
+        await early.channel.close();
+        early.payments.db.close();
+      }
+      const late = await build(mode, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, undefined, LIST_FIXTURE);
+      try {
+        // The PEP's final permit-use check runs after reverifyList and just
+        // before release: an invoice landing there is outside the bound set.
+        const verify = late.pep.verifyPermitAtUse.bind(late.pep);
+        let calls = 0;
+        late.pep.verifyPermitAtUse = async (attempt) => {
+          calls += 1;
+          if (calls === 2) late.payments.seed([], [initechInvoice]);
+          return verify(attempt);
+        };
+        const res = await late.server.callReadTool("list_invoices", {}, LIST_TOKEN);
+        expect(calls, mode).toBe(2);
+        expect(res.ok, `${mode} ${JSON.stringify(res)}`).toBe(true);
+        expect(vendorsOf(res.result), mode).toEqual(["acme", "globex"]);
+      } finally {
+        await late.channel.close();
+        late.payments.db.close();
+      }
+    }
+  });
+
+  it("a named vendor the store does not hold is refused unknown_vendor before any decision: no policy query, no Decision Evidence, a signed target_unresolvable refusal", async () => {
+    for (const mode of MODES) {
+      const policy = resourcePolicyFixture();
+      const x = await build(mode, policy, undefined, LIST_FIXTURE);
+      try {
+        const res = await x.server.callReadTool("list_invoices", { vendor_id: "umbrella" }, LIST_TOKEN);
+        expect(res.ok, mode).toBe(false);
+        expect(res.result, mode).toBeUndefined();
+        expect(policy.queries, mode).toEqual([]);
+        expect(x.records().some((e) => e.kind === "decision"), mode).toBe(false);
+        expect(x.records().find((e) => e.kind === "refusal")?.content, mode).toMatchObject({ denial_reason: "target_unresolvable", emitter: { role: "pep" } });
+      } finally {
+        await x.channel.close();
+        x.payments.db.close();
+      }
+    }
+  });
+});
+
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
 const CA = process.env.OPENFGA_CA_CERT;
@@ -238,6 +376,38 @@ d("the deployment's OpenFGA Resource policy at the resource (@spec runtime#input
         expect((await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN)).ok, mode).toBe(true);
         expect(x.records().filter((e) => e.kind === "decision").map((e) => (e.content as { decision: string }).decision), mode)
           .toEqual(["permit", "deny", "permit"]);
+      } finally {
+        await x.channel.close();
+        x.payments.db.close();
+      }
+    }
+  });
+
+  it("an unconstrained list names every invoice vendor to the stored policy: revoking only one vendor's entitlement refuses the whole read resource_policy, a read of the other vendor still permits, and restoring it permits both, the same over both channels (#828 step 5)", async () => {
+    const { fga } = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, ...(CA ? { caCertPath: CA } : {}) });
+    const admin = new FgaDomainAdmin(fga);
+    const alice = principalObject({ iss: ISSUER, sub: "alice" });
+    const globex = { user: alice, relation: "authorized_reader", object: "vendor:globex" };
+    await admin.grant([{ user: alice, relation: "authorized_reader", object: "vendor:acme" }, globex]);
+    const policy = fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(ISSUER) });
+    for (const mode of MODES) {
+      const x = await build(mode, policy, fga, LIST_FIXTURE);
+      try {
+        const both = await x.server.callReadTool("list_invoices", {}, LIST_TOKEN);
+        expect(both.ok, `${mode} ${JSON.stringify(both)}`).toBe(true);
+        expect(vendorsOf(both.result), mode).toEqual(["acme", "globex"]);
+        await admin.revoke([globex]);
+        const refused = await x.server.callReadTool("list_invoices", {}, LIST_TOKEN);
+        expect(refused.ok, mode).toBe(false);
+        expect(refused.result, mode).toBeUndefined();
+        expect(x.records().filter((e) => e.kind === "decision").at(-1)?.content, mode).toMatchObject({ decision: "deny", denial_reason: "resource_policy" });
+        const acme = await x.server.callReadTool("list_invoices", { vendor_id: "acme" }, LIST_TOKEN);
+        expect(acme.ok, `${mode} ${JSON.stringify(acme)}`).toBe(true);
+        expect(vendorsOf(acme.result), mode).toEqual(["acme"]);
+        await admin.grant([globex]);
+        const restored = await x.server.callReadTool("list_invoices", {}, LIST_TOKEN);
+        expect(restored.ok, `${mode} ${JSON.stringify(restored)}`).toBe(true);
+        expect(vendorsOf(restored.result), mode).toEqual(["acme", "globex"]);
       } finally {
         await x.channel.close();
         x.payments.db.close();
