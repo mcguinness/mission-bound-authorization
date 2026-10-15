@@ -66,6 +66,7 @@ informative:
   RFC8935:
   RFC9493:
   RFC9635:
+  RFC8628:
   I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
@@ -261,6 +262,14 @@ informative:
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-device-authorization:
+    title: "Mission Device Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-device-authorization.html
     author:
       -
         ins: K. McGuinness
@@ -890,8 +899,9 @@ The following is an example of a Mission Intent:
 
 ## Submission via PAR {#submission-via-par}
 
-A client MUST submit a Mission Intent through a Pushed Authorization
-Request {{RFC9126}} using the `mission_intent` request parameter. The
+On the authorization-code path ({{approval-event}}), a client MUST
+submit a Mission Intent through a Pushed Authorization Request
+{{RFC9126}} using the `mission_intent` request parameter. The
 parameter value is the UTF-8 JSON {{RFC8259}} serialization of the
 Submission envelope, a JSON object carried as an ordinary OAuth
 request-parameter value (form-encoded in the
@@ -926,8 +936,8 @@ Submission is governed by the following rules:
   ({{extensibility}}). A bare Mission Intent submitted as the
   parameter value fails this rule, since its `goal` and sibling
   members are unknown envelope members.
-- **One carriage, through PAR.** The AS accepts the Intent in one of
-  two forms:
+- **One carriage, through PAR.** On the authorization-code path, the
+  AS accepts the Intent in one of two forms:
 
   1. the form-encoded `mission_intent` parameter of the PAR request
      body; or
@@ -944,6 +954,21 @@ Submission is governed by the following rules:
   outside the Request Object in the same push MUST be rejected with
   `invalid_request`, strengthening {{Section 6.3 of RFC9101}}, under
   which the AS would only ignore such a value.
+- **Alternative back-channel profiles.** A Mission Intent travels on
+  no other request unless a companion profile explicitly defines that
+  request as a back-channel carriage for a client that cannot
+  complete the authorization-code path. Such a profile carries the
+  Submission envelope and any authority proposal in one request that
+  never traverses a user agent, applies this section's envelope and
+  proposal rules, and leaves the processing order
+  ({{submission-processing}}), derivation
+  ({{authorization-derivation}}), the approval event
+  ({{approval-event}}, relocated only as {{extensibility}} permits),
+  and the grant binding ({{grant-binding}}) unchanged. Support for a
+  grant type or endpoint never establishes such a carriage on its
+  own. The experimental Mission Device Authorization profile
+  ({{I-D.draft-mcguinness-oauth-mission-device-authorization}})
+  defines one for the device authorization grant {{RFC8628}}.
 - **Bounded size.** The AS MUST bound the Submission envelope's
   total size, the Intent's total size and the lengths of its arrays,
   and the count and per-entry sizes of `evidence` entries, refusing
@@ -6034,6 +6059,15 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Submission via PAR scopes its PAR carriage rule to the
+  authorization-code path. A Mission Intent travels on another
+  request only where a companion profile explicitly defines a
+  back-channel carriage that keeps the Submission envelope, the
+  processing order, derivation, the approval event, and the grant
+  binding; support for a grant type alone never establishes one. The
+  experimental Mission Device Authorization profile defines such a
+  carriage for RFC 8628 device authorization (#1202).
 
 - Issuance Gating refuses a derivation from a Mission that is not
   `active` with `invalid_request` on a Token Exchange, as Section 2.2.2
