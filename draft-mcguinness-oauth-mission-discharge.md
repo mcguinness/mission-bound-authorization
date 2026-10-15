@@ -813,8 +813,8 @@ distinguished from one whose selectors do not resolve.
 operation retry key under the Status profile's Idempotency and
 Conflicts rule ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
 "Idempotency and Conflicts"): a retransmission with the same `nonce`
-and a byte-identical request returns the stored signed response
-verbatim. The same `nonce` with a different request is refused
+and the same request members returns the stored signed response
+verbatim. The same `nonce` with different request members is refused
 `invalid_request`, never answered with an unrelated original
 response.
 
@@ -994,7 +994,7 @@ requester's identifier and `nonce` to the request's own `nonce`, as
 for the Status profile's state-only response
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Response").
 The `nonce` rules of {{discharge-idempotency}} apply to a receipt as to
-the envelope: a byte-identical retransmission replays the stored
+the envelope: a retransmission replays the stored
 receipt bytes, and a fresh-`nonce` replay of the same event returns a
 new receipt echoing the new `nonce`. The `discharge_receipt` object
 has:
@@ -1288,6 +1288,9 @@ entry carrying a `terminal_when` constraint it does not understand
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A `nonce` retransmission is compared on its request members, as in
+  the Status profile, not on its bytes (#705).
 
 - A Discharge Result carries `prior_version` and `new_version`, an
   envelope signed with `current_version` verifies over its original

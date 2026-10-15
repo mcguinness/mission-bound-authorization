@@ -47,12 +47,12 @@
     "content_sha256": "bc20eb11b403f3abfc4f5d85f786e9e2f4953bd760fd5e5ec52cd3b7722858ae"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "e6d514ce5ebf4ae47dee9bad3eaff6c2544ae64e",
-    "content_sha256": "59f5bb1554f7f4d60be297ba66c33a5df756983e22eb1c5ebb361d3b9c34d18e"
+    "revision": "c3738f99a00ce740009c67c4ee707aea16c92672",
+    "content_sha256": "ed5097446b15dee094b1e855d568a2684d34831241c6a9da9da33a9625253722"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "1a5ae2e0f5080f7eca8f27f6a0ad0ecdfd2def54",
-    "content_sha256": "f17d312b067ba2e56fb9963a5c833cdc0ba7e235aa07cee3096ccfdd4039b134"
+    "revision": "5702bdd0c504744d6283fea328675175065cbe5f",
+    "content_sha256": "f0fecb61aa70d5707c51896952d25adf243f30b830b37efa39e702bce11865db"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "f9c4eb28516517c5955734a70c61ae8c6d42309b",
@@ -7836,7 +7836,7 @@
    "id": "status.discharge.nonce-replay",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "retransmit carrying a `nonce` already seen for that client and `mission_id`, together with a request byte-identical to the original, the AS MUST replay the original response rather than re-execute the operation.",
+   "text": "retransmit carrying a `nonce` already seen for that client and `mission_id`, together with request members identical to the original's, the AS MUST replay the original response rather than re-execute the operation.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -7849,7 +7849,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a retransmitted lifecycle request with the same nonce and byte-identical body replays the original signed response rather than re-executing the operation"
+    "normative": "a retransmitted lifecycle request with the same nonce and the same operation members replays the original signed response rather than re-executing the operation, even when its client authentication parameters or member order differ"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -7865,15 +7865,21 @@
      "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > replays a same-nonce retry byte for byte, and refuses the same nonce with a different request invalid_request",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > compares a retransmit on its operation members: a regenerated client assertion and another member order still replay (@spec status#idempotency)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "LifecycleResponseStore, keyed by (endpoint, principal, mission_id, nonce), stores the response's exact bytes with the digest of the exact request bytes; the retransmission replays it without re-executing. Proven on `discharge`, whose response is the signed envelope (string equality is meaningful). DEVIATION: `nonce` is REQUIRED for `discharge` and OPTIONAL for the four state operations here, since existing operational callers never send one; dedup applies to any operation that does carry one."
+   "notes": "LifecycleResponseStore, keyed by (endpoint, principal, mission_id, nonce), stores the response's exact bytes with the digest of the request's operation members (client authentication parameters excluded, members in canonical order); the retransmission replays it without re-executing. Proven on `discharge`, whose response is the signed envelope (string equality is meaningful). DEVIATION: `nonce` is REQUIRED for `discharge` and OPTIONAL for the four state operations here, since existing operational callers never send one; dedup applies to any operation that does carry one."
   },
   {
    "id": "status.discharge.nonce-conflict-refusal",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "The same `nonce` paired with a request that is not byte-identical to the original MUST be refused `invalid_request`",
+   "text": "The same `nonce` paired with request members that differ from the original's MUST be refused `invalid_request`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -7886,7 +7892,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a retransmitted nonce paired with a non-identical request body is refused invalid_request, never answered with the unrelated original response"
+    "normative": "a retransmitted nonce paired with differing operation members is refused invalid_request, never answered with the unrelated original response"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -7902,9 +7908,114 @@
      "name": "revoke-only Lifecycle deployment: retries and terminal states (@spec status#idempotency, #1182) > replays a same-nonce retry byte for byte, and refuses the same nonce with a different request invalid_request",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > compares a retransmit on its operation members: a regenerated client assertion and another member order still replay (@spec status#idempotency)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "The divergent arm of the same test: the same nonce with a non-identical body is refused invalid_request (echoing the nonce, which is well formed), and the ORIGINAL response is still replayable afterwards, because the store is first-writer-wins and the refusal cannot overwrite what a retransmission must replay."
+   "notes": "The divergent arm of the same test: the same nonce with differing members is refused invalid_request (echoing the nonce, which is well formed), and the ORIGINAL response is still replayable afterwards, because the store is first-writer-wins and the refusal cannot overwrite what a retransmission must replay."
+  },
+  {
+   "id": "status.idempotency.member-comparison",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "The comparison covers the operation's request members (`operation`, `reason`, `suspend_until`, `on_expiry`, `expected_version`, and any member an extension operation defines), present or absent alike, and excludes client authentication parameters and HTTP headers, which a retry regenerates.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a same-nonce retry whose client assertion is regenerated and whose members arrive in another order replays the original response (a delayed `suspend` after a `resume` does not re-suspend), while a retry whose `reason` differs is refused invalid_request",
+    "local": "the reference digests a canonical serialization of the parsed members without client_assertion, client_assertion_type, client_id and client_secret; its own callers authenticate by a service-token header, so the excluded members reach it only as witnesses. Mutations caught: raw-byte digest, no client-auth exclusion, no member sort"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > compares a retransmit on its operation members: a regenerated client assertion and another member order still replay (@spec status#idempotency)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.idempotency.transient-not-replayed",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "A retransmit whose original response was `rate_limited`, or was `unavailable` or another 5xx response, is processed as a new request, not replayed.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a same-nonce retry after an `unavailable`, `rate_limited` or other 5xx response is processed afresh and can succeed; no transient failure is retained for the nonce",
+    "local": "the endpoint emits neither unavailable nor rate_limited, and an uncaught failure is not retained, but a store failure inside the transition is caught and answered as a retained not_found, which a retry then replays for the window (#1191)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.lifecycle.stale-version-refusal",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "the AS MUST refuse the operation with HTTP 409 and error symbol `stale_version`, leaving the Mission unchanged, when the Mission's current state version differs.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a lifecycle request whose `expected_version` differs from the Mission's current state version is refused 409 `stale_version` and leaves the Mission's state and version unchanged",
+    "local": "the reference reads no expected_version and has no stale_version refusal; its internal compare-and-swap guards concurrent writers and surfaces as conflict"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.lifecycle.stale-version-precedence",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "The AS applies this check before the transition rule below, so a stale `expected_version` is refused even where the operation would otherwise be idempotent success.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a fresh-nonce `revoke` of an already revoked Mission carrying a stale `expected_version` is refused `stale_version`, not answered as idempotent success",
+    "local": "blocked on status.lifecycle.stale-version-refusal: the reference reads no expected_version"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status interface audit (#705)."
   },
   {
    "id": "status.discharge.same-nonce-verbatim-replay",
@@ -9216,7 +9327,7 @@
    "id": "status.conformance.revoke-only-class",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "conformance",
-   "text": "serve the management endpoint ({{mission-lifecycle-endpoint}}) with the `revoke` operation, under its authentication, its explicit lifecycle authorization ({{lifecycle-authorization}}), the idempotency and conflict rules of {{idempotency}}, and the not-found refusal of an unauthorized request",
+   "text": "serve the Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}}) with the `revoke` operation, under its authentication, its explicit lifecycle authorization ({{lifecycle-authorization}}), the idempotency and conflict rules of {{idempotency}}, and the not-found refusal of an unauthorized request",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -9227,7 +9338,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment serving `revoke` revokes for an authorized caller holding none of the Mission's tokens, after which every derivation refuses and a racing refresh either commits first or is refused; refuses every operation it has not adopted `invalid_request`; replays a same-nonce retry and refuses a nonce mismatch; answers a fresh `revoke` of a revoked Mission with no transition and a `revoke` of a completed or expired Mission with `conflict`; answers an unauthorized caller as an unknown Mission; and answers each `revoke` with the signed, state-only Mission Status Response whose `aud` is the requester and whose `nonce` is the request's. The class requires no other operation and not the Mission Status operation, without forbidding either; the witness deployment adopts neither",
+    "normative": "a deployment serving `revoke` revokes for an authorized caller holding none of the Mission's tokens, after which every derivation refuses and a racing refresh either commits first or is refused; refuses every operation it has not adopted `invalid_request`; replays a same-nonce retry and refuses a nonce mismatch; answers a fresh `revoke` of a revoked Mission with no transition and a `revoke` of a completed or expired Mission with `conflict`; answers an unauthorized caller as an unknown Mission; and answers each `revoke` with the signed, state-only Mission Status Response whose `aud` is the requesting client's `client_id` and whose `nonce` is the request's. The class requires no other operation and not the Mission Status operation, without forbidding either; the witness deployment adopts neither",
     "local": "behavior witnessed on the reference configured revoke-only; three reference gaps keep the row partial and the capability unclaimed: (1) the request shape is POST /missions/{id}/lifecycle with a JSON body and a service token, not the advertised mission_lifecycle_endpoint with a form body carrying mission_id under Status's authentication methods, so neither mission_lifecycle_endpoint nor its auth-methods member is advertised; (2) revoke is answered with plain JSON, not the signed state-only Mission Status Response with requester aud and nonce binding; (3) mission_status_signing_alg_values_supported is advertised only when status or discharge is on, which must widen to the lifecycle capabilities once Lifecycle responses are signed"
    },
    "level": "endpoint",
@@ -9627,6 +9738,216 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
+  },
+  {
+   "id": "status.auth.client-assertion-issuer-aud",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-authentication",
+   "text": "The assertion's `aud` MUST be the AS's issuer identifier {{RFC8414}} as its sole value, the client authentication audience of {{I-D.draft-ietf-oauth-rfc7523bis}}; the AS MUST reject an assertion with any other `aud`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a private-key-JWT request to the Status or Lifecycle endpoint whose assertion `aud` is anything but the AS's issuer identifier as its sole value (the endpoint URL, the token endpoint, or an array adding either) is refused as an authentication failure",
+    "local": "the Status and Lifecycle endpoints accept only a service-token stand-in, so no client assertion reaches them (#1191)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.auth.client-assertion-typ",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-authentication",
+   "text": "The client SHOULD set the JWS `typ` header to `client-authentication+jwt`.",
+   "role": "client",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client authenticating to the Status or Lifecycle endpoint by private-key JWT types its assertion `client-authentication+jwt`",
+    "local": "no reference client authenticates to these endpoints by private-key JWT (#1191)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.response.effective-set-entries",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "`authorization_details`: the Effective Authority Set entries of every AS-supported `authorization_details` type",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after an issuer-held narrowing removes an entry, the Status response for that entry's audience omits it while `authority_hash` stays the approved set's commitment; an unnarrowed audience still receives its entry"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment.test.ts",
+     "name": "authority_hash immutability + projections > keeps authority_hash byte-identical while signedStatus omits the contained entry and carries containment_version",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.response.state-required",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "`state`: REQUIRED. The current Mission lifecycle state.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the signed Mission Status Response's `mission` object carries `state`",
+    "local": "witnessed on the dedicated Mission Status operation; a Lifecycle response is the same Mission Status Response, but the reference answers lifecycle operations with plain JSON that lacks expires_at and fresh_until (#1191)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status (@spec status#mission-status-response) > emits a JWS with the mission object and audience-scoped authority",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.response.expires-at-required",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "`expires_at`: REQUIRED. The point at which the Mission itself expires, the Mission record's `expires_at`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the signed Mission Status Response's `mission` object carries the Mission record's `expires_at`",
+    "local": "witnessed on the dedicated Mission Status operation; a Lifecycle response is the same Mission Status Response, but the reference answers lifecycle operations with plain JSON that lacks expires_at and fresh_until (#1191)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status (@spec status#mission-status-response) > emits a JWS with the mission object and audience-scoped authority",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.response.fresh-until-required",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "`fresh_until`: REQUIRED. An RFC 3339 {{RFC3339}} date-time giving the point until which the consumer MAY rely on the reported `state` without re-checking",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the signed Mission Status Response's `mission` object carries `fresh_until` as an RFC 3339 date-time",
+    "local": "witnessed on the dedicated Mission Status operation; a Lifecycle response is the same Mission Status Response, but the reference answers lifecycle operations with plain JSON that lacks expires_at and fresh_until (#1191)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status (@spec status#mission-status-response) > emits a JWS with the mission object and audience-scoped authority",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.metadata.signing-algs-advertised",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "REQUIRED when the AS serves any such surface, since a consumer rejects a response signed with an algorithm not listed",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS serving the Mission Status operation, the Lifecycle endpoint or Mission Management lists its response-signing algorithms in `mission_status_signing_alg_values_supported`",
+    "local": "advertised whenever the status or discharge capability is on, the Status route disabled included; a deployment serving only the Lifecycle endpoint does not advertise it (#1191, gap 3)"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "Mission Status signing algorithms in discovery (@spec status#as-metadata, discharge#discharge-receipt) > advertises them wherever a Status response or a Discharge Receipt can be served, the Status route disabled included",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.errors.nonce-echo",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-errors",
+   "text": "The body MUST contain `error` and `error_description`, and MUST additionally contain `nonce` when the request carried a well-formed `nonce`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Status and Lifecycle error body carries `error` and `error_description`, and echoes `nonce` exactly when the request carried a well-formed one",
+    "local": "the Lifecycle handler echoes a well-formed nonce on not_found, invalid_request and conflict; no test pins it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status interface audit (#705)."
   },
   {
    "id": "status.auth.challenge-token-scheme",
@@ -14109,9 +14430,15 @@
      "name": "each token class verifies only under its own role's keys (@spec runtime-oauth#token-validation, #825, D312) > refuses a token whose header names no kid, even with one key in the role",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > answers a token with no typ and a valid DPoP proof 401 on the holder's open MCP session, before the PEP: no evidence and no decision",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class. Validity includes the signing key's role (#825 PR 2a, D312): each token class verifies only under the kids locally pinned to it, so a token signed by a key this resource trusts for another class (or naming no kid) is refused like an untrusted key, before any claim is used; key-roles.test.ts proves it for access tokens on both transports, attenuation roots and transaction tokens."
+   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class. Validity includes the signing key's role (#825 PR 2a, D312): each token class verifies only under the kids locally pinned to it, so a token signed by a key this resource trusts for another class (or naming no kid) is refused like an untrusted key, before any claim is used; key-roles.test.ts proves it for access tokens on both transports, attenuation roots and transaction tokens. At the HTTP route (#825 acceptance item 5), a token that fails the profile (no `typ`) with a valid DPoP proof, sent on the holder's open MCP session so that a validated request would be dispatched, is answered 401 before the PEP, with no evidence and no decision request, while a conforming token on the same route reaches the PDP."
   },
   {
    "id": "runtime.token-validation.audience-and-pop",
@@ -23660,9 +23987,21 @@
      "name": "the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > a PEP record carrying a diagnostic or another role's value is refused unsigned, while every closed PEP value signs",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "on the same broad Mission and allowing policy, the credential alone decides a vendor lookup (@spec runtime#input-authority, #825) > over %s, refuses an invoice-only token before the PDP and permits a broad token",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > over the %s channel, refuses vendor lookup under an invoice-only credential before the PDP and permits it under a broad one, on the same broad Mission",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, and decision_evidence_unverifiable. Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
