@@ -44,7 +44,8 @@ import { delegationHandleParams } from "./delegation-handle.helper.js";
 import type { Server } from "node:http";
 import { DERIVATION_POLICY, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { credentialProfileVectors } from "@mission/core/test-vectors";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   TOKEN_EXCHANGE_GRANT_TYPE,
@@ -591,6 +592,54 @@ describe("audience-to-resource mapping (cleanup, issue #541): an OAuth aud need 
   it("mixes mapped and unmapped audiences independently, unioning the result", () => {
     const mapping = { a1: ["r1", "r2"] };
     expect(resourcesForAudiences(["a1", "a2"], mapping)).toEqual(new Set(["r1", "r2", "a2"]));
+  });
+});
+
+describe("the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402)", () => {
+  // flow1's real jti and Mission, as in the claim-set baseline above, so a
+  // crafted token fails only the vector under test.
+  const baseline = () => ({ jti: flow1.jti, mission: { id: flow1.missionId, issuer: ISSUER } });
+  const cnf = { jkt: "test-confirmation-thumbprint" };
+  const vectors = credentialProfileVectors(PAYMENTS, "payments:invoice.read");
+
+  it.each(vectors.filter((v) => !v.senderConstrainedProfileOnly).map((v) => [v.label, v.claims] as const))(
+    "answers a token with %s with a bare active:false, as the resource refuses it",
+    async (_label, claims) => {
+      const res = await introspect(await craftToken({ ...baseline(), ...claims }), { principal: RS_PAYMENTS });
+      expect(res.body).toEqual({ active: false });
+    },
+  );
+
+  it("introspects a primary token with no cnf as an active bearer token, and one with a well-formed cnf as DPoP", async () => {
+    const bearer = await introspect(await craftToken(baseline()), { principal: RS_PAYMENTS });
+    expect(bearer.body).toMatchObject({ active: true, token_type: "Bearer" });
+    expect(bearer.body).not.toHaveProperty("cnf");
+    const bound = await introspect(await craftToken({ ...baseline(), cnf }), { principal: RS_PAYMENTS });
+    expect(bound.body).toMatchObject({ active: true, token_type: "DPoP", cnf });
+  });
+
+  it("answers a delegated token (act) with no cnf with a bare active:false: a delegated token is sender-constrained", async () => {
+    const act = { sub: "delegate-agent" };
+    expect((await introspect(await craftToken({ ...baseline(), act }), { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+    expect((await introspect(await craftToken({ ...baseline(), act, cnf }), { principal: RS_PAYMENTS })).body.active).toBe(true);
+  });
+
+  it("answers a Child Mission's token with no cnf with a bare active:false: Child Mission tokens are sender-constrained", async () => {
+    // flow1's record as a Child Mission's: the profile follows the Mission
+    // the token is bound to.
+    const get = as.kernel.get.bind(as.kernel);
+    const spy = vi.spyOn(as.kernel, "get").mockImplementation((id: string) => {
+      const record = get(id);
+      return record && id === flow1.missionId
+        ? { ...record, parent: { id: "msn_parent", issuer: ISSUER, authority_hash: "sha-256:parent" } }
+        : record;
+    });
+    try {
+      expect((await introspect(await craftToken(baseline()), { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+      expect((await introspect(await craftToken({ ...baseline(), cnf }), { principal: RS_PAYMENTS })).body.active).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 

@@ -28,8 +28,11 @@ import {
 } from "jose";
 import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
 import {
+  type Confirmation,
   delegatedRoutingRefusal,
   earlyScopeRefusal,
+  parseConfirmation,
+  parseCredentialAuthority,
   projectScope,
   type RequestedScope,
   type ScopeProjectionMapping,
@@ -3437,6 +3440,22 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         }
         const credentialAuthority = rawDetails as AuthorityEntry[];
 
+        // @spec mission#introspection, runtime-oauth#token-validation (#825,
+        // D402) — the credential profile's validation, shared with the
+        // resource: an authority the resource would refuse to read in full,
+        // or a malformed present `cnf`, makes the token malformed here too.
+        // The authority check only gates; the projection below still reads
+        // the raw entries, delegation and capability bindings included.
+        // Possession of the `cnf` key stays the resource's to prove.
+        let confirmation: Confirmation | undefined;
+        try {
+          parseCredentialAuthority(rawDetails);
+          confirmation = parseConfirmation(payload.cnf);
+        } catch {
+          ctx.body = inactive;
+          return;
+        }
+
         // Mission resolution: a token the AS cannot bind to a known Mission
         // is unresolvable; no Mission or token detail is recovered from
         // failure.
@@ -3457,6 +3476,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // introspection for Missions it itself holds, so `record.issuer`
         // is also always this AS's own issuer.
         if (missionIdent?.issuer !== record.issuer) {
+          ctx.body = inactive;
+          return;
+        }
+        // @spec mission#delegation, child-delegation#attenuation (#825, D402)
+        // — the profiles that require sender constraint require the binding:
+        // a delegated token (`act`) and a Child Mission's token. A primary
+        // token may be a bearer token, so its `cnf` may be absent.
+        if (!confirmation && (payload.act !== undefined || record.parent !== undefined)) {
           ctx.body = inactive;
           return;
         }
@@ -3510,7 +3537,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         const authorization_details = returned.map((e) => e.entry);
         const disclosedMission = withDischargeSelectors(record, mission, returned);
 
-        const cnf = payload.cnf as { jkt?: string } | undefined;
+        const cnf = confirmation ? (payload.cnf as Record<string, unknown>) : undefined;
         ctx.body = {
           active: true,
           iss: payload.iss,
@@ -3522,7 +3549,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           jti,
           ...(typeof payload.scope === "string" ? { scope: payload.scope } : {}),
           ...(cnf ? { cnf } : {}),
-          token_type: cnf?.jkt ? "DPoP" : "Bearer",
+          token_type: confirmation?.jkt ? "DPoP" : "Bearer",
           authorization_details,
           mission: disclosedMission,
         };
