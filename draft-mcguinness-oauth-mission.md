@@ -2964,8 +2964,8 @@ to. For a confidential client, client authentication supplies the
 binding: on refresh, the AS authenticates the client and verifies
 that the refresh token was issued to it ({{Section 6 of RFC6749}}),
 so the token need not also be bound to the DPoP proof key
-({{Section 5 of RFC9449}}). A public client's refresh token is
-sender-constrained or uses refresh token rotation
+({{Section 5 of RFC9449}}). A public client's refresh token MUST
+be sender-constrained or use refresh token rotation
 ({{Section 2.2.2 of RFC9700}}). The AS can rotate either client
 type's refresh token; rotation detects replay of a consumed refresh
 token ({{Section 4.14.2 of RFC9700}}) and is not a cryptographic
