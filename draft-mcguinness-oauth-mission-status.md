@@ -608,7 +608,8 @@ The members are:
     disclosure privilege ({{I-D.draft-mcguinness-oauth-mission}},
     Section "Caller Authorization and Minimization"). Not carried on
     the issuance profile's baseline `mission` claim.
-  - `state`: the current Mission lifecycle state. The authoritative
+  - `state`: REQUIRED. The current Mission lifecycle state. The
+    authoritative
     state space is the issuance profile's
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
     and Gating"): `active` and `terminated`, this profile's `suspended`
@@ -642,10 +643,12 @@ The members are:
     correlation, not authority
     ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
     "Carryover Evidence and Observation").
-  - `expires_at`: the point at which the Mission itself expires, the
+  - `expires_at`: REQUIRED. The point at which the Mission itself
+    expires, the
     Mission record's `expires_at`
     ({{I-D.draft-mcguinness-oauth-mission}}).
-  - `fresh_until`: an RFC 3339 {{RFC3339}} date-time giving the point
+  - `fresh_until`: REQUIRED. An RFC 3339 {{RFC3339}} date-time giving
+    the point
     until which the consumer MAY rely on the reported `state` without
     re-checking, governing caching ({{mission-status-caching}}). It is
     report-freshness metadata, carried in `mission` so it travels with
