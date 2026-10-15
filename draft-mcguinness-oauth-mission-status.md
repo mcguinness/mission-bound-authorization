@@ -1996,12 +1996,6 @@ This document registers no new Well-Known URI. The metadata members of
 {{as-metadata}} are added to the OAuth Authorization Server Metadata
 document at `/.well-known/oauth-authorization-server` {{RFC8414}}.
 
-# Acknowledgments
-{:numbered="false"}
-
-The author thanks the implementers and reviewers of the Mission-Bound
-Authorization work for feedback that shaped these extensions.
-
 --- back
 
 # Document History {#document-history}
@@ -2073,3 +2067,9 @@ Authorization work for feedback that shaped these extensions.
   advertised propagation ceiling, the per-surface distribution posture,
   and the operator observations after a degraded surface recovers. No
   freshness window is extended and no member is added.
+
+# Acknowledgments
+{:numbered="false"}
+
+The author thanks the implementers and reviewers of the Mission-Bound
+Authorization work for feedback that shaped these extensions.
