@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         14 October 2026
-Expires: 17 April 2027
+Intended status: Standards Track                         15 October 2026
+Expires: 18 April 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 17 April 2027.
+   This Internet-Draft will expire on 18 April 2027.
 
 Copyright Notice
 
@@ -710,10 +710,14 @@ Table of Contents
 
    7.   Verify the applicable parent Authority Set entry's delegation
         carries a children object permitting child creation, and that
-        child_actor satisfies its constraints (Section 8).
+        child_actor satisfies its constraints (Section 8); verify the
+        same of the presented subject_token's applicable entry
+        (Section 7).
 
    8.   Derive the child Authority Set, verify strict subset
-        (Section 7.1), and apply fan-out controls.
+        (Section 7.1) and that it is within the authority the
+        subject_token carries (Section 7), and apply the fan-out
+        controls of both.
 
    9.   Determine subset derivation versus fresh approval and complete
         per Section 5.4: synchronous, deferred, or interactive.
@@ -766,6 +770,12 @@ Table of Contents
       accounting; it MUST NOT create a second Child Mission, count a
       second time against max_children (Section 8.1), or record a second
       Child Evidence object (Section 11).
+
+   A repetition whose subject_token does not authorize the recorded
+   creation under Section 7, both its authority bound and its children
+   controls, with the recorded child counted once toward max_children,
+   is refused with the corresponding denial reason: recovery never
+   delivers a child the presented token could not have created.
 
 5.9.  Worked Example
 
@@ -861,10 +871,12 @@ Table of Contents
       permits no child creation (Section 8).
 
    child_actor_not_allowed:  The child actor does not satisfy the parent
-      entry's allowed_child_actors (Section 8) or equivalent policy.
+      entry's or the presented subject_token's allowed_child_actors
+      (Section 8, Section 7), or equivalent policy.
 
    not_strict_subset:  The proposed child authority is not a strict
-      subset of parent authority (Section 7.1).
+      subset of parent authority (Section 7.1), or exceeds the authority
+      the presented subject_token carries (Section 7).
 
    fanout_exceeded:  Creating the child would exceed a fan-out control.
 
@@ -1085,6 +1097,22 @@ Table of Contents
    *  every child Authority Set entry MUST be a subset of a parent entry
       under the subset rule of [I-D.draft-mcguinness-oauth-mission];
 
+   *  every child Authority Set entry MUST also be a subset, under the
+      same rule, of an entry of the authority the presented
+      subject_token carries, so a down-scoped token never mints a child
+      broader than itself;
+
+   *  the presented subject_token MUST authorize this child-creation
+      operation: each child entry is attributed to the first entry of
+      the token's authority, in order, that it is a subset of, as
+      Section 8.1 attributes it to a parent entry; that token entry MUST
+      carry a children object, and its allowed_child_actors,
+      max_child_depth, and max_children (Section 8) constrain the
+      creation alongside the parent entry's, its max_children bounding
+      the same count; a token without that delegation right authorizes
+      no child, and carrying the token's restrictions into the child
+      does not satisfy this;
+
    *  the child MUST NOT include a resource, action, constraint
       relaxation, or delegation right not present in the parent;
 
@@ -1147,7 +1175,8 @@ Table of Contents
    beyond them applies.
 
    If the Mission Issuer cannot prove the child Authority Set is a
-   strict subset of the parent, it MUST refuse child creation with
+   strict subset of the parent, and within the authority the presented
+   subject_token carries (Section 7), it MUST refuse child creation with
    not_strict_subset.
 
 7.2.  Derivation Budget Is Not Inherited
@@ -2487,6 +2516,13 @@ Appendix A.  Experimental Consumer-Verified Cascade Modes
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The authority the presented subject_token carries bounds the child
+      as well as the parent's does, and the token's own children
+      controls govern the creation alongside the parent's, at creation
+      and on recovery, so a down-scoped token never mints or recovers a
+      child it could not authorize; the denial reasons cover both
+      (#825).
 
    *  A Parent Mission that is not active refuses the child-creation
       exchange with invalid_request, following the issuance profile's
