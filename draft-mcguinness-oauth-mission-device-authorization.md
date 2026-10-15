@@ -445,9 +445,13 @@ The `device_code` never traverses a user agent, so the OAuth
 binding's defense against authorization-code injection (PKCE or a
 DPoP-bound code) has no counterpart here. A leaked `device_code` lets
 its holder redeem the Mission's first tokens as the bound client,
-which for a public client is anyone. High entropy
-({{Section 5.2 of RFC8628}}), one-time issuance ({{issuance}}), and
-sender-constrained tokens limit the exposure. A refused request
+which for a public client is anyone. DPoP {{RFC9449}} at redemption
+binds the issued tokens to the redeemer's key; it neither
+authenticates the public-client instance that started the session nor
+prevents a thief from redeeming with a key of its own. High entropy
+({{Section 5.2 of RFC8628}}), a short lifetime, and one-time issuance
+({{issuance}}) limit the exposure, and sender-constrained tokens limit
+only what a later holder of those tokens can do. A refused request
 presenting an already redeemed `device_code` indicates a leak, and
 the AS can revoke the tokens issued from it.
 
