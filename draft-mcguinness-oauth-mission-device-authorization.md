@@ -322,24 +322,36 @@ the AS answers `authorization_pending` or `slow_down`
 
 ## Session Outcomes {#outcomes}
 
-A session ends in exactly one of these outcomes:
+A pending session reaches exactly one of these outcomes:
 
 `approved`:
-: The creation commit succeeded ({{approval}}). The next device access
-  token request from the bound client receives the success response
-  of {{issuance}}.
+: The creation commit succeeded ({{approval}}). The Mission exists
+  from that commit, and the session's `device_code` is redeemable as
+  described below.
 
 `denied`:
 : The Approver declined, the creation commit created no Mission, or
   the AS ended the session for another reason, such as suspected
-  `user_code` guessing. The next device access token request receives
-  `access_denied`, except that a refusal to which the OAuth binding
-  assigns `invalid_scope` (an `openid` request whose Approver is not
-  the Subject) is returned as `invalid_scope`.
+  `user_code` guessing. A device access token request presenting the
+  session's `device_code` receives `access_denied`, except that a
+  refusal to which the OAuth binding assigns `invalid_scope` (an
+  `openid` request whose Approver is not the Subject) is returned as
+  `invalid_scope`.
 
 `expired`:
-: The `device_code` lifetime elapsed while the session was pending.
-  The next device access token request receives `expired_token`.
+: The `device_code` lifetime elapsed while the session was pending. A
+  device access token request presenting it receives `expired_token`.
+
+Approval does not extend the `device_code` lifetime. A device access
+token request redeems an `approved` session only while its
+`device_code` is unexpired and unconsumed and the Mission passes the
+OAuth binding's issuance gating; it then receives the success response
+of {{issuance}}. A Mission no longer `active` yields the refusal that
+issuance gating assigns, and a consumed `device_code` yields
+`invalid_grant` ({{issuance}}). Once the `device_code` has expired
+unredeemed, a request presenting it receives `expired_token`
+({{Section 3.5 of RFC8628}}), even though the session was approved
+and its Mission is `active`.
 
 RFC 8628 defines no client cancellation. A client abandons a session
 by ceasing to poll; an approval reached afterwards still creates a
@@ -563,6 +575,7 @@ A further request presenting the same `device_code` receives
   exact submission and client; a direct approval event on the
   verification user agent with the record created atomically with
   the decision, client, Subject, and `user_code` confirmation in the
-  rendering; session outcomes; one-time issuance with required
-  `mission_id` and `mission_expires_at`; and the device grant as the
-  root of the Mission's grant lineage.
+  rendering; session outcomes, with redemption only of an unexpired,
+  unconsumed `device_code` under issuance gating; one-time issuance
+  with required `mission_id` and `mission_expires_at`; and the device
+  grant as the root of the Mission's grant lineage.

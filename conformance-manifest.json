@@ -36708,7 +36708,7 @@
    "surface": "approval-ceremony",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "No Mission exists, and polling yields authorization_pending or slow_down, until the decision commits; the first poll after the commit receives the Mission-bound token response."
+    "normative": "No Mission exists, and polling yields authorization_pending or slow_down, until the decision commits; the Mission exists from that commit, and the device_code becomes redeemable subject to its lifetime, one-time use, and issuance gating."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -36829,7 +36829,7 @@
    "id": "device-authorization.outcomes.denied",
    "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
    "anchor": "outcomes",
-   "text": "The next device access token request receives `access_denied`, except that a refusal to which the OAuth binding assigns `invalid_scope`",
+   "text": "A device access token request presenting the session's `device_code` receives `access_denied`, except that a refusal to which the OAuth binding assigns `invalid_scope`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -36851,7 +36851,7 @@
    "id": "device-authorization.outcomes.expired",
    "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
    "anchor": "outcomes",
-   "text": "The next device access token request receives `expired_token`.",
+   "text": "A device access token request presenting it receives `expired_token`.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -36863,6 +36863,50 @@
    "assertion": "refusal",
    "observation": {
     "normative": "A poll after the device_code lifetime elapsed while the session was pending receives expired_token."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.outcomes.redemption-gates",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "outcomes",
+   "text": "A device access token request redeems an `approved` session only while its `device_code` is unexpired and unconsumed and the Mission passes the OAuth binding's issuance gating",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After approval, a poll whose Mission was revoked or expired before redemption receives the issuance-gating refusal and no token; only a poll with an unexpired, unconsumed device_code and an active Mission receives the success response."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.outcomes.expired-after-approval",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "outcomes",
+   "text": "Once the `device_code` has expired unredeemed, a request presenting it receives `expired_token`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A poll presenting an approved session's device_code after its lifetime elapsed unredeemed receives expired_token and no token, while the Mission remains active until the deployment's unredeemed-code choice applies."
    },
    "level": "endpoint",
    "coverage": "todo",
