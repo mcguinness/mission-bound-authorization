@@ -186,7 +186,7 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
       expect(await named(discharge, view())).toEqual({ reason: "out_of_authority", bound: "credential" });
     });
 
-    it("names the Mission bound where the Mission's own entry refused: no entry names the action, its vendors, a collection member, its amount cap", async () => {
+    it("names the Mission bound where the Mission's own entry refused: no entry names the action, its vendors, a collection member, its amount cap, its contextual check on the target or a collection member", async () => {
       expect(await named(req({ action: { name: "payments:vendor.read" } }), view())).toEqual({ reason: "out_of_authority", bound: "mission" });
       const vendors = view();
       vendors.authority_set[0]!.constraints = { vendors: ["globex"] };
@@ -199,6 +199,15 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
       const over = req();
       over.context.amount = { amount: "20.00", currency: "USD" };
       expect(await named(over, capped)).toEqual({ reason: "parameter_violation", bound: "mission" });
+      // The contextual FGA check reads only the Mission's own tuples, so its
+      // refusal is bound 2 (#828, D404): at the target (step 6) and at one
+      // collection member (step 6a).
+      const refusing = { fga: { checkWithContext: async () => false } as unknown as Fga };
+      expect(await named(req(), view(), refusing)).toEqual({ reason: "out_of_authority", bound: "mission" });
+      const memberRefusing = {
+        fga: { checkWithContext: async (t: { object: string }) => t.object !== "vendor:globex" } as unknown as Fga,
+      };
+      expect(await named(reaching(req(), ["acme", "globex"]), view(), memberRefusing)).toEqual({ reason: "out_of_authority", bound: "mission" });
     });
 
     it("names the bound evaluated first when both exclude the action: a mirrored credential's constraint is the credential's", async () => {
@@ -217,10 +226,6 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
         reason: "resource_policy",
         bound: undefined,
       });
-      // The Mission's contextual FGA check refusing (#828 files it under the
-      // Mission's bound, bound 2) names no bound either, as before #828.
-      const refusing = { fga: { checkWithContext: async () => false } as unknown as Fga };
-      expect(await named(req(), view(), refusing)).toEqual({ reason: "out_of_authority", bound: undefined });
       const unmapped = view();
       unmapped.authority_set[0]!.actions = ["payments:unmapped.op"];
       expect(await named(req({ action: { name: "payments:unmapped.op" } }), unmapped)).toEqual({ reason: "out_of_authority", bound: undefined });

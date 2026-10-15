@@ -1421,7 +1421,9 @@ async function evaluateInner(
   );
   // A negative relationship/FGA result independent of any parameter
   // constraint: the entry was matched but no relation to the target holds.
-  if (!allowed) return deny("out_of_authority");
+  // The check reads only the Mission's own tuples, so the refusal is the
+  // Mission's bound (#828, D404).
+  if (!allowed) return deny("out_of_authority", "mission");
 
   // 6a. @spec runtime#read-binding: a bound bulk/cross-tenant read names a
   // COLLECTION, not one object: the check above names only the entry's first
@@ -1441,7 +1443,7 @@ async function evaluateInner(
   if (vendorIds) {
     for (const memberVendorId of vendorIds) {
       // Same distinction as step 6, applied per member: a vendor exclusion
-      // for THIS member is parameter_violation; an independent policy denial
+      // for THIS member is parameter_violation; a contextual-check refusal
       // for THIS member is out_of_authority. Neither classification permits
       // the whole collection because some OTHER member passes (comment
       // above: no partially-narrowed lane).
@@ -1462,7 +1464,7 @@ async function evaluateInner(
         { user: `mission:${view.id}`, relation: mapping.relation, object: `vendor:${memberVendorId}` },
         memberTuples,
       );
-      if (!memberAllowed) return deny("out_of_authority");
+      if (!memberAllowed) return deny("out_of_authority", "mission");
     }
   }
 

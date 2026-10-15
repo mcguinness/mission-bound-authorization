@@ -18703,7 +18703,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an out_of_authority or parameter_violation deny records authority_bound naming the bound that decided it (credential where the credential's own authority refused, mission where the Mission's own entry did), and no other decision carries it: a permit, a Resource-policy deny (resource_policy), a missing relation mapping, a request fault, a lifecycle deny; the emitter refuses the member on a permit, on any other reason, or outside the two values"
+    "normative": "an out_of_authority or parameter_violation deny records authority_bound naming the bound that decided it (credential where the credential's own authority refused, mission where the Mission's own entry or its contextual check did), and no other decision carries it: a permit, a Resource-policy deny (resource_policy), a missing relation mapping, a request fault, a lifecycle deny; the emitter refuses the member on a permit, on any other reason, or outside the two values"
    },
    "level": "unit",
    "coverage": "tested",
@@ -18716,7 +18716,7 @@
     },
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > names the Mission bound where the Mission's own entry refused: no entry names the action, its vendors, a collection member, its amount cap",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > names the Mission bound where the Mission's own entry refused: no entry names the action, its vendors, a collection member, its amount cap, its contextual check on the target or a collection member",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -18733,7 +18733,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "D322 kept D312's evidence requirement and moved it here (2b-ii); D324 extended it to parameter_violation; D340 ported #1134's authority_bound. #828 (#1135): a Resource-policy deny is resource_policy and carries no bound, witnessed in the no-bound test with the refusing Resource-policy fixture. The Mission's contextual FGA check refusing (fga.checkWithContext), which #828 files under bound 2, is out_of_authority and still names no bound, as before #828; whether it names mission is an open owner question."
+   "notes": "D322 kept D312's evidence requirement and moved it here (2b-ii); D324 extended it to parameter_violation; D340 ported #1134's authority_bound. #828 (#1135): a Resource-policy deny is resource_policy and carries no bound, witnessed in the no-bound test with the refusing Resource-policy fixture. The Mission's contextual FGA check refusing (fga.checkWithContext), which #828 files under bound 2, is out_of_authority and names mission (D404), witnessed at the target and at a collection member in the Mission-bound test."
   },
   {
    "id": "authzen.evidence.authority-bound-evaluation-order",
