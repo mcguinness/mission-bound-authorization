@@ -402,6 +402,7 @@ deployment's values: the reference AS and `plain-rs`.
     "Intent-only requests depend on an oidc-provider workaround (a marked, AS-written authorization_details)",
     "the decision-time scope check projects the derived set without capability_sources, so a catalog-sourced scope_only entry can pass at the decision and refuse at the token endpoint",
     "a repeated decision on one interaction binds a second grant to the committed record",
+    "the approval commits the Mission active before its grant is bound and its code issued, so a client that never redeems leaves an active Mission with no code (#916)",
     "the JWT-customizer backstop has no test yet (#870)"
   ]
 }
