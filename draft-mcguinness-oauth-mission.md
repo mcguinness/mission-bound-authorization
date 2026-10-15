@@ -689,8 +689,8 @@ The times below are on the same day in UTC.
    ERP token that expires at 12:05, with the read authority and a
    `mission` reference. The response also carries the granted
    authority, `mission_id`, and `mission_expires_at`
-   ({{grant-binding}}). The access token's five-minute lifetime is
-   distinct from the Mission's one-hour lifetime
+   ({{mission-response-parameters}}). The access token's five-minute
+   lifetime is distinct from the Mission's one-hour lifetime
    ({{mission-bound-tokens}}).
 4. **Use.** The ERP, a Mission-aware Resource Server, validates the
    token and proof of possession and permits the authorized read. The
@@ -1804,6 +1804,8 @@ Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}}). The
 AS alone establishes and resolves a binding; a client never supplies
 or negotiates one.
 
+### Establishing and Resolving a Binding {#grant-binding-resolution}
+
 At a direct approval event the AS binds the Mission to the
 authorization code it issues. The binding is server-side and is what
 "the referenced Mission" in {{lifecycle}} refers to. The code itself
@@ -1843,6 +1845,13 @@ Mission the credential resolves to and refuse a mismatch with the
 selects the Mission a successor is created from and does not reassign
 an existing binding.
 
+Because the grant, not the identifier, determines the Mission, a
+client does not supply `mission_id` to obtain a derivation, and an AS
+MUST NOT derive Mission-bound authority from a client-supplied
+`mission_id`.
+
+### Grant Bindings and Related Mechanisms {#grant-binding-related}
+
 The grant binding relates to other mechanisms as follows:
 
 - **Token Exchange.** A Token Exchange derivation ({{RFC8693}}) that
@@ -1870,8 +1879,8 @@ The grant binding relates to other mechanisms as follows:
   expansion successor
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}) are new
   Missions. Any grant binding or derived token they carry is their
-  own under this section's rules, not an extension of the origin
-  Mission's binding. They relate to their origin only by lineage (the
+  own under the same rules, not an extension of the origin Mission's
+  binding. They relate to their origin only by lineage (the
   child's `parent` member, the successor's `predecessor` member).
 - **Continuation handles.** A continuation handle and a
   refresh-token family
@@ -1889,11 +1898,13 @@ request. The same credential can be joined to different Missions
 across separate requests where its subject and client are eligible
 for more than one. Such a join is not a Mission grant binding: it
 does not make the joined OAuth grant Mission-bound, and it rests on
-its own authenticated inputs and evidence, never on this section's
+its own authenticated inputs and evidence, never on a Mission grant
 binding.
 
-Non-active state gates every future derivation across every binding
-this section defines ({{issuance-gating}}). It does not itself
+### Mission State Across Bindings {#grant-binding-state}
+
+Non-active state gates every future derivation across every Mission
+grant binding ({{issuance-gating}}). It does not itself
 revoke an OAuth grant the same client or subject holds outside any
 Mission binding, and it does not recall an access token already
 issued before its `exp` absent a runtime state check the token's
@@ -1906,17 +1917,14 @@ Management companion
 ({{I-D.draft-mcguinness-oauth-mission-management}}) can standardize
 that index's wire surface.
 
-Because the grant, not the identifier, determines the Mission, a
-client does not supply `mission_id` to obtain a derivation, and an AS
-MUST NOT derive Mission-bound authority from a client-supplied
-`mission_id`.
-
 When the authorization code expires unredeemed, no derivation is
 possible under the Mission regardless of which lifecycle outcome
 follows. The deployment either revokes the Mission or lets it expire at
 `expires_at`, and applies one choice consistently; both outcomes
 terminate it ({{lifecycle}}), so reprocessing the same timeout
 changes nothing.
+
+### Mission Identifier and Expiry in Responses {#mission-response-parameters}
 
 A client learns its `mission_id` from the `mission` claim's `id` on
 each issued token ({{mission-claim}}) or from the token response.
@@ -2359,7 +2367,8 @@ A Mission Identifier is an opaque URL-safe ASCII string of
 carrying no semantic content. The AS MUST NOT reuse a Mission
 Identifier. The record and the `mission` claim carry it as `id`; a
 surface that references a Mission from outside carries it as
-`mission_id`, as in the token-response parameter ({{grant-binding}}).
+`mission_id`, as in the token-response parameter
+({{mission-response-parameters}}).
 
 ## Worked Example {#worked-example}
 
@@ -4824,7 +4833,8 @@ Parameters" registry:
 - Name: `mission_id`
 - Parameter Usage Location: token response
 - Change Controller: IETF
-- Specification Document(s): this document, {{grant-binding}}
+- Specification Document(s): this document,
+  {{mission-response-parameters}}
 
 - Name: `mission_error`
 - Parameter Usage Location: token response
@@ -4834,7 +4844,8 @@ Parameters" registry:
 - Name: `mission_expires_at`
 - Parameter Usage Location: token response
 - Change Controller: IETF
-- Specification Document(s): this document, {{grant-binding}}
+- Specification Document(s): this document,
+  {{mission-response-parameters}}
 
 PAR {{RFC9126}} carries authorization-request parameters without a
 distinct usage location, so the pushed submission of `mission_intent`
@@ -5168,7 +5179,7 @@ it being `active` ({{lifecycle}}), and issues a Mission-bound access
 token for the ERP. The token response carries the granted
 `authorization_details` echo ({{mission-bound-tokens}}) and the
 `mission_id` and `mission_expires_at` response parameters
-({{grant-binding}}):
+({{mission-response-parameters}}):
 
 ~~~ json
 {
