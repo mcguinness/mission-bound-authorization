@@ -454,7 +454,8 @@ Some duties apply only when their condition holds: a submitted
 authority proposal, presented or required submission evidence
 ({{intent-submission-evidence}},
 {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}), or
-opaque tokens (which require introspection). The optional
+opaque tokens (which require introspection or issuer-local
+resolution). The optional
 capabilities (Delegation, Introspection as a state overlay for JWTs,
 and Cross-Domain projection) are adopted explicitly under
 {{conformance}}. Ordinary JWT consumption does not require retrieving
@@ -2861,7 +2862,8 @@ for credentials that cross a trust domain
 This document's token-carried enforcement assumes the JWT above. An
 opaque Mission-bound token is profiled only under the introspected
 consumption mode ({{introspected-consumption}}), where introspection
-is its claims carriage, with the same enforcement obligations. A
+or issuer-local resolution is its claims carriage, with the same
+enforcement obligations. A
 deployment whose AS can issue neither deploys a Mission Authority
 Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
 governs ordinary tokens at the enforcement layer.
@@ -3186,7 +3188,7 @@ alone; no call to the AS is required. It validates the token per
 per {{Section 7.1 of RFC9449}} or {{Section 3 of RFC8705}}, locally
 even when it introspects ({{composite-active}}). An opaque
 Mission-bound token is enforced from its active introspection
-response instead, under the same rules
+response or issuer-local resolution instead, under the same rules
 ({{introspected-consumption}}).
 
 A resource server:
@@ -3431,8 +3433,8 @@ Token introspection lets a Mission-state-aware resource server observe
 a Mission's current state per request instead of waiting out a
 token's lifetime. For the JWT carriage it is a state-observable
 overlay on the lifecycle-gated baseline ({{mission-bound-tokens}});
-for opaque Mission-bound tokens it is the claims carriage
-({{introspected-consumption}}).
+for opaque Mission-bound tokens it is the claims carriage outside
+issuer-local resolution ({{introspected-consumption}}).
 
 An AS MAY support OAuth 2.0 Token Introspection {{RFC7662}} for
 Mission-bound access tokens. When it does, the response for such a
@@ -3553,7 +3555,9 @@ under it; an opaque Mission-bound token outside this mode is not
 profiled.
 
 - In this mode, an AS issuing opaque Mission-bound tokens MUST offer
-  introspection for them with the members this mode names.
+  introspection for them with the members this mode names, unless
+  every resource server that consumes them uses issuer-local
+  resolution (below).
 - An active (`active: true`) response for such a token MUST carry,
   as introspection response members, the audience-filtered granted
   `authorization_details` ({{RFC9396}}), the `mission` member above,
@@ -3566,20 +3570,53 @@ profiled.
   `active: false` and the `mission` state facts
   ({{composite-active}}), never the authority itself.
 - A resource server consuming an opaque Mission-bound token MUST
-  resolve it through introspection before service, MUST verify
-  `active` is `true`, its own identity in `aud`, and the
-  sender-constraint binding `cnf` names, and MUST enforce the
-  response's `authorization_details` under the same rules as the
-  token-carried form ({{rs-enforcement}}), the fail-closed duties
-  included.
+  resolve it through introspection or issuer-local resolution
+  (below) before service, MUST verify `active` is `true`, its own
+  identity in `aud`, and the sender-constraint binding `cnf` names,
+  and MUST enforce the response's `authorization_details` under the
+  same rules as the token-carried form ({{rs-enforcement}}), the
+  fail-closed duties included.
 - A resource server that cannot obtain a valid introspection response
-  for an opaque Mission-bound token MUST refuse the request rather
-  than serve it from any cached or out-of-band belief about the
-  token's authority.
+  or issuer-local resolution for an opaque Mission-bound token MUST
+  refuse the request rather than serve it from any cached or
+  out-of-band belief about the token's authority.
 
 The per-use freshness rule of {{introspection}} covers the whole
 response in this mode: each response is one observation of the
 token's claims and Mission state, not a cacheable authority record.
+
+An AS MAY serve a resource server through issuer-local resolution: a
+direct read of the AS's authoritative committed token and grant
+state, not a call to an introspection endpoint. {{RFC7662}}
+introspection keeps its meaning as a network protocol. A resource
+server qualifies only when it is inside the issuer's trusted
+implementation boundary and the AS authorizes it to read that state;
+common ownership or a shared network does not by itself qualify it.
+For each resolution, the AS:
+
+1. MUST resolve the presented token to that token's own
+   issuer-qualified issuance or grant record, and establish from that
+   record the token's expiry, revocation and grant validity, its
+   intended audience, the composite active state
+   ({{composite-active}}), and the token's own authority;
+2. MUST authorize the resource server and minimize disclosure to it
+   as {{caller-authorization-and-minimization}} requires for an
+   introspection caller; and
+3. MUST yield, when the token is active, only what an active response
+   for that token carries in this mode, audience-filtered for that
+   resource server and with `act` and `cnf` as that response carries
+   them, and never the Mission's Authority Set or other authority the
+   token does not carry.
+
+Mission state alone, or a lookup by Mission identifier, never
+establishes a token's validity or authority. An unknown, invalid,
+expired or revoked token, or a Mission that is not `active`, resolves
+as inactive and yields no authority; missing or unavailable state
+yields no valid resolution.
+In the resource server duties above, the resolution stands in for the
+introspection response, possession proof and fail-closed refusal
+included, and each resolution is one per-use observation, not a
+cacheable assertion.
 
 ## Examples {#examples}
 
@@ -4189,9 +4226,10 @@ configuration. The companion defines conformance for ASs supporting
 an evidence type, whether its evidence is optional or required.
 
 A **Mission-aware Resource Server** implements resource server
-enforcement ({{rs-enforcement}}), from the token's own claims or from
-its active introspection response under the introspected consumption
-mode ({{introspected-consumption}}).
+enforcement ({{rs-enforcement}}), from the token's own claims or,
+under the introspected consumption mode, from its active
+introspection response or issuer-local resolution
+({{introspected-consumption}}).
 
 A **Mission Client** implements the client surfaces:
 
@@ -4213,8 +4251,10 @@ that supports none of them is still conformant:
   that carry the `act` delegation chain.
 - **Introspection** ({{introspection}}): reporting Mission state through
   the `mission` token introspection response member. Required where
-  the AS issues opaque Mission-bound tokens
-  ({{introspected-consumption}}).
+  the AS issues opaque Mission-bound tokens to a resource server that
+  does not use issuer-local resolution ({{introspected-consumption}}).
+  Issuer-local resolution does not by itself support a claim of this
+  capability.
 - **Cross-Domain**: projecting a Mission so it is honored by an
   authorization server in another trust domain. An implementation
   claiming this capability preserves, across the hop:
@@ -6068,6 +6108,14 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Introspected Token Consumption permits issuer-local resolution: an
+  AS can serve a resource server inside its trusted implementation
+  boundary by resolving an opaque Mission-bound token from its
+  committed token and grant state, under the same per-use,
+  token-specific, audience-filtered and fail-closed rules as an
+  introspection response. RFC 7662 keeps its meaning, and any other
+  resource server still requires introspection (#1203).
 
 - Downgrade by Omission covers a client acting under a Mission with an
   ordinary credential it already holds. A client performing a
