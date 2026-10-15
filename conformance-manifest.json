@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "da5950293ae5c9bdfb4a566ab118e8adb4cd91b4",
-    "content_sha256": "9ddf980f22fd8e5bd44b79849ca4222451a7c4c972a3049a7fc8143f42aed785"
+    "revision": "038142e0250f78862baf35f6a2c645b24e224778",
+    "content_sha256": "a1636c92a508c2db042537e53152f9f4f978a011c3b5882750afb34507e726e3"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -4407,6 +4407,30 @@
     }
    ],
    "notes": "#760 extended this row's citation instead of adding a semantic row: `authority_source` is named beside `approval_basis` in the introspection member list and its issuer-only sentence, the member-scoped disclosure sentence, the Mission Issuer conformance bullet, and the OAuth Token Introspection Response registration. The cited disclosure test asserts the disclosed shape exactly (`type` plus organizational `policy.id`/`policy.version`, no `digest`)."
+  },
+  {
+   "id": "core.discovery.held-credential-no-substitution",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "discovery",
+   "text": "A client performing a task under a Mission MUST NOT present, for that task, a credential that is not Mission-bound, such as an ordinary access token it already holds, unless a deployment-defined, trusted enforcement path establishes that Mission for the request and applies the Mission's authority and lifecycle controls to it.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a client holding both a Mission-bound token and an ordinary credential for the same resource sends no request for the Mission's task under the ordinary credential, including after a Mission refusal or once the Mission is no longer active, except through a deployment-defined enforcement path that establishes the Mission for the request and applies its authority and lifecycle controls; a Mission identifier the client supplies, or documentation alone, is not such a path"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D412 (#1205). Observable at the client, by a harness that drives it, or by a layer that mediates its requests: an AS or resource server cannot generally tell that an ordinary-credential request serves a Mission, and the Mission-governed registration tests in rar-carriage.test.ts witness the AS, not this client rule. Todo until a client implementation witnesses held-credential fallback refusal and an explicitly enforced joined path."
   },
   {
    "id": "derivation-limits.enforcement.derivation-cap-exhaustion",
