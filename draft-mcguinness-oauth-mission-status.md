@@ -681,7 +681,7 @@ The members are:
     `status_list` reference where the deployment publishes a Mission
     Status List
     ({{I-D.draft-mcguinness-oauth-mission-status-list}}).
-- `authorization_details`: the Authority Set entries of every
+- `authorization_details`: the Effective Authority Set entries of every
   AS-supported `authorization_details` type
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization
   Details Types") relevant to the requesting audience, audience
