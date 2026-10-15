@@ -599,6 +599,39 @@ proposals with no fresh human decision per instance. Every activation
 under this basis MUST record an Approval Governance Record, committed
 with the Mission ({{atomic-commitment}}).
 
+## Consented Root {#governed-policy-root}
+
+The consented root is the retained `approval_policy` snapshot that a
+human approved ({{record}}). It commits:
+
+- the clients, Subjects, and authority sources that can activate
+  under it;
+- the authority ceiling and the lifetime limits of each activated
+  Mission;
+- the deterministic rules that decide an activation;
+- the recency ceilings, the clock-skew allowance, and any class-named
+  exceptions of {{policy-approval-recency}}; and
+- where a separate policy artifact decides instances, that artifact's
+  activation policy reference ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Standing-Consent Bases").
+
+The root decides whether an instance activates. It is distinct from
+an `organizational` authority source's `authority_source.policy`,
+which bounds whose authority the Mission draws on
+({{I-D.draft-mcguinness-oauth-mission}}).
+
+The issuer MUST establish the standing consent, the consenting human,
+and that human's approval of the exact root version from retained,
+authenticated governance state, never from the activating request: a
+submitted proposal cannot supply its own standing consent.
+
+The root and a separate evaluator keep distinct digest domains:
+`approval_policy.digest` commits the root under `typ`
+`mission-approval-policy` ({{record}}), and the activation policy
+reference commits the evaluator under `typ`
+`mission-activation-policy`. The issuer MUST NOT accept either digest
+in place of the other.
+
 # Envelope and Verification {#envelope}
 
 An Approval Governance Record carries its integrity protection in an
