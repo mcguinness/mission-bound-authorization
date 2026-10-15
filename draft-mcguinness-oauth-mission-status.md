@@ -2008,6 +2008,15 @@ Authorization work for feedback that shaped these extensions.
 
 \[\[ To be removed from the final specification ]]
 
+- Interface audit before the first submission: the response reports
+  the Effective Authority Set; `state`, `expires_at` and `fresh_until`
+  are REQUIRED; every class that signs advertises
+  `mission_status_signing_alg_values_supported`; a private-key-JWT
+  assertion's `aud` is the AS's issuer identifier; `expected_version`
+  is a defined request member, checked before the transition rule; a
+  retransmit is compared on its operation members, and a transient
+  failure is not replayed (#705).
+
 - Conformance gains a revoke-only Mission Lifecycle class: the
   Lifecycle endpoint with `revoke` alone, under its authentication,
   lifecycle authorization, idempotency and signed state-only response,
