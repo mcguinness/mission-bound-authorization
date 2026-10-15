@@ -1,9 +1,21 @@
-# payments-runtime-profile-v1
+# payments-runtime-profile-v2
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v1`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v2`; changes bump the suffix.
+The file name is the document's stable name and does not carry the version.
+
+## Version history
+
+- **v2** (#828): the list form's `all` source enumerates every vendor the
+  payments store holds invoices for, so an unconstrained `list_invoices`
+  digest binds those vendors; a named `vendor_id` is the store-resolved
+  vendor, and one the store does not hold is refused `unknown_vendor`. A
+  `parameter_digest` over the list form is interpreted under the version in
+  force when it was computed.
+- **v1** (D34): the `all` source carries an empty `vendor_scope`, and a
+  named `vendor_id` is used as supplied.
 
 ## Canonical identifiers
 
