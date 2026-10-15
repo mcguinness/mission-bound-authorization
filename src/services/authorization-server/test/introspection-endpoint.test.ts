@@ -503,6 +503,13 @@ describe("strict token resolution: bare active:false, no Mission or token detail
     expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });
   });
 
+  it("a correctly signed token whose jti has no issuance record is never returned active", async () => {
+    // An unknown token: signed by the AS's own key and naming a live Mission,
+    // but no issuance record binds its jti to a grant.
+    const crafted = await craftToken({ jti: crypto.randomUUID(), mission: { id: flow1.missionId, issuer: ISSUER } });
+    expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+  });
+
   it("wrong-audience caller: the ENTIRE response is minimized", async () => {
     const res = await introspect(flow1.at, { principal: RS_SAAS });
     expect(res.status).toBe(200);

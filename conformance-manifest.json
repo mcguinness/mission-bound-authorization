@@ -6953,7 +6953,7 @@
    "surface": "introspection",
    "assertion": "refusal",
    "observation": {
-    "normative": "a malformed, individually expired, or unresolvable token (unknown Mission, or none) introspects as the bare `{active: false}` with no `mission` member; malformed includes a token that fails the Mission access-token profile's credential validation the resource applies, from the same shared negative vectors: an authority entry that cannot be read in full, a malformed present `cnf`, or an absent `cnf` where the token's profile requires sender constraint (a delegated token, a Child Mission's token), while a primary token with no `cnf` introspects active as a bearer token"
+    "normative": "a malformed, unknown (correctly signed, with no issuance record), individually expired, or unresolvable token (an unknown Mission, or none) introspects as the bare `{active: false}` with no `mission` member; malformed includes a token that fails the Mission access-token profile's credential validation the resource applies, from the same shared negative vectors: an authority entry that cannot be read in full, a malformed present `cnf`, or an absent `cnf` where the token's profile requires sender constraint (a delegated token, a Child Mission's token), while a primary token with no `cnf` introspects active as a bearer token"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -6979,6 +6979,12 @@
     {
      "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
      "name": "strict token resolution: bare active:false, no Mission or token detail > token carrying no Mission reference is unresolvable",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "strict token resolution: bare active:false, no Mission or token detail > a correctly signed token whose jti has no issuance record is never returned active",
      "level": "endpoint",
      "surface": "introspection"
     },

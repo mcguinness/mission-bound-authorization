@@ -638,13 +638,11 @@ the store.
   - `composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details` (`introspection-endpoint.test.ts`)
   - `caller authentication (@spec mission#caller-authorization-and-minimization) > refuses an unauthenticated call with 401 + WWW-Authenticate` (`introspection-endpoint.test.ts`)
   - `strict token resolution: bare active:false, no Mission or token detail > wrong-audience caller: the ENTIRE response is minimized` (`introspection-endpoint.test.ts`)
+  - `strict token resolution: bare active:false, no Mission or token detail > a correctly signed token whose jti has no issuance record is never returned active` (`introspection-endpoint.test.ts`)
   - `the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402) > answers a token with %s with a bare active:false, as the resource refuses it`, with its bearer, delegated-token and Child Mission cases (`introspection-endpoint.test.ts`). The vectors are `@mission/core/test-vectors`, which the resource's `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a token with %s on both transports, yielding no facts` also runs.
   - `Mission-bound refresh tokens (@spec mission#introspection) > Mission revocation reports the composite even though it destroys the grant` (`introspection-endpoint.test.ts`)
   - The revocation test of §3.6 runs `plain-rs` against the reference AS. The `plain-rs introspection failure contract (#873) > ...` tests (`services/plain-rs/test/plain-rs.test.ts`) run it against a stub endpoint (`issuance-only-deployment.md` §2).
 - **Residual.**
-  - No test presents a correctly signed token whose `jti` has no issuance
-    record. The crafted tokens in `introspection-endpoint.test.ts` reuse a
-    real `jti`. No test yet.
   - A check completed before a revocation does not cancel a request it
     admitted (`issuance-only-deployment.md` §1).
 
