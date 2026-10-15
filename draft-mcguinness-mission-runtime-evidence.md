@@ -1913,12 +1913,18 @@ that comparison in three ways:
   content.
 - **Evidence.** Each leg's Execution Evidence links by
   `evaluation_id` to Decision Evidence, and through
-  `authorizing_entry` or `entry_digest` to the approved entry and its
-  pinned reference. A parameter digest covers one action's whole
-  normalized parameter object, so digests from two services do not
-  show a shared field; the shared reference is read from the approved
-  entries. Where Decision Evidence carries no `parameter_digest`, the
-  records do not show which parameters the call used.
+  `authorizing_entry` or `entry_digest` to the approved entry. A
+  parameter digest covers one action's whole normalized parameter
+  object, so digests from two services do not show a shared field.
+  For a pin present at approval, the shared reference is read from the
+  approved entries. A pin added after approval is not in the approved
+  entry: the reference is read only from retained request or
+  credential evidence, such as the narrowed token or the parameters a
+  `parameter_digest` commits, that the comparing party is authorized
+  to obtain and can verify against its commitment. Without that
+  evidence, the comparison is inconclusive. Where Decision Evidence
+  carries no `parameter_digest`, the records do not show which
+  parameters the call used.
 - **Comparison.** A party the deployment defines, independent of the
   agent, compares the legs ({{comparing-party}}). An agent that
   compares the records of its own plan attests only to itself.
@@ -1965,7 +1971,9 @@ defines:
 - the records each comparison requires, named before the comparison;
 - the party's authority to obtain them, as authenticated records or as
   authorized access to retained parameters, together with the approved
-  entries that `authorizing_entry` or `entry_digest` names;
+  entries that `authorizing_entry` or `entry_digest` names and, for a
+  pin added after approval, the retained request or credential
+  evidence that carries it;
 - verification of each record against its commitments: its integrity
   envelope ({{decision-evidence-integrity}}), and a recomputed
   parameter or entry digest for any parameters or entry the party
@@ -1994,8 +2002,10 @@ complementary layers: AEB defines no execution-evidence format, and
 this document defines no admission lifecycle. They align as follows:
 
 - **Exact-action binding.** An AEB action digest covers every material
-  field that a pinned operation profile declares, including facts the
-  boundary resolves from the system of record, and no other field.
+  field and no other field: those the pinned native operation profile
+  declares and, for a cross-format join, those the selected Canonical
+  Action Identifier (CAID) definition declares, including facts the
+  boundary resolves from the system of record.
   The runtime profile commits an action in two digests instead:
   `parameter_digest` over the whole normalized parameter object and,
   under Evaluation-Context Binding, `evaluation_context_digest` over
