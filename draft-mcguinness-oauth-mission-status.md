@@ -837,7 +837,8 @@ Authority Server's submission surface
 `error`/`error_description` JSON body idiom for consistency with the
 OAuth-shaped APIs they compose with. Each surface's exact member
 requiredness is its own: here and in Mission Management,
-`error_description` and `nonce` are REQUIRED; the Mission Authority
+`error_description` is REQUIRED and `nonce` is REQUIRED whenever the
+request carried a well-formed one; the Mission Authority
 Server makes `error_description` OPTIONAL and adds the MAS-only
 `error_reason`.
 
