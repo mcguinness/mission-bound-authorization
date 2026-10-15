@@ -1048,8 +1048,10 @@ outside a Mission, except under documented policy exceptions. If a
 client registered as Mission-governed sends an
 `authorization_details` request that carries no `mission_intent`,
 the AS MUST reject the request with the `invalid_request` error
-code, so the client cannot omit the Intent to obtain ungoverned
-tokens.
+code, so the client cannot drop the Intent from a request that still
+carries `authorization_details`. A request carrying neither is an
+ordinary request that this rule does not reach; designation is what
+keeps a resource's tokens inside a Mission.
 
 The following is an example of an authority proposal submitted
 alongside the example Intent of {{mission-intent}}. Derivation
@@ -4073,6 +4075,17 @@ AS cannot change, the standalone Mission Authority Server
 ({{I-D.draft-mcguinness-mission-authority-server}}) is the governed
 alternative.
 
+A client performing a task under a Mission MUST NOT present, for that
+task, a credential that is not Mission-bound, such as an ordinary
+access token it already holds, unless a deployment-defined,
+trusted enforcement path establishes that Mission for the request and
+applies the Mission's authority and lifecycle controls to it. Neither
+a Mission identifier the client supplies nor documentation alone
+establishes the Mission for a request, and the path confers no
+authority beyond the Mission's. The rule does not restrict the
+client's workflows unrelated to the Mission
+({{downgrade-by-omission}}).
+
 An AS that advertises support for this document MUST include at least
 one AS-supported type in its `authorization_details_types_supported`
 metadata ({{RFC9396}}): the approved-set commitment a Mission-aware
@@ -4330,16 +4343,30 @@ A token bearing equivalent `authorization_details` but no `mission`
 claim is governed by no Mission state, revocation, or consent
 commitment. A deployment can designate a resource, or register a
 client, as Mission-governed; {{authority-proposal}} states the
-issuance-side rules that keep such a resource's tokens and such a
-client's requests inside a Mission.
+issuance-side rules that keep such a resource's tokens inside a
+Mission and refuse such a client's `authorization_details` request
+that omits the Intent.
 
 On the client side, a client holding a Mission Intent does not fall
-back to an ordinary request where Mission support is not established
-({{discovery}}).
+back to an ordinary request where Mission support is not established,
+and a client performing a Mission's task does not present an ordinary
+credential it already holds for that task ({{discovery}}).
 
 On the enforcement side, a resource server for such a resource
 rejects a token lacking the `mission` claim and can advertise that
 requirement ({{rs-enforcement}}, {{protected-resource-metadata}}).
+
+A held ordinary credential needs no request to the AS, and neither an
+AS nor a resource server can generally tell that a request made with
+one serves a Mission. Designation closes this path at a designated
+resource. Mandatory mediation closes it where the client's requests
+must pass through a runtime layer that holds custody of the client's
+credentials ({{I-D.draft-mcguinness-mission-runtime}}). A
+decision-time join of an ordinary credential to the Mission, such as
+the Mission Join of {{I-D.draft-mcguinness-mission-authority-server}},
+is one realization of the enforcement path that {{discovery}}
+permits. An unmediated ordinary workflow at an undesignated resource
+remains a residual that only the client's own conformance closes.
 
 The `mission_bound_authorization_supported` ({{discovery}}) and
 `mission_bound_authorization_required`
@@ -6041,6 +6068,17 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Downgrade by Omission covers a client acting under a Mission with an
+  ordinary credential it already holds. A client performing a
+  Mission's task presents no credential that is not Mission-bound
+  for that task unless a deployment-defined, trusted enforcement path
+  establishes the Mission for the request and applies its authority
+  and lifecycle controls; the section names designation and mandatory
+  mediation as the controls and the unmediated residual. The
+  Mission-governed client registration rule is described as rejecting
+  an `authorization_details` request that omits the Intent, not every
+  ungoverned request (#1205).
 
 - Mission-Bound Access Tokens: a confidential client's refresh token
   is bound to it by client authentication (Section 6 of RFC 6749), and
