@@ -1427,7 +1427,9 @@ present or absent alike, and excludes client authentication
 parameters and HTTP headers, which a retry regenerates. The same
 `nonce` paired with request members that differ from the original's
 MUST be refused `invalid_request` ({{mission-status-errors}}); the AS
-MUST NOT answer it with the unrelated original response.
+MUST NOT answer it with the unrelated original response. A retransmit
+whose original response was `unavailable`, `rate_limited`, or another
+5xx response is processed as a new request, not replayed.
 
 The window MUST be at least the validity
 span of the signed response the AS would replay (its `iat` to `exp`,
