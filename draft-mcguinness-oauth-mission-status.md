@@ -1914,10 +1914,14 @@ profile's privacy considerations.
 
 # IANA Considerations {#iana}
 
-This document requests IANA actions for OAuth AS metadata members and
-a media type. It defines no new registry of its own: the endpoint
+This document requests IANA actions for OAuth AS metadata members, a
+media type, and one entry in each of two issuance-profile registries.
+It defines no new registry of its own: the endpoint
 authentication-method value space is a closed set defined inline
-({{as-metadata}}). `suspended` and `completed`
+({{as-metadata}}), and Mission Lifecycle `operation` values have no
+IANA registry; a companion profile registers an extension operation
+by defining it in its own specification
+({{mission-lifecycle-endpoint}}). `suspended` and `completed`
 ({{mission-lifecycle-endpoint}}) are values of the issuance profile's
 `mission_error` member, which has no IANA registry, so this document
 requests no registration for them. A companion profile MAY register further extension
