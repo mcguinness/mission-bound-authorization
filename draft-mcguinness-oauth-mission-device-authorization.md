@@ -245,9 +245,14 @@ AS MUST apply an approval decision only to the session whose
 `user_code` the Approver entered or confirmed, and MUST NOT resolve
 any other `device_code` to the Mission that decision creates.
 
-The AS MUST refuse a device access token request for a session from
-any client other than the bound client with the `invalid_grant` error
-code ({{Section 5.2 of RFC6749}}).
+The AS MUST refuse a device access token request from an
+authenticated or identified client other than the bound client with
+the `invalid_grant` error code ({{Section 5.2 of RFC6749}}). A request
+that omits or fails client authentication the bound client is required
+to use receives `invalid_client` instead ({{Section 3.4 of RFC8628}},
+{{Section 5.2 of RFC6749}}). A public client that identifies itself
+with the bound `client_id` uses no client authentication and is not
+refused for its absence.
 
 A public client's `client_id` identifies the client; it does not
 authenticate it ({{Section 5.6 of RFC8628}}). The Mission Record's

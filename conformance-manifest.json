@@ -36609,7 +36609,7 @@
    "id": "device-authorization.binding.wrong-client",
    "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
    "anchor": "session-binding",
-   "text": "The AS MUST refuse a device access token request for a session from any client other than the bound client with the `invalid_grant` error code",
+   "text": "The AS MUST refuse a device access token request from an authenticated or identified client other than the bound client with the `invalid_grant` error code",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36620,7 +36620,29 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "A device access token request presenting the session's device_code under another client_id, or without the bound client's authentication, receives invalid_grant and no token."
+    "normative": "A device access token request presenting the session's device_code from a different client, authenticated, or identified by its own client_id when public, receives invalid_grant and no token."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.binding.client-authentication-failure",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "session-binding",
+   "text": "A request that omits or fails client authentication the bound client is required to use receives `invalid_client` instead",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "For a session bound to a client that must authenticate, a device access token request with no or failed client authentication receives invalid_client and no token. A public client identified by the bound client_id without client authentication is not refused for that absence."
    },
    "level": "endpoint",
    "coverage": "todo",
