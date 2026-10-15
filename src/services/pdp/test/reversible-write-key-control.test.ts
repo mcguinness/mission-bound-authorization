@@ -39,6 +39,7 @@ import {
   RUNTIME_POSTURE,
   type RuntimePosture,
 } from "../src/runtime-posture.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -98,6 +99,7 @@ const opts = {
   now: () => NOW,
   stalenessBound,
   relationForAction,
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   stateSourcePlacement: "pep" as const,
   claims: unreachableClaims as never,
 };

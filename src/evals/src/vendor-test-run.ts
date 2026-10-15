@@ -14,7 +14,7 @@ const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
 
 async function main() {
   const ca = process.env.OPENFGA_CA_CERT;
-  const { fga, modelId } = await Fga.connect({ apiUrl: API_URL, presharedKey: KEY, ...(ca ? { caCertPath: ca } : {}) });
+  const { fga, modelId } = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, ...(ca ? { caCertPath: ca } : {}) });
   const view: MissionView = {
     id: "msn_eval",
     issuer: "https://as.test",

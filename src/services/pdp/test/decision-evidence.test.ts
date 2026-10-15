@@ -37,6 +37,7 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, RESOURCE_POLICY_REFUSES_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -185,7 +186,7 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
       expect(await named(discharge, view())).toEqual({ reason: "out_of_authority", bound: "credential" });
     });
 
-    it("names the Mission bound where the Mission's own entry refused: no entry names the action, its vendors, a collection member, its amount cap", async () => {
+    it("names the Mission bound where the Mission's own entry refused: no entry names the action, its vendors, a collection member, its amount cap, its contextual check on the target or a collection member", async () => {
       expect(await named(req({ action: { name: "payments:vendor.read" } }), view())).toEqual({ reason: "out_of_authority", bound: "mission" });
       const vendors = view();
       vendors.authority_set[0]!.constraints = { vendors: ["globex"] };
@@ -198,6 +199,15 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
       const over = req();
       over.context.amount = { amount: "20.00", currency: "USD" };
       expect(await named(over, capped)).toEqual({ reason: "parameter_violation", bound: "mission" });
+      // The contextual FGA check reads only the Mission's own tuples, so its
+      // refusal is bound 2 (#828, D404): at the target (step 6) and at one
+      // collection member (step 6a).
+      const refusing = { fga: { checkWithContext: async () => false } as unknown as Fga };
+      expect(await named(req(), view(), refusing)).toEqual({ reason: "out_of_authority", bound: "mission" });
+      const memberRefusing = {
+        fga: { checkWithContext: async (t: { object: string }) => t.object !== "vendor:globex" } as unknown as Fga,
+      };
+      expect(await named(reaching(req(), ["acme", "globex"]), view(), memberRefusing)).toEqual({ reason: "out_of_authority", bound: "mission" });
     });
 
     it("names the bound evaluated first when both exclude the action: a mirrored credential's constraint is the credential's", async () => {
@@ -209,8 +219,13 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     });
 
     it("names no bound on any other decision: Resource policy, a missing relation mapping, a request fault, a lifecycle deny, a permit", async () => {
-      const refusing = { fga: { checkWithContext: async () => false } as unknown as Fga };
-      expect(await named(req(), view(), refusing)).toEqual({ reason: "out_of_authority", bound: undefined });
+      // @spec authzen#evidence: absent on "a deny by Resource policy" (#828):
+      // the independently administered policy refusing, both authority bounds
+      // satisfied, is resource_policy and names no bound.
+      expect(await named(req(), view(), { resourcePolicy: RESOURCE_POLICY_REFUSES_ALL_FIXTURE })).toEqual({
+        reason: "resource_policy",
+        bound: undefined,
+      });
       const unmapped = view();
       unmapped.authority_set[0]!.actions = ["payments:unmapped.op"];
       expect(await named(req({ action: { name: "payments:unmapped.op" } }), unmapped)).toEqual({ reason: "out_of_authority", bound: undefined });
@@ -444,6 +459,7 @@ function opts(over: Partial<EvaluateOptions> = {}): EvaluateOptions {
     now: () => NOW,
     stalenessBound,
     relationForAction,
+    resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     ...over,
   } as EvaluateOptions;
 }

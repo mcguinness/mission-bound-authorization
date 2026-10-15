@@ -81,6 +81,7 @@ function approve(stack: DemoStack, entries: AuthorityEntry[]): MissionView {
 /** A Mission-bound credential carrying `entries` as its own authority. */
 const tokenFor = (view: MissionView, entries: MissionView["authority_set"]): TokenFacts => ({
   sub: "alice",
+  iss: view.issuer,
   clientId: "ap-agent",
   cnfJkt: "jkt",
   mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
@@ -106,15 +107,15 @@ function dischargeClosingEntry(stack: DemoStack, missionId: string): string {
 const readInvoice = (stack: DemoStack, token: TokenFacts) => stack.pep.enforce("get_invoice", { invoice_id: "inv-1" }, token);
 
 describe("the composed stack refuses a discharged entry at the point of use (@spec discharge#runtime, #1144)", () => {
-  let fgaConnect: MockInstance;
+  let fgaBootstrap: MockInstance;
   beforeAll(() => {
-    fgaConnect = vi.spyOn(Fga, "connect").mockResolvedValue({
-      fga: { checkWithContext: async () => true } as unknown as Fga,
+    fgaBootstrap = vi.spyOn(Fga, "bootstrap").mockResolvedValue({
+      fga: { checkWithContext: async () => true, checkStored: async () => true, client: { write: async () => ({}) }, modelId: "test" } as unknown as Fga,
       storeId: "test",
       modelId: "test",
     });
   });
-  afterAll(() => fgaConnect.mockRestore());
+  afterAll(() => fgaBootstrap.mockRestore());
 
   for (const pdpMode of ["co-resident", "remote"] as const) {
     it(`after a discharge commit, the next decision for that entry is authority_discharged, and a credential deriving only from it is refused at step 5c while a live entry's credential still permits (${pdpMode})`, async () => {
@@ -125,6 +126,7 @@ describe("the composed stack refuses a discharged entry at the point of use (@sp
         claimsFile: tempFile("demo-claims-", "claims.sqlite"),
         writeReservationsFile: tempFile("demo-reservations-", "write-reservations.sqlite"),
         dischargeAuthority: DISCHARGE_AUTHORITY,
+        resourcePolicyStore: { bootstrap: "development" },
       });
       try {
         // Step 5b: one closing entry, the credential carrying it.
@@ -163,6 +165,7 @@ describe("the composed stack refuses a discharged entry at the point of use (@sp
       claimsFile: tempFile("demo-claims-", "claims.sqlite"),
       writeReservationsFile: tempFile("demo-reservations-", "write-reservations.sqlite"),
       dischargeAuthority: DISCHARGE_AUTHORITY,
+      resourcePolicyStore: { bootstrap: "development" },
     });
     try {
       const view = approve(stack, [readEntry(true)]);

@@ -12,11 +12,12 @@
 import { canonicalDigest } from "@mission/core";
 import { describe, expect, it } from "vitest";
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore } from "../src/index.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 const MISSION = { id: "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-", issuer: "https://as.test", authority_hash: "sha-256:fixture" };
 
 function store() {
-  const keys = createEphemeralEvidenceKeys();
+  const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
   return new EvidenceStore(keys.signing, keys.resolver);
 }
 

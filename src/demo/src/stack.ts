@@ -36,7 +36,9 @@ import {
   stalenessBound,
   stateSourcePlacement,
   deriveJoinDelegation,
-  Fga,
+  type Fga,
+  fgaResourcePolicy,
+  issuerLocalPrincipals,
   type MissionView,
   relationForAction,
 } from "@mission/pdp";
@@ -80,6 +82,7 @@ import { SaasMcpServer } from "@mission/mcp-saas";
 import { signStatement, TransparencyService, type Receipt, type SignedStatement } from "@mission/transparency";
 import { ConsoleBff } from "@mission/console-bff";
 import type { AccessRequestService } from "@mission/access-request";
+import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResourcePolicy } from "./resource-policy-store.js";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
 export const ISS = TOPOLOGY.issuers.as;
@@ -272,6 +275,12 @@ export async function composeStack(opts: {
    */
   writeReservationsFile?: string;
   /**
+   * @spec runtime#input-resource-policy (#828): attach to a configured
+   * Resource-policy store, or bootstrap a development one. No default
+   * (./resource-policy-store.ts).
+   */
+  resourcePolicyStore: ResourcePolicyStore;
+  /**
    * D284, D315: `as-native` assembles #253's first runtime target. It implies
    * `withAuthServer`, builds the AS with exactly {@link AS_NATIVE_CAPABILITIES}
    * (D332), mounts no MAS join route on the payments resource, and serves the
@@ -315,7 +324,10 @@ export async function composeStack(opts: {
   }
   const mode = opts.pdpMode ?? process.env.MISSION_PDP_MODE ?? "co-resident";
   if (mode !== "co-resident" && mode !== "remote") throw new Error("MISSION_PDP_MODE must be co-resident or remote");
-  const conn = await Fga.connect({ apiUrl: opts.openfgaUrl, presharedKey: opts.presharedKey, ...(opts.caCertPath ? { caCertPath: opts.caCertPath } : {}) });
+  const conn = await openResourcePolicyStore(
+    { apiUrl: opts.openfgaUrl, presharedKey: opts.presharedKey, ...(opts.caCertPath ? { caCertPath: opts.caCertPath } : {}) },
+    opts.resourcePolicyStore,
+  );
   const fga = conn.fga;
   const modelId = conn.modelId;
 
@@ -692,6 +704,15 @@ export async function composeStack(opts: {
     settlementKeys: buildEvidenceKeyResolver(evidenceKeys.verification.filter((k) => k.role !== "pdp")),
     onIndeterminate: (claim) => operatorAlerts.alert(indeterminateClaimAlert(claim)),
   });
+  // @spec runtime#input-resource-policy (#828): the independently
+  // administered Resource policy, stored OpenFGA entitlements read with no
+  // Mission input, for principals authenticated under this stack's issuer.
+  // A development store is seeded here, after the payments store it takes
+  // invoice ownership from; an attached store is used as it stands.
+  if (conn.development) {
+    await seedDevelopmentResourcePolicy(fga, issuer, payments.listInvoices());
+    console.log(`development Resource-policy store ${conn.storeId} model ${conn.modelId} (set OPENFGA_STORE_ID and OPENFGA_MODEL_ID to attach)`);
+  }
   const decisionPoint = createDecisionPoint({
     evidence: {
       signer: { kid: decisionEvidenceKey.kid, key: decisionEvidenceKeys.privateKey },
@@ -700,6 +721,7 @@ export async function composeStack(opts: {
       audience: CANONICAL_RESOURCE,
     },
     claims: pdpClaims,
+    resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer) }),
   });
   // @spec runtime#idempotency (#918, D223): the PEP's own durable,
   // single-writer reservation store for keyed reversible writes, named in

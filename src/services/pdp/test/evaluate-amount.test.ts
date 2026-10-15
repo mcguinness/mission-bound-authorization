@@ -19,6 +19,7 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate as evaluateRequest, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 import { withCredential } from "./with-credential.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -69,6 +70,7 @@ const optsFor = (v: MissionView) => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
 });
 
 /** Same request shape as `request()`, but with no `context.amount` at all

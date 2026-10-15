@@ -4,9 +4,10 @@ import type { Fga } from "@mission/pdp";
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, PaymentsStore, Pep, type PepDeps, type TokenFacts } from "../src/index.js";
 import { TOOLS } from "../src/server.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 function build() {
-  const keys = createEphemeralEvidenceKeys();
+  const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const deps: PepDeps = {
     evidence, payments: new PaymentsStore(), decide: keys.decide,

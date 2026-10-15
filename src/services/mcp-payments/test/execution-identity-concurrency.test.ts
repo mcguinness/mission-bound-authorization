@@ -51,8 +51,9 @@ import {
   EvidenceStore,
   type ExecutionEvidence,
 } from "../src/index.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 const MISSION_ID = "msn_concurrent";
 
 /** One disposition attempt, reused verbatim by every emission of it. */

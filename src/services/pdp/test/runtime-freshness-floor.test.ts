@@ -2,6 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { evaluate as evaluateRequest, type EvaluationRequest, type EvaluateOptions, type MissionView, relationForAction } from "../src/index.js";
 import { loadRuntimePosture, postureStalenessBound, RUNTIME_POSTURE } from "../src/runtime-posture.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -32,7 +33,7 @@ describe("consequential freshness floor (@spec runtime#state-freshness)", () => 
     const options: EvaluateOptions = {
       view, modelId: "review", now: () => new Date("2026-07-22T12:00:00Z"),
       fga: { checkWithContext: async () => true } as never,
-      stalenessBound: () => ({ kind: "none" }), relationForAction,
+      stalenessBound: () => ({ kind: "none" }), relationForAction, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     };
     for (const actionClass of [undefined, "consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration", "unknown"]) {
       request.context.action_class = actionClass;

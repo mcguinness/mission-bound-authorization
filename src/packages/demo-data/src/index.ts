@@ -471,6 +471,49 @@ function loadInvoices(): InvoiceSeed[] {
 
 export const INVOICES: InvoiceSeed[] = loadInvoices();
 
+/**
+ * @spec runtime#input-resource-policy (#828): one stored entitlement the
+ * development demo grants when it bootstraps its Resource-policy store. The
+ * principal is `sub` under the deployment's own issuer (the issuer-local
+ * mapping); the grant is on a vendor, and every invoice that vendor owns
+ * inherits it.
+ */
+export interface ResourcePolicyEntitlementSeed {
+  sub: string;
+  relation: "authorized_reader" | "authorized_payer";
+  vendor: string;
+}
+
+const ENTITLEMENT_SEED_MEMBERS = new Set(["sub", "relation", "vendor"]);
+
+function loadResourcePolicySeed(): ResourcePolicyEntitlementSeed[] {
+  const file = "seed/resource-policy.json";
+  const root = asObject(file, readJson(file), "resource-policy");
+  for (const key of Object.keys(root)) {
+    if (key !== "entitlements") throw new ConfigError(file, `unknown member ${key}`);
+  }
+  return asArray(file, root.entitlements, "entitlements").map((raw, i) => {
+    const ctx = `entitlements[${i}]`;
+    const e = asObject(file, raw, ctx);
+    for (const key of Object.keys(e)) {
+      if (!ENTITLEMENT_SEED_MEMBERS.has(key))
+        throw new ConfigError(file, `${ctx} has unknown member ${key}`);
+    }
+    const relation = reqString(file, e, "relation", ctx);
+    if (relation !== "authorized_reader" && relation !== "authorized_payer") {
+      throw new ConfigError(file, `${ctx}.relation must be authorized_reader or authorized_payer`);
+    }
+    return {
+      sub: reqString(file, e, "sub", ctx),
+      relation,
+      vendor: reqString(file, e, "vendor", ctx),
+    };
+  });
+}
+
+/** The development demo's stored entitlements, granted only by an explicit development bootstrap. */
+export const RESOURCE_POLICY_SEED: ResourcePolicyEntitlementSeed[] = loadResourcePolicySeed();
+
 export interface CeilingConstraints {
   max_amount?: { amount: string; currency: string };
   vendors?: string[];
