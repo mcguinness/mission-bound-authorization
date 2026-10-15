@@ -141,6 +141,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -1867,6 +1875,103 @@ requirement to this document or the runtime profile.
 | Third-party-verifiable | Scoped independent verification: a party with access to the Enforcement Scope Statement's published keys verifies a record independently of the emitting deployment ({{evidence-integrity-signing-keys}}) | Durable offline verification: a party holding retained or configured producer and Transparency Service trust anchors verifies without contacting either operator, where a Receipt and the evidence bytes are retained; cross-domain verifiability additionally requires the audit profile's independent-operator condition ({{I-D.draft-mcguinness-mission-audit}}) | That an unknown producer key is trusted, that the signed assertion is true, or that the evidence feed is complete |
 {: title="Evidence properties: what the records prove, and under which conditions"}
 
+# Cross-Entry Correspondence {#cross-entry-correspondence}
+
+This section is informative. It adds no member and no requirement to
+this document or the runtime profile.
+
+Each record describes one action at one decision or enforcement
+point. A task whose actions reach several resource servers can fail
+while every per-action decision is correct: an inventory service
+reserves item A, and a payment service charges for item B. Whether
+the outcomes of two Authority Set entries correspond is a comparison
+across records, which no single decision makes. The records support
+that comparison in three ways:
+
+- **Bind.** The approved entries can pin one shared reference, such as
+  an order identifier, each in its own resource server's vocabulary
+  ({{I-D.draft-mcguinness-mission-shaping}}, Section "Authority
+  Proposal"). A leg on any other reference falls outside its entry:
+  issuance refuses it under the subset rule
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Subset Rule"),
+  and a runtime decision denies it at the point of use. A pin present
+  in the entry at approval binds the legs to the approved reference
+  and the content disclosed with it. A pin the agent adds after
+  approval, by narrowing its own token
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Self-Exchange
+  Down-Scoping"), binds the legs to each other and not to approved
+  content.
+- **Evidence.** Each leg's Execution Evidence links by
+  `evaluation_id` to Decision Evidence, and through
+  `authorizing_entry` or `entry_digest` to the approved entry and its
+  pinned reference. A parameter digest covers one action's whole
+  normalized parameter object, so digests from two services do not
+  show a shared field; the shared reference is read from the approved
+  entries. Where Decision Evidence carries no `parameter_digest`, the
+  records do not show which parameters the call used.
+- **Comparison.** A party the deployment defines, independent of the
+  agent, compares the legs ({{comparing-party}}). An agent that
+  compares the records of its own plan attests only to itself.
+
+## Limits {#correspondence-limits}
+
+Binding and evidence do not detect two kinds of failure:
+
+- A difference in meaning between services on the same reference.
+  Both legs can carry the same order line, with a matching amount,
+  while the services disagree on the item it holds; the payment
+  service's vocabulary has no item, so no record it emits shows one.
+  Whether two services agree on what a reference denotes is their
+  consistency contract, not an authorization fact.
+- A fact that no Operation Profile declares. Evaluation-Context
+  Binding ({{I-D.draft-mcguinness-mission-runtime}}, Section
+  "Evaluation-Context Binding") detects declared drift of a target
+  under an unchanged reference, recorded here in
+  `evaluation_context_digest`; it covers no undeclared fact.
+
+The records are evidence for that consistency check; they do not
+perform it. The check relies on a service-side design that keeps one
+reference meaning one thing:
+
+- a reference that is immutable in its system of record, whose
+  identifier changes whenever its content changes;
+- a declared revision that the dependent operation binds through
+  Evaluation-Context Binding; or
+- an authoritative current-state check before the dependent action.
+
+A history predicate ({{I-D.draft-mcguinness-mission-runtime}},
+Section "History") can show that a reservation completed. It does not
+show that the reservation is still valid: the record of a completed
+reservation stays authentic after the reservation is cancelled,
+consumed, or expires. Current validity is established by an
+authoritative current-state check at the service.
+
+## The Comparing Party {#comparing-party}
+
+Independence from the agent is necessary for a comparison and not
+sufficient. A comparison result has meaning only where the deployment
+defines:
+
+- the records each comparison requires, named before the comparison;
+- the party's authority to obtain them, as authenticated records or as
+  authorized access to retained parameters, together with the approved
+  entries that `authorizing_entry` or `entry_digest` names;
+- verification of each record against its commitments: its integrity
+  envelope ({{decision-evidence-integrity}}), and a recomputed
+  parameter or entry digest for any parameters or entry the party
+  relies on;
+- a trusted mapping between the services' fields, such as order line
+  to item; and
+- an inconclusive result whenever a required record is missing or
+  fails verification, never a pass.
+
+A Mission Receipt references evidence and supplies no fact the
+records lack ({{mission-receipt}}); a receipt reference is not the
+content of a record. A comparison result is not a Mission lifecycle
+state and does not show that a task's goal was achieved. This
+document does not define how records are collected across producers,
+including across trust domains that share no evidence store.
+
 # Extension Members {#evidence-extensions}
 
 A Decision Evidence Object, Execution Evidence Object, and Refusal
@@ -2398,6 +2503,13 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- Cross-Entry Correspondence (informative) describes how the records
+  support comparing the outcomes of two Authority Set entries: each
+  leg is bound to one approved reference, each leg's evidence leads
+  to its entry, and a party the deployment defines compares them,
+  with an inconclusive result when a required record is missing. It
+  states what the records cannot detect and that history does not
+  establish a reservation's current validity (#1019).
 - Terminology: a Mission reference (`id`, `issuer`) is a binding's
   Mission Reference identifier and Controller namespace in that
   binding's representation, with the OAuth realization unchanged; the
