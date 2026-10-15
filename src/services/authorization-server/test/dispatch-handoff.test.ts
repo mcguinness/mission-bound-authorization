@@ -1262,3 +1262,24 @@ describe("the Dispatch Handoff exchange's unconstrained subject_token (@spec mis
     expect(res.error_description).toContain("not sender-constrained");
   });
 });
+
+describe("a dispatched instance's token is sender-constrained at introspection too (@spec mission-template#grant-type, mission#introspection, #825 D402)", () => {
+  /** RFC 7662 introspection as the payments resource's registered principal. */
+  const introspect = async (token: string): Promise<Record<string, unknown>> => {
+    const res = await fetch(`${ISSUER}/introspect`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        authorization: `Basic ${Buffer.from("rs-payments:dev-introspection-rs-payments").toString("base64")}`,
+      },
+      body: new URLSearchParams({ token }).toString(),
+    });
+    return (await res.json()) as Record<string, unknown>;
+  };
+
+  it("answers a dispatched token re-signed without cnf with a bare active:false, while the token as issued introspects active as DPoP", async () => {
+    const instance = await dispatchInstance();
+    expect(await introspect(instance.token)).toMatchObject({ active: true, token_type: "DPoP", cnf: { jkt: dispatcherJkt } });
+    expect(await introspect(await resignWithCnf(instance.token, tokenKey, undefined))).toEqual({ active: false });
+  });
+});
