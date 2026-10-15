@@ -656,7 +656,8 @@ The members are:
     ({{mission-lifecycle-endpoint}}): the RFC 3339 {{RFC3339}}
     deadline, and the transition (`resume` or `revoke`) the AS applies
     when it passes.
-  - `version`: REQUIRED. The Mission's **state version**: a strictly
+  - `version`: REQUIRED. A positive integer, the Mission's
+    **state version**: a strictly
     monotonic per-Mission counter the Mission Issuer maintains,
     incremented on each committed lifecycle transition (the approval
     event is version 1) and each committed metadata-only change,
@@ -1030,6 +1031,11 @@ form-urlencoded body:
 : CONDITIONAL. A string, one of `resume` or `revoke`. REQUIRED when
   `suspend_until` is present; otherwise MUST NOT be sent. It selects the
   transition the AS applies when `suspend_until` passes.
+
+`expected_version`:
+: OPTIONAL. The decimal form of a state version
+  ({{mission-status-response}}): the version the caller last observed.
+  The AS applies it as {{idempotency}} describes.
 
 `nonce`:
 : REQUIRED. A string. A client-generated nonce.
