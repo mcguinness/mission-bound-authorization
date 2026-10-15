@@ -350,6 +350,34 @@ issuer records the Approval Governance Record joined by
 decision it governs; the pending window changes when the decision
 happens, never what is recorded about it.
 
+## Policy Completion {#policy-completion}
+
+A pending approval can also complete under the `governed_policy`
+standing-consent basis
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Governed Policy Approval"). The Mission Issuer selects a configured
+governed policy whose consented root admits the pending proposal, and
+the policy decides it; no reviewer acts. This is not a relocated
+human decision, so step 3 of {{deferred-sequencing}} does not apply:
+as under any standing-consent basis, the standing consent and the
+policy's adjudication supply the Approver's authentication,
+authorization, and consent ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission Approval"). The creation commit of step 4 runs at
+the policy's decision, under that basis's activation checks and with
+its Approval Governance Record, and keeps the effective-expiry
+recheck.
+
+Nothing else about the deferral changes. Polling, cancellation,
+client binding, and token delivery follow the deferred substrate and
+this profile, and a completed activation moves the pending approval
+to `approved` ({{state-machine}}). An evaluation that does not
+authorize activation creates no Mission; the pending approval remains
+open to human review or resolves to `denied`. Each pending approval
+resolves under one `approval_event_id`, so retried and concurrent
+completions yield one Mission and one record. The client selects no
+approval basis: this profile defines no grant or request parameter
+for one.
+
 ## Queue Pressure {#queue-pressure}
 
 Deferral turns the review surface into a queue a client can flood. The
@@ -476,16 +504,17 @@ principal. The resolving poll returns a Mission-bound token whose
 A Mission Issuer conforming to this profile MUST:
 
 - support the deferred substrate for Mission approvals it defers;
-- execute the approval event on the asynchronous review surface with
-  the authentication the issuance profile requires
-  ({{deferred-sequencing}});
+- execute each human approval event it defers on the asynchronous
+  review surface with the authentication the issuance profile
+  requires ({{deferred-sequencing}});
 - create the Mission record `active` atomically with the approval
   decision; and
 - enforce the pending lifetime and staleness rules of
   {{pending-staleness}} and the queue bounds of {{queue-pressure}}.
 
 A Mission Issuer that records Approval Governance Records for
-deferred approvals does so under Mission Approval Governance's
+deferred approvals, including every policy completion
+({{policy-completion}}), does so under Mission Approval Governance's
 conformance ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
 A client conforming to this profile MUST treat every pending response
@@ -527,6 +556,15 @@ the deferred grant type are registered by the deferred substrate
 ({{I-D.draft-gerber-oauth-deferred-token-response}}).
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Policy Completion: a pending approval can complete under Mission
+  Approval Governance's `governed_policy` basis, with the deferral's
+  polling, cancellation, client binding, and token delivery unchanged
+  and no client-selected approval basis (#1185).
 
 # Acknowledgments
 {:numbered="false"}
