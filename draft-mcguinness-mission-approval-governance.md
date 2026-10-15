@@ -632,6 +632,59 @@ reference commits the evaluator under `typ`
 `mission-activation-policy`. The issuer MUST NOT accept either digest
 in place of the other.
 
+## Instance Record {#governed-policy-record}
+
+A Mission activated under this basis records these `approval_basis`
+members ({{I-D.draft-mcguinness-oauth-mission}}), each REQUIRED:
+
+`type`:
+: `governed_policy`.
+
+`consent_principal`:
+: The human who approved the exact root version.
+
+`approved_at`:
+: The instant of that approval, verified against retained,
+  authenticated state as the issuance profile requires of every
+  standing-consent basis.
+
+`root_commitment`:
+: The root's `approval_policy.digest`; the record's own
+  `approval_policy` is that root.
+
+`activation`:
+: An object of `approval_event_id`, equal to the Mission's own
+  `approval_event_id`, and `policy`, an object of the deciding
+  policy's `id`, `version`, and `digest`.
+
+`activation_actor`:
+: The authenticated client that requested this activation, distinct
+  from `consent_principal`.
+
+`adjudication`:
+: `kind` `policy`, with `policy` naming the deciding policy's `id`
+  and `version`, and `governance_record` `true`.
+
+The deciding policy is the root itself or the separate evaluator the
+root commits, never another policy. Its digest in `activation.policy`
+is `approval_policy.digest` when the root decides, and the
+evaluator's `mission-activation-policy` digest when the evaluator
+decides.
+
+`approval_event_id` identifies this activation's approval event,
+never the human's approval of the root. The issuer allocates one per
+proposal it activates, so a retried or concurrent activation of the
+same proposal resolves to one Mission and one record, and each
+distinct activation creates its own Mission.
+
+The record's accountable assertion ({{assertion-requirements}}) MUST
+be a `policy` assertion whose `principal` is `consent_principal` and
+whose `authority` names the deciding policy's `id` and `version` with
+`approved_at` equal to `approval_basis.approved_at`. Like every
+contributing assertion, it is authenticated and bound to this
+approval event. It records the policy's decision under that human's
+standing authorization, not a fresh human action.
+
 # Envelope and Verification {#envelope}
 
 An Approval Governance Record carries its integrity protection in an
