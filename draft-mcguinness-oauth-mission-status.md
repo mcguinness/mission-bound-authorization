@@ -1032,7 +1032,7 @@ form-urlencoded body:
   transition the AS applies when `suspend_until` passes.
 
 `expected_version`:
-: OPTIONAL. The decimal form of a state version
+: OPTIONAL. A string, the decimal form of a state version
   ({{mission-status-response}}): the version the caller last observed.
   The AS applies it as {{idempotency}} describes.
 
