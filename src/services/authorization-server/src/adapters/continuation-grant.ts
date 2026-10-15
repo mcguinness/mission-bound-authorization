@@ -1611,9 +1611,28 @@ export interface ResolvedSubject {
  * (through {@link verifyTokenEndpointDpop}) like every other DPoP check here.
  * Returns null after setting the ctx error body; the caller returns immediately.
  */
+export interface SubjectPossessionOptions {
+  /**
+   * @spec expansion#request-binding, child-delegation#child-creation (#1210):
+   * the code for a `subject_token` that is not sender-constrained. Expansion
+   * and Child Delegation state `invalid_request`; the Template's Dispatch
+   * Handoff refuses its steps 1 and 2 with `invalid_grant`, the default.
+   */
+  unconstrained?: "invalid_request" | "invalid_grant";
+  /**
+   * The rest of the caller's step-1 parsing (its required parameters), run
+   * once the `subject_token` parameters are parsed and before the token is
+   * verified or possession proven, so a step-1 failure is refused first
+   * (@spec expansion#verification-order, child-delegation#request-processing).
+   * It throws an OAuth error to refuse.
+   */
+  afterParse?: () => void;
+}
+
 export async function verifySubjectPossession(
   opts: AdapterOptions,
   ctx: KoaContextWithOIDC,
+  options: SubjectPossessionOptions = {},
 ): Promise<ResolvedSubject | null> {
   const params = ctx.oidc.params as Record<string, unknown>;
   // Step 1: subject_token type. A refresh token MUST NOT be the carrier (#448).
@@ -1635,6 +1654,7 @@ export async function verifySubjectPossession(
     txError(ctx, 400, "invalid_request", "subject_token (the Mission access token) required");
     return null;
   }
+  options.afterParse?.();
   // Step 1: verify subject_token on the AS jwks.
   let claims: Record<string, unknown>;
   try {
@@ -1653,9 +1673,18 @@ export async function verifySubjectPossession(
     txError(ctx, 400, "invalid_grant", "subject_token is missing the mission claim");
     return null;
   }
-  const cnfJkt = (claims.cnf as { jkt?: unknown } | undefined)?.jkt;
+  const cnf = claims.cnf;
+  const cnfJkt = (cnf as { jkt?: unknown } | undefined)?.jkt;
   if (typeof cnfJkt !== "string" || !cnfJkt) {
-    txError(ctx, 400, "invalid_grant", "subject_token is not sender-constrained (no cnf.jkt)");
+    // @spec expansion#request-binding, child-delegation#child-creation (#1210):
+    // a token bound by another mechanism (an mTLS `x5t#S256`) is
+    // sender-constrained, by a key this exchange does not verify: a possession
+    // failure, never "not sender-constrained".
+    if (cnf !== null && typeof cnf === "object" && Object.keys(cnf).length > 0) {
+      txError(ctx, 400, "invalid_grant", "subject_token's sender constraint is not a DPoP key this exchange can verify");
+      return null;
+    }
+    txError(ctx, 400, options.unconstrained ?? "invalid_grant", "subject_token is not sender-constrained (no cnf)");
     return null;
   }
   // Step 3: POSSESSION. The presenter controls the subject_token's OWN cnf key,
@@ -1834,6 +1863,17 @@ function readCreationRequestId(params: Record<string, unknown>): string {
   return v;
 }
 
+/**
+ * @spec child-delegation#child-creation (#1210): an exchange carrying both
+ * `child_actor` and Expansion's `predecessor` cross-check is refused with
+ * `invalid_request`, since a child creation and an expansion do not combine.
+ */
+function refuseChildActorWithPredecessor(params: Record<string, unknown>): void {
+  if (params.child_actor !== undefined && params.predecessor !== undefined) {
+    throw new errors.InvalidRequest("child_actor and predecessor do not combine: a child creation is not an expansion");
+  }
+}
+
 function readProposalParam(
   opts: AdapterOptions,
   params: Record<string, unknown>,
@@ -1973,8 +2013,18 @@ export async function handleChildCreationExchange(
     await retrieveCarryoverResult(opts, ctx, carryoverReplacement);
     return;
   }
-  // Steps 1-3: possession — the parent is selected by subject_token.
-  const resolved = await verifySubjectPossession(opts, ctx);
+  // Steps 1-3: possession, the parent selected by subject_token. Step 1 also
+  // requires creation_request_id (@spec child-delegation#creation-request-id,
+  // REQUIRED in every completion mode) and refuses an expansion's parameter,
+  // before possession (@spec child-delegation#request-processing, #1210).
+  let creationRequestId = "";
+  const resolved = await verifySubjectPossession(opts, ctx, {
+    unconstrained: "invalid_request",
+    afterParse: () => {
+      refuseChildActorWithPredecessor(params);
+      creationRequestId = readCreationRequestId(params);
+    },
+  });
   if (!resolved) return;
   const parent = resolved.record;
   // Step 4: acting agent (the authenticated parent client; carry actor_token).
@@ -1988,10 +2038,6 @@ export async function handleChildCreationExchange(
     txError(ctx, 400, "invalid_grant", "subject_token carries no readable authorization_details");
     return;
   }
-
-  // @spec child-delegation#creation-request-id — REQUIRED on every child
-  // creation, in every completion mode (missing -> invalid_request).
-  const creationRequestId = readCreationRequestId(params);
 
   // Non-authoritative `parent` cross-check (audit only): subject_token is the
   // selector, but a supplied `parent` that disagrees is refused (parent_mismatch).
@@ -2347,18 +2393,24 @@ export async function handleExpansionExchange(
     throw new errors.InvalidRequest("scope is accepted on the deferral_code poll that issues the token");
   }
 
-  // Steps 1-3: possession — the predecessor is selected by subject_token.
-  const resolved = await verifySubjectPossession(opts, ctx);
+  // Steps 1-3: possession, the predecessor selected by subject_token. Step 1
+  // also requires creation_request_id before possession (@spec
+  // expansion#verification-order, #1210): REQUIRED on every expansion
+  // initiation, in every completion mode, since initiation is mode-agnostic
+  // (the client cannot know in advance whether the request defers or goes
+  // interactive; missing -> invalid_request).
+  let creationRequestId = "";
+  const resolved = await verifySubjectPossession(opts, ctx, {
+    unconstrained: "invalid_request",
+    afterParse: () => {
+      refuseChildActorWithPredecessor(params);
+      creationRequestId = readCreationRequestId(params);
+    },
+  });
   if (!resolved) return;
   // Step 4: acting agent.
   const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
   if (!acting) return;
-
-  // @spec expansion#creation-request-id — REQUIRED on every expansion
-  // initiation, in every completion mode: initiation is mode-agnostic (the
-  // client cannot know in advance whether the request defers or goes
-  // interactive; missing -> invalid_request).
-  const creationRequestId = readCreationRequestId(params);
 
   // @spec expansion#request-binding — the non-authoritative `predecessor`
   // cross-check (audit only; subject_token is the selector, mirroring the
