@@ -234,6 +234,37 @@ describe("control-plane lifecycle response boundary", () => {
     expect(await replay.text()).toBe(original);
   });
 
+  it("compares a retransmit on its operation members: a regenerated client assertion and another member order still replay (@spec status#idempotency)", async () => {
+    const record = approveOnAs();
+    const nonce = freshNonce();
+    const assertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+    const first = await lifecycle(record.id, {
+      operation: "suspend",
+      nonce,
+      client_assertion_type: assertionType,
+      client_assertion: "assertion-one",
+    });
+    expect(first.status).toBe(200);
+    const original = await first.text();
+    expect((await lifecycle(record.id, { operation: "resume", nonce: freshNonce() })).status).toBe(200);
+    // The delayed retry regenerates its client assertion and orders its
+    // members differently. Its operation members are the original's, so it
+    // replays the original `suspend` response and does not re-suspend.
+    const retry = await lifecycle(record.id, {
+      client_assertion: "assertion-two",
+      nonce,
+      client_assertion_type: assertionType,
+      operation: "suspend",
+    });
+    expect(retry.status).toBe(200);
+    expect(await retry.text()).toBe(original);
+    expect(as.kernel.get(record.id)?.state).toBe("active");
+    // An operation member that differs makes it a different request.
+    const divergent = await lifecycle(record.id, { operation: "suspend", nonce, reason: "another request" });
+    expect(divergent.status).toBe(400);
+    expect(((await divergent.json()) as { error: string }).error).toBe("invalid_request");
+  });
+
   it("replays a retransmit whose retained response carries a validity that has passed", async () => {
     const record = approveOnAs();
     expect((await lifecycle(record.id, { operation: "suspend", nonce: freshNonce() })).status).toBe(
