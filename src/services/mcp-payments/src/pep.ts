@@ -316,31 +316,37 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
 };
 
 /**
- * @spec runtime#read-binding — synthetic FGA check object for a bulk
- * `list_invoices` request under an entry with NO `vendors` constraint at
- * all (entitled to every vendor already). There is no specific vendor to
- * name, and no FGA object type here supports a wildcard check target, so
- * this fixed placeholder stands in for "the entry's own scope, whatever it
- * is" under the same contextual-tuple pattern every other action uses
- * (the injected tuple names exactly the object being checked).
+ * @spec runtime#read-binding — synthetic check object for a bulk
+ * `list_invoices` request whose bound vendor set is EMPTY: an entry whose
+ * `vendors` allowlist is empty (its own constraint refuses the placeholder),
+ * or an unconstrained entry over a store with no invoices. There is no vendor
+ * to name, and no FGA object type here supports a wildcard check target, so
+ * this fixed placeholder is the request object; no stored Resource-policy
+ * entitlement names it, so the deployment's policy refuses it (#828 step 5).
  */
 const UNSCOPED_VENDOR_OBJECT = "__unscoped__";
 
 /**
  * @spec runtime#read-binding: the pure normal-form derivation for a bound
- * `list_invoices` read, over the CURRENT matched entry and the caller's
- * (possibly absent) `vendor_id`. Used at decision time (against the entry
+ * `list_invoices` read, over the CURRENT matched entry, the caller's
+ * (possibly absent) store-resolved `vendor_id`, and the vendors the payments
+ * store's invoices currently name. Used at decision time (against the entry
  * `enforceInner` just matched) and again at {@link Pep.reverifyList} (against
- * a freshly loaded entry), so a change to the Mission's own authority between
- * those two calls recomputes a DIFFERENT normal form rather than silently
- * repeating the stale one. `requestedVendorId`'s in-scope test mirrors the
- * FGA/entry-constraint check the request goes on to face: a requested vendor
- * that is (no longer) in the entry's `constraints.vendors` normalizes to an
- * EMPTY scope, never to `[requestedVendorId]` regardless of authority.
+ * a freshly loaded entry and a fresh store read), so a change to the
+ * Mission's own authority, or to the vendors the store holds invoices for,
+ * between those two calls recomputes a DIFFERENT normal form rather than
+ * silently repeating the stale one. `requestedVendorId`'s in-scope test
+ * mirrors the FGA/entry-constraint check the request goes on to face: a
+ * requested vendor that is (no longer) in the entry's `constraints.vendors`
+ * normalizes to an EMPTY scope, never to `[requestedVendorId]` regardless of
+ * authority. An unconstrained entry's scope is every vendor the read would
+ * return (#828 step 5), so the digest, the result filter and Resource policy
+ * all name the same actual targets.
  */
 function deriveVendorScope(
   entry: AuthorityEntry | undefined,
   requestedVendorId: string | undefined,
+  invoiceVendorIds: readonly string[],
 ): { vendor_scope: string[]; vendor_scope_source: "requested" | "entry" | "all" } {
   const allowedVendors = entry?.constraints?.vendors;
   if (requestedVendorId !== undefined) {
@@ -350,7 +356,7 @@ function deriveVendorScope(
   if (allowedVendors) {
     return { vendor_scope: [...allowedVendors].sort(), vendor_scope_source: "entry" };
   }
-  return { vendor_scope: [], vendor_scope_source: "all" };
+  return { vendor_scope: [...new Set(invoiceVendorIds)].sort(), vendor_scope_source: "all" };
 }
 
 /**
@@ -755,9 +761,8 @@ export interface EnforceResult {
   /**
    * @spec runtime#read-binding — present on a permitted `bindsVendorScope`
    * action (list_invoices): the vendor ids the bound result set is limited
-   * to. Absent only when the matched entry carries no vendor constraint and
-   * the caller requested no `vendor_id` (entitled to, and requesting, every
-   * vendor already).
+   * to, the normalized `vendor_scope` (for an unconstrained entry, every
+   * vendor the store held invoices for at the decision).
    */
   list_vendor_scope?: string[];
   /** Present on a requestable denial: the ARAP access-request context. */
@@ -1370,33 +1375,44 @@ export class Pep {
       const entry = view.authority_set.find(
         (e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action),
       );
-      const requestedVendorId = args.vendor_id !== undefined ? String(args.vendor_id) : undefined;
-      const scope = deriveVendorScope(entry, requestedVendorId);
+      // @spec runtime#input-resource-policy (#828 step 5): a named vendor_id
+      // is the vendor the payments store resolved, never the argument, as
+      // for lookup_vendor (D324); a vendor the store does not hold is refused
+      // here, before any decision, as get_invoice refuses an unknown invoice.
+      let requestedVendorId: string | undefined;
+      if (args.vendor_id !== undefined) {
+        requestedVendorId = this.deps.payments.getVendor(String(args.vendor_id))?.id;
+        if (requestedVendorId === undefined) return await this.refuse(token, "unknown_vendor", mapping.action, view);
+      }
+      const scope = deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds());
       listEffective = buildListEffectiveParams({ action: mapping.action, resource: CANONICAL_RESOURCE, ...scope });
       listDigest = parameterDigest(listEffective);
       // The RESULT-SET filter (server.ts's execute()) is a SEPARATE,
       // additional authorization-enforcement control, not the binding itself:
-      // "all" (unconstrained entry) filters nothing (undefined = every
-      // vendor), the other two sources filter to exactly the normalized scope.
-      listVendorScope = scope.vendor_scope_source === "all" ? undefined : scope.vendor_scope;
+      // every source filters to exactly the normalized scope, so an invoice
+      // for a vendor the decision never named is never returned.
+      listVendorScope = scope.vendor_scope;
       if (requestedVendorId !== undefined) {
         // A named vendor_id binds through the SAME vendor-constraint check
         // every invoice-scoped action here uses (out-of-scope -> denied
         // out_of_authority at the FGA step below, same as get_invoice).
         resourceObj = { type: "vendor", id: requestedVendorId, properties: { vendor_id: requestedVendorId } };
-      } else if (scope.vendor_scope_source === "entry") {
-        // Bulk form, vendor-constrained entry: bind the RESULT SET to the
-        // entry's own scope (never the unconstrained store). The set-level
-        // authority is the Mission Record's own entry.constraints.vendors,
-        // read directly here, not derived from the FGA check below.
+      } else {
+        // Bulk form: bind the RESULT SET to the normalized scope, the
+        // entry's own allowlist (never the unconstrained store) or, for an
+        // unconstrained entry, every vendor the store holds invoices for.
+        // A vendor-constrained entry's set-level authority is the Mission
+        // Record's own entry.constraints.vendors, read directly here, not
+        // derived from the FGA check below.
         //
         // @spec runtime#read-binding: finding 3 (PR #612 author review), the
         // FGA/PDP request names the FULL collection, not just one
         // representative member: `vendor_ids` carries every vendor this read
         // is about to return, and evaluateInner's step 6a checks each one
-        // independently (a denial on ANY member denies the whole read). An
-        // empty allowlist still denies, since UNSCOPED_VENDOR_OBJECT names no
-        // real vendor. `id`/`vendor_id` still name one representative member
+        // independently, as Resource policy checks every member at step 6b
+        // (a denial on ANY member denies the whole read, with no narrowed
+        // result). An empty set still denies, since UNSCOPED_VENDOR_OBJECT
+        // names no real vendor. `id`/`vendor_id` still name one representative member
         // (the step-6 single check, unchanged, still runs first) so every
         // OTHER single-object caller of this request shape is unaffected;
         // `vendor_ids` is what makes the per-member check happen at all. The
@@ -1410,11 +1426,6 @@ export class Pep {
           id: representative,
           properties: { vendor_id: representative, vendor_ids: scope.vendor_scope },
         };
-      } else {
-        // Bulk form, unconstrained entry: already entitled to every vendor,
-        // so the read is bound to that full, documented scope, not an
-        // accident of the tool's default arguments.
-        resourceObj = { type: "vendor", id: UNSCOPED_VENDOR_OBJECT, properties: {} };
       }
     }
 
@@ -1850,7 +1861,7 @@ export class Pep {
           const fresh = buildListEffectiveParams({
             action: listEffective.action,
             resource: listEffective.resource,
-            ...deriveVendorScope(entry, requestedVendorId),
+            ...deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
           });
           return parameterDigest(fresh);
         }
@@ -2167,7 +2178,7 @@ export class Pep {
     const fresh = buildListEffectiveParams({
       action: effective.action,
       resource: effective.resource,
-      ...deriveVendorScope(entry, requestedVendorId),
+      ...deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
     });
     const freshDigest = parameterDigest(fresh);
     if (freshDigest !== expectedDigest) {

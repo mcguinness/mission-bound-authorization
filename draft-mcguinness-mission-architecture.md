@@ -2687,11 +2687,16 @@ Each level includes the one before it:
   are issued, the subset rule.
 
   Where the binding gates issuance, a deployment that adds only a
-  freshness surface (Mission Status or introspection with a published
-  staleness bound, {{I-D.draft-mcguinness-oauth-mission-status}})
-  gains state-aware reliance: a revocation cutoff within that bound,
-  without per-action enforcement. That is a half-step into the next
-  level, not a level of its own.
+  freshness surface (Mission Status, introspection, or the OAuth
+  binding's issuer-local resolution, with a published staleness
+  bound, {{I-D.draft-mcguinness-oauth-mission-status}},
+  {{I-D.draft-mcguinness-oauth-mission}}) gains state-aware reliance:
+  a revocation cutoff within that bound, without per-action
+  enforcement. That is a half-step into the next level, not a level
+  of its own. A per-use read stops requests that arrive after the
+  revocation commits; it does not exclude an effect admitted before
+  it, which needs a serialization boundary between the revocation and
+  the effect.
 
   **Verification**: illustrative scenarios for this level, each traced
   to the rule its home document states, are in
@@ -3343,9 +3348,10 @@ The OAuth binding's invariants carry the deployment:
 
 The deployment sizes token lifetime to its tolerated staleness. Where
 the authorization server offers introspection, a resource server that
-introspects per request stops honoring a token at its next request
-once the Mission leaves `active`, with no Mission-specific code
-({{I-D.draft-mcguinness-oauth-mission}}).
+introspects per request, or uses the binding's issuer-local resolution
+inside the issuer's boundary, stops honoring a token at its next
+request once the Mission leaves `active`, with no Mission-specific
+code ({{I-D.draft-mcguinness-oauth-mission}}).
 
 The deployment claims approved-record integrity and bounded revocation
 latency ({{assurance-claims-axis}}); {{deployment-profile-examples}}
@@ -4257,6 +4263,13 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The freshness half-step names the OAuth binding's issuer-local
+  resolution of opaque tokens beside Mission Status and
+  introspection, and the issuance-only deployment names it as the
+  local equivalent of per-request introspection; a fresh read does
+  not by itself exclude an effect admitted before a revocation
+  commits (#1203).
 
 - Approval and Lifecycle states the OAuth lifecycle as `active`,
   Mission Status's `suspended`, and `terminated` with a reason from

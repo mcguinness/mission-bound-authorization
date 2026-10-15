@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "951d6242665bee2fd0214e13f1b17835dcd04f7b",
-    "content_sha256": "65f7a4cf503c1064f31f8976cff2b53d8a5fd41aac8c64dbaaa95e1b1c3ee1e3"
+    "revision": "63c5f6bd0bbd623f69453cfa8ea0f8c6340024ed",
+    "content_sha256": "b6130b911604bf053e963784d51b44475f1f890ab8f06716b77d09215426ead5"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "1c07de2093994575b1b4d39c6fd21cfe2848c045",
@@ -4409,6 +4409,30 @@
    "notes": "#760 extended this row's citation instead of adding a semantic row: `authority_source` is named beside `approval_basis` in the introspection member list and its issuer-only sentence, the member-scoped disclosure sentence, the Mission Issuer conformance bullet, and the OAuth Token Introspection Response registration. The cited disclosure test asserts the disclosed shape exactly (`type` plus organizational `policy.id`/`policy.version`, no `digest`)."
   },
   {
+   "id": "core.discovery.held-credential-no-substitution",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "discovery",
+   "text": "A client performing a task under a Mission MUST NOT present, for that task, a credential that is not Mission-bound, such as an ordinary access token it already holds, unless a deployment-defined, trusted enforcement path establishes that Mission for the request and applies the Mission's authority and lifecycle controls to it.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a client holding both a Mission-bound token and an ordinary credential for the same resource sends no request for the Mission's task under the ordinary credential, including after a Mission refusal or once the Mission is no longer active, except through a deployment-defined enforcement path that establishes the Mission for the request and applies its authority and lifecycle controls; a Mission identifier the client supplies, or documentation alone, is not such a path"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D412 (#1205). Observable at the client, by a harness that drives it, or by a layer that mediates its requests: an AS or resource server cannot generally tell that an ordinary-credential request serves a Mission, and the Mission-governed registration tests in rar-carriage.test.ts witness the AS, not this client rule. Todo until a client implementation witnesses held-credential fallback refusal and an explicitly enforced joined path."
+  },
+  {
    "id": "derivation-limits.enforcement.derivation-cap-exhaustion",
    "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
    "anchor": "enforcement",
@@ -7357,7 +7381,7 @@
    "id": "core.introspection.opaque-requires-introspection",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "introspected-consumption",
-   "text": "an AS issuing opaque Mission-bound tokens MUST offer introspection for them with the members this mode names",
+   "text": "an AS issuing opaque Mission-bound tokens MUST offer introspection for them with the members this mode names, unless every resource server that consumes them uses issuer-local resolution",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -7368,7 +7392,7 @@
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment issuing opaque Mission-bound tokens exposes introspection for them carrying the mode's members"
+    "normative": "a deployment issuing opaque Mission-bound tokens that any resource server consumes other than through issuer-local resolution exposes introspection for them carrying the mode's members"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -7440,6 +7464,182 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
+  },
+  {
+   "id": "core.introspection.local-resolution-own-record",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST resolve the presented token to that token's own issuer-qualified issuance or grant record",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "issuer-local resolution takes expiry, revocation and grant validity, audience, composite active state and authority from the presented token's own issuer-qualified issuance or grant record; an unknown, expired, revoked or wrong-audience token is refused at the resource while its Mission is active"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness presents unknown, expired, revoked and wrong-audience tokens under an active Mission."
+  },
+  {
+   "id": "core.introspection.local-resolution-not-mission-lookup",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "Mission state alone, or a lookup by Mission identifier, never establishes a token's validity or authority",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token whose own record is absent or invalid is refused although a lookup by its Mission identifier finds an active Mission"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness presents an unknown token that names an active Mission's identifier."
+  },
+  {
+   "id": "core.introspection.local-resolution-caller-authorization",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST authorize the resource server and minimize disclosure to it as {{caller-authorization-and-minimization}} requires for an introspection caller",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "issuer-local resolution yields nothing to a resource server that is not an audience of the token, and yields to an audience only its audience-filtered entries and the member-scoped Mission data it may receive"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. The qualification of a resolving resource server (inside the issuer's trusted implementation boundary, authorized to read its committed state) is a deployment trust input, not an observable obligation. A witness resolves a token at an unauthorized resource server and at a wrong audience."
+  },
+  {
+   "id": "core.introspection.local-resolution-projection",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST yield, when the token is active, only what an active response for that token carries in this mode",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an active issuer-local resolution yields the token's own audience-filtered authorization_details, mission, aud, act where delegated and cnf where sender-constrained, never the Mission's Authority Set or authority the token does not carry"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness resolves a token narrower than its Mission and a delegated token, and checks that only the token's own authority is enforced."
+  },
+  {
+   "id": "core.introspection.local-resolution-inactive-or-unavailable",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "resolves as inactive and yields no authority; missing or unavailable state yields no valid resolution",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an unknown, invalid, expired or revoked token or a non-active Mission resolves as inactive with no authority, and missing or unavailable state yields no resolution, so the resource refuses"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A witness makes the committed state unavailable, and terminates the Mission between two requests."
+  },
+  {
+   "id": "core.introspection.local-resolution-rs-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "cannot obtain a valid introspection response or issuer-local resolution for an opaque Mission-bound token MUST refuse the request",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS that cannot obtain a valid issuer-local resolution for an opaque Mission-bound token refuses the request rather than serve it from a cached or out-of-band belief"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. The issuer-local facet of the clause core.introspection.opaque-rs-fail-closed quotes; that row keeps the introspection facet."
+  },
+  {
+   "id": "core.introspection.local-resolution-rs-stands-in",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "the resolution stands in for the introspection response, possession proof and fail-closed refusal included",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS consuming an issuer-local resolution verifies active, its own identity in aud and possession of the key cnf names, and enforces the resolved authorization_details as it would an introspection response; a request without the bound key's proof is refused"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. The introspection-response form of these RS duties is #904's inventory; this row covers only the issuer-local form. A witness presents a sender-constrained token without valid proof."
+  },
+  {
+   "id": "core.introspection.local-resolution-per-use",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "each resolution is one per-use observation, not a cacheable assertion",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS resolves on every use, so a token revoked or a Mission terminated after an earlier successful resolution is refused on its next request"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A per-use read stops later requests only; excluding an effect admitted before a revocation commits needs a serialization boundary (#250), which this row does not claim."
   },
   {
    "id": "core.anchors.entry-commitment",
@@ -15469,9 +15669,21 @@
      "name": "independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > Mission authority refusing still denies where the stored entitlement permits",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > a policy refusing one vendor refuses the whole unconstrained read resource_policy with no result, while a read naming the other vendor permits",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > an unconstrained list names every invoice vendor to the stored policy: revoking only one vendor's entitlement refuses the whole read resource_policy, a read of the other vendor still permits, and restoring it permits both, the same over both channels (#828 step 5)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#828. The PDP now has an independent Resource-policy conjunct: a ResourcePolicy bound to the decision point, asked at evaluate() step 6b with the authenticated subject, client, action and targets and nothing Mission-derived, denying resource_policy. The unit truth table controls the Mission-authority and Resource-policy outcomes separately with named fixtures, and each cell was verified by disabling the step-6b refusal. A policy that cannot answer yields no decision, never a permit. Moved partial -> tested under #828's ledger rule, which required the real-OpenFGA assertion: the two OpenFGA citations (revoking only the stored entitlement denies resource_policy where the Mission permits, and restoring it permits; the Mission refusing denies where the entitlement permits) passed against a live OpenFGA in impl-ci at faf9250d. Since main's merge their requests carry the neutral credential authority #825 PR 2b requires (D341) and nothing else changed; they skip locally, so the impl-ci run at the merged head confirms them, and this row reverts to partial if it does not."
+   "notes": "#828. The PDP now has an independent Resource-policy conjunct: a ResourcePolicy bound to the decision point, asked at evaluate() step 6b with the authenticated subject, client, action and targets and nothing Mission-derived, denying resource_policy. The unit truth table controls the Mission-authority and Resource-policy outcomes separately with named fixtures, and each cell was verified by disabling the step-6b refusal. A policy that cannot answer yields no decision, never a permit. Moved partial -> tested under #828's ledger rule, which required the real-OpenFGA assertion: the two OpenFGA citations (revoking only the stored entitlement denies resource_policy where the Mission permits, and restoring it permits; the Mission refusing denies where the entitlement permits) passed against a live OpenFGA in impl-ci at faf9250d. Since main's merge their requests carry the neutral credential authority #825 PR 2b requires (D341) and nothing else changed; they skip locally, so the impl-ci run at the merged head confirms them, and this row reverts to partial if it does not. #828 step 5: a collection read names every vendor it returns as a target, so a policy refusing any one refuses the whole read resource_policy with no result, shown with a fixture over both channels and against the live stored policy."
   },
   {
    "id": "runtime.decision-inputs.constraint-evaluation-and-unenforceable-refusal",
@@ -17156,9 +17368,21 @@
      "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an unconstrained read names every vendor the store holds invoices for: the policy is asked about each, and the parameter digest binds that set",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an invoice for a vendor the decision never named is never returned: before the last check it is a parameter mismatch, after it the bound filter drops it",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> parameter_violation, #801: the entry is matched, only this vendor is excluded by its own constraint; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. #612 finding 3 fix: the FGA/PDP request now names the FULL collection (resource.properties.vendor_ids, populated in pep.ts's bindsVendorScope \"entry\" branch), and evaluateInner's step 6a checks every named member independently, denying the WHOLE read the moment any one member is refused (out_of_authority for an independent policy denial; parameter_violation for a member the entry's own vendors constraint excludes, #801) (fail-closed choice: the response contract has no lane for a partially narrowed permit). Proven with a stub Fga (denies one specific vendor object) at both the pure evaluateInner level and the full pep.ts->server.ts integration level, since this domain model's contextual-tuple-only grant mechanism has no way to make a LIVE OpenFGA check independently disagree with the Mission's own allowlist. There is still no genuine persisted Resource-policy layer distinct from the Mission's authority_set in this deployment (a `resource_policy` denial reason is named in the draft's failure classification but implemented nowhere here), so the stub proves the MECHANISM (every named member is actually checked) rather than a real independent policy disagreement. entry_digest still anchors only the Mission ceiling; it was never evidence of Resource-policy's independent say and still is not."
+   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> parameter_violation, #801: the entry is matched, only this vendor is excluded by its own constraint; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga, although their titles say Resource policy. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: an unconstrained read's normal form carries every vendor the payments store holds invoices for, so its parameter digest binds the read's actual targets; a change to them between decision and execution is parameter_mismatch, and the result is filtered to the bound set."
   },
   {
    "id": "runtime.read-binding.floor-and-no-misclassification",
@@ -17252,9 +17476,21 @@
      "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an unconstrained read names every vendor the store holds invoices for: the policy is asked about each, and the parameter digest binds that set",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an invoice for a vendor the decision never named is never returned: before the last check it is a parameter mismatch, after it the bound filter drops it",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3 fix: the FGA/PDP request now names the FULL collection (resource.properties.vendor_ids, populated in pep.ts's bindsVendorScope \"entry\" branch), and evaluateInner's step 6a checks every named member independently, denying the WHOLE read the moment any one member is refused (out_of_authority for an independent policy denial; parameter_violation for a member the entry's own vendors constraint excludes, #801) (fail-closed choice: the response contract has no lane for a partially narrowed permit). Proven with a stub Fga (denies one specific vendor object) at both the pure evaluateInner level and the full pep.ts->server.ts integration level, since this domain model's contextual-tuple-only grant mechanism has no way to make a LIVE OpenFGA check independently disagree with the Mission's own allowlist. There is still no genuine persisted Resource-policy layer distinct from the Mission's authority_set in this deployment (a `resource_policy` denial reason is named in the draft's failure classification but implemented nowhere here), so the stub proves the MECHANISM (every named member is actually checked) rather than a real independent policy disagreement. entry_digest still anchors only the Mission ceiling; it was never evidence of Resource-policy's independent say and still is not."
+   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga, although their titles say Resource policy. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: the unconstrained bulk form is bound to the vendors the store holds invoices for, named as targets and digested, not to a placeholder."
   },
   {
    "id": "runtime.metering.unmetered-bound-refusal",

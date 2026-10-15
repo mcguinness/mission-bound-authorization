@@ -1927,17 +1927,18 @@ export class McpPaymentsServer {
   /**
    * @spec runtime#read-binding — `listVendorScope` is the PEP's bound result
    * scope for `list_invoices` (`Pep.enforceInner`'s `bindsVendorScope`
-   * branch): the vendor ids the permitted read is limited to, absent only
-   * when the Mission's entry is unconstrained and no `vendor_id` was
-   * requested. The store filter on `args.vendor_id` stays as a first pass;
+   * branch): the vendor ids the permitted read is limited to, for an
+   * unconstrained entry every vendor the store held invoices for at the
+   * decision. The store filter on `args.vendor_id` stays as a first pass;
    * this filter is the actual binding enforcement, applied regardless of
-   * what the caller asked for.
+   * what the caller asked for, and an absent scope returns nothing.
    */
   private execute(tool: string, args: Record<string, unknown>, listVendorScope?: string[]): unknown {
     switch (tool) {
       case "list_invoices": {
         const invoices = this.deps.payments.listInvoices(args.vendor_id ? String(args.vendor_id) : undefined);
-        return listVendorScope ? invoices.filter((inv) => listVendorScope.includes(inv.vendor_id)) : invoices;
+        const scope = listVendorScope ?? [];
+        return invoices.filter((inv) => scope.includes(inv.vendor_id));
       }
       case "get_invoice":
         return this.deps.payments.getInvoice(String(args.invoice_id));
