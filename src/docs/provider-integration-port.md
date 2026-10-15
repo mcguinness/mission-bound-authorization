@@ -356,7 +356,9 @@ the store.
   - `{#approval-event}` step 7 is not met. The record commits `active` before
     the grant exists, and one request before the code is issued. A client
     that never follows the redirect leaves an `active` Mission with a bound
-    grant and no code. No test yet.
+    grant and no code. No test yet. #916 owns the local ordering (a
+    deterministic grant id or a serialized association); the cross-store
+    atomicity stays with #250.
   - A repeated decision on one interaction binds a second grant to the
     committed record. `kernel.approve` returns the stored record, and
     `decide()` saves and binds a new grant each time. `missions.grant_id`
@@ -400,7 +402,7 @@ the store.
   - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a rotating refresh: the rotated refresh token and the new access token expire no later than the Mission` (`exp-clamp.test.ts`)
   - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a credential minted with under one second of Mission left is refused, never given a 0 s or overrunning lifetime` (`exp-clamp.test.ts`)
   - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed with under one second of Mission left redirects access_denied, never invalid_grant, and issues no code` (`exp-clamp.test.ts`)
-  - `async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens)` (`async-delegation.test.ts`)
+  - `async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused invalid_grant with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens, mission#issuance-gating)` (`async-delegation.test.ts`)
 - **Tests (kernel-level):** `single-process control-plane fault boundaries > a derivation admitted from a stale snapshot cannot overshoot the cap` (`control-plane-faults.test.ts`).
 - **Unsupported or residual.**
   - The counter is not coupled to the token it pays for (§4.3; #250).
@@ -438,8 +440,10 @@ the store.
     signed and returned. `{#issuance-gating}` refuses a derivation answered
     after an acknowledged revocation. Code reading; no test yet; #250 owns the
     race (§4.6).
-  - No operation identity: a retry after a lost token response is a new,
-    separately counted derivation (§4.4).
+  - No operation identity: nothing replays a lost token response. A retry
+    of the same authorization code, or of a rotated refresh token, is reuse
+    and revokes the grant; a retry of a refresh token that has not rotated
+    is a new, separately counted derivation (§4.4).
 
 ### 3.6 Refresh and revocation gating
 
@@ -676,7 +680,12 @@ order:
 A JWT-only Resource Server accepts the token from step 3 on, without the AS
 knowing it was delivered. No authoritative issuance commit exists across the
 provider and Mission stores. Defining one is #250's first acceptance item
-(§4.6).
+(§4.6). The boundary cases this leaves open (a revocation between the gate
+and signing, a failure after counting, a failure after signing, a failure
+after index acceptance, a lost code-exchange or refresh response), each with
+its outcome and owner, are listed in
+[issuance-only-deployment.md](issuance-only-deployment.md) §4; D408 accepts
+them as unsupported for that reference deployment.
 
 ### 4.3 Failed-issuance counting
 
@@ -726,9 +735,13 @@ provider and Mission stores. Defining one is #250's first acceptance item
   `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refused rotating refresh leaves the same refresh token valid: once the trusted mapping is repaired it succeeds once, and its reuse gets the ordinary replay treatment`.
   A non-rotating refresh token can be presented again, and each use is a new
   derivation.
-- **Access-token issuance.** No operation identity. A retry after a lost
-  response is a fresh derivation, counted again. An earlier token, if it was
-  signed, stays valid until `exp`. No recorded artifact is replayed.
+- **Access-token issuance.** No operation identity, and no recorded artifact
+  is replayed. A retry after a lost response follows the two bullets above. A
+  retried code exchange is code reuse: refused `invalid_grant` before anything
+  is counted, and the grant it revokes makes the lost token introspect
+  `active: false`. A retried refresh on a refresh token that has not rotated
+  is a fresh derivation, counted again, and the lost token stays valid until
+  `exp`.
 - **Lifecycle operations.** Nonce-keyed replay of the committed outcome
   ([control-plane-deployment.md](control-plane-deployment.md)).
 
@@ -737,8 +750,9 @@ provider and Mission stores. Defining one is #250's first acceptance item
 `buildAuthorizationServer` awaits `kernel.recoverAtBoot()` after the provider
 exists. It marks deliveries owed to removed subscribers, drains the outbox,
 prunes settled rows and tombstone detail, and marks unreleased reservations
-`unacknowledged` (`kernel.ts`). For this path, a restart on the file-backed
-kernel leaves:
+`unacknowledged` (`kernel.ts`). The shipped issuance-only launcher uses the
+in-memory default, so a restart there loses the Mission kernel as well. For
+this path, a restart on the file-backed kernel leaves:
 
 - **Retained:** Mission Records, their committed authority-source roots,
   `derivation_count`, `grant_id`, lifecycle events and tombstones.
@@ -752,6 +766,10 @@ kernel leaves:
   `exp` (`issuance-only-deployment.md` §2).
 - **Stranded:** an `active` Mission whose grant is gone. Nothing can derive
   from it, and it stays `active` until `expires_at` or a revocation.
+
+A restart is not revocation: a consumer holding the old key keeps accepting
+pre-restart tokens until `exp` plus tolerance. Durable signing identities are
+#831's.
 
 Committed authority-source roots are the one thing reconciled at kernel
 construction (#827). A row that predates them gains one only from trusted
@@ -786,10 +804,11 @@ durable projections with a rollback witness, and the emergency rows and
 closure. Multi-process serialization stays with #641. This document claims
 none of that work.
 
-These gaps are not named in #250's items, and their owner is not verified:
+These gaps are not named in #250's items:
 
-- the approval commit ordering against code issuance (§3.4);
-- external Subjects (§3.2).
+- the approval commit ordering against code issuance (§3.4), whose local
+  ordering #916 owns;
+- external Subjects (§3.2), whose owner is not verified.
 
 The state gate after rotation (§3.6) is partly fixed by the refresh pre-check
 (#914). What remains, a state change between the pre-check and the save-time
