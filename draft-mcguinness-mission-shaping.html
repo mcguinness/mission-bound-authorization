@@ -1853,10 +1853,29 @@ keyed on the Intent (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class=
 proposal format and the narrowing rule are interoperable, so the
 result is enforceable and auditable across domains, and only the
 Mission Issuer's choice of what to narrow to stays local.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
-<p id="section-6.2-3">The proposal <span class="bcp14">MUST NOT</span> present issuer outputs as approved authority: the
+<p id="section-6.2-3">When a task's entries at different resource servers concern one
+object, such as the reservation and the payment for one order, the
+shaper can propose each entry pinned to the same reference, each in
+its own resource server's vocabulary. A leg on another reference then
+falls outside its entry. A pin in the entry at approval binds the
+legs to the approved reference and the content disclosed with it.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4">Where the object does not exist at approval, as when the agent places
+the order only after approval, the agent adds the pin later by
+narrowing its own token, for an entry type that supports narrowing
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Self-Exchange
+Down-Scoping"). That agent-chosen pin binds the legs to each other,
+not to approved content: an agent that pins the wrong order on every
+leg produces legs that agree. Approval of the object's content comes
+from an action-bound approval at the step that creates or commits it
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Action-Bound
+Approval"), or from the system of record. Mission Runtime Evidence
+describes how a comparing party checks the legs afterward
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>, Section
+"Cross-Entry Correspondence").<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">The proposal <span class="bcp14">MUST NOT</span> present issuer outputs as approved authority: the
 derived Authority Set is the Mission Issuer's product
 (<a href="#proposes-only" class="auto internal xref">Section 3.2</a>). Shaping Evidence that records the same facts is
-for audit only and is never an input to derivation.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+for audit only and is never an input to derivation.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authority-ceiling">
@@ -2809,6 +2828,10 @@ registered.<a href="#section-14-1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime-evidence">[I-D.draft-mcguinness-mission-runtime-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Runtime Evidence"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-approval">[I-D.draft-mcguinness-oauth-mission-approval]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Deferred Approval for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html</a>&gt;</span>. </dd>
@@ -3001,77 +3024,83 @@ guessing (<a href="#clarifications" class="auto internal xref">Section 7.1</a>).
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">The Mission Intent no longer carries <code>success_criteria</code>, following
+          <p id="appendix-B-2.1.1">Authority Proposal describes entries that correspond across
+resource servers: each pinned to the same reference in its own
+vocabulary, with a pin the agent adds after approval binding the
+legs to each other, not to approved content (#1019).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">The Mission Intent no longer carries <code>success_criteria</code>, following
 the OAuth binding. The shaper writes completion outcomes, where
 useful, into <code>goal</code>; the default-deny posture and the
 delegation-bound description name <code>task_bounds</code> only, and the
 recommendation against encoding authority in <code>success_criteria</code>
-goes with the member.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Model Output Is Not Authority points to the OAuth binding's
-issuer-side counterpart: a model enters adjudication only as a
-recorded input to a deterministic policy, without changing any
-requirement of this document.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+goes with the member.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Restructured for readability without changing any requirement.
+          <p id="appendix-B-2.3.1">Model Output Is Not Authority points to the OAuth binding's
+issuer-side counterpart: a model enters adjudication only as a
+recorded input to a deterministic policy, without changing any
+requirement of this document.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">Restructured for readability without changing any requirement.
 Sections follow the processing model, and the shaper's role and the
 Authority Proposal each have one home. The construction table became
 a per-member list, the two examples became one end-to-end appendix
 showing the Intent, the Authority Proposal, and Shaping Evidence,
 and the Conformance section and "What Shaping Adds and Does Not"
 were folded into Conventions, Deployment Considerations, and the
-Introduction.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+Introduction.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Corrected statements against their sources: the derivation-refusal
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">Corrected statements against their sources: the derivation-refusal
 codes in Re-Shaping, the AAuth binding's intake (a natural-language
 proposal, not a Mission Intent), the narrowing mode that replaced
 the reproducibility rule, and open-ended invariants, which are
-Authority Proposal constraints rather than <code>task_bounds</code>.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+Authority Proposal constraints rather than <code>task_bounds</code>.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Reconciled the shaping-ceiling outcomes with Ambiguity Handling and
+        <li class="normal" id="appendix-B-2.6">
+          <p id="appendix-B-2.6.1">Reconciled the shaping-ceiling outcomes with Ambiguity Handling and
 defined a partial proposal; fixed the condition on the broadening
 record; named the parties the keywords bind; limited Shaping
 Evidence to consent disclosure and audit at the Mission Issuer;
 made signing and integrity envelopes consistent; and moved
-staleness to one client-side rule.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">Replaced the "sound shaper" idiom with BCP 14 keywords. Member
-guidance covers <code>goal_lang</code> and the <code>target_resources</code> containment
-rule, and <code>purpose</code> is chosen only when the request supports it.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+staleness to one client-side rule.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">Only a re-proposal after an authority refusal narrows; a
+          <p id="appendix-B-2.7.1">Replaced the "sound shaper" idiom with BCP 14 keywords. Member
+guidance covers <code>goal_lang</code> and the <code>target_resources</code> containment
+rule, and <code>purpose</code> is chosen only when the request supports it.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.8">
+          <p id="appendix-B-2.8.1">Only a re-proposal after an authority refusal narrows; a
 construction error is corrected without broadening. The
 derivation-limit and intent-bound-evidence guidance follow their
 owning drafts, and an ambiguity narrowing that drops necessary
-authority is a partial proposal.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+authority is a partial proposal.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">Renamed the <code>authority_source</code> resolution basis to
+        <li class="normal" id="appendix-B-2.9">
+          <p id="appendix-B-2.9.1">Renamed the <code>authority_source</code> resolution basis to
 <code>capability_projection</code>; retained evidence is not rewritten. The
 recommended evidence members are typed, with their applicability,
 new members for the outcome, the emitted proposal, the ceiling, the
 parent Mission, and the re-proposal chain, and a defined
 <code>source_digest</code>. A shaping ceiling is an <code>authorization_details</code>
 array, and one that must constrain authority requires an Authority
-Proposal.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.9">
-          <p id="appendix-B-2.9.1">The evidence hash travels in the <code>mission_shaping_evidence_hash</code>
-pushed authorization request parameter that Consent Evidence
-defines.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+Proposal.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.10">
-          <p id="appendix-B-2.10.1">Tightened the prose by removing restatement: previews in the
+          <p id="appendix-B-2.10.1">The evidence hash travels in the <code>mission_shaping_evidence_hash</code>
+pushed authorization request parameter that Consent Evidence
+defines.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.11">
+          <p id="appendix-B-2.11.1">Tightened the prose by removing restatement: previews in the
 Introduction, repeated scope and conformance statements, and
 sentences that restated an adjacent requirement. Two clarification
 requirements that said the same thing are one. No other requirement
-changed.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-15T16:58:04Z
-Source repository commit: 8274c41a86a94462c5bbee229112489aa38b0b2b
+Generated: 2026-10-15T22:27:27Z
+Source repository commit: f9a18fb06844f6b553b76a5329f62386566c27bf
 Member count: 9
 
 Reading order:
@@ -10182,11 +10182,16 @@ Table of Contents
      ]
    }
 
-   Mission-bound refresh tokens MUST be sender-constrained or use
-   refresh token rotation.  This strengthens Section 2.2.2 of [RFC9700],
-   which requires it only of public clients, because Mission-state
-   gating does not bound a stolen refresh token while the Mission is
-   active.
+   A Mission-bound refresh token is bound to the client it was issued
+   to.  For a confidential client, client authentication supplies the
+   binding: on refresh, the AS authenticates the client and verifies
+   that the refresh token was issued to it (Section 6 of [RFC6749]), so
+   the token need not also be bound to the DPoP proof key (Section 5 of
+   [RFC9449]).  A public client's refresh token MUST be sender-
+   constrained or use refresh token rotation (Section 2.2.2 of
+   [RFC9700]).  The AS can rotate either client type's refresh token;
+   rotation detects replay of a consumed refresh token (Section 4.14.2
+   of [RFC9700]) and is not a cryptographic binding.
 
    A derived token's authority comes from the Mission, not from a fresh
    authentication.  Authentication claims (acr, amr, auth_time) on a
@@ -13997,6 +14002,14 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Mission-Bound Access Tokens: a confidential client's refresh token
+      is bound to it by client authentication (Section 6 of RFC 6749),
+      and a public client's refresh token is sender-constrained or
+      rotated (Section 2.2.2 of RFC 9700).  The rule no longer reads as
+      requiring every refresh token to be sender-constrained or rotated,
+      and no longer claims to strengthen RFC 9700.  Rotation, open to
+      either client type, is replay detection, not a binding (#1204).
 
    *  Issuance Gating refuses a derivation from a Mission that is not
       active with invalid_request on a Token Exchange, as Section 2.2.2
@@ -21702,29 +21715,33 @@ Table of Contents
      6.7.  Worked example
      6.8.  Digest vector
    7.  Evidence Properties
-   8.  Extension Members
-   9.  Conformance
-     9.1.  Compromise-Boundary Outcomes
-   10. Security Considerations
-     10.1.  Decision Evidence versus Execution Evidence
-     10.2.  Evidence integrity and signing keys
-     10.3.  Transport
-     10.4.  Mission Receipt
-   11. Privacy Considerations
-     11.1.  Evidence as PII sinks
-     11.2.  Parameter exposure
-     11.3.  Actor chain and Mission correlation
+   8.  Cross-Entry Correspondence
+     8.1.  Limits
+     8.2.  The Comparing Party
+     8.3.  Relationship to the Action Evidence Boundary
+   9.  Extension Members
+   10. Conformance
+     10.1.  Compromise-Boundary Outcomes
+   11. Security Considerations
+     11.1.  Decision Evidence versus Execution Evidence
+     11.2.  Evidence integrity and signing keys
+     11.3.  Transport
      11.4.  Mission Receipt
-   12. IANA Considerations
-     12.1.  Media Type Registry
-       12.1.1.  Secured Runtime Evidence Media Type
-       12.1.2.  Decision Evidence Media Type
-       12.1.3.  Execution Evidence Media Type
-       12.1.4.  Refusal Record Media Type
-       12.1.5.  Mission Receipt Media Type
-   13. References
-     13.1.  Normative References
-     13.2.  Informative References
+   12. Privacy Considerations
+     12.1.  Evidence as PII sinks
+     12.2.  Parameter exposure
+     12.3.  Actor chain and Mission correlation
+     12.4.  Mission Receipt
+   13. IANA Considerations
+     13.1.  Media Type Registry
+       13.1.1.  Secured Runtime Evidence Media Type
+       13.1.2.  Decision Evidence Media Type
+       13.1.3.  Execution Evidence Media Type
+       13.1.4.  Refusal Record Media Type
+       13.1.5.  Mission Receipt Media Type
+   14. References
+     14.1.  Normative References
+     14.2.  Informative References
    Appendix A.  Document History
    Acknowledgments
    Author's Address
@@ -21914,13 +21931,13 @@ Table of Contents
    |             |           |keys, so a party with access to that    |
    |             |           |statement verifies a record             |
    |             |           |independently of the deployment that    |
-   |             |           |emitted it (Section 10.2)               |
+   |             |           |emitted it (Section 11.2)               |
    +-------------+-----------+----------------------------------------+
    |Portable     |not        |Not supplied by this document alone:    |
    |Evidence     |consumed   |portability beyond a party with access  |
    |             |           |to the deployment's published keys      |
    |             |           |requires the transparency mechanisms of |
-   |             |           |the audit profile (Section 10.2,        |
+   |             |           |the audit profile (Section 11.2,        |
    |             |           |[I-D.draft-mcguinness-mission-audit])   |
    +-------------+-----------+----------------------------------------+
 
@@ -22200,7 +22217,7 @@ Table of Contents
       (string, required).
 
    A Decision Evidence Object is closed to uncoordinated extension; see
-   Section 8 for the extension rule and the coordinated extension
+   Section 9 for the extension rule and the coordinated extension
    members a deployment following the AuthZEN profile commonly carries
    (taint, mission_history, authority_bound, capability_source,
    hop_reference, principal_mapping, join_view_id).
@@ -22346,17 +22363,17 @@ Table of Contents
       scope and audience the record serves (Section 4.3).
 
    hop_reference:  OPTIONAL.  An object, in the coordinated extension
-      form Section 8 defines.  Present only when the refusing component
+      form Section 9 defines.  Present only when the refusing component
       verified enough of the presented credential, before the failure,
       to establish it was a continued credential.
 
    evidence_envelope:  REQUIRED.  An object.  Integrity protection in
       the form of Section 4.3, emitted by the refusing component, whose
       JWS protected cty is application/mission-refusal-record+json under
-      the protected typ of Section 4.3 (Section 12).
+      the protected typ of Section 4.3 (Section 13).
 
    A Refusal Record is closed to uncoordinated extension under the same
-   rule as Decision Evidence (Section 8).
+   rule as Decision Evidence (Section 9).
 
    Refusal Records are per-attempt, immutable, and append-only: a
    sustained failure condition with a retrying agent yields one signed
@@ -22477,7 +22494,7 @@ Table of Contents
 
    Where the selected signing key is identified as compromised by the
    deployment-defined key-status mechanism, the verifier MUST apply the
-   compromise-boundary rule of Section 10.2 before treating the
+   compromise-boundary rule of Section 11.2 before treating the
    signature as verified: only an independently trusted existence proof
    over the complete signed artifact, or its unambiguous typed digest,
    establishing existence before the authenticated boundary permits the
@@ -22487,7 +22504,7 @@ Table of Contents
    The JWS protected header MUST carry:
 
    *  kid: a key identifier resolvable in the emitter's published JWKS
-      (Section 10.2), so a verifier can select the emitter's signing key
+      (Section 11.2), so a verifier can select the emitter's signing key
       independently.
 
    *  alg: ES256 [RFC7518] is mandatory to implement; an implementation
@@ -22495,7 +22512,7 @@ Table of Contents
 
    *  typ: application/mission-runtime-evidence+jws, the secured
       runtime-evidence representation this document registers
-      (Section 12): one value for every record kind this envelope
+      (Section 13): one value for every record kind this envelope
       secures, identifying the complete JWS ([RFC7515], Section 4.1.9).
 
    *  cty: the registered media type of the evidence object being signed
@@ -22503,7 +22520,7 @@ Table of Contents
       evidence+json for Decision Evidence, application/mission-
       execution-evidence+json for Execution Evidence, application/
       mission-refusal-record+json for Refusal Records, and application/
-      mission-receipt+json for Mission Receipts (Section 12).  A
+      mission-receipt+json for Mission Receipts (Section 13).  A
       verifier MUST reject a JWS whose protected typ is not application/
       mission-runtime-evidence+jws or whose protected cty is not the
       media type of the object it is verifying, so signatures over one
@@ -22804,7 +22821,7 @@ Table of Contents
       audience the record serves (Section 4.3).
 
    hop_reference:  OPTIONAL.  An object, in the coordinated extension
-      form Section 8 defines.  Present when the linked Decision Evidence
+      form Section 9 defines.  Present when the linked Decision Evidence
       carries one.
 
    attempted_at:  OPTIONAL.  An RFC 3339 timestamp.  Timing context.
@@ -22820,7 +22837,7 @@ Table of Contents
       format (string, required) and a value (string, required).
 
    An Execution Evidence Object is closed to uncoordinated extension
-   under the same rule as Decision Evidence (Section 8): coordinated
+   under the same rule as Decision Evidence (Section 9): coordinated
    companion members (for example, the metering companion's
    measured_duration) are permitted, any other extension MUST use a
    collision-resistant name, and a consumer MUST ignore members it does
@@ -23016,7 +23033,7 @@ Table of Contents
       format (string, required) and a value (string, required).  The
       default format is jws-compact; the JWS protected typ is that of
       Section 4.3 with a cty of application/mission-receipt+json
-      (Section 12).
+      (Section 13).
 
    kind:  REQUIRED.  A string.  One of decision, execution, or refusal
       (Section 6.1).
@@ -23037,7 +23054,7 @@ Table of Contents
       enforcement scope statement already names (the PDP, or an
       executing PEP), and the statement declares which of them issue
       receipts; the verifier resolves the signing key through that
-      statement's published key sets (Section 10.2) and rejects an
+      statement's published key sets (Section 11.2) and rejects an
       emitter the statement does not name as a receipt issuer.  A self-
       published key presenting role receipt_issuer establishes nothing
       (Section 6.5).
@@ -23106,7 +23123,7 @@ Table of Contents
    type:  REQUIRED.  A string.  The referenced record's registered media
       type: application/mission-decision-evidence+json, application/
       mission-execution-evidence+json, or application/mission-refusal-
-      record+json (Section 12, Section 4, Section 5, Section 4.2).
+      record+json (Section 13, Section 4, Section 5, Section 4.2).
 
    digest:  REQUIRED.  A string.  A sha-256: prefixed digest, classified
       under the substrate's default commitment construction
@@ -23174,7 +23191,7 @@ Table of Contents
    rely on a receipt if any step fails.  Where the receipt issuer's
    signing key is identified as compromised, these steps are
    additionally governed by the compromise-boundary rule of
-   Section 10.2:
+   Section 11.2:
 
    1.  Verify the receipt's evidence_envelope: decode the JWS payload,
        compute the JCS canonical bytes of the receipt with
@@ -23184,7 +23201,7 @@ Table of Contents
        protected cty is application/mission-receipt+json, and verify the
        signature against the published key resolved by the JWS kid for
        the party named in emitter, through the enforcement scope
-       statement's published key sets (Section 10.2).  Confirm that
+       statement's published key sets (Section 11.2).  Confirm that
        statement names the emitter as a receipt issuer; the receipt's
        Mission binding is established by the verified records and the
        joins of step 4, never by key publication alone.
@@ -23435,7 +23452,7 @@ Table of Contents
    |           |that carried |                                         |record      |
    |           |the action   |                                         |contents and|
    |           |(Section     |                                         |linked state|
-   |           |10.2);       |                                         |evidence,   |
+   |           |11.2);       |                                         |evidence,   |
    |           |retired keys |                                         |not         |
    |           |stay         |                                         |consequences|
    |           |resolvable   |                                         |of signature|
@@ -23450,7 +23467,7 @@ Table of Contents
    |           |compromise-  |                                         |            |
    |           |boundary rule|                                         |            |
    |           |of           |                                         |            |
-   |           |Section 10.2:|                                         |            |
+   |           |Section 11.2:|                                         |            |
    |           |an artifact's|                                         |            |
    |           |own asserted |                                         |            |
    |           |timestamps   |                                         |            |
@@ -23477,13 +23494,172 @@ Table of Contents
    |           |emitting     |                                         |            |
    |           |deployment   |                                         |            |
    |           |(Section     |                                         |            |
-   |           |10.2)        |                                         |            |
+   |           |11.2)        |                                         |            |
    +-----------+-------------+-----------------------------------------+------------+
 
    Table 2: Evidence properties: what the records prove, and under which
                                  conditions
 
-8.  Extension Members
+8.  Cross-Entry Correspondence
+
+   This section is informative.  It adds no member and no requirement to
+   this document or the runtime profile.
+
+   Each record describes one action at one decision or enforcement
+   point.  A task whose actions reach several resource servers can fail
+   while every per-action decision is correct: an inventory service
+   reserves item A, and a payment service charges for item B.  Whether
+   the outcomes of two Authority Set entries correspond is a comparison
+   across records, which no single decision makes.  The records support
+   that comparison in three ways:
+
+   *  *Bind.* The approved entries can pin one shared reference, such as
+      an order identifier, each in its own resource server's vocabulary
+      ([I-D.draft-mcguinness-mission-shaping], Section "Authority
+      Proposal").  A leg on any other reference falls outside its entry:
+      issuance refuses it under the subset rule
+      ([I-D.draft-mcguinness-oauth-mission], Section "Subset Rule"), and
+      a runtime decision denies it at the point of use.  A pin present
+      in the entry at approval binds the legs to the approved reference
+      and the content disclosed with it.  A pin the agent adds after
+      approval, by narrowing its own token
+      ([I-D.draft-mcguinness-oauth-mission], Section "Self-Exchange
+      Down-Scoping"), binds the legs to each other and not to approved
+      content.
+
+   *  *Evidence.* Each leg's Execution Evidence links by evaluation_id
+      to Decision Evidence, and through authorizing_entry or
+      entry_digest to the approved entry.  A parameter digest covers one
+      action's whole normalized parameter object, so digests from two
+      services do not show a shared field.  For a pin present at
+      approval, the shared reference is read from the approved entries.
+      A pin added after approval is not in the approved entry: the
+      reference is read only from retained request or credential
+      evidence, such as the narrowed token or the parameters a
+      parameter_digest commits, that the comparing party is authorized
+      to obtain and can verify against its commitment.  Without that
+      evidence, the comparison is inconclusive.  Where Decision Evidence
+      carries no parameter_digest, the records do not show which
+      parameters the call used.
+
+   *  *Comparison.* A party the deployment defines, independent of the
+      agent, compares the legs (Section 8.2).  An agent that compares
+      the records of its own plan attests only to itself.
+
+8.1.  Limits
+
+   Binding and evidence do not detect two kinds of failure:
+
+   *  A difference in meaning between services on the same reference.
+      Both legs can carry the same order line, with a matching amount,
+      while the services disagree on the item it holds; the payment
+      service's vocabulary has no item, so no record it emits shows one.
+      Whether two services agree on what a reference denotes is their
+      consistency contract, not an authorization fact.
+
+   *  A fact that no Operation Profile declares.  Evaluation-Context
+      Binding ([I-D.draft-mcguinness-mission-runtime], Section 
+      "Evaluation-Context Binding") detects declared drift of a target
+      under an unchanged reference, recorded here in
+      evaluation_context_digest; it covers no undeclared fact.
+
+   The records are evidence for that consistency check; they do not
+   perform it.  The check relies on a service-side design that keeps one
+   reference meaning one thing:
+
+   *  a reference that is immutable in its system of record, whose
+      identifier changes whenever its content changes;
+
+   *  a declared revision that the dependent operation binds through
+      Evaluation-Context Binding; or
+
+   *  an authoritative current-state check before the dependent action.
+
+   A history predicate ([I-D.draft-mcguinness-mission-runtime],
+   Section "History") can show that a reservation completed.  It does
+   not show that the reservation is still valid: the record of a
+   completed reservation stays authentic after the reservation is
+   cancelled, consumed, or expires.  Current validity is established by
+   an authoritative current-state check at the service.
+
+8.2.  The Comparing Party
+
+   Independence from the agent is necessary for a comparison and not
+   sufficient.  A comparison result has meaning only where the
+   deployment defines:
+
+   *  the records each comparison requires, named before the comparison;
+
+   *  the party's authority to obtain them, as authenticated records or
+      as authorized access to retained parameters, together with the
+      approved entries that authorizing_entry or entry_digest names and,
+      for a pin added after approval, the retained request or credential
+      evidence that carries it;
+
+   *  verification of each record against its commitments: its integrity
+      envelope (Section 4.3), and a recomputed parameter or entry digest
+      for any parameters or entry the party relies on;
+
+   *  a trusted mapping between the services' fields, such as order line
+      to item; and
+
+   *  an inconclusive result whenever a required record is missing or
+      fails verification, never a pass.
+
+   A Mission Receipt references evidence and supplies no fact the
+   records lack (Section 6); a receipt reference is not the content of a
+   record.  A comparison result is not a Mission lifecycle state and
+   does not show that a task's goal was achieved.  This document does
+   not define how records are collected across producers, including
+   across trust domains that share no evidence store.
+
+8.3.  Relationship to the Action Evidence Boundary
+
+   The Action Evidence Boundary (AEB)
+   ([I-D.draft-schrock-action-evidence-boundary]) is a processing model
+   for the executor-side boundary that controls a consequential effect:
+   artifact verification, exact-action binding, consumption, provider
+   entry, outcome classification, and reconciliation.  That boundary is
+   where a PEP or executor emits Execution Evidence.  The two are
+   complementary layers: AEB defines no execution-evidence format, and
+   this document defines no admission lifecycle.  They align as follows:
+
+   *  *Exact-action binding.* An AEB action digest covers every material
+      field and no other field: those the pinned native operation
+      profile declares and, for a cross-format join, those the selected
+      Canonical Action Identifier (CAID) definition declares, including
+      facts the boundary resolves from the system of record.  The
+      runtime profile commits an action in two digests instead:
+      parameter_digest over the whole normalized parameter object and,
+      under Evaluation-Context Binding, evaluation_context_digest over
+      the resource-resolved facts an Operation Profile declares.
+
+   *  *Trusted mappings.* AEB joins independently encoded
+      representations of one action only under mappings the relying
+      party pins, never by guessing equivalence from names or
+      descriptions, and treats a missing or ambiguous mapping as
+      indeterminate.  The comparing party applies the same discipline
+      (Section 8.2).  The scope differs: AEB joins representations of
+      one action at one boundary and does not define semantic
+      equivalence between actions, so it does not compare different
+      actions at different resource servers either.
+
+   *  *Satisfaction.* AEB's SATISFIED decision means that verified,
+      matched evidence fills every slot of the relying party's evidence
+      requirement for one action.  Neither it nor a cross-entry
+      comparison result shows that a task's goal was achieved.
+
+   *  *Outcomes and reconciliation.* AEB classifies an invoked effect as
+      EXECUTED, FAILED, or INDETERMINATE, and holds an INDETERMINATE
+      attempt until authenticated reconciliation resolves it.  Execution
+      Evidence is emitted once a final outcome exists: EXECUTED and
+      FAILED correspond to outcome completed and failed, and an AEB
+      refusal under a permit before provider entry corresponds to
+      suppressed.  An attempt that stays INDETERMINATE leaves its
+      Decision Evidence orphaned, which a consumer classifies as
+      undetermined-outcome (Section 11).
+
+9.  Extension Members
 
    A Decision Evidence Object, Execution Evidence Object, and Refusal
    Record are each closed to uncoordinated extension: a companion or
@@ -23559,7 +23735,7 @@ Table of Contents
       policy applied), observed_at (REQUIRED, an RFC 3339 date-time),
       and valid_until (REQUIRED, an RFC 3339 date-time, the
       observation's validity bound).  Protected references follow the
-      privacy rule of this document (Section 11.1).  Execution Evidence
+      privacy rule of this document (Section 12.1).  Execution Evidence
       joins the mapping through evaluation_id rather than carrying the
       object again.  Registered and owned by the cross-domain profile.
 
@@ -23573,7 +23749,7 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-authority-server]), which defines
       what the commitment distinguishes.
 
-9.  Conformance
+10.  Conformance
 
    This document defines conformance for four roles: a PRODUCER that
    emits the records themselves; a CONSUMER, or VERIFIER, that reads and
@@ -23602,9 +23778,9 @@ Table of Contents
 
    A CONSUMER or VERIFIER conforming to this document MUST perform the
    byte-equality verification procedure and key checks of Section 4.3
-   against the emitter's published keys (Section 10.2), and classify
+   against the emitter's published keys (Section 11.2), and classify
    orphaned Decision Evidence and cross-record digest divergence as
-   Section 10 and Section 5 require, never as proof of action.
+   Section 11 and Section 5 require, never as proof of action.
 
    A RECEIPT ISSUER conforming to this document MUST:
 
@@ -23630,10 +23806,10 @@ Table of Contents
    algorithm of Section 6.5 and reject a Mission Receipt on any of its
    failure conditions.
 
-9.1.  Compromise-Boundary Outcomes
+10.1.  Compromise-Boundary Outcomes
 
    A VERIFIER and a RECEIPT VERIFIER conform to the compromise-boundary
-   rule (Section 10.2) when each of the following holds:
+   rule (Section 11.2) when each of the following holds:
 
    *  a self-asserted pre-boundary timestamp does not rescue a record
       signed under a compromised key;
@@ -23663,13 +23839,13 @@ Table of Contents
    *  the same outcomes hold for Mission Receipts and for harness
       evidence.
 
-10.  Security Considerations
+11.  Security Considerations
 
    The runtime profile's Security Considerations
    ([I-D.draft-mcguinness-mission-runtime]) apply in full.  This section
    addresses only threats specific to these records.
 
-10.1.  Decision Evidence versus Execution Evidence
+11.1.  Decision Evidence versus Execution Evidence
 
    Decision Evidence is not proof an action occurred.  Implementations
    MUST emit Execution Evidence to record outcomes, and auditors MUST
@@ -23679,7 +23855,7 @@ Table of Contents
    undetermined-outcome or, per deployment policy, as action-attempted;
    it MUST NOT treat it as proof of action.
 
-10.2.  Evidence integrity and signing keys
+11.2.  Evidence integrity and signing keys
 
    The evidence_envelope binds each record to the emitting PDP or PEP.
    The PDP's jws-compact signing key MUST be resolvable, by the JWS
@@ -23755,13 +23931,13 @@ Table of Contents
    profile ([I-D.draft-mcguinness-mission-audit]), where a deployment
    adopts them.
 
-10.3.  Transport
+11.3.  Transport
 
    Audit channels carrying Decision Evidence and Execution Evidence MUST
    be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED).  Evidence at
    rest MUST be encrypted per the deployment's data-protection posture.
 
-10.4.  Mission Receipt
+11.4.  Mission Receipt
 
    A Mission Receipt that copies fields from its underlying evidence
    invites a verifier to treat the receipt signer as authoritative for
@@ -23776,17 +23952,17 @@ Table of Contents
    independently.
 
    A compromised receipt-issuer signing key is governed by the
-   compromise-boundary rule of Section 10.2, applied during Receipt
+   compromise-boundary rule of Section 11.2, applied during Receipt
    verification (Section 6.5): timestamps asserted by the receipt itself
    never establish that its signature predates the boundary.
 
-11.  Privacy Considerations
+12.  Privacy Considerations
 
    The runtime profile's evidence-privacy guidance
    ([I-D.draft-mcguinness-mission-runtime]) applies in full.  This
    section addresses the concrete records this document defines.
 
-11.1.  Evidence as PII sinks
+12.1.  Evidence as PII sinks
 
    Decision Evidence, Execution Evidence, and Refusal Records carry the
    authenticated subject, actor chain, resource and action identifiers,
@@ -23800,7 +23976,7 @@ Table of Contents
    Where the cross-domain Origin Principal profile is in use
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]), retained records
    SHOULD carry the composed principal_mapping extension member
-   (Section 8) with protected subject references, not raw identities,
+   (Section 9) with protected subject references, not raw identities,
    unless the raw identity is necessary for the stated audit purpose.
 
    A protected subject reference is one of:
@@ -23821,7 +23997,7 @@ Table of Contents
    attackable: it is correlation infrastructure, not concealment, and a
    deployment using it MUST disclose that limitation.
 
-11.2.  Parameter exposure
+12.2.  Parameter exposure
 
    This restates, for the privacy reader, the action member's rule
    (Section 4): the durable Decision Evidence record MUST NOT contain
@@ -23838,7 +24014,7 @@ Table of Contents
    values.  The Execution Evidence result_summary MUST NOT carry user-
    content payloads.
 
-11.3.  Actor chain and Mission correlation
+12.3.  Actor chain and Mission correlation
 
    The actor member carries the delegation chain, which MAY reveal
    service accounts, client instances, and organizational structure.
@@ -23851,7 +24027,7 @@ Table of Contents
    Deployments that require unlinkability need an additional privacy
    design outside this document.
 
-11.4.  Mission Receipt
+12.4.  Mission Receipt
 
    The Mission Receipt's optional members (Section 6) are correlation
    surfaces, the same as the evidence they project from.  Minimization
@@ -23859,18 +24035,18 @@ Table of Contents
    the rule, not a default.  A receipt crosses a trust boundary by
    design, so an issuer carries only the members its recipient needs.
 
-12.  IANA Considerations
+13.  IANA Considerations
 
    This document requests the following IANA actions.
 
-12.1.  Media Type Registry
+13.1.  Media Type Registry
 
    This document registers five media types per [RFC6838]: the four
    evidence-object payload types below, and the JWS-secured runtime
    evidence representation their shared envelope carries (using the +jws
    structured syntax suffix already registered with IANA).
 
-12.1.1.  Secured Runtime Evidence Media Type
+13.1.1.  Secured Runtime Evidence Media Type
 
    *  Type name: application
 
@@ -23885,7 +24061,7 @@ Table of Contents
       secured payload's own media type travels in the JWS protected cty
       (Section 4.3).
 
-   *  Security considerations: see Section 10
+   *  Security considerations: see Section 11
 
    *  Interoperability considerations: see this document (Section 4.3)
 
@@ -23918,7 +24094,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.1.2.  Decision Evidence Media Type
+13.1.2.  Decision Evidence Media Type
 
    *  Type name: application
 
@@ -23930,7 +24106,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 10
+   *  Security considerations: see Section 11
 
    *  Interoperability considerations: see this document
 
@@ -23963,7 +24139,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.1.3.  Execution Evidence Media Type
+13.1.3.  Execution Evidence Media Type
 
    *  Type name: application
 
@@ -23975,7 +24151,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 10
+   *  Security considerations: see Section 11
 
    *  Interoperability considerations: see this document
 
@@ -24008,7 +24184,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.1.4.  Refusal Record Media Type
+13.1.4.  Refusal Record Media Type
 
    *  Type name: application
 
@@ -24020,7 +24196,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 10
+   *  Security considerations: see Section 11
 
    *  Interoperability considerations: see this document
 
@@ -24053,7 +24229,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.1.5.  Mission Receipt Media Type
+13.1.5.  Mission Receipt Media Type
 
    *  Type name: application
 
@@ -24065,7 +24241,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 10
+   *  Security considerations: see Section 11
 
    *  Interoperability considerations: see this document
 
@@ -24098,9 +24274,9 @@ Table of Contents
 
    *  Change controller: IETF
 
-13.  References
+14.  References
 
-13.1.  Normative References
+14.1.  Normative References
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
@@ -24174,7 +24350,7 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-13.2.  Informative References
+14.2.  Informative References
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", 2026,
@@ -24202,6 +24378,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-harness.html>.
 
+   [I-D.draft-mcguinness-mission-shaping]
+              McGuinness, K., "Mission Intent Shaping", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-shaping.html>.
+
    [I-D.draft-mcguinness-oauth-mission-approved-set-verification]
               McGuinness, K., "Mission Approved-Set Verification for
               OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
@@ -24219,9 +24400,25 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-
               continuation.html>.
 
+   [I-D.draft-schrock-action-evidence-boundary]
+              Schrock, I., "The Action Evidence Boundary for
+              Consequential Agent Effects", Work in Progress, Internet-
+              Draft, draft-schrock-action-evidence-boundary-07, 25
+              September 2026, <https://datatracker.ietf.org/doc/html/
+              draft-schrock-action-evidence-boundary-07>.
+
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Cross-Entry Correspondence (informative) describes how the records
+      support comparing the outcomes of two Authority Set entries: each
+      leg is bound to one approved reference, each leg's evidence leads
+      to its entry, and a party the deployment defines compares them,
+      with an inconclusive result when a required record is missing.  It
+      states what the records cannot detect and that history does not
+      establish a reservation's current validity, and relates the
+      records to the Action Evidence Boundary (#1019).
 
    *  Terminology: a Mission reference (id, issuer) is a binding's
       Mission Reference identifier and Controller namespace in that
