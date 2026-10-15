@@ -956,19 +956,21 @@ Submission is governed by the following rules:
   which the AS would only ignore such a value.
 - **Alternative back-channel profiles.** A Mission Intent travels on
   no other request unless a companion profile explicitly defines that
-  request as a back-channel carriage for a client that cannot
-  complete the authorization-code path. Such a profile carries the
-  Submission envelope and any authority proposal in one request that
-  never traverses a user agent, applies this section's envelope and
-  proposal rules, and leaves the processing order
+  request as a back-channel carriage of the Submission envelope. Such
+  a profile carries the envelope and any authority proposal in one
+  request that never traverses a user agent, and preserves this
+  section's envelope and proposal rules, the processing order
   ({{submission-processing}}), derivation
-  ({{authorization-derivation}}), the approval event
-  ({{approval-event}}, relocated only as {{extensibility}} permits),
-  and the grant binding ({{grant-binding}}) unchanged. Support for a
-  grant type or endpoint never establishes such a carriage on its
-  own. The experimental Mission Device Authorization profile
+  ({{authorization-derivation}}), the approval-event rules for the
+  Mission's approval basis ({{approval-event}}, with a direct
+  approval relocated only as {{extensibility}} permits), and the
+  grant binding ({{grant-binding}}). Support for a grant type or
+  endpoint never establishes such a carriage on its own. The
+  experimental Mission Device Authorization profile
   ({{I-D.draft-mcguinness-oauth-mission-device-authorization}})
-  defines one for the device authorization grant {{RFC8628}}.
+  defines one for a client that cannot complete the
+  authorization-code path, on the device authorization grant
+  {{RFC8628}}.
 - **Bounded size.** The AS MUST bound the Submission envelope's
   total size, the Intent's total size and the lengths of its arrays,
   and the count and per-entry sizes of `evidence` entries, refusing
@@ -6063,9 +6065,10 @@ Cross-Domain:
 - Submission via PAR scopes its PAR carriage rule to the
   authorization-code path. A Mission Intent travels on another
   request only where a companion profile explicitly defines a
-  back-channel carriage that keeps the Submission envelope, the
-  processing order, derivation, the approval event, and the grant
-  binding; support for a grant type alone never establishes one. The
+  back-channel carriage that preserves the Submission envelope, the
+  processing order, derivation, the approval rules for the Mission's
+  approval basis, and the grant binding; support for a grant type
+  alone never establishes one. The
   experimental Mission Device Authorization profile defines such a
   carriage for RFC 8628 device authorization (#1202).
 

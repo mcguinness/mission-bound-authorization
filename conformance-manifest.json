@@ -36897,7 +36897,7 @@
    "id": "core.submission.alternative-carriage-only-by-profile",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
-   "text": "A Mission Intent travels on no other request unless a companion profile explicitly defines that request as a back-channel carriage for a client that cannot complete the authorization-code path.",
+   "text": "A Mission Intent travels on no other request unless a companion profile explicitly defines that request as a back-channel carriage of the Submission envelope.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
