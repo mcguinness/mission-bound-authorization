@@ -829,8 +829,8 @@ operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) or naming a later merged
-issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `74184bac`, and every
-`file:line` citation is read at `74184bac`.
+issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `f62b1311`, and every
+`file:line` citation is read at `f62b1311`.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -893,7 +893,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 
   Both then apply `missionBoundFactsFrom` (`server.ts:599-632`) and
   `readMissionAccessClaims`
-  (`services/mcp-payments/src/token-verifier.ts:108-120`): `typ` `at+jwt`, the
+  (`services/mcp-payments/src/token-verifier.ts:109-112`): `typ` `at+jwt`, the
   RFC 9068 claims, a `mission` claim with `id` and `issuer`, and the token's
   own `authorization_details`, read as the credential's authority. A token
   that fails the profile is refused, never demoted to the ordinary class.
