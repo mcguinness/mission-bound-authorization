@@ -172,14 +172,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-mandate:
-    title: "Mission Mandate"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-ietf-oauth-rfc7523bis:
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
@@ -1735,7 +1727,8 @@ Cache-Control: max-age=3600
     "https://as.example.com/as/mission/status",
   "mission_status_endpoint_auth_methods_supported":
     ["tls_client_auth", "private_key_jwt", "access_token"],
-  "mission_status_endpoint_auth_signing_alg_values_supported": ["ES256"],
+  "mission_status_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://as.example.com/as/mission/lifecycle",
