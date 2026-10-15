@@ -4167,8 +4167,8 @@ out-of-band documentation, is that type's normative definition.
 
 An AS that advertises `mission_bound_authorization_supported: true`
 MUST also publish `pushed_authorization_request_endpoint`
-({{RFC9126}}), since a Mission Intent is accepted only through PAR
-({{submission-via-par}}).
+({{RFC9126}}), since the authorization-code path accepts a Mission
+Intent only through PAR ({{submission-via-par}}).
 
 An AS that advertises `mission_bound_authorization_supported: true`
 SHOULD also advertise `authorization_details_types_metadata_endpoint`
@@ -4267,8 +4267,8 @@ introspection response or issuer-local resolution
 
 A **Mission Client** implements the client surfaces:
 
-- submission of the Mission Intent via PAR only
-  ({{submission-via-par}}), proposing concrete authority, where it
+- submission of the Mission Intent via PAR on the authorization-code
+  path ({{submission-via-par}}), proposing concrete authority, where it
   does, on the `authorization_details` parameter pushed alongside
   `mission_intent` ({{authority-proposal}});
 - reading its granted authority from the token-response
