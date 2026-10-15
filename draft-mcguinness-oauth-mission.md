@@ -625,57 +625,6 @@ Mission-bound token:
 
 # Overview {#overview}
 
-## Principal Model {#principal-model}
-
-This document maps principals onto native OAuth constructs:
-
-- The **Agent** is the OAuth client, referenced by `client_id`. Agent
-  identity and credentialing are out of scope (see
-  {{I-D.draft-ietf-wimse-aims}}).
-- The **Subject** and **Approver** are each an (`iss`,
-  `sub`) pair, matching the access token `sub` model of {{RFC9068}}.
-  The Approver is the accountable consent principal whose approval
-  created the Mission, always equal to
-  `approval_basis.consent_principal`; under a standing-consent basis
-  a policy adjudicates the activation, which the basis's
-  `adjudication` member can make explicit ({{mission-record}}), while
-  the Approver remains the human whose consent roots it
-  ({{authority-sources}}, {{multi-party-approval}}).
-
-On a derived token, the `iss` claim is the AS and the `sub` claim is
-the AS-local `sub` to which the AS maps the Subject under the
-injective mapping of {{approval-event}}; adopting the external `sub`
-verbatim is the common case. Within the issuing AS's namespace, this
-(`iss`, `sub`) pair is the AS-local subject principal, authoritative
-for the Subject, and resource servers authorize against it. The
-Mission separately records the Subject's home issuer and identifier
-as `subject.iss` and `subject.sub`: the external subject identity,
-carried as provenance for audit and not on the token. This document
-defines no runtime lookup of it.
-
-The record's (`subject.iss`, `subject.sub`) and the token's (AS
-`iss`, `sub`) identify the same Subject in two issuer namespaces.
-Across trust domains, the cross-domain companion conveys Subject
-identity through its own subject-resolution claims, not a Mission
-lookup, and a token minted in another domain preserves the `mission`
-claim unchanged ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
-
-Issuer roles obey two invariants: a Mission has exactly one Mission
-Issuer, its `issuer`, and a Resource AS never creates or alters a
-Mission.
-
-Principals are recorded at the approval event and are immutable. Two
-principals are equal when their `iss` and `sub` are byte-equal, so
-the test compares principals only within one issuer namespace; the
-external subject identity and the AS-local subject principal
-represent one Subject and are never compared under this rule.
-
-Dynamic delegation (the actors an agent delegates to during
-execution) is carried on derived tokens in the `act` chain
-({{delegation}}), not on the immutable Mission Record. This document
-uses only (`iss`, `sub`) pairs; the subject identifier formats of
-{{RFC9493}} are not used.
-
 ## Protocol Flow {#protocol-flow}
 
 The following figure shows the protocol flow between the agent and
@@ -755,6 +704,57 @@ The times below are on the same day in UTC.
 An ERP that instead introspects on every request stops honoring the
 token on its next request after revocation, through the composite
 `active` result ({{composite-active}}).
+
+## Principal Model {#principal-model}
+
+This document maps principals onto native OAuth constructs:
+
+- The **Agent** is the OAuth client, referenced by `client_id`. Agent
+  identity and credentialing are out of scope (see
+  {{I-D.draft-ietf-wimse-aims}}).
+- The **Subject** and **Approver** are each an (`iss`,
+  `sub`) pair, matching the access token `sub` model of {{RFC9068}}.
+  The Approver is the accountable consent principal whose approval
+  created the Mission, always equal to
+  `approval_basis.consent_principal`; under a standing-consent basis
+  a policy adjudicates the activation, which the basis's
+  `adjudication` member can make explicit ({{mission-record}}), while
+  the Approver remains the human whose consent roots it
+  ({{authority-sources}}, {{multi-party-approval}}).
+
+On a derived token, the `iss` claim is the AS and the `sub` claim is
+the AS-local `sub` to which the AS maps the Subject under the
+injective mapping of {{approval-event}}; adopting the external `sub`
+verbatim is the common case. Within the issuing AS's namespace, this
+(`iss`, `sub`) pair is the AS-local subject principal, authoritative
+for the Subject, and resource servers authorize against it. The
+Mission separately records the Subject's home issuer and identifier
+as `subject.iss` and `subject.sub`: the external subject identity,
+carried as provenance for audit and not on the token. This document
+defines no runtime lookup of it.
+
+The record's (`subject.iss`, `subject.sub`) and the token's (AS
+`iss`, `sub`) identify the same Subject in two issuer namespaces.
+Across trust domains, the cross-domain companion conveys Subject
+identity through its own subject-resolution claims, not a Mission
+lookup, and a token minted in another domain preserves the `mission`
+claim unchanged ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+
+Issuer roles obey two invariants: a Mission has exactly one Mission
+Issuer, its `issuer`, and a Resource AS never creates or alters a
+Mission.
+
+Principals are recorded at the approval event and are immutable. Two
+principals are equal when their `iss` and `sub` are byte-equal, so
+the test compares principals only within one issuer namespace; the
+external subject identity and the AS-local subject principal
+represent one Subject and are never compared under this rule.
+
+Dynamic delegation (the actors an agent delegates to during
+execution) is carried on derived tokens in the `act` chain
+({{delegation}}), not on the immutable Mission Record. This document
+uses only (`iss`, `sub`) pairs; the subject identifier formats of
+{{RFC9493}} are not used.
 
 # Mission Intent {#mission-intent}
 
