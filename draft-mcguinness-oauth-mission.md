@@ -2959,10 +2959,17 @@ carried intact:
 }
 ~~~
 
-Mission-bound refresh tokens MUST be sender-constrained or use refresh
-token rotation. This strengthens {{Section 2.2.2 of RFC9700}}, which
-requires it only of public clients, because Mission-state gating does
-not bound a stolen refresh token while the Mission is `active`.
+A Mission-bound refresh token is bound to the client it was issued
+to. For a confidential client, client authentication supplies the
+binding: on refresh, the AS authenticates the client and verifies
+that the refresh token was issued to it ({{Section 6 of RFC6749}}),
+so the token need not also be bound to the DPoP proof key
+({{Section 5 of RFC9449}}). A public client's refresh token MUST
+be sender-constrained or use refresh token rotation
+({{Section 2.2.2 of RFC9700}}). The AS can rotate either client
+type's refresh token; rotation detects replay of a consumed refresh
+token ({{Section 4.14.2 of RFC9700}}) and is not a cryptographic
+binding.
 
 A derived token's authority comes from the Mission, not from a fresh
 authentication. Authentication claims (`acr`, `amr`, `auth_time`) on
@@ -6034,6 +6041,14 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Mission-Bound Access Tokens: a confidential client's refresh token
+  is bound to it by client authentication (Section 6 of RFC 6749), and
+  a public client's refresh token is sender-constrained or rotated
+  (Section 2.2.2 of RFC 9700). The rule no longer reads as requiring
+  every refresh token to be sender-constrained or rotated, and no
+  longer claims to strengthen RFC 9700. Rotation, open to either
+  client type, is replay detection, not a binding (#1204).
 
 - Issuance Gating refuses a derivation from a Mission that is not
   `active` with `invalid_request` on a Token Exchange, as Section 2.2.2

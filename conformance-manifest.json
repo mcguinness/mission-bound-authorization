@@ -15,8 +15,8 @@
     "content_sha256": "d674f8e075e2ca6797a7882264edb52e475f847aecbd1f60d987f9a45956dcde"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "27ea2fc059d9063aac5f99516bd01fa6f0b0658c",
-    "content_sha256": "90f4ba51c9752c26ad7aef7e68aff078b4f5ff6e6e19467b57b3c0c65759946a"
+    "revision": "77099bab921490c038b68590fce7ea5257c7de78",
+    "content_sha256": "3d0b6ce4af7bb061e0a4acf7497ab123f4c96b36bc6b90204ffe265f11c3c04c"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
@@ -67,12 +67,12 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "da5950293ae5c9bdfb4a566ab118e8adb4cd91b4",
-    "content_sha256": "9ddf980f22fd8e5bd44b79849ca4222451a7c4c972a3049a7fc8143f42aed785"
+    "revision": "951d6242665bee2fd0214e13f1b17835dcd04f7b",
+    "content_sha256": "65f7a4cf503c1064f31f8976cff2b53d8a5fd41aac8c64dbaaa95e1b1c3ee1e3"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
-    "content_sha256": "1929eef4d3128482f7ce4ed5cff9f79b63eef818262e15f8ecb3d155d3dc64b7"
+    "revision": "1c07de2093994575b1b4d39c6fd21cfe2848c045",
+    "content_sha256": "96d11f6058db7d7be65345cb50d004ef82835140ef0001c43a7b3cd743193101"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
@@ -6392,6 +6392,62 @@
     }
    ],
    "notes": "#1194. Partial: in every witnessed issuance the requesting client is also the Mission's approved agent, so the tests do not distinguish the requesting client from the record's client_id. That case is the delegated token of Delegation Within a Mission, which the reference AS does not implement (#869). Proved by overwriting client_id with the Subject in the JWT customizer (provider.ts): steps 3 and 4 fail, and step 6 is refused."
+  },
+  {
+   "id": "core.tokens.refresh-confidential-client-binding",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-bound-tokens",
+   "text": "For a confidential client, client authentication supplies the binding: on refresh, the AS authenticates the client and verifies that the refresh token was issued to it ({{Section 6 of RFC6749}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refresh of a confidential client's Mission-bound refresh token is refused when it carries no client authentication, and refused when the authenticated client is not the client the token was issued to (the errors of Section 5.2 of RFC 6749: invalid_client and invalid_grant); the issuing client's authenticated refresh succeeds",
+    "local": "the cited test proves, for a refresh token issued to ap-agent (private_key_jwt): a refresh carrying only client_id, with no client authentication, is refused 401 invalid_client; a refresh authenticated as governed-agent with a DPoP proof for the same key is refused 400 invalid_grant, so the refusal comes from the client binding rather than a key mismatch; and the issuing client's authenticated refresh of the same token then succeeds. It exercises the async-delegation family refresh lineage only (a token also bound to the DPoP key); the code-flow refresh lineage, bound by client authentication alone, is not exercised. No mutation proof exists, because the authentication and client-mismatch checks are the provider library's (oidc-provider 9.10.0), outside src/"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "refresh preserved on a projection refusal (@spec mission#scope-projection) > an unauthenticated or wrong-client refresh of a projection-failing token gets the ordinary client error, never a projection error",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1204 (D412, option A): client authentication is a confidential client's refresh-token binding (RFC 6749 Section 6; RFC 9449 Section 5), with no further sender constraint or rotation required. Partial: the witness covers the async-delegation family lineage only, the code-flow refresh lineage is unexercised, and the provider-library checks carry no mutation proof (observation.local). The cited test also witnesses core.scope-projection.refresh-preserved-on-projection-refusal; its client-error assertions run while the projection would fail, so they also show the client binding is checked first."
+  },
+  {
+   "id": "core.tokens.refresh-public-client-sender-constrained-or-rotated",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-bound-tokens",
+   "text": "A public client's refresh token MUST be sender-constrained or use refresh token rotation ({{Section 2.2.2 of RFC9700}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a public client's Mission-bound refresh token is either sender-constrained, so a refresh without proof of the bound key is refused, or rotated, so every refresh returns a new refresh token and a consumed one is refused when presented again"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1204 (D412, option A). The reference AS registers only private_key_jwt (confidential) clients (src/config/clients.json), so no test drives a public client. Its rotateRefreshToken hook (provider.ts) keeps oidc-provider's default of rotating a public client's refresh token that is not sender-constrained, unwitnessed here. The async-delegation family rotation and reuse tests use a confidential client, for which rotation is permitted, not required, so they do not witness this row, and rotation would not witness the sender-constrained alternative."
   },
   {
    "id": "core.tokens.scope-ceiling",

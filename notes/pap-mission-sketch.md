@@ -347,13 +347,13 @@ PAP's sign-in response, plus core's members:
 - The `refresh_token` is a Mission Account Token. It is added beside any
   ordinary Account Token the agent holds and replaces nothing, so the
   step-up replacement rule of Spec 4.4 does not apply.
-- It is sender-constrained under RFC 9449 Section 5, which treats an
-  authenticated confidential client's refresh token as bound by client
-  authentication. PAP accepts an Account Token only from the `client_id` it
-  was issued to, authenticated by `private_key_jwt` (Spec 4.8). Whether
-  that satisfies core's rule (sender-constrained or rotated) is #1204. A
-  Company that wants no doubt until it is settled rotates the token, which
-  PAP permits (Spec 4.8).
+- It is bound to the agent by client authentication, which is core's
+  refresh-token binding for a confidential client (RFC 6749 Section 6; RFC
+  9449 Section 5 treats it as the sender constraint). PAP accepts an
+  Account Token only from the `client_id` it was issued to, authenticated
+  by `private_key_jwt` (Spec 4.8). Core does not also require rotation. A
+  Company may still rotate the token, which PAP permits (Spec 4.8);
+  rotation detects replay and adds no binding.
 - No credential outlives `mission_expires_at`, per core.
 - Session Tokens stay opaque to the agent (Spec 4.2). Core profiles two
   forms of Mission-bound access token: an RFC 9068 JWT, or an opaque token
@@ -783,8 +783,9 @@ Filed; each needs a ruling.
 2. **#1203, in-house introspected consumption.** Recommended: an in-house
    read of the issuer's state counts. The commit-point check needs one
    clause in the Architecture's existing freshness wording, not a new name.
-3. **#1204, refresh-token sender constraint.** Section 3.5 relies on client
-   authentication counting.
+3. **#1204, refresh-token sender constraint.** Ruled (D412): client
+   authentication is a confidential client's refresh-token binding, which
+   Section 3.5 relies on.
 4. **#1205, ordinary credentials.** Downgrade by Omission does not cover a
    client that does the task with an ordinary token it holds. Section
    3.10's rule is this profile's own.
