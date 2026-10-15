@@ -45,12 +45,14 @@ What it is not:
 Where it sits in the drafts:
 
 - `draft-mcguinness-mission-architecture.md`:
-  - § Entry Ramps by Estate (`{#entry-ramps}`), the "issuance-only
-    deployment" paragraph under the table's last row;
-  - the adoption ladder's Baseline Issuance row (§ Mission Assurance Levels,
-    `{#assurance-levels}`);
+  - § The Issuance-Only Deployment (`{#issuance-only}`), after § Entry Ramps
+    by Estate (`{#entry-ramps}`);
+  - the Baseline Issuance level (§ The Four Levels,
+    `{#assurance-level-definitions}`, under § Mission Assurance Levels);
   - § Assurance Claims (`{#assurance-claims-axis}`);
-  - § The Mission Deployment Profile (`{#deployment-profile}`).
+  - § The Mission Deployment Profile (`{#deployment-profile}`), and its
+    issuance-only example shape (§ Deployment Profile Example Shapes,
+    `{#deployment-profile-examples}`), which §5 fills.
 - `draft-mcguinness-oauth-mission.md`:
   - § Issuance Scope, Not Runtime Enforcement (`{#runtime-boundary}`), what
     the OAuth binding does not do;
@@ -333,6 +335,10 @@ Consequences, in both configurations:
 - A JWT-only consumer that cached the old key keeps accepting it until `exp`
   plus tolerance, and `plain-rs` rejects post-restart tokens until its JWKS
   cache refreshes (§2). A restart is not revocation.
+- The OAuth binding keeps a retired key resolvable while tokens signed under
+  it remain valid (`{#mission-bound-tokens}`). A restart drops it from the
+  JWKS while pre-restart tokens are still unexpired, so that requirement is
+  not met across a restart (#831).
 - Every outstanding refresh token is refused; the client starts a new
   authorization.
 
@@ -391,6 +397,7 @@ deployment's values: the reference AS and `plain-rs`.
     "evidence is the AS's issuance records only: the Mission Record, its lifecycle events, and the per-token issuance index",
     "plain-rs logs nothing Mission-linked",
     "a restart is not revocation: consumers holding the old key keep accepting pre-restart tokens until exp, and plain-rs rejects post-restart tokens until its JWKS cache refreshes (up to 10 minutes)",
+    "a restart drops the signing key from the JWKS while tokens signed under it are unexpired, so the OAuth binding's key-resolvability rule is not met across a restart (#831)",
     "an introspection call that exceeds its timeout (default 2000 ms) or fails refuses service with 503; the plain RS never falls back to the JWT alone",
     "provider token acceptance and derivation counting are not coupled atomically (#250)",
     "a revocation committing while an issuance is past the state gate does not stop that issuance (#250)",
@@ -637,28 +644,41 @@ commit of the PR that published it. Check it out, then run
 
 | Draft | Revision | Role |
 |---|---|---|
-| `draft-mcguinness-oauth-mission.md` (the OAuth binding) | `ccddd9e8` (#705: the lifecycle states are `active` and `terminated` with a `termination`, which introspection reports beside `mission.state`, and the record has no `approver`; the other sections this deployment relies on are unchanged in substance since `4777b582`) | Normative: Mission intake, derivation, approval, record, issuance, scope projection, introspection (`{#introspection}`), and the authenticated revocation means (§ Revocation, `{#revocation}`), which a deployment-defined surface satisfies |
-| `draft-mcguinness-oauth-mission-resource-access.md` | `7fc9ef45` | Normative: the `mission_resource_access` type and its scope-projection conditions |
-| `draft-mcguinness-mission-architecture.md` | `def29355` (the sections relied on are unchanged since `e2dda50a`; later commits touch only the document map, the verb layers and the lifecycle summary) | Informative: the entry ramp, assurance claims and the Deployment Profile shape |
-| `draft-mcguinness-oauth-mission-status.md` | `eecf2207` (#705: `revoke` commits `terminated` with reason `revoked`, the response carries `termination` with its committing `version`, and idempotency compares the reason) | Informative: the semantics the lifecycle `revoke` follows, and the revocation-propagation sizing. Section by section below |
+| `draft-mcguinness-oauth-mission.md` (the OAuth binding) | `da595029` (#705: the lifecycle states are `active` and `terminated` with a `termination`, which introspection reports beside `mission.state`, and the record has no `approver`. Since `ccddd9e8`: an inactive Mission on a Token Exchange is refused `invalid_request`, every other grant `invalid_grant` (`{#issuance-gating}`, `{#error-mapping}`; #1154), which changes nothing here because every exchange is off (§8) and refresh stays `invalid_grant`; `{#revocation}` names the Status companion's revoke-only class beside a deployment-defined surface; and `{#termination}` adds the retained facts of a derived termination. The other relied-on sections are unchanged since `ccddd9e8`) | Normative: Mission intake, derivation, approval, record, issuance, scope projection, introspection (`{#introspection}`), the error mapping (`{#error-mapping}`), and the authenticated revocation means (§ Revocation, `{#revocation}`), which a deployment-defined surface satisfies |
+| `draft-mcguinness-oauth-mission-resource-access.md` | `cc857da2` (wording only since `7fc9ef45`) | Normative: the `mission_resource_access` type and its scope-projection conditions |
+| `draft-mcguinness-mission-architecture.md` | `861acff5` (the sections relied on are unchanged since `def29355`; the later commits touch only A Mission's Life and the new § Creation Paths, `{#creation-paths}`) | Informative: the entry ramp, assurance claims and the Deployment Profile shape |
+| `draft-mcguinness-oauth-mission-status.md` | `5702bdd0` (#705: `revoke` commits `terminated` with reason `revoked`, the response carries `termination` with its committing `version`, and idempotency compares the reason. Since `eecf2207`: an operation the AS does not serve is refused `invalid_request` before the Mission lookup; a revoke-only Lifecycle class; and the interface audit (#1215), under which a retransmit is compared on its operation members and both Lifecycle classes advertise `mission_status_signing_alg_values_supported`) | Informative: the semantics the lifecycle `revoke` follows, and the revocation-propagation sizing. Section by section below |
 | `draft-mcguinness-mission-control-plane.md` | `dc3d3cc0` | Informative: implementation discipline on the revoke path. The transition, its `nonce` claim and the response commit together (`{#serialization}`); a terminal Mission leaves a tombstone (`{#tombstones}`); lifecycle fan-out drains per request (`{#fanout}`). No claim here depends on it |
 | `draft-mcguinness-oauth-mission-issuance-grant.md` | `dc3d3cc0` | Not relied on. The code-exchange and refresh projections (`rarThroughEffectiveSet`) cite its `{#effective-set-projection}`, which governs a consuming AS. This AS is the Mission's issuer, and with containment and discharge off the effective set is the Authority Set |
+
+**Named, not relied on.** §3 cites
+`draft-mcguinness-oauth-mission-continuation.md` (`67644b73`, its
+`{#transport-async}`) for the full assembly's async-delegation behavior, and
+§3 and §8 name the Child Mission path of
+`draft-mcguinness-oauth-mission-child-delegation.md` (`c610f727`); both
+capabilities are off at the launcher (§8).
+`draft-mcguinness-mission-runtime.md` is #253's overlay, not this floor (§1).
 
 **The Mission Status companion, section by section.** The lifecycle endpoint
 here is the OAuth binding's deployment-defined revocation surface
 (`{#revocation}`). Its `revoke` follows these sections of the Status
-companion at `eecf2207`:
+companion at `5702bdd0`:
 
 - § Mission Lifecycle Endpoint (`{#mission-lifecycle-endpoint}`), its
-  Operations subsection: the `revoke` operation and the REQUIRED `nonce`.
-  Walkthrough step 6.
+  Operations subsection: the `revoke` operation and the REQUIRED `nonce`
+  (walkthrough step 6), and the refusal of an operation the AS does not
+  serve with `invalid_request` before the Mission lookup (§8's `suspend`,
+  `resume`, `complete`, `contain` and `discharge` rows).
 - § Legal Transitions (`{#legal-transitions}`): `revoke` from `active` to
   `terminated` with reason `revoked`. Walkthrough step 6.
 - § Idempotency and Conflicts (`{#idempotency}`): deduplication by
-  principal, Mission and `nonce`; a byte-identical retransmit replays the
-  original response; the same `nonce` on a different request is refused
-  `invalid_request`; an illegal operation is 409 `conflict`.
+  principal, Mission and `nonce`; a retransmit whose operation members equal
+  the original's replays the original response, whatever its client
+  authentication parameters or member order; the same `nonce` on a different
+  request is refused `invalid_request`; an illegal operation is 409
+  `conflict`.
   `control-plane lifecycle response boundary > replays a successful request before any state-dependent check, after the state moved on`,
+  `> compares a retransmit on its operation members: a regenerated client assertion and another member order still replay (@spec status#idempotency)`,
   `> refuses a divergent retry without retaining it, leaving the committed success replayable`,
   `> conflicts on the same retry when no claim was retained, which is what the claim fixes`.
 - The endpoint's Authorization subsection: a `mission_lifecycle` grant is
@@ -677,9 +697,9 @@ companion at `eecf2207`:
   the 300 s lifetime is walkthrough step 3.
 
 Of § Conformance's (`{#conformance}`) extensions, this deployment meets only
-Revocation propagation: the advertisement and the token sizing above. It does
-not claim Mission Lifecycle, because the reference endpoint's wire differs
-from the companion's:
+Revocation propagation: the advertisement and the token sizing above. It
+claims neither Mission Lifecycle nor its revoke-only class, because the
+reference endpoint's wire differs from the companion's:
 
 - it is `POST /missions/{id}/lifecycle` with a JSON body, not the
   `mission_lifecycle_endpoint` URL with a form-urlencoded body carrying
@@ -690,8 +710,13 @@ from the companion's:
 - a transition answers `{"id", "state", "version"}` JSON, with
   `termination` beside a `terminated` state, not a signed Mission Status
   Response;
-- `mission_lifecycle_endpoint` and its auth-methods member are not
-  advertised.
+- `mission_lifecycle_endpoint`, its auth-methods member and
+  `mission_status_signing_alg_values_supported` are not advertised; the AS
+  advertises the last only with the Mission Status or discharge capability,
+  both off here.
+
+The refusal of an operation not adopted, which the revoke-only class also
+requires, matches the companion (§8).
 
 Not used here: § Mission Status Operation (`{#mission-status}`), off (§8);
 the Status List companion (`draft-mcguinness-oauth-mission-status-list.md`),
