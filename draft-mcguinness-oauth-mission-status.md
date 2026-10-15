@@ -180,6 +180,7 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-ietf-oauth-rfc7523bis:
   I-D.draft-mcguinness-mission-authzen:
     title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
@@ -404,11 +405,12 @@ per request:
 3. **Private-key-JWT client authentication** {{RFC7523}}. The client
    presents `client_assertion_type` with the exact value
    `urn:ietf:params:oauth:client-assertion-type:jwt-bearer` and a signed
-   JWT as `client_assertion`. The assertion's `aud` MUST name the URL of
-   the endpoint being invoked (the `mission_status_endpoint` for a
-   Status request, the `mission_lifecycle_endpoint` for a Lifecycle
-   request), not the token endpoint; the AS MUST reject an assertion
-   whose `aud` names no such endpoint. The AS accepts only the JWS
+   JWT as `client_assertion`. The assertion's `aud` MUST be the AS's
+   issuer identifier {{RFC8414}} as its sole value, the client
+   authentication audience of {{I-D.draft-ietf-oauth-rfc7523bis}};
+   the AS MUST reject an assertion with any other `aud`. The client
+   SHOULD set the JWS `typ` header to `client-authentication+jwt`.
+   The AS accepts only the JWS
    {{RFC7515}} algorithms it advertises for that endpoint
    ({{as-metadata}}); `none` MUST NOT be used.
 
@@ -1207,10 +1209,10 @@ audience MUST name and the scopes it requires (`scopes_supported`):
 ({{mission-lifecycle-endpoint}}), and, where the deployment adopts the
 Entry Discharge companion, `mission_discharge` as well
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}). A private-key JWT
-`client_assertion` MUST name the `mission_lifecycle_endpoint` URL in
-`aud`, and a presented access token MUST be audience-restricted to
-this endpoint's protected-resource identifier, exactly as at the
-Mission Status endpoint. Direct mTLS or private-key-JWT callers
+`client_assertion` names the AS's issuer identifier in `aud`, and a
+presented access token MUST be audience-restricted to this endpoint's
+protected-resource identifier, exactly as at the Mission Status
+endpoint. Direct mTLS or private-key-JWT callers
 continue to use the deployment-defined equivalent grant, never a
 scope, exactly as a companion-registered extension operation such as
 `discharge` does
