@@ -51,8 +51,8 @@
     "content_sha256": "ed5097446b15dee094b1e855d568a2684d34831241c6a9da9da33a9625253722"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "a99e1ff33e850ca87c7ff2bdf1d12b6509d426c0",
-    "content_sha256": "47bacb7d1c527b17d7b575b69f9cab25f9950274ec53cece7fe429e6dd3e0edb"
+    "revision": "5702bdd0c504744d6283fea328675175065cbe5f",
+    "content_sha256": "f0fecb61aa70d5707c51896952d25adf243f30b830b37efa39e702bce11865db"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "5bc15030b4a95624b7cd3567076c069211b42ab4",
@@ -7813,7 +7813,7 @@
    "id": "status.idempotency.transient-not-replayed",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "A retransmit whose original response was `unavailable`, `rate_limited`, or another 5xx response is processed as a new request, not replayed.",
+   "text": "A retransmit whose original response was `rate_limited`, or was `unavailable` or another 5xx response, is processed as a new request, not replayed.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -9686,7 +9686,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the signed Mission Status Response's `mission` object carries `state`"
+    "normative": "the signed Mission Status Response's `mission` object carries `state`",
+    "local": "witnessed on the dedicated Mission Status operation; a Lifecycle response is the same Mission Status Response, but the reference answers lifecycle operations with plain JSON that lacks expires_at and fresh_until (#1191)"
    },
    "level": "unit",
    "coverage": "tested",
@@ -9714,7 +9715,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the signed Mission Status Response's `mission` object carries the Mission record's `expires_at`"
+    "normative": "the signed Mission Status Response's `mission` object carries the Mission record's `expires_at`",
+    "local": "witnessed on the dedicated Mission Status operation; a Lifecycle response is the same Mission Status Response, but the reference answers lifecycle operations with plain JSON that lacks expires_at and fresh_until (#1191)"
    },
    "level": "unit",
    "coverage": "tested",
@@ -9742,7 +9744,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the signed Mission Status Response's `mission` object carries `fresh_until` as an RFC 3339 date-time"
+    "normative": "the signed Mission Status Response's `mission` object carries `fresh_until` as an RFC 3339 date-time",
+    "local": "witnessed on the dedicated Mission Status operation; a Lifecycle response is the same Mission Status Response, but the reference answers lifecycle operations with plain JSON that lacks expires_at and fresh_until (#1191)"
    },
    "level": "unit",
    "coverage": "tested",
