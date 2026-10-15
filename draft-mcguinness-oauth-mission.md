@@ -489,17 +489,18 @@ Mission can make approval difficult to evaluate. A useful boundary
 is a task whose purpose, authority, and bounds the Approver can
 evaluate together ({{approval-comprehension}}).
 
-For recurring or evolving work, optional, experimental companions
-can reduce repeated approvals through standing consent
-({{standing-consent-bases}}). Mission Template
+Optional companions can reduce repeated approvals through standing
+consent ({{standing-consent-bases}}). For example, Mission Template
 ({{I-D.draft-mcguinness-oauth-mission-template}}) creates bounded
-instances of recurring tasks. Progressive Authorization
+instances of recurring tasks; Progressive Authorization
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}) permits successor
 Missions within a previously approved authority ceiling as a task
-evolves. The template or ceiling still needs a meaningful human
-approval. Neither mechanism removes its profile's
-fresh-human-approval requirement for prohibited high-consequence
-authority.
+evolves; and Mission Approval Governance
+({{I-D.draft-mcguinness-mission-approval-governance}}) lets a policy
+version a human approved decide an agent's own proposals. The
+template, ceiling, or policy still needs a meaningful human approval,
+and no such mechanism removes its profile's human-approval
+requirement for high-consequence authority.
 
 The unit of governance is the action, not the content. A Mission
 bounds where an agent may act (resources, actions) and how much
@@ -6044,7 +6045,9 @@ Cross-Domain:
 -01
 
 - Standing-Consent Bases lists `governed_policy`, the basis Mission
-  Approval Governance defines for a policy version a human approved.
+  Approval Governance defines for a policy version a human approved,
+  and the Introduction's standing-consent companions are examples,
+  not a closed, experimental-only list.
   A `direct` approval is always a human decision: `adjudication.kind`
   is `human` with or without `governance_record`, and Approval
   Governance states how a record backing a `direct` approval keeps
