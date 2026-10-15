@@ -222,8 +222,9 @@ This document specifies those surfaces as optional extensions
 that build on the issuance profile. The capabilities are:
 
 - A dedicated **Mission Status operation**
-  ({{mission-status}}), which any consumer holding a `mission_id`
-  resolves, with responses signed as a JWS {{RFC7515}}.
+  ({{mission-status}}), which an authenticated, authorized consumer
+  holding a `mission_id` resolves, with responses signed as a JWS
+  {{RFC7515}}.
 - An extension to OAuth token introspection that carries a Mission
   projection, which a deployment MAY return as a {{RFC9701}}-signed
   response ({{introspection-projection}}).
