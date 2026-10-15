@@ -318,11 +318,11 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
 /**
  * @spec runtime#read-binding — synthetic check object for a bulk
  * `list_invoices` request whose bound vendor set is EMPTY: an entry whose
- * `vendors` allowlist is empty, or an unconstrained entry over a store with
- * no invoices. There is no vendor to name, and no FGA object type here
- * supports a wildcard check target, so this fixed placeholder is the request
- * object. No Resource-policy entitlement names it, so a read with no target
- * is refused, never permitted as an empty result (#828 step 5).
+ * `vendors` allowlist is empty (its own constraint refuses the placeholder),
+ * or an unconstrained entry over a store with no invoices. There is no vendor
+ * to name, and no FGA object type here supports a wildcard check target, so
+ * this fixed placeholder is the request object; no stored Resource-policy
+ * entitlement names it, so the deployment's policy refuses it (#828 step 5).
  */
 const UNSCOPED_VENDOR_OBJECT = "__unscoped__";
 

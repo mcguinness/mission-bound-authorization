@@ -156,12 +156,15 @@ digested as above.
 
 - A `vendor_id` the store does not hold is refused `unknown_vendor`
   (`target_unresolvable`) before any decision request.
-- The decision request names every member of `vendor_scope` as a target
-  (`resource.properties.vendor_ids`). The Mission's own check and Resource
-  policy each evaluate every member, and a refusal of any member refuses
-  the whole read; no response carries a narrowed subset.
-- An empty `vendor_scope` names no target any policy entitles, so the read
-  is refused.
+- The decision request names the vendors as its targets: `resource.id`
+  names the requested vendor or one representative member, and a bulk
+  form's `resource.properties.vendor_ids` names every member of
+  `vendor_scope`. The Mission's own check and Resource policy each evaluate
+  every target, and a refusal of any one refuses the whole read; no response
+  carries a narrowed subset.
+- A bulk form with an empty `vendor_scope` names a placeholder vendor
+  object instead. An entry's empty allowlist refuses it, and no stored
+  entitlement names it, so the deployment's Resource policy refuses it.
 - Before release the PEP recomputes the list form from the current Mission
   and store; a difference is `parameter_mismatch`. Execution returns only
   invoices whose vendor is in `vendor_scope`.
