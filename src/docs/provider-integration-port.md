@@ -609,10 +609,16 @@ the store.
   2. A `token` parameter; 400 `invalid_request` otherwise.
   3. `jwtVerify` against the AS's keys, with the expected issuer and
      `typ: at+jwt`.
-  4. The RFC 9068 claim set, a well-formed `mission` claim, and well-formed
-     `authorization_details`.
+  4. The Mission access-token profile, read by the resource's own reader
+     (`readMissionAccessProfile`, #825, D402): the typed RFC 9068 claim set
+     and its clock bounds, the `mission` claim's profiled members, the
+     authority read in full (it only gates; step 9 projects the raw entries),
+     and a present `cnf`'s structure. Possession stays the resource's to
+     prove.
   5. `kernel.get(mission.id)`, with `mission.issuer` equal to the record's
-     issuer.
+     issuer. A delegated token (`act`), a Child Mission's token, or a
+     dispatched template instance's token must carry `cnf`; a primary token
+     may be a bearer token.
   6. An audience the caller is registered for.
   7. `kernel.introspectionProjection`, which applies the expiry clock. A
      non-active Mission answers `active: false` with `mission.state`.
@@ -637,12 +643,11 @@ the store.
   - `composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details` (`introspection-endpoint.test.ts`)
   - `caller authentication (@spec mission#caller-authorization-and-minimization) > refuses an unauthenticated call with 401 + WWW-Authenticate` (`introspection-endpoint.test.ts`)
   - `strict token resolution: bare active:false, no Mission or token detail > wrong-audience caller: the ENTIRE response is minimized` (`introspection-endpoint.test.ts`)
+  - `strict token resolution: bare active:false, no Mission or token detail > a correctly signed token whose jti has no issuance record is never returned active` (`introspection-endpoint.test.ts`)
+  - `the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402) > answers a token with %s with a bare active:false, as the resource refuses it`, with its bearer, delegated-token and Child Mission cases (`introspection-endpoint.test.ts`), and `a dispatched instance's token is sender-constrained at introspection too (@spec mission-template#grant-type, mission#introspection, #825 D402) > answers a dispatched token re-signed without cnf with a bare active:false, while the token as issued introspects active as DPoP` (`dispatch-handoff.test.ts`). The vectors are `@mission/core/test-vectors`, which the resource's `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a token with %s on both transports, yielding no facts` also runs.
   - `Mission-bound refresh tokens (@spec mission#introspection) > Mission revocation reports the composite even though it destroys the grant` (`introspection-endpoint.test.ts`)
   - The revocation test of §3.6 runs `plain-rs` against the reference AS. The `plain-rs introspection failure contract (#873) > ...` tests (`services/plain-rs/test/plain-rs.test.ts`) run it against a stub endpoint (`issuance-only-deployment.md` §2).
 - **Residual.**
-  - No test presents a correctly signed token whose `jti` has no issuance
-    record. The crafted tokens in `introspection-endpoint.test.ts` reuse a
-    real `jti`. No test yet.
   - A check completed before a revocation does not cancel a request it
     admitted (`issuance-only-deployment.md` §1).
 
@@ -853,7 +858,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 
 | Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
-| Credential validation | Yes. Met (D411): the PEP and the PDP each enforce the credential's own authority; #825 item 7 binds paths that consume introspection, which this one does not | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check, and the `context.credential` carrier the PDP enforces (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport, PEP- and PDP-level (§5.1) | Introspection does not yet validate a token's authority as the PEP does (#825 item 7, D402); the mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
+| Credential validation | Yes. Met (D411): the PEP and the PDP each enforce the credential's own authority, and introspection, which this path does not consume, validates as the resource does (D402) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check, and the `context.credential` carrier the PDP enforces (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport, PEP- and PDP-level (§5.1) | The mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
 | Independent Resource policy | Yes, not met: acceptance gate (#828) | The decision point's bound `ResourcePolicy`, OpenFGA stored entitlements in `stack.ts` (§5.2) | In the decision | None | Entitlements are stored in OpenFGA; startup attaches or bootstraps a development store (§5.2) | PDP- and PEP-level, [FGA] (§5.2) | Live witnesses CI-only; no client policy; an unresolved vendor lookup and an unconstrained list name no enumerable target; not yet declared in the profile or statement (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `Pep.intake` (closed schema, NFC) before any decision work; `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level and MCP channel, [FGA] (§5.4) | A single-record read re-derives no digest at use (§5.4) |
@@ -920,12 +925,10 @@ drives an AS-issued Mission-bound token through that assembled path.
   - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses the AS-issued token with no DPoP proof at the HTTP gate, before the PEP: no evidence and no decision`, `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a DPoP proof under a key other than the token's cnf.jkt at the HTTP gate, before the PEP: no evidence and no decision` and `the as-native target with the test-only ordinary-token minting fixture, OpenFGA client stubbed (D315, D332) > refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it` (HTTP transport, assembled path)
   - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > binds a session to the holder that opened it: every request on it is authenticated, and another holder's credential carrying its id is answered 404 Session not found before the PEP` (HTTP transport, assembled path) and `MCP sessions on the HTTP channel (D315, #1105) > dispatches a request on a session only for its holder: another key, subject or client is answered 404 Session not found and reaches no handler, and a refused credential is answered 401` (HTTP transport, stubbed payments server)
 - **Required, met for this target (D411).** This target validates tokens
-  and DPoP locally and does not consume introspection. #825 stays open for
-  acceptance item 7: introspection (§3.8) does not yet validate a token's
-  authority the way the PEP does before projecting it, and #825 closes when
-  the two share negative vectors and introspection validates the authority
-  first (D402). That requirement still binds every path that consumes
-  introspection, the JWT-plus-introspection configuration included.
+  and DPoP locally and does not consume introspection. Introspection (§3.8)
+  reads a token with this resource's own profile reader and the same
+  negative vectors before projecting its authority (D402), for every path
+  that consumes it, the JWT-plus-introspection configuration included.
 - **Residual.** On the in-process mediated channel every action, the
   high-consequence classes included, runs on a token whose possession is not
   proven. D240 requires a current proof of possession for a credential used
@@ -1256,9 +1259,8 @@ target's acceptance. It is not unsupported and cannot become an exclusion.
 
 - Independently administered Resource policy (#828). §5.2.
 
-The token-authority gate is met for this target (D411). #825's remaining
-acceptance item, introspection's validation of the credential authority
-(D402, §5.1), binds paths that consume introspection.
+The token-authority gate is met for this target (D411), and introspection
+validates a token as the resource does (D402, §3.8).
 
 **Unsupported.** Each is refused or visibly absent; none is partial support.
 
