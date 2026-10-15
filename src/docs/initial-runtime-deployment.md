@@ -68,9 +68,9 @@ administered Resource policy (#828) belong to the adopted policy conjunction.
 Under D284 ruling 4 they are acceptance prerequisites, so this target cannot
 pass acceptance while either is missing (§5). Token authority is met for this
 target: the PEP and the PDP each enforce the credential's own authority
-(D411). #825 stays open for one acceptance item, introspection's validation
-of the credential authority (D402), which binds paths that consume
-introspection; this target validates tokens and DPoP locally and does not.
+(D411). Introspection reads a token with the resource's own Mission
+access-token profile reader (D402), for paths that consume it; this target
+validates tokens and DPoP locally and does not.
 The PDP enforces Resource policy, but #828's acceptance is still open.
 
 ## 2. Dimension contract
@@ -81,7 +81,7 @@ The PDP enforces Resource policy, but #828's acceptance is still open.
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation over HTTP MCP, with a DPoP proof verified on every request, and the AuthZEN request (§4, §5). The in-process mediated channel is outside this target (D315). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, and the shared demo mounts a MAS join route there; the target mounts none, and a configuration that would mount one fails startup: `the as-native target excludes the MAS join route at startup (D315) > fails startup, before connecting to anything, when the payments resource is configured governed` | HTTP entry point only (D315) | #818 owns MAS; #956 Q2 its declaration in the shared demo |
 | Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1187`). Arguments outside a tool's served schema are refused `invalid_request` before any PDP call (§3) | Partial | None open: `hold_transfer`'s control is implemented (§3); #1106 is closed |
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:850-857`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
-| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP and the PDP: the PEP refuses an action outside the verified token's own `authorization_details` before the PDP, and carries that authority to the PDP, which enforces it as its own bound (D341); the token-authority gate is met (D411). Independent Resource policy is enforced by the PDP over stored OpenFGA entitlements; its acceptance is open (§5) | Token authority met (D411); Resource policy required, not met: blocks acceptance | Token authority: none for this target; #825 stays open for item 7, which binds paths that consume introspection (D402). Resource policy: #828 |
+| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP and the PDP: the PEP refuses an action outside the verified token's own `authorization_details` before the PDP, and carries that authority to the PDP, which enforces it as its own bound (D341); the token-authority gate is met (D411). Independent Resource policy is enforced by the PDP over stored OpenFGA entitlements; its acceptance is open (§5) | Token authority met (D411); Resource policy required, not met: blocks acceptance | Token authority: none (D411); introspection validates as the resource does (D402). Resource policy: #828 |
 | Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | none: the running reconciler settles a reported emission gap from the ledger (§7) |
 | Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain and the PEP write reservations are durable files; every other store is in memory (§7). The declared reconciler runs in the launched PEP process; a restarted process cannot reconcile a prior one's claims, a stated bound (§7) | Partial | #250, #831 |
 | Claims | Per-action limits only; execution and transaction handling for applicable operations; no aggregate cap, compromise containment or unattended prohibited-class exception | §8 | Partial | §8 |
@@ -250,11 +250,11 @@ channel, and refuses a missing or unreadable carrier or a passed expiry
 `Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)`.
 Decision Evidence names the bound that refused (`authority_bound`, D348). The
 Mission-bound path does not read `scope`. The token-authority gate is met for
-this target (D411). #825 stays open for acceptance item 7: introspection does
-not yet validate a token's authority the way the PEP does before projecting
-it (D402). That binds paths that consume introspection; this target's PEP
-validates tokens and DPoP locally and reads Mission state from the committed
-kernel.
+this target (D411). Introspection reads a token with the resource's own
+profile reader and the same negative vectors before projecting its authority
+(D402; [provider-integration-port.md](provider-integration-port.md) §3.8),
+for paths that consume it; this target's PEP validates tokens and DPoP
+locally and reads Mission state from the committed kernel.
 
 **Independently administered Resource policy:** partial; #828. The decision
 point binds a `ResourcePolicy` that `evaluate()` requires (it throws without
@@ -359,7 +359,7 @@ That test uses another member; no test names `max_budget`.
 
 **Unmet obligations by owner:**
 
-- Blocking acceptance: #828 (Resource policy). Token authority is met for this target (D411); #825 stays open for acceptance item 7, which binds paths that consume introspection (D402).
+- Blocking acceptance: #828 (Resource policy). Token authority is met for this target (D411).
 - Acceptance-pack prerequisites: #1105 (`pnpm as-native` still builds the cross-domain objects in process; its AS capability set is D332's, §2).
 - Separated deployment only: #1101 (state source under D293).
 - Also open: #826 (Approver versus Subject; implemented by #1074, D306, awaiting acceptance), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
