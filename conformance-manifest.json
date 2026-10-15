@@ -6405,10 +6405,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a refresh of a confidential client's Mission-bound refresh token is refused when it carries no client authentication, and refused when the authenticated client is not the client the token was issued to (the errors of Section 5.2 of RFC 6749: invalid_client and invalid_grant); the issuing client's authenticated refresh succeeds",
-    "local": "the witnessed token is an async-delegation family refresh token issued to ap-agent (private_key_jwt) and DPoP-bound; the wrong-client refresh authenticates as governed-agent and presents a DPoP proof for the same key, so its invalid_grant comes from the client binding (oidc-provider 9.10.0 refresh_token grant, client mismatch), not from a key binding; the unauthenticated refresh sends only client_id and gets 401 invalid_client"
+    "local": "the cited test proves, for a refresh token issued to ap-agent (private_key_jwt): a refresh carrying only client_id, with no client authentication, is refused 401 invalid_client; a refresh authenticated as governed-agent with a DPoP proof for the same key is refused 400 invalid_grant, so the refusal comes from the client binding rather than a key mismatch; and the issuing client's authenticated refresh of the same token then succeeds. It exercises the async-delegation family refresh lineage only (a token also bound to the DPoP key); the code-flow refresh lineage, bound by client authentication alone, is not exercised. No mutation proof exists, because the authentication and client-mismatch checks are the provider library's (oidc-provider 9.10.0), outside src/"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
@@ -6417,7 +6417,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1204 (D412, option A): client authentication is a confidential client's refresh-token binding (RFC 6749 Section 6; RFC 9449 Section 5), with no further sender constraint or rotation required. The cited test also witnesses core.scope-projection.refresh-preserved-on-projection-refusal; its client-error assertions run while the projection would fail, so they also show the client binding is checked first. The check itself is oidc-provider's refresh_token grant, which every refresh token of the reference AS passes through; the Mission code-flow refresh token is not separately witnessed, and no mutation was run for this row because the check lives outside src/."
+   "notes": "#1204 (D412, option A): client authentication is a confidential client's refresh-token binding (RFC 6749 Section 6; RFC 9449 Section 5), with no further sender constraint or rotation required. Partial: the witness covers the async-delegation family lineage only, the code-flow refresh lineage is unexercised, and the provider-library checks carry no mutation proof (observation.local). The cited test also witnesses core.scope-projection.refresh-preserved-on-projection-refusal; its client-error assertions run while the projection would fail, so they also show the client binding is checked first."
   },
   {
    "id": "core.tokens.refresh-public-client-sender-constrained-or-rotated",
