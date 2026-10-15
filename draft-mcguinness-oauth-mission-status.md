@@ -1459,7 +1459,8 @@ Lifecycle operations that change Mission state follow one rule. An
 operation whose resulting state ({{legal-transitions}}) and, for
 `terminated`, termination reason equal the Mission's current ones is
 idempotent success: the AS returns the current Mission Status
-Response, with no state change and no event emitted. Any other
+Response, with no state change and, except for the schedule
+replacement below, no event emitted. Any other
 operation not legal from the current state (for example `suspend`
 against a `terminated` Mission, or `revoke` against one terminated
 with reason `completed`) is a conflict: the AS MUST refuse it with
