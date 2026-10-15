@@ -3348,9 +3348,10 @@ The OAuth binding's invariants carry the deployment:
 
 The deployment sizes token lifetime to its tolerated staleness. Where
 the authorization server offers introspection, a resource server that
-introspects per request stops honoring a token at its next request
-once the Mission leaves `active`, with no Mission-specific code
-({{I-D.draft-mcguinness-oauth-mission}}).
+introspects per request, or uses the binding's issuer-local resolution
+inside the issuer's boundary, stops honoring a token at its next
+request once the Mission leaves `active`, with no Mission-specific
+code ({{I-D.draft-mcguinness-oauth-mission}}).
 
 The deployment claims approved-record integrity and bounded revocation
 latency ({{assurance-claims-axis}}); {{deployment-profile-examples}}
@@ -4265,8 +4266,10 @@ with no `suspended` state and its own termination reasons, served by
 
 - The freshness half-step names the OAuth binding's issuer-local
   resolution of opaque tokens beside Mission Status and
-  introspection; a fresh read does not by itself exclude an effect
-  admitted before a revocation commits (#1203).
+  introspection, and the issuance-only deployment names it as the
+  local equivalent of per-request introspection; a fresh read does
+  not by itself exclude an effect admitted before a revocation
+  commits (#1203).
 
 - Approval and Lifecycle states the OAuth lifecycle as `active`,
   Mission Status's `suspended`, and `terminated` with a reason from
