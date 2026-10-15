@@ -1642,7 +1642,9 @@ through standard {{RFC8414}} discovery.
   `introspection_signing_alg_values_supported`. These are the
   response-signing algorithms, not the algorithms the AS accepts on
   `private_key_jwt` client assertions (the endpoint auth-signing
-  members). Present when the AS serves any such surface.
+  members). REQUIRED when the AS serves any such surface, since a
+  consumer rejects a response signed with an algorithm not listed
+  ({{mission-status-response}}).
 
 `mission_lifecycle_endpoint`:
 : OPTIONAL. A string containing a URL. The URL of the
@@ -1743,8 +1745,9 @@ An implementation claiming an extension MUST meet its requirements:
   read authorization of {{mission-status-authentication}}, the
   anti-oracle property
   ({{mission-status-anti-oracle}}), and the error shape of
-  {{mission-status-errors}}; and advertise `mission_status_endpoint` and
-  `mission_status_endpoint_auth_methods_supported`.
+  {{mission-status-errors}}; and advertise `mission_status_endpoint`,
+  `mission_status_endpoint_auth_methods_supported`, and
+  `mission_status_signing_alg_values_supported`.
 - **Introspection projection**: carry the Mission projection on the
   introspection response ({{introspection-projection}}), returning it
   as a {{RFC9701}}-signed response where end-to-end integrity is
@@ -1752,8 +1755,9 @@ An implementation claiming an extension MUST meet its requirements:
 - **Mission Lifecycle**: serve the management endpoint
   ({{mission-lifecycle-endpoint}}), gate the `suspended` state and the
   `completed` termination it introduces exactly as the issuance profile
-  gates on non-`active` state, and advertise `mission_lifecycle_endpoint` and
-  `mission_lifecycle_endpoint_auth_methods_supported`.
+  gates on non-`active` state, and advertise `mission_lifecycle_endpoint`,
+  `mission_lifecycle_endpoint_auth_methods_supported`, and
+  `mission_status_signing_alg_values_supported`.
 - **Mission Lifecycle, revoke only**: serve the management endpoint
   ({{mission-lifecycle-endpoint}}) with the `revoke` operation, under
   its authentication, its explicit lifecycle authorization
