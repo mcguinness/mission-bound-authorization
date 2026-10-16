@@ -533,7 +533,7 @@ targets the plain RS, the `authorization_details` proposal is
                                    "mission":{"id":"msn_...","issuer":"http://localhost:4400"},"cnf":{"jkt":"..."}}}
 4. GET /api/reports        <- 200 {"reports":[]}
 5. POST /api/reports       <- 403 {"error":"insufficient_scope", ... scope="reports.write" ...}
-6. Revoke                  <- 200 {"id":"msn_...","state":"terminated","termination":{"reason":"revoked", ...},"version":2}
+6. Revoke                  <- 200 {"state":"terminated","termination":{"reason":"revoked", ...},"signed":true}
                                                                                     (as svc:console)
 6a. Refresh after revoke   <- 400 {"error":"invalid_grant"}
 6b. GET after revoke       <- 200 {"reports":[]}                                    JWT only: honored until exp
@@ -700,22 +700,15 @@ companion at `5702bdd0`:
 
 Of § Conformance's (`{#conformance}`) extensions, this deployment meets only
 Revocation propagation: the advertisement and the token sizing above. It
-claims neither Mission Lifecycle nor its revoke-only class, because the
-reference endpoint's wire differs from the companion's:
-
-- it is `POST /missions/{id}/lifecycle` with a JSON body, not the
-  `mission_lifecycle_endpoint` URL with a form-urlencoded body carrying
-  `mission_id`;
-- the caller authenticates with an `x-service-token` header, not mTLS, a
-  sender-constrained access token or private-key JWT (the endpoint's
-  Authentication subsection);
-- a transition answers `{"id", "state", "version"}` JSON, with
-  `termination` beside a `terminated` state, not a signed Mission Status
-  Response;
-- `mission_lifecycle_endpoint`, its auth-methods member and
-  `mission_status_signing_alg_values_supported` are not advertised; the AS
-  advertises the last only with the Mission Status or discharge capability,
-  both off here.
+claims neither Mission Lifecycle nor its revoke-only class. The AS serves
+the companion's endpoint (#1191): `mission_lifecycle_endpoint` takes a
+form-urlencoded body carrying `mission_id`, authenticates the caller by
+private-key JWT, answers `revoke` with the signed state-only Mission Status
+Response, and is advertised with its auth-methods member and
+`mission_status_signing_alg_values_supported`. This launcher binds no client
+a lifecycle grant there, so the walkthrough revokes through the dev-only
+`POST /missions/{id}/lifecycle` route, under the `svc:console` service token,
+which runs the same engine and returns the same signed response.
 
 The refusal of an operation not adopted, which the revoke-only class also
 requires, matches the companion (§8).
