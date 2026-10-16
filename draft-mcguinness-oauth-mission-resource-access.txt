@@ -1003,81 +1003,81 @@ Table of Contents
    the section shown, for every row, and the full Subset Rule and
    Intersection Rule text is there, not restated in the table:
 
-   +========================+===========+============+==========+=======+
-   |Key Name                |Value Space|Subset /    |Controller|Ref    |
-   |                        |           |Intersection|          |       |
-   +========================+===========+============+==========+=======+
-   |max_amount              |Object:    |Same        |IETF      |Section|
-   |                        |amount     |currency,   |          |3.2    |
-   |                        |(decimal   |candidate <=|          |       |
-   |                        |string),   |reference;  |          |       |
-   |                        |currency   |intersection|          |       |
-   |                        |(ISO 4217) |is the      |          |       |
-   |                        |           |smaller     |          |       |
-   |                        |           |amount      |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |resource_issued_after   |String, RFC|Candidate >=|IETF      |Section|
-   |                        |3339 date- |reference;  |          |3.2    |
-   |                        |time       |intersection|          |       |
-   |                        |           |is the later|          |       |
-   |                        |           |instant     |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |resource_issued_before  |String, RFC|Candidate <=|IETF      |Section|
-   |                        |3339 date- |reference;  |          |3.2    |
-   |                        |time       |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |earlier     |          |       |
-   |                        |           |instant     |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |tenant                  |String     |Equal;      |IETF      |Section|
-   |                        |           |intersection|          |3.2    |
-   |                        |           |is the      |          |       |
-   |                        |           |shared value|          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |recipient_domain        |String, DNS|Equal or a  |IETF      |Section|
-   |                        |name       |subdomain;  |          |3.2    |
-   |                        |           |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |narrower    |          |       |
-   |                        |           |value       |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |time_window             |Object:    |Candidate   |IETF      |Section|
-   |                        |not_before,|window      |          |3.2    |
-   |                        |not_after  |within      |          |       |
-   |                        |(RFC 3339  |reference   |          |       |
-   |                        |date-time) |window;     |          |       |
-   |                        |           |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |overlap     |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |data_classification     |Array of   |Candidate   |IETF      |Section|
-   |                        |strings    |array a     |          |3.2    |
-   |                        |           |subset of   |          |       |
-   |                        |           |reference   |          |       |
-   |                        |           |array;      |          |       |
-   |                        |           |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |common      |          |       |
-   |                        |           |members     |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |allowed_tools           |Array of   |Candidate   |IETF      |Section|
-   |                        |strings    |array a     |          |3.2    |
-   |                        |           |subset of   |          |       |
-   |                        |           |reference   |          |       |
-   |                        |           |array;      |          |       |
-   |                        |           |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |common      |          |       |
-   |                        |           |members     |          |       |
-   +------------------------+-----------+------------+----------+-------+
-   |requires_action_approval|Boolean    |Candidate   |IETF      |Section|
-   |                        |           |true or     |          |3.2    |
-   |                        |           |equal to    |          |       |
-   |                        |           |reference;  |          |       |
-   |                        |           |intersection|          |       |
-   |                        |           |is the      |          |       |
-   |                        |           |logical OR  |          |       |
-   +------------------------+-----------+------------+----------+-------+
+   +========================+==========+============+==========+=======+
+   |Key Name                |Value     |Subset /    |Controller|Ref    |
+   |                        |Space     |Intersection|          |       |
+   +========================+==========+============+==========+=======+
+   |max_amount              |Object:   |Same        |IETF      |Section|
+   |                        |amount    |currency,   |          |3.2    |
+   |                        |(decimal  |candidate <=|          |       |
+   |                        |string),  |reference;  |          |       |
+   |                        |currency  |intersection|          |       |
+   |                        |(ISO 4217)|is the      |          |       |
+   |                        |          |smaller     |          |       |
+   |                        |          |amount      |          |       |
+   +------------------------+----------+------------+----------+-------+
+   |resource_issued_after   |String,   |Candidate >=|IETF      |Section|
+   |                        |RFC 3339  |reference;  |          |3.2    |
+   |                        |date-time |intersection|          |       |
+   |                        |          |is the later|          |       |
+   |                        |          |instant     |          |       |
+   +------------------------+----------+------------+----------+-------+
+   |resource_issued_before  |String,   |Candidate <=|IETF      |Section|
+   |                        |RFC 3339  |reference;  |          |3.2    |
+   |                        |date-time |intersection|          |       |
+   |                        |          |is the      |          |       |
+   |                        |          |earlier     |          |       |
+   |                        |          |instant     |          |       |
+   +------------------------+----------+------------+----------+-------+
+   |tenant                  |String    |Equal;      |IETF      |Section|
+   |                        |          |intersection|          |3.2    |
+   |                        |          |is the      |          |       |
+   |                        |          |shared value|          |       |
+   +------------------------+----------+------------+----------+-------+
+   |recipient_domain        |String,   |Equal or a  |IETF      |Section|
+   |                        |DNS name  |subdomain;  |          |3.2    |
+   |                        |          |intersection|          |       |
+   |                        |          |is the      |          |       |
+   |                        |          |narrower    |          |       |
+   |                        |          |value       |          |       |
+   +------------------------+----------+------------+----------+-------+
+   |time_window             |Object:   |Candidate   |IETF      |Section|
+   |                        |not_before|window      |          |3.2    |
+   |                        |and       |within      |          |       |
+   |                        |not_after |reference   |          |       |
+   |                        |(RFC 3339 |window;     |          |       |
+   |                        |date-time)|intersection|          |       |
+   |                        |          |is the      |          |       |
+   |                        |          |overlap     |          |       |
+   +------------------------+----------+------------+----------+-------+
+   |data_classification     |Array of  |Candidate   |IETF      |Section|
+   |                        |strings   |array a     |          |3.2    |
+   |                        |          |subset of   |          |       |
+   |                        |          |reference   |          |       |
+   |                        |          |array;      |          |       |
+   |                        |          |intersection|          |       |
+   |                        |          |is the      |          |       |
+   |                        |          |common      |          |       |
+   |                        |          |members     |          |       |
+   +------------------------+----------+------------+----------+-------+
+   |allowed_tools           |Array of  |Candidate   |IETF      |Section|
+   |                        |strings   |array a     |          |3.2    |
+   |                        |          |subset of   |          |       |
+   |                        |          |reference   |          |       |
+   |                        |          |array;      |          |       |
+   |                        |          |intersection|          |       |
+   |                        |          |is the      |          |       |
+   |                        |          |common      |          |       |
+   |                        |          |members     |          |       |
+   +------------------------+----------+------------+----------+-------+
+   |requires_action_approval|Boolean   |Candidate   |IETF      |Section|
+   |                        |          |true or     |          |3.2    |
+   |                        |          |equal to    |          |       |
+   |                        |          |reference;  |          |       |
+   |                        |          |intersection|          |       |
+   |                        |          |is the      |          |       |
+   |                        |          |logical OR  |          |       |
+   +------------------------+----------+------------+----------+-------+
 
                                   Table 2
 
