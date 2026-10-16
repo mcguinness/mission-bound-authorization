@@ -463,6 +463,16 @@ export {
   withdrawGovernedPolicyConsent,
 } from "./kernel/governed-policy-approval.js";
 export {
+  type MissionApprovalDeferralOptions,
+  MissionApprovalDeferralError,
+  MissionApprovalDeferralStore,
+  type MissionApprovalPoll,
+  type MissionApprovalState,
+  type ModelAdvisor,
+  type ModelAdvisorRequest,
+  type PolicyCompletionResult,
+} from "./kernel/mission-approval-deferral.js";
+export {
   createTemplate,
   dispatchFromTemplate,
   findDispatch,
