@@ -32481,7 +32481,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.root-contents",
@@ -32510,7 +32510,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). The root is the retained approval_policy snapshot; a root missing a committed term is refused at load."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). The root is the retained approval_policy snapshot; a root missing a committed term is refused at load."
   },
   {
    "id": "approval-governance.governed-policy.consent-from-trusted-state",
@@ -32546,7 +32546,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.digest-domains",
@@ -32581,7 +32581,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.record-members",
@@ -32610,7 +32610,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.deciding-policy",
@@ -32639,7 +32639,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.approval-event-per-activation",
@@ -32674,7 +32674,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). The engine test forces the race through the approval event's uniqueness; the policy-completion test runs two completions concurrently."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). The engine test forces the race through the approval event's uniqueness; the policy-completion test runs two completions concurrently."
   },
   {
    "id": "approval-governance.governed-policy.accountable-policy-assertion",
@@ -32709,7 +32709,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.check-consent-active",
@@ -32739,7 +32739,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.check-root-approval",
@@ -32781,7 +32781,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.check-evaluator-digest",
@@ -32811,7 +32811,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.check-client-subject-source",
@@ -32841,7 +32841,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.check-authority-expiry-bounds",
@@ -32871,7 +32871,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.check-policy-evaluation",
@@ -32900,7 +32900,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.check-recency-high-risk",
@@ -32936,7 +32936,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.check-event-binding",
@@ -32965,7 +32965,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.check-atomic-commit",
@@ -33001,7 +33001,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.failure-no-mission",
@@ -33037,7 +33037,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.model-input-only",
@@ -33066,7 +33066,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.withdrawal-stops-activations",
@@ -33096,7 +33096,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "approval-governance.governed-policy.withdrawal-not-retroactive",
@@ -33126,7 +33126,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "deferred-approval.policy-completion.issuer-selects-policy",
@@ -33156,7 +33156,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "deferred-approval.policy-completion.deferral-unchanged",
@@ -33186,7 +33186,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "deferred-approval.policy-completion.refusal-no-mission",
@@ -33216,7 +33216,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "deferred-approval.policy-completion.human-fallback-direct",
@@ -33244,9 +33244,15 @@
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > makes a human approval after a refused evaluation a direct approval event, never a governed_policy activation",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > never turns an approval event that committed a direct Mission into a governed_policy activation",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). Owner review of #1227 accepted the human fallback with this guard. #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
   },
   {
    "id": "deferred-approval.policy-completion.one-mission",
@@ -33281,7 +33287,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). Completion is issuer-side: two concurrent completions, and a human approval racing a policy completion, resolve to one Mission and at most one record."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). Completion is issuer-side: two concurrent completions, and a human approval racing a policy completion, resolve to one Mission and at most one record."
   },
   {
    "id": "deferred-approval.policy-completion.no-client-basis-selector",
@@ -33303,7 +33309,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel): still no witness, since the reference AS has no PAR or token-endpoint wiring for Deferred Mission Approval; the kernel pending-approval store takes no basis or policy selector."
   },
   {
    "id": "child-delegation.carryover.no-progressive-drawdown",
