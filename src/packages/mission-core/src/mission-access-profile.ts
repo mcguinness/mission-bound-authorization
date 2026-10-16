@@ -10,6 +10,7 @@
  * token's profile requires sender constraint, and never proves possession.
  */
 
+import { type ActObject, validateActChain } from "@mission/actor-chain";
 import { type Confirmation, parseConfirmation } from "./confirmation.js";
 import { type CredentialAuthorityEntry, parseCredentialAuthority } from "./credential-authority.js";
 import { readTxnMissionClaim, type TxnMissionClaim } from "./txn-authorization.js";
@@ -39,6 +40,8 @@ export interface MissionAccessProfile extends CredentialProfileClaims {
   mission: TxnMissionClaim;
   /** The authority the credential itself carries (`authorization_details`), read in full. */
   credentialAuthority: readonly CredentialAuthorityEntry[];
+  /** A delegated token's actor chain, validated under the Actor Profile; absent when self-acting. */
+  act?: ActObject;
 }
 
 const nonEmptyString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
@@ -101,5 +104,25 @@ export function readMissionAccessProfile(
   } catch (e) {
     throw new CredentialProfileError(`token authorization_details: ${(e as Error).message}`);
   }
-  return { ...base, mission, credentialAuthority };
+  // @spec mission#delegation, RFC 8693 Section 4.1 (#904): a present `act`
+  // is an object whose every hop meets the Actor Profile (`sub` and `iss`,
+  // no `client_profile`, valid `sub_profile` tokens, depth within the
+  // maximum), the check the resource's enforcement point applies to it.
+  const act = payload.act;
+  if (act !== undefined) {
+    if (typeof act !== "object" || act === null || Array.isArray(act)) {
+      throw new CredentialProfileError("token act must be an object");
+    }
+    try {
+      validateActChain(act as ActObject);
+    } catch (e) {
+      throw new CredentialProfileError(`token act: ${(e as Error).message}`);
+    }
+  }
+  return {
+    ...base,
+    mission,
+    credentialAuthority,
+    ...(act !== undefined ? { act: act as ActObject } : {}),
+  };
 }

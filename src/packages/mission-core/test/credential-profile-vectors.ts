@@ -28,6 +28,14 @@ export interface CredentialProfileBaseline {
   nowS: number;
 }
 
+/** A well-formed actor chain `depth` hops deep, each hop naming `iss`. */
+function chain(depth: number, iss: string): Record<string, unknown> {
+  let node: Record<string, unknown> | undefined;
+  for (let i = depth; i >= 1; i--)
+    node = { sub: `agent-${i}`, iss, ...(node ? { act: node } : {}) };
+  return node as Record<string, unknown>;
+}
+
 export function credentialProfileVectors(
   baseline: CredentialProfileBaseline,
 ): CredentialProfileVector[] {
@@ -85,6 +93,23 @@ export function credentialProfileVectors(
       label: "a mission claim whose approval_basis has no type",
       claims: withMission({ approval_basis: {} }),
     },
+    // A delegated token's actor chain, under the Actor Profile.
+    { label: "an act that is not an object", claims: { act: "agent" } },
+    { label: "a null act", claims: { act: null } },
+    { label: "an act hop with no iss", claims: { act: { sub: "agent-b" } } },
+    {
+      label: "a nested act hop with no sub",
+      claims: { act: { sub: "agent-b", iss: mission.issuer, act: { iss: mission.issuer } } },
+    },
+    {
+      label: "client_profile inside an act hop",
+      claims: { act: { sub: "agent-b", iss: mission.issuer, client_profile: "native" } },
+    },
+    {
+      label: "an act hop with an invalid sub_profile",
+      claims: { act: { sub: "agent-b", iss: mission.issuer, sub_profile: "ai_agent bad!" } },
+    },
+    { label: "an act chain deeper than the maximum", claims: { act: chain(5, mission.issuer) } },
     // The credential's own authority, read in full.
     { label: "no authorization_details", claims: { authorization_details: undefined } },
     {

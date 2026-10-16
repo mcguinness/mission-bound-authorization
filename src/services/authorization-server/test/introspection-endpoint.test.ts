@@ -627,7 +627,9 @@ describe("the credential profile's shared negative vectors (@spec mission#intros
   it.each(labels)("answers a token with %s with a bare active:false, as the resource refuses it", async (label) => {
     const v = vectorsFor(flow1.missionId).find((x) => x.label === label);
     if (!v) throw new Error(`no vector ${label}`);
-    const res = await introspect(await craftToken({ ...baseline(), ...v.claims }, { header: v.header }), {
+    // Bound to a key, so the only failure is the vector's: a delegated
+    // token needs `cnf` regardless of its chain.
+    const res = await introspect(await craftToken({ ...baseline(), cnf, ...v.claims }, { header: v.header }), {
       principal: RS_PAYMENTS,
     });
     expect(res.body).toEqual({ active: false });
@@ -642,7 +644,7 @@ describe("the credential profile's shared negative vectors (@spec mission#intros
   });
 
   it("answers a delegated token (act) with no cnf with a bare active:false: a delegated token is sender-constrained", async () => {
-    const act = { sub: "delegate-agent" };
+    const act = { sub: "delegate-agent", iss: ISSUER };
     expect((await introspect(await craftToken({ ...baseline(), act }), { principal: RS_PAYMENTS })).body).toEqual({ active: false });
     expect((await introspect(await craftToken({ ...baseline(), act, cnf }), { principal: RS_PAYMENTS })).body.active).toBe(true);
   });
@@ -672,7 +674,8 @@ describe("the active response carries the token's act chain, and no other answer
   // exchange here mints an act-bearing token (#869 owns that path), and a JWT
   // test is not opaque-token consumption.
   const cnf = { jkt: "test-confirmation-thumbprint" };
-  const act = { sub: "agent-b", act: { sub: "agent-a" } };
+  // A valid Actor Profile chain: every hop names `sub` and `iss`.
+  const act = { sub: "agent-b", iss: ISSUER, act: { sub: "agent-a", iss: ISSUER } };
   const token = (claims: Record<string, unknown> = {}, opts: { expiresIn?: number } = {}) =>
     craftToken({ jti: flow1.jti, mission: { id: flow1.missionId, issuer: ISSUER }, cnf, ...claims }, opts);
 

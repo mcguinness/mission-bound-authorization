@@ -3382,7 +3382,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ctx.body = inactive;
           return;
         }
-        const { jti, sub, clientId, exp, iat, confirmation } = profile;
+        const { jti, sub, clientId, exp, iat, confirmation, act } = profile;
         const credentialAuthority = payload.authorization_details as AuthorityEntry[];
 
         // Mission resolution: a token the AS cannot bind to a known Mission
@@ -3415,7 +3415,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // (the record's template basis). A primary token may be a bearer
         // token, so its `cnf` may be absent.
         const senderConstrainedProfile =
-          payload.act !== undefined || record.parent !== undefined || record.approval_basis.type === "template";
+          act !== undefined || record.parent !== undefined || record.approval_basis.type === "template";
         if (!confirmation && senderConstrainedProfile) {
           ctx.body = inactive;
           return;
@@ -3483,10 +3483,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...(typeof payload.scope === "string" ? { scope: payload.scope } : {}),
           ...(cnf ? { cnf } : {}),
           // @spec mission#introspected-consumption, RFC 8693 Section 4.1 (#904):
-          // a delegated token's actor chain, carried unchanged. Only this active
-          // body carries it; every inactive or unauthorized answer is built
-          // without it.
-          ...(payload.act !== undefined ? { act: payload.act } : {}),
+          // a delegated token's actor chain, validated by the profile reader and
+          // carried unchanged. Only this active body carries it; every inactive
+          // or unauthorized answer is built without it.
+          ...(act !== undefined ? { act } : {}),
           token_type: confirmation?.jkt ? "DPoP" : "Bearer",
           authorization_details,
           mission: disclosedMission,
