@@ -887,7 +887,7 @@ The Mission Intent members are:
   resolves to an already-committed operation is recovery, not a new
   submission, and returns the stored outcome under the applicable
   idempotency rules even when the ceiling has since passed
-  ({{grant-binding}}).
+  ({{mission-response-parameters}}, {{mission-record}}).
 
 The Approver's authentication strength for the approval event is
 requested with the standard `acr_values` and `max_age`
@@ -952,7 +952,7 @@ Submission is governed by the following rules:
   ({{extensibility}}). A bare Mission Intent submitted as the
   parameter value fails this rule, since its `goal` and sibling
   members are unknown envelope members.
-- **One carriage, through PAR.** On the authorization-code path, the
+- **Carriage through PAR.** On the authorization-code path, the
   AS accepts the Intent in one of two forms:
 
   1. the form-encoded `mission_intent` parameter of the PAR request
@@ -1084,8 +1084,9 @@ against the proposal that sought it.
 Submitting `authorization_details` without `mission_intent` is an
 ordinary {{RFC9396}} request that this document does not govern.
 Two AS-side rules keep a governed task from being downgraded to such
-a request; {{downgrade-by-omission}} states the client-side rule and
-the threat. Where a deployment designates a resource
+a request; {{discovery}} states the client-side rules and
+{{downgrade-by-omission}} the threat. Where a deployment designates a
+resource
 Mission-governed, its AS MUST NOT issue a token for that resource
 outside a Mission, except under documented policy exceptions. If a
 client registered as Mission-governed sends an
@@ -1971,7 +1972,8 @@ parameter: a string carrying the Mission Identifier, returned
 alongside the issued token. An AS SHOULD return it, because a client
 need not parse the access token and cannot read the `mission` claim
 of a token that is encrypted or opaque to it. It is an informational
-reference only: presenting it authorizes nothing ({{lifecycle}}), and
+reference only: presenting it authorizes nothing
+({{grant-binding-resolution}}), and
 a client MUST NOT derive authority from it.
 
 Alongside it, this document defines `mission_expires_at`: the exact
@@ -2997,7 +2999,7 @@ Mission's read entry alone:
 The issuance is a derivation, gated on the Mission being `active`
 ({{lifecycle}}). The response carries no `scope` member because none
 was requested or granted. It echoes the narrowed grant and the
-`mission_id` reference ({{grant-binding}}); the emitted entry is a
+`mission_id` reference ({{mission-response-parameters}}); the emitted entry is a
 subset ({{subset}}) of the Mission's read entry, its `constraints`
 carried intact:
 
@@ -5671,7 +5673,7 @@ each assigns the three roles.
 | Policy drawdown ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) | The Parent Mission's human Approver | The requesting parent Agent, distinct from `consent_principal` | `kind: policy`, naming the child-creation policy's `id`/`version` where the entry carries one, otherwise the Parent Mission's approved delegation entry; never the requesting parent Agent |
 | Ceiling drawdown ({{I-D.draft-mcguinness-oauth-mission-progressive}}) | The Approver who consented the ceiling | The requesting client, distinct from `consent_principal` | `kind: policy`, naming the drawdown policy's `policy_id`/`policy_version` carried in `activation`; never the requesting client |
 | Governed policy approval ({{I-D.draft-mcguinness-mission-approval-governance}}) | The human who approved the exact policy version the instance activates under | The authenticated client that requested the activation, distinct from `consent_principal` | `kind: policy`, `policy` naming the deciding policy's `id`/`version` (the approved policy itself or the evaluator it commits), with `governance_record: true`; never the requesting client |
-| AGR-backed direct approval ({{I-D.draft-mcguinness-mission-approval-governance}}) | The approving human, whose own `human` assertion is the Approval Governance Record's accountable assertion | Equal to `consent_principal`, as for direct approval | `kind: human`, `governance_record: true`; `policy` and `service` assertions contribute without replacing the human decision, and the full assertion set is never collapsed into a single principal |
+| AGR-backed direct approval ({{I-D.draft-mcguinness-mission-approval-governance}}) | The approving human, whose own `human` assertion is the Approval Governance Record's accountable assertion | Equal to `consent_principal`, as for direct approval | `kind: human`, `governance_record: true`; how other assertions contribute is Approval Governance's |
 | AGR-backed template or drawdown activation ({{I-D.draft-mcguinness-mission-approval-governance}}) | Unchanged from the underlying basis, whose `approval_basis` stands in for an accountable assertion | Unchanged from the underlying basis | `kind: policy`, as the underlying basis assigns it, with `governance_record: true`; the full assertion set is never collapsed into a single principal |
 
 Direct approval is the degenerate case where one human fills every
