@@ -110,7 +110,7 @@ export interface ActivationPolicySnapshot {
 }
 
 /**
- * @spec approval-governance#record, approval-governance#governed-policy-root , 
+ * @spec approval-governance#record, approval-governance#governed-policy-root ,
  * the integrity-anchor `typ` for an Approval Governance Record's
  * `approval_policy.digest`: the retained snapshot of the governing policy,
  * which under `governed_policy` is the consented root a human approved. A

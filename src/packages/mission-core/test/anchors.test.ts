@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  ACTIVATION_POLICY_TYP,
+  APPROVAL_POLICY_TYP,
   AUTHORITY_ENTRY_TYP,
+  activationPolicyDigest,
+  approvalPolicyDigest,
   authorityHash,
   canonicalize,
   computeAnchor,
   DuplicateMemberError,
+  GOVERNED_POLICY_TYP,
   intentHash,
   parseStrictJson,
   verifyAnchor,
@@ -151,5 +156,31 @@ describe("Authority Set entry commitment (@spec mission#integrity-anchors)", () 
     expect(computeAnchor(AUTHORITY_ENTRY_TYP, ISS, reordered)).toBe(
       computeAnchor(AUTHORITY_ENTRY_TYP, ISS, ENTRY_COMMITMENT_V1),
     );
+  });
+});
+
+describe("policy snapshot digest domains (@spec approval-governance#governed-policy-root)", () => {
+  const snapshot = { content_type: "application/json", content: '{"rules":{"max_entries":3}}' };
+  const value = {
+    content_type: snapshot.content_type,
+    content: Buffer.from(snapshot.content, "utf8").toString("base64url"),
+  };
+
+  it("commits a root under mission-approval-policy and an evaluator under mission-activation-policy, never one for the other", () => {
+    expect(APPROVAL_POLICY_TYP).toBe("mission-approval-policy");
+    expect(approvalPolicyDigest(ISS, snapshot)).toBe(
+      computeAnchor(APPROVAL_POLICY_TYP, ISS, value),
+    );
+    expect(activationPolicyDigest(ISS, snapshot)).toBe(
+      computeAnchor(ACTIVATION_POLICY_TYP, ISS, value),
+    );
+    expect(approvalPolicyDigest(ISS, snapshot)).not.toBe(activationPolicyDigest(ISS, snapshot));
+    expect(approvalPolicyDigest(ISS, snapshot)).not.toBe(
+      computeAnchor(GOVERNED_POLICY_TYP, ISS, value),
+    );
+    // The digest is over bytes: the same bytes as text or as octets agree.
+    expect(
+      approvalPolicyDigest(ISS, { ...snapshot, content: Buffer.from(snapshot.content, "utf8") }),
+    ).toBe(approvalPolicyDigest(ISS, snapshot));
   });
 });

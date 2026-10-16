@@ -635,9 +635,10 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     expect(mission.authority_set.flatMap((e) => e.actions)).toEqual(["payments:invoice.list", "payments:invoice.read"]);
     // It never widens: a removal naming nothing held, and members that would
     // add authority, leave the no-objection set exactly as it was.
+    const elsewhere = DEPLOYMENT_CEILING.find((e) => e.resource !== RESOURCE) as AuthorityEntry;
     const widen = run("ape-m4", {
       remove: [{ resource: "https://elsewhere.test" }],
-      ...({ add: [executeEntry()], authority: [executeEntry()] } as object),
+      ...({ add: [elsewhere], authority: [elsewhere] } as object),
     });
     expect(widen.act().mission.authority_set).toEqual(widen.view.authority);
     // The model is a recorded service input, never the deciding policy.
