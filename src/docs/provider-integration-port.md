@@ -130,8 +130,18 @@ the store.
   No principal, or an `auth_time` in the future, is 401. `decide()` then checks
   the requested `acr_values` and `max_age`, and `prompt=login`, which
   oidc-provider substitutes for `max_age=0`, against the principal's `acr` and
-  `auth_time` (`approverAuthenticationSatisfies`). A miss finishes the
-  interaction `access_denied`.
+  `auth_time` (`approverAuthenticationSatisfies`). After derivation it
+  evaluates the published approval-authentication floor
+  (`config/approval-floor.json`, `evaluateApprovalFloor`) over the complete
+  derived Authority Set: every action is classified through the AS-owned
+  classification, and an unclassified one refuses. Payment execution and
+  remittance (`irreversible_action`, `external_commitment`) invoke the
+  `high-risk-authority` floor, which only a browser Approver satisfies, with
+  an achieved `acr` of `mfa` and an `auth_time` at most 300 seconds old. A
+  headless service's registered context never satisfies it. Both the request
+  and the floor must hold, so an absent or weaker request never relaxes the
+  floor. A miss of either finishes the interaction `access_denied`, before any
+  Mission, Grant or code.
 - **Boundary.** In request. Nothing is written before these checks pass.
 - **Asynchronous work.** None.
 - **Crash and recovery.** `ApprovalSessionStore` is an in-process `Map`, and
@@ -149,6 +159,18 @@ the store.
   - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's authentication never becomes the Subject's: openid refuses, and the token carries the Subject and none of the Approver's authentication`
   - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > max_age=0 refuses a stale Approver authentication`
   - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > an unsupported acr is refused`
+- **Tests (HTTP, `approval-floor.test.ts`):**
+  - `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority, with no client request, from a browser Approver whose achieved acr the floor does not accept: no Mission, Grant, code or Subject session`
+  - `> refuses high-risk authority approved headlessly, even when the approval service's registration claims mfa`
+  - `> the age bound: an Approver authenticated exactly max_authentication_age_seconds ago satisfies it, one second older does not`
+  - `> classifies the complete derived set: a high-risk entry after a low-risk one still invokes the floor`
+  - `> refuses admitted authority the classification does not name: unclassified authority fails closed`
+  - `the floor and the client's requested strength are conjunctive (@spec mission#approval-authentication, #826, D425) > a satisfied weaker request does not relax the floor: Alice requests and achieves password, and the floor refuses`
+  - `the floor's classification agrees with the deployment's operation definitions (@spec mission#approval-authentication, #826, D425) > the high-risk payments actions are exactly those with an irreversible or external-commitment operation`
+- **Tests (Expansion approval, `expansion-endpoint.test.ts`):**
+  - `an expansion approval meets the approval-authentication floor (@spec mission#approval-authentication, #826, D425) > refuses a high-risk expansion approval that carries no achieved authentication: nothing is recorded, the deferral stays pending, and no successor exists`
+  - `> refuses a high-risk expansion approval whose recorded login the floor does not accept, a weaker acr or one older than the age bound, then completes from one it accepts`
+  - `> admits a low-risk widening with no achieved authentication: the floor does not apply`
 - **Residual.**
   - The achieved `acr` and `auth_time` are checked and not retained. The
     record's `approval_basis.consent_principal` is `{iss, sub}`
@@ -222,10 +244,14 @@ the store.
   `invalid_request` before any interaction. That is the accepted limitation
   (D305): client-requested strength on a delegated approval, including a
   client registration's incompatible OIDC defaults, is unsupported and fails
-  closed, never ignored or downgraded. No approval-authentication floor is
-  published or enforced: the OAuth binding's high-risk floor
-  (`{#approval-authentication}`) is not implemented here (#826), and no
-  other carrier is defined.
+  closed, never ignored or downgraded. The published approval-authentication
+  floor governs the Approver's strength on high-risk authority (§3.1), and
+  no other carrier is defined. An Expansion deferral approval
+  (`ExpansionDeferralStore.approve`, an in-process API) meets the same floor
+  over the successor's derived authority, from the browser login the trusted
+  approval integration recorded (`ExpansionApproval.authentication`); without
+  one a high-risk expansion approval refuses, recording nothing, and the
+  deferral stays pending.
   Tests (HTTP, `approver-subject-separation.test.ts`):
   `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826)`,
   every case.
