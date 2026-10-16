@@ -402,6 +402,8 @@ describe("ceiling consent (@spec progressive#progressive-authorization)", () => 
     // authority_hash commits only the consented Authority Set.
     expect(record.authority_hash).toBe(authorityHash(ISSUER, record.authority_set as never));
     expect(record.ceiling_consented_at).toBe(record.created_at);
+    // The Approval Context Manifest input carries the record's ceiling_hash.
+    expect(as.kernel.approvalContextInput(record).ceiling_hash).toBe(record.ceiling_hash);
     // The ceiling is record provenance, never token content.
     expect(JSON.stringify(decodeJwt(m.accessToken))).not.toContain("authority_ceiling");
   });
