@@ -310,6 +310,7 @@ import {
 } from "./transaction-authorization.js";
 export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
+import { ceilingConsentOf, type ProgressiveDrawdownOptions } from "../kernel/progressive.js";
 import { ID_JAG_TOKEN_TYPE } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
@@ -663,6 +664,13 @@ export interface AdapterOptions {
    * disabled capability refuses with its path's standard error.
    */
   capabilities?: ReadonlySet<ProviderCapability>;
+  /**
+   * @spec progressive#in-ceiling-expansion: the policy-adjudicated drawdown
+   * path, default off. Absent, an approval decision's ceiling members are
+   * ignored and an expansion of a Mission that carries a ceiling takes the
+   * ordinary fresh-approval path.
+   */
+  progressive?: ProgressiveDrawdownOptions;
 }
 
 /**
@@ -4274,11 +4282,16 @@ async function decide(
   // requested ceiling that passes while the approval is pending refuses HERE and
   // creates no Mission. Mapped like the derivation refusal above: the
   // interaction finishes with the error, never a 500.
+  // @spec progressive#progressive-authorization: the authority ceiling and
+  // drawdown policy the Approver consented on this approval surface, read only
+  // where the deployment selects Progressive authorization.
+  const ceiling = opts.progressive ? ceilingConsentOf(body) : undefined;
   let record: MissionRecord;
   try {
     record = opts.kernel.approve({
       intent: intent as MissionIntent,
       ...(proposedAuthority ? { proposedAuthority } : {}),
+      ...(ceiling ? { ceiling } : {}),
       // @spec mission#intent-submission-evidence — the verified facts land on
       // the Mission Record (outside all anchors), request-derived, never
       // fabricated downstream.

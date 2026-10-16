@@ -123,6 +123,7 @@ import {
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { newMissionId } from "./mission-id.js";
+import { type CeilingConsent, ceilingMembersOf, consentCeiling, serializeCeiling } from "./progressive.js";
 import {
   IntentError,
   type IntentSubmissionPresenter,
@@ -223,7 +224,8 @@ CREATE TABLE IF NOT EXISTS missions (
   containment_json TEXT,
   discharged_json TEXT,
   submission_evidence_json TEXT,
-  termination_json TEXT
+  termination_json TEXT,
+  ceiling_json TEXT
 ) STRICT;
 `;
 
@@ -257,6 +259,12 @@ function migrateMissions(db: Database): void {
   // columns, which stay readable for exactly those rows.
   if (!columns.has("termination_json")) {
     db.exec("ALTER TABLE missions ADD COLUMN termination_json TEXT");
+  }
+  // @spec progressive#progressive-authorization: the consented ceiling and
+  // its commitment, written once at creation. Nullable with no default: a
+  // row without it carries no ceiling, so it has no progressive authorization.
+  if (!columns.has("ceiling_json")) {
+    db.exec("ALTER TABLE missions ADD COLUMN ceiling_json TEXT");
   }
 }
 
@@ -325,6 +333,14 @@ export interface ApproveInput {
    * member absent.
    */
   capabilityResolution?: CapabilitySourceResolution[];
+  /**
+   * @spec progressive#progressive-authorization: the authority ceiling and
+   * drawdown policy the Approver consented at this approval event, from the
+   * authenticated approval surface, never from the client. The drawdown
+   * policy's `digest` is minted here from the snapshot this issuer holds.
+   * Absent: the Mission has no progressive authorization.
+   */
+  ceiling?: CeilingConsent;
 }
 
 /**
@@ -863,6 +879,7 @@ export class MissionKernel {
       intent_hash: fresh.intent_hash,
       ...(fresh.proposal_hash ? { proposal_hash: fresh.proposal_hash } : {}),
       authority_hash: fresh.authority_hash,
+      ...(fresh.ceiling_hash ? { ceiling_hash: fresh.ceiling_hash } : {}),
       subject: fresh.subject,
       // @spec approval-governance#approval-context-manifest (#705): the
       // closed v1 manifest keeps its `approver` member; its value is the
@@ -1090,6 +1107,12 @@ export class MissionKernel {
     // the same read, so the established expiry and the committed creation time
     // can never drift apart.
     const createdAt = this.now().toISOString();
+    // @spec progressive#progressive-authorization: a ceiling consented at this
+    // approval event is recorded with its `ceiling_hash`, and its consent
+    // instant is this event's own.
+    const ceiling = input.ceiling
+      ? consentCeiling(this.opts.issuer, this.opts.activationPolicies, input.ceiling, createdAt)
+      : undefined;
     // @spec mission#approval-basis — direct: the human approval event itself
     // creates the record; consent_principal == activation_actor == approver,
     // and root_commitment is this Mission's own authority_hash.
@@ -1143,6 +1166,7 @@ export class MissionKernel {
       derivation_count: 0,
       grant_id: null,
       status_list_idx: null,
+      ...(ceiling ?? {}),
     };
     try {
       this.insertRecord(record, undefined, { source: resolvedSource });
@@ -1264,8 +1288,8 @@ export class MissionKernel {
            approval_basis_json, authority_source_json, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, derivation_limit,
            derivation_count, grant_id, predecessor, related_to, parent_id, parent_json, template_id,
-           template_json, projected_from, submission_evidence_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           template_json, projected_from, submission_evidence_json, ceiling_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -1324,6 +1348,9 @@ export class MissionKernel {
           // @spec mission#intent-submission-evidence — verified facts, immutable
           // after creation (like approval_basis), written only here.
           record.submission_evidence ? JSON.stringify(record.submission_evidence) : null,
+          // @spec progressive#progressive-authorization: the consented ceiling,
+          // immutable after creation, written only here.
+          serializeCeiling(record),
         );
       // @spec mission#authority-sources (#827): the committed root, in the
       // SAME transaction as the record: a Mission never exists without the
@@ -3874,6 +3901,8 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     ...(row.discharged_json
       ? { discharged: JSON.parse(row.discharged_json as string) as DischargedEntry[] }
       : {}),
+    // @spec progressive#progressive-authorization: absent means no ceiling.
+    ...ceilingMembersOf(row.ceiling_json),
   };
 }
 

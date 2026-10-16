@@ -82,8 +82,10 @@ import {
 } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
+import { adjudicateDrawdown, createCeilingDrawdownInCallerTx, DrawdownRefusal } from "../kernel/progressive.js";
 import {
   type AuthorityEntry,
+  type IntentSubmissionEvidenceFact,
   type MissionIntent,
   type MissionIntentSubmission,
   type MissionRecord,
@@ -102,6 +104,7 @@ import {
   gateErrorToMissionError,
   intentErrorToOidc,
   InvalidAuthorizationDetails,
+  MissionGrantError,
   newResourceServer,
   SCOPE_DECIDED_AT_SAVE,
   requiredEvidenceTypesFor,
@@ -2532,6 +2535,25 @@ export async function handleExpansionExchange(
     return;
   }
 
+  // @spec progressive#in-ceiling-expansion: where the deployment selects
+  // Progressive authorization and the predecessor carries a consented ceiling,
+  // the ceiling adjudicates first. Out of ceiling refuses; a drawdown its
+  // policy authorizes completes here; any other in-ceiling request falls back
+  // to the fresh approval below.
+  if (opts.progressive && active.authority_ceiling) {
+    const handled = await completeCeilingDrawdown(opts, provider, ctx, {
+      predecessorId: active.id,
+      requested,
+      intent,
+      ...(proposedAuthority ? { proposedAuthority } : {}),
+      ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+      creationRequestId,
+      fingerprint,
+      jkt: resolved.jkt,
+    });
+    if (handled) return;
+  }
+
   // Widening: a FRESH approval is required. Complete via the DTR deferred path.
   const store = opts.expansionDeferrals;
   if (!store) {
@@ -2728,6 +2750,121 @@ async function pollDeferredExpansion(
       }
     }
   }
+}
+
+/**
+ * @spec progressive#in-ceiling-expansion, expansion#creation-request-id: the
+ * policy-adjudicated in-ceiling drawdown. Returns false when the request falls
+ * back to a fresh human approval; otherwise it has answered the exchange.
+ *
+ * Nothing awaits between the reservation lookup and the commit, so a
+ * concurrent identical request either finds the committed reservation or
+ * loses the key's uniqueness constraint to it, and recovers the one result.
+ * The `(client, creation_request_id)` reservation, the successor's
+ * activation and the predecessor's supersession commit in one transaction
+ * before the token is minted; a lost response is recovered through
+ * {@link recoverExpansion}, which never creates again.
+ */
+async function completeCeilingDrawdown(
+  opts: AdapterOptions,
+  provider: Provider,
+  ctx: KoaContextWithOIDC,
+  d: {
+    predecessorId: string;
+    requested: AuthorityEntry[];
+    intent: MissionIntent;
+    proposedAuthority?: AuthorityEntry[];
+    submissionEvidence?: IntentSubmissionEvidenceFact[];
+    creationRequestId: string;
+    fingerprint: string;
+    jkt: string;
+  },
+): Promise<boolean> {
+  const progressive = opts.progressive;
+  const idem = opts.creationIdempotency;
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  const predecessor = opts.kernel.get(d.predecessorId);
+  if (!progressive || !idem || !predecessor) return false;
+  const raced = idem.find(client.clientId, d.creationRequestId);
+  if (raced) {
+    await recoverExpansion(opts, provider, ctx, raced, d.fingerprint, d.jkt);
+    return true;
+  }
+  const resourceToAs = opts.resourceToAs;
+  const adjudication = adjudicateDrawdown(opts.kernel, progressive, {
+    predecessor,
+    requested: d.requested,
+    // Without a resource map no resource is known to be local: fail closed.
+    isCrossDomain: (resource) => !resourceToAs || resourceToAs(resource) !== opts.issuer,
+  });
+  if (adjudication.outcome === "out_of_ceiling") {
+    // Set on ctx directly: err_out would strip mission_denial_reason.
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", mission_denial_reason: "out_of_ceiling" };
+    ctx.set("cache-control", "no-store");
+    return true;
+  }
+  if (adjudication.outcome === "fresh_approval") return false;
+  const reservation: CreationReservation = {
+    clientId: client.clientId,
+    creationRequestId: d.creationRequestId,
+    op: "expansion",
+    fingerprint: d.fingerprint,
+    cnfJkt: d.jkt,
+    sourceMissionId: predecessor.id,
+  };
+  let successor: MissionRecord;
+  try {
+    successor = idem.createCompleted(reservation, () => {
+      const created = createCeilingDrawdownInCallerTx(opts.kernel, {
+        predecessorId: predecessor.id,
+        intent: d.intent,
+        ...(d.proposedAuthority ? { proposedAuthority: d.proposedAuthority } : {}),
+        ...(d.submissionEvidence?.length ? { submissionEvidence: d.submissionEvidence } : {}),
+        activationActor: { iss: opts.issuer, sub: client.clientId },
+        policy: { ref: adjudication.ref, snapshot: adjudication.snapshot },
+      });
+      return { missionId: created.id, value: created };
+    });
+  } catch (e) {
+    if (e instanceof UniqueViolationError) {
+      const winner = idem.find(client.clientId, d.creationRequestId);
+      if (winner) {
+        await recoverExpansion(opts, provider, ctx, winner, d.fingerprint, d.jkt);
+        return true;
+      }
+    }
+    if (e instanceof DrawdownRefusal) {
+      // @spec progressive#in-ceiling-expansion (Derivation limits): refused as
+      // Derivation Limits refuses a derivation; nothing was created.
+      if (e.code === "derivations_exhausted") throw new MissionGrantError(e.message, "derivations_exhausted");
+      txError(ctx, 400, "invalid_request", e.message);
+      return true;
+    }
+    if (e instanceof IntentError) throw intentErrorToOidc(e);
+    throw e;
+  }
+  opts.kernel.publishPendingCommits();
+  const minted = await mintMissionAccessToken(
+    opts,
+    provider,
+    ctx,
+    successor,
+    opts.kernel.effectiveAuthoritySet(successor),
+    d.jkt,
+  );
+  if (minted) {
+    const body = ctx.body as { access_token?: string; expires_in?: number };
+    if (typeof body?.access_token === "string") {
+      const nowS = Math.floor(opts.kernel.nowDate().getTime() / 1000);
+      idem.recordDelivery(client.clientId, d.creationRequestId, {
+        mode: "ceiling_drawdown",
+        access_token: body.access_token,
+        exp: nowS + (typeof body.expires_in === "number" ? body.expires_in : 0),
+      });
+    }
+  }
+  return true;
 }
 
 /**

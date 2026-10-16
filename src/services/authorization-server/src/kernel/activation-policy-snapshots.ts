@@ -219,14 +219,23 @@ export class ActivationPolicySnapshotStore {
 
 /**
  * The activation policy reference a Mission record commits for its own
- * activation: a template instance's `template.dispatch_policy`, or a
- * policy-adjudicated child's `approval_basis.activation` policy members.
- * Undefined when the record commits none. A Mission-creating profile that
- * commits another (Progressive's `drawdown_policy`) adds its arm here.
+ * activation: a template instance's `template.dispatch_policy`, a
+ * policy-adjudicated child's `approval_basis.activation` policy members, or a
+ * policy-adjudicated Progressive successor's `drawdown_policy`. Undefined when
+ * the record commits none.
  */
 export function committedActivationPolicy(record: MissionRecord): ActivationPolicyRef | undefined {
   if (record.template) return record.template.dispatch_policy;
   const basis = record.approval_basis;
+  // @spec progressive#in-ceiling-expansion: the activation names the policy's
+  // id and version only; the digest is the one `ceiling_hash` commits on the
+  // record's own `drawdown_policy`.
+  if (basis.type === "ceiling_drawdown") {
+    const ref = record.drawdown_policy;
+    return ref && ref.id === basis.activation.policy_id && ref.version === basis.activation.policy_version
+      ? ref
+      : undefined;
+  }
   if (basis.type === "policy_drawdown") {
     const { policy_id, policy_version, policy_digest } = basis.activation;
     if (policy_id && policy_version && policy_digest) {
