@@ -465,13 +465,16 @@ assembles this target with `launchAsNative` (`demo/src/as-native.ts:72`): the
 AS on 4400 with the issuance profile plus exactly `lifecycle-revoke` and
 `transaction-authorization` (D332, §2), the `mcp-payments` PEP over HTTP MCP
 at `http://localhost:4403/mcp`, the PDP, OpenFGA and the in-process approval
-service, with no MAS join route. That service logs Bob in on the AS's browser
-approval surface with `mfa` at each approval, because the published
-approval-authentication floor (D425, `config/approval-floor.json`) refuses a
-headless approval of payment execution or remittance. The demo has no
-Approver identity provider: the service stands in for the trusted login
-integration and records the login at the moment it approves. A deployment
-establishes the session from its real login. It mints no ordinary token. It prints the
+service, with no MAS join route. That service approves on the AS's browser
+approval surface, because the published approval-authentication floor
+(D425, `config/approval-floor.json`) refuses a headless approval of payment
+execution or remittance. It presents a login recorded once when the stack is
+composed (Bob, `mfa`) and never records one at an approval, so 300 seconds
+after that login a high-risk approval refuses until the Approver logs in
+again. The login is simulated: the demo has no Approver identity provider,
+so no person authenticated. #253's high-risk approval acceptance therefore
+does not rest on it, and that gate stays unmet until a deployment's login
+integration supplies the achieved context. It mints no ordinary token. It prints the
 issuer, the AS capability set, the resource audience and the PDP mode, and
 needs only `pnpm setup` and `docker compose up -d` (OpenFGA).
 

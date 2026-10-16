@@ -167,6 +167,10 @@ the store.
   - `> refuses admitted authority the classification does not name: unclassified authority fails closed`
   - `the floor and the client's requested strength are conjunctive (@spec mission#approval-authentication, #826, D425) > a satisfied weaker request does not relax the floor: Alice requests and achieves password, and the floor refuses`
   - `the floor's classification agrees with the deployment's operation definitions (@spec mission#approval-authentication, #826, D425) > the high-risk payments actions are exactly those with an irreversible or external-commitment operation`
+- **Tests (Expansion approval, `expansion-endpoint.test.ts`):**
+  - `an expansion approval meets the approval-authentication floor (@spec mission#approval-authentication, #826, D425) > refuses a high-risk expansion approval that carries no achieved authentication: nothing is recorded, the deferral stays pending, and no successor exists`
+  - `> refuses a high-risk expansion approval whose recorded login the floor does not accept, a weaker acr or one older than the age bound, then completes from one it accepts`
+  - `> admits a low-risk widening with no achieved authentication: the floor does not apply`
 - **Residual.**
   - The achieved `acr` and `auth_time` are checked and not retained. The
     record's `approval_basis.consent_principal` is `{iss, sub}`
@@ -242,9 +246,12 @@ the store.
   client registration's incompatible OIDC defaults, is unsupported and fails
   closed, never ignored or downgraded. The published approval-authentication
   floor governs the Approver's strength on high-risk authority (§3.1), and
-  no other carrier is defined. Expansion deferral approvals are an
-  in-process API with no authenticated approval surface, so they carry no
-  achieved context and the floor is not evaluated there.
+  no other carrier is defined. An Expansion deferral approval
+  (`ExpansionDeferralStore.approve`, an in-process API) meets the same floor
+  over the successor's derived authority, from the browser login the trusted
+  approval integration recorded (`ExpansionApproval.authentication`); without
+  one a high-risk expansion approval refuses, recording nothing, and the
+  deferral stays pending.
   Tests (HTTP, `approver-subject-separation.test.ts`):
   `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826)`,
   every case.
