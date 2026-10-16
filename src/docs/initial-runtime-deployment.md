@@ -273,8 +273,8 @@ the stack's issuer ([fga-hygiene.md](fga-hygiene.md)). Its owner is the
 deployment's OpenFGA administrator, who changes it with `pnpm resource-policy`
 (`FgaDomainAdmin`, attached to the configured store, never creating one):
 `pnpm resource-policy administers the stored entitlements (@spec runtime#input-resource-policy, #828) > attaches to the configured store and model and never bootstraps one; without both ids it refuses before connecting`.
-The Operation Profile (`payments-runtime-profile-v3`) declares its owner,
-principal, relations, freshness (current as of the decision, separate from
+The Operation Profile (`payments-runtime-profile-v4`) declares its owner,
+principals (subject and client), relations, tenant, freshness (current as of the decision, separate from
 Mission-state freshness) and failure behavior; the Enforcement Scope
 Statement's baseline has no Resource-policy member, and the runtime profile
 is the delta over it that carries the declaration. `composeStack` attaches
@@ -295,10 +295,18 @@ made before a restart still refuses after the launcher attaches to the
 same store, in both PDP modes:
 [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (co-resident)` and
 [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (remote)`.
-Remaining under #828: the live witnesses run only in CI; no policy requires
-a client and there is no tenant dimension (D426); a vendor the store does
-not hold keeps `lookup_vendor`'s server target (D324), which a vendor
-constraint or the policy refuses.
+The authenticated client and the tenant are policy dimensions (D429): the
+client must hold `authorized_client` on every target, and an entitlement
+counts only for a member of the vendor's tenant. Another client, a revoked
+client entitlement and the same subject outside the vendor's tenant each
+refuse, and restoring each permits:
+`the client dimension (D429): the authenticated client must hold authorized_client on every target; a refused client entitlement refuses though the subject's holds, and no client or a client under another issuer refuses without a check`,
+[FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > the client and the tenant are policy dimensions (D429): another client, a revoked client entitlement, and the same subject outside the vendor's tenant each deny resource_policy; restoring each permits`,
+[FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read is refused resource_policy with no effect once the administrator revokes only its client's entitlement on acme, the subject's unchanged, and permitted once it is restored (co-resident) (D429)` and
+[FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read is refused resource_policy with no effect once the administrator revokes only its client's entitlement on acme, the subject's unchanged, and permitted once it is restored (remote) (D429)`.
+Remaining under #828: the live witnesses run only in CI; a vendor the
+store does not hold keeps `lookup_vendor`'s server target (D324), which a
+vendor constraint or the policy refuses.
 
 Deployment-administered gates that do exist: the action-bound approval for
 `payments:remittance.send` (§3), the action-to-relation map (`out_of_authority`,
