@@ -565,6 +565,9 @@ Mission Issuer (authorization server):
   event, records the Mission, and derives tokens. It is the Mission's
   `issuer`; this document also calls it the "issuer AS" or the "AS".
 
+Mission Client:
+: The client conformance role, defined in {{conformance}}.
+
 Mission-aware Resource Server:
 : The resource server conformance role, defined in {{conformance}}.
 
