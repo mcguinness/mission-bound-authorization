@@ -11099,6 +11099,36 @@
    "notes": "#972 item 18, #1099 review; #1191 (D416)."
   },
   {
+   "id": "status.lifecycle.resume-distinct-authorization",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "Because `resume` returns a suspended Mission to `active` and so undoes the containment a `suspend` established, a deployment SHOULD require a distinct or elevated authorization for `resume`, mirroring the treatment of bulk `resume` in Mission Management ({{I-D.draft-mcguinness-oauth-mission-management}}).",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a direct resume from a caller holding the authorization for suspend but not the distinct or elevated resume authorization is refused as an unauthorized lifecycle request, and the Mission stays suspended",
+    "local": "The reference AS requires the distinct mission_resume grant only where the deployment sets distinctResumeGrant. The shipped assembly leaves it off and authorizes resume with mission_lifecycle alone, a recorded departure from this SHOULD; the witness runs on a deployment that sets it."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > holds scheduling to the deployment's direct-resume authorization: where resume needs mission_resume, a suspend-only caller can neither resume nor schedule a resume; where mission_lifecycle authorizes resume, it authorizes the schedule",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D285 item 2: the SHOULD stays a SHOULD). Partial: witnessed on the opt-in configuration only. Proved by letting mission_lifecycle alone satisfy the direct-resume authorization (the test fails)."
+  },
+  {
    "id": "status.lifecycle.scheduled-resume-authorization",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "lifecycle-authorization",
@@ -11113,12 +11143,32 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a suspend carrying on_expiry=resume is refused to a caller holding the authorization for suspend but not the deployment's direct-resume authorization for that Mission, both when it would arm a schedule on an active Mission and when it would set or replace the schedule of a Mission another party already suspended; a caller holding both succeeds"
+    "normative": "a suspend carrying on_expiry=resume is refused to a caller holding the authorization for suspend but not the deployment's direct-resume authorization for that Mission, both when it would arm a schedule on an active Mission and when it would set or replace the schedule of a Mission another party already suspended; a caller holding both succeeds",
+    "local": "The reference AS adopts schedules only where the deployment sets suspensionSchedules (off by default; elsewhere a schedule is refused invalid_request, #1191). The deployment's direct-resume authorization is mission_lifecycle and, where it sets distinctResumeGrant, the distinct mission_resume grant too; one predicate (mayResume, provider.ts) decides a direct resume and a resume schedule alike. The refusal cases run on a deployment that sets distinctResumeGrant; the plain case shows that where mission_lifecycle authorizes resume, it authorizes the schedule."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint with a suspend-only caller and a suspend-plus-resume caller, each sending suspend with suspend_until and on_expiry=resume against an active Mission and against a Mission a different party suspended (with and without a recorded schedule)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > refuses a suspend-only caller a resume schedule, armed on an active Mission or set or replaced on a Mission another party suspended, as an unknown Mission, leaving state, version, schedule and committing party unchanged",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > commits a resume schedule for a caller holding the deployment's direct-resume authorization, also on another party's suspension, and a revoke schedule on the suspend authorization alone",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > holds scheduling to the deployment's direct-resume authorization: where resume needs mission_resume, a suspend-only caller can neither resume nor schedule a resume; where mission_lifecycle authorizes resume, it authorizes the schedule",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D285, D416). Proved by checking a resume schedule against suspend authority only (the refusal test fails) and by letting mission_lifecycle alone satisfy the direct-resume authorization (the refusal test and the deployment-choice test fail)."
   },
   {
    "id": "status.lifecycle.scheduled-resume-refusal-no-change",
@@ -11135,12 +11185,49 @@
    "surface": "lifecycle-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "the refused scheduled-resume request leaves the Mission's state, its recorded suspend_until and on_expiry, and that schedule's committing party unchanged, and is answered with the not-found response shape of an unauthorized lifecycle request"
+    "normative": "the refused scheduled-resume request leaves the Mission's state, its recorded suspend_until and on_expiry, and that schedule's committing party unchanged, and is answered with the not-found response shape of an unauthorized lifecycle request",
+    "local": "The authorization check runs after the request members are parsed and before the expiry clock or any transaction, so the refusal reads nothing of the Mission."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the refusal cases of status.lifecycle.scheduled-resume-authorization, asserting state, version, recorded schedule and committing party before and after, and the not_found response body."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > refuses a suspend-only caller a resume schedule, armed on an active Mission or set or replaced on a Mission another party suspended, as an unknown Mission, leaving state, version, schedule and committing party unchanged",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D285, D416). Proved by committing the requested transition before answering the refusal (the refusal test fails on the unchanged state, schedule and committing party) and by dropping the check for a resume schedule (the same test fails)."
+  },
+  {
+   "id": "status.lifecycle.scheduled-revoke-authorization",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "A `suspend` whose `on_expiry` is `revoke` needs only the authorization for `suspend`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a caller holding the authorization for suspend but not the deployment's direct-resume authorization commits a suspend with on_expiry=revoke, and the schedule is recorded"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > commits a resume schedule for a caller holding the deployment's direct-resume authorization, also on another party's suspension, and a revoke schedule on the suspend authorization alone",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D285 item 7). Proved by demanding the direct-resume authorization for any schedule (the test fails)."
   },
   {
    "id": "status.lifecycle.schedule-committing-party-recorded",
@@ -11157,12 +11244,26 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each committed schedule is recorded with the acting party of the request that committed it, and an authorized replacement records the replacing request's acting party in place of the earlier one"
+    "normative": "each committed schedule is recorded with the acting party of the request that committed it, and an authorized replacement records the replacing request's acting party in place of the earlier one",
+    "local": "The committing party is the authenticated client's identifier, recorded in the Mission row's schedule (kernel get) and, as schedule_committing_party (not a wire member), in the durable lifecycle event of the commit that armed or replaced it."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the AS's schedule and audit record read after arming a schedule and after an authorized replacement by a different acting party; no wire member carries the committing party."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule record (@spec status#lifecycle-authorization, status#idempotency, status#mission-status-response, #1002) > records each committed schedule's committing party, and an authorized replacement updates the pair and its committing party, emits the change and reports the new values",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > commits a resume schedule for a caller holding the deployment's direct-resume authorization, also on another party's suspension, and a revoke schedule on the suspend authorization alone",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D285, D416). Proved by recording a fixed party instead of the request's acting party (both tests fail)."
   },
   {
    "id": "status.lifecycle.authorization-required",
@@ -11323,12 +11424,62 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "once a current schedule's suspend_until passes before expires_at, the Mission is reported active (on_expiry resume) or terminated with reason revoked (on_expiry revoke) with the corresponding transition emitted, without any further lifecycle request"
+    "normative": "once a current schedule's suspend_until passes before expires_at, the Mission is reported active (on_expiry resume) or terminated with reason revoked (on_expiry revoke) with the corresponding transition emitted, without any further lifecycle request",
+    "local": "The scheduler arms an in-process timer for each committed schedule; the expiry clock also applies a due schedule on any read of the record, so a read after the deadline reports the committed transition before the timer is delivered. A scheduled revoke records terminated_at at the deadline. The tests read the stored row before any request to show that the timer, not a read, applied it."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: a controllable clock driving a suspended Mission past suspend_until for each on_expiry value, observed through the Mission Status endpoint."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > applies on_expiry when suspend_until passes, without a further request: resume returns the Mission to active and revoke terminates it revoked, each transition emitted once",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > applies a due schedule on the next read of the record, before its timer is delivered, and the Status operation reports the committed transition",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D416). Proved by arming no timer on a committed schedule, by disabling the due-schedule application, and by terminating a revoke schedule with another reason (the deadline test fails each time)."
+  },
+  {
+   "id": "status.lifecycle.schedule-reported",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "While the Mission is `suspended` under a deadline, both `suspend_until` and `on_expiry` surface in the signed Mission Status Response ({{mission-status-response}}) so a consumer sees the pending outcome.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "while a Mission is suspended under a schedule, the signed Mission Status Response carries suspend_until and on_expiry with the recorded values; neither appears while the Mission is active, suspended without a deadline, or after the suspension ends",
+    "local": "Observed through the Mission Status operation and the Lifecycle endpoint's own signed response, which share one observation (observeInCallerTx)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule record (@spec status#lifecycle-authorization, status#idempotency, status#mission-status-response, #1002) > reports suspend_until and on_expiry in the signed Mission Status Response exactly while the Mission is suspended under a deadline",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule record (@spec status#lifecycle-authorization, status#idempotency, status#mission-status-response, #1002) > records each committed schedule's committing party, and an authorized replacement updates the pair and its committing party, emits the change and reports the new values",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D416). Proved by omitting both members from the observation (both tests fail)."
   },
   {
    "id": "status.lifecycle.schedule-grant-loss-not-cancel",
@@ -11345,12 +11496,20 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a resume schedule whose committing party's resume authorization is withdrawn or expires after the commit still applies at its deadline; the deadline performs no grant re-check"
+    "normative": "a resume schedule whose committing party's resume authorization is withdrawn or expires after the commit still applies at its deadline; the deadline performs no grant re-check",
+    "local": "The withdrawal is shown in force first (a direct resume by the committing party is refused not_found); a delivery checks only the stored schedule's generation and the Mission's state."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, withdraw the committing caller's lifecycle grant, advance the clock past suspend_until, and observe the Mission active."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > applies a resume schedule at its deadline after the committing party's lifecycle grants are withdrawn",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D285 item 5, D416). Proved by adding a fire-time re-check of the committing party's grants to the scheduler (the test fails)."
   },
   {
    "id": "status.lifecycle.schedule-superseded-never-fires",
@@ -11367,12 +11526,32 @@
    "surface": "lifecycle-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "after a scheduled resume is superseded, by a direct resume followed by a new suspend or by an authorized replacement, its original deadline passing leaves the Mission suspended with its current schedule, if any, and that schedule's committing party unchanged"
+    "normative": "after a scheduled resume is superseded, by a direct resume followed by a new suspend or by an authorized replacement, its original deadline passing leaves the Mission suspended with its current schedule, if any, and that schedule's committing party unchanged",
+    "local": "Each schedule carries its generation, the state version of the commit that armed or replaced it, and every transition out of suspended clears it in the same statement. A timer delivery claims its generation inside one kernel transaction; cancellation is never relied on: the tests let every cancelled timer fire, and deliver stale generations again by hand, including while the current schedule is due."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, then (a) resume and suspend again with no schedule or a later one, and (b) replace it with a later or revoke schedule; advance the clock past the original suspend_until and observe state, schedule and committing party."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > never applies a superseded schedule: after a direct resume and a new suspend, or an authorized replacement, the original deadline leaves the Mission suspended with its current schedule and committing party",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > commits one transition under duplicate deliveries of the same timer",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > serializes a deadline with a manual transition: whichever commits first decides, and the other acts on the state it left",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D416). Proved by keeping the schedule across a transition out of suspended (the superseded test fails), by not claiming the generation (the same test fails), and by checking neither state nor generation at delivery (all three tests fail)."
   },
   {
    "id": "status.lifecycle.schedule-no-terminal-change",
@@ -11389,12 +11568,38 @@
    "surface": "lifecycle-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a deadline passing for a Mission that has reached a terminal state changes nothing: a resume schedule never makes a revoked, completed, expired or companion-terminal Mission active"
+    "normative": "a deadline passing for a Mission that has reached a terminal state changes nothing: a resume schedule never makes a revoked, completed, expired or companion-terminal Mission active",
+    "local": "Witnessed for revoked, completed, expired and parent_terminated Missions; a superseded predecessor is never suspended, so no schedule survives to its deadline."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: arm a resume schedule, revoke or complete the Mission, advance the clock past suspend_until, and observe the terminal state unchanged with no transition emitted."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > changes nothing when the deadline passes for a Mission revoked or completed since its schedule was armed",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > changes nothing when the deadline passes for a Child Mission terminated parent_terminated by its parent's revocation",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > lets expiry govern a deadline at or after expires_at: the Mission is terminated expired at expires_at and never observed active or revoked from its schedule",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > serializes a deadline with a manual transition: whichever commits first decides, and the other acts on the state it left",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D416). Proved by keeping the schedule through termination and letting a deadline act on any state (the revoked-or-completed, Child Mission and manual-transition tests fail) and by checking neither state nor generation at delivery (the first two fail)."
   },
   {
    "id": "status.lifecycle.schedule-expiry-governs",
@@ -11411,12 +11616,26 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "with suspend_until equal to or later than expires_at, the Mission is terminated with reason expired at expires_at and is never observed active from the scheduled resume (nor terminated with reason revoked from a revoke schedule)"
+    "normative": "with suspend_until equal to or later than expires_at, the Mission is terminated with reason expired at expires_at and is never observed active from the scheduled resume (nor terminated with reason revoked from a revoke schedule)",
+    "local": "Expiry precedence is the expiry clock's order: the clock materializes expiry before it applies a due schedule, so a deadline at or after expires_at never applies, and neither does one before it whose delivery comes after it."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: a controllable clock with suspend_until equal to expires_at and later than expires_at, for both on_expiry values, observing every Status read across the boundary."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > lets expiry govern a deadline at or after expires_at: the Mission is terminated expired at expires_at and never observed active or revoked from its schedule",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > lets expiry govern a deadline before expires_at whose delivery comes only after expires_at: the Mission is terminated expired, never resumed",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D416). Proved by applying a due schedule before the expiry clock (both tests fail)."
   },
   {
    "id": "status.lifecycle.schedule-replacement",
@@ -11433,12 +11652,20 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an authorized suspend against a suspended Mission carrying a valid suspend_until and on_expiry pair that differs from the recorded schedule, or arming one where none is recorded, updates the recorded pair and its committing party, emits the metadata change, and reports the new values in the signed response"
+    "normative": "an authorized suspend against a suspended Mission carrying a valid suspend_until and on_expiry pair that differs from the recorded schedule, or arming one where none is recorded, updates the recorded pair and its committing party, emits the metadata change, and reports the new values in the signed response",
+    "local": "The replacement is a metadata-only commit (state unchanged, version incremented) whose lifecycle event carries prior_state and state suspended with the new suspend_until and on_expiry. The deadline compares as an instant, so the same instant in another RFC 3339 spelling is the recorded pair."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint: suspend, then suspend again with a different valid pair from a different authorized caller; assert the response values, the incremented version, the emitted change and the recorded committing party."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule record (@spec status#lifecycle-authorization, status#idempotency, status#mission-status-response, #1002) > records each committed schedule's committing party, and an authorized replacement updates the pair and its committing party, emits the change and reports the new values",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D416). Proved by accepting a differing pair without effect, by emitting the commit without the schedule members, and by omitting them from the response (the test fails each time)."
   },
   {
    "id": "status.lifecycle.schedule-omission-preserves",
@@ -11455,12 +11682,20 @@
    "surface": "lifecycle-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a suspend omitting both suspend_until and on_expiry against a suspended Mission leaves the recorded pair and its committing party unchanged, whoever sends it, and the deadline still applies"
+    "normative": "a suspend omitting both suspend_until and on_expiry against a suspended Mission leaves the recorded pair and its committing party unchanged, whoever sends it, and the deadline still applies",
+    "local": "The recorded pair sent again by another authorized caller is not a replacement either: its committing party stays."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint: arm a schedule, send a plain suspend from another authorized caller, and assert the reported pair, version and committing party unchanged."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule record (@spec status#lifecycle-authorization, status#idempotency, status#mission-status-response, #1002) > leaves the recorded schedule and its committing party unchanged on a suspend omitting both members, whoever sends it, and on the recorded pair sent again; the deadline still applies",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1002 (D416). Proved by clearing the schedule on a plain suspend and by treating the recorded pair as a replacement (the test fails each time)."
   },
   {
    "id": "status.lifecycle.schedule-incomplete-pair-invalid",
@@ -11480,9 +11715,28 @@
     "normative": "a suspend carrying suspend_until without on_expiry, or on_expiry without suspend_until, is refused as malformed and changes neither state nor any recorded schedule"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1002 (D285, D323). No implementation yet: the reference kernel has no suspend_until/on_expiry model. Planned test surface: the lifecycle endpoint against an active and a suspended Mission, each incomplete pair, asserting refusal and unchanged state and schedule."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191) > refuses schedule members on another operation, as an incomplete pair, and as a schedule this deployment cannot honor, leaving the Mission unchanged",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191) > parses the schedule members only on suspend, and only as a complete pair",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule record (@spec status#lifecycle-authorization, status#idempotency, status#mission-status-response, #1002) > refuses either schedule member alone against a suspended Mission with a recorded schedule invalid_request, changing neither its state nor its schedule",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1191 witnesses the refusal on an active Mission and the parse; #1002 adds a suspended Mission with a recorded schedule. Proved by reading an incomplete pair as no schedule (all three tests fail)."
   },
   {
    "id": "management.bulk.scheduled-resume-grant-dry-run",
