@@ -419,7 +419,8 @@ export type GovernedPolicyRefusal =
   | "policy_refused"
   | "approval_in_future"
   | "recency_exceeded"
-  | "high_risk_without_exception";
+  | "high_risk_without_exception"
+  | "approval_event_used";
 
 export class GovernedPolicyError extends Error {
   constructor(
@@ -1146,12 +1147,23 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
   return { mission: record, record: signed as ApprovalGovernanceRecord };
 }
 
-/** The Mission and record an approval event already committed under this basis, if any. */
+/**
+ * The Mission and record an approval event already committed under this
+ * basis, if any. An event that already committed a Mission under another
+ * basis (a `direct` approval of the same pending proposal) is refused: it
+ * never becomes a `governed_policy` activation.
+ */
 function committedActivation(kernel: MissionKernel, approvalEventId: string): GovernedActivation | undefined {
   const mission = kernel.findByApprovalEvent(approvalEventId);
-  if (!mission || mission.approval_basis.type !== "governed_policy") return undefined;
+  if (!mission) return undefined;
   const record = kernel.governanceRecords.forMission(mission.id);
-  return record ? { mission, record } : undefined;
+  if (mission.approval_basis.type !== "governed_policy" || !record) {
+    throw new GovernedPolicyError(
+      "approval_event_used",
+      `approval event ${approvalEventId} already committed a ${mission.approval_basis.type} Mission`,
+    );
+  }
+  return { mission, record };
 }
 
 /**

@@ -10,6 +10,7 @@ import {
   assertGovernedPolicyRecord,
   type AuthorityEntry,
   type AuthoritySourceCatalog,
+  eligibleGovernedPolicyConsents,
   type GovernedActivation,
   type GovernedPolicyApprovalConfig,
   GovernedPolicyConfigError,
@@ -301,6 +302,25 @@ describe("governed policy root and record (@spec approval-governance#governed-po
     expect(kernel.governanceRecords.count()).toBe(2);
   });
 
+  it("never turns an approval event that committed a direct Mission into a governed_policy activation", () => {
+    const kernel = makeKernel();
+    const c = consent(kernel);
+    kernel.approve({
+      intent: intent(),
+      subject: { iss: ISS, sub: "svc-reconciler" },
+      approver: { iss: ISS, sub: "dana" },
+      clientId: "svc-agent",
+      approvalEventId: "ape-direct",
+    });
+    expect(outcome(() => activate(kernel, c.consent_id, { approvalEventId: "ape-direct" }))).toBe("approval_event_used");
+    // The same holds when the activation reaches the commit before seeing it.
+    const spy = vi.spyOn(kernel, "findByApprovalEvent").mockImplementationOnce(() => undefined);
+    expect(outcome(() => activate(kernel, c.consent_id, { approvalEventId: "ape-direct" }))).toBe("approval_event_used");
+    spy.mockRestore();
+    expect(kernel.allMissions().map((m) => m.approval_basis.type)).toEqual(["direct"]);
+    expect(kernel.governanceRecords.count()).toBe(0);
+  });
+
   it("refuses a record whose accountable assertion is not the consent principal's policy assertion naming the deciding policy and approved_at", () => {
     const kernel = makeKernel();
     const { mission, record } = activate(kernel, consent(kernel).consent_id);
@@ -330,6 +350,22 @@ describe("governed policy root and record (@spec approval-governance#governed-po
 });
 
 describe("governed policy activation (@spec approval-governance#governed-policy-activation)", () => {
+  it("is off unless the deployment configures it: no consent, no activation, no eligible policy", () => {
+    const kernel = new MissionKernel({
+      issuer: ISS,
+      policy: DERIVATION_POLICY as never,
+      statusKey: key,
+      statusKid: "as-status",
+      authoritySourceCatalog: catalog() as never,
+      now,
+    });
+    expect(kernel.governedPolicyApproval()).toBeUndefined();
+    expect(outcome(() => consent(kernel))).toBe("not_configured");
+    expect(outcome(() => activate(kernel, "gpc_any"))).toBe("not_configured");
+    expect(eligibleGovernedPolicyConsents(kernel, "svc-agent")).toEqual([]);
+    nothingCommitted(kernel);
+  });
+
   it("activates a bounded Mission and commits a signed Approval Governance Record with it", () => {
     const kernel = makeKernel();
     const c = consent(kernel);
