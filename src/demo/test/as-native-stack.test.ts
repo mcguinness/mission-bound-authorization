@@ -17,8 +17,10 @@
  * second ([FGA]) runs against a live OpenFGA and is skipped without one, so
  * only CI with OpenFGA exercises it. Each also has a second composition with
  * the test-only ordinary-token minting fixture on, used only by the
- * baseline-Join refusal. Every composition binds the declared audience's port
- * (4403), so none runs beside a live `pnpm as-native`.
+ * baseline-Join refusal. A further [FGA] block runs the Resource-policy
+ * revocation sequence through the launcher, across a restart (#828). Every
+ * composition binds the declared audience's port (4403), so none runs beside
+ * a live `pnpm as-native`.
  */
 
 import { type ChildProcess, spawn } from "node:child_process";
@@ -1442,10 +1444,12 @@ dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a 
       TOPOLOGY.openfga,
     );
 
+  // A read claims no Execution Evidence (§8 of the deployment contract): a
+  // permitted read is its result and its permit, a refused one neither.
   const expectPermitted = (x: Awaited<ReturnType<typeof read>>, label: string) => {
     expect(x.res.ok, `${label} ${JSON.stringify(x.res)}`).toBe(true);
+    expect(x.res.result, label).toMatchObject({ id: "inv-1" });
     expect(x.decision, label).toMatchObject({ decision: "permit" });
-    expect(x.executed, label).toBe(1);
   };
   const expectRefused = (x: Awaited<ReturnType<typeof read>>, label: string) => {
     expect(x.res.ok, label).toBe(false);

@@ -507,6 +507,14 @@ and
 The wrapper's dev-CA check and signal forwarding (`scripts/as-native.mjs`)
 have no test yet.
 
+`pnpm resource-policy` (`scripts/resource-policy.mjs`,
+`demo/src/resource-policy-cli.ts`) changes the Resource policy in the store
+the target attaches to: `grant` or `revoke` an entitlement
+(`--iss <issuer> --sub <subject> --relation reader|payer` and `--vendor` or
+`--invoice`), or `move-invoice`. It needs `OPENFGA_STORE_ID` and
+`OPENFGA_MODEL_ID` and never creates a store (#828). Its wrapper has no test
+yet.
+
 The target is HTTP MCP with verified DPoP only (D315). A request without a
 proof, or with a proof under a key other than the token's `cnf.jkt`, is
 refused before the PEP, and so is a baseline-Join credential:
