@@ -57,6 +57,8 @@ export interface AssertionOptions {
   issuer?: string;
   /** Sign with this key instead of the client's. */
   key?: CryptoKey;
+  /** The `iat` (seconds), from which `exp` counts; the system clock by default. */
+  now?: number;
 }
 
 /**
@@ -69,7 +71,7 @@ export async function lifecycleClientAssertion(
   client: LifecycleTestClient,
   options: AssertionOptions = {},
 ): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
+  const now = options.now ?? Math.floor(Date.now() / 1000);
   const claims: Record<string, unknown> = {};
   if (options.jti !== null) claims.jti = options.jti ?? crypto.randomUUID();
   const jwt = new SignJWT(claims)
