@@ -469,6 +469,7 @@ export {
   DEFERRED_GRANT_TYPE,
   ExpansionDeferralStore,
   ExpansionDeferralError,
+  ApprovalFloorRefusedError,
   type ApplyCarryoverOutcome,
   type ExpansionApproval,
   type ExpansionDeferredResult,
@@ -476,6 +477,7 @@ export {
   type DeferralSlowDown,
   type DeferredToken,
 } from "./kernel/deferred.js";
+export { evaluateApprovalFloor, type ApprovalFloorOutcome, type AchievedApproverContext } from "./kernel/approval-floor.js";
 export {
   ChallengeError,
   type ChallengeErrorCode,
@@ -1097,6 +1099,7 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     () => kernel.nowDate(),
     opts.childMissionCarryover ?? CHILD_MISSION_CARRYOVER,
+    opts.approvalFloor ?? APPROVAL_FLOOR,
   );
   // @spec expansion#creation-request-id — the creation-idempotency store over
   // the kernel database (instances over the same kernel share the table; this

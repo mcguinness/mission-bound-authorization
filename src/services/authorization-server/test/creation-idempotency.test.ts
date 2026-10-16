@@ -24,7 +24,7 @@
  *    pending retry returns the SAME deferral_code.
  */
 
-import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { ApprovalSessionStore } from "../src/index.js";
 const FLOOR_SESSIONS = new ApprovalSessionStore();
 
@@ -512,6 +512,7 @@ describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
     // superseded on this first redemption.
     as.expansionDeferrals.approve(ob.deferral_code as string, {
       approver: { iss: ISSUER, sub: "bob" },
+      authentication: FIXTURE_BROWSER_LOGIN,
       approvalEventId: `apev-idem-${crypto.randomUUID()}`,
       approvedUntil: FAR_EXP,
     });

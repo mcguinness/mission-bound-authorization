@@ -24,7 +24,7 @@
  *   plus absolute-lifetime clamping and family revocation on terminal lifecycle paths.
  */
 
-import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { ApprovalSessionStore } from "../src/index.js";
 const FLOOR_SESSIONS = new ApprovalSessionStore();
 
@@ -2085,6 +2085,7 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
 
     as.expansionDeferrals.approve(ob.deferral_code as string, {
       approver: { iss: ISSUER, sub: "bob" },
+      authentication: FIXTURE_BROWSER_LOGIN,
       approvalEventId: `apev-651-${crypto.randomUUID()}`,
       approvedUntil: FAR_EXP,
     });
@@ -2590,6 +2591,7 @@ describe("a fully contained family is refused after rotation, within the owner's
     expect(ob.error).toBe("authorization_pending");
     as.expansionDeferrals.approve(ob.deferral_code as string, {
       approver: { iss: ISSUER, sub: "bob" },
+      authentication: FIXTURE_BROWSER_LOGIN,
       approvalEventId: "apev-restore-after-family-containment",
       approvedUntil: FAR_EXP,
     });
