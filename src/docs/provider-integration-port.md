@@ -958,7 +958,8 @@ drives an AS-issued Mission-bound token through that assembled path.
   yields no decision (remote: 503), so the PEP refuses `pdp_unreachable`.
 - **Asynchronous work.** None.
 - **Crash and recovery.** Entitlements are stored in OpenFGA, administered
-  through `FgaDomainAdmin`. `composeStack` attaches to a configured store and
+  with `pnpm resource-policy` (`FgaDomainAdmin`, attached to the configured
+  store, never creating one). `composeStack` attaches to a configured store and
   model, verifying the model and creating nothing, or bootstraps a
   development store seeded from `config/seed/resource-policy.json`. With the
   development memory engine, tuples survive a stack restart only while the
@@ -975,13 +976,15 @@ drives an AS-issued Mission-bound token through that assembled path.
   - `list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an invoice for a vendor the decision never named is never returned: before the last check it is a parameter mismatch, after it the bound filter drops it` (PEP-level)
   - `list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > a named vendor the store does not hold is refused unknown_vendor before any decision: no policy query, no Decision Evidence, a signed target_unresolvable refusal` (PEP-level)
   - [FGA] `the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > an unconstrained list names every invoice vendor to the stored policy: revoking only one vendor's entitlement refuses the whole read resource_policy, a read of the other vendor still permits, and restoring it permits both, the same over both channels (#828 step 5)` (PEP-level)
+  - [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (co-resident)` and `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (remote)` (the assembled AS-native target over HTTP)
+  - `pnpm resource-policy administers the stored entitlements (@spec runtime#input-resource-policy, #828) > attaches to the configured store and model and never bootstraps one; without both ids it refuses before connecting` (the administration command)
 - **Required, not met.** #828 stays an acceptance gate. Its live witnesses
-  run only where OpenFGA does (CI). No policy requires a client. A vendor
-  the store does not hold keeps `lookup_vendor`'s server target (D324),
-  which a vendor constraint or the policy refuses. The payments Operation
-  Profile specifies every tool's targets and the list form; it and the
-  Enforcement Scope Statement do not yet name the policy's owner or its
-  freshness.
+  run only where OpenFGA does (CI). No policy requires a client and there
+  is no tenant dimension (D426). A vendor the store does not hold keeps
+  `lookup_vendor`'s server target (D324), which a vendor constraint or the
+  policy refuses. The payments Operation Profile
+  (`payments-runtime-profile-v3`) declares the policy's owner, principal,
+  relations, freshness and failure behavior.
 
 ### 5.3 Protected state and lifecycle
 

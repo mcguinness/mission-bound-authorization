@@ -41,7 +41,8 @@ Decisions D26/D39, #828. How the PDP uses OpenFGA correctly.
   - `Fga.attach verifies the configured model and never creates a store (@spec runtime#input-resource-policy, #828) > the model fingerprint compares conditions: a condition on a directly related type and a condition's key, name, expression and parameters each change it; condition metadata does not`
   - [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > a conditional model refuses attach: the domain model with one condition declared and one entitlement conditional on it, both named`
 - **Administration.** `FgaDomainAdmin` grants and revokes stored
-  entitlements and moves an invoice between vendors. It refuses any tuple
+  entitlements and moves an invoice between vendors; `pnpm resource-policy`
+  is its command, attached to the configured store and never creating one. It refuses any tuple
   that is not a `user` entitlement on a vendor or invoice, or an invoice's
   owning vendor, before anything reaches the store, so nothing a Mission
   approval or a token carries is written as durable policy.
