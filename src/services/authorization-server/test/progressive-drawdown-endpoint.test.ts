@@ -456,6 +456,30 @@ describe("policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion)",
     expect(successor.client_id).toBe(predecessor.client_id);
   });
 
+  it("a source narrowed since the predecessor's approval refuses the drawdown at its commit: no successor, nothing superseded, nothing reserved", async () => {
+    const pred = await issueMission(READ, ceilingOf("drawdown-wide"));
+    const crid = crypto.randomUUID();
+    const before = as.kernel.allMissions().length;
+    // The source's declaration now admits only the read entry.
+    const resolve = as.kernel.resolveCommittedSource.bind(as.kernel);
+    const narrowed = vi.spyOn(as.kernel, "resolveCommittedSource").mockImplementation((binding) => {
+      const current = resolve(binding);
+      return { ...current, entry: { ...current.entry, ceiling: READ_CEILING } };
+    });
+    let res: Response;
+    try {
+      res = await tokenRequest(expansionParams(pred.accessToken, crid, [...READ, "payments:payment.schedule"]));
+    } finally {
+      narrowed.mockRestore();
+    }
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("access_denied");
+    expect(as.kernel.allMissions().length).toBe(before);
+    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+    expect(as.creationIdempotency.find("ap-agent", crid)).toBeUndefined();
+  });
+
   it("verifies the drawdown policy digest before activation and retains the verified snapshot with the successor", async () => {
     const pred = await issueMission(READ, ceilingOf());
     const body = await drawdown(pred.accessToken, crypto.randomUUID(), READ_LIST);
@@ -582,8 +606,11 @@ describe("approval_event_id per drawdown reservation (@spec progressive#in-ceili
     expect(as.kernel.allMissions().length).toBe(before + 1);
     const successor = committed[0] as MissionRecord;
     expect(as.creationIdempotency.find("ap-agent", crid)?.missionId).toBe(successor.id);
+    const carried = as.kernel.get(successor.id)?.derivation_count as number;
     const retry = await drawdown(pred.accessToken, crid, READ_LIST);
     expect(retry.mission_id).toBe(successor.id);
+    // The recovery's fresh delivery token is ordinary issuance: one derivation.
+    expect(as.kernel.get(successor.id)?.derivation_count).toBe(carried + 1);
     expect((decodeJwt(retry.access_token) as { mission: { id: string } }).mission.id).toBe(successor.id);
     expect(as.kernel.get(successor.id)?.approval_event_id).toBe(successor.approval_event_id);
     expect(as.kernel.allMissions().length).toBe(before + 1);
@@ -776,10 +803,36 @@ describe("derivation limits through the drawdown (@spec progressive#in-ceiling-e
     expect(as.kernel.get(successor.id)?.derivation_count).toBe(2);
   });
 
+  it("a stricter request narrows the inherited limit without resetting the count; one that leaves no derivation refuses", async () => {
+    const root = await issueMission(READ, ceilingOf(), { intentExtra: { requested_derivation_limit: 5 } });
+    const narrowed = await tokenRequest(
+      expansionParams(root.accessToken, crypto.randomUUID(), READ_LIST, "Widen", { requested_derivation_limit: 3 }),
+    );
+    const nb = (await narrowed.json()) as Completed;
+    expect(narrowed.status, JSON.stringify(nb)).toBe(200);
+    expect(as.kernel.get(nb.mission_id)?.derivation_limit).toBe(3);
+    expect(as.kernel.get(nb.mission_id)?.derivation_count).toBe(2);
+    // A tighter effective limit equal to the carried count leaves no derivation.
+    const other = await issueMission(READ, ceilingOf(), { intentExtra: { requested_derivation_limit: 5 } });
+    const before = as.kernel.allMissions().length;
+    const refused = await tokenRequest(
+      expansionParams(other.accessToken, crypto.randomUUID(), READ_LIST, "Widen", { requested_derivation_limit: 1 }),
+    );
+    const rb = (await refused.json()) as { error?: string; mission_error?: string };
+    expect(refused.status, JSON.stringify(rb)).toBe(400);
+    expect(rb.error).toBe("invalid_grant");
+    expect(rb.mission_error).toBe("derivations_exhausted");
+    expect(as.kernel.allMissions().length).toBe(before);
+    expect(as.kernel.get(other.missionId)?.state).toBe("active");
+    expect(as.kernel.get(other.missionId)?.derivation_count).toBe(1);
+  });
+
   it("an exact retry returns the recorded token without counting; once that token has expired, the fresh delivery token is gated by the successor's limit", async () => {
     const root = await issueMission(READ, ceilingOf(), { intentExtra: { requested_derivation_limit: 2 } });
     const crid = crypto.randomUUID();
     const first = await drawdown(root.accessToken, crid, READ_LIST);
+    // The request omits requested_derivation_limit: the inherited limit stands.
+    expect(as.kernel.get(first.mission_id)?.derivation_limit).toBe(2);
     expect(as.kernel.get(first.mission_id)?.derivation_count).toBe(2);
     const retry = await drawdown(root.accessToken, crid, READ_LIST);
     expect(retry.access_token).toBe(first.access_token);
