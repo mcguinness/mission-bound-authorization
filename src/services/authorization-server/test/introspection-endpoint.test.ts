@@ -38,7 +38,10 @@
  *    Mission (and any sibling family) staying active;
  *  - Mission-bound refresh tokens introspect under the SAME composite rule.
  */
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { ApprovalSessionStore } from "../src/index.js";
+const FLOOR_SESSIONS = new ApprovalSessionStore();
+
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 import type { Server } from "node:http";
@@ -161,7 +164,7 @@ async function runFlow(input: {
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+    headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader()), "content-type": "application/json" },
     body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res);
@@ -337,6 +340,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: FLOOR_SESSIONS,
     testTokenSigningJwk,
     // @spec discharge#discharge-authority — admits the completing condition
     // flow6 carries (the shipped dev service principal asserts it), so the

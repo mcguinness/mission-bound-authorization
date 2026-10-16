@@ -24,7 +24,10 @@
  *   plus absolute-lifetime clamping and family revocation on terminal lifecycle paths.
  */
 
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { ApprovalSessionStore } from "../src/index.js";
+const FLOOR_SESSIONS = new ApprovalSessionStore();
+
 
 import { type Server } from "node:http";
 import { type AuthorityEntry, canonicalize, type JsonValue } from "@mission/core";
@@ -252,7 +255,7 @@ async function issueBaseMission(
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader(jar) },
+    headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)), "content-type": "application/json" },
     body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res, jar);
@@ -514,6 +517,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     testTokenSigningJwk: (await exportJWK(asTokenKeys.privateKey)) as JWK,
     allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: FLOOR_SESSIONS,
     authoritySource: {
       effectiveAuthoritySet: (record) => {
         if (sourceOutage !== undefined) throw new SourceUnavailableError(sourceOutage);

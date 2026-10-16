@@ -21,6 +21,28 @@ export function browserApprovalHeaders(
   return { cookie: interactionCookies ? `${interactionCookies}; ${cookie}` : cookie, "x-csrf-token": csrf };
 }
 
+/**
+ * A high-risk approval (#826, D425): the published approval-authentication
+ * floor accepts only an Approver logged in on the browser approval surface
+ * with an accepted `acr` (`mfa`) inside its age bound, never a headless
+ * approval service. Bob, approving for Alice unless told otherwise; `null`
+ * selects no Subject, a self-approval.
+ */
+export function floorApprovalHeaders(
+  sessions: ApprovalSessionStore,
+  uid: string,
+  interactionCookies: string,
+  approver: { sub?: string; subject?: string | null } = {},
+): Record<string, string> {
+  const subject = approver.subject === undefined ? "alice" : approver.subject;
+  return browserApprovalHeaders(
+    sessions,
+    uid,
+    { sub: approver.sub ?? "bob", acr: "mfa", ...(subject !== null ? { subject } : {}) },
+    interactionCookies,
+  );
+}
+
 /** Trusted test driver credential; never part of the client fixture. */
 const TOKEN = "test-only-independent-approver-759";
 const principal: ServiceTokenPrincipal = {
