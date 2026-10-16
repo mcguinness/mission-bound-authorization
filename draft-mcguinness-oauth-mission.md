@@ -1619,9 +1619,10 @@ At a direct approval event the AS MUST, in order:
    was submitted ({{authority-proposal}}), `proposal_hash` over the
    submitted `authorization_details` array.
 7. **Create the Mission Record** ({{mission-record}}) in the `active`
-   state, atomically with issuance of the authorization code, or of
-   the grant artifact a back-channel carriage profile defines
-   ({{extensibility}}). The
+   state atomically with the approval decision and issuance of the
+   authorization code, or, under a back-channel carriage profile
+   ({{extensibility}}), with establishment of the Mission grant binding
+   and activation of the profile-defined grant for redemption. The
    commit MUST verify atomically that the effective expiry is
    strictly later than the creation instant: acceptance of the
    submission does not freeze time, and where the requested ceiling
@@ -4120,9 +4121,12 @@ This document's extension points are:
   Mission Deferred Approval companion is such a profile
   ({{I-D.draft-mcguinness-oauth-mission-approval}}). A back-channel
   carriage profile ({{submission-via-par}}) MAY instead couple the
-  approval decision to the grant artifact it defines, such as a device
-  code, under the same conditions; the Mission then binds to that
-  profile-defined reusable grant ({{grant-binding}}).
+  approval decision to establishing the Mission grant binding and
+  activating for redemption a grant the profile defines, such as a
+  device code issued while the request was pending, provided the steps
+  and their atomicity with the approval decision hold unchanged and no
+  Mission reference exists before the record is `active`; the Mission
+  then binds to that profile-defined reusable grant ({{grant-binding}}).
 
 This document defines no capability-negotiation mechanism or
 profile-version field; an extension declares its own identifiers and,
@@ -6186,11 +6190,13 @@ Cross-Domain:
 -01
 
 - Extensibility: a back-channel carriage profile can couple the
-  approval decision to the grant artifact it defines, under the same
-  sequencing and atomicity conditions, and the Mission binds to that
-  profile-defined grant. Step 7 and grant-binding resolution name the
-  case, so the Device Authorization profile's direct approval rests on
-  the core's seam (#1202).
+  approval decision to establishing the Mission grant binding and
+  activating for redemption a grant it defines, such as a device code
+  issued while the request was pending, under the same sequencing and
+  atomicity conditions. Step 7 commits the record with that binding and
+  activation rather than with issuance, and grant-binding resolution
+  names the case, so the Device Authorization profile's direct approval
+  rests on the core's seam (#1202).
 
 - Editorial (#910): the Introduction leads with the Mission, its
   guarantees and the residual of already-issued access tokens, and
