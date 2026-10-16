@@ -67,7 +67,9 @@ export {
   MissionKernel,
   GateError,
   LifecycleConflictError,
+  MissionNotFoundError,
   ObservationWatermarkError,
+  StaleVersionError,
   STATUS_SIGNING_ALG,
   type DischargeReceiptObservation,
   type ObservationWatermark,
@@ -822,6 +824,12 @@ export async function buildAuthorizationServer(opts: {
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   /**
+   * @spec status#lifecycle-authorization — the grants bound to a client that
+   * authenticates to the Mission Lifecycle endpoint by private-key JWT, keyed by
+   * `client_id`. Absent (the default), no client holds any.
+   */
+  lifecycleClientGrants?: Record<string, readonly string[]>;
+  /**
    * @spec discharge#discharge-authority — the issuer-held discharge-authority
    * policy handed to the kernel: which principals may assert which
    * `event_type`, resolved through a condition's `discharge_authority` value or
@@ -1151,6 +1159,7 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.serviceTokenPrincipals
       ? { serviceTokenPrincipals: opts.serviceTokenPrincipals }
       : {}),
+    ...(opts.lifecycleClientGrants ? { lifecycleClientGrants: opts.lifecycleClientGrants } : {}),
     ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
     // @spec txn-authorization#challenge-redemption — the endpoint's
     // configuration, assembled from the caller's deployment inputs plus this
