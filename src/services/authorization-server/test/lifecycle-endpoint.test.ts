@@ -29,7 +29,7 @@ import type { Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { createLocalJWKSet, type JWK, jwtVerify } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { LIFECYCLE_ENDPOINT_PATH } from "../src/adapters/lifecycle-endpoint.js";
+import { LIFECYCLE_ENDPOINT_PATH, parseTransitionMembers } from "../src/adapters/lifecycle-endpoint.js";
 import {
   type AuthorityEntry,
   type BuiltAs,
@@ -200,10 +200,11 @@ describe("Mission Lifecycle endpoint transport and client authentication (@spec 
     );
     expect(json.status, json.text).toBe(400);
     expect(json.json?.error).toBe("invalid_request");
+    const repeatedNonce = nonce();
     const repeated = new URLSearchParams({
       mission_id: m.id,
       operation: "revoke",
-      nonce: nonce(),
+      nonce: repeatedNonce,
       client_assertion_type: CLIENT_ASSERTION_TYPE,
       client_assertion: await lifecycleClientAssertion(ISSUER, consoleClient),
     });
@@ -217,23 +218,38 @@ describe("Mission Lifecycle endpoint transport and client authentication (@spec 
     );
     expect(twice.status, twice.text).toBe(400);
     expect(twice.json?.error).toBe("invalid_request");
+    expect(twice.json?.nonce).toBe(repeatedNonce);
     expect(as.kernel.get(m.id)?.state).toBe("active");
   });
 
   it("refuses a request with no credential, a client secret, Basic or an access token invalid_client (HTTP 400) with no challenge", async () => {
     const m = approve();
     const members = { mission_id: m.id, operation: "revoke", nonce: nonce() };
+    // Each foreign credential rides beside an otherwise valid client
+    // assertion: the request is not authenticated by exactly one accepted
+    // mechanism, so it is refused rather than authenticated by the assertion.
+    const withAssertion = async (): Promise<Record<string, string>> => ({
+      ...members,
+      client_assertion_type: CLIENT_ASSERTION_TYPE,
+      client_assertion: await lifecycleClientAssertion(ISSUER, consoleClient),
+    });
     const answers = [
       await postLifecycleForm(ISSUER, members),
       await postLifecycleForm(ISSUER, { ...members, client_id: consoleClient.clientId, client_secret: "s3cret" }),
-      await postLifecycleForm(ISSUER, members, {
+      await postLifecycleForm(ISSUER, { ...(await withAssertion()), client_secret: "s3cret" }),
+      await postLifecycleForm(ISSUER, await withAssertion(), {
         authorization: `Basic ${Buffer.from(`${consoleClient.clientId}:s3cret`).toString("base64")}`,
       }),
-      await postLifecycleForm(ISSUER, members, { authorization: "Bearer some.access.token" }),
+      await postLifecycleForm(ISSUER, await withAssertion(), { authorization: "Bearer some.access.token" }),
+      await postLifecycleForm(ISSUER, await withAssertion(), { authorization: "DPoP some.access.token" }),
     ];
     for (const a of answers) {
       expect(a.status, a.text).toBe(400);
       expect(a.json?.error).toBe("invalid_client");
+      // @spec status#mission-status-errors — `error_description`, and the
+      // request's well-formed `nonce` echoed.
+      expect(typeof a.json?.error_description).toBe("string");
+      expect(a.json?.nonce).toBe(members.nonce);
       expect(a.wwwAuthenticate).toBeNull();
       expect(a.cacheControl).toBe("no-store");
     }
@@ -311,6 +327,15 @@ describe("Mission Lifecycle endpoint transport and client authentication (@spec 
 });
 
 describe("Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191)", () => {
+  it("refuses at boot a lifecycle grant that names no Lifecycle authorization", async () => {
+    await expect(
+      buildAuthorizationServer({
+        issuer: "http://localhost:1",
+        lifecycleClientGrants: { [consoleClient.clientId]: ["mission_admin"] },
+      }),
+    ).rejects.toThrow(/unknown grant mission_admin/);
+  });
+
   it("answers an authenticated client without the lifecycle grant exactly as it answers an unknown Mission", async () => {
     const m = approve();
     for (const client of [ungrantedClient, readerClient]) {
@@ -389,6 +414,31 @@ describe("Mission Lifecycle endpoint authorization and request members (@spec st
     expect(idempotentButStale.status, idempotentButStale.text).toBe(409);
     expect(idempotentButStale.json?.error).toBe("stale_version");
     expect(as.kernel.get(m.id)?.version).toBe(revokedAt);
+  });
+
+  it("refuses an operation not legal from the current state 409 conflict, echoing the nonce and leaving the Mission unchanged", async () => {
+    const m = approve();
+    expect((await op({ mission_id: m.id, operation: "revoke", nonce: nonce() })).status).toBe(200);
+    const n = nonce();
+    const conflict = await op({ mission_id: m.id, operation: "complete", nonce: n });
+    expect(conflict.status, conflict.text).toBe(409);
+    expect(conflict.json).toMatchObject({ error: "conflict", nonce: n });
+    expect(typeof conflict.json?.error_description).toBe("string");
+    expect(as.kernel.get(m.id)?.termination?.reason).toBe("revoked");
+  });
+
+  it("parses the schedule members only on suspend, and only as a complete pair", () => {
+    const until = "2026-12-01T00:00:00Z";
+    expect(parseTransitionMembers("suspend", { suspend_until: until, on_expiry: "revoke" })).toEqual({
+      ok: true,
+      value: { schedule: { suspendUntil: until, onExpiry: "revoke" } },
+    });
+    for (const operation of ["revoke", "resume", "complete"] as const) {
+      expect(parseTransitionMembers(operation, { suspend_until: until, on_expiry: "revoke" }).ok, operation).toBe(false);
+    }
+    expect(parseTransitionMembers("suspend", { suspend_until: until }).ok).toBe(false);
+    expect(parseTransitionMembers("suspend", { on_expiry: "resume" }).ok).toBe(false);
+    expect(parseTransitionMembers("suspend", {})).toEqual({ ok: true, value: {} });
   });
 });
 
