@@ -490,6 +490,11 @@ describe("the issuance-only launcher refuses every excluded path (#873)", () => 
     }
     expect(meta.mission_bound_authorization_supported).toBe(true);
     expect(meta.introspection_endpoint).toBe(`${asUrl}/introspect`);
+    // `lifecycle-revoke` serves the Mission Lifecycle endpoint and signs its
+    // responses (#1191).
+    expect(meta.mission_lifecycle_endpoint).toBe(`${asUrl}/mission/lifecycle`);
+    expect(meta.mission_lifecycle_endpoint_auth_methods_supported).toEqual(["private_key_jwt"]);
+    expect(meta.mission_status_signing_alg_values_supported).toEqual(["ES256"]);
     // The revocation-propagation bound the 300 s access-token lifetime is sized to.
     expect(meta.mission_max_stale_seconds).toBe(300);
   });

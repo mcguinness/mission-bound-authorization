@@ -245,6 +245,7 @@ describe("protected-event ingestion: JWS source verification -> deterministic co
       headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
       body: JSON.stringify({
         operation: "contain",
+        nonce: crypto.randomUUID(),
         event: {
           type: "manual_review",
           source: "svc:soc-analyst",

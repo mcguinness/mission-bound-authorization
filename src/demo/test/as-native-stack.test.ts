@@ -447,7 +447,8 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
         await lifecycleOn(missionId, { operation: "discharge", entry: "e1", condition: "c1", event_id: randomUUID() }),
         "discharge",
       );
-      expectAbsent(meta, "mission_status_signing_alg_values_supported");
+      // `mission_status_signing_alg_values_supported` stays advertised: the
+      // Lifecycle endpoint's `revoke` signs its response (capabilitySet).
     },
     "lifecycle-extended": async () => {
       for (const operation of ["suspend", "resume", "complete"]) {
@@ -458,7 +459,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       expectUnservedRoute(
         await send(`/missions/${missionId}/status`, { headers: { "x-service-token": DEV_SERVICE_TOKEN } }),
       );
-      expectAbsent(meta, "mission_status_signing_alg_values_supported");
+      expectAbsent(meta, "mission_status_endpoint");
     },
     "status-list": async () => {
       const r = await send(`/statuslist/${STATUS_LIST_ID}`);
@@ -558,6 +559,11 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       const meta = (await (await fetch(`${asUrl}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
       // oidc-provider always lists `implicit`; no client registers a response type that uses it.
       expect(meta.grant_types_supported).toEqual(["implicit", "authorization_code", "refresh_token"]);
+      // `lifecycle-revoke` serves the Mission Lifecycle endpoint, answered with
+      // the signed Mission Status Response (#1191).
+      expect(meta.mission_lifecycle_endpoint).toBe(`${asUrl}/mission/lifecycle`);
+      expect(meta.mission_lifecycle_endpoint_auth_methods_supported).toEqual(["private_key_jwt"]);
+      expect(meta.mission_status_signing_alg_values_supported).toEqual(["ES256"]);
       expect(meta.transaction_authorization_endpoint).toBe(`${asUrl}/transaction`);
       for (const member of [
         "mission_child_delegation_supported",

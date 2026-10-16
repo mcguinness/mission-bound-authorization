@@ -891,7 +891,7 @@ describe("discharge response consumers (@spec discharge#discharge-receipt, #disc
 // ---------------------------------------------------------------------------
 
 describe("Mission Status signing algorithms in discovery (@spec status#as-metadata, discharge#discharge-receipt)", () => {
-  it("advertises them wherever a Status response or a Discharge Receipt can be served, the Status route disabled included", async () => {
+  it("advertises them wherever a Status response, a Lifecycle response or a Discharge Receipt can be served, the Status route disabled included", async () => {
     // This deployment serves both.
     expect(await advertisedAlgs(ISSUER)).toEqual(["ES256"]);
     const deployment = async (port: number, capabilities: ReadonlySet<ProviderCapability>) => {
@@ -911,8 +911,18 @@ describe("Mission Status signing algorithms in discovery (@spec status#as-metada
     expect(await deployment(PORT + 1, without("status"))).toEqual(["ES256"]);
     // Status served with discharge off.
     expect(await deployment(PORT + 2, without("discharge"))).toEqual(["ES256"]);
-    // Neither: nothing signs that shape, and the member is absent.
-    expect(await deployment(PORT + 3, without("status", "discharge"))).toEqual([]);
+    // Neither, but the Lifecycle endpoint serves `revoke` alone, and answers it
+    // with the signed state-only Mission Status Response (#1191).
+    expect(
+      await deployment(PORT + 3, without("status", "discharge", "lifecycle-extended", "containment")),
+    ).toEqual(["ES256"]);
+    // None of them: nothing signs that shape, and the member is absent.
+    expect(
+      await deployment(
+        14796, // PORT + 4 is another suite's port
+        without("status", "discharge", "lifecycle-revoke", "lifecycle-extended", "containment"),
+      ),
+    ).toEqual([]);
   });
 });
 
