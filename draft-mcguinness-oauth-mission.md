@@ -3002,7 +3002,8 @@ Mission's read entry alone:
 The issuance is a derivation, gated on the Mission being `active`
 ({{lifecycle}}). The response carries no `scope` member because none
 was requested or granted. It echoes the narrowed grant and the
-`mission_id` reference ({{mission-response-parameters}}); the emitted entry is a
+`mission_id` reference ({{mission-response-parameters}}); the emitted
+entry is a
 subset ({{subset}}) of the Mission's read entry, its `constraints`
 carried intact:
 
