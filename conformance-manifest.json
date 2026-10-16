@@ -7539,7 +7539,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. The shared active builder carries a delegated token's `act` chain unchanged and no inactive answer carries it (#904): `introspection-endpoint.test.ts` \"the active response carries the token's act chain, and no other answer does\". Those are JWT tests of the shared builder, not opaque consumption, so they are not cited here (D415)."
   },
   {
    "id": "core.introspection.authority-only-when-active",
@@ -7561,7 +7561,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. The shared active builder carries a delegated token's `act` chain unchanged and no inactive answer carries it (#904): `introspection-endpoint.test.ts` \"the active response carries the token's act chain, and no other answer does\". Those are JWT tests of the shared builder, not opaque consumption, so they are not cited here (D415)."
   },
   {
    "id": "core.introspection.opaque-rs-fail-closed",
@@ -7584,6 +7584,72 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
+  },
+  {
+   "id": "core.introspection.opaque-rs-resolve-before-service",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "A resource server consuming an opaque Mission-bound token MUST resolve it through introspection or issuer-local resolution (below) before service",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS serves a request bearing an opaque Mission-bound token only after resolving that token through introspection or issuer-local resolution; it never serves first or serves on an unresolved token"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904, D415): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed; a local JWT check, plain-rs's optional per-request introspection included, is not opaque consumption and does not witness this row."
+  },
+  {
+   "id": "core.introspection.opaque-rs-verify-response",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST verify `active` is `true`, its own identity in `aud`, and the sender-constraint binding `cnf` names",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS refuses an opaque Mission-bound token whose resolution is not `active: true`, does not name the RS in `aud`, or names a `cnf` binding the presenter does not prove"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904, D415): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed; a local JWT check, plain-rs's optional per-request introspection included, is not opaque consumption and does not witness this row."
+  },
+  {
+   "id": "core.introspection.opaque-rs-enforce-returned-authority",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST enforce the response's `authorization_details` under the same rules as the token-carried form ({{rs-enforcement}}), the fail-closed duties included",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an RS enforces an opaque token's resolved `authorization_details` exactly as it enforces a JWT's carried authority, refusing an action outside it and failing closed where it cannot evaluate an entry"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Scoped to core.introspected-consumption (#904, D415): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed; a local JWT check, plain-rs's optional per-request introspection included, is not opaque consumption and does not witness this row."
   },
   {
    "id": "core.introspection.local-resolution-own-record",
