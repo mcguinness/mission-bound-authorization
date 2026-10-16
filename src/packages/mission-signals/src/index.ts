@@ -16,9 +16,11 @@
  * in-process); stream verification / heartbeat liveness and its staleness
  * fallback; automatic Mission Status refetch on a detected version gap or a
  * detected rematerialization need (this module detects each condition only;
- * the refetch itself is the consumer's job); and the
- * `suspend_until` / `on_expiry` / `tenant` members (no model exists in the
- * kernel). The `mission_capabilities_supported` delivery gate
+ * the refetch itself is the consumer's job); the `suspend_until` /
+ * `on_expiry` members (a kernel commit that arms or replaces a schedule
+ * carries them, #1002; this builder does not yet relay them); and the
+ * `tenant` member (no model exists in the kernel). The
+ * `mission_capabilities_supported` delivery gate
  * ({@link MissionSignalEmitter}) is implemented: a stream that has not
  * declared `authority_changed` is not delivered a discharge commit's event.
  * Delivery durability (#641) is implemented: the emitter journals one durable

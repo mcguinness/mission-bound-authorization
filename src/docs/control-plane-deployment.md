@@ -119,6 +119,29 @@ may be illegal from the state that commit left; a refusal must never roll that
 expiry back, leaving an expired Mission `active` without its transition or its
 publication. The derivation gate follows the same rule.
 
+Suspension schedules (`suspend_until` and `on_expiry`) are off unless a
+deployment adopts them (`suspensionSchedules`). Where adopted, the schedule is
+persisted, not the timer. Each schedule lives in its Mission's row, written in
+the same compare-and-set statement as the `suspend` that arms it or the
+metadata-only commit that replaces it, together with its committing party and
+its generation (the state version of that commit); every transition out of
+`suspended` clears it in the same statement. The schedule is therefore exactly
+as durable as the Mission Record: it survives a restart on the file-backed
+store and, like everything else, not on the in-memory default. Timers are
+in-process and unreferenced. Startup re-arms one per persisted schedule and
+delivers any whose deadline passed while the process was down before the
+assembly serves a request. A delivery claims its generation inside one kernel
+transaction and acts only on that exact schedule of a `suspended` Mission, so a
+stale or replaced timer, a duplicate delivery and a delivery racing a manual
+transition change nothing; nothing depends on cancelling a timer. The expiry
+clock applies a due schedule after expiry, on any read of the record as well as
+at the timer, so a Mission past its `expires_at` is `expired` and never resumed.
+The transition and its durable lifecycle event commit together, as for every
+other transition. Delivery is single-process: a second process would run its
+own timers, each still claiming the generation under the version
+compare-and-set, but no multi-process scheduling claim is made. Authorization
+is decided at commit; a delivery never re-checks the committing party's grant.
+
 A reservation replay is the one ungated path, and only when an artifact was
 actually retained: returning a recorded artifact produces nothing new. A
 recorded operation identity with no retained artifact is gated like any fresh
@@ -179,6 +202,7 @@ Namespace inventory for the changed seams:
 | Mutable seam | Namespace boundary |
 |---|---|
 | Mission state/version, counters, child accounting and expansion deferrals | One issuer owns the kernel database |
+| Suspension schedules and their generations | The Mission's own row in the kernel database |
 | Durable lifecycle events and per-subscriber delivery rows | One issuer owns the kernel database; each event row records the issuer it committed under |
 | Terminal tombstones | Keyed on the canonical issuer and Mission identity pair |
 | Actor-depth records | Existing structured issuer/Mission/client tuple |
