@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-15T23:09:08Z
-Source repository commit: 2c98cc962a0906c8c35366f81b06e10f7c298570
+Generated: 2026-10-16T16:35:34Z
+Source repository commit: 81c381da24dafb4fc6f9e9a5c18a40647bbd234b
 Member count: 9
 
 Reading order:
@@ -30,8 +30,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           15 October 2026
-Expires: 18 April 2027
+Intended status: Informational                           16 October 2026
+Expires: 19 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -84,7 +84,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 April 2027.
+   This Internet-Draft will expire on 19 April 2027.
 
 Copyright Notice
 
@@ -1186,6 +1186,7 @@ Table of Contents
    |        | resource-access, oauth-mission-issuance-  |Distribution; |
    |        | grant, oauth-mission-consent-evidence,    |Evidence and  |
    |        | oauth-mission-approval, oauth-mission-    |Accountability|
+   |        | device-authorization, oauth-mission-      |              |
    |        | approval-revision, oauth-mission-         |              |
    |        | template, mission-approval-governance     |              |
    +--------+-------------------------------------------+--------------+
@@ -1234,114 +1235,106 @@ Table of Contents
    The same mechanisms, placed on the authority path (Figure 1) by the
    transition each acts on:
 
-   +=============+=================+==================================+
-   |Mechanism    |What it changes  | Home                             |
-   +=============+=================+==================================+
-   |Direct       |a proposal to an | oauth-mission                    |
-   |approval     |approval event   |                                  |
-   |             |(direct basis)   |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Template     |a template       | oauth-mission-template           |
-   |dispatch     |ceiling to an    |                                  |
-   |             |approval event   |                                  |
-   |             |(template basis) |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Expansion    |a freshly        | oauth-mission-expansion          |
-   |             |adjudicated      |                                  |
-   |             |successor        |                                  |
-   |             |Authority Set,   |                                  |
-   |             |for widening or  |                                  |
-   |             |restoration      |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Progressive  |an Expansion     | oauth-mission-progressive        |
-   |authorization|successor        |                                  |
-   |             |adjudicated by   |                                  |
-   |             |policy within a  |                                  |
-   |             |pre-consented    |                                  |
-   |             |ceiling          |                                  |
-   |             |(ceiling_drawdown|                                  |
-   |             |basis)           |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Containment  |narrows the      | oauth-mission-containment        |
-   |             |Effective        |                                  |
-   |             |Authority Set;   |                                  |
-   |             |restored only    |                                  |
-   |             |through an       |                                  |
-   |             |Expansion        |                                  |
-   |             |successor        |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Discharge    |narrows the      | oauth-mission-discharge          |
-   |             |Effective        |                                  |
-   |             |Authority Set;   |                                  |
-   |             |the entry is     |                                  |
-   |             |spent            |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Suspend and  |closes and       | oauth-mission-status             |
-   |resume       |reopens the      |                                  |
-   |             |lifecycle gate;  |                                  |
-   |             |neither set      |                                  |
-   |             |changes          |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Revoke,      |closes the       | oauth-mission, oauth-mission-    |
-   |complete,    |lifecycle gate   | status                           |
-   |expire       |terminally       |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Issuance and |the Effective    | oauth-mission                    |
-   |refresh      |Authority Set to |                                  |
-   |             |a derived        |                                  |
-   |             |credential       |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Issuance     |an Effective     | oauth-mission-issuance-grant     |
-   |grant        |subset handed to |                                  |
-   |             |a consuming AS   |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Derivation   |bounds how many  | oauth-mission-derivation-limits  |
-   |limits       |derivations the  |                                  |
-   |             |Effective        |                                  |
-   |             |Authority Set    |                                  |
-   |             |yields           |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Attenuation  |a derived        | oauth-mission-attenuation        |
-   |             |credential to a  |                                  |
-   |             |narrower one,    |                                  |
-   |             |offline          |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Child        |a new Child      | oauth-mission-child-delegation   |
-   |delegation   |Mission approval |                                  |
-   |             |event bounded by |                                  |
-   |             |the parent's     |                                  |
-   |             |Effective        |                                  |
-   |             |Authority Set    |                                  |
-   |             |(direct or       |                                  |
-   |             |policy_drawdown  |                                  |
-   |             |basis)           |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Cross-domain |a derived subset | oauth-mission-cross-domain       |
-   |projection   |honored as a     |                                  |
-   |             |destination-local|                                  |
-   |             |credential       |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Runtime      |credential       | mission-runtime, mission-authzen |
-   |decision     |authority, the   |                                  |
-   |             |current Effective|                                  |
-   |             |Authority Set,   |                                  |
-   |             |and state to a   |                                  |
-   |             |per-action       |                                  |
-   |             |decision         |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Deferred     |how an approval  | oauth-mission-approval, oauth-   |
-   |approval,    |event is reached;| mission-approval-revision,       |
-   |approval     |no transition of | mission-approval-governance      |
-   |revision,    |their own        |                                  |
-   |approval     |                 |                                  |
-   |governance   |                 |                                  |
-   +-------------+-----------------+----------------------------------+
-   |Evidence,    |record or carry a| oauth-mission-consent-evidence,  |
-   |continuation,|transition; move | mission-runtime-evidence,        |
-   |work products|no authority     | mission-audit, oauth-mission-    |
-   |             |                 | continuation, oauth-mission-     |
-   |             |                 | work-products                    |
-   +-------------+-----------------+----------------------------------+
+   +==================+=======================+=======================+
+   | Mechanism        | What it changes       | Home                  |
+   +==================+=======================+=======================+
+   | Direct approval  | a proposal to an      | oauth-mission         |
+   |                  | approval event        |                       |
+   |                  | (direct basis)        |                       |
+   +------------------+-----------------------+-----------------------+
+   | Template         | a template ceiling to | oauth-mission-        |
+   | dispatch         | an approval event     | template              |
+   |                  | (template basis)      |                       |
+   +------------------+-----------------------+-----------------------+
+   | Governed policy  | a proposal to an      | mission-approval-     |
+   | approval         | approval event a      | governance            |
+   |                  | policy decides under  |                       |
+   |                  | a policy version a    |                       |
+   |                  | human approved        |                       |
+   |                  | (governed_policy      |                       |
+   |                  | basis)                |                       |
+   +------------------+-----------------------+-----------------------+
+   | Expansion        | a freshly adjudicated | oauth-mission-        |
+   |                  | successor Authority   | expansion             |
+   |                  | Set, for widening or  |                       |
+   |                  | restoration           |                       |
+   +------------------+-----------------------+-----------------------+
+   | Progressive      | an Expansion          | oauth-mission-        |
+   | authorization    | successor adjudicated | progressive           |
+   |                  | by policy within a    |                       |
+   |                  | pre-consented ceiling |                       |
+   |                  | (ceiling_drawdown     |                       |
+   |                  | basis)                |                       |
+   +------------------+-----------------------+-----------------------+
+   | Containment      | narrows the Effective | oauth-mission-        |
+   |                  | Authority Set;        | containment           |
+   |                  | restored only through |                       |
+   |                  | an Expansion          |                       |
+   |                  | successor             |                       |
+   +------------------+-----------------------+-----------------------+
+   | Discharge        | narrows the Effective | oauth-mission-        |
+   |                  | Authority Set; the    | discharge             |
+   |                  | entry is spent        |                       |
+   +------------------+-----------------------+-----------------------+
+   | Suspend and      | closes and reopens    | oauth-mission-status  |
+   | resume           | the lifecycle gate;   |                       |
+   |                  | neither set changes   |                       |
+   +------------------+-----------------------+-----------------------+
+   | Revoke,          | closes the lifecycle  | oauth-mission, oauth- |
+   | complete, expire | gate terminally       | mission-status        |
+   +------------------+-----------------------+-----------------------+
+   | Issuance and     | the Effective         | oauth-mission         |
+   | refresh          | Authority Set to a    |                       |
+   |                  | derived credential    |                       |
+   +------------------+-----------------------+-----------------------+
+   | Issuance grant   | an Effective subset   | oauth-mission-        |
+   |                  | handed to a consuming | issuance-grant        |
+   |                  | AS                    |                       |
+   +------------------+-----------------------+-----------------------+
+   | Derivation       | bounds how many       | oauth-mission-        |
+   | limits           | derivations the       | derivation-limits     |
+   |                  | Effective Authority   |                       |
+   |                  | Set yields            |                       |
+   +------------------+-----------------------+-----------------------+
+   | Attenuation      | a derived credential  | oauth-mission-        |
+   |                  | to a narrower one,    | attenuation           |
+   |                  | offline               |                       |
+   +------------------+-----------------------+-----------------------+
+   | Child delegation | a new Child Mission   | oauth-mission-child-  |
+   |                  | approval event        | delegation            |
+   |                  | bounded by the        |                       |
+   |                  | parent's Effective    |                       |
+   |                  | Authority Set (direct |                       |
+   |                  | or policy_drawdown    |                       |
+   |                  | basis)                |                       |
+   +------------------+-----------------------+-----------------------+
+   | Cross-domain     | a derived subset      | oauth-mission-cross-  |
+   | projection       | honored as a          | domain                |
+   |                  | destination-local     |                       |
+   |                  | credential            |                       |
+   +------------------+-----------------------+-----------------------+
+   | Runtime decision | credential authority, | mission-runtime,      |
+   |                  | the current Effective | mission-authzen       |
+   |                  | Authority Set, and    |                       |
+   |                  | state to a per-action |                       |
+   |                  | decision              |                       |
+   +------------------+-----------------------+-----------------------+
+   | Deferred         | how an approval event | oauth-mission-        |
+   | approval, device | is reached; no        | approval, oauth-      |
+   | authorization,   | transition of their   | mission-device-       |
+   | approval         | own                   | authorization, oauth- |
+   | revision,        |                       | mission-approval-     |
+   | approval         |                       | revision, mission-    |
+   | governance       |                       | approval-governance   |
+   +------------------+-----------------------+-----------------------+
+   | Evidence,        | record or carry a     | oauth-mission-        |
+   | continuation,    | transition; move no   | consent-evidence,     |
+   | work products    | authority             | mission-runtime-      |
+   |                  |                       | evidence, mission-    |
+   |                  |                       | audit, oauth-mission- |
+   |                  |                       | continuation, oauth-  |
+   |                  |                       | mission-work-products |
+   +------------------+-----------------------+-----------------------+
 
               Table 2: The transition each mechanism acts on
 
@@ -1361,10 +1354,13 @@ Table of Contents
          ([I-D.draft-mcguinness-oauth-mission-submission-evidence]).
 
    In OAuth, the Intent enters through Pushed Authorization Requests
-   [RFC9126] or the MAS submission endpoint.  In AAuth, the agent sends
-   the native description and requested tools to the Person Server's
-   mission endpoint.  The AAuth binding defines no Mission Intent or
-   dependency on the shaping profile.
+   [RFC9126] or the MAS submission endpoint, or, under an experimental
+   companion for a client with no redirect, the device authorization
+   endpoint of [RFC8628]
+   ([I-D.draft-mcguinness-oauth-mission-device-authorization]).  In
+   AAuth, the agent sends the native description and requested tools to
+   the Person Server's mission endpoint.  The AAuth binding defines no
+   Mission Intent or dependency on the shaping profile.
 
 7.2.  Approve and Record
 
@@ -1383,12 +1379,17 @@ Table of Contents
 
       *  Consent Evidence, committing the disclosure shown to the
          Approver
-         ([I-D.draft-mcguinness-oauth-mission-consent-evidence]); and
+         ([I-D.draft-mcguinness-oauth-mission-consent-evidence]);
 
       *  Deferred Approval
          ([I-D.draft-mcguinness-oauth-mission-approval]), the OAuth
          binding's asynchronous path, with an experimental companion
-         adding an in-review narrowing negotiation.
+         adding an in-review narrowing negotiation; and
+
+      *  Device Authorization
+         ([I-D.draft-mcguinness-oauth-mission-device-authorization]), an
+         experimental OAuth path for a client with no redirect, approved
+         on a second device.
 
    The standalone and AAuth bindings are natively asynchronous.  AAuth's
    baseline approval commits its exact mission blob, not the family
@@ -1405,16 +1406,16 @@ Table of Contents
 
    A deterministic, versioned policy can adjudicate activation at
    machine speed within a ceiling a human consented to (the template,
-   policy_drawdown, and ceiling_drawdown authorization bases that
-   companion profiles define on the OAuth binding's extension point; see
-   Authorization bases in Section 8).  The policy is the instance's
-   adjudication mechanism; the human or human-accountable principal who
-   consented to the policy or the template stays the accountable
-   Approver (consent_principal), and policy_version keeps that chain re-
-   checkable.  A policy artifact, a model's output, or the actor that
-   triggered the instance never becomes that principal.  Derivation
-   fixes the authority, the adjudicator (a human or such a policy)
-   decides activation, and a human is accountable.
+   policy_drawdown, ceiling_drawdown, and governed_policy authorization
+   bases that companion profiles define on the OAuth binding's extension
+   point; see Authorization bases in Section 8).  The policy is the
+   instance's adjudication mechanism; the human or human-accountable
+   principal who consented to the policy or the template stays the
+   accountable Approver (consent_principal), and policy_version keeps
+   that chain re-checkable.  A policy artifact, a model's output, or the
+   actor that triggered the instance never becomes that principal.
+   Derivation fixes the authority, the adjudicator (a human or such a
+   policy) decides activation, and a human is accountable.
 
    A model's judgment, over risk signals or enterprise context, enters
    adjudication only as a recorded input to the policy: it can refuse or
@@ -1424,7 +1425,9 @@ Table of Contents
    approver reading attacker-influenced proposals is itself an injection
    surface.  The high-consequence classes stay on a fresh human
    decision, per the progressive profile's prohibited set
-   ([I-D.draft-mcguinness-oauth-mission-progressive]).
+   ([I-D.draft-mcguinness-oauth-mission-progressive]); under
+   governed_policy, a policy decides one only under a committed, class-
+   named exception ([I-D.draft-mcguinness-mission-approval-governance]).
 
 7.2.1.  Mission Creation Paths
 
@@ -1438,46 +1441,61 @@ Table of Contents
    identity system says who the agent is; the Mission records which task
    it may perform.
 
-   +==============+==================+===================+=============+
-   |Situation     | Whose authority  | Who decides       |How the      |
-   |(home)        |                  |                   |request      |
-   |              |                  |                   |arrives      |
-   +==============+==================+===================+=============+
-   |A user        | the user's       | that user, at the |the          |
-   |approves an   | (user_delegated) | approval event    |authorization|
-   |agent's task  |                  |                   |endpoint     |
-   |(oauth-       |                  |                   |             |
-   |mission)      |                  |                   |             |
-   +--------------+------------------+-------------------+-------------+
-   |An            | the agent's      | the               |the          |
-   |administrator | (service_owned)  | administrator, at |authorization|
-   |approves an   | or a governed    | the approval      |endpoint, or |
-   |agent's own   | policy's         | event             |a pending    |
-   |task (oauth-  | (organizational) |                   |request      |
-   |mission with  |                  |                   |resolved     |
-   |oauth-        |                  |                   |later with no|
-   |mission-      |                  |                   |user present |
-   |approval, or  |                  |                   |             |
-   |mission-      |                  |                   |             |
-   |authority-    |                  |                   |             |
-   |server)       |                  |                   |             |
-   +--------------+------------------+-------------------+-------------+
-   |A policy      | the source       | a dispatch        |one token    |
-   |approves each | retained at      | policy, within a  |request from |
-   |run of a      | template consent | template a human  |a listed     |
-   |recurring     |                  | consented to once |dispatcher   |
-   |task (oauth-  |                  |                   |             |
-   |mission-      |                  |                   |             |
-   |template,     |                  |                   |             |
-   |experimental) |                  |                   |             |
-   +--------------+------------------+-------------------+-------------+
-   |An agent      | the Parent       | a fresh human     |a child-     |
-   |starts a sub- | Mission's        | approval, or the  |creation     |
-   |agent (oauth- |                  | parent's          |token        |
-   |mission-      |                  | delegation policy |exchange     |
-   |child-        |                  | (policy_drawdown) |             |
-   |delegation)   |                  |                   |             |
-   +--------------+------------------+-------------------+-------------+
+   +================+================+===================+=============+
+   |Situation       |Whose authority | Who decides       |How the      |
+   |(home)          |                |                   |request      |
+   |                |                |                   |arrives      |
+   +================+================+===================+=============+
+   |A user approves |the user's      | that user, at the |the          |
+   |an agent's task |(user_delegated)| approval event    |authorization|
+   |(oauth-mission) |                |                   |endpoint     |
+   +----------------+----------------+-------------------+-------------+
+   |A user          |the user's      | that user, at the |a device     |
+   |approves, on a  |(user_delegated)| approval event on |authorization|
+   |second device,  |                | the verification  |request, then|
+   |the task of an  |                | page              |device-code  |
+   |agent with no   |                |                   |polling      |
+   |redirect        |                |                   |             |
+   |(oauth-mission- |                |                   |             |
+   |device-         |                |                   |             |
+   |authorization,  |                |                   |             |
+   |experimental)   |                |                   |             |
+   +----------------+----------------+-------------------+-------------+
+   |An              |the agent's     | the               |the          |
+   |administrator   |(service_owned) | administrator, at |authorization|
+   |approves an     |or a governed   | the approval      |endpoint, or |
+   |agent's own     |policy's        | event             |a pending    |
+   |task (oauth-    |(organizational)|                   |request      |
+   |mission with    |                |                   |resolved     |
+   |oauth-mission-  |                |                   |later with no|
+   |approval, or    |                |                   |user present |
+   |mission-        |                |                   |             |
+   |authority-      |                |                   |             |
+   |server)         |                |                   |             |
+   +----------------+----------------+-------------------+-------------+
+   |A policy        |the source      | a dispatch        |one token    |
+   |approves each   |retained at     | policy, within a  |request from |
+   |run of a        |template consent| template a human  |a listed     |
+   |recurring task  |                | consented to once |dispatcher   |
+   |(oauth-mission- |                |                   |             |
+   |template,       |                |                   |             |
+   |experimental)   |                |                   |             |
+   +----------------+----------------+-------------------+-------------+
+   |A policy        |a source the    | a policy version  |a pending    |
+   |approves an     |approved policy | a human approved, |request the  |
+   |agent's own     |admits          | evaluated at the  |policy       |
+   |task (mission-  |(service_owned  | creation commit   |resolves with|
+   |approval-       |or              | (governed_policy) |no human     |
+   |governance with |organizational) |                   |present      |
+   |oauth-mission-  |                |                   |             |
+   |approval)       |                |                   |             |
+   +----------------+----------------+-------------------+-------------+
+   |An agent starts |the Parent      | a fresh human     |a child-     |
+   |a sub-agent     |Mission's       | approval, or the  |creation     |
+   |(oauth-mission- |                | parent's          |token        |
+   |child-          |                | delegation policy |exchange     |
+   |delegation)     |                | (policy_drawdown) |             |
+   +----------------+----------------+-------------------+-------------+
 
                       Table 3: Mission creation paths
 
@@ -1897,6 +1915,10 @@ Table of Contents
       *  ceiling_drawdown: a successor a policy adjudicates within an
          authority ceiling the Approver consented to at the initial
          approval.
+
+      *  governed_policy: an agent's own proposal a policy adjudicates
+         under a policy version a human approved
+         ([I-D.draft-mcguinness-mission-approval-governance]).
 
       Every basis fixes the same accountable human as consent_principal;
       the bases differ only in what activated this instance and what
@@ -3935,7 +3957,11 @@ Table of Contents
    freshly approved unit Missions with deferred approval
    ([I-D.draft-mcguinness-oauth-mission-approval]) absorbing the volume:
    the experimental profile changes the unit economics, not the
-   governance shape.
+   governance shape.  A single agent can also propose each unit Mission
+   itself and have a policy approve it under a policy version a human
+   approved (governed_policy,
+   [I-D.draft-mcguinness-mission-approval-governance]), resolving the
+   pending request with no reviewer.
 
 12.6.  The Mission Deployment Profile
 
@@ -4162,6 +4188,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-aauth-management.html>.
 
+   [I-D.draft-mcguinness-mission-approval-governance]
+              McGuinness, K., "Mission Approval Governance", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-approval-governance.html>.
+
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -4327,6 +4358,12 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-derivation-
               limits.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-device-authorization]
+              McGuinness, K., "Mission Device Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-device-
+              authorization.html>.
+
    [I-D.draft-mcguinness-oauth-mission-discharge]
               McGuinness, K., "Mission Entry Discharge for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -4405,6 +4442,11 @@ Table of Contents
    [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
               RFC 6749, DOI 10.17487/RFC6749, October 2012,
               <https://www.rfc-editor.org/rfc/rfc6749>.
+
+   [RFC8628]  Denniss, W., Bradley, J., Jones, M., and H. Tschofenig,
+              "OAuth 2.0 Device Authorization Grant", RFC 8628,
+              DOI 10.17487/RFC8628, August 2019,
+              <https://www.rfc-editor.org/rfc/rfc8628>.
 
    [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
               and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
@@ -5209,56 +5251,61 @@ Appendix G.  Mission Document Map
 
    *Approval time:*
 
-     +===================================+===========================+
-     | Document                          | Role                      |
-     +===================================+===========================+
-     | mission-shaping                   | Client-side shaping of a  |
-     |                                   | user's request into a     |
-     |                                   | candidate Mission Intent, |
-     |                                   | as untrusted proposal.    |
-     +-----------------------------------+---------------------------+
-     | oauth-mission-submission-evidence | The Intent Submission     |
-     |                                   | Evidence framework: entry |
-     |                                   | convention, binding, and  |
-     |                                   | verification bounds;      |
-     |                                   | defines no types.         |
-     +-----------------------------------+---------------------------+
-     | oauth-mission-request-provenance  | Optional evidence type: a |
-     |                                   | trusted intake's signed   |
-     |                                   | record of who originated  |
-     |                                   | the request behind an     |
-     |                                   | Intent, with a secret-    |
-     |                                   | keyed request digest.     |
-     +-----------------------------------+---------------------------+
-     | oauth-mission-consent-evidence    | The                       |
-     |                                   | consent_rendering_hash    |
-     |                                   | anchor and signed         |
-     |                                   | evidence of what the      |
-     |                                   | Approver was shown.       |
-     +-----------------------------------+---------------------------+
-     | oauth-mission-approval            | Asynchronous approval     |
-     |                                   | over the deferred         |
-     |                                   | substrate.                |
-     +-----------------------------------+---------------------------+
-     | mission-approval-governance       | The Approval Governance   |
-     |                                   | Record: authenticated     |
-     |                                   | assertions behind an      |
-     |                                   | approval, committed       |
-     |                                   | atomically with           |
-     |                                   | activation.               |
-     +-----------------------------------+---------------------------+
-     | oauth-mission-approval-revision   | Experimental: in-review   |
-     |                                   | narrowing revision of a   |
-     |                                   | deferred proposal.        |
-     +-----------------------------------+---------------------------+
-     | oauth-mission-template            | Experimental: one consent |
-     |                                   | to a template's ceiling;  |
-     |                                   | each dispatch is an       |
-     |                                   | ordinary, policy-         |
-     |                                   | instantiated Mission.     |
-     +-----------------------------------+---------------------------+
+   +====================================+=============================+
+   | Document                           | Role                        |
+   +====================================+=============================+
+   | mission-shaping                    | Client-side shaping of a    |
+   |                                    | user's request into a       |
+   |                                    | candidate Mission Intent,   |
+   |                                    | as untrusted proposal.      |
+   +------------------------------------+-----------------------------+
+   | oauth-mission-submission-evidence  | The Intent Submission       |
+   |                                    | Evidence framework: entry   |
+   |                                    | convention, binding, and    |
+   |                                    | verification bounds;        |
+   |                                    | defines no types.           |
+   +------------------------------------+-----------------------------+
+   | oauth-mission-request-provenance   | Optional evidence type: a   |
+   |                                    | trusted intake's signed     |
+   |                                    | record of who originated    |
+   |                                    | the request behind an       |
+   |                                    | Intent, with a secret-keyed |
+   |                                    | request digest.             |
+   +------------------------------------+-----------------------------+
+   | oauth-mission-consent-evidence     | The consent_rendering_hash  |
+   |                                    | anchor and signed evidence  |
+   |                                    | of what the Approver was    |
+   |                                    | shown.                      |
+   +------------------------------------+-----------------------------+
+   | oauth-mission-approval             | Asynchronous approval over  |
+   |                                    | the deferred substrate.     |
+   +------------------------------------+-----------------------------+
+   | oauth-mission-device-authorization | Experimental: Mission       |
+   |                                    | Intent carriage on the RFC  |
+   |                                    | 8628 device grant, approved |
+   |                                    | on a second device, for a   |
+   |                                    | client with no redirect.    |
+   +------------------------------------+-----------------------------+
+   | mission-approval-governance        | The Approval Governance     |
+   |                                    | Record: authenticated       |
+   |                                    | assertions behind an        |
+   |                                    | approval, committed         |
+   |                                    | atomically with activation; |
+   |                                    | and the governed_policy     |
+   |                                    | basis it backs.             |
+   +------------------------------------+-----------------------------+
+   | oauth-mission-approval-revision    | Experimental: in-review     |
+   |                                    | narrowing revision of a     |
+   |                                    | deferred proposal.          |
+   +------------------------------------+-----------------------------+
+   | oauth-mission-template             | Experimental: one consent   |
+   |                                    | to a template's ceiling;    |
+   |                                    | each dispatch is an         |
+   |                                    | ordinary, policy-           |
+   |                                    | instantiated Mission.       |
+   +------------------------------------+-----------------------------+
 
-                                  Table 21
+                                 Table 21
 
    *Lifecycle:*
 
@@ -5500,6 +5547,19 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Mission Creation Paths, Propose, Approve and Record, and the
+      document map add the experimental Mission Device Authorization
+      companion: a client with no redirect submits its Mission Intent at
+      the RFC 8628 device authorization endpoint, and the user approves
+      on a second device (#1202).  No profile's requirements change.
+
+   *  The policy-adjudicated authorization bases, Authorization bases,
+      Mission creation paths, the transition table, and the Standing-
+      Agent Pattern include governed_policy, Approval Governance's basis
+      for a policy version a human approved; under it, a high-
+      consequence class needs a committed, class-named exception
+      (#1185).
 
    *  The freshness half-step names the OAuth binding's issuer-local
       resolution of opaque tokens beside Mission Status and
@@ -5799,8 +5859,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         15 October 2026
-Expires: 18 April 2027
+Intended status: Standards Track                         16 October 2026
+Expires: 19 April 2027
 
 
                      Mission Substrate Requirements
@@ -5858,7 +5918,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 April 2027.
+   This Internet-Draft will expire on 19 April 2027.
 
 Copyright Notice
 
@@ -7371,8 +7431,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         15 October 2026
-Expires: 18 April 2027
+Intended status: Standards Track                         16 October 2026
+Expires: 19 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -7431,7 +7491,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 April 2027.
+   This Internet-Draft will expire on 19 April 2027.
 
 Copyright Notice
 
@@ -7454,9 +7514,9 @@ Table of Contents
      1.2.  Applicability
    2.  Conventions and Terminology
    3.  Overview
-     3.1.  Principal Model
-     3.2.  Protocol Flow
-       3.2.1.  One Mission from Approval to Revocation
+     3.1.  Protocol Flow
+       3.1.1.  One Mission from Approval to Revocation
+     3.2.  Principal Model
    4.  Mission Intent
      4.1.  Submission via PAR
      4.2.  Authority Proposal
@@ -7470,6 +7530,10 @@ Table of Contents
      6.2.  Authority Sources
      6.3.  Approver Authentication Strength
      6.4.  Binding the Mission to the Grant
+       6.4.1.  Establishing and Resolving a Binding
+       6.4.2.  Grant Bindings and Related Mechanisms
+       6.4.3.  Mission State Across Bindings
+       6.4.4.  Mission Identifier and Expiry in Responses
      6.5.  Single Accountable Approver
    7.  Mission Record
      7.1.  Standing-Consent Bases
@@ -7572,6 +7636,16 @@ Table of Contents
 
 1.  Introduction
 
+   This document defines a *Mission*: a durable authorization object
+   that binds a disclosed task to an explicitly approved Authority Set
+   and governs the lifecycle of the authority derived from that
+   approval.  The authorization server (AS) issues tokens under a
+   Mission only while it is active, each bounded by the approved
+   Authority Set, and resource servers enforce the resulting
+   credentials.  Revoking or expiring a Mission stops further issuance
+   and refresh; it does not, by itself, invalidate an access token
+   already issued, which remains valid until it expires (Section 9.3).
+
    Agent-identity work such as [I-D.draft-ietf-wimse-aims] establishes
    how an AI agent authenticates and how a user delegates authority to
    it: the agent is an OAuth 2.0 [RFC6749] client identified by
@@ -7584,41 +7658,40 @@ Table of Contents
 
    In current deployments, each token is individually valid and each
    request individually in scope, but no OAuth object records the task
-   the user approved.  A token issued for a task remains usable after
-   the user's approval lapses or is withdrawn, because nothing ties the
-   token's validity to that approval.
+   the user approved.  A grant obtained for a task keeps yielding tokens
+   after the user's approval of that task lapses or is withdrawn,
+   because nothing ties further issuance to that approval.
 
-   This document defines a *Mission*: a durable authorization object
-   that binds a disclosed task to an explicitly approved Authority Set
-   and governs the lifecycle of the authority derived from that
-   approval.  A Mission is created and used in a single chain:
+   A Mission is created and used in a single chain:
 
-   1.  The client submits a structured *Mission Intent* describing the
-       task (goal, target resources, task bounds) instead of requesting
-       raw scopes, optionally proposing concrete authority alongside it
-       as standard authorization_details.
+   1.  *Submit.* The client submits a structured *Mission Intent*
+       describing the task (goal, target resources, task bounds) instead
+       of requesting raw scopes, optionally proposing concrete authority
+       alongside it as standard authorization_details.
 
-   2.  The authorization server (AS) derives *authorization details*
+   2.  *Derive authority.* The AS derives *authorization details*
        ([RFC9396]), the *Authority Set*: the concrete authority the task
        needs.
 
-   3.  At an *approval event*, the Approver consents to that authority,
-       and the AS commits the task as an *intent_hash* and the authority
-       as an *authority_hash* and records a durable *Mission*.
+   3.  *Approve.* At an *approval event*, the Approver consents to that
+       authority, and the AS commits the task as an *intent_hash* and
+       the authority as an *authority_hash* and records a durable
+       *Mission*.
 
-   4.  The AS binds the OAuth grant that the approval produces to that
-       Mission, server-side: every later derivation from that grant
-       lineage resolves to exactly this Mission, and the client never
-       selects or reassigns it (Section 6.4).
+   4.  *Bind the grant.* The AS binds the OAuth grant that the approval
+       produces to that Mission, server-side: every later derivation
+       from that grant lineage resolves to exactly this Mission, and the
+       client never selects or reassigns it (Section 6.4).
 
-   5.  Every access token the agent obtains under the Mission carries
-       the derived authorization details and a *mission claim*
-       identifying the Mission (id, issuer) it was derived under.  A
-       resource server enforces statelessly from the token.
+   5.  *Issue and enforce.* Every access token the agent obtains under
+       the Mission carries the derived authorization details and a
+       *mission claim* identifying the Mission (id, issuer) it was
+       derived under.  A resource server enforces statelessly from the
+       token.
 
-   6.  Token issuance and refresh are *gated on Mission state*, so
-       revoking or expiring the Mission stops the agent from obtaining
-       further authority.
+   6.  *Stop issuance.* Token issuance and refresh are *gated on Mission
+       state*, so revoking or expiring the Mission stops the agent from
+       obtaining further authority.
 
    The result is that a user approves a task once, and that approval,
    not a per-request scope grant, bounds and outlives every token the
@@ -7671,33 +7744,35 @@ Table of Contents
    Section 18 is the complete statement of roles and optional
    capabilities.  The starting path is one client, one authorization
    server, direct approval, and a single resource audience.  It needs no
-   runtime profile, delegated token, or cross-domain projection.
+   runtime profile, delegated token, or cross-domain projection.  The
+   worked flow (Section 3.1.1) follows one Mission along this path with
+   concrete times, and the table lists where each implementer reads
+   next.
 
-     +===============+===============================+==============+
-     | Implementer   | Responsibility on the         | Defining     |
-     |               | starting path                 | sections     |
-     +===============+===============================+==============+
-     | Mission       | Submit an Intent through PAR, | Section 4.1, |
-     | Client        | optionally propose authority, | Section 4.2, |
-     |               | complete the authorization-   | Section 6.4, |
-     |               | code flow, and read the       | Section 10   |
-     |               | granted authority and Mission |              |
-     |               | references from the response  |              |
-     +---------------+-------------------------------+--------------+
-     | Mission       | Validate the submission,      | Section 4.4, |
-     | Issuer (AS)   | derive bounded authority,     | Section 5,   |
-     |               | obtain approval, commit the   | Section 6,   |
-     |               | Mission, and gate every       | Section 7,   |
-     |               | issuance and refresh on its   | Section 9.2  |
-     |               | state and limits              |              |
-     +---------------+-------------------------------+--------------+
-     | Mission-aware | Validate the credential and   | Section 11,  |
-     | Resource      | any sender constraint,        | Section 13.4 |
-     | Server        | enforce the carried           |              |
-     |               | authority, and apply any      |              |
-     |               | configured Mission            |              |
-     |               | requirement                   |              |
-     +---------------+-------------------------------+--------------+
+    +===============+=================================+==============+
+    | Implementer   | Responsibility on the starting  | Defining     |
+    |               | path                            | sections     |
+    +===============+=================================+==============+
+    | Mission       | Submit an Intent through PAR,   | Section 4.1, |
+    | Client        | optionally propose authority,   | Section 4.2, |
+    |               | complete the authorization-code | Section 10,  |
+    |               | flow, and read the granted      | Section      |
+    |               | authority and Mission           | 6.4.4        |
+    |               | references from the response    |              |
+    +---------------+---------------------------------+--------------+
+    | Mission       | Validate the submission, derive | Section 4.4, |
+    | Issuer (AS)   | bounded authority, obtain       | Section 5,   |
+    |               | approval, commit the Mission,   | Section 6,   |
+    |               | bind the grant to it, and gate  | Section 6.4, |
+    |               | every issuance and refresh on   | Section 7,   |
+    |               | its state and limits            | Section 9.2  |
+    +---------------+---------------------------------+--------------+
+    | Mission-aware | Validate the credential and any | Section 11,  |
+    | Resource      | sender constraint, enforce the  | Section 13.4 |
+    | Server        | carried authority, and apply    |              |
+    |               | any configured Mission          |              |
+    |               | requirement                     |              |
+    +---------------+---------------------------------+--------------+
 
                 Table 1: Who implements the issuance path
 
@@ -7746,16 +7821,18 @@ Table of Contents
    is a task whose purpose, authority, and bounds the Approver can
    evaluate together (Section 6.1).
 
-   For recurring or evolving work, optional, experimental companions can
-   reduce repeated approvals through standing consent (Section 7.1).
-   Mission Template ([I-D.draft-mcguinness-oauth-mission-template])
-   creates bounded instances of recurring tasks.  Progressive
-   Authorization ([I-D.draft-mcguinness-oauth-mission-progressive])
-   permits successor Missions within a previously approved authority
-   ceiling as a task evolves.  The template or ceiling still needs a
-   meaningful human approval.  Neither mechanism removes its profile's
-   fresh-human-approval requirement for prohibited high-consequence
-   authority.
+   Optional companions can reduce repeated approvals through standing
+   consent (Section 7.1).  For example, Mission Template
+   ([I-D.draft-mcguinness-oauth-mission-template]) creates bounded
+   instances of recurring tasks; Progressive Authorization
+   ([I-D.draft-mcguinness-oauth-mission-progressive]) permits successor
+   Missions within a previously approved authority ceiling as a task
+   evolves; and Mission Approval Governance
+   ([I-D.draft-mcguinness-mission-approval-governance]) lets a policy
+   version a human approved decide an agent's own proposals.  The
+   template, ceiling, or policy still needs a meaningful human approval,
+   and no such mechanism removes its profile's human-approval
+   requirement for high-consequence authority.
 
    The unit of governance is the action, not the content.  A Mission
    bounds where an agent may act (resources, actions) and how much
@@ -7798,6 +7875,9 @@ Table of Contents
       Mission Intent, runs the approval event, records the Mission, and
       derives tokens.  It is the Mission's issuer; this document also
       calls it the "issuer AS" or the "AS".
+
+   Mission-aware Resource Server:  The resource server conformance role,
+      defined in Section 18.
 
    Resource AS:  An authorization server in another trust domain that
       honors a Mission it did not issue, minting its own tokens for its
@@ -7864,7 +7944,88 @@ Table of Contents
 
 3.  Overview
 
-3.1.  Principal Model
+3.1.  Protocol Flow
+
+   The following figure shows the protocol flow between the agent and
+   the Mission Issuer:
+
+    Agent (client)                       Mission Issuer (AS)
+         |                                     |
+         | 1. PAR: intent + proposal --------->| derive authority
+         |<----------- request_uri ------------| (authz_details)
+         |                                     |
+         | 2. authorization request ---------->| Approver consents
+         |                                     |   -> authority_hash
+         |<-------------- code ----------------| -> Mission active
+         |                                     |   (bound to the grant)
+         |                                     |
+         | 3. token request ------------------>| gate: active?
+         |<----------- access token -----------| + authz_details
+         |                                     |   + mission claim
+         v
+
+   The flow then leaves the AS: (4) the agent calls the resource server
+   with the token; the resource server enforces the
+   authorization_details statelessly and can check the mission claim
+   (Section 11), with no callback to the AS required. (5) A management
+   revoke, or expires_at passing, moves the Mission to terminated, with
+   reason revoked or expired, after which the AS refuses further
+   issuance and refresh; a deployment can also treat [RFC7009]
+   revocation of the refresh token as revoking the Mission
+   (Section 9.3).  The end-to-end example (Appendix A) walks this flow
+   with concrete messages.
+
+3.1.1.  One Mission from Approval to Revocation
+
+   Consider a registered client reading invoices from one ERP resource
+   for Alice.  Alice is both the Subject and the Approver; the authority
+   source is user-delegated.  The AS and ERP support the
+   mission_resource_access type defined by
+   [I-D.draft-mcguinness-oauth-mission-resource-access].  This example
+   uses a direct approval, a JWT access token, no delegated token, and
+   no submission evidence; the AS's admission policy requires none.  The
+   times below are on the same day in UTC.
+
+   1.  *Submit.* The client pushes a Mission Intent naming
+       https://erp.example.com and requesting expiry at 13:00.
+       Alongside it, the client proposes an authorization_details entry
+       of type mission_resource_access for that resource and the action
+       invoices.read.  It follows the PAR request_uri into the
+       authorization interaction (Section 4.1).
+
+   2.  *Approve and commit.* At 12:00 the AS authenticates Alice,
+       verifies the authority source and proposed read authority, and
+       renders that authority and the effective 13:00 expiry for her
+       approval.  On approval it atomically creates the active Mission,
+       records its commitments, and binds the authorization code to it
+       (Section 6, Section 6.4).
+
+   3.  *Issue.* Still at 12:00, the client redeems the code.  The AS
+       resolves and checks the Mission and returns a sender-constrained
+       ERP token that expires at 12:05, with the read authority and a
+       mission reference.  The response also carries the granted
+       authority, mission_id, and mission_expires_at (Section 6.4.4).
+       The access token's five-minute lifetime is distinct from the
+       Mission's one-hour lifetime (Section 10).
+
+   4.  *Use.* The ERP, a Mission-aware Resource Server, validates the
+       token and proof of possession and permits the authorized read.
+       The token grants no write authority.  No Mission-state lookup or
+       complete-set retrieval is part of this example's resource request
+       (Section 11).
+
+   5.  *Stop further issuance.* At 12:02 an authorized revocation makes
+       the Mission non-active.  A subsequent refresh, if the AS issued a
+       refresh token, is refused with invalid_grant (Section 9.2).  The
+       already-issued access token can still be honored on this
+       stateless path until 12:05; revocation does not undo a completed
+       read (Section 9.3).
+
+   An ERP that instead introspects on every request stops honoring the
+   token on its next request after revocation, through the composite
+   active result (Section 13.2).
+
+3.2.  Principal Model
 
    This document maps principals onto native OAuth constructs:
 
@@ -7914,87 +8075,6 @@ Table of Contents
    (Section 14), not on the immutable Mission Record.  This document
    uses only (iss, sub) pairs; the subject identifier formats of
    [RFC9493] are not used.
-
-3.2.  Protocol Flow
-
-   The following figure shows the protocol flow between the agent and
-   the Mission Issuer:
-
-    Agent (client)                       Mission Issuer (AS)
-         |                                     |
-         | 1. PAR: intent + proposal --------->| derive authority
-         |<----------- request_uri ------------| (authz_details)
-         |                                     |
-         | 2. authorization request ---------->| Approver consents
-         |                                     |   -> authority_hash
-         |<-------------- code ----------------| -> Mission active
-         |                                     |   (bound to the grant)
-         |                                     |
-         | 3. token request ------------------>| gate: active?
-         |<----------- access token -----------| + authz_details
-         |                                     |   + mission claim
-         v
-
-   The flow then leaves the AS: (4) the agent calls the resource server
-   with the token; the resource server enforces the
-   authorization_details statelessly and can check the mission claim
-   (Section 11), with no callback to the AS required. (5) A management
-   revoke, or expires_at passing, moves the Mission to terminated, with
-   reason revoked or expired, after which the AS refuses further
-   issuance and refresh; a deployment can also treat [RFC7009]
-   revocation of the refresh token as revoking the Mission
-   (Section 9.3).  The end-to-end example (Appendix A) walks this flow
-   with concrete messages.
-
-3.2.1.  One Mission from Approval to Revocation
-
-   Consider a registered client reading invoices from one ERP resource
-   for Alice.  Alice is both the Subject and the Approver; the authority
-   source is user-delegated.  The AS and ERP support the
-   mission_resource_access type defined by
-   [I-D.draft-mcguinness-oauth-mission-resource-access].  This example
-   uses a direct approval, a JWT access token, no delegated token, and
-   no submission evidence; the AS's admission policy requires none.  The
-   times below are on the same day in UTC.
-
-   1.  *Submit.* The client pushes a Mission Intent naming
-       https://erp.example.com and requesting expiry at 13:00.
-       Alongside it, the client proposes an authorization_details entry
-       of type mission_resource_access for that resource and the action
-       invoices.read.  It follows the PAR request_uri into the
-       authorization interaction (Section 4.1).
-
-   2.  *Approve and commit.* At 12:00 the AS authenticates Alice,
-       verifies the authority source and proposed read authority, and
-       renders that authority and the effective 13:00 expiry for her
-       approval.  On approval it atomically creates the active Mission,
-       records its commitments, and binds the authorization code to it
-       (Section 6, Section 6.4).
-
-   3.  *Issue.* Still at 12:00, the client redeems the code.  The AS
-       resolves and checks the Mission and returns a sender-constrained
-       ERP token that expires at 12:05, with the read authority and a
-       mission reference.  The response also carries the granted
-       authority, mission_id, and mission_expires_at (Section 6.4).  The
-       access token's five-minute lifetime is distinct from the
-       Mission's one-hour lifetime (Section 10).
-
-   4.  *Use.* The ERP, a Mission-aware Resource Server, validates the
-       token and proof of possession and permits the authorized read.
-       The token grants no write authority.  No Mission-state lookup or
-       complete-set retrieval is part of this example's resource request
-       (Section 11).
-
-   5.  *Stop further issuance.* At 12:02 an authorized revocation makes
-       the Mission non-active.  A subsequent refresh, if the AS issued a
-       refresh token, is refused with invalid_grant (Section 9.2).  The
-       already-issued access token can still be honored on this
-       stateless path until 12:05; revocation does not undo a completed
-       read (Section 9.3).
-
-   An ERP that instead introspects on every request stops honoring the
-   token on its next request after revocation, through the composite
-   active result (Section 13.2).
 
 4.  Mission Intent
 
@@ -8142,13 +8222,13 @@ Table of Contents
 
 4.1.  Submission via PAR
 
-   A client MUST submit a Mission Intent through a Pushed Authorization
-   Request [RFC9126] using the mission_intent request parameter.  The
-   parameter value is the UTF-8 JSON [RFC8259] serialization of the
-   Submission envelope, a JSON object carried as an ordinary OAuth
-   request-parameter value (form-encoded in the application/x-www-form-
-   urlencoded PAR request body, like other OAuth parameters) with
-   exactly these members:
+   On the authorization-code path (Section 6), a client MUST submit a
+   Mission Intent through a Pushed Authorization Request [RFC9126] using
+   the mission_intent request parameter.  The parameter value is the
+   UTF-8 JSON [RFC8259] serialization of the Submission envelope, a JSON
+   object carried as an ordinary OAuth request-parameter value (form-
+   encoded in the application/x-www-form-urlencoded PAR request body,
+   like other OAuth parameters) with exactly these members:
 
    intent:  REQUIRED.  The Mission Intent object (Section 4).
 
@@ -8176,8 +8256,8 @@ Table of Contents
       Mission Intent submitted as the parameter value fails this rule,
       since its goal and sibling members are unknown envelope members.
 
-   *  *One carriage, through PAR.* The AS accepts the Intent in one of
-      two forms:
+   *  *One carriage, through PAR.* On the authorization-code path, the
+      AS accepts the Intent in one of two forms:
 
       1.  the form-encoded mission_intent parameter of the PAR request
           body; or
@@ -8195,6 +8275,22 @@ Table of Contents
       Object in the same push MUST be rejected with invalid_request,
       strengthening Section 6.3 of [RFC9101], under which the AS would
       only ignore such a value.
+
+   *  *Alternative back-channel profiles.* A Mission Intent travels on
+      no other request unless a companion profile explicitly defines
+      that request as a back-channel carriage of the Submission
+      envelope.  Such a profile carries the envelope and any authority
+      proposal in one request that never traverses a user agent, and
+      preserves this section's envelope and proposal rules, the
+      processing order (Section 4.4), derivation (Section 5), the
+      approval-event rules for the Mission's approval basis (Section 6,
+      with a direct approval relocated only as Section 15 permits), and
+      the grant binding (Section 6.4).  Support for a grant type or
+      endpoint never establishes such a carriage on its own.  The
+      experimental Mission Device Authorization profile
+      ([I-D.draft-mcguinness-oauth-mission-device-authorization])
+      defines one for a client that cannot complete the authorization-
+      code path, on the device authorization grant [RFC8628].
 
    *  *Bounded size.* The AS MUST bound the Submission envelope's total
       size, the Intent's total size and the lengths of its arrays, and
@@ -8747,14 +8843,15 @@ Table of Contents
 
    At a direct approval event the AS MUST, in order:
 
-   1.  Authenticate the Approver, subject to the approval-authentication
-       floor and any client-requested strength (Section 6.3).  The AS
-       MUST NOT take the Approver's identity or achieved authentication
-       context from unauthenticated client input; the authenticated
-       surface that resolved the approval establishes both.
+   1.  *Authenticate the Approver*, subject to the approval-
+       authentication floor and any client-requested strength
+       (Section 6.3).  The AS MUST NOT take the Approver's identity or
+       achieved authentication context from unauthenticated client
+       input; the authenticated surface that resolved the approval
+       establishes both.
 
-   2.  Establish the Subject: the principal the task is for, recorded as
-       the Mission's subject and mapped to the sub of every derived
+   2.  *Establish the Subject*: the principal the task is for, recorded
+       as the Mission's subject and mapped to the sub of every derived
        token (Section 10).  The Subject can be a workload or
        organizational principal (Section 6.2), established and mapped
        the same way.
@@ -8780,7 +8877,7 @@ Table of Contents
           verbatim is valid only where it collides with no other
           principal's sub.
 
-   3.  Establish the authority source: whose authority the approval
+   3.  *Establish the authority source*: whose authority the approval
        draws on, recorded as the Mission's authority_source
        (Section 6.2, Section 7).  The AS MUST establish it from trusted
        configuration or authenticated governance state, never from
@@ -8794,16 +8891,17 @@ Table of Contents
        The AS MUST refuse when either relationship cannot be
        established.
 
-   4.  Establish the effective Mission expiry: the requested
+   4.  *Establish the effective Mission expiry*: the requested
        intent.expires_at ceiling narrowed by applicable AS policy and
        any ceiling an applicable Mission-creating profile defines.  The
        value is bounded as expires_at requires (Section 7) and is
        rechecked at the creation commit (step 7).
 
-   5.  Render for consent the derived Authority Set in human-meaningful
-       terms, with the goal, task_bounds, and the effective expires_at
-       (and, when it differs, the requested intent.expires_at, so the
-       Approver sees the narrowing) as context:
+   5.  *Render for consent* the derived Authority Set in human-
+       meaningful terms, with the goal, task_bounds, and the effective
+       expires_at (and, when it differs, the requested
+       intent.expires_at, so the Approver sees the narrowing) as
+       context:
 
        *  The consent object is the *derived Authority Set*, what the
           agent may do, not the goal or Mission Intent: derivation is
@@ -8822,13 +8920,13 @@ Table of Contents
           the rendering MUST distinguish the entries the client proposed
           from any narrowing or restructuring the AS applied.
 
-   6.  Compute the integrity anchors (Section 8.1): authority_hash over
-       the consented Authority Set, intent_hash over the approved
+   6.  *Compute the integrity anchors* (Section 8.1): authority_hash
+       over the consented Authority Set, intent_hash over the approved
        Mission Intent, and, when an authority proposal was submitted
        (Section 4.2), proposal_hash over the submitted
        authorization_details array.
 
-   7.  Create the Mission Record (Section 7) in the active state,
+   7.  *Create the Mission Record* (Section 7) in the active state,
        atomically with issuance of the authorization code.  The commit
        MUST verify atomically that the effective expiry is strictly
        later than the creation instant: acceptance of the submission
@@ -9057,6 +9155,8 @@ Table of Contents
    alone establishes and resolves a binding; a client never supplies or
    negotiates one.
 
+6.4.1.  Establishing and Resolving a Binding
+
    At a direct approval event the AS binds the Mission to the
    authorization code it issues.  The binding is server-side and is what
    "the referenced Mission" in Section 9 refers to.  The code itself
@@ -9098,6 +9198,13 @@ Table of Contents
    selects the Mission a successor is created from and does not reassign
    an existing binding.
 
+   Because the grant, not the identifier, determines the Mission, a
+   client does not supply mission_id to obtain a derivation, and an AS
+   MUST NOT derive Mission-bound authority from a client-supplied
+   mission_id.
+
+6.4.2.  Grant Bindings and Related Mechanisms
+
    The grant binding relates to other mechanisms as follows:
 
    *  *Token Exchange.* A Token Exchange derivation ([RFC8693]) that
@@ -9127,9 +9234,9 @@ Table of Contents
       expansion successor
       ([I-D.draft-mcguinness-oauth-mission-expansion]) are new Missions.
       Any grant binding or derived token they carry is their own under
-      this section's rules, not an extension of the origin Mission's
-      binding.  They relate to their origin only by lineage (the child's
-      parent member, the successor's predecessor member).
+      the same rules, not an extension of the origin Mission's binding.
+      They relate to their origin only by lineage (the child's parent
+      member, the successor's predecessor member).
 
    *  *Continuation handles.* A continuation handle and a refresh-token
       family ([I-D.draft-mcguinness-oauth-mission-continuation]) are
@@ -9146,14 +9253,16 @@ Table of Contents
    across separate requests where its subject and client are eligible
    for more than one.  Such a join is not a Mission grant binding: it
    does not make the joined OAuth grant Mission-bound, and it rests on
-   its own authenticated inputs and evidence, never on this section's
+   its own authenticated inputs and evidence, never on a Mission grant
    binding.
 
-   Non-active state gates every future derivation across every binding
-   this section defines (Section 9.2).  It does not itself revoke an
-   OAuth grant the same client or subject holds outside any Mission
-   binding, and it does not recall an access token already issued before
-   its exp absent a runtime state check the token's consumer performs
+6.4.3.  Mission State Across Bindings
+
+   Non-active state gates every future derivation across every Mission
+   grant binding (Section 9.2).  It does not itself revoke an OAuth
+   grant the same client or subject holds outside any Mission binding,
+   and it does not recall an access token already issued before its exp
+   absent a runtime state check the token's consumer performs
    (Section 9.3, Section 13).
 
    An issuer that needs to cascade a lifecycle operation, or to
@@ -9163,17 +9272,14 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-management]) can standardize
    that index's wire surface.
 
-   Because the grant, not the identifier, determines the Mission, a
-   client does not supply mission_id to obtain a derivation, and an AS
-   MUST NOT derive Mission-bound authority from a client-supplied
-   mission_id.
-
    When the authorization code expires unredeemed, no derivation is
    possible under the Mission regardless of which lifecycle outcome
    follows.  The deployment either revokes the Mission or lets it expire
    at expires_at, and applies one choice consistently; both outcomes
    terminate it (Section 9), so reprocessing the same timeout changes
    nothing.
+
+6.4.4.  Mission Identifier and Expiry in Responses
 
    A client learns its mission_id from the mission claim's id on each
    issued token (Section 10.2) or from the token response.  This
@@ -9375,7 +9481,10 @@ Table of Contents
          (Section 7.1).
 
       For direct, activation.approval_event_id MUST identify a human
-      approval event (Section 6).
+      approval event (Section 6).  Approval Governance states how a
+      record backing a direct approval keeps that human decision as its
+      accountable assertion
+      ([I-D.draft-mcguinness-mission-approval-governance]).
 
       approval_basis is provenance: neither anchor covers it
       (Section 8.1); a profile that commits the Mission Record itself
@@ -9441,11 +9550,13 @@ Table of Contents
    fresh human approval per instance; each instance is still created at
    its own approval event (Section 6).  The type values template
    ([I-D.draft-mcguinness-oauth-mission-template]), policy_drawdown
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), and
-   ceiling_drawdown ([I-D.draft-mcguinness-oauth-mission-progressive])
-   are such bases.  For a standing-consent type, activation takes the
-   shape that its companion profile defines, and activation_actor names
-   a dispatching or requesting party distinct from the consenting human.
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]),
+   ceiling_drawdown ([I-D.draft-mcguinness-oauth-mission-progressive]),
+   and governed_policy
+   ([I-D.draft-mcguinness-mission-approval-governance]) are such bases.
+   For a standing-consent type, activation takes the shape that its
+   companion profile defines, and activation_actor names a dispatching
+   or requesting party distinct from the consenting human.
 
    An unrecognized type, and likewise an unrecognized adjudication.kind
    (below), is preserved unchanged as opaque provenance on an otherwise
@@ -9506,24 +9617,25 @@ Table of Contents
       governance_record:  OPTIONAL.  A boolean. true when an Approval
          Governance Record is recorded for this approval event
          ([I-D.draft-mcguinness-mission-approval-governance]), joined by
-         this Mission's own approval_event_id.  When true, kind MUST
-         equal the record's accountable assertion's own kind: a governed
-         decision still names its mechanism, and the record supplies the
-         fuller assertion set behind it, including any multi-assertion
-         set, never flattened into it.
+         this Mission's own approval_event_id.  It never changes kind,
+         which follows the basis (below), and Approval Governance aligns
+         the record's accountable assertion, where it carries one, with
+         that kind: a governed decision still names its mechanism, and
+         the record supplies the fuller assertion set behind it,
+         including any multi-assertion set, never flattened into it.
 
    The adjudication member, where present, follows the basis:
 
-   *  Where adjudication is present for direct, kind MUST be human
-      unless governance_record is true, in which case kind instead
-      follows the override that member defines (above).
+   *  Where adjudication is present for direct, kind MUST be human, with
+      or without governance_record: a policy decides an instance only
+      under a standing-consent basis.
 
    *  Where a companion profile defining a standing-consent type
       populates adjudication, kind MUST be policy, naming the identity
       and version of the policy or workflow that adjudicated the
-      instance, subject to the same governance_record override.  A
-      companion profile MUST NOT flatten a policy's or an Approval
-      Governance Record's assertion set into a single principal member.
+      instance.  A companion profile MUST NOT flatten a policy's or an
+      Approval Governance Record's assertion set into a single principal
+      member.
 
    *Activation policy commitment.* Where a standing-consent basis lets a
    separate policy artifact adjudicate activation (a dispatch, drawdown,
@@ -9579,7 +9691,7 @@ Table of Contents
    semantic content.  The AS MUST NOT reuse a Mission Identifier.  The
    record and the mission claim carry it as id; a surface that
    references a Mission from outside carries it as mission_id, as in the
-   token-response parameter (Section 6.4).
+   token-response parameter (Section 6.4.4).
 
 7.3.  Worked Example
 
@@ -10134,7 +10246,7 @@ Table of Contents
    narrowed) set assigned to the issued token, and it is the
    authoritative statement of what was granted, which the client
    compares with its proposal (Section 4.2).  The mission_id response
-   parameter carries the Mission reference beside it (Section 6.4).
+   parameter carries the Mission reference beside it (Section 6.4.4).
 
    The following is an example of a refresh request that narrows the
    canonical ERP Mission (the worked example of Section 7) to a read-
@@ -11485,7 +11597,8 @@ Table of Contents
 
    An AS that advertises mission_bound_authorization_supported: true
    MUST also publish pushed_authorization_request_endpoint ([RFC9126]),
-   since a Mission Intent is accepted only through PAR (Section 4.1).
+   since the authorization-code path accepts a Mission Intent only
+   through PAR (Section 4.1).
 
    An AS that advertises mission_bound_authorization_supported: true
    SHOULD also advertise authorization_details_types_metadata_endpoint
@@ -11585,16 +11698,16 @@ Table of Contents
 
    A *Mission Client* implements the client surfaces:
 
-   *  submission of the Mission Intent via PAR only (Section 4.1),
-      proposing concrete authority, where it does, on the
-      authorization_details parameter pushed alongside mission_intent
-      (Section 4.2);
+   *  submission of the Mission Intent via PAR on the authorization-code
+      path (Section 4.1), proposing concrete authority, where it does,
+      on the authorization_details parameter pushed alongside
+      mission_intent (Section 4.2);
 
    *  reading its granted authority from the token-response
       authorization_details echo (Section 10); and
 
    *  obtaining mission_id from the mission_id token-response parameter
-      or the mission claim's id (Section 6.4), treating it as a
+      or the mission claim's id (Section 6.4.4), treating it as a
       reference, not a credential.
 
    Beyond these mandatory roles, an implementation can additionally
@@ -12260,7 +12373,7 @@ Table of Contents
 
    *  Change Controller: IETF
 
-   *  Specification Document(s): this document, Section 6.4
+   *  Specification Document(s): this document, Section 6.4.4
 
    *  Name: mission_error
 
@@ -12276,7 +12389,7 @@ Table of Contents
 
    *  Change Controller: IETF
 
-   *  Specification Document(s): this document, Section 6.4
+   *  Specification Document(s): this document, Section 6.4.4
 
    PAR [RFC9126] carries authorization-request parameters without a
    distinct usage location, so the pushed submission of mission_intent
@@ -12889,6 +13002,12 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-derivation-
               limits.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-device-authorization]
+              McGuinness, K., "Mission Device Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-device-
+              authorization.html>.
+
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -12959,6 +13078,11 @@ Table of Contents
               Writing an IANA Considerations Section in RFCs", BCP 26,
               RFC 8126, DOI 10.17487/RFC8126, June 2017,
               <https://www.rfc-editor.org/rfc/rfc8126>.
+
+   [RFC8628]  Denniss, W., Bradley, J., Jones, M., and H. Tschofenig,
+              "OAuth 2.0 Device Authorization Grant", RFC 8628,
+              DOI 10.17487/RFC8628, August 2019,
+              <https://www.rfc-editor.org/rfc/rfc8628>.
 
    [RFC8935]  Backman, A., Ed., Jones, M., Ed., Scurtescu, M., Ansari,
               M., and A. Nadalin, "Push-Based Security Event Token (SET)
@@ -13083,7 +13207,7 @@ A.3.  Stage 2: Mission-Bound Token Issuance
    being active (Section 9), and issues a Mission-bound access token for
    the ERP.  The token response carries the granted
    authorization_details echo (Section 10) and the mission_id and
-   mission_expires_at response parameters (Section 6.4):
+   mission_expires_at response parameters (Section 6.4.4):
 
    {
      "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
@@ -13219,7 +13343,7 @@ B.2.  Relationship to Adjacent Work
    translation into authorization requirements out of scope.  This
    document specifies that translation, reusing its agent-as-client and
    delegating-principal-as-token-sub assignments unchanged
-   (Section 3.1); an agent authenticated and delegated per it uses the
+   (Section 3.2); an agent authenticated and delegated per it uses the
    mechanisms here to obtain Mission-bound tokens.
 
    Decision-layer access-request and approval workflows, such as the
@@ -13513,17 +13637,38 @@ Appendix C.  Role Mapping
    |                                                       |                   |                  |the requesting    |
    |                                                       |                   |                  |client            |
    +-------------------------------------------------------+-------------------+------------------+------------------+
-   |AGR-backed approval                                    |The principal the  |Unchanged from the|governance_record:|
-   |([I-D.draft-mcguinness-mission-approval-governance])   |Approval Governance|underlying basis  |true; kind equals |
-   |                                                       |Record's           |                  |the record's      |
-   |                                                       |accountable        |                  |accountable       |
-   |                                                       |assertion names,   |                  |assertion's own   |
-   |                                                       |equal to           |                  |mechanism (human  |
-   |                                                       |consent_principal  |                  |or policy), never |
-   |                                                       |                   |                  |a value that names|
-   |                                                       |                   |                  |the record itself,|
-   |                                                       |                   |                  |and its full      |
+   |Governed policy approval                               |The human who      |The authenticated |kind: policy,     |
+   |([I-D.draft-mcguinness-mission-approval-governance])   |approved the exact |client that       |policy naming the |
+   |                                                       |policy version the |requested the     |deciding policy's |
+   |                                                       |instance activates |activation,       |id/version (the   |
+   |                                                       |under              |distinct from     |approved policy   |
+   |                                                       |                   |consent_principal |itself or the     |
+   |                                                       |                   |                  |evaluator it      |
+   |                                                       |                   |                  |commits), with    |
+   |                                                       |                   |                  |governance_record:|
+   |                                                       |                   |                  |true; never the   |
+   |                                                       |                   |                  |requesting client |
+   +-------------------------------------------------------+-------------------+------------------+------------------+
+   |AGR-backed direct approval                             |The approving      |Equal to          |kind: human,      |
+   |([I-D.draft-mcguinness-mission-approval-governance])   |human, whose own   |consent_principal,|governance_record:|
+   |                                                       |human assertion is |as for direct     |true; policy and  |
+   |                                                       |the Approval       |approval          |service assertions|
+   |                                                       |Governance Record's|                  |contribute without|
+   |                                                       |accountable        |                  |replacing the     |
+   |                                                       |assertion          |                  |human decision,   |
+   |                                                       |                   |                  |and the full      |
    |                                                       |                   |                  |assertion set is  |
+   |                                                       |                   |                  |never collapsed   |
+   |                                                       |                   |                  |into a single     |
+   |                                                       |                   |                  |principal         |
+   +-------------------------------------------------------+-------------------+------------------+------------------+
+   |AGR-backed template or drawdown activation             |Unchanged from the |Unchanged from the|kind: policy, as  |
+   |([I-D.draft-mcguinness-mission-approval-governance])   |underlying basis,  |underlying basis  |the underlying    |
+   |                                                       |whose              |                  |basis assigns it, |
+   |                                                       |approval_basis     |                  |with              |
+   |                                                       |stands in for an   |                  |governance_record:|
+   |                                                       |accountable        |                  |true; the full    |
+   |                                                       |assertion          |                  |assertion set is  |
    |                                                       |                   |                  |never collapsed   |
    |                                                       |                   |                  |into a single     |
    |                                                       |                   |                  |principal         |
@@ -14080,6 +14225,37 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Editorial (#910): the Introduction leads with the Mission, its
+      guarantees and the residual of already-issued access tokens, and
+      its chain steps carry labels.  The protocol flow and its worked
+      example precede the Principal Model; the Implementation Map links
+      the reading paths; Terminology points to the Mission-aware
+      Resource Server role; the approval algorithm's steps carry labels;
+      and Binding the Mission to the Grant has named subsections, one
+      for the mission_id and mission_expires_at response parameters.  No
+      requirement changes.
+
+   *  Submission via PAR scopes its PAR carriage rule to the
+      authorization-code path.  A Mission Intent travels on another
+      request only where a companion profile explicitly defines a back-
+      channel carriage that preserves the Submission envelope, the
+      processing order, derivation, the approval rules for the Mission's
+      approval basis, and the grant binding; support for a grant type
+      alone never establishes one.  The experimental Mission Device
+      Authorization profile defines such a carriage for RFC 8628 device
+      authorization (#1202).
+
+   *  Standing-Consent Bases lists governed_policy, the basis Mission
+      Approval Governance defines for a policy version a human approved,
+      and the Introduction's standing-consent companions are examples,
+      not a closed, experimental-only list.  A direct approval is always
+      a human decision: adjudication.kind is human with or without
+      governance_record, and Approval Governance states how a record
+      backing a direct approval keeps that decision as its accountable
+      assertion.  Role Mapping separates AGR-backed direct approval from
+      AGR-backed template or drawdown activation and adds governed
+      policy approval (#1185).
 
    *  Introspected Token Consumption permits issuer-local resolution: an
       AS can serve a resource server inside its trusted implementation
@@ -14815,8 +14991,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         15 October 2026
-Expires: 18 April 2027
+Intended status: Standards Track                         16 October 2026
+Expires: 19 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -14869,7 +15045,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 April 2027.
+   This Internet-Draft will expire on 19 April 2027.
 
 Copyright Notice
 
@@ -17118,8 +17294,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         15 October 2026
-Expires: 18 April 2027
+Intended status: Standards Track                         16 October 2026
+Expires: 19 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -17178,7 +17354,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 April 2027.
+   This Internet-Draft will expire on 19 April 2027.
 
 Copyright Notice
 
@@ -21718,8 +21894,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         15 October 2026
-Expires: 18 April 2027
+Intended status: Standards Track                         16 October 2026
+Expires: 19 April 2027
 
 
                         Mission Runtime Evidence
@@ -21769,7 +21945,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 April 2027.
+   This Internet-Draft will expire on 19 April 2027.
 
 Copyright Notice
 
@@ -24572,8 +24748,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         15 October 2026
-Expires: 18 April 2027
+Intended status: Standards Track                         16 October 2026
+Expires: 19 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -24629,7 +24805,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 April 2027.
+   This Internet-Draft will expire on 19 April 2027.
 
 Copyright Notice
 
@@ -27896,8 +28072,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         15 October 2026
-Expires: 18 April 2027
+Intended status: Standards Track                         16 October 2026
+Expires: 19 April 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -27949,7 +28125,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 April 2027.
+   This Internet-Draft will expire on 19 April 2027.
 
 Copyright Notice
 
@@ -29920,8 +30096,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         15 October 2026
-Expires: 18 April 2027
+Intended status: Standards Track                         16 October 2026
+Expires: 19 April 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -29976,7 +30152,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 18 April 2027.
+   This Internet-Draft will expire on 19 April 2027.
 
 Copyright Notice
 
