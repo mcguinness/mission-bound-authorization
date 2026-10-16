@@ -29,7 +29,14 @@ import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapt
 import type { RegisteredActivationPolicy } from "../src/kernel/activation-policy.js";
 import type { ProgressiveDrawdownOptions } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, LifecycleCommit, MissionRecord } from "../src/kernel/types.js";
-import { buildAuthorizationServer, type BuiltAs, createChildMission } from "../src/index.js";
+import {
+  buildAuthorizationServer,
+  type BuiltAs,
+  conditionDigest,
+  createChildMission,
+  type DischargeAuthorityPolicy,
+  entryDigest,
+} from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 
 const PORT = 14839;
@@ -83,6 +90,19 @@ const PROGRESSIVE: ProgressiveDrawdownOptions = {
     // payments:remittance.send is deliberately unclassified.
   },
   externalCommunicationActions: ["payments:vendor.read"],
+};
+
+/** A completion condition and the issuer-held mapping that authorizes its discharge. */
+const CLOSE = { event_type: "accounting-period-closed", discharge_authority: "close-management-2026-q3" };
+const DISCHARGE_AUTHORITY: DischargeAuthorityPolicy = {
+  policies: {
+    [CLOSE.discharge_authority]: {
+      mapping_id: "close-management",
+      mapping_version: "1",
+      event_types: [CLOSE.event_type],
+      principals: ["svc:console"],
+    },
+  },
 };
 
 /** The payments ceiling exactly as the derivation policy states it: every derived entry fits it. */
@@ -180,7 +200,12 @@ type CeilingDecision = { authority_ceiling: AuthorityEntry[]; drawdown_policy?: 
 async function issueMission(
   actions: string[],
   ceiling: CeilingDecision | undefined,
-  opts: { client?: Client; issuer?: string; intentExtra?: Record<string, unknown> } = {},
+  opts: {
+    client?: Client;
+    issuer?: string;
+    intentExtra?: Record<string, unknown>;
+    proposal?: Record<string, unknown>[];
+  } = {},
 ): Promise<{ missionId: string; accessToken: string }> {
   const client = opts.client ?? ap;
   const issuer = opts.issuer ?? ISSUER;
@@ -201,7 +226,7 @@ async function issueMission(
       code_challenge_method: "S256",
       login_hint: "alice",
       mission_intent: intentJson("Pay Acme invoices", opts.intentExtra),
-      authorization_details: JSON.stringify(authority(actions)),
+      authorization_details: JSON.stringify(opts.proposal ?? authority(actions)),
       client_assertion: await clientAssertion(client, issuer),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     }).toString(),
@@ -339,6 +364,7 @@ beforeAll(async () => {
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     activationPolicies: POLICIES,
     actorProfiles: aiAgents("subagent-extractor"),
+    dischargeAuthority: DISCHARGE_AUTHORITY,
     onLifecycleCommit: (c) => commits.push(c),
     testClients,
     progressive: PROGRESSIVE,
@@ -479,9 +505,30 @@ describe("approval_event_id per drawdown reservation (@spec progressive#in-ceili
   it("concurrent identical drawdowns create one successor, and every response names it", async () => {
     const pred = await issueMission(READ, ceilingOf());
     const crid = crypto.randomUUID();
-    const responses = await Promise.all(
-      Array.from({ length: 4 }, () => tokenRequest(expansionParams(pred.accessToken, crid, READ_LIST))),
-    );
+    // Hold every request after its reservation lookup until all four have
+    // passed it, so they reach the creation commit together.
+    const n = 4;
+    let arrived = 0;
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const verify = as.kernel.verifySubmissionEvidence.bind(as.kernel);
+    const hold = vi.spyOn(as.kernel, "verifySubmissionEvidence").mockImplementation(async (input) => {
+      arrived += 1;
+      if (arrived === n) release();
+      await gate;
+      return verify(input);
+    });
+    let responses: Response[];
+    try {
+      responses = await Promise.all(
+        Array.from({ length: n }, () => tokenRequest(expansionParams(pred.accessToken, crid, READ_LIST))),
+      );
+    } finally {
+      hold.mockRestore();
+    }
+    expect(arrived).toBe(n);
     const bodies = (await Promise.all(responses.map((r) => r.json()))) as Completed[];
     for (const [i, r] of responses.entries()) expect(r.status, JSON.stringify(bodies[i])).toBe(200);
     const ids = new Set(bodies.map((b) => b.mission_id));
@@ -668,6 +715,39 @@ describe("containment restrictions of the chain (@spec progressive#in-ceiling-ex
   });
 });
 
+describe("discharge restrictions of the chain (@spec progressive#in-ceiling-expansion, discharge#discharge)", () => {
+  it("a successor overlapping discharged authority falls back; one overlapping none stays eligible, and the restriction survives that intervening successor", async () => {
+    const completing = {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:invoice.list"],
+      constraints: { vendors: ["acme"], terminal_when: [CLOSE] },
+    };
+    const root = await issueMission(READ_LIST, ceilingOf(), {
+      proposal: [...authority(READ), completing],
+    });
+    const record = as.kernel.get(root.missionId) as MissionRecord;
+    const entry = record.authority_set.find((e) => e.actions.includes("payments:invoice.list")) as AuthorityEntry;
+    as.kernel.discharge(root.missionId, {
+      authority: "svc:console",
+      entry_digest: entryDigest(ISSUER, entry),
+      condition_digest: conditionDigest(CLOSE),
+      event_type: CLOSE.event_type,
+      event_id: `close-${crypto.randomUUID()}`,
+    });
+    // Restoring the discharged action by policy falls back.
+    await expectFreshApproval(root.missionId, root.accessToken, READ_LIST);
+    // Unrelated authority remains eligible.
+    const next = await drawdown(root.accessToken, crypto.randomUUID(), [...READ, "payments:payment.schedule"]);
+    expect(as.kernel.get(next.mission_id)?.discharged).toBeUndefined();
+    // The successor holds no latch, yet the chain's restriction still applies.
+    await expectFreshApproval(next.mission_id, next.access_token, [
+      ...READ_LIST,
+      "payments:payment.schedule",
+    ]);
+  });
+});
+
 describe("derivation limits through the drawdown (@spec progressive#in-ceiling-expansion, derivation-limits#effective-limit)", () => {
   it("carries the derivation count forward under a limit a larger request cannot raise, and refuses at exhaustion creating nothing", async () => {
     // Limit 2; the authorization-code token is the first derivation.
@@ -694,6 +774,31 @@ describe("derivation limits through the drawdown (@spec progressive#in-ceiling-e
     expect(as.kernel.allMissions().length).toBe(before);
     expect(as.kernel.get(successor.id)?.state).toBe("active");
     expect(as.kernel.get(successor.id)?.derivation_count).toBe(2);
+  });
+
+  it("an exact retry returns the recorded token without counting; once that token has expired, the fresh delivery token is gated by the successor's limit", async () => {
+    const root = await issueMission(READ, ceilingOf(), { intentExtra: { requested_derivation_limit: 2 } });
+    const crid = crypto.randomUUID();
+    const first = await drawdown(root.accessToken, crid, READ_LIST);
+    expect(as.kernel.get(first.mission_id)?.derivation_count).toBe(2);
+    const retry = await drawdown(root.accessToken, crid, READ_LIST);
+    expect(retry.access_token).toBe(first.access_token);
+    expect(as.kernel.get(first.mission_id)?.derivation_count).toBe(2);
+    // The delivery artifact expires: recovery would mint a fresh token, which
+    // is ordinary issuance, and the successor's limit is reached.
+    as.creationIdempotency.recordDelivery("ap-agent", crid, {
+      mode: "ceiling_drawdown",
+      access_token: first.access_token,
+      exp: 0,
+    });
+    const before = as.kernel.allMissions().length;
+    const gated = await tokenRequest(expansionParams(root.accessToken, crid, READ_LIST));
+    const gb = (await gated.json()) as { error?: string; mission_error?: string };
+    expect(gated.status, JSON.stringify(gb)).toBe(400);
+    expect(gb.error).toBe("invalid_grant");
+    expect(gb.mission_error).toBe("derivations_exhausted");
+    expect(as.kernel.allMissions().length).toBe(before);
+    expect(as.kernel.get(first.mission_id)?.derivation_count).toBe(2);
   });
 });
 
