@@ -1994,7 +1994,7 @@ export class MissionKernel {
           ? { outcome: "not-due", record: after, dueAtMs }
           : { outcome: "retry", record: after, dueAtMs };
       }
-      const scheduled = dueScheduleTransition(stored, Math.max(this.now().getTime(), dueAtMs));
+      const scheduled = dueScheduleTransition(stored, Number.POSITIVE_INFINITY);
       const applied =
         scheduled !== undefined &&
         after.state === scheduled.to &&
@@ -2981,7 +2981,8 @@ export class MissionKernel {
    *
    * @spec status#state-machine, status#legal-transitions: the same clock
    * applies a due suspension schedule, AFTER expiry, so a Mission past its
-   * `expires_at` is `expired` and never resumed. Unlike expiry, a due
+   * `expires_at` is `expired` and never resumed, and a deadline at or after
+   * `expires_at` never applies. Unlike expiry, a due
    * schedule is never projected: a resume or revocation that did not commit
    * is not reported, and the caller gets the stored `suspended` row (which
    * derives nothing) until the commit lands.
@@ -3993,11 +3994,12 @@ function scheduleDueAtMs(record: Pick<MissionRecord, "schedule" | "expires_at">)
 }
 
 /**
- * @spec status#mission-lifecycle-endpoint ("Operations"), status#legal-transitions:
- * the transition a record's current schedule owes at `nowMs`, or undefined.
- * Only a `suspended` record under a schedule whose deadline has passed owes
- * one, and only when that deadline precedes `expires_at`: a deadline at or
- * after `expires_at` never applies, whatever the clock reads.
+ * @spec status#mission-lifecycle-endpoint ("Operations"): the transition a
+ * record's current schedule owes at `nowMs`, or undefined. Only a `suspended`
+ * record under a schedule whose deadline has passed owes one. Expiry
+ * precedence is the caller's ({@link MissionKernel.applyExpiry} runs the
+ * expiry clock first), which is why a deadline at or after `expires_at`
+ * never applies: by then the Mission is `expired`.
  */
 function dueScheduleTransition(
   record: MissionRecord,
@@ -4006,7 +4008,7 @@ function dueScheduleTransition(
   const schedule = record.schedule;
   if (record.state !== "suspended" || !schedule) return undefined;
   const until = Date.parse(schedule.suspend_until);
-  if (!(until < Date.parse(record.expires_at)) || until > nowMs) return undefined;
+  if (until > nowMs) return undefined;
   return schedule.on_expiry === "resume"
     ? { to: "active" }
     : { to: "terminated", termination: { reason: "revoked", terminated_at: new Date(until).toISOString() } };
