@@ -14754,7 +14754,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "The payments profile (payments-runtime-profile-v3, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -15781,9 +15782,21 @@
      "name": "the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > an unconstrained list names every invoice vendor to the stored policy: revoking only one vendor's entitlement refuses the whole read resource_policy, a read of the other vendor still permits, and restoring it permits both, the same over both channels (#828 step 5)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (co-resident)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (remote)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#828. The PDP now has an independent Resource-policy conjunct: a ResourcePolicy bound to the decision point, asked at evaluate() step 6b with the authenticated subject, client, action and targets and nothing Mission-derived, denying resource_policy. The unit truth table controls the Mission-authority and Resource-policy outcomes separately with named fixtures, and each cell was verified by disabling the step-6b refusal. A policy that cannot answer yields no decision, never a permit. Moved partial -> tested under #828's ledger rule, which required the real-OpenFGA assertion: the two OpenFGA citations (revoking only the stored entitlement denies resource_policy where the Mission permits, and restoring it permits; the Mission refusing denies where the entitlement permits) passed against a live OpenFGA in impl-ci at faf9250d. Since main's merge their requests carry the neutral credential authority #825 PR 2b requires (D341) and nothing else changed; they skip locally, so the impl-ci run at the merged head confirms them, and this row reverts to partial if it does not. #828 step 5: a collection read names every vendor it returns as a target, so a policy refusing any one refuses the whole read resource_policy with no result, shown with a fixture over both channels and against the live stored policy."
+   "notes": "#828. The PDP now has an independent Resource-policy conjunct: a ResourcePolicy bound to the decision point, asked at evaluate() step 6b with the authenticated subject, client, action and targets and nothing Mission-derived, denying resource_policy. The unit truth table controls the Mission-authority and Resource-policy outcomes separately with named fixtures, and each cell was verified by disabling the step-6b refusal. A policy that cannot answer yields no decision, never a permit. Moved partial -> tested under #828's ledger rule, which required the real-OpenFGA assertion: the two OpenFGA citations (revoking only the stored entitlement denies resource_policy where the Mission permits, and restoring it permits; the Mission refusing denies where the entitlement permits) passed against a live OpenFGA in impl-ci at faf9250d. Since main's merge their requests carry the neutral credential authority #825 PR 2b requires (D341) and nothing else changed; they skip locally, so the impl-ci run at the merged head confirms them, and this row reverts to partial if it does not. #828 step 5: a collection read names every vendor it returns as a target, so a policy refusing any one refuses the whole read resource_policy with no result, shown with a fixture over both channels and against the live stored policy. D426: on the assembled AS-native target over HTTP, an issued DPoP-bound read is refused resource_policy with no Execution Evidence once the administrator revokes only its entitlement (pnpm resource-policy), permitted once restored, and a revocation survives a restart attached to the same store, in both PDP modes (live OpenFGA, CI). Each mode fails at \"after revocation\" with the step-6b refusal bypassed, and at \"after restart\" when attaching re-grants the revoked entitlement (live OpenFGA, #1232 review)."
   },
   {
    "id": "runtime.decision-inputs.constraint-evaluation-and-unenforceable-refusal",
