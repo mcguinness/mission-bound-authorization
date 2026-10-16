@@ -27,7 +27,8 @@ import { type CryptoKey, decodeJwt, exportJWK, generateKeyPair, importJWK, SignJ
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import type { RegisteredActivationPolicy } from "../src/kernel/activation-policy.js";
-import type { ProgressiveDrawdownOptions } from "../src/kernel/progressive.js";
+import { IntentError } from "../src/kernel/intent.js";
+import { consentCeiling, type ProgressiveDrawdownOptions } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, LifecycleCommit, MissionRecord } from "../src/kernel/types.js";
 import {
   buildAuthorizationServer,
@@ -408,6 +409,15 @@ describe("ceiling consent (@spec progressive#progressive-authorization)", () => 
     expect(JSON.stringify(decodeJwt(m.accessToken))).not.toContain("authority_ceiling");
   });
 
+  it("refuses a consented drawdown_policy the issuer does not hold, or one that is not an object, as invalid_request", () => {
+    const at = new Date().toISOString();
+    for (const drawdownPolicy of [{ id: "drawdown-unknown", version: "1" }, { id: "drawdown-std", version: "2" }, null]) {
+      expect(() =>
+        consentCeiling(ISSUER, POLICIES, { authority_ceiling: FULL_CEILING, drawdown_policy: drawdownPolicy as never }, at),
+      ).toThrowError(IntentError);
+    }
+  });
+
   it("omits drawdown_policy from ceiling_hash when the Approver consents a ceiling without one", async () => {
     const m = await issueMission(READ, { authority_ceiling: FULL_CEILING });
     const record = as.kernel.get(m.missionId) as MissionRecord;
@@ -697,7 +707,7 @@ describe("fresh-approval fallback (@spec progressive#in-ceiling-expansion, progr
     const { child } = createChildMission(as.kernel, {
       parentId: pred.missionId,
       intent: { goal: "Read invoices", target_resources: [RESOURCE], expires_at: FAR_EXP },
-      proposedAuthority: authority(READ),
+      proposedAuthority: authority(READ) as unknown as AuthorityEntry[],
       childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
     });
     await expectFreshApproval(pred.missionId, pred.accessToken, READ_LIST);

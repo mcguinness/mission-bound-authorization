@@ -134,7 +134,7 @@ export function consentCeiling(
   const ceiling = validateAuthorityProposal(JSON.stringify(entries), resources);
   let drawdownPolicy: ActivationPolicyRef | undefined;
   if (consent.drawdown_policy !== undefined) {
-    const { id, version } = consent.drawdown_policy;
+    const { id, version } = (consent.drawdown_policy ?? {}) as { id?: unknown; version?: unknown };
     drawdownPolicy =
       typeof id === "string" && typeof version === "string"
         ? mintActivationPolicyRef(iss, registry, id, version)

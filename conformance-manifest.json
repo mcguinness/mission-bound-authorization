@@ -30423,6 +30423,12 @@
      "name": "ceiling consent (@spec progressive#progressive-authorization) > records the consented authority_ceiling and drawdown_policy under ceiling_hash, outside authority_hash and the token",
      "level": "endpoint",
      "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent (@spec progressive#progressive-authorization) > refuses a consented drawdown_policy the issuer does not hold, or one that is not an object, as invalid_request",
+     "level": "unit",
+     "surface": "commitment"
     }
    ],
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
