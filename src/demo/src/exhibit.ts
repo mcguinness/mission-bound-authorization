@@ -10,7 +10,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { createExpansion, DEFERRED_GRANT_TYPE, successorWidensOnly, validateMissionIntent } from "@mission/authorization-server";
+import { type AuthorityEntry, createExpansion, DEFERRED_GRANT_TYPE, successorWidensOnly, validateMissionIntent } from "@mission/authorization-server";
 import { buildScopeStatement, EgressGate, type MissionState, scopeDigest } from "@mission/agent";
 import {
   aamReconciliationCeiling,
@@ -24,6 +24,7 @@ import type { TokenFacts } from "@mission/mcp-payments";
 import type { Decision, EvaluationRequest } from "@mission/pdp";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import {
+  assertDemoApprovalFloor,
   callWithTransactionCredential,
   composeStack,
   type AuthServerExtras,
@@ -1881,24 +1882,28 @@ async function main() {
     }),
   );
   hop("Operator", "AS", "expand mission — successor from a fresh approval (kernel op)", "in-process");
+  // The widened proposal: what the wire submits as the standard RFC 9396
+  // authorization_details parameter beside mission_intent.
+  const widened: AuthorityEntry[] = [
+    {
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send", "payments:payment.schedule"],
+      constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme"] },
+    },
+    {
+      type: "mission_resource_access",
+      resource: SAAS_RESOURCE,
+      actions: ["ledger:vendor.read", "ledger:journal.write"],
+    },
+  ];
+  // @spec mission#approval-authentication (#826, D425): the fresh approval
+  // meets the published floor against the stack's recorded console login.
+  assertDemoApprovalFloor(stack, stack.kernel.derive(successorIntent, widened));
   const expansion = createExpansion(stack.kernel, {
     predecessorId: missionId,
     intent: successorIntent,
-    // The widened proposal: what the wire submits as the standard RFC 9396
-    // authorization_details parameter beside mission_intent.
-    proposedAuthority: [
-      {
-        type: "mission_resource_access",
-        resource: CANONICAL_RESOURCE,
-        actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send", "payments:payment.schedule"],
-        constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme"] },
-      },
-      {
-        type: "mission_resource_access",
-        resource: SAAS_RESOURCE,
-        actions: ["ledger:vendor.read", "ledger:journal.write"],
-      },
-    ],
+    proposedAuthority: widened,
     approver: { iss: asUrl, sub: "bob" },
     approvalEventId: "apev-exhibit-successor",
     approvedUntil: "2027-01-01T00:00:00Z",

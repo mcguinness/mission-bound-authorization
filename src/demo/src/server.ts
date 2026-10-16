@@ -29,7 +29,7 @@ import {
   dpopProofFor,
   submitMissionApproval,
 } from "./oauth-client.js";
-import { completeMissionApproval, denyMissionApproval, issueMissionToken } from "./approval-console.js";
+import { completeMissionApproval, denyMissionApproval, issueMissionToken, logInAgain } from "./approval-console.js";
 import { installConsoleSessionBoundary } from "./console-session-boundary.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
@@ -461,6 +461,15 @@ async function main() {
   // enough context per entry to decide (see enrichedQueue). Extends the shape the
   // console-bff method returns; the console-bff itself is untouched.
   app.get("/bff/approver/queue", (c) => c.json(enrichedQueue()));
+  // @spec mission#approval-authentication (#826, D425) — the approver logs in
+  // again: a new recorded login for the console (simulated; the demo has no
+  // Approver identity provider). Adjudication never logs in, so a high-risk
+  // approval more than the floor's age bound after the last login refuses
+  // until this is called.
+  app.post("/bff/approver/login", (c) => {
+    logInAgain(stack.approverLogin);
+    return c.json({ sub: stack.approverLogin.sub, acr: stack.approverLogin.acr, auth_time: stack.approverLogin.auth_time });
+  });
   // Approver adjudicates EITHER a parked mission approval (approvalId in
   // missionApprovals) or a pending AROP/JIT task on the shared ARS.
   app.post("/bff/approver/adjudicate", async (c) => {

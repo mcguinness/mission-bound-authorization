@@ -2,22 +2,43 @@
 import { APPROVAL_SUBJECT_HEADER, type ApprovalSessionStore } from "@mission/authorization-server";
 import { jarClosures, redeemMissionApproval, submitMissionApproval, type CookieJar, type IssueOpts, type SubmittedApproval } from "./oauth-client.js";
 
+/** The console Approver's recorded login: who, the `acr` that login achieved, and when it happened. */
+export interface ApproverLogin {
+  sub: string;
+  acr: string;
+  auth_time: number;
+}
+
+/**
+ * Record a login by the console's Approver, at the moment the login happens
+ * (#826, D425). The demo has no Approver identity provider, so this stands in
+ * for a deployment's login integration: it records the `acr` the demo
+ * configures and the current time. It is called at a login (stack
+ * composition, or the demo server's explicit login route), never at an
+ * approval. The login is simulated, so it is not evidence that a person
+ * authenticated, and #253's high-risk approval acceptance does not rest on it.
+ */
+export function recordApproverLogin(approver: { sub: string; acr: string }, at = Math.floor(Date.now() / 1000)): ApproverLogin {
+  return { sub: approver.sub, acr: approver.acr, auth_time: at };
+}
+
+/** A new login by the same Approver, updating the recorded login in place. No approval calls it. */
+export function logInAgain(login: ApproverLogin, at = Math.floor(Date.now() / 1000)): void {
+  login.auth_time = at;
+}
+
 /**
  * The console's Approver on the AS's trusted browser approval surface (#826,
- * D425). Each approval logs the Approver in through the AS's trusted login
- * store, which records the `acr` that login achieved and the time it
- * happened, bound to the one interaction. The approval-authentication floor
- * accepts only such a login: a headless approval service's registration is
- * not an authentication of the Approver. The demo has no Approver identity
- * provider, so the console stands in for the trusted login integration and
- * records a login at the moment it approves; a deployment calls `establish`
- * from its real login. The floor's evidence here is structural (the browser
- * surface, a per-interaction context, the age bound), not a claim that the
- * demo authenticated a person.
+ * D425). Every approval presents the recorded login unchanged, its `acr` and
+ * the time it happened, bound to the one interaction through the AS's trusted
+ * login store. An approval never records a login, so the context ages: the
+ * approval-authentication floor refuses it once it is older than the floor
+ * allows, until the Approver logs in again. A headless approval service's
+ * registration is not an authentication of the Approver.
  */
 export interface ApprovalConsole {
   sessions: ApprovalSessionStore;
-  approver: { sub: string; acr: string };
+  login: ApproverLogin;
 }
 
 /** How the console authenticates: a browser login, or a headless approval service token. */
@@ -36,9 +57,9 @@ export async function resolveMissionApproval(asUrl: string, approver: ApproverCr
     identity = { cookie: cookieHeader(), "x-service-token": approver, ...(subject !== null ? { [APPROVAL_SUBJECT_HEADER]: subject } : {}) };
   } else {
     const login = approver.sessions.establish(pending.uid, {
-      sub: approver.approver.sub,
-      acr: approver.approver.acr,
-      auth_time: Math.floor(Date.now() / 1000),
+      sub: approver.login.sub,
+      acr: approver.login.acr,
+      auth_time: approver.login.auth_time,
       ...(subject !== null ? { subject } : {}),
     });
     const interaction = cookieHeader();
