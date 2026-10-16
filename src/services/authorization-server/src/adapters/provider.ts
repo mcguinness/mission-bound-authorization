@@ -434,6 +434,16 @@ export const MISSION_LIFECYCLE_SCOPE = "mission_lifecycle";
 export const MISSION_DISCHARGE_SCOPE = "mission_discharge";
 
 /**
+ * @spec status#lifecycle-authorization: the distinct grant a deployment that
+ * sets `distinctResumeGrant` requires for `resume`, beside
+ * {@link MISSION_LIFECYCLE_SCOPE}: the distinct or elevated authorization the
+ * profile says a deployment SHOULD require, since `resume` undoes the
+ * containment a `suspend` established. The same grant then governs a
+ * `suspend` whose `on_expiry` is `resume`, which schedules that resume.
+ */
+export const MISSION_RESUME_SCOPE = "mission_resume";
+
+/**
  * @spec status#mission-status-authentication — the explicit read authorization
  * the Mission Status operation requires of an authenticated caller. A caller
  * without it is refused with the not-found response. The same grant decides
@@ -449,6 +459,7 @@ export const MISSION_STATUS_SCOPE = "mission_status";
  */
 const LIFECYCLE_CLIENT_GRANTS: ReadonlySet<string> = new Set([
   MISSION_LIFECYCLE_SCOPE,
+  MISSION_RESUME_SCOPE,
   MISSION_DISCHARGE_SCOPE,
   MISSION_STATUS_SCOPE,
 ]);
@@ -468,14 +479,14 @@ export interface ServiceTokenPrincipal {
 }
 
 /**
- * The shipped dev token carries every grant (lifecycle, discharge, status
- * read), so every existing operational caller keeps working; a deployment (or a test proving non-implication)
+ * The shipped dev token carries every grant (lifecycle, resume, discharge,
+ * status read), so every existing operational caller keeps working; a deployment (or a test proving non-implication)
  * registers additional tokens, which are merged OVER this default.
  */
 export const DEFAULT_SERVICE_TOKEN_PRINCIPALS: Readonly<Record<string, ServiceTokenPrincipal>> = {
   [DEV_SERVICE_TOKEN]: {
     principal_id: "svc:console",
-    scopes: [MISSION_LIFECYCLE_SCOPE, MISSION_DISCHARGE_SCOPE, MISSION_STATUS_SCOPE],
+    scopes: [MISSION_LIFECYCLE_SCOPE, MISSION_RESUME_SCOPE, MISSION_DISCHARGE_SCOPE, MISSION_STATUS_SCOPE],
   },
 };
 
@@ -500,6 +511,21 @@ export interface AdapterOptions {
    * as an unknown Mission.
    */
   lifecycleClientGrants?: Record<string, readonly string[]>;
+  /**
+   * @spec status#lifecycle-authorization: require the distinct
+   * {@link MISSION_RESUME_SCOPE} grant, beside `mission_lifecycle`, for a
+   * direct `resume` and for a `suspend` whose `on_expiry` is `resume`. Absent
+   * (the default), `mission_lifecycle` alone authorizes both, so this
+   * deployment departs from the profile's SHOULD until it sets this.
+   */
+  distinctResumeGrant?: boolean;
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): this deployment
+   * adopts `suspend_until` and `on_expiry`, and runs the suspension
+   * scheduler that applies them. Absent (the default), a `suspend` carrying
+   * them is refused `invalid_request`.
+   */
+  suspensionSchedules?: boolean;
   clients: Record<string, unknown>[];
   jwks: { keys: Record<string, unknown>[] };
   publicJwks: { keys: Record<string, unknown>[] };
@@ -2593,6 +2619,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
 
   /**
+   * @spec status#lifecycle-authorization: the authorization this deployment
+   * requires for a direct `resume`, in ONE place: a direct `resume` and a
+   * `suspend` whose `on_expiry` is `resume` both call it, so scheduling a
+   * resume never needs less than resuming does. `mission_lifecycle`, and,
+   * where the deployment sets `distinctResumeGrant`, `mission_resume` too.
+   */
+  const mayResume = (principal: ServiceTokenPrincipal): boolean =>
+    principal.scopes.includes(MISSION_LIFECYCLE_SCOPE) &&
+    (opts.distinctResumeGrant !== true || principal.scopes.includes(MISSION_RESUME_SCOPE));
+
+  /**
    * @spec discharge#condition-selectors — add `discharge_selectors` to an ACTIVE
    * introspection `mission` projection, for exactly the `authorization_details`
    * this response returns to this caller, and only where this deployment
@@ -3215,13 +3252,29 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           sendInvalidRequest(members.description);
           return;
         }
-        // A schedule this deployment cannot honor is refused, never accepted
-        // without effect (#1002 implements `suspend_until` and `on_expiry`).
-        if (members.value.schedule) {
+        const { expectedVersion, schedule } = members.value;
+        // A schedule this deployment has not adopted is refused, never
+        // accepted without effect.
+        if (schedule && opts.suspensionSchedules !== true) {
           sendInvalidRequest("suspend_until and on_expiry are not supported by this deployment");
           return;
         }
-        const { expectedVersion } = members.value;
+        // A deadline already passed sets no deadline to wait for: refused as
+        // a request this deployment cannot honor, before any Mission is read.
+        if (schedule && Date.parse(schedule.suspendUntil) <= kernel.nowDate().getTime()) {
+          sendInvalidRequest("suspend_until must lie in the future");
+          return;
+        }
+        // @spec status#lifecycle-authorization: a `suspend` whose `on_expiry`
+        // is `resume` schedules a later resume, so it needs the authorization a
+        // direct `resume` needs, checked before any change and refused as an
+        // unauthorized request, whether it would arm a schedule or replace one
+        // on a Mission another party suspended. `on_expiry` `revoke` needs
+        // only the authorization for `suspend`, checked above.
+        if ((lifecycleOperation === "resume" || schedule?.onExpiry === "resume") && !mayResume(principal)) {
+          sendNotFound();
+          return;
+        }
         // @spec control-plane#serialization — the expiry clock runs FIRST, in
         // its own transaction, and stays OUT of the transition's. The clock
         // MATERIALIZES a narrowing transition; the operation then requested may
@@ -3239,11 +3292,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // provider's own store, so it can neither join nor roll back with this
         // commit.
         const transitioned = withTransaction(kernel.db, () => {
-          const record = kernel.transition(
-            missionId,
-            lifecycleOperation,
-            expectedVersion !== undefined ? { expectedVersion } : {},
-          );
+          // @spec status#lifecycle-authorization: the committing party of a
+          // schedule is this request's acting party.
+          const record = kernel.transition(missionId, lifecycleOperation, {
+            ...(expectedVersion !== undefined ? { expectedVersion } : {}),
+            ...(schedule
+              ? {
+                  schedule: {
+                    suspend_until: schedule.suspendUntil,
+                    on_expiry: schedule.onExpiry,
+                    committing_party: principal.principal_id,
+                  },
+                }
+              : {}),
+          });
           // @spec status#mission-lifecycle-endpoint, status#mission-status-response
           // the state-only Mission Status Response: the request names no
           // `audience`, so `aud` is the authenticated client and nothing

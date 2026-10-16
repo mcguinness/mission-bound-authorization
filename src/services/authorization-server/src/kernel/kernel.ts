@@ -153,6 +153,8 @@ import {
   type MissionRecord,
   type MissionState,
   type ParentRef,
+  type ScheduleRequest,
+  type SuspensionSchedule,
   type TemplateRef,
   TERMINAL_STATES,
   type TerminalWhenCondition,
@@ -217,7 +219,8 @@ CREATE TABLE IF NOT EXISTS missions (
   containment_json TEXT,
   discharged_json TEXT,
   submission_evidence_json TEXT,
-  termination_json TEXT
+  termination_json TEXT,
+  schedule_json TEXT
 ) STRICT;
 `;
 
@@ -251,6 +254,12 @@ function migrateMissions(db: Database): void {
   // columns, which stay readable for exactly those rows.
   if (!columns.has("termination_json")) {
     db.exec("ALTER TABLE missions ADD COLUMN termination_json TEXT");
+  }
+  // @spec status#mission-lifecycle-endpoint ("Operations"): the current
+  // suspension schedule. Nullable with no default: a row that predates it
+  // holds no schedule, which is what it always meant.
+  if (!columns.has("schedule_json")) {
+    db.exec("ALTER TABLE missions ADD COLUMN schedule_json TEXT");
   }
 }
 
@@ -1880,8 +1889,24 @@ export class MissionKernel {
    * against the current state version BEFORE that rule, so a stale guard is
    * refused ({@link StaleVersionError}) even where the operation would
    * otherwise be idempotent success, and the Mission is left unchanged.
+   *
+   * @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency:
+   * `schedule`, valid only on `suspend` and already authorized by the caller,
+   * is committed with the transition from `active`. Against a `suspended`
+   * Mission it is the one idempotent case that carries metadata: a pair
+   * differing from the recorded one, or arming one where none is recorded,
+   * replaces it ({@link replaceSchedule}); the same pair, or none, changes
+   * nothing, so omission never clears a deadline and never replaces the
+   * recorded committing party.
    */
-  transition(id: string, op: LifecycleOperation, opts: { expectedVersion?: number } = {}): MissionRecord {
+  transition(
+    id: string,
+    op: LifecycleOperation,
+    opts: { expectedVersion?: number; schedule?: ScheduleRequest } = {},
+  ): MissionRecord {
+    if (opts.schedule && op !== "suspend") {
+      throw new Error(`a schedule is valid only on suspend, not ${op}`);
+    }
     // @spec control-plane#serialization — the expiry clock may materialize a
     // terminal transition here, so the legality check reads the record that
     // materialization left behind (or, when that write fails, the observed
@@ -1893,6 +1918,11 @@ export class MissionKernel {
       );
     }
     const rule = LEGAL_TRANSITIONS[op];
+    if (op === "suspend" && record.state === "suspended") {
+      return opts.schedule && !sameSchedule(record.schedule, opts.schedule)
+        ? this.replaceSchedule(record, opts.schedule)
+        : record;
+    }
     if (
       op !== "resume" &&
       record.state === rule.to &&
@@ -1903,7 +1933,89 @@ export class MissionKernel {
     if (!rule.from.includes(record.state)) {
       throw new LifecycleConflictError(`${op} is not legal from ${describeLifecycle(record)}`);
     }
-    return this.setState(record, rule.to, rule.reason ? { termination: { reason: rule.reason } } : {});
+    return this.setState(record, rule.to, {
+      ...(rule.reason ? { termination: { reason: rule.reason } } : {}),
+      ...(opts.schedule ? { schedule: opts.schedule } : {}),
+    });
+  }
+
+  /**
+   * @spec status#idempotency, status#lifecycle-authorization: replace the
+   * schedule of a `suspended` Mission: a metadata-only commit (state
+   * unchanged, version incremented) recording the new pair, its committing
+   * party and its generation (this commit's version), and emitting the change
+   * with `prior_state` and `state` both `suspended` and the updated values.
+   * The compare-and-set on `(version, state)` admits it from the stored row.
+   */
+  private replaceSchedule(record: MissionRecord, schedule: ScheduleRequest): MissionRecord {
+    return withTransaction(this.db, () => {
+      const committedAt = this.now().toISOString();
+      const next: SuspensionSchedule = { ...schedule, generation: record.version + 1 };
+      const changed = this.db
+        .prepare(
+          "UPDATE missions SET schedule_json = ?, version = version + 1 WHERE id = ? AND version = ? AND state = 'suspended'",
+        )
+        .run(JSON.stringify(next), record.id, record.version);
+      if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
+      const fresh = this.mustGet(record.id);
+      this.emitCommit(fresh, "suspended", false, false, committedAt, scheduleCommitMembers(fresh.schedule));
+      return fresh;
+    });
+  }
+
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"), status#legal-transitions,
+   * status#state-machine: a schedule timer's delivery for `generation`.
+   *
+   * The delivery CLAIMS the generation inside one transaction: it acts only
+   * while the stored row is `suspended` under a schedule of exactly that
+   * generation, so a stale or replaced timer, a duplicate delivery, and a
+   * delivery after any manual transition change nothing. A claimed delivery
+   * runs the expiry clock ({@link applyExpiry}), which gives a Mission past
+   * its `expires_at` the `expired` termination (or one under a terminated
+   * parent its `parent_terminated` termination) and applies a due schedule
+   * whose deadline precedes `expires_at` under the `(version, state)`
+   * compare-and-set. Nothing re-checks the committing party's authority: the
+   * schedule was authorized when it was committed.
+   */
+  fireSchedule(id: string, generation: number): ScheduleFire {
+    return withTransaction(this.db, () => {
+      const stored = this.get(id);
+      if (!stored) return { outcome: "superseded" };
+      if (stored.state !== "suspended" || stored.schedule?.generation !== generation) {
+        return { outcome: "superseded", record: stored };
+      }
+      const dueAtMs = scheduleDueAtMs(stored);
+      const after = this.applyExpiry(stored);
+      if (after.version === stored.version) {
+        // Nothing committed: an early delivery waits for its deadline; a due
+        // one whose write failed is retried, never dropped.
+        return this.now().getTime() < dueAtMs
+          ? { outcome: "not-due", record: after, dueAtMs }
+          : { outcome: "retry", record: after, dueAtMs };
+      }
+      const scheduled = dueScheduleTransition(stored, Math.max(this.now().getTime(), dueAtMs));
+      const applied =
+        scheduled !== undefined &&
+        after.state === scheduled.to &&
+        after.termination?.reason === scheduled.termination?.reason;
+      return { outcome: applied ? "applied" : "ended", record: after };
+    });
+  }
+
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): every current
+   * schedule in the kernel database, for the scheduler to arm at boot. The
+   * schedule persists in the Mission's own row, so it is exactly as durable
+   * as the record: on the file-backed store it survives a restart.
+   */
+  currentSchedules(): Array<{ missionId: string; generation: number; dueAtMs: number }> {
+    const rows = this.db
+      .prepare("SELECT * FROM missions WHERE state = 'suspended' AND schedule_json IS NOT NULL")
+      .all() as Record<string, unknown>[];
+    return rows.map(rowToRecord).flatMap((r) =>
+      r.schedule ? [{ missionId: r.id, generation: r.schedule.generation, dueAtMs: scheduleDueAtMs(r) }] : [],
+    );
   }
 
   /**
@@ -2866,14 +2978,41 @@ export class MissionKernel {
    * Its failure or rollback never changes the result: the caller still gets
    * the observed termination, re-observed from the current row when that can
    * be read.
+   *
+   * @spec status#state-machine, status#legal-transitions: the same clock
+   * applies a due suspension schedule, AFTER expiry, so a Mission past its
+   * `expires_at` is `expired` and never resumed. Unlike expiry, a due
+   * schedule is never projected: a resume or revocation that did not commit
+   * is not reported, and the caller gets the stored `suspended` row (which
+   * derives nothing) until the commit lands.
    */
   applyExpiry(record: MissionRecord): MissionRecord {
     const observed = this.observe(record);
-    if (observed.state !== "terminated" || record.state === "terminated" || !observed.termination) {
-      return observed;
-    }
+    if (observed.state !== "terminated") return this.applyDueSchedule(record, observed);
+    if (record.state === "terminated" || !observed.termination) return observed;
     try {
       return this.setState(record, "terminated", { termination: observed.termination });
+    } catch {
+      try {
+        const current = this.get(record.id);
+        return current ? this.observe(current) : observed;
+      } catch {
+        return observed;
+      }
+    }
+  }
+
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): commit the
+   * transition a due schedule owes ({@link dueScheduleTransition}) under the
+   * `(version, state)` compare-and-set, which clears the schedule with it.
+   * On a failed write the caller gets the current row, never a projection.
+   */
+  private applyDueSchedule(record: MissionRecord, observed: MissionRecord): MissionRecord {
+    const due = dueScheduleTransition(record, this.now().getTime());
+    if (!due) return observed;
+    try {
+      return this.setState(record, due.to, due.termination ? { termination: due.termination } : {});
     } catch {
       try {
         const current = this.get(record.id);
@@ -3406,6 +3545,12 @@ export class MissionKernel {
         // absent only while an `expired` or `parent_terminated` termination is
         // observed but not yet committed.
         ...(record.termination ? { termination: record.termination } : {}),
+        // @spec status#mission-status-response, status#mission-lifecycle-endpoint:
+        // CONDITIONAL, present only while the Mission is `suspended` under a
+        // deadline, so a consumer sees the pending outcome.
+        ...(record.state === "suspended" && record.schedule
+          ? { suspend_until: record.schedule.suspend_until, on_expiry: record.schedule.on_expiry }
+          : {}),
         version: record.version,
         expires_at: record.expires_at,
         fresh_until: new Date((nowS + freshness) * 1000).toISOString(),
@@ -3526,9 +3671,17 @@ export class MissionKernel {
   private setState(
     record: MissionRecord,
     to: MissionState,
-    opts: { projectedFrom?: MissionState; termination?: Termination } = {},
+    opts: { projectedFrom?: MissionState; termination?: Termination; schedule?: ScheduleRequest } = {},
   ): MissionRecord {
     const { projectedFrom } = opts;
+    // @spec status#mission-lifecycle-endpoint ("Operations"): the schedule is
+    // written in the SAME statement as the state. Only a `suspend` commits
+    // one, under this commit's version as its generation; every other
+    // transition clears it, since a schedule is current only for the
+    // suspension it was armed for.
+    const schedule: SuspensionSchedule | undefined =
+      to === "suspended" && opts.schedule ? { ...opts.schedule, generation: record.version + 1 } : undefined;
+    const scheduleJson = schedule ? JSON.stringify(schedule) : null;
     // @spec control-plane#serialization — state/version and descendant
     // projection commit together, and the CAS on (version, state) admits the
     // transition from the stored row rather than the caller's snapshot.
@@ -3560,7 +3713,7 @@ export class MissionKernel {
         };
         const changed = this.db
           .prepare(
-            "UPDATE missions SET state = 'terminated', termination_json = ?, version = version + 1 WHERE id = ? AND version = ? AND state = ?",
+            "UPDATE missions SET state = 'terminated', termination_json = ?, schedule_json = NULL, version = version + 1 WHERE id = ? AND version = ? AND state = ?",
           )
           .run(JSON.stringify(termination), record.id, record.version, record.state);
         if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
@@ -3571,19 +3724,25 @@ export class MissionKernel {
         // `active`), and CLEARED (`NULL`) whenever a Mission returns to `active` (a
         // resume or a restore), so it is present only for the duration of the hold.
         const changed = this.db
-          .prepare("UPDATE missions SET state = ?, version = version + 1, projected_from = ? WHERE id = ? AND version = ? AND state = ?")
-          .run(to, projectedFrom ?? null, record.id, record.version, record.state);
+          .prepare(
+            "UPDATE missions SET state = ?, version = version + 1, projected_from = ?, schedule_json = ? WHERE id = ? AND version = ? AND state = ?",
+          )
+          .run(to, projectedFrom ?? null, scheduleJson, record.id, record.version, record.state);
         if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
       } else {
         const changed = this.db
-          .prepare("UPDATE missions SET state = ?, version = version + 1 WHERE id = ? AND version = ? AND state = ?")
-          .run(to, record.id, record.version, record.state);
+          .prepare(
+            "UPDATE missions SET state = ?, version = version + 1, schedule_json = ? WHERE id = ? AND version = ? AND state = ?",
+          )
+          .run(to, scheduleJson, record.id, record.version, record.state);
         if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
       }
       // Commit from the persisted row, not the in-memory spread: transition()
       // discards applyExpiry()'s return, so the spread `version` can be off by one.
       const fresh = this.get(record.id);
-      if (fresh) this.emitCommit(fresh, record.state, false, false, committedAt);
+      if (fresh) {
+        this.emitCommit(fresh, record.state, false, false, committedAt, schedule ? scheduleCommitMembers(fresh.schedule) : {});
+      }
       // @spec child-delegation#cascade — a terminal transition cascades to
       // dependent Child Missions. Gating here (inside the transaction) covers every
       // terminal funnel that flows through setState: transition(revoke/complete)
@@ -3713,6 +3872,11 @@ export class MissionKernel {
    * termination holds (`successor`, `parent`, `carried_to`); a commit carries
    * no top-level reference member. `committedAt` is the instant the caller
    * already stamped on the termination, so the two never drift.
+   *
+   * @spec signals#lifecycle-event, status#idempotency: `schedule` is passed
+   * EXPLICITLY by the two funnels that commit a schedule (a `suspend` that
+   * arms one, {@link replaceSchedule}), never inferred from the record, so a
+   * metadata-only commit that leaves the schedule as it was carries none.
    */
   private emitCommit(
     record: MissionRecord,
@@ -3720,6 +3884,7 @@ export class MissionKernel {
     authorityChanged = false,
     containmentAdvanced = false,
     committedAt?: string,
+    schedule: ScheduleCommitMembers = {},
   ): void {
     const event: LifecycleCommit = {
       id: record.id,
@@ -3743,6 +3908,7 @@ export class MissionKernel {
       ...(record.containment
         ? { containment_version: record.containment.containment_version }
         : {}),
+      ...schedule,
     };
     const persisted: PersistedLifecycleCommit = this.outbox.enqueueInCallerTx(event);
     if (TERMINAL_STATES.has(record.state)) {
@@ -3768,6 +3934,82 @@ export class MissionKernel {
 /** A record's lifecycle for a message: its state, with the reason when terminated. */
 function describeLifecycle(record: Pick<MissionRecord, "state" | "termination">): string {
   return record.state === "terminated" ? `terminated (${record.termination?.reason ?? "unknown"})` : record.state;
+}
+
+/**
+ * @spec status#mission-lifecycle-endpoint ("Operations"), status#legal-transitions,
+ * status#state-machine: one delivery of a schedule timer.
+ *
+ *  - `applied`: the deadline passed before `expires_at` and `on_expiry`
+ *    committed;
+ *  - `ended`: the expiry clock ended the Mission first (its own `expires_at`,
+ *    or an ancestor's termination) and that termination committed; the
+ *    schedule never applies;
+ *  - `superseded`: the generation is not the stored row's current schedule
+ *    (replaced, ended by a transition, or already applied), so nothing
+ *    changed;
+ *  - `not-due`: delivered before its deadline; nothing changed;
+ *  - `retry`: due, but the commit did not land; nothing changed.
+ */
+export type ScheduleFire =
+  | { outcome: "applied" | "ended"; record: MissionRecord }
+  | { outcome: "superseded"; record?: MissionRecord }
+  | { outcome: "not-due" | "retry"; record: MissionRecord; dueAtMs: number };
+
+/** The schedule members a commit carries ({@link LifecycleCommit}). */
+type ScheduleCommitMembers = Pick<LifecycleCommit, "suspend_until" | "on_expiry" | "schedule_committing_party">;
+
+function scheduleCommitMembers(schedule: SuspensionSchedule | undefined): ScheduleCommitMembers {
+  return schedule
+    ? {
+        suspend_until: schedule.suspend_until,
+        on_expiry: schedule.on_expiry,
+        schedule_committing_party: schedule.committing_party,
+      }
+    : {};
+}
+
+/**
+ * @spec status#idempotency: whether a supplied pair is the recorded one. The
+ * deadline compares as an instant, so two spellings of one RFC 3339 instant
+ * are the same deadline.
+ */
+function sameSchedule(recorded: SuspensionSchedule | undefined, supplied: ScheduleRequest): boolean {
+  return (
+    recorded !== undefined &&
+    recorded.on_expiry === supplied.on_expiry &&
+    Date.parse(recorded.suspend_until) === Date.parse(supplied.suspend_until)
+  );
+}
+
+/**
+ * @spec status#legal-transitions: when a schedule's timer next has work: its
+ * deadline, or the Mission's `expires_at` when that comes first, since expiry
+ * then governs and the deadline never applies.
+ */
+function scheduleDueAtMs(record: Pick<MissionRecord, "schedule" | "expires_at">): number {
+  const until = Date.parse(record.schedule?.suspend_until ?? record.expires_at);
+  return Math.min(until, Date.parse(record.expires_at));
+}
+
+/**
+ * @spec status#mission-lifecycle-endpoint ("Operations"), status#legal-transitions:
+ * the transition a record's current schedule owes at `nowMs`, or undefined.
+ * Only a `suspended` record under a schedule whose deadline has passed owes
+ * one, and only when that deadline precedes `expires_at`: a deadline at or
+ * after `expires_at` never applies, whatever the clock reads.
+ */
+function dueScheduleTransition(
+  record: MissionRecord,
+  nowMs: number,
+): { to: MissionState; termination?: Termination } | undefined {
+  const schedule = record.schedule;
+  if (record.state !== "suspended" || !schedule) return undefined;
+  const until = Date.parse(schedule.suspend_until);
+  if (!(until < Date.parse(record.expires_at)) || until > nowMs) return undefined;
+  return schedule.on_expiry === "resume"
+    ? { to: "active" }
+    : { to: "terminated", termination: { reason: "revoked", terminated_at: new Date(until).toISOString() } };
 }
 
 /**
@@ -3842,6 +4084,11 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
       : {}),
     // Only the held-from `active` is ever recorded; anything else is dropped.
     ...(row.projected_from === "active" ? { projected_from: "active" as const } : {}),
+    // @spec status#mission-lifecycle-endpoint ("Operations"): absent means no
+    // current schedule; only a `suspended` row ever holds one.
+    ...(row.schedule_json && lifecycle.state === "suspended"
+      ? { schedule: JSON.parse(row.schedule_json as string) as SuspensionSchedule }
+      : {}),
     // Absent means no containment was ever applied; written only by contain().
     ...(row.containment_json
       ? { containment: JSON.parse(row.containment_json as string) as MissionContainment }

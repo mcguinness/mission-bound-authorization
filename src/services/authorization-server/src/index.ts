@@ -54,6 +54,7 @@ import type { EffectiveAuthoritySource } from "./kernel/derive.js";
 import type { DischargeAuthorityPolicy } from "./kernel/discharge.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
+import { type ScheduleTimers, SuspensionScheduler } from "./kernel/suspension-scheduler.js";
 import type { TxnAuthorizationOptions } from "./adapters/transaction-authorization.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
 import type { ActivationPolicyRegistry } from "./kernel/activation-policy.js";
@@ -73,9 +74,18 @@ export {
   STATUS_SIGNING_ALG,
   type DischargeReceiptObservation,
   type ObservationWatermark,
+  type ScheduleFire,
   type StatusObservation,
   type StatusObservationOptions,
 } from "./kernel/kernel.js";
+export {
+  MAX_TIMER_DELAY_MS,
+  SCHEDULE_RETRY_DELAY_MS,
+  type ScheduleDelivery,
+  type ScheduleTimers,
+  SuspensionScheduler,
+  SYSTEM_SCHEDULE_TIMERS,
+} from "./kernel/suspension-scheduler.js";
 export {
   DerivationReservationStore,
   type DerivationReservation,
@@ -139,6 +149,7 @@ export {
   DEFAULT_SERVICE_TOKEN_PRINCIPALS,
   MISSION_DISCHARGE_SCOPE,
   MISSION_LIFECYCLE_SCOPE,
+  MISSION_RESUME_SCOPE,
   MISSION_STATUS_RESPONSE_MEDIA_TYPE,
   MISSION_STATUS_SCOPE,
   type ServiceTokenPrincipal,
@@ -668,6 +679,12 @@ export interface BuiltAs {
    * Absent: every capability is on, the full reference provider.
    */
   capabilities?: ReadonlySet<ProviderCapability>;
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): the suspension
+   * scheduler, present exactly where this assembly adopted schedules
+   * (`suspensionSchedules`) and serves `suspend`.
+   */
+  suspensionScheduler?: SuspensionScheduler;
 }
 
 export async function buildAuthorizationServer(opts: {
@@ -830,6 +847,26 @@ export async function buildAuthorizationServer(opts: {
    */
   lifecycleClientGrants?: Record<string, readonly string[]>;
   /**
+   * @spec status#lifecycle-authorization: require the distinct
+   * `mission_resume` grant, beside `mission_lifecycle`, for a direct `resume`
+   * and for scheduling one. Absent (the default), `mission_lifecycle` alone
+   * authorizes both.
+   */
+  distinctResumeGrant?: boolean;
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): adopt
+   * `suspend_until` and `on_expiry` and run the suspension scheduler that
+   * applies them, on the given timers (the process's own by default). Absent
+   * (the default), a schedule is refused `invalid_request` and no scheduler
+   * runs. Ignored where `suspend` is not served (`lifecycle-extended` off).
+   */
+  suspensionSchedules?: { timers?: ScheduleTimers };
+  /**
+   * The kernel's clock. Absent, the system clock. A test drives a schedule's
+   * deadline or a Mission's expiry with a controlled one.
+   */
+  now?: () => Date;
+  /**
    * @spec discharge#discharge-authority — the issuer-held discharge-authority
    * policy handed to the kernel: which principals may assert which
    * `event_type`, resolved through a condition's `discharge_authority` value or
@@ -977,6 +1014,13 @@ export async function buildAuthorizationServer(opts: {
   // tombstone horizon short of the retry window this deployment declared.
   const dischargeEventRetentionSeconds =
     opts.dischargeEventRetentionSeconds ?? DEFAULT_DISCHARGE_EVENT_TTL_S;
+  // @spec status#mission-lifecycle-endpoint ("Operations"): the suspension
+  // scheduler runs only where schedules are adopted and `suspend` is served.
+  // Created after the kernel; it joins the fan-out below by forward reference,
+  // like the Status List republisher.
+  const schedulesAdopted =
+    opts.suspensionSchedules !== undefined && capabilityEnabled(opts, "lifecycle-extended");
+  let suspensionScheduler: SuspensionScheduler | undefined;
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
@@ -1020,6 +1064,7 @@ export async function buildAuthorizationServer(opts: {
     authoritySourceCatalog: AUTHORITY_SOURCES as never,
     statusKey: statusKeys.privateKey,
     statusKid: asStatus.kid,
+    ...(opts.now ? { now: opts.now } : {}),
     // Fan the committed transition out to the Status List republisher (PULL), the
     // continuation store (terminal propagation), and any injected subscriber, e.g.
     // the Mission Signals emitter (PUSH).
@@ -1046,9 +1091,26 @@ export async function buildAuthorizationServer(opts: {
       // make this subscriber replay-unsafe. `created_at` and `client_id` are the
       // only record facts the rooting needs and both ride the event.
       if (isActivatingCommit(commit)) rootMissionContinuation(continuationStore, commit);
+      // @spec status#mission-lifecycle-endpoint ("Operations"): arm the timer
+      // of a committed schedule, cancel it when its suspension ends.
+      suspensionScheduler?.onLifecycleCommit(commit);
       opts.onLifecycleCommit?.(commit);
     },
   });
+  if (schedulesAdopted) {
+    suspensionScheduler = new SuspensionScheduler(kernel, {
+      ...(opts.suspensionSchedules?.timers ? { timers: opts.suspensionSchedules.timers } : {}),
+      // A transition to `terminated` also destroys the OAuth grant, as the
+      // Lifecycle endpoint's own `revoke` does, so refresh fails structurally.
+      onApplied: async (record) => {
+        const p = terminalProvider;
+        if (record.state === "terminated" && record.grant_id && p) {
+          const grant = await p.Grant.find(record.grant_id);
+          await grant?.destroy();
+        }
+      },
+    });
+  }
   // @spec control-plane#fanout — the ONE durable retryable subscriber. Its
   // effect leaves this process (it revokes and destroys oidc-provider grants),
   // so it cannot be acknowledged by returning: it gets a durable delivery row
@@ -1160,6 +1222,8 @@ export async function buildAuthorizationServer(opts: {
       ? { serviceTokenPrincipals: opts.serviceTokenPrincipals }
       : {}),
     ...(opts.lifecycleClientGrants ? { lifecycleClientGrants: opts.lifecycleClientGrants } : {}),
+    ...(opts.distinctResumeGrant ? { distinctResumeGrant: true } : {}),
+    ...(schedulesAdopted ? { suspensionSchedules: true } : {}),
     ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
     // @spec txn-authorization#challenge-redemption — the endpoint's
     // configuration, assembled from the caller's deployment inputs plus this
@@ -1239,6 +1303,10 @@ export async function buildAuthorizationServer(opts: {
   // on the in-memory default; the `store.file` opt-in is what makes it
   // observable across a restart.
   await kernel.recoverAtBoot();
+  // @spec status#mission-lifecycle-endpoint ("Operations"): re-arm every
+  // persisted schedule, delivering any whose deadline passed while the
+  // process was down, before this assembly serves a request.
+  await suspensionScheduler?.recover();
 
   return {
     provider,
@@ -1259,5 +1327,6 @@ export async function buildAuthorizationServer(opts: {
     protectedEventSources: seededSources,
     devOrdinaryIssuance: opts.devOrdinaryIssuance === true,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
+    ...(suspensionScheduler ? { suspensionScheduler } : {}),
   };
 }
