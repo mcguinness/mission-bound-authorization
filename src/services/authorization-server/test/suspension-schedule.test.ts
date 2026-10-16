@@ -32,21 +32,25 @@ import { mkdtempSync, rmSync } from "node:fs";
 import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
-import { decodeJwt } from "jose";
+import { CANONICAL_RESOURCE, DERIVATION_POLICY, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { decodeJwt, generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
   type BuiltAs,
   buildAuthorizationServer,
+  createChildMission,
   type LifecycleCommit,
   MISSION_LIFECYCLE_SCOPE,
   MISSION_RESUME_SCOPE,
-  type MissionKernel,
+  MissionKernel,
   type MissionRecord,
   type ScheduleTimers,
+  SuspensionScheduler,
   validateMissionIntent,
 } from "../src/index.js";
+import { aiAgents } from "./actor-profiles.helper.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 import {
   decodeStatusResponse,
   type LifecycleAnswer,
@@ -569,6 +573,60 @@ describe("suspension schedule deadlines (@spec status#mission-lifecycle-endpoint
     } finally {
       clock.ignoreClears = false;
     }
+  });
+
+  it("changes nothing when the deadline passes for a Child Mission terminated parent_terminated by its parent's revocation", async () => {
+    const childClock = new ControlledClock(new Date(clock.at.getTime()));
+    childClock.ignoreClears = true;
+    const resource = DERIVATION_POLICY.ceiling[0].resource as string;
+    const entry = (actions: string[]): AuthorityEntry[] => [
+      {
+        type: "mission_resource_access",
+        resource,
+        actions,
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ];
+    let childScheduler: SuspensionScheduler | undefined;
+    const kernel = new MissionKernel({
+      issuer: "https://as.test",
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["parent-agent"], ["bob"]),
+      statusKey: (await generateKeyPair("ES256")).privateKey,
+      statusKid: "as-status",
+      now: childClock.now,
+      actorProfiles: aiAgents("child-agent"),
+      onLifecycleCommit: (c) => childScheduler?.onLifecycleCommit(c),
+    });
+    childScheduler = new SuspensionScheduler(kernel, { timers: childClock });
+    const expiresAt = at(30 * 86400, childClock);
+    const parent = kernel.approve({
+      intent: kernel.validateIntent(JSON.stringify({ goal: "Pay Acme", target_resources: [resource], expires_at: expiresAt })),
+      proposedAuthority: entry(["payments:invoice.read", "payments:payment.execute"]),
+      subject: { iss: "https://as.test", sub: "alice" },
+      approver: { iss: "https://as.test", sub: "bob" },
+      clientId: "parent-agent",
+      approvalEventId: "apev-sched-parent",
+    });
+    const child = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: kernel.validateIntent(
+        JSON.stringify({ goal: "Read Acme invoices", target_resources: [resource], expires_at: expiresAt }),
+      ),
+      proposedAuthority: entry(["payments:invoice.read"]),
+      childActor: { sub: "child-agent", sub_profile: "ai_agent" },
+    }).child;
+    kernel.transition(child.id, "suspend", {
+      schedule: { suspend_until: at(30, childClock), on_expiry: "resume", committing_party: "svc:ops" },
+    });
+    const generation = kernel.get(child.id)?.schedule?.generation as number;
+    kernel.transition(parent.id, "revoke");
+    const terminated = kernel.get(child.id);
+    expect(terminated).toMatchObject({ state: "terminated", termination: { reason: "parent_terminated" } });
+    await childClock.advance(31_000);
+    expect(await childScheduler.deliver({ missionId: child.id, generation })).toBe("superseded");
+    expect(kernel.get(child.id)).toEqual(terminated);
+    kernel.db.close();
   });
 
   it("lets expiry govern a deadline at or after expires_at: the Mission is terminated expired at expires_at and never observed active or revoked from its schedule", async () => {
