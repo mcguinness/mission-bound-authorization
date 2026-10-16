@@ -596,7 +596,7 @@ The times below are on the same day in UTC.
    renders that authority and the effective 13:00 expiry for her
    approval. On approval it atomically creates the active Mission,
    records its commitments, and binds the authorization code to it
-   ({{approval-event}}, {{grant-binding}}).
+   ({{approval-event}}, {{grant-binding-resolution}}).
 3. **Issue.** Still at 12:00, the client redeems the code. The AS
    resolves and checks the Mission and returns a sender-constrained
    ERP token that expires at 12:05, with the read authority and a
@@ -1540,10 +1540,11 @@ alone, establish whether a human decided at that instant.
 The direct realization runs as an OAuth 2.0 {{RFC6749}}
 authorization-code flow initiated from the PAR-issued `request_uri`
 ({{submission-via-par}}). Because the authorization code
-is the artifact the Mission grant binds to ({{grant-binding}}) and it
-passes through the front channel, the AS MUST bind the code to the
-requesting client with PKCE ({{RFC7636}}, `S256` challenge method)
-or, equivalently, issue a DPoP-bound authorization code ({{RFC9449}}).
+is the artifact the Mission grant binds to
+({{grant-binding-resolution}}) and it passes through the front
+channel, the AS MUST bind the code to the requesting client with
+PKCE ({{RFC7636}}, `S256` challenge method) or, equivalently, issue
+a DPoP-bound authorization code ({{RFC9449}}).
 Redemption is then verified as {{Section 4.6 of RFC7636}} or
 {{Section 10 of RFC9449}} specifies. This prevents
 authorization-code injection from yielding the Mission grant.
@@ -4134,7 +4135,8 @@ This document's extension points are:
   device code issued while the request was pending, provided the steps
   and their atomicity with the approval decision hold unchanged and no
   Mission reference exists before the record is `active`; the Mission
-  then binds to that profile-defined reusable grant ({{grant-binding}}).
+  then binds to that profile-defined reusable grant
+  ({{grant-binding-resolution}}).
 
 This document defines no capability-negotiation mechanism or
 profile-version field; an extension declares its own identifiers and,
@@ -5316,9 +5318,9 @@ After approval, the AS records Mission
 ## Stage 2: Mission-Bound Token Issuance {#stage-2-mission-bound-token-issuance}
 
 The agent redeems the authorization code at the token endpoint. The
-AS resolves the Mission from the grant ({{grant-binding}}), gates on
-it being `active` ({{lifecycle}}), and issues a Mission-bound access
-token for the ERP. The token response carries the granted
+AS resolves the Mission from the grant ({{grant-binding-resolution}}),
+gates on it being `active` ({{lifecycle}}), and issues a Mission-bound
+access token for the ERP. The token response carries the granted
 `authorization_details` echo ({{mission-bound-tokens}}) and the
 `mission_id` and `mission_expires_at` response parameters
 ({{mission-response-parameters}}):
