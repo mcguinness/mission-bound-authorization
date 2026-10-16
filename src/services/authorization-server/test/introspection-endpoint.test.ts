@@ -670,6 +670,38 @@ describe("the credential profile's shared negative vectors (@spec mission#intros
   });
 });
 
+describe("the active response carries the token's act chain, and no other answer does (@spec mission#introspected-consumption, RFC 8693 Section 4.1, #904)", () => {
+  // Each token is signed by the AS's own key and reuses flow1's real issuance
+  // record. That proves the introspection output contract only: no delegated
+  // exchange here mints an act-bearing token (#869 owns that path), and a JWT
+  // test is not opaque-token consumption.
+  const cnf = { jkt: "test-confirmation-thumbprint" };
+  const act = { sub: "agent-b", act: { sub: "agent-a" } };
+  const token = (claims: Record<string, unknown> = {}, opts: { expiresIn?: number } = {}) =>
+    craftToken({ jti: flow1.jti, mission: { id: flow1.missionId, issuer: ISSUER }, cnf, ...claims }, opts);
+
+  it("carries a delegated token's nested act chain unchanged on an active response", async () => {
+    const res = await introspect(await token({ act }), { principal: RS_PAYMENTS });
+    expect(res.body).toMatchObject({ active: true, act });
+  });
+
+  it("carries no act member for a token without one", async () => {
+    const res = await introspect(await token(), { principal: RS_PAYMENTS });
+    expect(res.body.active).toBe(true);
+    expect(res.body).not.toHaveProperty("act");
+  });
+
+  it("never discloses act on an inactive answer or to a caller that is not an audience of the token", async () => {
+    // Individually expired, and signed for another issuer: bare inactive.
+    expect((await introspect(await token({ act }, { expiresIn: -60 }), { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+    expect((await introspect(await token({ act, iss: "https://evil.example" }), { principal: RS_PAYMENTS })).body).toEqual({
+      active: false,
+    });
+    // The same active token, asked about by a resource that is not its audience.
+    expect((await introspect(await token({ act }), { principal: RS_SAAS })).body).toEqual({ active: false });
+  });
+});
+
 describe("credential-authority projection: never the Mission's full authority (@spec mission#introspection — issue #541 P1-1)", () => {
   it("a narrowed credential discloses ONLY the authority IT carries, even though the Mission permits more", async () => {
     const record = as.kernel.get(flow5.missionId);

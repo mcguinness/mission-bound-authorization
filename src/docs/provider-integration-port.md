@@ -650,7 +650,9 @@ the store.
      effective set and audience-minimized (`projectThroughEffective`,
      `resourcesForAudiences`).
 
-  A failure in steps 3 to 6, or in step 8, is a bare `active: false`. A
+  A failure in steps 3 to 6, or in step 8, is a bare `active: false`. An
+  active response carries a delegated token's `act` chain unchanged; no
+  inactive or unauthorized answer carries it (#904). A
   refresh token takes a parallel branch through `provider.RefreshToken.find`.
 - **Boundary.** Each call reads current kernel state. `applyExpiry` can commit
   the expiry (`terminated`, reason `expired`) during the read. The AS caches
@@ -666,6 +668,7 @@ the store.
   - `composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details` (`introspection-endpoint.test.ts`)
   - `caller authentication (@spec mission#caller-authorization-and-minimization) > refuses an unauthenticated call with 401 + WWW-Authenticate` (`introspection-endpoint.test.ts`)
   - `strict token resolution: bare active:false, no Mission or token detail > wrong-audience caller: the ENTIRE response is minimized` (`introspection-endpoint.test.ts`)
+  - `the active response carries the token's act chain, and no other answer does (@spec mission#introspected-consumption, RFC 8693 Section 4.1, #904) > carries a delegated token's nested act chain unchanged on an active response`, with its absence and non-disclosure cases (`introspection-endpoint.test.ts`; a crafted token on a real issuance record, not delegated issuance)
   - `strict token resolution: bare active:false, no Mission or token detail > a correctly signed token whose jti has no issuance record is never returned active` (`introspection-endpoint.test.ts`)
   - `the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402) > answers a token with %s with a bare active:false, as the resource refuses it`, with its bearer, delegated-token and Child Mission cases (`introspection-endpoint.test.ts`), and `a dispatched instance's token is sender-constrained at introspection too (@spec mission-template#grant-type, mission#introspection, #825 D402) > answers a dispatched token re-signed without cnf with a bare active:false, while the token as issued introspects active as DPoP` (`dispatch-handoff.test.ts`). The vectors are `@mission/core/test-vectors`, which the resource's `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a token with %s on both transports, yielding no facts` also runs.
   - `Mission-bound refresh tokens (@spec mission#introspection) > Mission revocation reports the composite even though it destroys the grant` (`introspection-endpoint.test.ts`)
