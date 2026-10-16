@@ -256,13 +256,13 @@ function migrateMissions(db: Database): void {
 
 export class LifecycleConflictError extends Error {}
 /**
- * @spec status#mission-status-errors — the referenced Mission does not exist at
+ * @spec status#mission-status-errors: the referenced Mission does not exist at
  * this issuer. Typed so a surface can tell an unknown reference (`not_found`)
  * from a backend failure (`unavailable`) without matching message text.
  */
 export class MissionNotFoundError extends Error {}
 /**
- * @spec status#idempotency — a lifecycle request's `expected_version` differs
+ * @spec status#idempotency: a lifecycle request's `expected_version` differs
  * from the Mission's current state version (`stale_version`, HTTP 409).
  */
 export class StaleVersionError extends Error {}
@@ -340,7 +340,7 @@ export interface StatusObservationOptions {
   audience?: string;
   requester: string;
   /**
-   * @spec status#lifecycle-authorization — the envelope `sub`: the acting
+   * @spec status#lifecycle-authorization: the envelope `sub`: the acting
    * party of a Lifecycle request, reflected in the signed response's audit
    * surface. Absent, `sub` is the Mission's client, as before.
    */
@@ -1876,7 +1876,7 @@ export class MissionKernel {
    * `completed` (or `expired`), and `complete` on one terminated `revoked`,
    * are conflicts: the recorded cause never changes.
    *
-   * @spec status#idempotency — `expectedVersion`, when given, is checked
+   * @spec status#idempotency: `expectedVersion`, when given, is checked
    * against the current state version BEFORE that rule, so a stale guard is
    * refused ({@link StaleVersionError}) even where the operation would
    * otherwise be idempotent success, and the Mission is left unchanged.

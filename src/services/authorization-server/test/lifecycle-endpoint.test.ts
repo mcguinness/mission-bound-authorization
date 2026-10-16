@@ -250,7 +250,7 @@ describe("Mission Lifecycle endpoint transport and client authentication (@spec 
     for (const a of answers) {
       expect(a.status, a.text).toBe(400);
       expect(a.json?.error).toBe("invalid_client");
-      // @spec status#mission-status-errors — `error_description`, and the
+      // @spec status#mission-status-errors: `error_description`, and the
       // request's well-formed `nonce` echoed.
       expect(typeof a.json?.error_description).toBe("string");
       expect(a.json?.nonce).toBe(members.nonce);

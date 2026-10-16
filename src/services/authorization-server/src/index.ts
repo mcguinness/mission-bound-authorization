@@ -824,7 +824,7 @@ export async function buildAuthorizationServer(opts: {
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   /**
-   * @spec status#lifecycle-authorization — the grants bound to a client that
+   * @spec status#lifecycle-authorization: the grants bound to a client that
    * authenticates to the Mission Lifecycle endpoint by private-key JWT, keyed by
    * `client_id`. Absent (the default), no client holds any.
    */

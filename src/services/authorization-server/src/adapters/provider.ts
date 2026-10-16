@@ -444,7 +444,7 @@ export const MISSION_DISCHARGE_SCOPE = "mission_discharge";
 export const MISSION_STATUS_SCOPE = "mission_status";
 
 /**
- * @spec status#lifecycle-authorization — the grants a directly authenticated
+ * @spec status#lifecycle-authorization: the grants a directly authenticated
  * client can hold at the Mission Lifecycle endpoint (`lifecycleClientGrants`).
  */
 const LIFECYCLE_CLIENT_GRANTS: ReadonlySet<string> = new Set([
@@ -491,7 +491,7 @@ export interface AdapterOptions {
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   /**
-   * @spec status#lifecycle-authorization — the deployment-defined grants bound
+   * @spec status#lifecycle-authorization: the deployment-defined grants bound
    * to a client that authenticates to the Mission Lifecycle endpoint by
    * private-key JWT, keyed by `client_id`: `mission_lifecycle` for `revoke`,
    * `suspend`, `resume` and `complete`, `mission_discharge` for `discharge`,
@@ -776,7 +776,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
   opts.creationIdempotency ??= new CreationIdempotencyStore(kernel);
   // @spec RFC 9449 — proof-jti replay protection for the manual DPoP blocks.
   opts.dpopProofReplay ??= newDpopProofReplay();
-  // @spec status#lifecycle-authorization — a lifecycle grant names one of the
+  // @spec status#lifecycle-authorization: a lifecycle grant names one of the
   // endpoint's authorizations; anything else is a configuration error.
   for (const [clientId, grants] of Object.entries(opts.lifecycleClientGrants ?? {})) {
     for (const grant of grants) {
@@ -2620,7 +2620,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   });
 
   /**
-   * @spec status#lifecycle-authorization — the lifecycle grants bound to a
+   * @spec status#lifecycle-authorization: the lifecycle grants bound to a
    * client that authenticates directly (private-key JWT): never a scope, and
    * none unless the deployment registers them. Null-prototype for the reason
    * the service-token registry is.
@@ -2631,7 +2631,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   );
 
   /**
-   * @spec status#mission-lifecycle-endpoint, status#as-metadata — the endpoint
+   * @spec status#mission-lifecycle-endpoint, status#as-metadata: the endpoint
    * is served, and advertised, exactly where the deployment enables one of its
    * operations (adapters/capabilities.ts).
    */
@@ -2849,7 +2849,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // `mission_id`, the caller authenticated by private-key JWT.
     if (ctx.path === LIFECYCLE_ENDPOINT_PATH && ctx.method === "POST" && lifecycleServed) {
       const form = await readLifecycleForm(ctx.req, ctx.get("content-type") ?? "");
-      // @spec status#mission-status-errors — every refusal before the engine
+      // @spec status#mission-status-errors: every refusal before the engine
       // echoes the request's `nonce` when it carried a well-formed one, and
       // none is retained: the nonce key needs an authenticated client.
       if (!form.ok) {
@@ -2864,7 +2864,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       }
       const echo = wellFormedNonce(form.params.nonce);
       // @spec status#mission-status-authentication, status#mission-status-auth-failures
-      // — a failed private-key-JWT authentication, or no credential where no
+      // a failed private-key-JWT authentication, or no credential where no
       // access-token scheme is accepted, is HTTP 400 `invalid_client` with no
       // challenge, decided before any Mission is read.
       const auth = await authenticateLifecycleClient(
@@ -2937,7 +2937,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.body = JSON.stringify(json);
       };
       // @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency
-      // — `nonce` is REQUIRED: an absent, empty, longer or non-string one is
+      // `nonce` is REQUIRED: an absent, empty, longer or non-string one is
       // malformed and refused with no `nonce` echoed.
       if (nonce === undefined) {
         deliver(400, {
@@ -2958,7 +2958,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         nonce,
       };
       /**
-       * @spec status#mission-status-errors — send and REMEMBER this response
+       * @spec status#mission-status-errors: send and REMEMBER this response
        * for the request's nonce. The store is first-writer-wins, so a later
        * divergent-retry refusal never overwrites the response a
        * retransmission must replay.
@@ -3014,7 +3014,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         });
       };
       /**
-       * @spec status#mission-status-errors, status#idempotency — an UNEXPECTED
+       * @spec status#mission-status-errors, status#idempotency: an UNEXPECTED
        * failure (a lookup, storage or signing fault) is `unavailable`, never
        * the unknown-Mission answer, and is delivered WITHOUT retention, so a
        * retry is processed as a new request. A commit that preceded the fault
@@ -3207,7 +3207,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           return;
         }
         // @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency
-        // — the request members of `revoke`, `suspend`, `resume` and `complete`,
+        // the request members of `revoke`, `suspend`, `resume` and `complete`,
         // parsed in one place (adapters/lifecycle-endpoint.ts).
         const lifecycleOperation = body.operation as LifecycleOperation;
         const members = parseTransitionMembers(lifecycleOperation, body);
@@ -3230,7 +3230,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // transition and without its publication. The counter path already
         // keeps the gate outside its transaction for exactly this reason.
         kernel.materializeExpiry(missionId);
-        // @spec control-plane#serialization, control-plane#fresh-observation —
+        // @spec control-plane#serialization, control-plane#fresh-observation:
         // the transition, the observation the response reports and the nonce
         // claim are ONE transaction; only the signature happens after. Before
         // this, a process lost between the commit and the response answered a
@@ -3245,7 +3245,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             expectedVersion !== undefined ? { expectedVersion } : {},
           );
           // @spec status#mission-lifecycle-endpoint, status#mission-status-response
-          // — the state-only Mission Status Response: the request names no
+          // the state-only Mission Status Response: the request names no
           // `audience`, so `aud` is the authenticated client and nothing
           // carries `authorization_details`; `sub` is the acting party
           // (status#lifecycle-authorization); `nonce` is the request's. An
@@ -3274,7 +3274,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         send(200, MISSION_STATUS_RESPONSE_MEDIA_TYPE, await kernel.signObservation(transitioned.observation));
       } catch (e) {
         if (e instanceof StaleVersionError) {
-          // @spec status#idempotency — checked before the transition rule.
+          // @spec status#idempotency: checked before the transition rule.
           sendJson(409, { error: "stale_version", error_description: e.message, nonce });
         } else if (e instanceof LifecycleConflictError) {
           sendJson(409, {
@@ -3880,7 +3880,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (enabled("status") || lifecycleServed) {
         meta.mission_status_signing_alg_values_supported = [STATUS_SIGNING_ALG];
       }
-      // @spec status#as-metadata, status#mission-lifecycle-endpoint — the
+      // @spec status#as-metadata, status#mission-lifecycle-endpoint: the
       // Lifecycle endpoint, the methods it accepts and, for private_key_jwt,
       // the client-assertion algorithms, wherever it is served.
       if (lifecycleServed) {

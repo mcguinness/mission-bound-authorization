@@ -1,6 +1,6 @@
 /**
  * @spec status#mission-lifecycle-endpoint, status#mission-status-authentication,
- * status#idempotency — the advertised Mission Lifecycle endpoint's request
+ * status#idempotency: the advertised Mission Lifecycle endpoint's request
  * surface: its form transport, its private-key-JWT client authentication, and
  * the parsing of the state-changing operations' request members.
  *
@@ -19,7 +19,7 @@ import { DPOP_PROOF_REPLAY_WINDOW_S, type DpopProofReplay } from "./dpop-replay.
 export const LIFECYCLE_ENDPOINT_PATH = "/mission/lifecycle";
 
 /**
- * @spec status#as-metadata — the methods this endpoint accepts
+ * @spec status#as-metadata: the methods this endpoint accepts
  * (`mission_lifecycle_endpoint_auth_methods_supported`). Private-key JWT only:
  * the profile requires at least one of its three mechanisms, and this
  * deployment accepts no access-token scheme here.
@@ -27,7 +27,7 @@ export const LIFECYCLE_ENDPOINT_PATH = "/mission/lifecycle";
 export const LIFECYCLE_ENDPOINT_AUTH_METHODS: readonly string[] = ["private_key_jwt"];
 
 /**
- * @spec status#as-metadata — the client-assertion verification set
+ * @spec status#as-metadata: the client-assertion verification set
  * (`mission_lifecycle_endpoint_auth_signing_alg_values_supported`), never
  * `none`. Distinct from the response-signing algorithms.
  */
@@ -36,12 +36,12 @@ export const LIFECYCLE_CLIENT_ASSERTION_ALGS: readonly string[] = ["ES256"];
 const CLIENT_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 
 /**
- * @spec status#mission-status-authentication — the explicit type a client
+ * @spec status#mission-status-authentication: the explicit type a client
  * SHOULD set on its assertion (draft-ietf-oauth-rfc7523bis).
  */
 export const CLIENT_AUTHENTICATION_TYP = "client-authentication+jwt";
 
-/** @spec status#mission-lifecycle-endpoint ("Operations") — `reason`'s bound. */
+/** @spec status#mission-lifecycle-endpoint ("Operations"): `reason`'s bound. */
 export const REASON_MAX_CHARS = 1024;
 
 /** The request body this endpoint will read at all (bytes). */
@@ -53,7 +53,7 @@ export type LifecycleFormResult =
   | { ok: false; description: string; nonce?: string };
 
 /**
- * @spec status#idempotency — a well-formed `nonce`: a string of 1 to 255
+ * @spec status#idempotency: a well-formed `nonce`: a string of 1 to 255
  * characters. Anything else is malformed and never echoed.
  */
 export function wellFormedNonce(value: unknown): string | undefined {
@@ -61,7 +61,7 @@ export function wellFormedNonce(value: unknown): string | undefined {
 }
 
 /**
- * @spec status#mission-lifecycle-endpoint ("Operations") — read the body as
+ * @spec status#mission-lifecycle-endpoint ("Operations"): read the body as
  * `application/x-www-form-urlencoded` and nothing else. Every member of this
  * endpoint is single-valued, so a repeated parameter is refused rather than
  * resolved: whichever occurrence the server read, another participant may
@@ -110,7 +110,7 @@ export interface LifecycleClientAuthenticationDeps {
 
 /**
  * @spec status#mission-status-authentication, status#mission-status-auth-failures
- * — authenticate the caller by private-key JWT (RFC 7523).
+ * authenticate the caller by private-key JWT (RFC 7523).
  *
  * The ASSERTION names the client: `iss` and `sub` are its identifier, the
  * registered record is selected from that identity, and the signature is
@@ -209,7 +209,7 @@ function acceptedAssertionTyp(typ: string): boolean {
 }
 
 /**
- * @spec status#mission-lifecycle-endpoint ("Operations") — a `suspend`'s
+ * @spec status#mission-lifecycle-endpoint ("Operations"): a `suspend`'s
  * deadline and the transition applied when it passes.
  */
 export interface SuspendSchedule {
@@ -220,7 +220,7 @@ export interface SuspendSchedule {
 /** The parsed request members of `revoke`, `suspend`, `resume` and `complete`. */
 export interface TransitionMembers {
   reason?: string;
-  /** @spec status#idempotency — the state version the caller last observed. */
+  /** @spec status#idempotency: the state version the caller last observed. */
   expectedVersion?: number;
   /** Present only on a `suspend` carrying both schedule members. */
   schedule?: SuspendSchedule;
@@ -229,7 +229,7 @@ export interface TransitionMembers {
 export type MembersResult<T> = { ok: true; value: T } | { ok: false; description: string };
 
 /**
- * @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency —
+ * @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency:
  * parse the request members of a state-changing operation. Request-shape
  * failures are `invalid_request`; nothing here reads the Mission.
  */
@@ -264,7 +264,7 @@ export function parseTransitionMembers(
 const RFC3339_DATE_TIME = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$/;
 
 /**
- * @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency —
+ * @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency:
  * THE ONE PLACE a `suspend` request's schedule members are parsed.
  * `suspend_until` is valid only on `suspend`; `on_expiry` is REQUIRED with it
  * and MUST NOT be sent without it, so a request carrying only one of the two

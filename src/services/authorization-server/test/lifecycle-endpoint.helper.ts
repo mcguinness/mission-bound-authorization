@@ -1,6 +1,6 @@
 /**
  * @spec status#mission-lifecycle-endpoint, status#mission-status-authentication
- * — a test client of the advertised Mission Lifecycle endpoint: a registered
+ * a test client of the advertised Mission Lifecycle endpoint: a registered
  * private-key-JWT client, its client assertion, the form request, and the
  * decoded signed response.
  */
@@ -60,7 +60,7 @@ export interface AssertionOptions {
 }
 
 /**
- * @spec status#mission-status-authentication — the client's assertion: `iss`
+ * @spec status#mission-status-authentication: the client's assertion: `iss`
  * and `sub` its identifier, `aud` the AS issuer identifier as its sole value,
  * and the JWS `typ` the client SHOULD set, `client-authentication+jwt`.
  */
