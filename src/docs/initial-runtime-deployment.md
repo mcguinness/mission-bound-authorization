@@ -468,7 +468,10 @@ at `http://localhost:4403/mcp`, the PDP, OpenFGA and the in-process approval
 service, with no MAS join route. That service logs Bob in on the AS's browser
 approval surface with `mfa` at each approval, because the published
 approval-authentication floor (D425, `config/approval-floor.json`) refuses a
-headless approval of payment execution or remittance. It mints no ordinary token. It prints the
+headless approval of payment execution or remittance. The demo has no
+Approver identity provider: the service stands in for the trusted login
+integration and records the login at the moment it approves. A deployment
+establishes the session from its real login. It mints no ordinary token. It prints the
 issuer, the AS capability set, the resource audience and the PDP mode, and
 needs only `pnpm setup` and `docker compose up -d` (OpenFGA).
 

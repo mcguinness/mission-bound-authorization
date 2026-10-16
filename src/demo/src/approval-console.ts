@@ -8,7 +8,12 @@ import { jarClosures, redeemMissionApproval, submitMissionApproval, type CookieJ
  * store, which records the `acr` that login achieved and the time it
  * happened, bound to the one interaction. The approval-authentication floor
  * accepts only such a login: a headless approval service's registration is
- * not an authentication of the Approver.
+ * not an authentication of the Approver. The demo has no Approver identity
+ * provider, so the console stands in for the trusted login integration and
+ * records a login at the moment it approves; a deployment calls `establish`
+ * from its real login. The floor's evidence here is structural (the browser
+ * surface, a per-interaction context, the age bound), not a claim that the
+ * demo authenticated a person.
  */
 export interface ApprovalConsole {
   sessions: ApprovalSessionStore;
