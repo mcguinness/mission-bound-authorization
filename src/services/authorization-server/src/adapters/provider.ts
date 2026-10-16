@@ -1954,7 +1954,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // cookie removed, on success or error, so the user agent never holds it.
   // The code it issued is not session-bound (expiresWithSession). The
   // headless marker is read from the stored interaction, written only by
-  // `decide()`.
+  // `decide()`, on every completion of a headless approval: a success, a
+  // refusal or a denial.
   //
   // The resume is recognized by the interaction it resumes, not by its path.
   // oidc-provider's resume action loads the interaction named by the resume
@@ -4026,9 +4027,9 @@ async function handleMissionDispatchGrant(
  * `max_age`? Approver-scoped, never Subject-scoped: this checks only the
  * principal acting as Approver for THIS approval event, never the Mission
  * Subject, who MAY be a different principal. Absence of either request
- * parameter trivially satisfies that parameter (the deployment's own
- * approval-authentication floor, enforced elsewhere, is unaffected either
- * way and is never relaxed by a narrower or absent client request).
+ * parameter trivially satisfies that parameter. This AS publishes and
+ * enforces no approval-authentication floor of its own: the high-risk floor
+ * of @spec mission#approval-authentication is not implemented here (#826).
  */
 function approverAuthenticationSatisfies(
   requested: { acrValues?: string; maxAge?: string; forceFreshLogin?: boolean },
@@ -4073,6 +4074,25 @@ async function decide(
     return;
   }
   const params = details.params as Record<string, unknown>;
+  // @spec mission#approval-authentication (#826): every completion of a
+  // headless approval, a refusal or a denial as much as a success, is marked
+  // for the headless-resume middleware and detached from the session this
+  // user agent held when the interaction began, so its resume neither reads
+  // nor refreshes that session. The detachment is needed because
+  // oidc-provider's resume compares the interaction's session with its own
+  // before it handles an error result, and this resume runs without the user
+  // agent's session.
+  const finish = async (result: Record<string, unknown>) => {
+    if (!interactive && details.session?.uid) {
+      delete (details.session as { uid?: string }).uid;
+      await details.save(Math.max(1, (details.exp ?? 0) - Math.floor(Date.now() / 1000)));
+    }
+    await provider.interactionFinished(
+      ctx.req,
+      ctx.res,
+      interactive ? result : { ...result, [HEADLESS_APPROVAL_RESULT]: true },
+    );
+  };
   // @spec mission#submission-via-par — re-parse the pushed Submission envelope;
   // approval and intent_hash cover exactly the semantic `intent`.
   const submission = opts.kernel.validateSubmission(String(params.mission_intent));
@@ -4129,7 +4149,7 @@ async function decide(
   }
 
   if (body.decision !== "approve") {
-    await provider.interactionFinished(ctx.req, ctx.res, {
+    await finish({
       error: "access_denied",
       error_description: "approver denied the mission",
     });
@@ -4149,7 +4169,7 @@ async function decide(
     const samePrincipal =
       approverPrincipal.iss === subjectPrincipal.iss && approverPrincipal.sub === subjectPrincipal.sub;
     if (!samePrincipal || !interactive) {
-      await provider.interactionFinished(ctx.req, ctx.res, {
+      await finish({
         error: "invalid_scope",
         error_description: samePrincipal
           ? "openid requires an End-User authenticated in this user agent; a headless approval is not one"
@@ -4183,7 +4203,7 @@ async function decide(
       Math.floor(opts.kernel.nowDate().getTime() / 1000),
     )
   ) {
-    await provider.interactionFinished(ctx.req, ctx.res, {
+    await finish({
       error: "access_denied",
       error_description: "approver authentication did not satisfy the requested acr_values/max_age",
     });
@@ -4202,7 +4222,7 @@ async function decide(
     authority = opts.kernel.derive(intent, proposedAuthority);
   } catch (e) {
     if (e instanceof IntentError) {
-      await provider.interactionFinished(ctx.req, ctx.res, {
+      await finish({
         error: e.code,
         error_description: e.message,
       });
@@ -4235,7 +4255,7 @@ async function decide(
       requested: { values: requestedScope.resource, explicit: true },
     });
     if (outcome.outcome === "refuse" && outcome.error === "invalid_scope") {
-      await provider.interactionFinished(ctx.req, ctx.res, {
+      await finish({
         error: "invalid_scope",
         error_description: outcome.reason,
       });
@@ -4270,7 +4290,7 @@ async function decide(
     });
   } catch (e) {
     if (e instanceof IntentError) {
-      await provider.interactionFinished(ctx.req, ctx.res, {
+      await finish({
         error: e.code,
         error_description: e.message,
       });
@@ -4327,17 +4347,11 @@ async function decide(
   // a different Subject. oidc-provider finishes an interaction only through
   // a login, which on a headless approval is the code's account and nothing
   // more: this user agent is the client's, no End-User authenticated in it,
-  // and the resume leaves it no session (the headless-resume middleware).
-  // The resume runs on a fresh session, so the interaction no longer names
-  // the one this user agent held when it began.
-  if (!interactive && details.session?.uid) {
-    delete (details.session as { uid?: string }).uid;
-    await details.save(Math.max(1, (details.exp ?? 0) - Math.floor(Date.now() / 1000)));
-  }
-  await provider.interactionFinished(ctx.req, ctx.res, {
+  // and the resume leaves it no session (`finish` and the headless-resume
+  // middleware).
+  await finish({
     login: { accountId: approver, acr: principal.acr, ts: principal.auth_time, remember: interactive },
     consent: { grantId },
-    ...(interactive ? {} : { [HEADLESS_APPROVAL_RESULT]: true }),
   });
 }
 
