@@ -565,6 +565,9 @@ Mission Issuer (authorization server):
   event, records the Mission, and derives tokens. It is the Mission's
   `issuer`; this document also calls it the "issuer AS" or the "AS".
 
+Mission Client:
+: The client conformance role, defined in {{conformance}}.
+
 Mission-aware Resource Server:
 : The resource server conformance role, defined in {{conformance}}.
 
@@ -887,7 +890,7 @@ The Mission Intent members are:
   resolves to an already-committed operation is recovery, not a new
   submission, and returns the stored outcome under the applicable
   idempotency rules even when the ceiling has since passed
-  ({{grant-binding}}).
+  ({{mission-response-parameters}}, {{mission-record}}).
 
 The Approver's authentication strength for the approval event is
 requested with the standard `acr_values` and `max_age`
@@ -952,7 +955,7 @@ Submission is governed by the following rules:
   ({{extensibility}}). A bare Mission Intent submitted as the
   parameter value fails this rule, since its `goal` and sibling
   members are unknown envelope members.
-- **One carriage, through PAR.** On the authorization-code path, the
+- **Carriage through PAR.** On the authorization-code path, the
   AS accepts the Intent in one of two forms:
 
   1. the form-encoded `mission_intent` parameter of the PAR request
@@ -1084,8 +1087,9 @@ against the proposal that sought it.
 Submitting `authorization_details` without `mission_intent` is an
 ordinary {{RFC9396}} request that this document does not govern.
 Two AS-side rules keep a governed task from being downgraded to such
-a request; {{downgrade-by-omission}} states the client-side rule and
-the threat. Where a deployment designates a resource
+a request; {{discovery}} states the client-side rules and
+{{downgrade-by-omission}} the threat. Where a deployment designates a
+resource
 Mission-governed, its AS MUST NOT issue a token for that resource
 outside a Mission, except under documented policy exceptions. If a
 client registered as Mission-governed sends an
@@ -1615,7 +1619,10 @@ At a direct approval event the AS MUST, in order:
    was submitted ({{authority-proposal}}), `proposal_hash` over the
    submitted `authorization_details` array.
 7. **Create the Mission Record** ({{mission-record}}) in the `active`
-   state, atomically with issuance of the authorization code. The
+   state atomically with the approval decision and issuance of the
+   authorization code, or, under a back-channel carriage profile
+   ({{extensibility}}), with establishment of the Mission grant binding
+   and activation of the profile-defined grant for redemption. The
    commit MUST verify atomically that the effective expiry is
    strictly later than the creation instant: acceptance of the
    submission does not freeze time, and where the requested ceiling
@@ -1841,7 +1848,9 @@ or negotiates one.
 ### Establishing and Resolving a Binding {#grant-binding-resolution}
 
 At a direct approval event the AS binds the Mission to the
-authorization code it issues. The binding is server-side and is what
+authorization code it issues, or, under a back-channel carriage
+profile, to the grant artifact that profile defines
+({{extensibility}}). The binding is server-side and is what
 "the referenced Mission" in {{lifecycle}} refers to. The code itself
 carries no refresh-token family: only a successful redemption
 produces one, and where it does, the resulting refresh-token family
@@ -1967,7 +1976,8 @@ parameter: a string carrying the Mission Identifier, returned
 alongside the issued token. An AS SHOULD return it, because a client
 need not parse the access token and cannot read the `mission` claim
 of a token that is encrypted or opaque to it. It is an informational
-reference only: presenting it authorizes nothing ({{lifecycle}}), and
+reference only: presenting it authorizes nothing
+({{grant-binding-resolution}}), and
 a client MUST NOT derive authority from it.
 
 Alongside it, this document defines `mission_expires_at`: the exact
@@ -2993,7 +3003,8 @@ Mission's read entry alone:
 The issuance is a derivation, gated on the Mission being `active`
 ({{lifecycle}}). The response carries no `scope` member because none
 was requested or granted. It echoes the narrowed grant and the
-`mission_id` reference ({{grant-binding}}); the emitted entry is a
+`mission_id` reference ({{mission-response-parameters}}); the emitted
+entry is a
 subset ({{subset}}) of the Mission's read entry, its `constraints`
 carried intact:
 
@@ -4108,7 +4119,14 @@ This document's extension points are:
   response), provided the steps and their atomicity hold unchanged
   and no Mission reference exists before the record is `active`; the
   Mission Deferred Approval companion is such a profile
-  ({{I-D.draft-mcguinness-oauth-mission-approval}}).
+  ({{I-D.draft-mcguinness-oauth-mission-approval}}). A back-channel
+  carriage profile ({{submission-via-par}}) MAY instead couple the
+  approval decision to establishing the Mission grant binding and
+  activating for redemption a grant the profile defines, such as a
+  device code issued while the request was pending, provided the steps
+  and their atomicity with the approval decision hold unchanged and no
+  Mission reference exists before the record is `active`; the Mission
+  then binds to that profile-defined reusable grant ({{grant-binding}}).
 
 This document defines no capability-negotiation mechanism or
 profile-version field; an extension declares its own identifiers and,
@@ -5663,7 +5681,7 @@ each assigns the three roles.
 | Policy drawdown ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) | The Parent Mission's human Approver | The requesting parent Agent, distinct from `consent_principal` | `kind: policy`, naming the child-creation policy's `id`/`version` where the entry carries one, otherwise the Parent Mission's approved delegation entry; never the requesting parent Agent |
 | Ceiling drawdown ({{I-D.draft-mcguinness-oauth-mission-progressive}}) | The Approver who consented the ceiling | The requesting client, distinct from `consent_principal` | `kind: policy`, naming the drawdown policy's `policy_id`/`policy_version` carried in `activation`; never the requesting client |
 | Governed policy approval ({{I-D.draft-mcguinness-mission-approval-governance}}) | The human who approved the exact policy version the instance activates under | The authenticated client that requested the activation, distinct from `consent_principal` | `kind: policy`, `policy` naming the deciding policy's `id`/`version` (the approved policy itself or the evaluator it commits), with `governance_record: true`; never the requesting client |
-| AGR-backed direct approval ({{I-D.draft-mcguinness-mission-approval-governance}}) | The approving human, whose own `human` assertion is the Approval Governance Record's accountable assertion | Equal to `consent_principal`, as for direct approval | `kind: human`, `governance_record: true`; `policy` and `service` assertions contribute without replacing the human decision, and the full assertion set is never collapsed into a single principal |
+| AGR-backed direct approval ({{I-D.draft-mcguinness-mission-approval-governance}}) | The approving human, whose own `human` assertion is the Approval Governance Record's accountable assertion | Equal to `consent_principal`, as for direct approval | `kind: human`, `governance_record: true`; how other assertions contribute is Approval Governance's |
 | AGR-backed template or drawdown activation ({{I-D.draft-mcguinness-mission-approval-governance}}) | Unchanged from the underlying basis, whose `approval_basis` stands in for an accountable assertion | Unchanged from the underlying basis | `kind: policy`, as the underlying basis assigns it, with `governance_record: true`; the full assertion set is never collapsed into a single principal |
 
 Direct approval is the degenerate case where one human fills every
@@ -6171,6 +6189,15 @@ Cross-Domain:
 
 -01
 
+- Extensibility: a back-channel carriage profile can couple the
+  approval decision to establishing the Mission grant binding and
+  activating for redemption a grant it defines, such as a device code
+  issued while the request was pending, under the same sequencing and
+  atomicity conditions. Step 7 commits the record with that binding and
+  activation rather than with issuance, and grant-binding resolution
+  names the case, so the Device Authorization profile's direct approval
+  rests on the core's seam (#1202).
+
 - Editorial (#910): the Introduction leads with the Mission, its
   guarantees and the residual of already-issued access tokens, and
   its chain steps carry labels. The protocol flow and its worked
@@ -6210,13 +6237,13 @@ Cross-Domain:
   introspection response. RFC 7662 keeps its meaning, and any other
   resource server still requires introspection (#1203).
 
-- Downgrade by Omission covers a client acting under a Mission with an
-  ordinary credential it already holds. A client performing a
-  Mission's task presents no credential that is not Mission-bound
-  for that task unless a deployment-defined, trusted enforcement path
-  establishes the Mission for the request and applies its authority
-  and lifecycle controls; the section names designation and mandatory
-  mediation as the controls and the unmediated residual. The
+- Authorization Server Metadata adds a client requirement: a client
+  performing a Mission's task presents no credential that is not
+  Mission-bound for that task unless a deployment-defined, trusted
+  enforcement path establishes the Mission for the request and
+  applies its authority and lifecycle controls. Downgrade by Omission
+  explains the held-credential path, names designation and mandatory
+  mediation as the controls, and states the unmediated residual. The
   Mission-governed client registration rule is described as rejecting
   an `authorization_details` request that omits the Intent, not every
   ungoverned request (#1205).
@@ -6698,13 +6725,13 @@ Cross-Domain:
   carried-as-approved) is declared in the deployment documentation
   that names the type as supported ({{other-types}}, {{discovery}});
   opaque Mission-bound tokens get a defined consumption mode,
-  introspection REQUIRED as the claims carriage with active-only
+  introspection (or, inside the issuer's trusted boundary,
+  issuer-local resolution) as the claims carriage with active-only
   authority disclosure and fail-closed resource server duties
   ({{introspected-consumption}}); the second derivation mode is
   renamed configured-mapping mode (formerly template mode) and
   framed as the no-RAR on-ramp ({{authorization-derivation}});
-  Authority Sources moved after Protocol Flow within the Overview
-  (structure only).
+  Authority Sources moved into Mission Approval (structure only).
 
 - Editorial consolidation; no normative change: every removed
   sentence restates a rule that remains normatively stated at its
@@ -6815,8 +6842,8 @@ Cross-Domain:
   commitments with `authority_hash` an audit correlator at a
   narrowed-token resource server; the subset rule named
   representational, not semantic; approval-event sequencing named as
-  an extensibility seam; Intent carriage closed to the form-encoded
-  PAR parameter.
+  an extensibility seam; Intent carriage on the authorization-code
+  path closed to PAR.
 - Operational and privacy: verification-key retention anchored to
   the audit horizon, issuer-key custody and per-artifact-class `kid`
   guidance, a Mission-record and evidence-access privacy section,
@@ -6850,16 +6877,14 @@ Cross-Domain:
   rather than REQUIRED in this revision because the family's
   standing-consent constructors (Template dispatch, Child Delegation,
   Ceiling drawdown) do not yet emit it; a future breaking-change
-  window, the same one tracked for `approver`'s removal, MAY promote
-  it once they do. A new Role Mapping table ({{role-mapping}}) covers
-  direct, relocated human approval, Template dispatch, policy
-  drawdown, ceiling drawdown, and AGR-backed approval, with direct
-  approval as the degenerate one-human case. `type` and
+  window may promote it once they do. A new Role Mapping table
+  ({{role-mapping}}) covers direct, relocated human approval, Template
+  dispatch, policy drawdown, ceiling drawdown, governed policy, and
+  AGR-backed approval, with direct approval as the degenerate
+  one-human case. `type` and
   `adjudication.kind` get their own unknown-value rule, distinct from
-  the Mission Lifecycle state rule. The top-level `approver` member is
-  DEPRECATED as a compatibility alias for
-  `approval_basis.consent_principal`, normatively equal to it; its
-  removal is deferred to the same future breaking-change window.
+  the Mission Lifecycle state rule. The top-level `approver` member
+  is removed in favor of `approval_basis.consent_principal` (#705).
 
 - References: the agent-identity reference
   draft-klrc-aiagent-auth is replaced by its successor,
@@ -6902,6 +6927,21 @@ Cross-Domain:
   the Approver's authentication or approval never yields an ID Token,
   UserInfo, or authentication session for the Subject. Self-approval
   keeps its ordinary OpenID Connect behavior (#826).
+
+- Authority Sources ({{authority-sources}}): the Mission Record gains
+  a required, immutable `authority_source` (`user_delegated`,
+  `service_owned`, or `organizational`) naming whose authority the
+  approval draws on. Approval activates authority the source already
+  holds and manufactures none: the AS verifies the derived Authority
+  Set against the source before approval (#316).
+
+- Mission Intent: its prose members carry no machine semantics
+  (#313).
+
+- Third-Party Data Subjects ({{third-party-data-subjects}}): Mission
+  approval records the Approver's authorization of the undertaking
+  and is not, by itself, evidence of a third party's consent to
+  disclosure (#344).
 
 -00
 
