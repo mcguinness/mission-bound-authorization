@@ -516,7 +516,11 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
         makeEvidence("denied", "strict_subset", "policy_denied"),
       );
     }
-    evaluatedPolicies.push({ ref: policyRef, snapshot });
+    // One retention per policy identity, however many justifying entries carry it.
+    const seen = evaluatedPolicies.some(
+      ({ ref }) => ref.id === policyRef.id && ref.version === policyRef.version && ref.digest === policyRef.digest,
+    );
+    if (!seen) evaluatedPolicies.push({ ref: policyRef, snapshot });
   }
 
   // @spec child-delegation#fanout — allowed_child_actors: the child actor MUST be
