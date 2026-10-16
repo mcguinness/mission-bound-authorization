@@ -3286,7 +3286,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an activation under a policy snapshot whose digest differs from the committed digest does not activate under that policy: Template refuses with dispatch_policy_changed, Progressive falls back to a fresh human approval, Child Delegation denies with policy_denied",
-    "local": "Template: a held snapshot edited under the same version, a changed version, or no snapshot refuses dispatch_policy_changed with no instance and no dispatch row committed; the committed snapshot still dispatches. The Agent selection rule is read only from the verified snapshot (its `select_agent` member), so a rule re-pointed under the same version refuses dispatch_policy_changed and never selects. Child Delegation: the same three changes deny policy_denied (with deny Child Evidence) and commit no child; restoring the snapshot admits creation. Progressive's ceiling drawdown is not implemented in the reference, so the drawdown_policy clause has no witness; the Template and Child Delegation clauses are asserted."
+    "local": "Template: a held snapshot edited under the same version, a changed version, or no snapshot refuses dispatch_policy_changed with no instance and no dispatch row committed; the committed snapshot still dispatches. The Agent selection rule is read only from the verified snapshot (its `select_agent` member), so a rule re-pointed under the same version refuses dispatch_policy_changed and never selects. Child Delegation: the same three changes deny policy_denied (with deny Child Evidence) and commit no child; restoring the snapshot admits creation. Eligibility reads only the current registry: a policy replaced under a new version, edited under the same version, or retired refuses even while its exact committed snapshot is retained for audit, and the refusal retains nothing for the changed bytes. Progressive's ceiling drawdown is not implemented in the reference, so the drawdown_policy clause has no witness; the Template and Child Delegation clauses are asserted."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -3306,6 +3306,30 @@
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
      "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > replacement under a new version: the old instance's digest recomputes from its retained snapshot after the registry moves on, and both snapshots are retained",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > changed bytes under the same version: the Dispatch is refused, nothing is retained for the edited bytes, and the committed bytes are never overwritten",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > retirement: a retained snapshot never re-admits a retired Dispatch Policy, and retiring it erases no evidence before the audit horizon",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > retains every justifying child_creation_policy snapshot, and the child's root_commitment recomputes from it after the policy is replaced, edited or retired",
      "level": "unit",
      "surface": "derivation"
     }
@@ -3330,12 +3354,74 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the snapshot bytes and media type behind each activation policy digest are retained for the audit horizon of every Mission activated under that snapshot, so the digest reproduces"
+    "normative": "the snapshot bytes and media type behind each activation policy digest are retained for the audit horizon of every Mission activated under that snapshot, so the digest reproduces",
+    "local": "Template and Child Delegation: every successful Dispatch and policy-adjudicated child creation retains the snapshot its gate verified (for a child, every justifying entry's child_creation_policy), keyed by (issuer, policy id, version, digest), with the exact bytes, the media type and the anchor's typ and iss, on the kernel database inside the record's own transaction: a retention failure commits no Mission, dispatch row or reservation. A write recomputes the digest and refuses bytes that do not reproduce it, never rewrites retained bytes, and only moves the horizon forward. The horizon is the latest expires_at of a Mission activated under the snapshot plus the declared audit retention (7776000 seconds, the value the terminal tombstones compose); boot recovery prunes only rows past it, and replacing, editing or retiring a policy in the registry deletes nothing. An auditor recomputes an old activation's committed digest from the retained row after the registry changes; an unretained or pruned commitment reports unavailable and a tampered row mismatch. Durable only on the file-backed kernel store (restart witnessed); the in-memory default does not survive a restart. Unit witnesses only, below the row's endpoint level. Progressive's ceiling drawdown has no activation path in the reference (#1017), so its arm has no witness."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#985 (D219). No implementation witness: the reference registry holds the current snapshot per policy id, not the history an audit horizon needs once a policy is edited."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > retains the verified Dispatch Policy snapshot under (issuer, id, version, digest) with its exact bytes and media type, and the instance's committed digest recomputes from it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > a later activation under the same snapshot extends its horizon, and no write shrinks the horizon or rewrites the bytes",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > replacement under a new version: the old instance's digest recomputes from its retained snapshot after the registry moves on, and both snapshots are retained",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > changed bytes under the same version: the Dispatch is refused, nothing is retained for the edited bytes, and the committed bytes are never overwritten",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > retirement: a retained snapshot never re-admits a retired Dispatch Policy, and retiring it erases no evidence before the audit horizon",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > an unretained commitment verifies as unavailable, a tampered row as a mismatch, and a Mission that commits no activation policy as not_applicable",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > a Dispatch whose snapshot cannot be retained commits no instance, no dispatch row and no reservation",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > retains every justifying child_creation_policy snapshot, and the child's root_commitment recomputes from it after the policy is replaced, edited or retired",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > a child creation whose snapshot cannot be retained commits no child",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
+     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > retained snapshots survive a restart on the file-backed kernel store and are pruned at boot only past their audit horizon",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#985 (D219, D413); reference implementation (template dispatch, child creation). Retention and Template/Child witnesses: impl/985-policy-snapshot-retention. Progressive remains with #1017."
   },
   {
    "id": "core.standing-consent.activation-event-id",
