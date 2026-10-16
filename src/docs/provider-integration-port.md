@@ -643,7 +643,8 @@ the store.
      (`readMissionAccessProfile`, #825, D402): the typed RFC 9068 claim set
      and its clock bounds, the `mission` claim's profiled members, the
      authority read in full (it only gates; step 9 projects the raw entries),
-     and a present `cnf`'s structure. Possession stays the resource's to
+     a present `act` chain under the Actor Profile, and a present `cnf`'s
+     structure. Possession stays the resource's to
      prove.
   5. `kernel.get(mission.id)`, with `mission.issuer` equal to the record's
      issuer. A delegated token (`act`), a Child Mission's token, or a
