@@ -96,6 +96,14 @@ export function credentialProfileVectors(
     // A delegated token's actor chain, under the Actor Profile.
     { label: "an act that is not an object", claims: { act: "agent" } },
     { label: "a null act", claims: { act: null } },
+    {
+      label: "a nested null act",
+      claims: { act: { sub: "agent-b", iss: mission.issuer, act: null } },
+    },
+    {
+      label: "a nested false act",
+      claims: { act: { sub: "agent-b", iss: mission.issuer, act: false } },
+    },
     { label: "an act hop with no iss", claims: { act: { sub: "agent-b" } } },
     {
       label: "a nested act hop with no sub",
