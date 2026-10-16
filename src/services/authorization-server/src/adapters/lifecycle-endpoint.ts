@@ -49,7 +49,16 @@ const MAX_BODY_BYTES = 64 * 1024;
 
 export type LifecycleFormResult =
   | { ok: true; params: Record<string, string> }
-  | { ok: false; description: string };
+  /** `nonce`: the request's well-formed nonce, for the refusal to echo. */
+  | { ok: false; description: string; nonce?: string };
+
+/**
+ * @spec status#idempotency — a well-formed `nonce`: a string of 1 to 255
+ * characters. Anything else is malformed and never echoed.
+ */
+export function wellFormedNonce(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 && value.length <= 255 ? value : undefined;
+}
 
 /**
  * @spec status#mission-lifecycle-endpoint ("Operations") — read the body as
@@ -78,7 +87,9 @@ export async function readLifecycleForm(req: IncomingMessage, contentType: strin
   const params: Record<string, string> = Object.create(null) as Record<string, string>;
   for (const [name, value] of form) {
     if (Object.hasOwn(params, name)) {
-      return { ok: false, description: `${name} MUST NOT appear more than once` };
+      const nonces = form.getAll("nonce");
+      const nonce = nonces.length === 1 ? wellFormedNonce(nonces[0]) : undefined;
+      return { ok: false, description: `${name} MUST NOT appear more than once`, ...(nonce ? { nonce } : {}) };
     }
     params[name] = value;
   }

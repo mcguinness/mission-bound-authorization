@@ -374,6 +374,7 @@ import {
   LIFECYCLE_ENDPOINT_PATH,
   parseTransitionMembers,
   readLifecycleForm,
+  wellFormedNonce,
 } from "./lifecycle-endpoint.js";
 import { DISPATCH_HANDOFF_TYP, handleDispatchHandoffRedemption } from "./dispatch-handoff.js";
 import type { CrossOrgOptions } from "./cross-org-grant.js";
@@ -2848,12 +2849,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // `mission_id`, the caller authenticated by private-key JWT.
     if (ctx.path === LIFECYCLE_ENDPOINT_PATH && ctx.method === "POST" && lifecycleServed) {
       const form = await readLifecycleForm(ctx.req, ctx.get("content-type") ?? "");
+      // @spec status#mission-status-errors — every refusal before the engine
+      // echoes the request's `nonce` when it carried a well-formed one, and
+      // none is retained: the nonce key needs an authenticated client.
       if (!form.ok) {
         ctx.status = 400;
         ctx.set("cache-control", "no-store");
-        ctx.body = { error: "invalid_request", error_description: form.description };
+        ctx.body = {
+          error: "invalid_request",
+          error_description: form.description,
+          ...(form.nonce ? { nonce: form.nonce } : {}),
+        };
         return;
       }
+      const echo = wellFormedNonce(form.params.nonce);
       // @spec status#mission-status-authentication, status#mission-status-auth-failures
       // — a failed private-key-JWT authentication, or no credential where no
       // access-token scheme is accepted, is HTTP 400 `invalid_client` with no
@@ -2873,10 +2882,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         if (auth.retryAfterS !== undefined) {
           ctx.status = 503;
           ctx.set("Retry-After", String(auth.retryAfterS));
-          ctx.body = { error: "unavailable", error_description: auth.description };
+          ctx.body = { error: "unavailable", error_description: auth.description, ...(echo ? { nonce: echo } : {}) };
         } else {
           ctx.status = 400;
-          ctx.body = { error: "invalid_client", error_description: auth.description };
+          ctx.body = { error: "invalid_client", error_description: auth.description, ...(echo ? { nonce: echo } : {}) };
         }
         return;
       }
@@ -2900,9 +2909,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // `nonce` rule of @spec status#idempotency compares those, not the bytes.
       const { body, digest } = await readBodyWithDigest(ctx.req);
       if (body.mission_id !== undefined && body.mission_id !== pathMissionId) {
+        const echo = wellFormedNonce(body.nonce);
         ctx.status = 400;
         ctx.set("cache-control", "no-store");
-        ctx.body = { error: "invalid_request", error_description: "mission_id does not match the path" };
+        ctx.body = {
+          error: "invalid_request",
+          error_description: "mission_id does not match the path",
+          ...(echo ? { nonce: echo } : {}),
+        };
         return;
       }
       lifecycleCall = { principal, missionId: pathMissionId, body, digest };
@@ -2911,11 +2925,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // --- Lifecycle operations (@spec status#legal-transitions) ---
     if (lifecycleCall) {
       const { principal, body, digest } = lifecycleCall;
-      const rawNonce = body.nonce;
-      const nonce =
-        typeof rawNonce === "string" && rawNonce.length > 0 && rawNonce.length <= 255
-          ? rawNonce
-          : undefined;
+      const nonce = wellFormedNonce(body.nonce);
       /**
        * Deliver a JSON body WITHOUT retaining it: a refusal no nonce key can
        * hold, or a transient failure.
