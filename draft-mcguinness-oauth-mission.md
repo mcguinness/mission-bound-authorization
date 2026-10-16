@@ -4303,10 +4303,14 @@ configuration. The companion defines conformance for ASs supporting
 an evidence type, whether its evidence is optional or required.
 
 A **Mission-aware Resource Server** implements resource server
-enforcement ({{rs-enforcement}}), from the token's own claims or,
-under the introspected consumption mode, from its active
-introspection response or issuer-local resolution
-({{introspected-consumption}}).
+enforcement ({{rs-enforcement}}). It enforces a JWT from the token's
+own claims, needing no Mission-state store and no call to the AS, or,
+under the introspected consumption mode, from the token-specific
+inputs of its active introspection response or issuer-local
+resolution ({{introspected-consumption}}); in either form it enforces
+each applicable entry its tokens carry under that entry's type, which
+for `mission_resource_access` is work a plain {{RFC9068}} resource
+server does not do.
 
 A **Mission Client** implements the client surfaces:
 
