@@ -4794,7 +4794,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "lifecycle refusals carry mission_error with one of revoked, expired, superseded, derivations_exhausted, or a value a companion defines (Mission Status's suspended and completed, Child Delegation's parent_terminated)",
-    "local": "fixed (#636/#706 cut): oidc-provider 9.10's InvalidGrant/err_out.js copy only error/error_description/scope/state from a thrown error, so mission_error never reached the client before this change; MissionGrantError plus a grant.error listener now splice it into the body wherever gateDerivation/gateActive refuses a still-valid grant. Proven positively at the wire with a real, non-undefined value for derivations_exhausted (a Mission capped at requested_derivation_limit 1, second derivation refused). This demo's own /lifecycle route additionally destroys the underlying OAuth Grant on a terminal transition (documented in provider.ts), so a revoked or expired-via-that-route Mission fails through oidc-provider's own grant lookup instead, never reaching this mechanism; mission_revoked and mission_expired are therefore reachable in deployments that gate purely on Mission state (a raw state change, or natural wall-clock expiry) but are untested at the wire here for that reason. mission_superseded is not yet defined by any companion in this codebase. On a Token Exchange the gate's lifecycle refusal is invalid_request and carries the same mission_error (#1154)."
+    "local": "oidc-provider 9.10's err_out.js copies only error, error_description, scope and state from a thrown error, so MissionGrantError and MissionExchangeError plus a grant.error listener splice mission_error into the body wherever the Mission gate (the refresh pre-check, gateDerivation or gateActive) refuses a still-valid grant. Endpoint witnesses cited here: suspended on a refresh (tracer); derivations_exhausted on a capped Mission's second derivation (tracer); superseded on a refresh of a predecessor's own refresh token after a deferred expansion activated its successor, with nothing issued, saved or counted (refresh-precheck, #1065); and expired on a Token Exchange, whose lifecycle refusal is invalid_request (#1154). The shared mapper gateErrorToMissionError, which passes each termination reason through (superseded, parent_terminated, expired) and gives no value for an unrecognized one, is cited as a unit witness, not as an endpoint refusal. Partial: revoked, completed and parent_terminated are not cited here as endpoint refusals. This demo's own /lifecycle route destroys the underlying OAuth Grant on a terminal transition (provider.ts), so a refresh after it fails at oidc-provider's grant lookup with no mission_error; a raw kernel transition, natural expiry or supersession leaves the grant for the Mission gate."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -4813,8 +4813,14 @@
     },
     {
      "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
-     "name": "mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint) > the value is the observed termination reason, unprefixed: superseded and parent_terminated map, an unknown reason carries none (@spec mission#termination)",
+     "name": "mission_error on a refresh after expansion (@spec expansion#superseded-state, mission#issuance-gating, #1065) > a refresh of the superseded predecessor's refresh token is refused invalid_grant with mission_error superseded, issuing, saving and counting nothing",
      "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint) > the value is the observed termination reason, unprefixed: superseded and parent_terminated map, an unknown reason carries none (@spec mission#termination)",
+     "level": "unit",
      "surface": "token-endpoint"
     },
     {
@@ -35894,6 +35900,36 @@
     }
    ],
    "notes": "#1154 (D369)."
+  },
+  {
+   "id": "expansion.superseded-state.refusal-mission-error",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "superseded-state",
+   "text": "The refusal's `mission_error` value is `superseded`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a derivation refused under a superseded predecessor (a new token, a refresh, a token exchange, or a cross-domain grant) carries mission_error superseded",
+    "local": "Partial: endpoint-witnessed on a refresh of the predecessor's own refresh token after a deferred expansion activated its successor, refused invalid_grant with nothing issued, saved or counted; a Token Exchange or cross-domain grant under a superseded predecessor is not cited here."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "mission_error on a refresh after expansion (@spec expansion#superseded-state, mission#issuance-gating, #1065) > a refresh of the superseded predecessor's refresh token is refused invalid_grant with mission_error superseded, issuing, saving and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1065 (D415)."
   },
   {
    "id": "expansion.reconciliation.completion-refusal-code",
