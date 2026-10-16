@@ -111,9 +111,13 @@ async function authorize(args: {
   decideHeaders?: Record<string, string>;
   approval: Approval;
   jar?: Jar;
+  /** The approval surface's decision; `approve` unless given. */
+  decision?: string;
   /** Rewrites the resume request (the first redirect back into the issuer after the decision). */
   resume?: { url?: (location: string) => string; method?: string };
-}): Promise<{ code?: string; error?: string; jar: Jar; decideStatus: number }> {
+  /** Runs after the decision, immediately before the resume. */
+  beforeResume?: () => Promise<void>;
+}): Promise<{ code?: string; error?: string; jar: Jar; decideStatus: number; resumeCookies: string[] }> {
   const client = args.client ?? "ap-agent";
   const jar = args.jar ?? new Map<string, string>();
   const par = await push(client, { ...(args.scope ? { scope: args.scope } : {}), ...(args.extra ?? {}) });
@@ -134,17 +138,20 @@ async function authorize(args: {
     method: "POST",
     redirect: "manual",
     headers: { ...headers, ...(args.decideHeaders ?? {}), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve" }),
+    body: JSON.stringify({ decision: args.decision ?? "approve" }),
   });
   const decideStatus = res.status;
   keep(jar, res);
   location = res.headers.get("location") ?? "";
+  await args.beforeResume?.();
+  const resumeCookies: string[] = [];
   let first = true;
   while (location.startsWith(ISSUER)) {
     const url = first && args.resume?.url ? args.resume.url(location) : location;
     const method = first && args.resume?.method ? args.resume.method : "GET";
     first = false;
     res = await fetch(url, { method, redirect: "manual", headers: { cookie: cookieOf(jar) } });
+    resumeCookies.push(...res.headers.getSetCookie());
     keep(jar, res);
     location = res.headers.get("location") ?? "";
   }
@@ -152,6 +159,7 @@ async function authorize(args: {
   return {
     jar,
     decideStatus,
+    resumeCookies,
     ...(q.get("code") ? { code: q.get("code") as string } : {}),
     ...(q.get("error") ? { error: q.get("error") as string } : {}),
   };
@@ -211,6 +219,55 @@ async function sessionOf(jar: Jar): Promise<{ accountId?: string; loginTs?: numb
   const id = jar.get("_session");
   if (!id) return undefined;
   return (await as.provider.Session.find(id)) as { accountId?: string; loginTs?: number; acr?: string } | undefined;
+}
+
+type StoredSession = { accountId?: string; loginTs?: number; acr?: string; exp?: number };
+
+/**
+ * An Alice session from a browser self-approval, then Bob's headless act for
+ * her in the same user agent. Only the act's resume is observed: the session
+ * saves it causes and the session cookies it sends. The authorization request
+ * before it is the client's own and loads Alice's session as usual.
+ */
+async function aliceSessionThrough(act: { scope?: string; decision?: string; resume?: { url?: (location: string) => string; method?: string } }) {
+  const aliceTime = Math.floor(Date.now() / 1000) - 600;
+  const first = await authorize({ scope: "openid", approval: { browser: { sub: "alice", acr: "mfa", auth_time: aliceTime } } });
+  expect(first.code, first.error).toBeTruthy();
+  const aliceSession = first.jar.get("_session") as string;
+  expect(((await as.provider.Session.find(aliceSession)) as StoredSession | undefined)?.loginTs).toBe(aliceTime);
+  const saved: string[] = [];
+  const onSaved = (s: { id?: string }) => {
+    if (s.id) saved.push(s.id);
+  };
+  let expBefore: number | undefined;
+  let bob: Awaited<ReturnType<typeof authorize>>;
+  try {
+    bob = await authorize({
+      ...act,
+      approval: { headless: { sub: "bob", subject: "alice" } },
+      jar: first.jar,
+      beforeResume: async () => {
+        expBefore = ((await as.provider.Session.find(aliceSession)) as StoredSession | undefined)?.exp;
+        as.provider.on("session.saved", onSaved);
+      },
+    });
+  } finally {
+    as.provider.off("session.saved", onSaved);
+  }
+  const after = (await as.provider.Session.find(aliceSession)) as StoredSession | undefined;
+  return { bob, jar: first.jar, aliceSession, aliceTime, saved, expBefore, after };
+}
+
+/** Alice's session is as she left it: Bob's resume neither saved it nor sent a session cookie. */
+function expectAliceUntouched(o: Awaited<ReturnType<typeof aliceSessionThrough>>): void {
+  expect(o.saved).not.toContain(o.aliceSession);
+  expect(o.bob.resumeCookies.filter((l) => /^_session(?:\.sig)?=/.test(l))).toEqual([]);
+  expect(o.jar.get("_session")).toBe(o.aliceSession);
+  expect(o.expBefore).toBeDefined();
+  expect(o.after?.exp).toBe(o.expBefore);
+  expect(o.after?.accountId).toBe("alice");
+  expect(o.after?.loginTs).toBe(o.aliceTime);
+  expect(o.after?.acr).toBe("mfa");
 }
 
 describe("Approver and Subject stay separate identities (@spec mission#approval-authentication, #826)", () => {
@@ -375,20 +432,35 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
   });
 
   it("an Alice session established before Bob approves for her is neither read nor refreshed by Bob's headless act, which still completes", async () => {
-    const aliceTime = Math.floor(Date.now() / 1000) - 600;
-    const first = await authorize({ scope: "openid", approval: { browser: { sub: "alice", acr: "mfa", auth_time: aliceTime } } });
-    expect(first.code, first.error).toBeTruthy();
-    const aliceSession = first.jar.get("_session");
-    expect((await sessionOf(first.jar))?.loginTs).toBe(aliceTime);
     // Bob approves for Alice in the same user agent: the resume never sees
     // Alice's session, so it neither asks to end it nor renews it.
-    const second = await authorize({ approval: { headless: { sub: "bob", subject: "alice" } }, jar: first.jar });
-    expect(second.code, second.error).toBeTruthy();
-    expect(first.jar.get("_session")).toBe(aliceSession);
-    const after = await sessionOf(first.jar);
-    expect(after?.accountId).toBe("alice");
-    expect(after?.loginTs).toBe(aliceTime);
-    expect(after?.acr).toBe("mfa");
+    const o = await aliceSessionThrough({});
+    expect(o.bob.code, o.bob.error).toBeTruthy();
+    expectAliceUntouched(o);
+  });
+
+  it.each([
+    ["an openid refusal", { scope: "openid" }, "invalid_scope"],
+    ["a denial", { decision: "deny" }, "access_denied"],
+  ] as const)("Bob's headless act ending in %s neither reads nor refreshes an Alice session, and leaves a fresh user agent no session", async (_end, act, error) => {
+    const o = await aliceSessionThrough(act);
+    expect(o.bob.error).toBe(error);
+    expect(o.bob.code).toBeUndefined();
+    expectAliceUntouched(o);
+    // In a user agent with no session, the refused act leaves none.
+    const fresh = await authorize({ ...act, approval: { headless: { sub: "bob", subject: "alice" } } });
+    expect(fresh.error).toBe(error);
+    expect(fresh.jar.has("_session")).toBe(false);
+    expect(fresh.resumeCookies.filter((l) => /^_session(?:\.sig)?=/.test(l))).toEqual([]);
+  });
+
+  it.each([
+    ["a trailing slash", { url: (l: string) => `${l}/` }],
+    ["an uppercase path", { url: (l: string) => l.replace("/auth/", "/AUTH/") }],
+    ["a different path uid", { url: (l: string) => l.replace(/\/auth\/[^/?]+/, "/auth/not-the-interaction") }],
+    ["a HEAD request", { method: "HEAD" }],
+  ] as const)("a refused headless resume through %s neither reads nor refreshes an Alice session", async (_form, resume) => {
+    expectAliceUntouched(await aliceSessionThrough({ scope: "openid", resume }));
   });
 
   it("a later prompt=none request naming the Subject is not satisfied by another principal's approval", async () => {

@@ -202,9 +202,11 @@ the store.
 - **Approver and Subject identities (#826).** The provider account and Grant
   are the Approver's: `interactionFinished` logs the Approver in with the
   achieved `acr` and authentication time, never the Subject. A browser
-  approval keeps that session. A headless approval leaves none: its user
-  agent is the client's, so the resume runs without the session cookie that
-  user agent holds, the session the login created is destroyed before the
+  approval keeps that session. A headless approval leaves none, and a
+  session the user agent already holds is neither read nor refreshed: its
+  user agent is the client's, so on every completion, a refusal or a denial
+  as much as a success, the resume runs without the session cookie that user
+  agent holds, the session the login created is destroyed before the
   response is flushed and its cookie removed, and the code is not
   session-bound (`expiresWithSession`). Every
   Mission-bound access token carries the Subject: `formats.customizers.jwt`
@@ -220,8 +222,10 @@ the store.
   `invalid_request` before any interaction. That is the accepted limitation
   (D305): client-requested strength on a delegated approval, including a
   client registration's incompatible OIDC defaults, is unsupported and fails
-  closed, never ignored or downgraded. The issuer's published approval floor
-  governs the Approver's strength, and no other carrier is defined.
+  closed, never ignored or downgraded. No approval-authentication floor is
+  published or enforced: the OAuth binding's high-risk floor
+  (`{#approval-authentication}`) is not implemented here (#826), and no
+  other carrier is defined.
   Tests (HTTP, `approver-subject-separation.test.ts`):
   `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826)`,
   every case.
