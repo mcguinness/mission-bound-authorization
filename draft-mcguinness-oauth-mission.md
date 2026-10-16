@@ -533,6 +533,94 @@ prevention, redaction) are complementary; under mediated execution
 they fit at the mediating enforcement component
 ({{runtime-boundary}}).
 
+# Overview {#overview}
+
+## Protocol Flow {#protocol-flow}
+
+Besides the agent (the OAuth client) and the Mission Issuer (the
+AS), the flow involves two principals: the Subject, on whose behalf
+the Mission is approved, and the Approver, the accountable principal
+who approves it. {{conventions-and-terminology}} defines these terms
+and the rest of this document's vocabulary.
+
+The following figure shows the protocol flow between the agent and
+the Mission Issuer:
+
+~~~
+ Agent (client)                       Mission Issuer (AS)
+      |                                     |
+      | 1. PAR: intent + proposal --------->| derive authority
+      |<----------- request_uri ------------| (authz_details)
+      |                                     |
+      | 2. authorization request ---------->| Approver consents
+      |                                     |   -> authority_hash
+      |<-------------- code ----------------| -> Mission active
+      |                                     |   (bound to the grant)
+      |                                     |
+      | 3. token request ------------------>| gate: active?
+      |<----------- access token -----------| + authz_details
+      |                                     |   + mission claim
+      v
+~~~
+
+The flow then leaves the AS: (4) the agent calls the resource server
+with the token; the resource server enforces the `authorization_details`
+statelessly and can check the `mission` claim ({{rs-enforcement}}),
+with no callback to the AS required. (5) A management revoke, or
+`expires_at` passing, moves the Mission to `terminated`, with
+reason `revoked` or `expired`, after which the AS refuses further
+issuance and refresh; a deployment can also treat {{RFC7009}}
+revocation of the refresh token as revoking the Mission
+({{revocation}}). The end-to-end example
+({{e2e-example}}) walks this flow with concrete messages.
+
+### One Mission from Approval to Revocation {#first-mission}
+
+Consider a registered client reading invoices from one ERP resource
+for Alice. Alice is both the Subject and the Approver; the authority
+source is user-delegated. The AS and ERP support the
+`mission_resource_access` type defined by
+{{I-D.draft-mcguinness-oauth-mission-resource-access}}. This example
+uses a direct approval, a JWT access token, no delegated token, and
+no submission evidence; the AS's admission policy requires none.
+The times below are on the same day in UTC.
+
+1. **Submit.** The client pushes a Mission Intent naming
+   `https://erp.example.com` and requesting expiry at 13:00. Alongside
+   it, the client proposes an `authorization_details` entry of type
+   `mission_resource_access` for that resource and the action
+   `invoices.read`. It follows the PAR `request_uri` into the
+   authorization interaction ({{submission-via-par}}).
+2. **Approve and commit.** At 12:00 the AS authenticates Alice,
+   verifies the authority source and proposed read authority, and
+   renders that authority and the effective 13:00 expiry for her
+   approval. On approval it atomically creates the active Mission,
+   records its commitments, and binds the authorization code to it
+   ({{approval-event}}, {{grant-binding}}).
+3. **Issue.** Still at 12:00, the client redeems the code. The AS
+   resolves and checks the Mission and returns a sender-constrained
+   ERP token that expires at 12:05, with the read authority and a
+   `mission` reference. The response also carries the granted
+   authority, `mission_id`, and `mission_expires_at`
+   ({{mission-response-parameters}}). The access token's five-minute
+   lifetime is distinct from the Mission's one-hour lifetime
+   ({{mission-bound-tokens}}).
+4. **Use.** The ERP, a Mission-aware Resource Server, validates the
+   token and proof of possession and permits the authorized read. The
+   token grants no write authority.
+   No Mission-state lookup or complete-set retrieval is part of this
+   example's resource request ({{rs-enforcement}}).
+5. **Stop further issuance.** At 12:02 an authorized revocation makes
+   the Mission non-active. A subsequent refresh, if the AS issued a
+   refresh token, is refused with `invalid_grant`
+   ({{issuance-gating}}). The already-issued access token can still
+   be honored on this stateless path until 12:05; revocation does not
+   undo a completed read ({{revocation}}).
+
+An ERP that instead introspects on every request stops honoring the
+token on its next request after revocation, through the composite
+`active` result ({{composite-active}}).
+
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
@@ -642,88 +730,6 @@ Mission-bound token:
   carries the gating guarantee of this document; a token that only
   references or carries Mission data without the gates is not
   Mission-bound ({{conformance}}).
-
-# Overview {#overview}
-
-## Protocol Flow {#protocol-flow}
-
-The following figure shows the protocol flow between the agent and
-the Mission Issuer:
-
-~~~
- Agent (client)                       Mission Issuer (AS)
-      |                                     |
-      | 1. PAR: intent + proposal --------->| derive authority
-      |<----------- request_uri ------------| (authz_details)
-      |                                     |
-      | 2. authorization request ---------->| Approver consents
-      |                                     |   -> authority_hash
-      |<-------------- code ----------------| -> Mission active
-      |                                     |   (bound to the grant)
-      |                                     |
-      | 3. token request ------------------>| gate: active?
-      |<----------- access token -----------| + authz_details
-      |                                     |   + mission claim
-      v
-~~~
-
-The flow then leaves the AS: (4) the agent calls the resource server
-with the token; the resource server enforces the `authorization_details`
-statelessly and can check the `mission` claim ({{rs-enforcement}}),
-with no callback to the AS required. (5) A management revoke, or
-`expires_at` passing, moves the Mission to `terminated`, with
-reason `revoked` or `expired`, after which the AS refuses further
-issuance and refresh; a deployment can also treat {{RFC7009}}
-revocation of the refresh token as revoking the Mission
-({{revocation}}). The end-to-end example
-({{e2e-example}}) walks this flow with concrete messages.
-
-### One Mission from Approval to Revocation {#first-mission}
-
-Consider a registered client reading invoices from one ERP resource
-for Alice. Alice is both the Subject and the Approver; the authority
-source is user-delegated. The AS and ERP support the
-`mission_resource_access` type defined by
-{{I-D.draft-mcguinness-oauth-mission-resource-access}}. This example
-uses a direct approval, a JWT access token, no delegated token, and
-no submission evidence; the AS's admission policy requires none.
-The times below are on the same day in UTC.
-
-1. **Submit.** The client pushes a Mission Intent naming
-   `https://erp.example.com` and requesting expiry at 13:00. Alongside
-   it, the client proposes an `authorization_details` entry of type
-   `mission_resource_access` for that resource and the action
-   `invoices.read`. It follows the PAR `request_uri` into the
-   authorization interaction ({{submission-via-par}}).
-2. **Approve and commit.** At 12:00 the AS authenticates Alice,
-   verifies the authority source and proposed read authority, and
-   renders that authority and the effective 13:00 expiry for her
-   approval. On approval it atomically creates the active Mission,
-   records its commitments, and binds the authorization code to it
-   ({{approval-event}}, {{grant-binding}}).
-3. **Issue.** Still at 12:00, the client redeems the code. The AS
-   resolves and checks the Mission and returns a sender-constrained
-   ERP token that expires at 12:05, with the read authority and a
-   `mission` reference. The response also carries the granted
-   authority, `mission_id`, and `mission_expires_at`
-   ({{mission-response-parameters}}). The access token's five-minute
-   lifetime is distinct from the Mission's one-hour lifetime
-   ({{mission-bound-tokens}}).
-4. **Use.** The ERP, a Mission-aware Resource Server, validates the
-   token and proof of possession and permits the authorized read. The
-   token grants no write authority.
-   No Mission-state lookup or complete-set retrieval is part of this
-   example's resource request ({{rs-enforcement}}).
-5. **Stop further issuance.** At 12:02 an authorized revocation makes
-   the Mission non-active. A subsequent refresh, if the AS issued a
-   refresh token, is refused with `invalid_grant`
-   ({{issuance-gating}}). The already-issued access token can still
-   be honored on this stateless path until 12:05; revocation does not
-   undo a completed read ({{revocation}}).
-
-An ERP that instead introspects on every request stops honoring the
-token on its next request after revocation, through the composite
-`active` result ({{composite-active}}).
 
 ## Principal Model {#principal-model}
 
