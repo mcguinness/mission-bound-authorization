@@ -80,7 +80,8 @@ Table of Contents
      4.3.  Deferred Approval State Machine
      4.4.  Pending Lifetime and Staleness
      4.5.  Approval Governance Record
-     4.6.  Queue Pressure
+     4.6.  Policy Completion
+     4.7.  Queue Pressure
    5.  Integration with the Mission Suite
    6.  Worked Example
    7.  Conformance
@@ -90,6 +91,7 @@ Table of Contents
    11. References
      11.1.  Normative References
      11.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -344,7 +346,38 @@ Table of Contents
    it governs; the pending window changes when the decision happens,
    never what is recorded about it.
 
-4.6.  Queue Pressure
+4.6.  Policy Completion
+
+   A pending approval can also complete under the governed_policy
+   standing-consent basis
+   ([I-D.draft-mcguinness-mission-approval-governance],
+   Section "Governed Policy Approval").  The Mission Issuer selects a
+   configured governed policy whose consented root admits the pending
+   proposal, and the policy decides it; no reviewer acts.  This is not a
+   relocated human decision, so step 3 of Section 4.1 does not apply: as
+   under any standing-consent basis, the standing consent and the
+   policy's adjudication supply the Approver's authentication,
+   authorization, and consent ([I-D.draft-mcguinness-oauth-mission],
+   Section "Mission Approval").  The creation commit of step 4 runs at
+   the policy's decision, under that basis's activation checks and with
+   its Approval Governance Record, and keeps the effective-expiry
+   recheck.
+
+   Nothing else about the deferral changes.  Polling, cancellation,
+   client binding, and token delivery follow the deferred substrate and
+   this profile, and a completed activation moves the pending approval
+   to approved (Section 4.3).  An evaluation that does not authorize
+   activation creates no Mission.  The pending approval then either
+   remains open for a separately authenticated, full direct approval by
+   a human, or resolves to denied.  That human path never turns a failed
+   governed_policy check into a governed_policy activation: it is a
+   direct approval event with its own record.  Each pending approval
+   resolves under one approval_event_id, so retried and concurrent
+   completions yield one Mission and one record.  The client selects no
+   approval basis: this profile defines no grant or request parameter
+   for one.
+
+4.7.  Queue Pressure
 
    Deferral turns the review surface into a queue a client can flood.
    The Mission Issuer MUST bound the number of concurrent pending
@@ -465,18 +498,20 @@ Table of Contents
 
    *  support the deferred substrate for Mission approvals it defers;
 
-   *  execute the approval event on the asynchronous review surface with
-      the authentication the issuance profile requires (Section 4.1);
+   *  execute each human approval event it defers on the asynchronous
+      review surface with the authentication the issuance profile
+      requires (Section 4.1);
 
    *  create the Mission record active atomically with the approval
       decision; and
 
    *  enforce the pending lifetime and staleness rules of Section 4.4
-      and the queue bounds of Section 4.6.
+      and the queue bounds of Section 4.7.
 
    A Mission Issuer that records Approval Governance Records for
-   deferred approvals does so under Mission Approval Governance's
-   conformance ([I-D.draft-mcguinness-mission-approval-governance]).
+   deferred approvals, including every policy completion (Section 4.6),
+   does so under Mission Approval Governance's conformance
+   ([I-D.draft-mcguinness-mission-approval-governance]).
 
    A client conforming to this profile MUST treat every pending response
    as unapproved and poll the deferral_code per the deferred substrate.
@@ -579,6 +614,18 @@ Table of Contents
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Policy Completion: a pending approval can complete under Mission
+      Approval Governance's governed_policy basis, with the deferral's
+      polling, cancellation, client binding, and token delivery
+      unchanged and no client-selected approval basis.  A policy
+      evaluation that does not authorize activation leaves the request
+      for a full direct human approval or denied, never a
+      governed_policy activation (#1185).
 
 Acknowledgments
 

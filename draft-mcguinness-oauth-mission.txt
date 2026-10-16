@@ -344,11 +344,11 @@ Table of Contents
    authority proposal, presented or required submission evidence
    (Section 4.3,
    [I-D.draft-mcguinness-oauth-mission-submission-evidence]), or opaque
-   tokens (which require introspection).  The optional capabilities
-   (Delegation, Introspection as a state overlay for JWTs, and Cross-
-   Domain projection) are adopted explicitly under Section 18.  Ordinary
-   JWT consumption does not require retrieving the Mission Record or
-   recomputing the complete approved Authority Set.
+   tokens (which require introspection or issuer-local resolution).  The
+   optional capabilities (Delegation, Introspection as a state overlay
+   for JWTs, and Cross-Domain projection) are adopted explicitly under
+   Section 18.  Ordinary JWT consumption does not require retrieving the
+   Mission Record or recomputing the complete approved Authority Set.
 
 1.2.  Applicability
 
@@ -379,16 +379,18 @@ Table of Contents
    is a task whose purpose, authority, and bounds the Approver can
    evaluate together (Section 6.1).
 
-   For recurring or evolving work, optional, experimental companions can
-   reduce repeated approvals through standing consent (Section 7.1).
-   Mission Template ([I-D.draft-mcguinness-oauth-mission-template])
-   creates bounded instances of recurring tasks.  Progressive
-   Authorization ([I-D.draft-mcguinness-oauth-mission-progressive])
-   permits successor Missions within a previously approved authority
-   ceiling as a task evolves.  The template or ceiling still needs a
-   meaningful human approval.  Neither mechanism removes its profile's
-   fresh-human-approval requirement for prohibited high-consequence
-   authority.
+   Optional companions can reduce repeated approvals through standing
+   consent (Section 7.1).  For example, Mission Template
+   ([I-D.draft-mcguinness-oauth-mission-template]) creates bounded
+   instances of recurring tasks; Progressive Authorization
+   ([I-D.draft-mcguinness-oauth-mission-progressive]) permits successor
+   Missions within a previously approved authority ceiling as a task
+   evolves; and Mission Approval Governance
+   ([I-D.draft-mcguinness-mission-approval-governance]) lets a policy
+   version a human approved decide an agent's own proposals.  The
+   template, ceiling, or policy still needs a meaningful human approval,
+   and no such mechanism removes its profile's human-approval
+   requirement for high-consequence authority.
 
    The unit of governance is the action, not the content.  A Mission
    bounds where an agent may act (resources, actions) and how much
@@ -775,13 +777,13 @@ Table of Contents
 
 4.1.  Submission via PAR
 
-   A client MUST submit a Mission Intent through a Pushed Authorization
-   Request [RFC9126] using the mission_intent request parameter.  The
-   parameter value is the UTF-8 JSON [RFC8259] serialization of the
-   Submission envelope, a JSON object carried as an ordinary OAuth
-   request-parameter value (form-encoded in the application/x-www-form-
-   urlencoded PAR request body, like other OAuth parameters) with
-   exactly these members:
+   On the authorization-code path (Section 6), a client MUST submit a
+   Mission Intent through a Pushed Authorization Request [RFC9126] using
+   the mission_intent request parameter.  The parameter value is the
+   UTF-8 JSON [RFC8259] serialization of the Submission envelope, a JSON
+   object carried as an ordinary OAuth request-parameter value (form-
+   encoded in the application/x-www-form-urlencoded PAR request body,
+   like other OAuth parameters) with exactly these members:
 
    intent:  REQUIRED.  The Mission Intent object (Section 4).
 
@@ -809,8 +811,8 @@ Table of Contents
       Mission Intent submitted as the parameter value fails this rule,
       since its goal and sibling members are unknown envelope members.
 
-   *  *One carriage, through PAR.* The AS accepts the Intent in one of
-      two forms:
+   *  *One carriage, through PAR.* On the authorization-code path, the
+      AS accepts the Intent in one of two forms:
 
       1.  the form-encoded mission_intent parameter of the PAR request
           body; or
@@ -828,6 +830,22 @@ Table of Contents
       Object in the same push MUST be rejected with invalid_request,
       strengthening Section 6.3 of [RFC9101], under which the AS would
       only ignore such a value.
+
+   *  *Alternative back-channel profiles.* A Mission Intent travels on
+      no other request unless a companion profile explicitly defines
+      that request as a back-channel carriage of the Submission
+      envelope.  Such a profile carries the envelope and any authority
+      proposal in one request that never traverses a user agent, and
+      preserves this section's envelope and proposal rules, the
+      processing order (Section 4.4), derivation (Section 5), the
+      approval-event rules for the Mission's approval basis (Section 6,
+      with a direct approval relocated only as Section 15 permits), and
+      the grant binding (Section 6.4).  Support for a grant type or
+      endpoint never establishes such a carriage on its own.  The
+      experimental Mission Device Authorization profile
+      ([I-D.draft-mcguinness-oauth-mission-device-authorization])
+      defines one for a client that cannot complete the authorization-
+      code path, on the device authorization grant [RFC8628].
 
    *  *Bounded size.* The AS MUST bound the Submission envelope's total
       size, the Intent's total size and the lengths of its arrays, and
@@ -927,8 +945,11 @@ Table of Contents
    under documented policy exceptions.  If a client registered as
    Mission-governed sends an authorization_details request that carries
    no mission_intent, the AS MUST reject the request with the
-   invalid_request error code, so the client cannot omit the Intent to
-   obtain ungoverned tokens.
+   invalid_request error code, so the client cannot drop the Intent from
+   a request that still carries authorization_details.  A request
+   carrying neither is an ordinary request that this rule does not
+   reach; designation is what keeps a resource's tokens inside a
+   Mission.
 
    The following is an example of an authority proposal submitted
    alongside the example Intent of Section 4.  Derivation narrows
@@ -2005,7 +2026,10 @@ Table of Contents
          (Section 7.1).
 
       For direct, activation.approval_event_id MUST identify a human
-      approval event (Section 6).
+      approval event (Section 6).  Approval Governance states how a
+      record backing a direct approval keeps that human decision as its
+      accountable assertion
+      ([I-D.draft-mcguinness-mission-approval-governance]).
 
       approval_basis is provenance: neither anchor covers it
       (Section 8.1); a profile that commits the Mission Record itself
@@ -2071,11 +2095,13 @@ Table of Contents
    fresh human approval per instance; each instance is still created at
    its own approval event (Section 6).  The type values template
    ([I-D.draft-mcguinness-oauth-mission-template]), policy_drawdown
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), and
-   ceiling_drawdown ([I-D.draft-mcguinness-oauth-mission-progressive])
-   are such bases.  For a standing-consent type, activation takes the
-   shape that its companion profile defines, and activation_actor names
-   a dispatching or requesting party distinct from the consenting human.
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]),
+   ceiling_drawdown ([I-D.draft-mcguinness-oauth-mission-progressive]),
+   and governed_policy
+   ([I-D.draft-mcguinness-mission-approval-governance]) are such bases.
+   For a standing-consent type, activation takes the shape that its
+   companion profile defines, and activation_actor names a dispatching
+   or requesting party distinct from the consenting human.
 
    An unrecognized type, and likewise an unrecognized adjudication.kind
    (below), is preserved unchanged as opaque provenance on an otherwise
@@ -2136,24 +2162,25 @@ Table of Contents
       governance_record:  OPTIONAL.  A boolean. true when an Approval
          Governance Record is recorded for this approval event
          ([I-D.draft-mcguinness-mission-approval-governance]), joined by
-         this Mission's own approval_event_id.  When true, kind MUST
-         equal the record's accountable assertion's own kind: a governed
-         decision still names its mechanism, and the record supplies the
-         fuller assertion set behind it, including any multi-assertion
-         set, never flattened into it.
+         this Mission's own approval_event_id.  It never changes kind,
+         which follows the basis (below), and Approval Governance aligns
+         the record's accountable assertion, where it carries one, with
+         that kind: a governed decision still names its mechanism, and
+         the record supplies the fuller assertion set behind it,
+         including any multi-assertion set, never flattened into it.
 
    The adjudication member, where present, follows the basis:
 
-   *  Where adjudication is present for direct, kind MUST be human
-      unless governance_record is true, in which case kind instead
-      follows the override that member defines (above).
+   *  Where adjudication is present for direct, kind MUST be human, with
+      or without governance_record: a policy decides an instance only
+      under a standing-consent basis.
 
    *  Where a companion profile defining a standing-consent type
       populates adjudication, kind MUST be policy, naming the identity
       and version of the policy or workflow that adjudicated the
-      instance, subject to the same governance_record override.  A
-      companion profile MUST NOT flatten a policy's or an Approval
-      Governance Record's assertion set into a single principal member.
+      instance.  A companion profile MUST NOT flatten a policy's or an
+      Approval Governance Record's assertion set into a single principal
+      member.
 
    *Activation policy commitment.* Where a standing-consent basis lets a
    separate policy artifact adjudicate activation (a dispatch, drawdown,
@@ -2734,9 +2761,10 @@ Table of Contents
 
    This document's token-carried enforcement assumes the JWT above.  An
    opaque Mission-bound token is profiled only under the introspected
-   consumption mode (Section 13.4), where introspection is its claims
-   carriage, with the same enforcement obligations.  A deployment whose
-   AS can issue neither deploys a Mission Authority Server
+   consumption mode (Section 13.4), where introspection or issuer-local
+   resolution is its claims carriage, with the same enforcement
+   obligations.  A deployment whose AS can issue neither deploys a
+   Mission Authority Server
    ([I-D.draft-mcguinness-mission-authority-server]), which governs
    ordinary tokens at the enforcement layer.
 
@@ -3045,8 +3073,8 @@ Table of Contents
    Section 4 of [RFC9068], and any sender-constraint binding (cnf) per
    Section 7.1 of [RFC9449] or Section 3 of [RFC8705], locally even when
    it introspects (Section 13.2).  An opaque Mission-bound token is
-   enforced from its active introspection response instead, under the
-   same rules (Section 13.4).
+   enforced from its active introspection response or issuer-local
+   resolution instead, under the same rules (Section 13.4).
 
    A resource server:
 
@@ -3403,7 +3431,8 @@ Table of Contents
    observe a Mission's current state per request instead of waiting out
    a token's lifetime.  For the JWT carriage it is a state-observable
    overlay on the lifecycle-gated baseline (Section 10); for opaque
-   Mission-bound tokens it is the claims carriage (Section 13.4).
+   Mission-bound tokens it is the claims carriage outside issuer-local
+   resolution (Section 13.4).
 
    An AS MAY support OAuth 2.0 Token Introspection [RFC7662] for
    Mission-bound access tokens.  When it does, the response for such a
@@ -3529,7 +3558,9 @@ Table of Contents
    Mission-bound token outside this mode is not profiled.
 
    *  In this mode, an AS issuing opaque Mission-bound tokens MUST offer
-      introspection for them with the members this mode names.
+      introspection for them with the members this mode names, unless
+      every resource server that consumes them uses issuer-local
+      resolution (below).
 
    *  An active (active: true) response for such a token MUST carry, as
       introspection response members, the audience-filtered granted
@@ -3545,20 +3576,54 @@ Table of Contents
       itself.
 
    *  A resource server consuming an opaque Mission-bound token MUST
-      resolve it through introspection before service, MUST verify
-      active is true, its own identity in aud, and the sender-constraint
-      binding cnf names, and MUST enforce the response's
-      authorization_details under the same rules as the token-carried
-      form (Section 11), the fail-closed duties included.
+      resolve it through introspection or issuer-local resolution
+      (below) before service, MUST verify active is true, its own
+      identity in aud, and the sender-constraint binding cnf names, and
+      MUST enforce the response's authorization_details under the same
+      rules as the token-carried form (Section 11), the fail-closed
+      duties included.
 
    *  A resource server that cannot obtain a valid introspection
-      response for an opaque Mission-bound token MUST refuse the request
-      rather than serve it from any cached or out-of-band belief about
-      the token's authority.
+      response or issuer-local resolution for an opaque Mission-bound
+      token MUST refuse the request rather than serve it from any cached
+      or out-of-band belief about the token's authority.
 
    The per-use freshness rule of Section 13 covers the whole response in
    this mode: each response is one observation of the token's claims and
    Mission state, not a cacheable authority record.
+
+   An AS MAY serve a resource server through issuer-local resolution: a
+   direct read of the AS's authoritative committed token and grant
+   state, not a call to an introspection endpoint.  [RFC7662]
+   introspection keeps its meaning as a network protocol.  A resource
+   server qualifies only when it is inside the issuer's trusted
+   implementation boundary and the AS authorizes it to read that state;
+   common ownership or a shared network does not by itself qualify it.
+   For each resolution, the AS:
+
+   1.  MUST resolve the presented token to that token's own issuer-
+       qualified issuance or grant record, and establish from that
+       record the token's expiry, revocation and grant validity, its
+       intended audience, the composite active state (Section 13.2), and
+       the token's own authority;
+
+   2.  MUST authorize the resource server and minimize disclosure to it
+       as Section 13.1 requires for an introspection caller; and
+
+   3.  MUST yield, when the token is active, only what an active
+       response for that token carries in this mode, audience-filtered
+       for that resource server and with act and cnf as that response
+       carries them, and never the Mission's Authority Set or other
+       authority the token does not carry.
+
+   Mission state alone, or a lookup by Mission identifier, never
+   establishes a token's validity or authority.  An unknown, invalid,
+   expired or revoked token, or a Mission that is not active, resolves
+   as inactive and yields no authority; missing or unavailable state
+   yields no valid resolution.  In the resource server duties above, the
+   resolution stands in for the introspection response, possession proof
+   and fail-closed refusal included, and each resolution is one per-use
+   observation, not a cacheable assertion.
 
 13.5.  Examples
 
@@ -4057,6 +4122,16 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-authority-server]) is the governed
    alternative.
 
+   A client performing a task under a Mission MUST NOT present, for that
+   task, a credential that is not Mission-bound, such as an ordinary
+   access token it already holds, unless a deployment-defined, trusted
+   enforcement path establishes that Mission for the request and applies
+   the Mission's authority and lifecycle controls to it.  Neither a
+   Mission identifier the client supplies nor documentation alone
+   establishes the Mission for a request, and the path confers no
+   authority beyond the Mission's.  The rule does not restrict the
+   client's workflows unrelated to the Mission (Section 19.1.2).
+
    An AS that advertises support for this document MUST include at least
    one AS-supported type in its authorization_details_types_supported
    metadata ([RFC9396]): the approved-set commitment a Mission-aware
@@ -4067,7 +4142,8 @@ Table of Contents
 
    An AS that advertises mission_bound_authorization_supported: true
    MUST also publish pushed_authorization_request_endpoint ([RFC9126]),
-   since a Mission Intent is accepted only through PAR (Section 4.1).
+   since the authorization-code path accepts a Mission Intent only
+   through PAR (Section 4.1).
 
    An AS that advertises mission_bound_authorization_supported: true
    SHOULD also advertise authorization_details_types_metadata_endpoint
@@ -4161,16 +4237,16 @@ Table of Contents
    an evidence type, whether its evidence is optional or required.
 
    A *Mission-aware Resource Server* implements resource server
-   enforcement (Section 11), from the token's own claims or from its
-   active introspection response under the introspected consumption mode
-   (Section 13.4).
+   enforcement (Section 11), from the token's own claims or, under the
+   introspected consumption mode, from its active introspection response
+   or issuer-local resolution (Section 13.4).
 
    A *Mission Client* implements the client surfaces:
 
-   *  submission of the Mission Intent via PAR only (Section 4.1),
-      proposing concrete authority, where it does, on the
-      authorization_details parameter pushed alongside mission_intent
-      (Section 4.2);
+   *  submission of the Mission Intent via PAR on the authorization-code
+      path (Section 4.1), proposing concrete authority, where it does,
+      on the authorization_details parameter pushed alongside
+      mission_intent (Section 4.2);
 
    *  reading its granted authority from the token-response
       authorization_details echo (Section 10); and
@@ -4188,7 +4264,9 @@ Table of Contents
 
    *  *Introspection* (Section 13): reporting Mission state through the
       mission token introspection response member.  Required where the
-      AS issues opaque Mission-bound tokens (Section 13.4).
+      AS issues opaque Mission-bound tokens to a resource server that
+      does not use issuer-local resolution (Section 13.4).  Issuer-local
+      resolution does not by itself support a claim of this capability.
 
    *  *Cross-Domain*: projecting a Mission so it is honored by an
       authorization server in another trust domain.  An implementation
@@ -4324,16 +4402,29 @@ Table of Contents
    is governed by no Mission state, revocation, or consent commitment.
    A deployment can designate a resource, or register a client, as
    Mission-governed; Section 4.2 states the issuance-side rules that
-   keep such a resource's tokens and such a client's requests inside a
-   Mission.
+   keep such a resource's tokens inside a Mission and refuse such a
+   client's authorization_details request that omits the Intent.
 
    On the client side, a client holding a Mission Intent does not fall
-   back to an ordinary request where Mission support is not established
-   (Section 16).
+   back to an ordinary request where Mission support is not established,
+   and a client performing a Mission's task does not present an ordinary
+   credential it already holds for that task (Section 16).
 
    On the enforcement side, a resource server for such a resource
    rejects a token lacking the mission claim and can advertise that
    requirement (Section 11, Section 17).
+
+   A held ordinary credential needs no request to the AS, and neither an
+   AS nor a resource server can generally tell that a request made with
+   one serves a Mission.  Designation closes this path at a designated
+   resource.  Mandatory mediation closes it where the client's requests
+   must pass through a runtime layer that holds custody of the client's
+   credentials ([I-D.draft-mcguinness-mission-runtime]).  A decision-
+   time join of an ordinary credential to the Mission, such as the
+   Mission Join of [I-D.draft-mcguinness-mission-authority-server], is
+   one realization of the enforcement path that Section 16 permits.  An
+   unmediated ordinary workflow at an undesignated resource remains a
+   residual that only the client's own conformance closes.
 
    The mission_bound_authorization_supported (Section 16) and
    mission_bound_authorization_required (Section 17) members are
@@ -5456,6 +5547,12 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-derivation-
               limits.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-device-authorization]
+              McGuinness, K., "Mission Device Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-device-
+              authorization.html>.
+
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -5526,6 +5623,11 @@ Table of Contents
               Writing an IANA Considerations Section in RFCs", BCP 26,
               RFC 8126, DOI 10.17487/RFC8126, June 2017,
               <https://www.rfc-editor.org/rfc/rfc8126>.
+
+   [RFC8628]  Denniss, W., Bradley, J., Jones, M., and H. Tschofenig,
+              "OAuth 2.0 Device Authorization Grant", RFC 8628,
+              DOI 10.17487/RFC8628, August 2019,
+              <https://www.rfc-editor.org/rfc/rfc8628>.
 
    [RFC8935]  Backman, A., Ed., Jones, M., Ed., Scurtescu, M., Ansari,
               M., and A. Nadalin, "Push-Based Security Event Token (SET)
@@ -6080,17 +6182,38 @@ Appendix C.  Role Mapping
    |                                                       |                   |                  |the requesting    |
    |                                                       |                   |                  |client            |
    +-------------------------------------------------------+-------------------+------------------+------------------+
-   |AGR-backed approval                                    |The principal the  |Unchanged from the|governance_record:|
-   |([I-D.draft-mcguinness-mission-approval-governance])   |Approval Governance|underlying basis  |true; kind equals |
-   |                                                       |Record's           |                  |the record's      |
-   |                                                       |accountable        |                  |accountable       |
-   |                                                       |assertion names,   |                  |assertion's own   |
-   |                                                       |equal to           |                  |mechanism (human  |
-   |                                                       |consent_principal  |                  |or policy), never |
-   |                                                       |                   |                  |a value that names|
-   |                                                       |                   |                  |the record itself,|
-   |                                                       |                   |                  |and its full      |
+   |Governed policy approval                               |The human who      |The authenticated |kind: policy,     |
+   |([I-D.draft-mcguinness-mission-approval-governance])   |approved the exact |client that       |policy naming the |
+   |                                                       |policy version the |requested the     |deciding policy's |
+   |                                                       |instance activates |activation,       |id/version (the   |
+   |                                                       |under              |distinct from     |approved policy   |
+   |                                                       |                   |consent_principal |itself or the     |
+   |                                                       |                   |                  |evaluator it      |
+   |                                                       |                   |                  |commits), with    |
+   |                                                       |                   |                  |governance_record:|
+   |                                                       |                   |                  |true; never the   |
+   |                                                       |                   |                  |requesting client |
+   +-------------------------------------------------------+-------------------+------------------+------------------+
+   |AGR-backed direct approval                             |The approving      |Equal to          |kind: human,      |
+   |([I-D.draft-mcguinness-mission-approval-governance])   |human, whose own   |consent_principal,|governance_record:|
+   |                                                       |human assertion is |as for direct     |true; policy and  |
+   |                                                       |the Approval       |approval          |service assertions|
+   |                                                       |Governance Record's|                  |contribute without|
+   |                                                       |accountable        |                  |replacing the     |
+   |                                                       |assertion          |                  |human decision,   |
+   |                                                       |                   |                  |and the full      |
    |                                                       |                   |                  |assertion set is  |
+   |                                                       |                   |                  |never collapsed   |
+   |                                                       |                   |                  |into a single     |
+   |                                                       |                   |                  |principal         |
+   +-------------------------------------------------------+-------------------+------------------+------------------+
+   |AGR-backed template or drawdown activation             |Unchanged from the |Unchanged from the|kind: policy, as  |
+   |([I-D.draft-mcguinness-mission-approval-governance])   |underlying basis,  |underlying basis  |the underlying    |
+   |                                                       |whose              |                  |basis assigns it, |
+   |                                                       |approval_basis     |                  |with              |
+   |                                                       |stands in for an   |                  |governance_record:|
+   |                                                       |accountable        |                  |true; the full    |
+   |                                                       |assertion          |                  |assertion set is  |
    |                                                       |                   |                  |never collapsed   |
    |                                                       |                   |                  |into a single     |
    |                                                       |                   |                  |principal         |
@@ -6647,6 +6770,46 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Submission via PAR scopes its PAR carriage rule to the
+      authorization-code path.  A Mission Intent travels on another
+      request only where a companion profile explicitly defines a back-
+      channel carriage that preserves the Submission envelope, the
+      processing order, derivation, the approval rules for the Mission's
+      approval basis, and the grant binding; support for a grant type
+      alone never establishes one.  The experimental Mission Device
+      Authorization profile defines such a carriage for RFC 8628 device
+      authorization (#1202).
+
+   *  Standing-Consent Bases lists governed_policy, the basis Mission
+      Approval Governance defines for a policy version a human approved,
+      and the Introduction's standing-consent companions are examples,
+      not a closed, experimental-only list.  A direct approval is always
+      a human decision: adjudication.kind is human with or without
+      governance_record, and Approval Governance states how a record
+      backing a direct approval keeps that decision as its accountable
+      assertion.  Role Mapping separates AGR-backed direct approval from
+      AGR-backed template or drawdown activation and adds governed
+      policy approval (#1185).
+
+   *  Introspected Token Consumption permits issuer-local resolution: an
+      AS can serve a resource server inside its trusted implementation
+      boundary by resolving an opaque Mission-bound token from its
+      committed token and grant state, under the same per-use, token-
+      specific, audience-filtered and fail-closed rules as an
+      introspection response.  RFC 7662 keeps its meaning, and any other
+      resource server still requires introspection (#1203).
+
+   *  Downgrade by Omission covers a client acting under a Mission with
+      an ordinary credential it already holds.  A client performing a
+      Mission's task presents no credential that is not Mission-bound
+      for that task unless a deployment-defined, trusted enforcement
+      path establishes the Mission for the request and applies its
+      authority and lifecycle controls; the section names designation
+      and mandatory mediation as the controls and the unmediated
+      residual.  The Mission-governed client registration rule is
+      described as rejecting an authorization_details request that omits
+      the Intent, not every ungoverned request (#1205).
 
    *  Mission-Bound Access Tokens: a confidential client's refresh token
       is bound to it by client authentication (Section 6 of RFC 6749),
