@@ -6184,6 +6184,13 @@ Cross-Domain:
 
 -01
 
+- Extensibility: a back-channel carriage profile can couple the
+  approval decision to the grant artifact it defines, under the same
+  sequencing and atomicity conditions, and the Mission binds to that
+  profile-defined grant. Step 7 and grant-binding resolution name the
+  case, so the Device Authorization profile's direct approval rests on
+  the core's seam (#1202).
+
 - Editorial (#910): the Introduction leads with the Mission, its
   guarantees and the residual of already-issued access tokens, and
   its chain steps carry labels. The protocol flow and its worked
@@ -6223,13 +6230,13 @@ Cross-Domain:
   introspection response. RFC 7662 keeps its meaning, and any other
   resource server still requires introspection (#1203).
 
-- Downgrade by Omission covers a client acting under a Mission with an
-  ordinary credential it already holds. A client performing a
-  Mission's task presents no credential that is not Mission-bound
-  for that task unless a deployment-defined, trusted enforcement path
-  establishes the Mission for the request and applies its authority
-  and lifecycle controls; the section names designation and mandatory
-  mediation as the controls and the unmediated residual. The
+- Authorization Server Metadata adds a client requirement: a client
+  performing a Mission's task presents no credential that is not
+  Mission-bound for that task unless a deployment-defined, trusted
+  enforcement path establishes the Mission for the request and
+  applies its authority and lifecycle controls. Downgrade by Omission
+  explains the held-credential path, names designation and mandatory
+  mediation as the controls, and states the unmediated residual. The
   Mission-governed client registration rule is described as rejecting
   an `authorization_details` request that omits the Intent, not every
   ungoverned request (#1205).
@@ -6711,13 +6718,13 @@ Cross-Domain:
   carried-as-approved) is declared in the deployment documentation
   that names the type as supported ({{other-types}}, {{discovery}});
   opaque Mission-bound tokens get a defined consumption mode,
-  introspection REQUIRED as the claims carriage with active-only
+  introspection (or, inside the issuer's trusted boundary,
+  issuer-local resolution) as the claims carriage with active-only
   authority disclosure and fail-closed resource server duties
   ({{introspected-consumption}}); the second derivation mode is
   renamed configured-mapping mode (formerly template mode) and
   framed as the no-RAR on-ramp ({{authorization-derivation}});
-  Authority Sources moved after Protocol Flow within the Overview
-  (structure only).
+  Authority Sources moved into Mission Approval (structure only).
 
 - Editorial consolidation; no normative change: every removed
   sentence restates a rule that remains normatively stated at its
@@ -6828,8 +6835,8 @@ Cross-Domain:
   commitments with `authority_hash` an audit correlator at a
   narrowed-token resource server; the subset rule named
   representational, not semantic; approval-event sequencing named as
-  an extensibility seam; Intent carriage closed to the form-encoded
-  PAR parameter.
+  an extensibility seam; Intent carriage on the authorization-code
+  path closed to PAR.
 - Operational and privacy: verification-key retention anchored to
   the audit horizon, issuer-key custody and per-artifact-class `kid`
   guidance, a Mission-record and evidence-access privacy section,
@@ -6863,16 +6870,14 @@ Cross-Domain:
   rather than REQUIRED in this revision because the family's
   standing-consent constructors (Template dispatch, Child Delegation,
   Ceiling drawdown) do not yet emit it; a future breaking-change
-  window, the same one tracked for `approver`'s removal, MAY promote
-  it once they do. A new Role Mapping table ({{role-mapping}}) covers
-  direct, relocated human approval, Template dispatch, policy
-  drawdown, ceiling drawdown, and AGR-backed approval, with direct
-  approval as the degenerate one-human case. `type` and
+  window may promote it once they do. A new Role Mapping table
+  ({{role-mapping}}) covers direct, relocated human approval, Template
+  dispatch, policy drawdown, ceiling drawdown, governed policy, and
+  AGR-backed approval, with direct approval as the degenerate
+  one-human case. `type` and
   `adjudication.kind` get their own unknown-value rule, distinct from
-  the Mission Lifecycle state rule. The top-level `approver` member is
-  DEPRECATED as a compatibility alias for
-  `approval_basis.consent_principal`, normatively equal to it; its
-  removal is deferred to the same future breaking-change window.
+  the Mission Lifecycle state rule. The top-level `approver` member
+  is removed in favor of `approval_basis.consent_principal` (#705).
 
 - References: the agent-identity reference
   draft-klrc-aiagent-auth is replaced by its successor,
@@ -6915,6 +6920,21 @@ Cross-Domain:
   the Approver's authentication or approval never yields an ID Token,
   UserInfo, or authentication session for the Subject. Self-approval
   keeps its ordinary OpenID Connect behavior (#826).
+
+- Authority Sources ({{authority-sources}}): the Mission Record gains
+  a required, immutable `authority_source` (`user_delegated`,
+  `service_owned`, or `organizational`) naming whose authority the
+  approval draws on. Approval activates authority the source already
+  holds and manufactures none: the AS verifies the derived Authority
+  Set against the source before approval (#316).
+
+- Mission Intent: its prose members carry no machine semantics
+  (#313).
+
+- Third-Party Data Subjects ({{third-party-data-subjects}}): Mission
+  approval records the Approver's authorization of the undertaking
+  and is not, by itself, evidence of a third party's consent to
+  disclosure (#344).
 
 -00
 
