@@ -6214,13 +6214,17 @@ Cross-Domain:
 
 - Editorial (#910): the Introduction leads with the Mission, its
   guarantees and the residual of already-issued access tokens, and
-  its chain steps carry labels. The protocol flow and its worked
-  example precede the Principal Model; the Implementation Map links
-  the reading paths; Terminology points to the Mission-aware Resource
-  Server role; the approval algorithm's steps carry labels; and
-  Binding the Mission to the Grant has named subsections, one for the
-  `mission_id` and `mission_expires_at` response parameters. No
-  requirement changes.
+  its chain steps carry labels. The Overview, with the protocol flow
+  and its worked example, precedes Conventions and Terminology, which
+  ends with the Principal Model; the Implementation Map links the
+  reading paths; Terminology points to the Mission-aware Resource
+  Server role, and Conformance states that role's inputs; the
+  approval algorithm's steps carry labels; Binding the Mission to the
+  Grant has named subsections, among them one for establishing and
+  resolving a binding, which the pointers to that rule cite, and one
+  for the `mission_id` and `mission_expires_at` response parameters;
+  and Mission-Bound Access Tokens introduces the JWT and opaque forms
+  together. No requirement changes.
 
 - Submission via PAR scopes its PAR carriage rule to the
   authorization-code path. A Mission Intent travels on another
