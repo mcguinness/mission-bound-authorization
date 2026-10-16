@@ -21,6 +21,40 @@ export function browserApprovalHeaders(
   return { cookie: interactionCookies ? `${interactionCookies}; ${cookie}` : cookie, "x-csrf-token": csrf };
 }
 
+/**
+ * The suite's one recorded Approver login (#826, D425): Bob logged in with
+ * `mfa` when this module loaded, once per test file. Approvals consume it and
+ * never reset it, so it ages like a real login; a suite runs well inside the
+ * floor's 300-second bound.
+ */
+export const FIXTURE_LOGIN_TIME = Math.floor(Date.now() / 1000);
+
+/** That login as an expansion approval's achieved context (the trusted integration's record). */
+export const FIXTURE_BROWSER_LOGIN = { surface: "browser" as const, acr: "mfa", auth_time: FIXTURE_LOGIN_TIME };
+
+/**
+ * A high-risk approval (#826, D425): the published approval-authentication
+ * floor accepts only an Approver logged in on the browser approval surface
+ * with an accepted `acr` (`mfa`) inside its age bound, never a headless
+ * approval service. Bob, approving for Alice unless told otherwise; `null`
+ * selects no Subject, a self-approval. The context is the suite's recorded
+ * login ({@link FIXTURE_LOGIN_TIME}), never a time stamped at the approval.
+ */
+export function floorApprovalHeaders(
+  sessions: ApprovalSessionStore,
+  uid: string,
+  interactionCookies: string,
+  approver: { sub?: string; subject?: string | null } = {},
+): Record<string, string> {
+  const subject = approver.subject === undefined ? "alice" : approver.subject;
+  return browserApprovalHeaders(
+    sessions,
+    uid,
+    { sub: approver.sub ?? "bob", acr: "mfa", auth_time: FIXTURE_LOGIN_TIME, ...(subject !== null ? { subject } : {}) },
+    interactionCookies,
+  );
+}
+
 /** Trusted test driver credential; never part of the client fixture. */
 const TOKEN = "test-only-independent-approver-759";
 const principal: ServiceTokenPrincipal = {
