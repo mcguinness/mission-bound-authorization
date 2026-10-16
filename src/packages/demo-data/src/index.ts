@@ -1925,13 +1925,16 @@ export interface ApprovalFloorPolicy {
  * payments resource resolves to the possibly env-overridden
  * CANONICAL_RESOURCE, like the ceiling.
  */
-export function loadApprovalFloor(text: string = readText("approval-floor.json")): ApprovalFloorPolicy {
+export function loadApprovalFloor(
+  text: string = readText("approval-floor.json"),
+): ApprovalFloorPolicy {
   const file = "approval-floor.json";
   let raw: unknown;
   try {
     raw = parseStrictJson(text);
   } catch (e) {
-    if (e instanceof DuplicateMemberError) throw new ConfigError(file, `ambiguous policy: ${e.message}`);
+    if (e instanceof DuplicateMemberError)
+      throw new ConfigError(file, `ambiguous policy: ${e.message}`);
     throw new ConfigError(file, `invalid JSON: ${(e as Error).message}`);
   }
   const only = (obj: Record<string, unknown>, keys: readonly string[], ctx: string) => {
@@ -1947,7 +1950,11 @@ export function loadApprovalFloor(text: string = readText("approval-floor.json")
   const floors = asArray(file, root.floors, "floors").map((rawFloor, i) => {
     const ctx = `floors[${i}]`;
     const f = asObject(file, rawFloor, ctx);
-    only(f, ["id", "applies_to", "approval_surface", "accepted_acr", "max_authentication_age_seconds"], ctx);
+    only(
+      f,
+      ["id", "applies_to", "approval_surface", "accepted_acr", "max_authentication_age_seconds"],
+      ctx,
+    );
     const id = reqString(file, f, "id", ctx);
     if (floorIds.has(id)) throw new ConfigError(file, `${ctx}.id ${id} is not unique`);
     floorIds.add(id);
@@ -1961,7 +1968,10 @@ export function loadApprovalFloor(text: string = readText("approval-floor.json")
     }
     const age = reqNumber(file, f, "max_authentication_age_seconds", ctx);
     if (!Number.isSafeInteger(age) || age <= 0) {
-      throw new ConfigError(file, `${ctx}.max_authentication_age_seconds must be a positive integer`);
+      throw new ConfigError(
+        file,
+        `${ctx}.max_authentication_age_seconds must be a positive integer`,
+      );
     }
     return {
       id,
@@ -1981,12 +1991,15 @@ export function loadApprovalFloor(text: string = readText("approval-floor.json")
     const type = reqString(file, e, "type", ctx);
     const resource = remap(reqString(file, e, "resource", ctx));
     const key = JSON.stringify([type, resource]);
-    if (seen.has(key)) throw new ConfigError(file, `${ctx} classifies ${type} at ${resource} a second time`);
+    if (seen.has(key))
+      throw new ConfigError(file, `${ctx} classifies ${type} at ${resource} a second time`);
     seen.add(key);
     const actions = asObject(file, e.actions, `${ctx}.actions`);
-    if (Object.keys(actions).length === 0) throw new ConfigError(file, `${ctx}.actions must be non-empty`);
+    if (Object.keys(actions).length === 0)
+      throw new ConfigError(file, `${ctx}.actions must be non-empty`);
     for (const [action, cls] of Object.entries(actions)) {
-      if (!isClass(cls)) throw new ConfigError(file, `${ctx}.actions.${action} is not a known action class`);
+      if (!isClass(cls))
+        throw new ConfigError(file, `${ctx}.actions.${action} is not a known action class`);
     }
     return { type, resource, actions: actions as Record<string, ApprovalFloorActionClass> };
   });
