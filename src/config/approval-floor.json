@@ -1,0 +1,44 @@
+{
+  "policy_id": "reference-approval-floor-2026-10-16",
+  "deployment_scope": "every Mission this authorization server approves through its approval interaction",
+  "floors": [
+    {
+      "id": "high-risk-authority",
+      "applies_to": ["irreversible_action", "external_commitment", "privileged_administration"],
+      "approval_surface": "browser",
+      "accepted_acr": ["mfa"],
+      "max_authentication_age_seconds": 300
+    }
+  ],
+  "classification": [
+    {
+      "type": "mission_resource_access",
+      "resource": "http://localhost:4403/mcp",
+      "actions": {
+        "payments:invoice.list": "consequential_read",
+        "payments:invoice.read": "consequential_read",
+        "payments:vendor.read": "consequential_read",
+        "payments:payment.schedule": "consequential_write",
+        "payments:payment.schedule.cancel": "consequential_write",
+        "payments:payment.execute": "irreversible_action",
+        "payments:remittance.send": "external_commitment"
+      }
+    },
+    {
+      "type": "mission_resource_access",
+      "resource": "http://localhost:4406/mcp",
+      "actions": {
+        "ledger:vendor.read": "consequential_read",
+        "ledger:journal.write": "consequential_write"
+      }
+    },
+    {
+      "type": "mission_resource_access",
+      "resource": "http://localhost:4410/api",
+      "actions": {
+        "reports:report.read": "consequential_read",
+        "reports:report.write": "consequential_write"
+      }
+    }
+  ]
+}

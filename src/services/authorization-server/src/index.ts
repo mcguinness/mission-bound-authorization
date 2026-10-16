@@ -19,6 +19,8 @@ import {
   SCOPE_PROJECTION,
   TOPOLOGY,
   USERS,
+  APPROVAL_FLOOR,
+  type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import type { ScopeProjectionMapping } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
@@ -708,6 +710,12 @@ export async function buildAuthorizationServer(opts: {
   /** Independent approver login integration; OAuth interaction cookies never establish this login. */
   approvalSessions?: ApprovalSessionStore;
   /**
+   * @spec mission#approval-authentication (#826, D425) — override the
+   * published approval-authentication floor. Defaults to the config-shipped
+   * {@link APPROVAL_FLOOR}.
+   */
+  approvalFloor?: ApprovalFloorPolicy;
+  /**
    * @spec mission#intent-submission-evidence — the deployment-GLOBAL
    * policy-required Intent Submission Evidence types (the anti-downgrade
    * hook), unioned per submission with the presenting client's registered
@@ -1142,6 +1150,7 @@ export async function buildAuthorizationServer(opts: {
       ? { requiredIntentEvidenceTypes: opts.requiredIntentEvidenceTypes }
       : {}),
     approverRoleSubs: new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub)),
+    approvalFloor: opts.approvalFloor ?? APPROVAL_FLOOR,
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
     // @spec mission#caller-authorization-and-minimization — the registered
     // RFC 7662 introspection principals (config/introspection.json).

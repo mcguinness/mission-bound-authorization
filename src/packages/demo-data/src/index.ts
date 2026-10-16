@@ -1870,6 +1870,137 @@ export function loadScopeProjection(
 /** The validated shipped scope-projection mapping (@see loadScopeProjection). */
 export const SCOPE_PROJECTION: ScopeProjectionMapping = loadScopeProjection();
 
+/**
+ * @spec mission#approval-authentication (#826, D425) — an action class of the
+ * approval-authentication floor's classification: the runtime's action
+ * classes, plus `privileged_administration`, the binding's third high-risk
+ * kind, which no shipped action carries.
+ */
+export const APPROVAL_FLOOR_ACTION_CLASSES = [
+  "non_consequential",
+  "consequential_read",
+  "consequential_write",
+  "irreversible_action",
+  "external_commitment",
+  "privileged_administration",
+] as const;
+export type ApprovalFloorActionClass = (typeof APPROVAL_FLOOR_ACTION_CLASSES)[number];
+
+/** One published floor: the classes that invoke it, and what satisfies it. */
+export interface ApprovalFloor {
+  id: string;
+  applies_to: ApprovalFloorActionClass[];
+  /** The only approval surface whose achieved context can satisfy it. */
+  approval_surface: "browser";
+  /** Accepted achieved `acr` values, by exact match; no ordering among them. */
+  accepted_acr: string[];
+  /** The longest time since the Approver authenticated that still satisfies it. */
+  max_authentication_age_seconds: number;
+}
+
+/** The AS-owned class of each action of one authority type at one resource. */
+export interface ApprovalFloorClassification {
+  type: string;
+  resource: string;
+  actions: Record<string, ApprovalFloorActionClass>;
+}
+
+/**
+ * @spec mission#approval-authentication (#826, D425) — the published
+ * approval-authentication floor: its deployment scope, the floors, and the
+ * AS-owned classification of every action the AS can admit. Nothing a client
+ * sends classifies authority.
+ */
+export interface ApprovalFloorPolicy {
+  policy_id: string;
+  deployment_scope: string;
+  floors: ApprovalFloor[];
+  classification: ApprovalFloorClassification[];
+}
+
+/**
+ * Load + validate config/approval-floor.json. Parsed strictly: a duplicated
+ * member, an unknown member, an unknown action class, an empty floor or a
+ * second classification for one type and resource refuses at load. The
+ * payments resource resolves to the possibly env-overridden
+ * CANONICAL_RESOURCE, like the ceiling.
+ */
+export function loadApprovalFloor(text: string = readText("approval-floor.json")): ApprovalFloorPolicy {
+  const file = "approval-floor.json";
+  let raw: unknown;
+  try {
+    raw = parseStrictJson(text);
+  } catch (e) {
+    if (e instanceof DuplicateMemberError) throw new ConfigError(file, `ambiguous policy: ${e.message}`);
+    throw new ConfigError(file, `invalid JSON: ${(e as Error).message}`);
+  }
+  const only = (obj: Record<string, unknown>, keys: readonly string[], ctx: string) => {
+    for (const k of Object.keys(obj)) {
+      if (!keys.includes(k)) throw new ConfigError(file, `${ctx} has unknown member ${k}`);
+    }
+  };
+  const isClass = (v: unknown): v is ApprovalFloorActionClass =>
+    typeof v === "string" && (APPROVAL_FLOOR_ACTION_CLASSES as readonly string[]).includes(v);
+  const root = asObject(file, raw, "approval-floor");
+  only(root, ["policy_id", "deployment_scope", "floors", "classification"], "approval-floor");
+  const floorIds = new Set<string>();
+  const floors = asArray(file, root.floors, "floors").map((rawFloor, i) => {
+    const ctx = `floors[${i}]`;
+    const f = asObject(file, rawFloor, ctx);
+    only(f, ["id", "applies_to", "approval_surface", "accepted_acr", "max_authentication_age_seconds"], ctx);
+    const id = reqString(file, f, "id", ctx);
+    if (floorIds.has(id)) throw new ConfigError(file, `${ctx}.id ${id} is not unique`);
+    floorIds.add(id);
+    const appliesTo = reqStringArray(file, f, "applies_to", ctx);
+    if (appliesTo.length === 0 || !appliesTo.every(isClass)) {
+      throw new ConfigError(file, `${ctx}.applies_to must name one or more known action classes`);
+    }
+    const acr = reqStringArray(file, f, "accepted_acr", ctx);
+    if (acr.length === 0 || acr.some((a) => a.length === 0) || new Set(acr).size !== acr.length) {
+      throw new ConfigError(file, `${ctx}.accepted_acr must be distinct non-empty strings`);
+    }
+    const age = reqNumber(file, f, "max_authentication_age_seconds", ctx);
+    if (!Number.isSafeInteger(age) || age <= 0) {
+      throw new ConfigError(file, `${ctx}.max_authentication_age_seconds must be a positive integer`);
+    }
+    return {
+      id,
+      applies_to: appliesTo as ApprovalFloorActionClass[],
+      approval_surface: reqEnum(file, f, "approval_surface", ctx, ["browser"] as const),
+      accepted_acr: acr,
+      max_authentication_age_seconds: age,
+    };
+  });
+  if (floors.length === 0) throw new ConfigError(file, "floors must be non-empty");
+  const remap = (uri: string) => (uri === DEFAULT_PAYMENTS_RESOURCE ? CANONICAL_RESOURCE : uri);
+  const seen = new Set<string>();
+  const classification = asArray(file, root.classification, "classification").map((rawEntry, i) => {
+    const ctx = `classification[${i}]`;
+    const e = asObject(file, rawEntry, ctx);
+    only(e, ["type", "resource", "actions"], ctx);
+    const type = reqString(file, e, "type", ctx);
+    const resource = remap(reqString(file, e, "resource", ctx));
+    const key = JSON.stringify([type, resource]);
+    if (seen.has(key)) throw new ConfigError(file, `${ctx} classifies ${type} at ${resource} a second time`);
+    seen.add(key);
+    const actions = asObject(file, e.actions, `${ctx}.actions`);
+    if (Object.keys(actions).length === 0) throw new ConfigError(file, `${ctx}.actions must be non-empty`);
+    for (const [action, cls] of Object.entries(actions)) {
+      if (!isClass(cls)) throw new ConfigError(file, `${ctx}.actions.${action} is not a known action class`);
+    }
+    return { type, resource, actions: actions as Record<string, ApprovalFloorActionClass> };
+  });
+  return {
+    policy_id: reqString(file, root, "policy_id", "approval-floor"),
+    deployment_scope: reqString(file, root, "deployment_scope", "approval-floor"),
+    floors,
+    classification,
+  };
+}
+
+/** The validated shipped approval-authentication floor (@see loadApprovalFloor). */
+export const APPROVAL_FLOOR: ApprovalFloorPolicy = loadApprovalFloor();
+
 /** Build a confidential client (private_key_jwt) from a seed: fresh key per boot (D25). */
 async function buildSeededClient(client: ClientSeed): Promise<SeededClient> {
   const { publicKey, privateKey } = await generateKeyPair(client.key.alg, { extractable: true });
