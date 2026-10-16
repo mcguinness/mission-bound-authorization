@@ -72,6 +72,8 @@ let consoleClient: LifecycleTestClient;
 let readerClient: LifecycleTestClient;
 /** Registered, authenticates, holds no lifecycle grant. */
 let ungrantedClient: LifecycleTestClient;
+/** Holds `mission_lifecycle`, but its registered key signs ES384, an algorithm the endpoint does not advertise. */
+let es384Client: LifecycleTestClient;
 let approvals = 0;
 
 const proposal = (): AuthorityEntry[] => [
@@ -125,11 +127,13 @@ beforeAll(async () => {
   consoleClient = await newLifecycleClient("security-console");
   readerClient = await newLifecycleClient("status-reader");
   ungrantedClient = await newLifecycleClient("ungranted-tool");
+  es384Client = await newLifecycleClient("es384-tool", "ES384");
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    testClients: [consoleClient.metadata, readerClient.metadata, ungrantedClient.metadata],
+    testClients: [consoleClient.metadata, readerClient.metadata, ungrantedClient.metadata, es384Client.metadata],
     lifecycleClientGrants: {
       [consoleClient.clientId]: [MISSION_LIFECYCLE_SCOPE],
+      [es384Client.clientId]: [MISSION_LIFECYCLE_SCOPE],
       [readerClient.clientId]: [MISSION_STATUS_SCOPE],
     },
   });
@@ -323,6 +327,33 @@ describe("Mission Lifecycle endpoint transport and client authentication (@spec 
       expect(refused.json?.error, label).toBe("invalid_client");
     }
     expect(as.kernel.get(m.id)?.state).toBe("suspended");
+  });
+});
+
+describe("Mission Lifecycle endpoint client-assertion algorithms (@spec status#mission-status-authentication, status#as-metadata, #1191)", () => {
+  it("refuses an assertion signed with an algorithm the endpoint does not advertise, none included, from a client registered for it", async () => {
+    const m = approve();
+    const meta = await discovery(ISSUER);
+    expect(meta.mission_lifecycle_endpoint_auth_signing_alg_values_supported).not.toContain("ES384");
+    // A validly signed ES384 assertion from a client whose registered key is ES384.
+    const es384 = await lifecycleRequest(ISSUER, es384Client, { mission_id: m.id, operation: "revoke", nonce: nonce() });
+    expect(es384.status, es384.text).toBe(400);
+    expect(es384.json?.error).toBe("invalid_client");
+    // An unsecured (`alg` none) assertion naming the console client.
+    const now = Math.floor(Date.now() / 1000);
+    const part = (o: Record<string, unknown>) => Buffer.from(JSON.stringify(o)).toString("base64url");
+    const unsecured = `${part({ alg: "none", typ: "client-authentication+jwt" })}.${part({
+      iss: consoleClient.clientId,
+      sub: consoleClient.clientId,
+      aud: ISSUER,
+      iat: now,
+      exp: now + 60,
+      jti: crypto.randomUUID(),
+    })}.`;
+    const none = await op({ mission_id: m.id, operation: "revoke", nonce: nonce() }, unsecured);
+    expect(none.status, none.text).toBe(400);
+    expect(none.json?.error).toBe("invalid_client");
+    expect(as.kernel.get(m.id)?.state).toBe("active");
   });
 });
 

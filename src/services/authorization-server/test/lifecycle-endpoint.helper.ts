@@ -14,19 +14,22 @@ export const CLIENT_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-typ
 export interface LifecycleTestClient {
   clientId: string;
   kid: string;
+  /** The JWS algorithm its key signs with. */
+  alg: string;
   privateKey: CryptoKey;
   /** For `buildAuthorizationServer({ testClients })`. */
   metadata: Record<string, unknown>;
 }
 
 /** A private-key-JWT client that holds no grant at /token, only a key. */
-export async function newLifecycleClient(clientId: string): Promise<LifecycleTestClient> {
-  const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true });
+export async function newLifecycleClient(clientId: string, alg = "ES256"): Promise<LifecycleTestClient> {
+  const { privateKey, publicKey } = await generateKeyPair(alg, { extractable: true });
   const kid = `${clientId}-key`;
-  const jwk = { ...((await exportJWK(publicKey)) as JWK), kid, alg: "ES256", use: "sig" };
+  const jwk = { ...((await exportJWK(publicKey)) as JWK), kid, alg, use: "sig" };
   return {
     clientId,
     kid,
+    alg,
     privateKey: privateKey as CryptoKey,
     metadata: {
       client_id: clientId,
@@ -35,7 +38,7 @@ export async function newLifecycleClient(clientId: string): Promise<LifecycleTes
       response_types: [],
       redirect_uris: [],
       token_endpoint_auth_method: "private_key_jwt",
-      token_endpoint_auth_signing_alg: "ES256",
+      token_endpoint_auth_signing_alg: alg,
       jwks: { keys: [jwk] },
     },
   };
@@ -71,7 +74,7 @@ export async function lifecycleClientAssertion(
   if (options.jti !== null) claims.jti = options.jti ?? crypto.randomUUID();
   const jwt = new SignJWT(claims)
     .setProtectedHeader({
-      alg: "ES256",
+      alg: client.alg,
       kid: client.kid,
       ...(options.typ === null ? {} : { typ: options.typ ?? "client-authentication+jwt" }),
     })
