@@ -2890,9 +2890,20 @@ they read current state rather than infer it from token validity.
 
 # Mission-Bound Access Tokens {#mission-bound-tokens}
 
-Access tokens issued under a Mission are JWTs per {{RFC9068}}, which
-fixes the required claims (including `jti`), the `at+jwt` `typ`
-header parameter, and resource server validation
+An access token issued under a Mission takes one of two forms. The
+self-contained form is a JWT per {{RFC9068}}, which a resource server
+can enforce from the token alone ({{rs-enforcement}}); this
+document's token-carried enforcement assumes it. The other form, an
+opaque Mission-bound token, is profiled only under the introspected
+consumption mode ({{introspected-consumption}}), where introspection
+or issuer-local resolution is its claims carriage, with the same
+enforcement obligations. A deployment whose AS can issue neither
+deploys a Mission Authority Server
+({{I-D.draft-mcguinness-mission-authority-server}}), which governs
+ordinary tokens at the enforcement layer.
+
+{{RFC9068}} fixes the JWT's required claims (including `jti`), the
+`at+jwt` `typ` header parameter, and resource server validation
 ({{Section 2.1 of RFC9068}}, {{Section 2.2 of RFC9068}},
 {{Section 4 of RFC9068}}). In addition to what that profile requires,
 a derived token:
@@ -2925,15 +2936,6 @@ A delegated token is sender-constrained to the delegate's own key
 ({{delegation}}); the cross-domain companion requires sender-constraint
 for credentials that cross a trust domain
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
-
-This document's token-carried enforcement assumes the JWT above. An
-opaque Mission-bound token is profiled only under the introspected
-consumption mode ({{introspected-consumption}}), where introspection
-or issuer-local resolution is its claims carriage, with the same
-enforcement obligations. A
-deployment whose AS can issue neither deploys a Mission Authority
-Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
-governs ordinary tokens at the enforcement layer.
 
 An AS MUST publish its token verification keys (for example, at its
 {{RFC8414}} `jwks_uri`, as {{Section 4 of RFC9068}} recommends);
