@@ -259,7 +259,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
           { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions, constraints },
         ]),
       },
-      authServer().approverServiceToken,
+      authServer().approverConsole,
     );
   const issueRead = () => issue(["payments:invoice.read"], { vendors: ["acme"] });
 

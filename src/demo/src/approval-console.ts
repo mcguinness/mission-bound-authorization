@@ -1,6 +1,22 @@
 /** Trusted exhibit/console driver. Never imported by the agent OAuth helper. */
-import { APPROVAL_SUBJECT_HEADER } from "@mission/authorization-server";
+import { APPROVAL_SUBJECT_HEADER, type ApprovalSessionStore } from "@mission/authorization-server";
 import { jarClosures, redeemMissionApproval, submitMissionApproval, type CookieJar, type IssueOpts, type SubmittedApproval } from "./oauth-client.js";
+
+/**
+ * The console's Approver on the AS's trusted browser approval surface (#826,
+ * D425). Each approval logs the Approver in through the AS's trusted login
+ * store, which records the `acr` that login achieved and the time it
+ * happened, bound to the one interaction. The approval-authentication floor
+ * accepts only such a login: a headless approval service's registration is
+ * not an authentication of the Approver.
+ */
+export interface ApprovalConsole {
+  sessions: ApprovalSessionStore;
+  approver: { sub: string; acr: string };
+}
+
+/** How the console authenticates: a browser login, or a headless approval service token. */
+export type ApproverCredential = ApprovalConsole | string;
 
 /**
  * The trusted console resolves an approval. `subject` is the Subject the
@@ -8,14 +24,24 @@ import { jarClosures, redeemMissionApproval, submitMissionApproval, type CookieJ
  * demo's approver Bob approves for Alice; `null` is a self-approval. The
  * agent's PAR never names it.
  */
-export async function resolveMissionApproval(asUrl: string, approverToken: string, pending: { uid: string; jar: CookieJar }, decision: "approve" | "deny", subject: string | null = "alice"): Promise<string | undefined> {
+export async function resolveMissionApproval(asUrl: string, approver: ApproverCredential, pending: { uid: string; jar: CookieJar }, decision: "approve" | "deny", subject: string | null = "alice"): Promise<string | undefined> {
   const { cookieHeader, storeCookies } = jarClosures(pending.jar);
+  let identity: Record<string, string>;
+  if (typeof approver === "string") {
+    identity = { cookie: cookieHeader(), "x-service-token": approver, ...(subject !== null ? { [APPROVAL_SUBJECT_HEADER]: subject } : {}) };
+  } else {
+    const login = approver.sessions.establish(pending.uid, {
+      sub: approver.approver.sub,
+      acr: approver.approver.acr,
+      auth_time: Math.floor(Date.now() / 1000),
+      ...(subject !== null ? { subject } : {}),
+    });
+    const interaction = cookieHeader();
+    identity = { cookie: interaction ? `${interaction}; ${login.cookie}` : login.cookie, "x-csrf-token": login.csrf };
+  }
   let res = await fetch(`${asUrl}/interaction/${pending.uid}/decide`, {
     method: "POST", redirect: "manual",
-    headers: {
-      "content-type": "application/json", cookie: cookieHeader(), "x-service-token": approverToken,
-      ...(subject !== null ? { [APPROVAL_SUBJECT_HEADER]: subject } : {}),
-    },
+    headers: { "content-type": "application/json", ...identity },
     body: JSON.stringify({ decision }),
   });
   if (res.status >= 400) throw new Error(`approval resolution refused: ${res.status}`);
@@ -37,17 +63,17 @@ export async function resolveMissionApproval(asUrl: string, approverToken: strin
   return code;
 }
 
-export async function completeMissionApproval(asUrl: string, clientKey: Record<string, unknown>, pending: { uid: string; jar: CookieJar; par?: SubmittedApproval["par"] }, approverToken: string) {
-  const code = await resolveMissionApproval(asUrl, approverToken, pending, "approve");
+export async function completeMissionApproval(asUrl: string, clientKey: Record<string, unknown>, pending: { uid: string; jar: CookieJar; par?: SubmittedApproval["par"] }, approver: ApproverCredential) {
+  const code = await resolveMissionApproval(asUrl, approver, pending, "approve");
   return redeemMissionApproval(asUrl, clientKey, { code: code!, ...(pending.par ? { par: pending.par } : {}) });
 }
 
-export async function denyMissionApproval(asUrl: string, pending: { uid: string; jar: CookieJar }, approverToken: string): Promise<void> {
-  await resolveMissionApproval(asUrl, approverToken, pending, "deny");
+export async function denyMissionApproval(asUrl: string, pending: { uid: string; jar: CookieJar }, approver: ApproverCredential): Promise<void> {
+  await resolveMissionApproval(asUrl, approver, pending, "deny");
 }
 
 /** Trusted driver orchestrates distinct client and approver roles before handing off a token. */
-export async function issueMissionToken(asUrl: string, clientKey: Record<string, unknown>, opts: IssueOpts, approverToken: string) {
+export async function issueMissionToken(asUrl: string, clientKey: Record<string, unknown>, opts: IssueOpts, approver: ApproverCredential) {
   const pending = await submitMissionApproval(asUrl, clientKey, opts);
-  return completeMissionApproval(asUrl, clientKey, pending, approverToken);
+  return completeMissionApproval(asUrl, clientKey, pending, approver);
 }

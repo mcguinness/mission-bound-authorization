@@ -9,6 +9,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
+  ApprovalSessionStore,
   type AuthorityEntry,
   buildAuthorizationServer,
   MISSION_APPROVAL_SCOPE,
@@ -83,6 +84,7 @@ import { signStatement, TransparencyService, type Receipt, type SignedStatement 
 import { ConsoleBff } from "@mission/console-bff";
 import type { AccessRequestService } from "@mission/access-request";
 import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResourcePolicy } from "./resource-policy-store.js";
+import type { ApprovalConsole } from "./approval-console.js";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
 export const ISS = TOPOLOGY.issuers.as;
@@ -115,6 +117,14 @@ export interface AuthServerExtras {
   childClientJwk: Record<string, unknown>;
   /** Trusted console/driver only. Never included in agent dependencies or tool results. */
   approverServiceToken: string;
+  /**
+   * @spec mission#approval-authentication (#826, D425) — the trusted
+   * console's Approver on the browser approval surface: Bob, logging in with
+   * `mfa` at each approval. A high-risk approval needs it, because the
+   * published approval-authentication floor accepts no headless approval
+   * service's registration. Trusted console/driver only, like the token.
+   */
+  approverConsole: ApprovalConsole;
   /** AROP Deferred Token Response store (drive open/approve/deny headlessly). */
   deferrals: DeferralStore;
   ras: ResourceAuthorizationServer;
@@ -414,6 +424,7 @@ export async function composeStack(opts: {
       ],
     ]);
     const approverServiceToken = crypto.randomUUID();
+    const approvalSessions = new ApprovalSessionStore();
     // D332: the as-native target's AS runs exactly AS_NATIVE_CAPABILITIES,
     // plus `dev-token` only under the test fixture. The shared demo passes no
     // set, which is the full reference assembly.
@@ -426,6 +437,7 @@ export async function composeStack(opts: {
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
+      approvalSessions,
       serviceTokenPrincipals: {
         [approverServiceToken]: { principal_id: "svc:approver-console", scopes: [MISSION_APPROVAL_SCOPE],
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
@@ -605,6 +617,7 @@ export async function composeStack(opts: {
       agentClientJwk: as.agentClientJwk,
       childClientJwk: as.childClientJwk,
       approverServiceToken,
+      approverConsole: { sessions: approvalSessions, approver: { sub: "bob", acr: "mfa" } },
       deferrals: as.deferrals,
       ras,
       saas,

@@ -224,7 +224,7 @@ async function main() {
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ]);
-  const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails }, stack.authServer.approverServiceToken);
+  const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails }, stack.authServer.approverConsole);
   const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST", issued.accessToken);
   // @spec authority-server#mission-join (#557 review point 5) — validateToken()
   // returns MissionBoundTokenFacts specifically (mission REQUIRED, never
@@ -475,7 +475,7 @@ async function main() {
         return c.json({ approved: rec.state === "active", state: rec.state, ...(rec.missionId ? { missionId: rec.missionId } : {}) });
       }
       if (decision === "deny") {
-        await denyMissionApproval(asUrl, { uid: rec.submitted.uid, jar: rec.submitted.jar }, stack.authServer!.approverServiceToken);
+        await denyMissionApproval(asUrl, { uid: rec.submitted.uid, jar: rec.submitted.jar }, stack.authServer!.approverConsole);
         rec.state = "denied";
         return c.json({ approved: false, state: "denied" });
       }
@@ -488,7 +488,7 @@ async function main() {
           uid: rec.submitted.uid,
           jar: rec.submitted.jar,
           par: rec.submitted.par,
-        }, stack.authServer!.approverServiceToken);
+        }, stack.authServer!.approverConsole);
       } catch (e) {
         return c.json({ approved: false, error: (e as Error).message }, 400);
       }

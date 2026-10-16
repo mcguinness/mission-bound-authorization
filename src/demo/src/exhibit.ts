@@ -873,7 +873,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "the Mission carries remittance.send with a direct approval_basis, distinct approver bob != subject alice, and NO template lineage.",
   );
   hop("Approver (Bob)", "AS", "PAR → authorize → decide → token (ordinary human approval)", "HTTP");
-  const humanIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent() }, as.approverServiceToken);
+  const humanIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent() }, as.approverConsole);
   const humanClaims = decodeClaims(humanIssued.accessToken);
   const humanMissionId = (humanClaims.mission as { id: string }).id;
   const humanRecord = stack.kernel.get(humanMissionId);
@@ -980,7 +980,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "the fresh task carries remittance.send again; the contained mission never regains it mid-run.",
   );
   hop("Approver (Bob)", "AS", "PAR → authorize → decide → token (a fresh human approval)", "HTTP");
-  const restoreIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent() }, as.approverServiceToken);
+  const restoreIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent() }, as.approverConsole);
   const restoreClaims = decodeClaims(restoreIssued.accessToken);
   const restoredHumanMissionId = (restoreClaims.mission as { id: string }).id;
   const restoredRecord = stack.kernel.get(restoredHumanMissionId);
@@ -1179,7 +1179,7 @@ async function main() {
   // OAuth only: Bob approves for Alice, and an approval is never Alice's
   // authentication, so this flow carries no `openid` and yields no ID Token
   // (#826).
-  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, authorizationDetails }, as.approverServiceToken);
+  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, authorizationDetails }, as.approverConsole);
 
   // PAR (Agent → AS, real HTTP): push the request carrying the mission_intent.
   hop("Agent", "AS", "POST /request", "HTTP");
