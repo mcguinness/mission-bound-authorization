@@ -41,7 +41,16 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { asTokenSigningKeyPair, MTLS_CNF, resignWithCnf, tokenRequestOnce } from "./subject-possession.helper.js";
+import {
+  asTokenSigningKeyPair,
+  BARE_REFUSAL_MEMBERS,
+  INVALID_ACTOR_TOKENS,
+  INVALID_SUBJECT_TOKENS,
+  MTLS_CNF,
+  resignWith,
+  resignWithCnf,
+  tokenRequestOnce,
+} from "./subject-possession.helper.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   JWT_TOKEN_TYPE,
@@ -561,7 +570,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     expect(as.kernel.get(p.missionId)?.derivation_count).toBe(derivBefore);
   });
 
-  it("possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)", async () => {
+  it("possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_request)", async () => {
     const wrongDpop = await generateKeyPair("ES256", { extractable: true });
     const res = await tokenRequestWithDpop(wrongDpop, {
       grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
@@ -583,7 +592,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("confirmation key");
   });
 
@@ -642,7 +651,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     expect(body.mission_id).toBeTruthy();
   });
 
-  it("actor_token (verification step 4): an actor_token whose cnf is NOT the presenter key is refused (invalid_grant)", async () => {
+  it("actor_token (verification step 4): an actor_token whose cnf is NOT the presenter key is refused (invalid_request)", async () => {
     const otherKey = await generateKeyPair("ES256", { extractable: true });
     const otherJkt = await calculateJwkThumbprint(await exportJWK(otherKey.publicKey));
     // Signed with the PRESENTER key (so verification against the DPoP key succeeds),
@@ -662,7 +671,7 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("not sender-constrained to the presenter key");
   });
 
@@ -963,7 +972,8 @@ describe("subject-token possession at the child-creation exchange (@spec child-d
     const p = await issueParentMission();
     const res = await refusal(await send(childParams(await resignWithCnf(p.accessToken, asSigningKey, MTLS_CNF)), await freshProof()));
     expect(res.status, JSON.stringify(res)).toBe(400);
-    expect(res.error).toBe("invalid_grant");
+    // RFC 8693 Section 2.2.2 (#1178): an unacceptable subject_token.
+    expect(res.error).toBe("invalid_request");
     expect(res.error_description).toContain("sender constraint");
     expect(res.error_description).not.toContain("not sender-constrained");
   });
@@ -995,5 +1005,94 @@ describe("subject-token possession at the child-creation exchange (@spec child-d
     expect(res.error).toBe("invalid_request");
     expect(res.error_description).toContain("predecessor");
     expect(as.kernel.findChildren(p.missionId)).toHaveLength(0);
+  });
+});
+
+describe("invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178)", () => {
+  /**
+   * Send one child-creation exchange as ap-agent under `proof` (a fresh proof
+   * of the parent token's key unless given) and report the response with what
+   * the exchange left behind: the parent's count and children, and any
+   * reservation of the operation's creation_request_id.
+   */
+  async function attempt(
+    p: { missionId: string },
+    subjectToken: string,
+    extra: Record<string, string> = {},
+    proof?: string,
+  ) {
+    const count = as.kernel.get(p.missionId)?.derivation_count;
+    const children = as.kernel.findChildren(p.missionId).length;
+    const creationRequestId = crypto.randomUUID();
+    const res = await tokenRequestOnce(
+      ISSUER,
+      {
+        grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+        subject_token: subjectToken,
+        subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        requested_token_type: JWT_TOKEN_TYPE,
+        creation_request_id: creationRequestId,
+        mission_intent: JSON.stringify({
+          intent: { goal: "Extract Acme invoices", target_resources: [RESOURCE], expires_at: PARENT_EXP },
+        }),
+        authorization_details: JSON.stringify(childAuthority()),
+        child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
+        ...extra,
+      },
+      await clientAssertion(),
+      proof ?? (await dpopProof(`${ISSUER}/token`, "POST")),
+    );
+    const body = (await res.json()) as Record<string, unknown>;
+    return {
+      status: res.status,
+      body,
+      countUnchanged: as.kernel.get(p.missionId)?.derivation_count === count,
+      childrenUnchanged: as.kernel.findChildren(p.missionId).length === children,
+      reserved: as.creationIdempotency.find("ap-agent", creationRequestId) !== undefined,
+    };
+  }
+
+  /** The refusal is invalid_request, carries no diagnostic, and creates, reserves and counts nothing. */
+  function expectRefused(r: Awaited<ReturnType<typeof attempt>>, description: string): void {
+    expect(r.status, JSON.stringify(r.body)).toBe(400);
+    expect(r.body.error).toBe("invalid_request");
+    expect(r.body.error_description).toContain(description);
+    expect(Object.keys(r.body).sort()).toEqual([...BARE_REFUSAL_MEMBERS]);
+    expect(r.countUnchanged).toBe(true);
+    expect(r.childrenUnchanged).toBe(true);
+    expect(r.reserved).toBe(false);
+  }
+
+  it.each(INVALID_SUBJECT_TOKENS)(
+    "refuses %s with invalid_request, no Mission diagnostic, and no child, reservation or count",
+    async (_name, make, description) => {
+      const p = await issueParentMission();
+      expectRefused(await attempt(p, await make(p.accessToken, asSigningKey)), description);
+    },
+  );
+
+  it("refuses a subject_token without readable authorization_details with invalid_request, creating nothing", async () => {
+    const p = await issueParentMission();
+    const token = await resignWith(p.accessToken, asSigningKey, (c) => delete c.authorization_details);
+    expectRefused(await attempt(p, token), "no readable authorization_details");
+  });
+
+  it.each(INVALID_ACTOR_TOKENS)(
+    "refuses %s with invalid_request, no Mission diagnostic, and no child, reservation or count",
+    async (_name, make, description) => {
+      const p = await issueParentMission();
+      expectRefused(await attempt(p, p.accessToken, { actor_token: await make(dpopKeys), actor_token_type: JWT_TOKEN_TYPE }), description);
+    },
+  );
+
+  it("keeps invalid_dpop_proof for a proof that fails its own checks, distinct from a valid proof under another key", async () => {
+    const p = await issueParentMission();
+    // Signed by the token's own key, but for another endpoint: the proof is invalid.
+    const r = await attempt(p, p.accessToken, {}, await dpopProof(`${ISSUER}/elsewhere`, "POST"));
+    expect(r.status, JSON.stringify(r.body)).toBe(400);
+    expect(r.body.error).toBe("invalid_dpop_proof");
+    expect(r.body.mission_error).toBeUndefined();
+    expect(r.childrenUnchanged).toBe(true);
+    expect(r.reserved).toBe(false);
   });
 });

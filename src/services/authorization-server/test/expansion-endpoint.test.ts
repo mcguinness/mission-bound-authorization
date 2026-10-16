@@ -44,7 +44,15 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { asTokenSigningKeyPair, MTLS_CNF, resignWithCnf, tokenRequestOnce } from "./subject-possession.helper.js";
+import {
+  asTokenSigningKeyPair,
+  BARE_REFUSAL_MEMBERS,
+  INVALID_ACTOR_TOKENS,
+  INVALID_SUBJECT_TOKENS,
+  MTLS_CNF,
+  resignWithCnf,
+  tokenRequestOnce,
+} from "./subject-possession.helper.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   JWT_TOKEN_TYPE,
@@ -978,7 +986,7 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
     expect(body.error_description).toContain("refresh token");
   });
 
-  it("possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)", async () => {
+  it("possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_request)", async () => {
     const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);
     const wrongDpop = await generateKeyPair("ES256", { extractable: true });
     const res = await tokenRequestWithDpop(wrongDpop, {
@@ -994,7 +1002,7 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("confirmation key");
   });
 });
@@ -1332,7 +1340,8 @@ describe("subject-token possession at the expansion exchange (@spec expansion#re
     const pred = await issuePredecessor(["payments:invoice.read"]);
     const res = await refusal(await send(expandParams(await resignWithCnf(pred.accessToken, asSigningKey, MTLS_CNF)), await freshProof()));
     expect(res.status, JSON.stringify(res)).toBe(400);
-    expect(res.error).toBe("invalid_grant");
+    // RFC 8693 Section 2.2.2 (#1178): an unacceptable subject_token.
+    expect(res.error).toBe("invalid_request");
     expect(res.error_description).toContain("sender constraint");
     expect(res.error_description).not.toContain("not sender-constrained");
   });
@@ -1373,5 +1382,88 @@ describe("subject-token possession at the expansion exchange (@spec expansion#re
     expect(res.error).toBe("invalid_request");
     expect(res.error_description).toContain("child_actor");
     expect(res.deferral_code).toBeUndefined();
+  });
+});
+
+describe("invalid or unacceptable subject and actor tokens at the expansion exchange (@spec expansion#verification-order, RFC 8693 Section 2.2.2, #1178)", () => {
+  const WIDE = ["payments:invoice.read", "payments:remittance.send"];
+
+  /**
+   * Send one widening expansion exchange as ap-agent under `proof` (a fresh
+   * proof of the predecessor token's key unless given) and report the
+   * response with what the exchange left behind: the predecessor's state and
+   * count, and any reservation of the operation's creation_request_id.
+   */
+  async function attempt(
+    pred: { missionId: string },
+    subjectToken: string,
+    extra: Record<string, string> = {},
+    proof?: string,
+  ) {
+    const count = as.kernel.get(pred.missionId)?.derivation_count;
+    const creationRequestId = crypto.randomUUID();
+    const res = await tokenRequestOnce(
+      ISSUER,
+      {
+        grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+        subject_token: subjectToken,
+        subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        mission_intent: intentJson("Widen to add remittance", WIDE),
+        authorization_details: JSON.stringify(authority(WIDE)),
+        creation_request_id: creationRequestId,
+        ...extra,
+      },
+      await clientAssertion(),
+      proof ?? (await dpopProof(`${ISSUER}/token`, "POST")),
+    );
+    const body = (await res.json()) as Record<string, unknown>;
+    return {
+      status: res.status,
+      body,
+      untouched:
+        as.kernel.get(pred.missionId)?.state === "active" && as.kernel.get(pred.missionId)?.derivation_count === count,
+      reserved: as.creationIdempotency.find("ap-agent", creationRequestId) !== undefined,
+    };
+  }
+
+  /** The refusal is invalid_request, carries no diagnostic, and defers, reserves and counts nothing. */
+  function expectRefused(r: Awaited<ReturnType<typeof attempt>>, description: string): void {
+    expect(r.status, JSON.stringify(r.body)).toBe(400);
+    expect(r.body.error).toBe("invalid_request");
+    expect(r.body.error_description).toContain(description);
+    expect(Object.keys(r.body).sort()).toEqual([...BARE_REFUSAL_MEMBERS]);
+    expect(r.untouched).toBe(true);
+    expect(r.reserved).toBe(false);
+  }
+
+  it.each(INVALID_SUBJECT_TOKENS)(
+    "refuses %s with invalid_request, no Mission diagnostic, and no deferral, reservation or count",
+    async (_name, make, description) => {
+      const pred = await issuePredecessor(["payments:invoice.read"]);
+      expectRefused(await attempt(pred, await make(pred.accessToken, asSigningKey)), description);
+    },
+  );
+
+  it.each(INVALID_ACTOR_TOKENS)(
+    "refuses %s with invalid_request, no Mission diagnostic, and no deferral, reservation or count",
+    async (_name, make, description) => {
+      const pred = await issuePredecessor(["payments:invoice.read"]);
+      expectRefused(
+        await attempt(pred, pred.accessToken, { actor_token: await make(dpopKeys), actor_token_type: JWT_TOKEN_TYPE }),
+        description,
+      );
+    },
+  );
+
+  it("keeps invalid_dpop_proof for a proof that fails its own checks, distinct from a valid proof under another key", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    // Signed by the token's own key, but for another endpoint: the proof is invalid.
+    const r = await attempt(pred, pred.accessToken, {}, await dpopProof(`${ISSUER}/elsewhere`, "POST"));
+    expect(r.status, JSON.stringify(r.body)).toBe(400);
+    expect(r.body.error).toBe("invalid_dpop_proof");
+    expect(r.body.mission_error).toBeUndefined();
+    expect(r.untouched).toBe(true);
+    expect(r.reserved).toBe(false);
   });
 });

@@ -45,6 +45,16 @@ import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE, presentedTokenAuthority } from "../src/adapters/continuation-grant.js";
 import { buildAuthorizationServer, type BuiltAs, SourceUnavailableError } from "../src/index.js";
 import { GateError } from "../src/kernel/kernel.js";
+import {
+  BARE_REFUSAL_MEMBERS,
+  forge,
+  INVALID_SUBJECT_TOKENS,
+  MTLS_CNF,
+  resignWith,
+  resignWithCnf,
+  type SubjectTokenCase,
+  UNHELD_KEY_CNF,
+} from "./subject-possession.helper.js";
 
 const PORT = 14480;
 const ISSUER = `http://localhost:${PORT}`;
@@ -992,7 +1002,8 @@ describe("the presented token's authority bounds a Child Mission (@spec child-de
     const res = await createChild(token, missionId);
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    // RFC 8693 Section 2.2.2 (#1178): an unacceptable subject_token.
+    expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("no readable authorization_details");
     expect(as.kernel.findChildren(missionId)).toHaveLength(before);
   });
@@ -2234,7 +2245,8 @@ describe("the async-delegation subject_token is a delegation handle (@spec conti
     const res = await asyncDelegate(baseAccessToken, { rawSubject: true });
     const body = (await res.json()) as { error?: string; error_description?: string; refresh_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    // RFC 8693 Section 2.2.2 (#1178): the token's own aud, an unacceptable subject_token.
+    expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("not a delegation handle audienced to the acting client");
     expect(body.refresh_token).toBeUndefined();
     expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
@@ -2247,7 +2259,7 @@ describe("the async-delegation subject_token is a delegation handle (@spec conti
     const res = await asyncDelegate(handle, { rawSubject: true, keys: otherDpop });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("does not match the subject_token confirmation key");
     expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
   });
@@ -2337,7 +2349,7 @@ describe("the delegation-handle request (@spec continuation#transport-async, mis
     const res = await delegationHandleRequest(baseAccessToken, undefined, otherDpop);
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("does not match the subject_token confirmation key");
   });
 
@@ -2346,7 +2358,7 @@ describe("the delegation-handle request (@spec continuation#transport-async, mis
     const res = await delegationHandleRequest(baseAccessToken, "child");
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("not issued to the requesting client");
   });
 
@@ -2478,6 +2490,146 @@ describe("the delegation-handle request (@spec continuation#transport-async, mis
       expect(combined.error, param).toBe("invalid_request");
       expect(combined.error_description, param).toContain(`cannot be combined with ${param}`);
     }
+  });
+});
+
+/**
+ * @spec continuation#transport-async, RFC 8693 Section 2.2.2 (#1178, D415):
+ * the async exchange's subject_token cases, each built from a real delegation
+ * handle and checked inline by the transport (it has its own resolution, not
+ * the shared possession check), with its error_description fragment.
+ */
+const ASYNC_SUBJECT_TOKENS: readonly SubjectTokenCase[] = [
+  ["an unverifiable delegation handle", (token) => forge(token), "subject_token verification failed"],
+  [
+    "a delegation handle without a mission claim",
+    (token, key) => resignWith(token, key, (c) => delete c.mission),
+    "missing the mission claim",
+  ],
+  [
+    "a delegation handle issued to another client",
+    (token, key) => resignWith(token, key, (c) => { c.client_id = "subagent-invoice-extractor"; }),
+    "not issued to the acting client",
+  ],
+  [
+    "a delegation handle whose own aud is not the acting client",
+    (token, key) => resignWith(token, key, (c) => { c.aud = RESOURCE; }),
+    "not a delegation handle audienced to the acting client",
+  ],
+  [
+    "an mTLS-bound delegation handle",
+    (token, key) => resignWithCnf(token, key, MTLS_CNF),
+    "does not match the subject_token confirmation key",
+  ],
+  [
+    "a delegation handle bound to another key than the proof's",
+    (token, key) => resignWithCnf(token, key, UNHELD_KEY_CNF),
+    "does not match the subject_token confirmation key",
+  ],
+  [
+    "a delegation handle naming an unknown Mission",
+    (token, key) =>
+      resignWith(token, key, (c) => {
+        c.mission = { ...(c.mission as Record<string, unknown>), id: "msn_unknown_1178" };
+      }),
+    "mission not found",
+  ],
+  [
+    "a delegation handle without readable authorization_details",
+    (token, key) => resignWith(token, key, (c) => delete c.authorization_details),
+    "no readable authorization_details",
+  ],
+];
+
+/** The handle request's own subject_token cases beyond the shared possession check's. */
+const HANDLE_SUBJECT_TOKENS: readonly SubjectTokenCase[] = [
+  ...INVALID_SUBJECT_TOKENS,
+  [
+    "a subject_token issued to another client",
+    (token, key) => resignWith(token, key, (c) => { c.client_id = "subagent-invoice-extractor"; }),
+    "not issued to the requesting client",
+  ],
+  [
+    "a subject_token without readable authorization_details",
+    (token, key) => resignWith(token, key, (c) => delete c.authorization_details),
+    "no readable authorization_details",
+  ],
+];
+
+describe("invalid or unacceptable subject tokens at the async exchange and the delegation-handle request (@spec continuation#transport-async, RFC 8693 Section 2.2.2, #1178)", () => {
+  it.each(ASYNC_SUBJECT_TOKENS)(
+    "the async exchange refuses %s with invalid_request, no Mission diagnostic, and no family, reservation or count",
+    async (_name, make, description) => {
+      const { missionId, baseAccessToken } = await issueBaseMission();
+      const handle = await delegationHandle(baseAccessToken);
+      const count = as.kernel.get(missionId)?.derivation_count;
+      const creationRequestId = crypto.randomUUID();
+      const res = await asyncDelegate(await make(handle, asTokenKey), { rawSubject: true, creationRequestId });
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toContain(description);
+      expect(Object.keys(body).sort()).toEqual([...BARE_REFUSAL_MEMBERS]);
+      expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+      expect(as.creationIdempotency.find("ap-agent", creationRequestId)).toBeUndefined();
+    },
+  );
+
+  it.each(HANDLE_SUBJECT_TOKENS)(
+    "the delegation-handle request refuses %s with invalid_request, no Mission diagnostic, and no handle or count",
+    async (_name, make, description) => {
+      const { missionId, baseAccessToken } = await issueBaseMission();
+      const count = as.kernel.get(missionId)?.derivation_count;
+      const res = await delegationHandleRequest(await make(baseAccessToken, asTokenKey));
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toContain(description);
+      expect(Object.keys(body).sort()).toEqual([...BARE_REFUSAL_MEMBERS]);
+      expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+    },
+  );
+
+  it("both keep invalid_dpop_proof for a proof that fails its own checks, distinct from a valid proof under another key", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const handle = await delegationHandle(baseAccessToken);
+    const count = as.kernel.get(missionId)?.derivation_count;
+    const wrongUri = { htu: `${ISSUER}/elsewhere` };
+    for (const res of [
+      await fetch(`${ISSUER}/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(actingDpop, wrongUri) },
+        body: new URLSearchParams({
+          grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+          request_refresh_token: "true",
+          subject_token: handle,
+          subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+          resource: RESOURCE,
+          creation_request_id: crypto.randomUUID(),
+          client_assertion: await clientAssertion(),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        }).toString(),
+      }),
+      await fetch(`${ISSUER}/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(actingDpop, wrongUri) },
+        body: new URLSearchParams({
+          grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+          subject_token: baseAccessToken,
+          subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+          requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+          audience: "ap-agent",
+          client_assertion: await clientAssertion(),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        }).toString(),
+      }),
+    ]) {
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_dpop_proof");
+      expect(body.mission_error).toBeUndefined();
+    }
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
   });
 });
 
