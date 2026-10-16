@@ -529,6 +529,16 @@ describe("suspension schedule deadlines (@spec status#mission-lifecycle-endpoint
         expect(await scheduler().deliver({ missionId: m.id, generation })).toBe("superseded");
       }
       expect([a, b, c].map((m) => as.kernel.get(m.id))).toEqual(before);
+      // A stale delivery acts on nothing even while the current schedule is
+      // due: only the current generation's own delivery applies it.
+      const d = approve();
+      const dOld = await arm(d.id, operator, 40, "resume");
+      const dCurrent = await arm(d.id, deputy, 45, "revoke");
+      clock.skip(46_000);
+      expect(await scheduler().deliver({ missionId: d.id, generation: dOld })).toBe("superseded");
+      expect(stored(as.kernel, d.id).state).toBe("suspended");
+      expect(await scheduler().deliver({ missionId: d.id, generation: dCurrent })).toBe("applied");
+      expect(stored(as.kernel, d.id)).toMatchObject({ state: "terminated", termination: "revoked" });
     } finally {
       clock.ignoreClears = false;
     }
@@ -597,6 +607,17 @@ describe("suspension schedule deadlines (@spec status#mission-lifecycle-endpoint
       expect(emitted.filter((e) => e.state === "terminated").map((e) => e.termination?.reason)).toEqual(["expired"]);
       expect(emitted.at(-1)?.termination?.terminated_at).toBe(m.expires_at);
     }
+  });
+
+  it("lets expiry govern a deadline before expires_at whose delivery comes only after expires_at: the Mission is terminated expired, never resumed", async () => {
+    const m = approve(at(120));
+    expect((await op(operator, { mission_id: m.id, operation: "suspend", suspend_until: at(60), on_expiry: "resume" })).status).toBe(200);
+    const generation = as.kernel.get(m.id)?.schedule?.generation as number;
+    // No delivery and no read until both instants have passed, as across a process outage.
+    clock.skip(121_000);
+    expect(await scheduler().deliver({ missionId: m.id, generation })).toBe("ended");
+    expect(stored(as.kernel, m.id)).toMatchObject({ state: "terminated", termination: "expired" });
+    expect(events(as.kernel, m.id).some((e) => e.state === "active" && e.prior_state === "suspended")).toBe(false);
   });
 
   it("commits one transition under duplicate deliveries of the same timer", async () => {
