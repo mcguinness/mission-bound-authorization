@@ -368,7 +368,7 @@ That test uses another member; no test names `max_budget`.
 - Blocking acceptance: #828 (Resource policy). Token authority is met for this target (D411).
 - Acceptance-pack prerequisites: #1105 (`pnpm as-native` still builds the cross-domain objects in process; its AS capability set is D332's, §2).
 - Separated deployment only: #1101 (state source under D293).
-- Also open: #826 (Approver versus Subject; implemented by #1074, D306, awaiting acceptance), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
+- Also open: #826 (Approver versus Subject, implemented by #1074 (D306) and #1229 (D424); the approval-authentication floor (D425) this target's high-risk approvals meet; awaiting acceptance), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
 - #917 and #918 are closed as implemented (D245, D247); their leftovers are resolved by #1103 and #1080.
 
 ## 9. Pinned adoption closure
@@ -448,6 +448,7 @@ The pack cannot pass while #828 is unmet (§1); the token-authority gate is met 
 | Phase mismatch | `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting check_transfer's preflight permit` | |
 | Failed commit predicate with the permit retained | none | applies only to a connector that claims a commit-point predicate; none does at this revision (#817), so the guarantee stays excluded (§8) |
 | Bob for Alice, with and without `openid` | `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject` and `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves for another principal without openid: the token and introspection carry the Subject, the record the Approver, and the provider account and session the Approver` | not on the assembled path; #826 awaits implementation acceptance |
+| High-risk approval below the published floor | `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority approved headlessly, even when the approval service's registration claims mfa` and `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority, with no client request, from a browser Approver whose achieved acr the floor does not accept: no Mission, Grant, code or Subject session` | |
 | Revoke during issuance | none on this surface | #250, #873 |
 | Restart and uncertain recovery | the unit-level witnesses in §7 | no assembled restart test; a prior process's unsettled claims close indeterminate with an operator alert, a stated bound (§7) |
 | Emission failure | the six #1104 tests in §6 | not on the assembled path |
@@ -464,7 +465,10 @@ assembles this target with `launchAsNative` (`demo/src/as-native.ts:72`): the
 AS on 4400 with the issuance profile plus exactly `lifecycle-revoke` and
 `transaction-authorization` (D332, §2), the `mcp-payments` PEP over HTTP MCP
 at `http://localhost:4403/mcp`, the PDP, OpenFGA and the in-process approval
-service, with no MAS join route. It mints no ordinary token. It prints the
+service, with no MAS join route. That service logs Bob in on the AS's browser
+approval surface with `mfa` at each approval, because the published
+approval-authentication floor (D425, `config/approval-floor.json`) refuses a
+headless approval of payment execution or remittance. It mints no ordinary token. It prints the
 issuer, the AS capability set, the resource audience and the PDP mode, and
 needs only `pnpm setup` and `docker compose up -d` (OpenFGA).
 
