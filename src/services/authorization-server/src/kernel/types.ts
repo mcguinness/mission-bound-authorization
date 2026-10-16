@@ -329,7 +329,11 @@ export interface ContainmentEventRecord {
  * {@link MissionClaim.approval_basis}) that MUST NOT be relied on to grant
  * authority.
  */
-export type ApprovalBasis = ApprovalBasisDirect | ApprovalBasisTemplate | ApprovalBasisPolicyDrawdown;
+export type ApprovalBasis =
+  | ApprovalBasisDirect
+  | ApprovalBasisTemplate
+  | ApprovalBasisPolicyDrawdown
+  | ApprovalBasisGovernedPolicy;
 
 export type ApprovalBasisType = ApprovalBasis["type"];
 
@@ -453,6 +457,43 @@ export interface ApprovalBasisPolicyDrawdown {
    * the child-creation request.
    */
   approved_at: string;
+}
+
+/**
+ * @spec approval-governance#governed-policy-record: a governed policy
+ * activation's basis: an accountable human approved a bounded policy version
+ * (the consented root, retained as the Approval Governance Record's
+ * `approval_policy` snapshot), and that policy decided THIS instance with no
+ * fresh human decision. Every member is fixed from retained, authenticated
+ * governance state and the issuer's own evaluation, never from the request.
+ * Distinct from an `organizational` source's `authority_source.policy`, which
+ * bounds whose authority the Mission draws on, not whether it activates.
+ */
+export interface ApprovalBasisGovernedPolicy {
+  type: "governed_policy";
+  /** The human who approved the exact root version. */
+  consent_principal: { iss: string; sub: string };
+  /** That human approval's instant, read from the retained consent. */
+  approved_at: string;
+  /** The root's `approval_policy.digest` (typ `mission-approval-policy`). */
+  root_commitment: string;
+  activation: {
+    /** This instance's approval event, equal to the record's own `approval_event_id`. */
+    approval_event_id: string;
+    /**
+     * The deciding policy: the root itself (its `mission-approval-policy`
+     * digest) or the separate evaluator the root commits (its
+     * `mission-activation-policy` digest), never another policy.
+     */
+    policy: ActivationPolicyRef;
+  };
+  /** The authenticated client that requested this activation. */
+  activation_actor: { iss: string; sub: string };
+  adjudication: {
+    kind: "policy";
+    policy: { id: string; version: string };
+    governance_record: true;
+  };
 }
 
 /** @spec mission#mission-record */

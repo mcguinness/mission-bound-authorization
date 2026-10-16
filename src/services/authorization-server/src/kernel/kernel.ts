@@ -4,7 +4,7 @@
  * oidc-provider types cross this boundary.
  */
 
-import { KeyObject, randomBytes, randomInt, sign } from "node:crypto";
+import { createPublicKey, KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
   type ApprovalContextManifestInput,
   authorityHash,
@@ -120,6 +120,12 @@ import {
   committedActivationPolicy,
   type EvaluatedActivationPolicy,
 } from "./activation-policy-snapshots.js";
+import { ApprovalGovernanceRecordStore } from "./approval-governance.js";
+import {
+  type GovernedPolicyApprovalConfig,
+  GovernedPolicyConsentStore,
+  validateGovernedPolicyApprovalConfig,
+} from "./governed-policy-approval.js";
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { newMissionId } from "./mission-id.js";
@@ -459,6 +465,13 @@ export interface KernelOptions {
    */
   activationPolicies?: ActivationPolicyRegistry;
   /**
+   * @spec approval-governance#governed-policy: the `governed_policy`
+   * standing-consent basis: the consented roots this issuer holds and the
+   * humans authorized to approve each. OPTIONAL and default off: absent, no
+   * consent is recorded and nothing activates under this basis.
+   */
+  governedPolicyApproval?: GovernedPolicyApprovalConfig;
+  /**
    * @spec mission#authority-sources, mission#approval-event — the deployment's
    * TRUSTED authority-source catalog. The approval event establishes
    * `authority_source` from this and from nothing else: never from
@@ -613,6 +626,18 @@ export class MissionKernel {
    */
   readonly activationPolicySnapshots: ActivationPolicySnapshotStore;
   /**
+   * @spec approval-governance#atomic-commitment: the signed Approval
+   * Governance Records, on this kernel's database and written only in the
+   * creation transaction of the Mission each governs.
+   */
+  readonly governanceRecords: ApprovalGovernanceRecordStore;
+  /**
+   * @spec approval-governance#governed-policy-root: the retained governance
+   * state of the `governed_policy` basis (consented roots, human consents,
+   * recorded activation inputs), on this kernel's database.
+   */
+  readonly governedPolicyConsents: GovernedPolicyConsentStore;
+  /**
    * @spec control-plane#serialization — the in-flight owner of each
    * (mission, operation) identity; see {@link exclusiveDerivation}.
    */
@@ -720,6 +745,11 @@ export class MissionKernel {
     });
     this.dischargePins = new DischargeMappingPinStore(this.db);
     this.dischargeSelectors = new DischargeSelectorStore(this.db, this.now);
+    // @spec approval-governance#governed-policy: a configuration fault refuses
+    // construction, never an activation at request time.
+    if (opts.governedPolicyApproval) validateGovernedPolicyApprovalConfig(opts.governedPolicyApproval);
+    this.governanceRecords = new ApprovalGovernanceRecordStore(this.db);
+    this.governedPolicyConsents = new GovernedPolicyConsentStore(this.db);
   }
 
   validateIntent(raw: string): MissionIntent {
@@ -836,6 +866,34 @@ export class MissionKernel {
   activationPolicies(): ActivationPolicyRegistry | undefined {
     return this.opts.activationPolicies;
   }
+
+  /**
+   * @spec approval-governance#governed-policy: the governed policy
+   * configuration, or undefined when the deployment leaves the basis off.
+   */
+  governedPolicyApproval(): GovernedPolicyApprovalConfig | undefined {
+    return this.opts.governedPolicyApproval;
+  }
+
+  /** The Mission Issuer this kernel creates records for. */
+  issuerId(): string {
+    return this.opts.issuer;
+  }
+
+  /** The derivation policy version a Mission created here records as `policy_version`. */
+  policyVersion(): string {
+    return this.opts.policy.policy_version;
+  }
+
+  /**
+   * The public half of the Status key {@link statusSigner} signs with, as a
+   * verifier resolves it by `kid` from the issuer's published key material.
+   */
+  statusVerificationKey(): KeyObject {
+    if (!this.statusPublicKey) this.statusPublicKey = createPublicKey(KeyObject.from(this.opts.statusKey));
+    return this.statusPublicKey;
+  }
+  private statusPublicKey?: KeyObject;
 
   /**
    * @spec mission#standing-consent-bases: the auditor's check of a Mission's
