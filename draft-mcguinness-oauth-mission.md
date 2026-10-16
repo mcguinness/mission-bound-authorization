@@ -1615,7 +1615,9 @@ At a direct approval event the AS MUST, in order:
    was submitted ({{authority-proposal}}), `proposal_hash` over the
    submitted `authorization_details` array.
 7. **Create the Mission Record** ({{mission-record}}) in the `active`
-   state, atomically with issuance of the authorization code. The
+   state, atomically with issuance of the authorization code, or of
+   the grant artifact a back-channel carriage profile defines
+   ({{extensibility}}). The
    commit MUST verify atomically that the effective expiry is
    strictly later than the creation instant: acceptance of the
    submission does not freeze time, and where the requested ceiling
@@ -1841,7 +1843,9 @@ or negotiates one.
 ### Establishing and Resolving a Binding {#grant-binding-resolution}
 
 At a direct approval event the AS binds the Mission to the
-authorization code it issues. The binding is server-side and is what
+authorization code it issues, or, under a back-channel carriage
+profile, to the grant artifact that profile defines
+({{extensibility}}). The binding is server-side and is what
 "the referenced Mission" in {{lifecycle}} refers to. The code itself
 carries no refresh-token family: only a successful redemption
 produces one, and where it does, the resulting refresh-token family
@@ -4108,7 +4112,11 @@ This document's extension points are:
   response), provided the steps and their atomicity hold unchanged
   and no Mission reference exists before the record is `active`; the
   Mission Deferred Approval companion is such a profile
-  ({{I-D.draft-mcguinness-oauth-mission-approval}}).
+  ({{I-D.draft-mcguinness-oauth-mission-approval}}). A back-channel
+  carriage profile ({{submission-via-par}}) MAY instead couple the
+  approval decision to the grant artifact it defines, such as a device
+  code, under the same conditions; the Mission then binds to that
+  profile-defined reusable grant ({{grant-binding}}).
 
 This document defines no capability-negotiation mechanism or
 profile-version field; an extension declares its own identifiers and,
