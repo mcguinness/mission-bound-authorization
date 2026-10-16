@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "418209e2b4ea5c7da2827d04b77210c86053c276",
-    "content_sha256": "1758e27bdc7d014bd5d7a5edba34b8ed6bef1f3d41f3e2d94baa12dce70a81f1"
+    "revision": "402c07b070c7f241df7a1b9eb48952609eb8d88e",
+    "content_sha256": "3d620da35f99d490a2c3fc7fd6958dc7263469861dec8a6d738d065c6ca202ad"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "1c07de2093994575b1b4d39c6fd21cfe2848c045",
@@ -137,6 +137,10 @@
    "draft-mcguinness-oauth-mission-approval.md": {
     "revision": "62a7c5bbea04dcc7bf598d791c788b0b9f2def31",
     "content_sha256": "26b6d44e7435641dd9a7d515f816eef5c0db707ecd870abf7f27c17ea5d1fe29"
+   },
+   "draft-mcguinness-oauth-mission-device-authorization.md": {
+    "revision": "6c1c73f0955c0837c2c8435cc4c50db6b7ce3ffc",
+    "content_sha256": "68f1ab69f8c48630c370c2ae10ebb8880fbf3add9d0b138ff6273ccf50575e59"
    }
   }
  },
@@ -193,7 +197,8 @@
    "propagation",
    "governance-record",
    "mission-statement",
-   "deployment-documentation"
+   "deployment-documentation",
+   "device-authorization-endpoint"
   ],
   "levels": [
    "unit",
@@ -275,7 +280,8 @@
    "aauth.supervision-proof",
    "aauth.reference-projection",
    "aauth-management.update-position",
-   "aauth-management.delegation-tree"
+   "aauth-management.delegation-tree",
+   "device-authorization.carriage"
   ]
  },
  "profiles": [
@@ -37342,6 +37348,646 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#705 (D359). No Mandate minting code exists in the reference implementation."
+  },
+  {
+   "id": "device-authorization.discovery.explicit-support-before-sending",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "discovery",
+   "text": "A client MUST NOT send `mission_intent` in a device authorization request unless the AS's metadata, obtained and validated as {{Section 3 of RFC8414}} specifies, advertises both `mission_bound_authorization_supported` and `mission_device_authorization_supported` as `true`",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "device-authorization-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "Against an AS whose validated metadata does not advertise both members as true, including one that advertises only RFC 8628 device-grant metadata, or that names a different device_authorization_endpoint, the client sends no device authorization request carrying mission_intent."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.discovery.no-ordinary-fallback",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "discovery",
+   "text": "A client holding a Mission Intent for an AS that does not advertise this profile MUST NOT request the same authority in an ordinary device authorization request, as `scope` or as `authorization_details` without `mission_intent`.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "device-authorization-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "When the AS does not advertise mission_device_authorization_supported, the client sends no device authorization request carrying the Mission's authority as scope or as authorization_details, and reports the inability."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.request.no-request-object",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "request",
+   "text": "the AS MUST refuse a device authorization request that carries `mission_intent` together with a `request` or `request_uri` parameter, with the `invalid_request` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "device-authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A device authorization request carrying mission_intent and a request or request_uri parameter receives invalid_request, and no device_code is issued."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.request.whole-or-refuse",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "request",
+   "text": "An AS that advertises this profile MUST process a device authorization request carrying `mission_intent` entirely under this document or refuse it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "device-authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A request carrying mission_intent either yields a session whose approval creates a Mission from the whole submission or is refused; it never yields an ordinary device grant whose token lacks the mission claim, and no envelope member is dropped."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.request.validate-before-device-code",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "request",
+   "text": "The AS MUST complete steps 1 to 5 of the OAuth binding's Submission Processing Order, and validate every proposed entry, before it issues a `device_code`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "device-authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A malformed envelope or Intent, an unsupported or failing evidence entry, an invalid proposed entry, or a proposed resource outside target_resources is refused at the device authorization endpoint with the code the OAuth binding's error mapping assigns at PAR, and no device_code or user_code is issued."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.binding.verification-values-ignored",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "session-binding",
+   "text": "the AS MUST ignore `mission_intent`, `authorization_details`, and `scope` presented at the verification URI",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "mission_intent, authorization_details or scope values added to the verification URI change neither the rendering nor the Mission created; the Approver sees and approves the bound submission."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.binding.token-request-intent-ignored",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "session-binding",
+   "text": "and `mission_intent` presented on a device access token request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "A device access token request carrying a different mission_intent yields the Mission created from the bound submission, unchanged."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.binding.decision-to-entered-session",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "session-binding",
+   "text": "The AS MUST apply an approval decision only to the session whose `user_code` the Approver entered or confirmed, and MUST NOT resolve any other `device_code` to the Mission that decision creates.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "After an approval through one session's user_code, polling with another session's device_code never returns that Mission's tokens."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.binding.wrong-client",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "session-binding",
+   "text": "The AS MUST refuse a device access token request from an authenticated or identified client other than the bound client with the `invalid_grant` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A device access token request presenting the session's device_code from a different client, authenticated, or identified by its own client_id when public, receives invalid_grant and no token."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.binding.client-authentication-failure",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "session-binding",
+   "text": "A request that omits or fails client authentication the bound client is required to use receives `invalid_client` instead",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "For a session bound to a client that must authenticate, a device access token request with no or failed client authentication receives invalid_client and no token. A public client identified by the bound client_id without client authentication is not refused for that absence."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.binding.public-client-not-service-owned",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "session-binding",
+   "text": "a public client's `client_id` cannot establish a `service_owned` authority source for that client",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An approval whose service_owned authority source would rest on a public client's client_id creates no Mission."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.approval.user-code-not-authentication",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "approval",
+   "text": "Entering a `user_code` selects a session; it neither authenticates the Approver nor establishes the Subject.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Entering a valid user_code without Approver authentication reaches no decision, and the Subject is never taken from the session or the code."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.approval.record-atomic-with-decision",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "approval",
+   "text": "the AS creates the Mission Record in the `active` state atomically with the approval decision, and that commit makes the session's `device_code` redeemable",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "No Mission exists, and polling yields authorization_pending or slow_down, until the decision commits; the Mission exists from that commit, and the device_code becomes redeemable subject to its lifetime, one-time use, and issuance gating."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.approval.commit-session-pending",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "approval",
+   "text": "The commit inherits the OAuth binding's effective-expiry recheck, and MUST also verify that the session is still pending",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "A decision reached after the session expired, or after the AS ended it, creates no Mission."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.approval.render-client",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "approval",
+   "text": "MUST identify the requesting client from AS-held registration data, state whether the AS authenticated it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The verification page names the requesting client from registration data and says whether the AS authenticated it; for a public client it says the client is not authenticated."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.approval.render-client-display-inert",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "approval",
+   "text": "render any client-supplied display value, such as a dynamically registered client name, as inert text",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A client name or other client-supplied display value containing markup renders as literal text."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.approval.render-subject",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "approval",
+   "text": "MUST identify the Subject the authority is granted for, whether or not the Approver is the Subject",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The verification page names the Subject on every Mission approval, including self-approval."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.approval.user-code-confirmation",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "approval",
+   "text": "Before the decision, the AS MUST display the `user_code` and ask the Approver to confirm that it matches the code the requesting client displays and that the Approver started this request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Whether the Approver typed the code or arrived through verification_uri_complete, the page shows the user_code and asks for both confirmations before offering the decision."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.outcomes.denied",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "outcomes",
+   "text": "A device access token request presenting the session's `device_code` receives `access_denied`, except that a refusal to which the OAuth binding assigns `invalid_scope`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After a decline, a creation commit that creates no Mission, or the AS ending the session, the next poll receives access_denied; an openid request whose Approver is not the Subject receives invalid_scope."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.outcomes.expired",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "outcomes",
+   "text": "A device access token request presenting it receives `expired_token`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A poll after the device_code lifetime elapsed while the session was pending receives expired_token."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.outcomes.redemption-gates",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "outcomes",
+   "text": "A device access token request redeems an `approved` session only while its `device_code` is unexpired and unconsumed and the Mission passes the OAuth binding's issuance gating",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After approval, a poll whose Mission was revoked or expired before redemption receives the issuance-gating refusal and no token; only a poll with an unexpired, unconsumed device_code and an active Mission receives the success response."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.outcomes.expired-after-approval",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "outcomes",
+   "text": "Once the `device_code` has expired unredeemed, a request presenting it receives `expired_token`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A poll presenting an approved session's device_code after its lifetime elapsed unredeemed receives expired_token and no token, while the Mission remains active until the deployment's unredeemed-code choice applies."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.outcomes.unredeemed-approved-session",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "outcomes",
+   "text": "When the `device_code` of an `approved` session expires unredeemed, the deployment revokes the Mission or lets it expire at its `expires_at`, applying one choice consistently",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A Mission whose approved session's device_code expired unredeemed is reported terminated by revocation, or active until its expires_at, by the deployment's one documented choice."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.issuance.mission-id-required",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "issuance",
+   "text": "the AS MUST include `mission_id` in it beside the `mission_expires_at` that binding requires",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The device access token response that creates the Mission carries mission_id and mission_expires_at."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.issuance.one-time",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "issuance",
+   "text": "The AS MUST refuse every later device access token request presenting that `device_code`, concurrent requests included, with the `invalid_grant` error code.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "A second device access token request presenting a redeemed device_code receives invalid_grant and no token."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.issuance.at-most-one-success",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "issuance",
+   "text": "A `device_code` yields at most one successful token response.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "Concurrent device access token requests presenting one approved device_code yield exactly one success response."
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.issuance.lineage-root",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "issuance",
+   "text": "the accepted `device_code` is the root of the Mission's grant lineage",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A refresh token from the first redemption resolves to the same Mission on every refresh, and no client input changes that Mission."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "device-authorization.issuance.client-requires-mission-members",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "issuance",
+   "text": "A client MUST NOT use the tokens of a successful device access token response unless the response carries `mission_id`, `mission_expires_at`, and the granted `authorization_details`.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "Given a success response lacking any of the three members, the client presents none of its tokens and reports a failed Mission creation."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+  },
+  {
+   "id": "core.submission.alternative-carriage-only-by-profile",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "A Mission Intent travels on no other request unless a companion profile explicitly defines that request as a back-channel carriage of the Submission envelope.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "device-authorization-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "An AS that implements no profile defining a carriage creates no Mission from a mission_intent presented on any other request, such as a device authorization request, whatever grant types it supports."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1202 seam: no witness yet. A future endpoint test presents mission_intent at the device authorization endpoint of an AS without the device-authorization companion and observes that no Mission is created."
   }
  ]
 }

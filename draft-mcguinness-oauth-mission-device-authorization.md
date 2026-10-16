@@ -1,0 +1,587 @@
+---
+title: "Mission Device Authorization for OAuth 2.0"
+abbrev: "OAuth Mission Device Authorization"
+category: exp
+
+docname: draft-mcguinness-oauth-mission-device-authorization-latest
+submissiontype: IETF
+workgroup: Web Authorization Protocol
+number:
+date:
+consensus: true
+v: 3
+keyword:
+ - oauth
+ - mission
+ - agent
+ - device authorization
+ - approval
+venue:
+  github: "mcguinness/mission-bound-authorization"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-device-authorization.html"
+
+author:
+ -
+    fullname: Karl McGuinness
+    organization: Independent
+    email: public@karlmcguinness.com
+
+normative:
+  RFC6749:
+  RFC8414:
+  RFC8628:
+  RFC9396:
+  I-D.draft-mcguinness-oauth-mission:
+    title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+
+informative:
+  RFC7009:
+  RFC9126:
+  RFC9449:
+  I-D.draft-mcguinness-oauth-mission-approval:
+    title: "Mission Deferred Approval for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-consent-evidence:
+    title: "Mission Consent Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+
+--- abstract
+
+Mission-Bound Authorization for OAuth 2.0 accepts a Mission Intent
+through a Pushed Authorization Request on an authorization-code flow,
+which ends in a redirect to the client. A client with no
+redirect-capable user agent, such as a command-line agent on a remote
+host, cannot complete that flow. This document defines an optional,
+experimental profile of the OAuth 2.0 Device Authorization Grant for
+that client: the client submits its Mission Intent and authority
+proposal at the device authorization endpoint, the user's approval of
+the derived authority on a second device creates the Mission, and the
+client's polling token request delivers the Mission's credentials. A
+dedicated metadata member advertises support; generic device-grant
+support never implies it.
+
+--- middle
+
+# Introduction {#introduction}
+
+The OAuth binding {{I-D.draft-mcguinness-oauth-mission}} creates a
+Mission at an approval event reached from a Pushed Authorization
+Request (PAR) {{RFC9126}} that carries the Mission Intent. A client
+with no redirect-capable user agent, such as an agent in a container
+or a command-line agent on a remote host, cannot complete that flow.
+The OAuth 2.0 Device Authorization Grant {{RFC8628}} serves such a
+client: the client makes a direct request to the authorization server
+(AS), and the user authorizes on a separate device. The OAuth binding
+admits a Mission Intent on another request only under a profile that
+explicitly defines that carriage
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission via
+PAR").
+
+This document is that profile for the device authorization grant.
+The client sends the Submission envelope and any authority proposal
+in its device authorization request. The AS validates them as it
+validates a pushed submission and binds the resulting session to the
+exact submission and the requesting client. The user enters the user
+code on a second device, authenticates, and decides over the derived
+authority at a direct approval event. The client's device access
+token request then returns the Mission-bound tokens with the
+Mission's identifier and effective expiry, and the accepted device
+grant roots the Mission's grant lineage.
+
+This document changes nothing on the authorization-code path and
+defines no endpoint, grant type, or request parameter. It is
+optional: an AS or client that does not implement it conforms to the
+OAuth binding unchanged. RFC 8628 requires an AS to ignore request
+parameters it does not recognize ({{Section 3.1 of RFC8628}}), so an
+AS without this profile would treat a Mission submission as an
+ordinary device request. Support is therefore advertised explicitly
+({{discovery}}) and never inferred from generic device-grant
+support.
+
+# Relationship to the OAuth Binding {#binding-relationship}
+
+This document depends normatively on the OAuth binding and on
+{{RFC8628}}. It reuses, without restating, the OAuth binding's
+Mission Intent, Submission envelope, Submission Processing Order,
+authority proposal, derivation, approval event, integrity anchors,
+Mission Record, grant binding, issuance gating, and token rules, and
+RFC 8628's request, response, user interaction, polling, and error
+codes. It uses three seams the OAuth binding defines
+({{I-D.draft-mcguinness-oauth-mission}}):
+
+- an alternative back-channel carriage of the Submission envelope
+  (Section "Submission via PAR");
+- relocation of the approval event relative to code issuance (Section
+  "Extensibility"), which Mission Deferred Approval
+  {{I-D.draft-mcguinness-oauth-mission-approval}} also uses; and
+- a profile-defined reusable grant as the root of a grant lineage
+  (Section "Binding the Mission to the Grant").
+
+# Conventions and Terminology {#conventions}
+
+{::boilerplate bcp14-tagged}
+
+This document uses the terms Mission, Mission Intent, Submission
+envelope, Authority Set, Approver, Subject, and Mission Record as the
+OAuth binding defines them, and device authorization endpoint, device
+authorization request, `device_code`, `user_code`, and verification
+URI as {{RFC8628}} defines them.
+
+Device authorization session:
+: The state the AS holds for one accepted device authorization
+  request under this document: its `device_code` and `user_code`, the
+  bound submission and client ({{session-binding}}), and its outcome
+  ({{outcomes}}).
+
+Verification user agent:
+: The user agent on a separate device through which the user visits
+  the verification URI and decides ({{Section 3.3 of RFC8628}}).
+
+# Discovery {#discovery}
+
+This document defines the following authorization server metadata
+parameter {{RFC8414}}:
+
+`mission_device_authorization_supported`:
+: OPTIONAL boolean. When `true`, the AS accepts a Mission Intent at
+  its device authorization endpoint under this document. If omitted,
+  the default value is `false`.
+
+A client MUST NOT send `mission_intent` in a device authorization
+request unless the AS's metadata, obtained and validated as
+{{Section 3 of RFC8414}} specifies, advertises both
+`mission_bound_authorization_supported` and
+`mission_device_authorization_supported` as `true` and names the
+`device_authorization_endpoint` the client uses. Advertised support
+for the device grant ({{Section 4 of RFC8628}}) or for the OAuth
+binding alone does not establish it.
+
+A client holding a Mission Intent for an AS that does not advertise
+this profile MUST NOT request the same authority in an ordinary
+device authorization request, as `scope` or as
+`authorization_details` without `mission_intent`. It surfaces the
+inability instead, as the OAuth binding requires of a client whose AS
+lacks Mission support ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Authorization Server Metadata").
+
+# Device Authorization Request {#request}
+
+The client sends a device authorization request
+({{Section 3.1 of RFC8628}}) carrying:
+
+`mission_intent`:
+: REQUIRED. The Submission envelope, encoded as the OAuth binding
+  encodes it for PAR ({{I-D.draft-mcguinness-oauth-mission}}, Section
+  "Submission via PAR").
+
+`authorization_details`:
+: OPTIONAL. An authority proposal
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority
+  Proposal"), which {{Section 3 of RFC9396}} permits in this request.
+
+`scope`:
+: OPTIONAL. A requested subset of the authority the Mission Intent
+  yields, as on a pushed submission.
+
+The client authenticates, or identifies itself with `client_id` when
+it is a public client, as {{Section 3.1 of RFC8628}} requires. The
+Submission envelope travels only as the form-encoded `mission_intent`
+parameter: the AS MUST refuse a device authorization request that
+carries `mission_intent` together with a `request` or `request_uri`
+parameter, with the `invalid_request` error code.
+
+An AS that advertises this profile MUST process a device
+authorization request carrying `mission_intent` entirely under this
+document or refuse it; it never ignores `mission_intent` or a member
+of the Submission envelope, and never answers such a request with an
+ordinary device authorization session. It applies the OAuth
+binding's Submission via PAR rules for the envelope's structure,
+closed top levels, and size bounds, and its Authority Proposal rules,
+reading "the same pushed request" as this request.
+
+The AS MUST complete steps 1 to 5 of the OAuth binding's Submission
+Processing Order, and validate every proposed entry, before it issues
+a `device_code`, refusing a failure with the error code the OAuth
+binding's error mapping assigns to it at PAR, in an error response as
+{{Section 3.2 of RFC8628}} specifies. After the device authorization
+response, the client learns only the session outcomes of
+{{outcomes}}; the device grant has no front-channel step at which a
+later refusal could reach it with its code. Derivation and rendering
+(steps 6 and 7) run at the approval event ({{approval}}), where the
+Subject and authority source are established.
+
+# Session Binding {#session-binding}
+
+On success the AS returns the device authorization response of
+{{Section 3.2 of RFC8628}}, which carries no Mission data. No Mission
+exists yet: the `device_code` and `user_code` are pending-request
+state, never a grant or authority.
+
+The AS binds the session to the exact Submission envelope, the exact
+submitted `authorization_details` array, and any `scope` value, and
+to the requesting client: its `client_id` and, for a client that
+authenticated, that authentication. No later request supplies or
+changes a bound value: the AS MUST ignore `mission_intent`,
+`authorization_details`, and `scope` presented at the verification
+URI, and `mission_intent` presented on a device access token request.
+
+A `user_code` and a `device_code` identify one session together. The
+AS MUST apply an approval decision only to the session whose
+`user_code` the Approver entered or confirmed, and MUST NOT resolve
+any other `device_code` to the Mission that decision creates.
+
+The AS MUST refuse a device access token request from an
+authenticated or identified client other than the bound client with
+the `invalid_grant` error code ({{Section 5.2 of RFC6749}}). A request
+that omits or fails client authentication the bound client is required
+to use receives `invalid_client` instead ({{Section 3.4 of RFC8628}},
+{{Section 5.2 of RFC6749}}). A public client that identifies itself
+with the bound `client_id` uses no client authentication and is not
+refused for its absence.
+
+A public client's `client_id` identifies the client; it does not
+authenticate it ({{Section 5.6 of RFC8628}}). The Mission Record's
+`client_id` then names the client the request identified, not one the
+AS authenticated. Because the authority source is established from
+trusted configuration, never from client assertion
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Approval",
+step 3), a public client's `client_id` cannot establish a
+`service_owned` authority source for that client.
+
+# Approval on the Verification User Agent {#approval}
+
+The user visits the verification URI and enters the `user_code`, or
+arrives through `verification_uri_complete`, as
+{{Section 3.3 of RFC8628}} describes. The approval event is a
+`direct` approval event under the OAuth binding
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Approval"),
+run on the verification user agent. Its steps execute there
+unchanged: Approver authentication against the published
+approval-authentication floor, Subject establishment, the authority
+source and its checks, the effective expiry, the consent rendering,
+and the integrity anchors. The OAuth binding's `acr_values` and
+`max_age` carriage belongs to the authorization request and has no
+counterpart in this profile. Entering a `user_code` selects a
+session; it neither authenticates the Approver nor establishes the
+Subject.
+
+Step 7 moves through the OAuth binding's approval-event sequencing
+seam: the AS creates the Mission Record in the `active` state
+atomically with the approval decision, and that commit makes the
+session's `device_code` redeemable. The commit inherits the OAuth
+binding's effective-expiry recheck, and MUST also verify that the
+session is still pending; a decision reached after the session
+expired or ended creates no Mission.
+
+In addition to what the OAuth binding's approval event renders, the
+rendering on the verification user agent:
+
+- MUST identify the requesting client from AS-held registration data,
+  state whether the AS authenticated it, and render any
+  client-supplied display value, such as a dynamically registered
+  client name, as inert text; and
+- MUST identify the Subject the authority is granted for, whether or
+  not the Approver is the Subject.
+
+Before the decision, the AS MUST display the `user_code` and ask the
+Approver to confirm that it matches the code the requesting client
+displays and that the Approver started this request, whether the
+Approver typed the code or arrived through
+`verification_uri_complete`. This makes mandatory what
+{{Section 3.3.1 of RFC8628}} and {{Section 5.4 of RFC8628}}
+recommend, because the approval activates durable authority over a
+requester's Intent.
+
+Where a deployment records Consent Evidence
+{{I-D.draft-mcguinness-oauth-mission-consent-evidence}}, the
+rendering on the verification user agent is the disclosure it
+commits.
+
+# Polling and Issuance {#polling}
+
+The client polls with the device access token request of
+{{Section 3.4 of RFC8628}}, authenticating or identifying itself as
+on the device authorization request. While the session is pending,
+the AS answers `authorization_pending` or `slow_down`
+({{Section 3.5 of RFC8628}}).
+
+## Session Outcomes {#outcomes}
+
+A pending session reaches exactly one of these outcomes:
+
+`approved`:
+: The creation commit succeeded ({{approval}}). The Mission exists
+  from that commit, and the session's `device_code` is redeemable as
+  described below.
+
+`denied`:
+: The Approver declined, the creation commit created no Mission, or
+  the AS ended the session for another reason, such as suspected
+  `user_code` guessing. A device access token request presenting the
+  session's `device_code` receives `access_denied`, except that a
+  refusal to which the OAuth binding assigns `invalid_scope` (an
+  `openid` request whose Approver is not the Subject) is returned as
+  `invalid_scope`.
+
+`expired`:
+: The `device_code` lifetime elapsed while the session was pending. A
+  device access token request presenting it receives `expired_token`.
+
+Approval does not extend the `device_code` lifetime. A device access
+token request redeems an `approved` session only while its
+`device_code` is unexpired and unconsumed and the Mission passes the
+OAuth binding's issuance gating; it then receives the success response
+of {{issuance}}. A Mission no longer `active` yields the refusal that
+issuance gating assigns, and a consumed `device_code` yields
+`invalid_grant` ({{issuance}}). Once the `device_code` has expired
+unredeemed, a request presenting it receives `expired_token`
+({{Section 3.5 of RFC8628}}), even though the session was approved
+and its Mission is `active`.
+
+RFC 8628 defines no client cancellation. A client abandons a session
+by ceasing to poll; an approval reached afterwards still creates a
+Mission. When the `device_code` of an `approved` session expires
+unredeemed, the deployment revokes the Mission or lets it expire at
+its `expires_at`, applying one choice consistently, as the OAuth
+binding requires for an unredeemed authorization code
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding the Mission
+to the Grant").
+
+## Issuance {#issuance}
+
+The success response is a token response ({{Section 5.1 of RFC6749}})
+carrying the Mission-bound access token, the granted
+`authorization_details` ({{Section 7 of RFC9396}}), `mission_id`, and
+`mission_expires_at`. It is the Mission-creating success response of
+the OAuth binding, and the AS MUST include `mission_id` in it beside
+the `mission_expires_at` that binding requires.
+
+A `device_code` yields at most one successful token response. The AS
+MUST refuse every later device access token request presenting that
+`device_code`, concurrent requests included, with the `invalid_grant`
+error code.
+
+At the creation commit the AS binds the Mission to the session's
+device grant: the accepted `device_code` is the root of the Mission's
+grant lineage, a profile-defined reusable grant in the OAuth binding's
+sense, and the refresh-token family its redemption emits inherits
+that binding atomically with its issuance. Issuance gating applies to
+the first redemption as to any later derivation. The OAuth binding's
+token rules apply unchanged ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission-Bound Access Tokens"); they require a public client's
+Mission-bound refresh token to be sender-constrained or rotated. A
+client can sender-constrain the issued tokens with DPoP {{RFC9449}}
+on the device access token request.
+
+A client MUST NOT use the tokens of a successful device access token
+response unless the response carries `mission_id`,
+`mission_expires_at`, and the granted `authorization_details`. It
+treats such a response as a failed Mission creation and can revoke
+the tokens {{RFC7009}}. The client relies on these members, not on
+the access token's contents, which can be opaque or encrypted to it.
+
+# Conformance {#conformance}
+
+An AS conforming to this document conforms to the OAuth binding as a
+Mission Issuer and to {{RFC8628}}, advertises
+`mission_device_authorization_supported` ({{discovery}}), and
+implements {{request}}, {{session-binding}}, {{approval}}, and
+{{polling}}.
+
+A client conforming to this document implements {{discovery}}, the
+request of {{request}}, and the response check of {{issuance}}, and
+the OAuth binding's Mission Client surfaces other than submission
+through PAR.
+
+# Security Considerations {#security-considerations}
+
+The security considerations of {{RFC8628}} and of the OAuth binding
+apply.
+
+## Remote Phishing {#sec-phishing}
+
+An attacker can start a session with its own Mission Intent and send
+the `user_code` or `verification_uri_complete` to a victim
+({{Section 5.4 of RFC8628}}). An approval then creates a Mission for
+the attacker's client over the victim's authority. The `user_code`
+confirmation and the rendering of the actual client, its
+authentication status, the Subject, and the derived Authority Set
+({{approval}}) reduce this risk, as does a short `device_code`
+lifetime. None of them stops a phisher who coaches the victim in real
+time. A deployment can restrict high-consequence authority under this
+profile to authenticated clients.
+
+## Client Identity {#sec-client-identity}
+
+Device clients are usually public ({{Section 5.6 of RFC8628}}). Any
+party can start a session naming a public client's `client_id`, so a
+Mission created through a public client is held by whoever holds the
+session's `device_code`, not by a particular piece of software.
+Neither the user's proximity to the device nor entry of the
+`user_code` authenticates the agent that proposed the Intent: the
+`user_code` shows only that the Approver saw the code
+({{Section 5.3 of RFC8628}}). The OAuth binding's checks that rely on
+the authenticated client, such as self-exchange by the Mission's
+approved agent, are only as strong as that client's authentication.
+
+## Device Code Theft {#sec-device-code}
+
+The `device_code` never traverses a user agent, so the OAuth
+binding's defense against authorization-code injection (PKCE or a
+DPoP-bound code) has no counterpart here. A leaked `device_code` lets
+its holder redeem the Mission's first tokens as the bound client,
+which for a public client is anyone. DPoP {{RFC9449}} at redemption
+binds the issued tokens to the redeemer's key; it neither
+authenticates the public-client instance that started the session nor
+prevents a thief from redeeming with a key of its own. High entropy
+({{Section 5.2 of RFC8628}}), a short lifetime, and one-time issuance
+({{issuance}}) limit the exposure, and sender-constrained tokens limit
+only what a later holder of those tokens can do. A refused request
+presenting an already redeemed `device_code` indicates a leak, and
+the AS can revoke the tokens issued from it.
+
+## Downgrade {#sec-downgrade}
+
+An AS without this profile ignores `mission_intent`, so a client that
+sent it a submission would receive an ordinary device grant over its
+`authorization_details`, governed by no Mission. The discovery rule
+({{discovery}}) and the client's response check ({{issuance}}) close
+that path. The metadata's integrity rests on the retrieval
+protections of {{RFC8414}}.
+
+# Privacy Considerations {#privacy-considerations}
+
+The verification user agent displays the Intent's prose, the derived
+authority, the client, and the Subject on a second device, possibly
+where others can see it ({{Section 5.5 of RFC8628}}). The device
+authorization response carries no Mission data, and the `user_code`
+reveals nothing about the Intent. A session that ends without a
+Mission leaves its submission at the AS as an unredeemed pushed
+request does, and the OAuth binding's retention considerations apply.
+
+# IANA Considerations {#iana}
+
+This document requests registration of the following in the "OAuth
+Authorization Server Metadata" registry ({{RFC8414}}):
+
+- Metadata Name: `mission_device_authorization_supported`
+- Metadata Description: Boolean indicating that the authorization
+  server accepts a Mission Intent at its device authorization
+  endpoint.
+- Change Controller: IETF
+- Specification Document(s): this document, {{discovery}}
+
+{{Section 11.2.1 of RFC6749}} defines no "OAuth Parameters" usage
+location for the device authorization request. This document uses
+`mission_intent` there under its existing registration, as
+{{RFC9396}} uses `authorization_details`, and requests no other
+action.
+
+--- back
+
+# Example {#example}
+
+The following is an example of a device authorization request from
+the public client `cli-agent`. The `mission_intent` and
+`authorization_details` values are shown decoded, with line breaks
+for display purposes only:
+
+~~~ http
+POST /device_authorization HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+client_id=cli-agent
+&mission_intent={"intent":{
+  "goal":"Reconcile Q3 invoices.",
+  "target_resources":["https://erp.example.com"],
+  "expires_at":"2026-12-31T23:59:59Z"}}
+&authorization_details=[{"type":"mission_resource_access",
+  "resource":"https://erp.example.com",
+  "actions":["invoices.read"]}]
+~~~
+
+The AS validates the submission and returns:
+
+~~~ http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "device_code": "GmRhmhcxhwAzkoEqiMEg_DnyEysNkuNhszIySk9eS",
+  "user_code": "WDJB-MJHT",
+  "verification_uri": "https://as.example.com/device",
+  "expires_in": 600,
+  "interval": 5
+}
+~~~
+
+The user `alice` visits the verification URI on her phone, enters the
+code, and authenticates. The page states that the request comes from
+`cli-agent`, a client the AS did not authenticate, for the account
+`alice`; shows the goal as text; lists the derived authority, reading
+invoices at `erp.example.com` until 31 December 2026; and displays
+`WDJB-MJHT`, asking her to confirm it matches her terminal and that
+she started the request. She approves, and the AS creates the Mission
+`active` atomically with her decision. A poll before her decision
+received `authorization_pending`; the next poll, with a DPoP proof,
+receives:
+
+~~~ http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
+  "token_type": "DPoP",
+  "expires_in": 300,
+  "refresh_token": "Q8sZw1nT4yV7bR2kP5mX9cL3",
+  "authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"] } ],
+  "mission_id": "msn_4Tq8Lw2Rx7Vn3Kp9Yd6Sb1Ze5Mc0Jh-",
+  "mission_expires_at": "2026-12-31T23:59:59Z"
+}
+~~~
+
+A further request presenting the same `device_code` receives
+`invalid_grant`.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+-00
+
+- Initial version (#1202). Carries the Submission envelope and
+  authority proposal on the RFC 8628 device authorization request
+  under the OAuth binding's alternative back-channel seam: the
+  `mission_device_authorization_supported` metadata member and the
+  client's discovery and no-fallback rules; whole-request validation
+  before a `device_code` is issued; binding of the session to the
+  exact submission and client; a direct approval event on the
+  verification user agent with the record created atomically with
+  the decision, client, Subject, and `user_code` confirmation in the
+  rendering; session outcomes, with redemption only of an unexpired,
+  unconsumed `device_code` under issuance gating; one-time issuance
+  with required `mission_id` and `mission_expires_at`; and the device
+  grant as the root of the Mission's grant lineage.
