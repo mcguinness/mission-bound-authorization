@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           16 October 2026
-Expires: 19 April 2027
+Intended status: Informational                           17 October 2026
+Expires: 20 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 19 April 2027.
+   This Internet-Draft will expire on 20 April 2027.
 
 Copyright Notice
 
@@ -4629,91 +4629,70 @@ Appendix B.  Comparison to a Conventional Stack
    mark where that local composition meets what this family
    standardizes:
 
-   +=============+===============+=====================+===============+
-   | Requirement | Conventional  | Mission             | Illustrative  |
-   |             | OAuth+PDP     | standardization     | added Mission |
-   |             | realization   |                     | cost          |
-   +=============+===============+=====================+===============+
-   | Durable     | OAuth grants, | An independently    | Durable-      |
-   | task        | refresh       | addressable,        | object and    |
-   | semantics   | families, or  | lifecycle-bearing   | lifecycle     |
-   | across      | PDP records   | approved task with  | storage       |
-   | tokens and  | outlive the   | anchors             |               |
-   | restarts    | token         | consistently        |               |
-   |             |               | interpreted by the  |               |
-   |             |               | authorization       |               |
-   |             |               | server, PDP,        |               |
-   |             |               | agents, audiences,  |               |
-   |             |               | and evidence        |               |
-   |             |               | producers; it does  |               |
-   |             |               | not make            |               |
-   |             |               | persistence newly   |               |
-   |             |               | possible (the       |               |
-   |             |               | OAuth binding's     |               |
-   |             |               | Why a New Object    |               |
-   |             |               | and Relationship    |               |
-   |             |               | to Other            |               |
-   |             |               | Authorization       |               |
-   |             |               | Objects sections)   |               |
-   +-------------+---------------+---------------------+---------------+
-   | Multi-      | A deployment- | Stable approved-    | New claims    |
-   | credential, | invented      | task semantics for  | and endpoints |
-   | multi-actor | transaction,  | that join, bound    |               |
-   | join        | grant, or     | to authority and    |               |
-   |             | workflow      | carried through     |               |
-   |             | identifier    | delegation and      |               |
-   |             | shared across | fan-out outside     |               |
-   |             | credentials   | one private PDP     |               |
-   |             |               | schema              |               |
-   |             |               | (Section 7.7)       |               |
-   +-------------+---------------+---------------------+---------------+
-   | A second    | The partner   | Bounded local       | State         |
-   | trust       | calls the     | credentials and     | consistency   |
-   | domain      | origin PDP,   | common anchors      | and           |
-   |             | shares state, | carried by Cross-   | distribution; |
-   |             | or federates  | Domain Projection,  | privacy and   |
-   |             | policy,       | accepting local-    | correlation   |
-   |             | trading       | token revocation    | surface       |
-   |             | synchronous   | latency (the        |               |
-   |             | coupling,     | Project verb): a    |               |
-   |             | availability, | portability         |               |
-   |             | and           | choice, not the     |               |
-   |             | disclosure    | only possible       |               |
-   |             |               | design              |               |
-   +-------------+---------------+---------------------+---------------+
-   | Approval as | A local       | A standardized      | Evidence      |
-   | a first-    | consent or    | immutable           | operations    |
-   | class       | grant         | snapshot,           |               |
-   | record      | database plus | integrity anchors,  |               |
-   |             | versioned     | and one reference   |               |
-   |             | decision logs | portable evidence   |               |
-   |             |               | can cite (the       |               |
-   |             |               | OAuth binding's     |               |
-   |             |               | Why a New Object    |               |
-   |             |               | section; the Prove  |               |
-   |             |               | verb)               |               |
-   +-------------+---------------+---------------------+---------------+
-   | Persistent  | A stateful    | Monotonic subset    | AS or MAS     |
-   | narrowing   | authorization | semantics across    | integration;  |
-   |             | server or PDP | issuance,           | ecosystem     |
-   |             | stores        | delegation,         | adoption      |
-   |             | reduced       | attenuation, and    |               |
-   |             | entitlements  | cross-domain        |               |
-   |             | and consults  | projections,        |               |
-   |             | them at       | auditable across    |               |
-   |             | issuance      | components          |               |
-   |             |               | (Section 8)         |               |
-   +-------------+---------------+---------------------+---------------+
+   +===========+=============+======================================+=============+
+   |Requirement|Conventional |Mission standardization               |Illustrative |
+   |           |OAuth+PDP    |                                      |added Mission|
+   |           |realization  |                                      |cost         |
+   +===========+=============+======================================+=============+
+   |Durable    |OAuth grants,|An independently addressable,         |Durable-     |
+   |task       |refresh      |lifecycle-bearing approved task with  |object and   |
+   |semantics  |families, or |anchors consistently interpreted by   |lifecycle    |
+   |across     |PDP records  |the authorization server, PDP, agents,|storage      |
+   |tokens and |outlive the  |audiences, and evidence producers; it |             |
+   |restarts   |token        |does not make persistence newly       |             |
+   |           |             |possible                              |             |
+   |           |             |([I-D.draft-mcguinness-oauth-mission],|             |
+   |           |             |Sections "Relationship to Existing    |             |
+   |           |             |OAuth Objects" and "Relationship to   |             |
+   |           |             |Adjacent Work")                       |             |
+   +-----------+-------------+--------------------------------------+-------------+
+   |Multi-     |A deployment-|Stable approved-task semantics for    |New claims   |
+   |credential,|invented     |that join, bound to authority and     |and endpoints|
+   |multi-actor|transaction, |carried through delegation and fan-out|             |
+   |join       |grant, or    |outside one private PDP schema        |             |
+   |           |workflow     |(Section 7.7)                         |             |
+   |           |identifier   |                                      |             |
+   |           |shared across|                                      |             |
+   |           |credentials  |                                      |             |
+   +-----------+-------------+--------------------------------------+-------------+
+   |A second   |The partner  |Bounded local credentials and common  |State        |
+   |trust      |calls the    |anchors carried by Cross-Domain       |consistency  |
+   |domain     |origin PDP,  |Projection, accepting local-token     |and          |
+   |           |shares state,|revocation latency (the Project verb):|distribution;|
+   |           |or federates |a portability choice, not the only    |privacy and  |
+   |           |policy,      |possible design                       |correlation  |
+   |           |trading      |                                      |surface      |
+   |           |synchronous  |                                      |             |
+   |           |coupling,    |                                      |             |
+   |           |availability,|                                      |             |
+   |           |and          |                                      |             |
+   |           |disclosure   |                                      |             |
+   +-----------+-------------+--------------------------------------+-------------+
+   |Approval as|A local      |A standardized immutable snapshot,    |Evidence     |
+   |a first-   |consent or   |integrity anchors, and one reference  |operations   |
+   |class      |grant        |portable evidence can cite            |             |
+   |record     |database plus|([I-D.draft-mcguinness-oauth-mission],|             |
+   |           |versioned    |Section "Relationship to Existing     |             |
+   |           |decision logs|OAuth Objects"; the Prove verb)       |             |
+   +-----------+-------------+--------------------------------------+-------------+
+   |Persistent |A stateful   |Monotonic subset semantics across     |AS or MAS    |
+   |narrowing  |authorization|issuance, delegation, attenuation, and|integration; |
+   |           |server or PDP|cross-domain projections, auditable   |ecosystem    |
+   |           |stores       |across components (Section 8)         |adoption     |
+   |           |reduced      |                                      |             |
+   |           |entitlements |                                      |             |
+   |           |and consults |                                      |             |
+   |           |them at      |                                      |             |
+   |           |issuance     |                                      |             |
+   +-----------+-------------+--------------------------------------+-------------+
 
      Table 16: Where a conventional stack meets Mission standardization
 
-   The OAuth binding's sections named in the table are in
-   [I-D.draft-mcguinness-oauth-mission].  Past these crossovers, a
-   conventional deployment often accumulates a durable task record, a
-   stable join key, lifecycle checks, narrowing rules, and audit
-   correlations.  Mission standardizes that recurring shape across
-   bindings and trust domains; it does not claim local policy systems
-   cannot implement equivalent outcomes.
+   Past these crossovers, a conventional deployment often accumulates a
+   durable task record, a stable join key, lifecycle checks, narrowing
+   rules, and audit correlations.  Mission standardizes that recurring
+   shape across bindings and trust domains; it does not claim local
+   policy systems cannot implement equivalent outcomes.
 
 Appendix C.  A Worked Composition
 
@@ -5521,6 +5500,10 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The conventional-stack table cites the OAuth binding's sections by
+      their current titles, "Relationship to Existing OAuth Objects" and
+      "Relationship to Adjacent Work" (#1125).
 
    *  Mission Creation Paths, Propose, Approve and Record, and the
       document map add the experimental Mission Device Authorization
