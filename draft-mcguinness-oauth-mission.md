@@ -580,9 +580,9 @@ the Mission Issuer:
 The remaining steps take place outside the AS:
 
 (4) The agent calls the resource server with the token. The resource
-server enforces the `authorization_details` statelessly, with no
-callback to the AS, and can check the `mission` claim
-({{rs-enforcement}}).
+server enforces the `authorization_details` statelessly and can check
+the `mission` claim ({{rs-enforcement}}), with no callback to the AS
+required.
 
 (5) A management revoke, or `expires_at` passing, moves the Mission
 to `terminated`, with reason `revoked` or `expired`, after which the
@@ -1265,10 +1265,10 @@ entries depend on whether an authority proposal was submitted:
 
   Either mode is conforming. A deployment publishes its mapping space as
   deployment documentation. Eligibility can be scoped per Subject and
-  client. A mapping keyed on Subject attributes resolves at the approval
-  event, where the Subject is established ({{approval-event}}), so a
-  refusal at PAR time is best-effort over what is checkable without the
-  Subject.
+  client, and a mapping keyed on Subject attributes resolves at the
+  approval event, where the Subject is established
+  ({{approval-event}}), so a refusal at PAR time is best-effort over
+  what is checkable without the Subject.
 
   Every Mission this mode yields takes its own fresh approval; standing
   consent to a pre-approved ceiling is the separate, experimental
@@ -2437,7 +2437,6 @@ drawdown, or child-creation policy, rather than the consented object
 itself), the object the accountable human consented to MUST carry
 that policy as an activation policy reference: an object of `id` (a
 string), `version` (a string), and `digest`.
-
 The `digest` is an integrity anchor ({{integrity-anchors}}) whose
 `typ` is `mission-activation-policy`, whose `iss` is the activating
 issuer, and whose `value` is an object of `content_type`, the media
@@ -2450,7 +2449,6 @@ follows, as it does for an activation the policy does not authorize.
 The issuer MUST retain each snapshot's bytes and media type for the
 audit horizon ({{mission-record}}) of every Mission it activates
 under that snapshot, so an auditor can reproduce the digest.
-
 Where no separate policy artifact exists, as when child creation is
 adjudicated against the approved delegation entry itself, this rule
 does not apply.
@@ -5772,9 +5770,9 @@ The following are out of scope for this document:
   to an approval for issuance and audit; it does not identify a
   business transaction.
 - **Approval-free authorization upgrade.** The Authority Set is
-  committed at approval, and this document defines no widening that
-  bypasses consent. Widening requires a new approval, a successor
-  Mission, as specified by Mission Expansion
+  committed at approval, and this document defines no mid-stream
+  widening that bypasses consent. Widening requires a new approval, a
+  successor Mission, as specified by Mission Expansion
   {{I-D.draft-mcguinness-oauth-mission-expansion}}.
 - **Lifecycle event distribution.** A resource server learns Mission
   state from the token lifetime or optional introspection
