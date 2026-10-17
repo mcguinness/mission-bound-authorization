@@ -357,12 +357,11 @@ this comparison ({{delegate-eligibility}}). A derived entry's
 ## Common Constraints {#common-constraints}
 
 A `constraints` member name ({{resource-access-type}}) is either a
-specification-defined **Common Constraint** or a deployment-defined
-key. Common
-Constraints give independently developed deployments one vocabulary
-they interpret, narrow, and compare identically; further Common
-Constraints are defined by specification under the naming convention of
-{{iana-common-constraints}}.
+specification-defined **Common Constraint** or a deployment-defined key.
+Common Constraints give independently developed deployments one
+vocabulary they interpret, narrow, and compare identically. Further
+Common Constraints are defined by specification and registered
+({{iana-common-constraints}}).
 
 A Common Constraint definition fixes:
 
@@ -374,141 +373,188 @@ A Common Constraint definition fixes:
   result MUST be no broader than either operand.
 
 A `constraints` member whose name is a specification-defined Common
-Constraint is interpreted per its
-definition. Any other member name remains
-deployment-defined and is interpreted only within the issuing
+Constraint is interpreted per its definition. Any other member name
+remains deployment-defined and is interpreted only within the issuing
 deployment; a consumer that does not recognize it MUST fail closed
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
-The same duty binds the authorization server side of narrowing: whenever the authorization server derives
-a candidate entry from a ceiling (a client's authority proposal
-narrowed to the Authority Set, or an Authority Set entry narrowed to
-a derived or delegated token, {{I-D.draft-mcguinness-oauth-mission}},
-{{delegate-eligibility}}), a
-registered Common Constraint key present in the ceiling entry that the
-authorization server does not implement narrowing for MUST NOT be dropped while the
-entry survives. The authorization server MUST instead fail closed: refuse the whole
-derivation, or omit the entry from the result, exactly as an
-unrecognized `target_resources` value already may be; the granted
-`authorization_details` echo reflects any such omission
-({{I-D.draft-mcguinness-oauth-mission}}). Carrying the entry forward with the
-key dropped would widen effective authority past the ceiling exactly
-as an unenforced key would at the resource server
-({{I-D.draft-mcguinness-oauth-mission}}).
+The same duty binds the authorization server when it narrows. The
+authorization server derives a candidate entry from a ceiling entry when
+it narrows:
 
-This document defines the initial Common Constraints:
+- a client's authority proposal to the Authority Set
+  ({{I-D.draft-mcguinness-oauth-mission}}); or
+- an Authority Set entry to a derived or delegated token
+  ({{delegate-eligibility}}).
 
-- `max_amount` (object): a per-action ceiling on a monetary amount.
-  The value is an object with two members: `amount` (REQUIRED, a
-  string containing a decimal number) and `currency` (REQUIRED, an
-  ISO 4217 {{ISO4217}} currency code). Subset: no broader when the `currency`
-  values are equal and the candidate `amount` is less than or equal
-  to the reference `amount`, compared in decimal value space;
-  differing currencies fail the comparison (no conversion is
-  defined). Intersection: when the `currency` values are equal, the
-  value with the smaller `amount`; differing currencies have no
-  intersection and the combination fails.
-- `resource_issued_after` (string, an RFC 3339 {{RFC3339}} date-time):
-  the action applies only to resources issued at or after this instant.
-  Subset: no broader when greater than or equal to the reference.
-  Intersection: the later instant.
-- `resource_issued_before` (string, an RFC 3339 {{RFC3339}} date-time):
-  the action applies only to resources issued at or before this
-  instant. Subset: no broader when less than or equal to the reference.
-  Intersection: the earlier instant. The `resource_` qualifier in both
-  names marks that the window bounds resource issuance, not token
-  issuance.
-- `tenant` (string): the action applies only to resources of the named
-  tenant. Subset: no broader when equal to the reference value.
-  Intersection: the common value when the two are equal; otherwise
-  there is no intersection and the combination fails.
-- `recipient_domain` (string, a DNS name): the action applies only to
-  recipients within the named domain. Subset: no broader when equal to
-  the reference or a DNS subdomain of it. Intersection: the narrower
-  value when one is equal to or a subdomain of the other; otherwise
-  there is no intersection and the combination fails.
-- `time_window` (object): the action may be exercised only within the
-  window, evaluated at the point of use (unlike `resource_issued_after`
-  and `resource_issued_before`, which bound resource issuance, and
-  unlike token `exp`, which bounds the credential). The value has two
-  members, `not_before` and `not_after` (each an RFC 3339 {{RFC3339}}
-  date-time); at least one MUST be present, and an absent member is
-  unbounded on that side. Subset: no broader when the candidate window
-  lies within the reference window, an absent candidate bound counting
-  as unbounded and therefore broader than any present reference bound.
-  Intersection: the overlap (the later `not_before`, the earlier
-  `not_after`); an empty overlap has no intersection and the
-  combination fails.
-- `data_classification` (array of strings): the action applies only to
-  data whose classification label is among the named values. Label
-  semantics are deployment- or registry-defined; the comparison is not.
-  Subset: no broader when the candidate array's members are a subset of
-  the reference array's, compared as exact strings. Intersection: the
-  common members; an empty result has no intersection and the
-  combination fails.
-- `allowed_tools` (array of strings): the action may be exercised only
-  through a capability whose identifier is among the named values (a
-  tool or function identity, asserted at the point of use by the
-  enforcing component). Subset: no broader when the candidate array's
-  members are a subset of the reference array's, compared as exact
-  strings. Intersection: the common members; an empty result has no
-  intersection and the combination fails.
-- `requires_action_approval` (boolean): when `true`, each exercise of
-  the action requires a fresh, action-bound approval at the point of
-  use; the enforcing component MUST NOT permit the action on Mission
-  authority alone. A value of `false` is equivalent to omitting the
-  member. Subset: no broader when the candidate is `true` or equals
-  the reference (narrowing may add the requirement, never remove it).
-  Intersection: the logical OR of the two values.
+In either case, a registered Common Constraint key present in the
+ceiling entry that the authorization server does not implement narrowing
+for MUST NOT be dropped while the entry survives. The authorization
+server MUST instead fail closed: refuse the whole derivation, or omit
+the entry from the result, as it may for an unrecognized
+`target_resources` value; the granted `authorization_details` echo
+reflects any such omission ({{I-D.draft-mcguinness-oauth-mission}}).
+Carrying the entry forward with the key dropped would widen effective
+authority past the ceiling, as an unenforced key would at the resource
+server ({{I-D.draft-mcguinness-oauth-mission}}).
 
-The `mission_resource_access` type does not define an interoperable
-cumulative use counter. Deployments that adopt Mission Metering
-({{I-D.draft-mcguinness-mission-metering}}) apply its accounting and
-settlement rules; the metering PDP can be embedded in the resource
-server.
+This type defines no interoperable cumulative use counter. A deployment
+that adopts Mission Metering ({{I-D.draft-mcguinness-mission-metering}})
+applies its accounting and settlement rules, and can embed the metering
+policy decision point in the resource server.
 
-These comparisons are in value space, not lexical: `max_amount`
-`amount` members are compared as the decimal numbers the strings
-contain, so `"500"`, `"500.0"`, and `"500.00"` are equal;
-`resource_issued_after` and `resource_issued_before` values are
-compared as the
-instants they denote after normalization to UTC, so two RFC 3339
-representations of the same instant that differ only in timezone offset
-or trailing subsecond zeros are equal; `recipient_domain` values are
-compared as DNS names, case-insensitively and on whole labels, so
-`mail.example.com` is within `example.com` and `example.net` is
-not. A Common Constraint definition
-MUST fix its subset and intersection in value-space terms, so that
-independent deployments compute the same result for the same values and
-the subset rule of {{subset}} is reproducible.
+### Initial Common Constraints {#initial-common-constraints}
 
-A decimal-string value in a Common Constraint (`max_amount`'s
-`amount` member, and any future Common Constraint with a
-decimal-valued member) MUST match `^[0-9]+(\.[0-9]{1,18})?$`: one or
-more decimal digits, optionally followed by a single `.` and one to
-18 further decimal digits. A leading `-` is out of scope for a
-ceiling value and MUST be rejected.
-A value of any other form, including scientific notation
-(`"1e300"`), a sign, a thousands separator, or a non-numeric token
-(`"NaN"`, `"Infinity"`), is malformed, and a consumer MUST reject it
-rather than attempt to parse it: an authority proposal carrying
-one is refused at submission ({{I-D.draft-mcguinness-oauth-mission}}), and a
-resource server treats a malformed
-decimal value the same as a `constraints` key it cannot enforce
-({{rs-enforcement}}). Comparison and intersection over two such
-decimal-string values MUST be computed as exact decimal arithmetic
-(for example, by scaling both values to integers by their fractional
-digit count and comparing the integers) and MUST NOT parse either
-value into an IEEE 754 binary floating-point type: that
-representation does not hold every value the grammar above admits
-exactly and can compare or combine two values incorrectly.
+This document defines the following Common Constraints.
+
+`max_amount`:
+: A per-action ceiling on a monetary amount.
+
+  - Value: an object with two members, `amount` (REQUIRED, a string
+    containing a decimal number, {{decimal-values}}) and `currency`
+    (REQUIRED, an ISO 4217 currency code {{ISO4217}}).
+  - Subset: no broader when the `currency` values are equal and the
+    candidate `amount` is less than or equal to the reference `amount`,
+    compared in decimal value space; differing currencies fail the
+    comparison (no conversion is defined).
+  - Intersection: when the `currency` values are equal, the value with
+    the smaller `amount`; differing currencies have no intersection and
+    the combination fails.
+
+`resource_issued_after`:
+: The action applies only to resources issued at or after this instant.
+
+  - Value: a string, an {{RFC3339}} date-time.
+  - Subset: no broader when greater than or equal to the reference.
+  - Intersection: the later instant.
+
+`resource_issued_before`:
+: The action applies only to resources issued at or before this instant.
+  The `resource_` qualifier in both names marks that the window bounds
+  resource issuance, not token issuance.
+
+  - Value: a string, an {{RFC3339}} date-time.
+  - Subset: no broader when less than or equal to the reference.
+  - Intersection: the earlier instant.
+
+`tenant`:
+: The action applies only to resources of the named tenant.
+
+  - Value: a string.
+  - Subset: no broader when equal to the reference value.
+  - Intersection: the common value when the two are equal; otherwise
+    there is no intersection and the combination fails.
+
+`recipient_domain`:
+: The action applies only to recipients within the named domain.
+
+  - Value: a string, a DNS name.
+  - Subset: no broader when equal to the reference or a DNS subdomain of
+    it.
+  - Intersection: the narrower value when one is equal to or a subdomain
+    of the other; otherwise there is no intersection and the combination
+    fails.
+
+`time_window`:
+: The action may be exercised only within the window, evaluated at the
+  point of use. This differs from `resource_issued_after` and
+  `resource_issued_before`, which bound resource issuance, and from the
+  token's `exp`, which bounds the credential.
+
+  - Value: an object with two members, `not_before` and `not_after`,
+    each an {{RFC3339}} date-time; at least one MUST be present, and an
+    absent member is unbounded on that side.
+  - Subset: no broader when the candidate window lies within the
+    reference window, an absent candidate bound counting as unbounded
+    and therefore broader than any present reference bound.
+  - Intersection: the overlap (the later `not_before`, the earlier
+    `not_after`); an empty overlap has no intersection and the
+    combination fails.
+
+`data_classification`:
+: The action applies only to data whose classification label is among
+  the named values. Label semantics are deployment- or registry-defined;
+  the comparison is not.
+
+  - Value: an array of strings.
+  - Subset: no broader when the candidate array's members are a subset
+    of the reference array's, compared as exact strings.
+  - Intersection: the common members; an empty result has no
+    intersection and the combination fails.
+
+`allowed_tools`:
+: The action may be exercised only through a capability whose identifier
+  is among the named values: a tool or function identity, asserted at
+  the point of use by the enforcing component.
+
+  - Value: an array of strings.
+  - Subset: no broader when the candidate array's members are a subset
+    of the reference array's, compared as exact strings.
+  - Intersection: the common members; an empty result has no
+    intersection and the combination fails.
+
+`requires_action_approval`:
+: When `true`, each exercise of the action requires a fresh,
+  action-bound approval at the point of use; the enforcing component
+  MUST NOT permit the action on Mission authority alone. A value of
+  `false` is equivalent to omitting the member.
+
+  - Value: a boolean.
+  - Subset: no broader when the candidate is `true` or equals the
+    reference (narrowing may add the requirement, never remove it).
+  - Intersection: the logical OR of the two values.
+
+### Value-Space Comparison {#value-space-comparison}
+
+Common Constraint comparisons are in value space, not lexical:
+
+- `max_amount` `amount` members are compared as the decimal numbers the
+  strings contain, so `"500"`, `"500.0"`, and `"500.00"` are equal;
+- `resource_issued_after` and `resource_issued_before` values are
+  compared as the instants they denote after normalization to UTC, so
+  two RFC 3339 representations of the same instant that differ only in
+  timezone offset or trailing subsecond zeros are equal; and
+- `recipient_domain` values are compared as DNS names,
+  case-insensitively and on whole labels, so `mail.example.com` is
+  within `example.com` and `example.net` is not.
+
+A Common Constraint definition MUST fix its subset and intersection in
+value-space terms, so that independent deployments compute the same
+result for the same values and the subset rule of {{subset}} is
+reproducible.
+
+### Decimal Values {#decimal-values}
+
+A decimal-string value in a Common Constraint (`max_amount`'s `amount`
+member, and any future Common Constraint with a decimal-valued member)
+MUST match `^[0-9]+(\.[0-9]{1,18})?$`: one or more decimal digits,
+optionally followed by a single `.` and one to 18 further decimal
+digits. A leading `-` is out of scope for a ceiling value and MUST be
+rejected.
+
+A value of any other form, including scientific notation (`"1e300"`), a
+sign, a thousands separator, or a non-numeric token (`"NaN"`,
+`"Infinity"`), is malformed, and a consumer MUST reject it rather than
+attempt to parse it:
+
+- an authority proposal carrying one is refused at submission
+  ({{I-D.draft-mcguinness-oauth-mission}}); and
+- a resource server treats a malformed decimal value the same as a
+  `constraints` key it cannot enforce ({{rs-enforcement}}).
+
+Comparison and intersection over two such decimal-string values MUST be
+computed as exact decimal arithmetic (for example, by scaling both
+values to integers by their fractional digit count and comparing the
+integers) and MUST NOT parse either value into an IEEE 754 binary
+floating-point type: that representation does not hold every value the
+grammar above admits exactly and can compare or combine two values
+incorrectly.
 
 A numeric constraint value MUST lie within the range JCS {{RFC8785}}
-serializes exactly. Monetary amounts avoid that hazard by
-construction: `max_amount` carries its `amount` as a string containing
-a decimal number, paired with an ISO 4217 {{ISO4217}} `currency` code, and a
-future Common Constraint for a monetary value SHOULD reuse this shape
-rather than a JSON number.
+serializes exactly. Monetary amounts avoid that hazard: `max_amount`
+carries its `amount` as a string containing a decimal number, paired
+with an ISO 4217 `currency` code, and a future Common Constraint for a
+monetary value SHOULD reuse this shape rather than a JSON number.
 
 ## Resource Server Enforcement {#rs-enforcement}
 
