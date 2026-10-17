@@ -295,60 +295,64 @@ The write entry carries no `delegation`, so it is non-delegable:
 and refuses an entry that is not one. This section defines that
 relation.
 
-When the authorization server narrows the Authority Set for a derived token, a derived
-`mission_resource_access` entry A is a subset of a Mission entry B
-when:
+When the authorization server narrows the Authority Set for a derived
+token, a derived `mission_resource_access` entry A is a subset of a
+Mission entry B when all of the following hold:
 
-1. A's effective resource set is contained in B's
-   (`resource_match`, {{resource-access-type}}): when neither
-   entry sets `resource_match: "prefix"`, A.`resource` equals
-   B.`resource`; when B is a `prefix` entry, A (whether `exact` or
-   `prefix`) is contained when A.`resource` equals B.`resource` or
-   extends its path at a path-segment boundary; a `prefix` A is never
-   contained in an `exact` B.
-2. Every A.`actions` value is within some B.`actions` value: a value
-   is within an equal value; a literal action is within a family whose
-   name it extends at a segment boundary (`invoices.read` is within
-   `invoices.*`); a family is within a reference family when its own
-   name extends the reference's name at a segment boundary
-   (`invoices.q3.*` is within `invoices.*`). A family is never within
-   a literal action.
-3. For every key K in **B**.`constraints`:
-   - K MUST also be present in A.`constraints`. A key present in B
-     but absent from A is treated as the broadest possible value and
+1. **Resource.** A's effective resource set is contained in B's
+   (`resource_match`, {{resource-access-type}}):
+   - when neither entry sets `resource_match: "prefix"`, A.`resource`
+     equals B.`resource`;
+   - when B is a `prefix` entry, A (whether `exact` or `prefix`) is
+     contained when A.`resource` equals B.`resource` or extends its path
+     at a path-segment boundary; and
+   - a `prefix` A is never contained in an `exact` B.
+2. **Actions.** Every A.`actions` value is within some B.`actions`
+   value:
+   - a value is within an equal value;
+   - a literal action is within a family whose name it extends at a
+     segment boundary (`invoices.read` is within `invoices.*`);
+   - a family is within a reference family when its own name extends the
+     reference's name at a segment boundary (`invoices.q3.*` is within
+     `invoices.*`); and
+   - a family is never within a literal action.
+3. **Constraints.** For every key K in **B**.`constraints`:
+   - K MUST also be present in A.`constraints`. A key present in B but
+     absent from A is treated as the broadest possible value and
      therefore fails this test.
-   - A's value MUST be no broader than B's under K's subset rule:
-     the specification-defined rule when K is a Common Constraint
+   - A's value MUST be no broader than B's under K's subset rule: the
+     specification-defined rule when K is a Common Constraint
      ({{common-constraints}}), the deployment-defined comparison
      otherwise.
 
 Resource containment under a `prefix` reference is compared after
-RFC 3986 {{RFC3986}} syntax-based normalization of both URIs: lowercase
-the scheme and host, remove a default port, uppercase the hexadecimal
-digits of any percent-encoding ({{Section 2.1 of RFC3986}}, so `%2f` and
-`%2F` are equivalent), decode percent-encoded octets of unreserved
-characters, and remove dot-segments. This
-normalization applies to comparison only, never to hashing:
+normalizing both URIs with these steps from {{Section 6.2.2 of RFC3986}}
+(syntax-based) and {{Section 6.2.3 of RFC3986}} (scheme-based):
+
+1. lowercase the scheme and host;
+2. remove a default port;
+3. uppercase the hexadecimal digits of any percent-encoding
+   ({{Section 2.1 of RFC3986}}), so `%2f` and `%2F` are equivalent;
+4. decode percent-encoded octets of unreserved characters; and
+5. remove dot-segments.
+
+This normalization applies to comparison only, never to hashing:
 {{I-D.draft-mcguinness-oauth-mission}}'s anchor computation remains
 byte-exact over the recorded values and is untouched by this rule.
 
-The default comparison is deliberately flat: `resource` matches by
-exact equality and a literal action by array membership. Hierarchy is
-opt-in and closed to the two forms above: `resource_match: "prefix"`
-for resource containment and `.*` action families for action
-containment ({{resource-access-type}}). A deployment that uses
-neither retains the flat behavior unchanged.
+Hierarchy is opt-in and closed to two forms: `resource_match: "prefix"`
+for resource containment and `.*` action families for action containment
+({{resource-access-type}}). Without them, comparison is flat: `resource`
+matches by exact equality and a literal action by array membership.
 
 The `delegation` member is policy, not authority, and is not part of
 this comparison ({{delegate-eligibility}}). A derived entry's
-`delegation`, when present, MUST NOT be broader than the parent
-entry's:
+`delegation`, when present, MUST NOT be broader than the parent entry's:
 
 - its `max_depth` MUST be no greater than the parent entry's;
-- its `allowed_delegates` MUST be no wider than the parent entry's;
-  and
-- a derived entry MUST NOT introduce `delegation` where the parent
-  entry has none.
+- its `allowed_delegates` MUST be no wider than the parent entry's; and
+- a derived entry MUST NOT introduce `delegation` where the parent entry
+  has none.
 
 ## Common Constraints {#common-constraints}
 
