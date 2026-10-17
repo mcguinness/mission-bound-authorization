@@ -4880,7 +4880,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "lifecycle refusals carry mission_error with one of revoked, expired, superseded, derivations_exhausted, or a value a companion defines (Mission Status's suspended and completed, Child Delegation's parent_terminated)",
-    "local": "fixed (#636/#706 cut): oidc-provider 9.10's InvalidGrant/err_out.js copy only error/error_description/scope/state from a thrown error, so mission_error never reached the client before this change; MissionGrantError plus a grant.error listener now splice it into the body wherever gateDerivation/gateActive refuses a still-valid grant. Proven positively at the wire with a real, non-undefined value for derivations_exhausted (a Mission capped at requested_derivation_limit 1, second derivation refused). This demo's own /lifecycle route additionally destroys the underlying OAuth Grant on a terminal transition (documented in provider.ts), so a revoked or expired-via-that-route Mission fails through oidc-provider's own grant lookup instead, never reaching this mechanism; mission_revoked and mission_expired are therefore reachable in deployments that gate purely on Mission state (a raw state change, or natural wall-clock expiry) but are untested at the wire here for that reason. mission_superseded is not yet defined by any companion in this codebase. On a Token Exchange the gate's lifecycle refusal is invalid_request and carries the same mission_error (#1154)."
+    "local": "oidc-provider 9.10's err_out.js copies only error, error_description, scope and state from a thrown error, so MissionGrantError and MissionExchangeError plus a grant.error listener splice mission_error into the body wherever the Mission gate (the refresh pre-check, gateDerivation or gateActive) refuses a still-valid grant. Endpoint witnesses cited here: suspended on a refresh (tracer); derivations_exhausted on a capped Mission's second derivation (tracer); superseded on a refresh of a predecessor's own refresh token after a deferred expansion activated its successor, with nothing issued, saved or counted (refresh-precheck, #1065); and expired on a Token Exchange, whose lifecycle refusal is invalid_request (#1154). The shared mapper gateErrorToMissionError, which passes each termination reason through (superseded, parent_terminated, expired) and gives no value for an unrecognized one, is cited as a unit witness, not as an endpoint refusal. Partial: revoked, completed and parent_terminated are not cited here as endpoint refusals. This demo's own /lifecycle route destroys the underlying OAuth Grant on a terminal transition (provider.ts), so a refresh after it fails at oidc-provider's grant lookup with no mission_error; a raw kernel transition, natural expiry or supersession leaves the grant for the Mission gate."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -4899,8 +4899,14 @@
     },
     {
      "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
-     "name": "mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint) > the value is the observed termination reason, unprefixed: superseded and parent_terminated map, an unknown reason carries none (@spec mission#termination)",
+     "name": "mission_error on a refresh after expansion (@spec expansion#superseded-state, mission#issuance-gating, #1065) > a refresh of the superseded predecessor's refresh token is refused invalid_grant with mission_error superseded, issuing, saving and counting nothing",
      "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint) > the value is the observed termination reason, unprefixed: superseded and parent_terminated map, an unknown reason carries none (@spec mission#termination)",
+     "level": "unit",
      "surface": "token-endpoint"
     },
     {
@@ -6888,7 +6894,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Unit-level only: projectScope proves each audience independently (a value is emitted only when safe at every audience, mixed modes refuse). No issuance path here mints a multi-audience access token (oidc-provider binds one resource server per token), so no endpoint test observes the clause."
+   "notes": "Partial while this provider issues single-audience tokens (D415); not a permanent limitation. projectScope proves each audience independently at unit level (a value is emitted only when safe at every audience, mixed modes refuse). No endpoint mints a multi-audience Mission-bound token: oidc-provider refuses more than one resource indicator at the token request (lib/helpers/resolve_resource.js, 9.10.0), every custom-grant mint binds one resource server, and the cross-org exchange projects for its one requested audience. Reconsider if a genuine multi-audience issuance path is added; none is added only to witness this row."
   },
   {
    "id": "core.scope-projection.unknown-stale-mapping-fail-closed",
@@ -6989,7 +6995,7 @@
     "normative": "the scope-projection rule applies to every issuance path that can emit scope on a Mission-bound token, not only initial issuance."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
@@ -7026,9 +7032,39 @@
      "name": "PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #child-client-identity) > happy path: child redeems its assertion -> 200 DPoP-bound child token carrying the child mission",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection on the dispatch and expansion-successor mints (@spec mission#scope-projection) > a template dispatch to the scope-only target carries only the scope the instance's template-bounded entry proves, which the plain RS enforces, and refuses invalid_target while the target's mapping is unknown",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection on the dispatch and expansion-successor mints (@spec mission#scope-projection) > an expansion successor's first token carries the scope projected from the successor's own derived entry, which drops a requested action beyond the ceiling, and the plain RS enforces the widened scope",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358) > mints a handle audienced to the requesting client, under the presented token's key, with its authority and no scope, as one counted derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the JWT customizer backstop, invoked directly (@spec mission#scope-projection, mission#rs-enforcement) > refuses invalid_target a Mission-bound payload whose token the scope projection did not decide, and applies the decided scope for a projected token",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Witnessed: initial issuance, refresh (re-projection against the current mapping, no-safe-value and removed-mapping refusals, narrower requested scope), async-delegation Token Exchange and its family refresh, the cross-org Token Exchange, and the deferred and child jwt-bearer mints (their payments tokens carry no scope). The dispatch and expansion-successor mints run the same save-time projection but no test observes them."
+   "notes": "Witnessed at the token endpoint on every Mission-bound mint path: initial issuance; refresh (re-projection against the current mapping, no-safe-value and removed-mapping refusals, narrower requested scope); the async-delegation Token Exchange and its family refresh; the cross-org Token Exchange; the deferred and child jwt-bearer mints (payments tokens, scope omitted); the template dispatch and the expansion successor's first token (scope projected from the derived, ceiling-bounded entry at the scope-only plain RS, a dispatch to an unmapped target refused invalid_target); and the delegation-handle request and the Dispatch Handoff redemption (delegation handles, scope omitted under step 4). An expansion recovery re-mint and an async-delegation resume reuse the witnessed mint functions. The JWT customizer refuses a Mission-bound token the projection did not decide (direct invocation, unit level), so a new mint path cannot skip the projection silently. Transaction tokens and attenuation roots carry no scope."
   },
   {
    "id": "core.scope-projection.ungrantable-requested-scope-refused",
@@ -7157,6 +7193,50 @@
     }
    ],
    "notes": "The projection is decided in oidc-provider's rotateRefreshToken hook, after client authentication and the refresh token's own client, expiry, sender-constraint and reuse checks, and before consumption or rotation. Witnessed on a rotating (async-delegation family) refresh token: refused invalid_target and invalid_scope while the mapping cannot prove the value, then the same token succeeds once after the mapping is repaired, and its reuse is replay-detected (grant revoked). Rotation is not disabled and no consumed token is restored."
+  },
+  {
+   "id": "core.rs-enforcement.delegated-routing-mission-aware",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "A deployment MUST NOT route a delegated Mission-bound token to a Mission-unaware resource server, or to logging or audit infrastructure, that authorizes or logs the caller on `client_id` without processing the `act` chain.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission-bound token that carries an emitted act chain, whatever path emitted it, never reaches a Mission-unaware resource server, or logging or audit infrastructure, that authorizes or logs the caller on client_id without processing the act chain",
+    "local": "the AS portion only: the AS issues an act-bearing Mission-bound token only for an audience its trusted scope-projection mapping classifies mission_aware, and refuses any other or unmapped audience with invalid_target (D166) before issuance"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > mints the act-bearing token for an audience classified Mission-aware",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the JWT customizer backstop, invoked directly (@spec mission#scope-projection, mission#rs-enforcement) > refuses invalid_target an act-bearing Mission-bound payload to an audience not classified Mission-aware or not mapped, and passes it to a Mission-aware audience",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role), at the token endpoint on the cross-org exchange and on the JWT customizer backstop by direct invocation (unit: no oidc-provider mint carries act today; the endpoint witness follows a same-Mission delegation mint, #869). It does not establish every deployment route: the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. The transaction endpoint applies the same gate before admitting a workflow (txn-endpoint.test.ts, delegated routing of transaction tokens); that coverage is reviewed separately."
   },
   {
    "id": "core.introspection.composite-active",
@@ -27523,7 +27603,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "No scope-projection mode exists in src for this profile: the demo consuming AS models Mission authority as authorization_details (RFC 9396) throughout and never projects to scope. Todo pending a scope-projection implementation."
+   "notes": "Todo: no consuming-AS Issuance Grant redemption or refresh path exists in src (see issuance-grant.effective-set-projection.redemption, #589), so nothing here maps a Mission Issuance Grant's narrowed remainder to scope. The issuer's own scope projection (core scope-projection) runs on every Mission-bound mint over the token's effective-set-narrowed authorization_details, but that witnesses the issuer role, not this profile's consuming AS: the async-delegation family is not the consuming-AS Issuance Grant path (D415), and a RAS effective-authority calculation does not project to scope. Implement and test when that consuming path exists."
   },
   {
    "id": "issuance-grant.effective-set-projection.claim-gate",
@@ -29069,7 +29149,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a handoff whose DPoP proof is under any key but the subject token's cnf.jkt is refused invalid_grant"
+    "normative": "a subject token that fails verification, carries no mission claim, names an unknown Mission, or is bound by mTLS or to another key than the proof's, and a handoff whose DPoP proof is under any key but the subject token's cnf.jkt, are refused invalid_grant, issuing no handoff grant"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -29079,9 +29159,15 @@
      "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > wrong key: a DPoP proof under any key but the instance token's is refused invalid_grant",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the Dispatch Handoff keeps the Template's code for an invalid or unacceptable subject_token (@spec mission-template#dispatch-handoff, #1178) > refuses %s with invalid_grant and issues no handoff grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "D357 acceptance bar item 1 (the Dispatcher proves possession of the instance token's key). Shares the child and expansion exchanges' possession check. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "D357 acceptance bar item 1 (the Dispatcher proves possession of the instance token's key). Shares the child and expansion exchanges' possession check. Proved by disabling the check (dispatch-handoff mutation harness, #1158). #1178: the shared possession check answers in each caller's contract; the Template's is invalid_grant."
   },
   {
    "id": "template.handoff.exchange-client",
@@ -30848,7 +30934,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the async-delegation exchange refuses a subject_token whose aud is not the authenticated acting client's client_id, including the agent's own resource-audienced Mission access token, before any family, reservation or derivation count; a retry under a recorded creation_request_id presenting such a token recovers nothing"
+    "normative": "the async-delegation exchange refuses a subject_token whose aud is not the authenticated acting client's client_id, including the agent's own resource-audienced Mission access token, before any family, reservation or derivation count; a retry under a recorded creation_request_id presenting such a token recovers nothing",
+    "local": "the reference AS answers invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -30862,6 +30949,12 @@
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
      "name": "the async-delegation subject_token is a delegation handle (@spec continuation#transport-async, draft-zhu-oauth-async-delegation-05 Section 4.3, #1157) > recovery revalidates the handle: a retry presenting the raw token or another key never retrieves the recorded family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "invalid or unacceptable subject tokens at the async exchange and the delegation-handle request (@spec continuation#transport-async, RFC 8693 Section 2.2.2, #1178) > the async exchange refuses %s with invalid_request, no Mission diagnostic, and no family, reservation or count",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -30883,7 +30976,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the async-delegation exchange refuses a delegation handle presented with a DPoP proof under any key other than the handle's own cnf.jkt, though the client authenticates, and a recovery retry under another key retrieves nothing"
+    "normative": "the async-delegation exchange refuses a delegation handle presented with a DPoP proof under any key other than the handle's own cnf.jkt, though the client authenticates, and a recovery retry under another key retrieves nothing",
+    "local": "the reference AS answers invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -30905,9 +30999,15 @@
      "name": "Dispatch Handoff: complete, fresh DPoP proofs on both legs (@spec RFC 9449 Section 4.3, #1163 review) > the delegation-handle request and the async exchange refuse an incomplete, stale or future-dated proof; within the window both succeed (#1157 review P1)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "invalid or unacceptable subject tokens at the async exchange and the delegation-handle request (@spec continuation#transport-async, RFC 8693 Section 2.2.2, #1178) > the async exchange refuses %s with invalid_request, no Mission diagnostic, and no family, reservation or count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body). Owner review of #1165: the proof is complete and fresh (RFC 9449 Section 4.3) at both the handle request and the async exchange."
+   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body). Owner review of #1165: the proof is complete and fresh (RFC 9449 Section 4.3) at both the handle request and the async exchange. #1178 adds the mTLS-bound handle and one bound to another key, each refused before any family, reservation or count."
   },
   {
    "id": "continuation.async-transport.handle-request",
@@ -30924,7 +31024,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Token Exchange presenting the agent's own Mission access token, with a DPoP proof of that token's key and audience equal to the agent's client_id, yields an access token whose aud is that client_id; an audience naming anything else, or a proof under another key, is refused"
+    "normative": "a Token Exchange presenting the agent's own Mission access token, with a DPoP proof of that token's key and audience equal to the agent's client_id, yields an access token whose aud is that client_id; an audience naming anything else, or a proof under another key, is refused",
+    "local": "the reference AS answers invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -30956,6 +31057,12 @@
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
      "name": "the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358) > refuses audience combined with the async selector before routing: no family and no derivation count (#1157 review P2)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "invalid or unacceptable subject tokens at the async exchange and the delegation-handle request (@spec continuation#transport-async, RFC 8693 Section 2.2.2, #1178) > the delegation-handle request refuses %s with invalid_request, no Mission diagnostic, and no handle or count",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -31222,7 +31329,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The narrower-prefix-entry clause is unit-level only: this deployment's derivation never produces a resource_match prefix entry. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
+   "notes": "The narrower-prefix-entry clause is unit-level only, because no issuance path here can carry a resource_match prefix entry: the kernel derivation builds each derived entry member by member (type, resource, actions, constraints, delegation) and never carries resource_match, so every Mission entry is exact, and the cross-org exchange's tool mapping emits none either. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
   },
   {
    "id": "resource-access.scope-projection.actions-no-aggregation",
@@ -33805,7 +33912,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the child-creation exchange creates a child within the presented token's authority, and refuses with invalid_request and mission_denial_reason not_strict_subset a child beyond it (an action the token lacks, or a delegation right the token lacks), though the parent allows it, creating no child; a subject_token whose authority cannot be read is refused invalid_grant; the deny Child Evidence records attenuation result exceeds_presented_authority"
+    "normative": "the child-creation exchange creates a child within the presented token's authority, and refuses with invalid_request and mission_denial_reason not_strict_subset a child beyond it (an action the token lacks, or a delegation right the token lacks), though the parent allows it, creating no child; a subject_token whose authority cannot be read is refused, creating no child; the deny Child Evidence records attenuation result exceeds_presented_authority",
+    "local": "the reference AS answers an unreadable subject_token invalid_request (RFC 8693 Section 2.2.2, #1178, D415)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -34012,14 +34120,14 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a child-creation exchange whose DPoP proof is missing or not under the subject_token's own confirmation key is refused",
-    "local": "the reference AS answers a missing proof invalid_dpop_proof and a wrong-key proof invalid_grant (#1178); the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
+    "local": "the reference AS answers a missing proof invalid_dpop_proof and a wrong-key proof invalid_request (RFC 8693 Section 2.2.2, #1178, D415); the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, also invalid_request, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
-     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_request)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -34186,7 +34294,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "possession is verified after step 1: a request missing both creation_request_id and its DPoP proof is refused for the missing creation_request_id (invalid_request, RFC 6749 Section 5.2), and a proof not under the subject_token's confirmation key, or a replayed one, is refused",
-    "local": "the reference AS answers a wrong-key proof invalid_grant (#1178) and a replayed one invalid_dpop_proof; the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
+    "local": "the reference AS answers a wrong-key proof invalid_request (RFC 8693 Section 2.2.2, #1178, D415) and a replayed one invalid_dpop_proof; the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -34199,7 +34307,7 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
-     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_request)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -34217,6 +34325,41 @@
     }
    ],
    "notes": "#1210 (D398). The possession arm is partial: see observation.local. The lead-in carries the MUST."
+  },
+  {
+   "id": "child-delegation.request-processing.failure-refusal",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "request-processing",
+   "text": "On any failure the Mission Issuer MUST refuse with `invalid_request`, `invalid_grant`, or `invalid_token` as appropriate, and MUST NOT create a child.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an invalid or unacceptable subject_token (one failing verification, without a mission claim, naming an unknown Mission, bound by mTLS or to another key than the proof's, or without readable authorization_details) or actor_token (one failing verification, or not sender-constrained to the presenter) refuses the child-creation exchange with one of invalid_request, invalid_grant or invalid_token, and no child, creation_request_id reservation or derivation count results",
+    "local": "the reference AS answers each witnessed failure invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only; this row witnesses the subject_token and actor_token failure classes, and the other steps' failures keep their own rows. A DPoP proof that fails its own checks is RFC 9449's invalid_dpop_proof, outside the three codes this clause lists"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178) > refuses %s with invalid_request, no Mission diagnostic, and no child, reservation or count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178) > refuses a subject_token without readable authorization_details with invalid_request, creating nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178 (D415, with D369). Proved by mutation (PR body): each refusal's code returned to invalid_grant, a mission_error spliced onto the refusal, a derivation counted before the key check, and a creation_request_id reserved before the subject check; each was caught."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
@@ -36115,6 +36258,36 @@
    "notes": "#1154 (D369)."
   },
   {
+   "id": "expansion.superseded-state.refusal-mission-error",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "superseded-state",
+   "text": "The refusal's `mission_error` value is `superseded`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a derivation refused under a superseded predecessor (a new token, a refresh, a token exchange, or a cross-domain grant) carries mission_error superseded",
+    "local": "Partial: endpoint-witnessed on a refresh of the predecessor's own refresh token after a deferred expansion activated its successor, refused invalid_grant with nothing issued, saved or counted; a Token Exchange or cross-domain grant under a superseded predecessor is not cited here."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "mission_error on a refresh after expansion (@spec expansion#superseded-state, mission#issuance-gating, #1065) > a refresh of the superseded predecessor's refresh token is refused invalid_grant with mission_error superseded, issuing, saving and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1065 (D415)."
+  },
+  {
    "id": "expansion.reconciliation.completion-refusal-code",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "reconciliation",
@@ -36446,14 +36619,14 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an expansion exchange whose DPoP proof is not under the subject_token's own confirmation key is refused",
-    "local": "the reference AS answers that refusal invalid_grant (whether a Token Exchange answers invalid_request is #1178's question); the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
+    "local": "the reference AS answers that refusal invalid_request (RFC 8693 Section 2.2.2, #1178, D415); the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: possession (@spec expansion, #448) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "name": "expansion wire: possession (@spec expansion, #448) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_request)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -36569,7 +36742,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "possession is verified after step 1: a request missing both creation_request_id and its DPoP proof is refused for the missing creation_request_id (invalid_request, RFC 6749 Section 5.2), and a proof not under the subject_token's confirmation key, or a replayed one, is refused",
-    "local": "the reference AS answers a wrong-key proof invalid_grant (#1178) and a replayed one invalid_dpop_proof; the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
+    "local": "the reference AS answers a wrong-key proof invalid_request (RFC 8693 Section 2.2.2, #1178, D415) and a replayed one invalid_dpop_proof; the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -36582,7 +36755,7 @@
     },
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: possession (@spec expansion, #448) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "name": "expansion wire: possession (@spec expansion, #448) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_request)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -36600,6 +36773,36 @@
     }
    ],
    "notes": "#1210 (D398). The possession arm is partial: see observation.local. The lead-in carries the MUST."
+  },
+  {
+   "id": "expansion.verification-order.failure-refusal",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "verification-order",
+   "text": "On any failure the Mission Issuer MUST refuse with `invalid_request`, `invalid_grant`, or `invalid_token` as appropriate, and MUST NOT create a successor.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an invalid or unacceptable subject_token (one failing verification, without a mission claim, naming an unknown Mission, or bound by mTLS or to another key than the proof's) or actor_token (one failing verification, or not sender-constrained to the presenter) refuses the expansion exchange with one of invalid_request, invalid_grant or invalid_token, leaving the predecessor active with its derivation count, and no deferral, successor or creation_request_id reservation results",
+    "local": "the reference AS answers each witnessed failure invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only; this row witnesses the subject_token and actor_token failure classes, and the other steps' failures keep their own rows. A DPoP proof that fails its own checks is RFC 9449's invalid_dpop_proof, outside the three codes this clause lists"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the expansion exchange (@spec expansion#verification-order, RFC 8693 Section 2.2.2, #1178) > refuses %s with invalid_request, no Mission diagnostic, and no deferral, reservation or count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178 (D415, with D369). Proved by mutation (PR body): each refusal's code returned to invalid_grant, a mission_error spliced onto the refusal, a derivation counted before the key check, and a creation_request_id reserved before the subject check; each was caught."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
