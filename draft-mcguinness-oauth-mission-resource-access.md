@@ -656,89 +656,90 @@ AS") evaluates conveyed matchers, failing closed and narrowing out any
 ## Scope Projection {#scope-projection}
 
 {{I-D.draft-mcguinness-oauth-mission}} states the semantic subset
-condition and issuance algorithm an authorization server applies
-before emitting `scope` for any `authorization_details` entry: the
-projected scope's effective rights, together with every independently
-mandatory control on the target's enforcement path, MUST be a subset
-of the rights the applicable entries grant. This section states when
-that condition holds for a `mission_resource_access` entry.
+condition and issuance algorithm an authorization server applies before
+emitting `scope` for any `authorization_details` entry: the projected
+scope's effective rights, together with every independently mandatory
+control on the target's enforcement path, MUST be a subset of the rights
+the applicable entries grant. This section states when that condition
+holds for a `mission_resource_access` entry.
 
 A scope-projection mapping's entry for this type names, for a target
-resource server: the `scope` value or values it emits, the `resource`
-and `resource_match` the mapping covers, the `actions` value or values
-each `scope` value stands for, and, for every `constraints` key an
-entry may carry, whether the target independently and identically
-enforces that key on the `scope`-authorized path.
+resource server:
 
-Projecting a `mission_resource_access` entry's authority to `scope`
-is safe only when all of the following hold:
+- the `scope` value or values it emits;
+- the `resource` and `resource_match` the mapping covers;
+- the `actions` value or values each `scope` value stands for; and
+- for every `constraints` key an entry may carry, whether the target
+  independently and identically enforces that key on the
+  `scope`-authorized path.
 
-1. **The resource match is exact under the mapping.** The mapping's
-   `scope` value is defined over the entry's `resource` and
-   `resource_match`. A `prefix` entry projects safely only when the
-   mapping itself scopes the value to that same prefix; a `scope`
-   value the target's own interpretation extends to a broader
-   ancestor resource is not a safe projection of a narrower `prefix`
-   entry.
+Projecting a `mission_resource_access` entry's authority to `scope` is
+safe only when all of the following hold:
+
+1. **The mapping covers the same resource set.** The mapping's `scope`
+   value is defined over the entry's `resource` and `resource_match`. A
+   `prefix` entry projects safely only when the mapping itself scopes
+   the value to that same prefix; a `scope` value the target's own
+   interpretation extends to a broader ancestor resource is not a safe
+   projection of a narrower `prefix` entry.
 2. **The actions match without aggregation.** Every action granted by
    the mapped `scope` value MUST be included in the applicable entry's
    `actions`; the value MAY grant a proper subset of them. A `scope`
-   value that grants any additional action, including through an
-   implied action family, an aggregate of unrelated actions, or the
-   union of more than one entry's actions, fails this condition,
-   because the target grants every action the union names, not only
-   the entry's.
+   value that grants any additional action, including through an implied
+   action family, an aggregate of unrelated actions, or the union of
+   more than one entry's actions, fails this condition, because the
+   target grants every action the union names, not only the entry's.
 3. **Every carried `constraints` key is independently enforced.** For
-   every key in the entry's `constraints`, the mapping states that
-   the target enforces that key, under a comparison at least as tight
-   as the entry's value, on the `scope`-authorized path. An entry
-   with no `constraints` trivially satisfies this condition. A key
-   the mapping does not name as independently enforced fails the
-   condition for that entry, exactly as an unenforced key fails
-   closed at a resource server that consumes `authorization_details`
-   directly.
+   every key in the entry's `constraints`, the mapping states that the
+   target enforces that key, under a comparison at least as tight as the
+   entry's value, on the `scope`-authorized path. An entry with no
+   `constraints` satisfies this condition. A key the mapping does not
+   name as independently enforced fails the condition for that entry, as
+   an unenforced key fails closed at a resource server that consumes
+   `authorization_details` directly.
 
 An entry failing any condition MUST NOT be projected to `scope`. Per
 {{I-D.draft-mcguinness-oauth-mission}}'s issuance algorithm, the
 authorization server then omits `scope` for that entry where the
-target's enforcement path consumes `authorization_details`, and
-refuses issuance to that target when it is `scope`-only and no other
-carried entry supplies a safe projection.
+target's enforcement path consumes `authorization_details`, and refuses
+issuance to that target when it is `scope`-only (it consumes `scope` and
+not `authorization_details`) and no other carried entry supplies a safe
+projection.
 
 ## Transformation Capabilities {#transformation-capabilities}
 
-{{I-D.draft-mcguinness-oauth-mission}} requires an authorization
-server to declare, for every authorization-server-supported `authorization_details`
-type, whether it understands the type's narrowing, delegation, and
-scope-projection semantics, through deployment documentation or,
-where available, the machine-readable `mission_transformation_capabilities`
-carrier that document defines.
+{{I-D.draft-mcguinness-oauth-mission}} requires an authorization server
+to declare, for every `authorization_details` type it supports, whether
+it understands the type's narrowing, delegation, and scope-projection
+semantics. The declaration is made through deployment documentation or,
+where available, the machine-readable
+`mission_transformation_capabilities` carrier that document defines.
 
 For `mission_resource_access`, an authorization server that implements
 this document in full declares:
 
 `narrowing`: `true`
-: The subset and intersection algebra of {{subset}} and
-  {{common-constraints}} is fully defined, over every member this
-  document specifies.
+: The subset rule of {{subset}}, over every member this document
+  specifies, and the Common Constraint intersection rules of
+  {{common-constraints}} are fully defined.
 
 `delegation`: `true`
-: The delegation policy of {{delegate-eligibility}} is fully
-  defined; an entry's `delegation` member states its own depth and
-  eligibility bounds.
+: The delegation policy of {{delegate-eligibility}} is fully defined; an
+  entry's `delegation` member states its own depth and eligibility
+  bounds.
 
 `projection`: `true`
 : A safe scope projection is defined, and decidable per entry, by
-  {{scope-projection}}; it is not unconditionally available for
-  every entry, and an authorization server MUST still apply that
-  section's conditions per entry before emitting `scope`.
+  {{scope-projection}}; it is not unconditionally available for every
+  entry, and an authorization server MUST still apply that section's
+  conditions per entry before emitting `scope`.
 
-An authorization server that implements only part of this document
-(for example, `mission_resource_access` entries without ever emitting
-`scope` for them) declares `projection` as undeclared rather than
-`true`, and {{I-D.draft-mcguinness-oauth-mission}}'s carried-as-approved
+An authorization server that implements only part of this document (for
+example, `mission_resource_access` entries without ever emitting `scope`
+for them) leaves `projection` undeclared rather than declaring it
+`true`. {{I-D.draft-mcguinness-oauth-mission}}'s carried-as-approved
 fallback then applies to `scope` projection for this type at that
-deployment, exactly as it would for an unsupported type.
+deployment, as it would for an unsupported type.
 
 ## Modeling Tools and Function Calls {#tools}
 
@@ -830,29 +831,29 @@ implements:
   ({{transformation-capabilities}}), stating which of narrowing,
   delegation, and projection it claims for this type.
 
-Beyond that floor, an authorization server implements, for each
-capability it declares as `true`:
+For each capability it declares `true`, an authorization server also
+implements:
 
-- **narrowing**: the subset and intersection algebra
-  ({{subset}}, {{common-constraints}});
+- **narrowing**: the subset rule and the Common Constraint intersection
+  rules ({{subset}}, {{common-constraints}});
 - **delegation**: the delegate eligibility test
   ({{delegate-eligibility}}); and
-- **projection**: the three per-entry, per-target safety conditions
-  of {{scope-projection}} before emitting `scope`. An authorization
-  server that does not claim `projection` MUST NOT emit `scope` for a
-  `mission_resource_access` entry under
-  {{I-D.draft-mcguinness-oauth-mission}}'s issuance algorithm, and
-  instead omits `scope` or refuses issuance to a scope-only target,
-  exactly as that document requires for any type without a declared
-  projection.
+- **projection**: the three per-entry, per-target safety conditions of
+  {{scope-projection}} before emitting `scope`.
 
-A **resource server** conforms by implementing the enforcement duties
-of {{rs-enforcement}}: exact or prefix resource matching, action and
+An authorization server that does not claim `projection` MUST NOT emit
+`scope` for a `mission_resource_access` entry under
+{{I-D.draft-mcguinness-oauth-mission}}'s issuance algorithm, and instead
+omits `scope` or refuses issuance to a scope-only target, as that
+document requires for any type without a declared projection.
+
+A **resource server** conforms by implementing the enforcement duties of
+{{rs-enforcement}}: exact or prefix resource matching, action and
 action-family matching, and every carried `constraints` key, failing
-closed on a member, matching mode, or key it does not implement. A
-resource server does not implement narrowing, delegate eligibility,
-or the Transformation Capabilities declaration; those are the
-authorization server's, and their presence or absence does not bear
+closed on a `resource_match` value or `constraints` key it does not
+implement. A resource server does not implement narrowing, delegate
+eligibility, or the Transformation Capabilities declaration; those are
+the authorization server's, and their presence or absence does not bear
 on a resource server's conformance.
 
 # Security Considerations {#security-considerations}
