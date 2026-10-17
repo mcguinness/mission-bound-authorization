@@ -29,9 +29,9 @@ import {
 } from "../src/index.js";
 import { browserApprovalHeaders } from "./approval-fixture.js";
 
-const PORT = 14791;
+const PORT = 14763;
 const ISSUER = `http://localhost:${PORT}`;
-const OFF_PORT = 14792;
+const OFF_PORT = 14764;
 const OFF_ISSUER = `http://localhost:${OFF_PORT}`;
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];

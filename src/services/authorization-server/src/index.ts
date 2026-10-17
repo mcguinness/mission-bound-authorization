@@ -19,6 +19,8 @@ import {
   SCOPE_PROJECTION,
   TOPOLOGY,
   USERS,
+  APPROVAL_FLOOR,
+  type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import type { ScopeProjectionMapping } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
@@ -467,6 +469,7 @@ export {
   DEFERRED_GRANT_TYPE,
   ExpansionDeferralStore,
   ExpansionDeferralError,
+  ApprovalFloorRefusedError,
   type ApplyCarryoverOutcome,
   type ExpansionApproval,
   type ExpansionDeferredResult,
@@ -474,6 +477,7 @@ export {
   type DeferralSlowDown,
   type DeferredToken,
 } from "./kernel/deferred.js";
+export { evaluateApprovalFloor, type ApprovalFloorOutcome, type AchievedApproverContext } from "./kernel/approval-floor.js";
 export {
   ChallengeError,
   type ChallengeErrorCode,
@@ -707,6 +711,12 @@ export async function buildAuthorizationServer(opts: {
   childMissionCarryover?: CarryoverConfig;
   /** Independent approver login integration; OAuth interaction cookies never establish this login. */
   approvalSessions?: ApprovalSessionStore;
+  /**
+   * @spec mission#approval-authentication (#826, D425) — override the
+   * published approval-authentication floor. Defaults to the config-shipped
+   * {@link APPROVAL_FLOOR}.
+   */
+  approvalFloor?: ApprovalFloorPolicy;
   /**
    * @spec mission#intent-submission-evidence — the deployment-GLOBAL
    * policy-required Intent Submission Evidence types (the anti-downgrade
@@ -1089,6 +1099,7 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     () => kernel.nowDate(),
     opts.childMissionCarryover ?? CHILD_MISSION_CARRYOVER,
+    opts.approvalFloor ?? APPROVAL_FLOOR,
   );
   // @spec expansion#creation-request-id — the creation-idempotency store over
   // the kernel database (instances over the same kernel share the table; this
@@ -1142,6 +1153,7 @@ export async function buildAuthorizationServer(opts: {
       ? { requiredIntentEvidenceTypes: opts.requiredIntentEvidenceTypes }
       : {}),
     approverRoleSubs: new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub)),
+    approvalFloor: opts.approvalFloor ?? APPROVAL_FLOOR,
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
     // @spec mission#caller-authorization-and-minimization — the registered
     // RFC 7662 introspection principals (config/introspection.json).

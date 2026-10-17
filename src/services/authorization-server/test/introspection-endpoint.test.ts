@@ -38,7 +38,10 @@
  *    Mission (and any sibling family) staying active;
  *  - Mission-bound refresh tokens introspect under the SAME composite rule.
  */
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { ApprovalSessionStore } from "../src/index.js";
+const FLOOR_SESSIONS = new ApprovalSessionStore();
+
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 import type { Server } from "node:http";
@@ -161,7 +164,7 @@ async function runFlow(input: {
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+    headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader()), "content-type": "application/json" },
     body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res);
@@ -337,6 +340,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: FLOOR_SESSIONS,
     testTokenSigningJwk,
     // @spec discharge#discharge-authority — admits the completing condition
     // flow6 carries (the shipped dev service principal asserts it), so the
@@ -627,7 +631,9 @@ describe("the credential profile's shared negative vectors (@spec mission#intros
   it.each(labels)("answers a token with %s with a bare active:false, as the resource refuses it", async (label) => {
     const v = vectorsFor(flow1.missionId).find((x) => x.label === label);
     if (!v) throw new Error(`no vector ${label}`);
-    const res = await introspect(await craftToken({ ...baseline(), ...v.claims }, { header: v.header }), {
+    // Bound to a key, so the only failure is the vector's: a delegated
+    // token needs `cnf` regardless of its chain.
+    const res = await introspect(await craftToken({ ...baseline(), cnf, ...v.claims }, { header: v.header }), {
       principal: RS_PAYMENTS,
     });
     expect(res.body).toEqual({ active: false });
@@ -642,7 +648,7 @@ describe("the credential profile's shared negative vectors (@spec mission#intros
   });
 
   it("answers a delegated token (act) with no cnf with a bare active:false: a delegated token is sender-constrained", async () => {
-    const act = { sub: "delegate-agent" };
+    const act = { sub: "delegate-agent", iss: ISSUER };
     expect((await introspect(await craftToken({ ...baseline(), act }), { principal: RS_PAYMENTS })).body).toEqual({ active: false });
     expect((await introspect(await craftToken({ ...baseline(), act, cnf }), { principal: RS_PAYMENTS })).body.active).toBe(true);
   });
@@ -663,6 +669,39 @@ describe("the credential profile's shared negative vectors (@spec mission#intros
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+describe("the active response carries the token's act chain, and no other answer does (@spec mission#introspected-consumption, RFC 8693 Section 4.1, #904)", () => {
+  // Each token is signed by the AS's own key and reuses flow1's real issuance
+  // record. That proves the introspection output contract only: no delegated
+  // exchange here mints an act-bearing token (#869 owns that path), and a JWT
+  // test is not opaque-token consumption.
+  const cnf = { jkt: "test-confirmation-thumbprint" };
+  // A valid Actor Profile chain: every hop names `sub` and `iss`.
+  const act = { sub: "agent-b", iss: ISSUER, act: { sub: "agent-a", iss: ISSUER } };
+  const token = (claims: Record<string, unknown> = {}, opts: { expiresIn?: number } = {}) =>
+    craftToken({ jti: flow1.jti, mission: { id: flow1.missionId, issuer: ISSUER }, cnf, ...claims }, opts);
+
+  it("carries a delegated token's nested act chain unchanged on an active response", async () => {
+    const res = await introspect(await token({ act }), { principal: RS_PAYMENTS });
+    expect(res.body).toMatchObject({ active: true, act });
+  });
+
+  it("carries no act member for a token without one", async () => {
+    const res = await introspect(await token(), { principal: RS_PAYMENTS });
+    expect(res.body.active).toBe(true);
+    expect(res.body).not.toHaveProperty("act");
+  });
+
+  it("never discloses act on an inactive answer or to a caller that is not an audience of the token", async () => {
+    // Individually expired, and signed for another issuer: bare inactive.
+    expect((await introspect(await token({ act }, { expiresIn: -60 }), { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+    expect((await introspect(await token({ act, iss: "https://evil.example" }), { principal: RS_PAYMENTS })).body).toEqual({
+      active: false,
+    });
+    // The same active token, asked about by a resource that is not its audience.
+    expect((await introspect(await token({ act }), { principal: RS_SAAS })).body).toEqual({ active: false });
   });
 });
 

@@ -29,7 +29,7 @@ import {
   dpopProofFor,
   submitMissionApproval,
 } from "./oauth-client.js";
-import { completeMissionApproval, denyMissionApproval, issueMissionToken } from "./approval-console.js";
+import { completeMissionApproval, denyMissionApproval, issueMissionToken, logInAgain } from "./approval-console.js";
 import { installConsoleSessionBoundary } from "./console-session-boundary.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
@@ -224,7 +224,7 @@ async function main() {
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ]);
-  const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails }, stack.authServer.approverServiceToken);
+  const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails }, stack.authServer.approverConsole);
   const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST", issued.accessToken);
   // @spec authority-server#mission-join (#557 review point 5) — validateToken()
   // returns MissionBoundTokenFacts specifically (mission REQUIRED, never
@@ -461,6 +461,15 @@ async function main() {
   // enough context per entry to decide (see enrichedQueue). Extends the shape the
   // console-bff method returns; the console-bff itself is untouched.
   app.get("/bff/approver/queue", (c) => c.json(enrichedQueue()));
+  // @spec mission#approval-authentication (#826, D425) — the approver logs in
+  // again: a new recorded login for the console (simulated; the demo has no
+  // Approver identity provider). Adjudication never logs in, so a high-risk
+  // approval more than the floor's age bound after the last login refuses
+  // until this is called.
+  app.post("/bff/approver/login", (c) => {
+    logInAgain(stack.approverLogin);
+    return c.json({ sub: stack.approverLogin.sub, acr: stack.approverLogin.acr, auth_time: stack.approverLogin.auth_time });
+  });
   // Approver adjudicates EITHER a parked mission approval (approvalId in
   // missionApprovals) or a pending AROP/JIT task on the shared ARS.
   app.post("/bff/approver/adjudicate", async (c) => {
@@ -475,7 +484,7 @@ async function main() {
         return c.json({ approved: rec.state === "active", state: rec.state, ...(rec.missionId ? { missionId: rec.missionId } : {}) });
       }
       if (decision === "deny") {
-        await denyMissionApproval(asUrl, { uid: rec.submitted.uid, jar: rec.submitted.jar }, stack.authServer!.approverServiceToken);
+        await denyMissionApproval(asUrl, { uid: rec.submitted.uid, jar: rec.submitted.jar }, stack.authServer!.approverConsole);
         rec.state = "denied";
         return c.json({ approved: false, state: "denied" });
       }
@@ -488,7 +497,7 @@ async function main() {
           uid: rec.submitted.uid,
           jar: rec.submitted.jar,
           par: rec.submitted.par,
-        }, stack.authServer!.approverServiceToken);
+        }, stack.authServer!.approverConsole);
       } catch (e) {
         return c.json({ approved: false, error: (e as Error).message }, 400);
       }
