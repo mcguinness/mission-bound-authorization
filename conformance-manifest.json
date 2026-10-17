@@ -3247,7 +3247,8 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where a standing-consent Mission populates approval_basis.adjudication, kind is policy, naming the deciding policy or workflow's identity and version, never the activation_actor that triggered the instance"
+    "normative": "where a standing-consent Mission populates approval_basis.adjudication, kind is policy, naming the deciding policy or workflow's identity and version, never the activation_actor that triggered the instance",
+    "local": "Limited to the governed-policy kernel path (activateGovernedPolicy), the one path that reaches this case in the reference AS; no endpoint witness. Template dispatch and policy drawdown populate no adjudication, so the clause does not bind them."
    },
    "level": "unit",
    "coverage": "tested",
@@ -3592,7 +3593,8 @@
    "surface": "governance-decision",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where a kind policy adjudicator's recorded inputs include a model's output, the activated Authority Set is no wider than the same policy version yields over the same recorded inputs with that output treated as no objection: the model's output can refuse the activation or narrow it, never add an entry or widen one"
+    "normative": "where a kind policy adjudicator's recorded inputs include a model's output, the activated Authority Set is no wider than the same policy version yields over the same recorded inputs with that output treated as no objection: the model's output can refuse the activation or narrow it, never add an entry or widen one",
+    "local": "Limited to the governed-policy kernel path (activateGovernedPolicy), the one path that reaches this case in the reference AS; no endpoint witness."
    },
    "level": "unit",
    "coverage": "tested",
@@ -3621,11 +3623,11 @@
    "surface": "governance-decision",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where an Approval Governance Record's accountable assertion is kind policy (including a direct approval with no standing-consent basis) and that policy's recorded inputs include a model's output, the activated Authority Set is no wider than the same policy version yields over the same recorded inputs with that output treated as no objection",
-    "local": "Witnessed on governed_policy, whose accountable assertion is kind policy. The observation's direct-approval case cannot arise after D387 (a direct accountable assertion is human), so it has no witness; the observation needs re-quoting."
+    "normative": "where an Approval Governance Record's accountable assertion is kind policy and that policy's recorded inputs include a model's output, the activated Authority Set is no wider than the same policy version yields over the same recorded inputs with that output treated as no objection",
+    "local": "Limited to the governed-policy kernel path (activateGovernedPolicy), the one path that reaches this case in the reference AS; no endpoint witness. After D387 a direct approval's accountable assertion is human, so governed_policy is the only kind-policy accountable assertion."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -32299,7 +32301,8 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a service assertion's authority names the identifier and version of the logic that produced its decision, and the model's identifier and version where a model produced it"
+    "normative": "a service assertion's authority names the identifier and version of the logic that produced its decision, and the model's identifier and version where a model produced it",
+    "local": "Limited to the governed-policy kernel path (activateGovernedPolicy), the one path that reaches this case in the reference AS; no endpoint witness."
    },
    "level": "unit",
    "coverage": "tested",
@@ -32898,6 +32901,12 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > re-evaluating the recorded policy version over the recorded inputs reproduces the decision",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > re-checks against the capability resolution retained at activation, while a new activation resolves current trusted state",
+     "level": "unit",
+     "surface": "governance-decision"
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
@@ -32932,6 +32941,12 @@
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a high-risk class only under a committed, class-named exception, whose age then binds",
+     "level": "unit",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an action the root does not classify instead of treating it as low-risk",
      "level": "unit",
      "surface": "governance-decision"
     }
@@ -33123,7 +33138,7 @@
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > leaves a Mission activated before withdrawal active under its ordinary lifecycle",
      "level": "unit",
-     "surface": "lifecycle-endpoint"
+     "surface": "governance-decision"
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
@@ -33153,7 +33168,7 @@
      "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > completes a pending proposal under a configured governed policy whose root admits it, never one the client names",
      "level": "unit",
-     "surface": "token-endpoint"
+     "surface": "governance-decision"
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
@@ -33183,7 +33198,7 @@
      "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > keeps polling, cancellation, client binding, and single delivery for a policy-completed approval",
      "level": "unit",
-     "surface": "token-endpoint"
+     "surface": "governance-decision"
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
@@ -33213,7 +33228,7 @@
      "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > creates no Mission when the evaluation does not authorize activation, leaving the approval pending or, when configured, denied",
      "level": "unit",
-     "surface": "token-endpoint"
+     "surface": "governance-decision"
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
@@ -33243,13 +33258,13 @@
      "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > makes a human approval after a refused evaluation a direct approval event, never a governed_policy activation",
      "level": "unit",
-     "surface": "token-endpoint"
+     "surface": "governance-decision"
     },
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
      "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > never turns an approval event that committed a direct Mission into a governed_policy activation",
      "level": "unit",
-     "surface": "token-endpoint"
+     "surface": "governance-decision"
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). Owner review of #1227 accepted the human fallback with this guard. #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
@@ -33269,22 +33284,23 @@
    "surface": "token-endpoint",
    "assertion": "concurrency",
    "observation": {
-    "normative": "retried and concurrent completions of one pending approval produce one Mission and one Approval Governance Record"
+    "normative": "retried and concurrent completions of one pending approval produce one Mission and one Approval Governance Record",
+    "local": "Kernel-level witness only (MissionApprovalDeferralStore, concurrency and unit tests): two concurrent policy completions, and a human approval racing one, resolve a pending approval to one Mission and at most one record. The token-endpoint obligation has no witness, since Deferred Mission Approval has no wire path in the reference AS."
    },
    "level": "concurrency",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > resolves retried and concurrent completions of one pending approval to one Mission and one record",
      "level": "concurrency",
-     "surface": "token-endpoint"
+     "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > leaves the approval pending with no Mission and nothing to deliver when the record cannot be signed",
      "level": "unit",
-     "surface": "token-endpoint"
+     "surface": "governance-record"
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). Completion is issuer-side: two concurrent completions, and a human approval racing a policy completion, resolve to one Mission and at most one record."
