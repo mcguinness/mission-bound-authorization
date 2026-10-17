@@ -1255,8 +1255,9 @@ entries depend on whether an authority proposal was submitted:
   The mapping is a lookup, not synthesis. Because no
   `authorization_details` object was submitted, the AS refuses an Intent
   that matches no configured mapping, or whose mapped candidates policy
-  narrows to nothing, with `access_denied` ({{error-mapping}}). Its `error_description` can say whether no
-  mapping matched or policy narrowed the candidates to nothing.
+  narrows to nothing, with `access_denied` ({{error-mapping}}). Its
+  `error_description` can say whether no mapping matched or policy
+  narrowed the candidates to nothing.
 
   Either mode is conforming. A deployment publishes its mapping space as
   deployment documentation. Eligibility can be scoped per Subject and
@@ -1992,9 +1993,11 @@ as the Mission Join of
 decision point joins an ordinary OAuth credential to a Mission per
 request. The same credential can be joined to different Missions across
 separate requests where its subject and client are eligible for more
-than one. Such a join is not a Mission grant binding: it does not make
-the joined OAuth grant Mission-bound, and it rests on its own
-authenticated inputs and evidence, never on a Mission grant binding.
+than one.
+
+Such a join is not a Mission grant binding: it does not make the joined
+OAuth grant Mission-bound, and it rests on its own authenticated inputs
+and evidence, never on a Mission grant binding.
 
 ### Mission State Across Bindings {#grant-binding-state}
 
@@ -3206,6 +3209,7 @@ Exchange, and any other derived-token path.
 
 Scope projection does not change OAuth response semantics and does not
 make access-token inspection a client requirement.
+
 {{Section 3.3 of RFC6749}} requires the token response to carry `scope`
 whenever the granted scope differs from the requested scope, and its
 grammar defines no empty scope, so an issuance cannot report an
@@ -3214,10 +3218,12 @@ ungranted requested value by omission. The AS MUST refuse, with
 `scope` value the issuance cannot grant: a value the target's trusted
 mapping names but no carried entry makes safe (step 3), or any `scope`
 value the AS associates with a target that consumes
-`authorization_details` (step 4). An unknown, ambiguous, or stale
-mapping is a step 5 failure and yields the `invalid_target` error code
-even when the request also names a `scope` value; `invalid_scope`
-applies only under a mapping the AS trusts.
+`authorization_details` (step 4).
+
+An unknown, ambiguous, or stale mapping is a step 5 failure and yields
+the `invalid_target` error code even when the request also names a
+`scope` value; `invalid_scope` applies only under a mapping the AS
+trusts.
 
 Where the AS emits a projected `scope`, a requested `scope` narrows
 it to the requested values, and the token response reports the
@@ -3450,13 +3456,14 @@ the codes):
    ({{Section 6 of RFC9470}}), and that authentication does not meet
    the resource's requirement, the resource server responds with the
    `insufficient_user_authentication` error code and the `acr_values`
-   or `max_age` parameters ({{Section 3 of RFC9470}}). Where no Subject
-   authentication applies, the token carries no such claims and the
-   challenge offers no remediation, so the resource server does not
-   use it. The Subject's authentication is a distinct fact from the
-   Approver's approval-time authentication; a requirement on the
-   Approver is an approval floor ({{approval-authentication}}), not a
-   resource server challenge.
+   or `max_age` parameters ({{Section 3 of RFC9470}}).
+
+   Where no Subject authentication applies, the token carries no such
+   claims and the challenge offers no remediation, so the resource
+   server does not use it. The Subject's authentication is a distinct
+   fact from the Approver's approval-time authentication; a requirement
+   on the Approver is an approval floor ({{approval-authentication}}),
+   not a resource server challenge.
 2. **Sender-constraint or key-binding failure.** The token's proof of
    possession is missing or invalid: the resource server responds with
    the `invalid_token` error code, in the `DPoP` scheme for a
@@ -4556,6 +4563,7 @@ assertion that the carried authority was correctly projected
 A deployment that needs assurance independent of the token signature
 verifies the carried authority against the complete approved set. What
 that verification provides depends on when the issuer is compromised.
+
 Retrieving the complete set under the same trust root as the token adds
 nothing against an issuer malicious at approval time: that issuer can
 approve and commit arbitrary authority, and no containment mechanism
