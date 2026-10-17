@@ -142,6 +142,32 @@ export function issuerLocalPrincipals(issuer: string): PrincipalMapper {
       : undefined;
 }
 
+/**
+ * Maps an authenticated client, under the issuer that authenticated the
+ * request's subject, to a policy principal, or `undefined` when it is not a
+ * client this policy administers (D429).
+ */
+export type ClientMapper = (client: { client: string | undefined; iss: string | undefined }) => string | undefined;
+
+/**
+ * The OpenFGA principal for an issuer-qualified client, encoded as
+ * {@link principalObject} encodes a subject, on the model's `client` type.
+ */
+export function clientObject(client: { iss: string; client: string }): string {
+  return `client:${encodeURIComponent(client.iss)}|${encodeURIComponent(client.client)}`;
+}
+
+/**
+ * The issuer-local client mapping: the authenticated client is a principal
+ * only under exactly the configured issuer, the one that authenticated the
+ * subject. No client, or a client under any other issuer, selects none.
+ */
+export function issuerLocalClients(issuer: string): ClientMapper {
+  if (typeof issuer !== "string" || issuer.length === 0) throw new ResourcePolicyConfigError("issuer-local client mapping needs an issuer");
+  return (c) =>
+    c.iss === issuer && typeof c.client === "string" && c.client.length > 0 ? clientObject({ iss: issuer, client: c.client }) : undefined;
+}
+
 /** The stored entitlement relation for each Mission-context relation. */
 export const ENTITLEMENT_RELATIONS = {
   reader: "authorized_reader",
@@ -150,16 +176,21 @@ export const ENTITLEMENT_RELATIONS = {
 
 export type EntitlementRelation = (typeof ENTITLEMENT_RELATIONS)[keyof typeof ENTITLEMENT_RELATIONS];
 
+/** The stored relation a client needs on every target, whatever the action (D429). */
+export const CLIENT_ENTITLEMENT = "authorized_client";
+
 /** Target types the stored entitlement model administers. */
 const POLICY_TARGET_TYPES = new Set(["invoice", "vendor"]);
 
 /**
- * The OpenFGA-backed Resource policy: for each target, one check of the
- * stored entitlement relation the action maps to, for the mapped principal,
- * with no contextual tuples. Every target must be entitled; the first that
- * is not refuses the whole action. A subject the mapper does not administer,
- * an action with no mapped relation, or a target type the model does not
- * administer refuses rather than skipping the check.
+ * The OpenFGA-backed Resource policy: for each target, a check of the
+ * stored entitlement relation the action maps to for the mapped subject, and
+ * a check of `authorized_client` for the mapped client (D429), with no
+ * contextual tuples. The model counts a direct grant only for a member of
+ * the target's tenant. Every target must be entitled to both; the first that
+ * is not refuses the whole action. A subject or client the mappers do not
+ * administer, an action with no mapped relation, or a target type the model
+ * does not administer refuses rather than skipping the check.
  *
  * Every check is an authoritative read (`HIGHER_CONSISTENCY`) with no cache:
  * the Resource-policy freshness this deployment declares is "current as of
@@ -170,6 +201,7 @@ export function fgaResourcePolicy(
   fga: Pick<Fga, "checkStored">,
   options: {
     principals: PrincipalMapper;
+    clients: ClientMapper;
     relationForAction?: (action: string) => { relation: "payer" | "reader" } | null;
   },
 ): ResourcePolicy {
@@ -179,18 +211,19 @@ export function fgaResourcePolicy(
       return getTracer("pdp").startActiveSpan("pdp.resource_policy", async (span) => {
         try {
           const principal = options.principals(query.subject);
+          const client = options.clients({ client: query.client, iss: query.subject.iss });
           const mapped = relationOf(query.action);
-          if (principal === undefined || mapped === null || query.targets.length === 0) return { allowed: false };
+          if (principal === undefined || client === undefined || mapped === null || query.targets.length === 0) return { allowed: false };
           const relation = ENTITLEMENT_RELATIONS[mapped.relation];
           for (const target of query.targets) {
             if (!POLICY_TARGET_TYPES.has(target.type) || typeof target.id !== "string" || target.id.length === 0) {
               return { allowed: false, target };
             }
-            const allowed = await fga.checkStored(
-              { user: principal, relation, object: `${target.type}:${target.id}` },
-              { higherConsistency: true },
-            );
-            if (!allowed) return { allowed: false, target };
+            const object = `${target.type}:${target.id}`;
+            const subjectAllowed = await fga.checkStored({ user: principal, relation, object }, { higherConsistency: true });
+            if (!subjectAllowed) return { allowed: false, target };
+            const clientAllowed = await fga.checkStored({ user: client, relation: CLIENT_ENTITLEMENT, object }, { higherConsistency: true });
+            if (!clientAllowed) return { allowed: false, target };
           }
           return { allowed: true };
         } catch (e) {
