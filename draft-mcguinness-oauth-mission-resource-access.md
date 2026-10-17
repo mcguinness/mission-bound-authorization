@@ -953,46 +953,48 @@ them.
 
 ## The Mission Resource Access Authorization Details Type {#type-registration}
 
-`mission_resource_access` is an `authorization_details` type per
-{{Section 2 of RFC9396}}, defined by this document in
-{{resource-access-type}}. RFC 9396 does not establish an IANA
-registry of authorization details types (type identifiers are
-interpreted by the authorization server), so this document creates no
-registry entry for it and requires no IANA action here. If a registry
-of authorization details types is established in the future, this type
-SHOULD be registered in it.
+`mission_resource_access` is an `authorization_details` type
+({{Section 2 of RFC9396}}), defined in {{resource-access-type}}.
+{{RFC9396}} establishes no IANA registry of authorization details types
+(the authorization server interprets type identifiers), so this document
+requests no IANA action for it. If a registry of authorization details
+types is established in the future, this type SHOULD be registered in
+it.
 
 ## OAuth Protected Resource Metadata Registration {#oauth-protected-resource-metadata-registration}
 
-This document registers the following in the "OAuth Protected
-Resource Metadata" registry ({{RFC9728}}):
+This document requests registration of the following value in the "OAuth
+Protected Resource Metadata" registry ({{RFC9728}}):
 
 - Metadata Name: `mission_constraints_supported`
 - Metadata Description: JSON array of the `constraints` keys the
-  protected resource understands and enforces.
-- Change Controller: IESG
-- Specification Document(s): this document, {{protected-resource-metadata}}
+  protected resource understands and enforces
+- Change Controller: IETF
+- Specification Document(s): {{protected-resource-metadata}} of this
+  document
 
 ## Common Constraints Registry {#iana-common-constraints}
 
-This document establishes the "Mission Common Constraints" registry.
-The registration policy is Specification Required {{RFC8126}}. A
-Designated Expert reviews a submission for the discipline
-{{common-constraints}} requires: a name matching
-`^[A-Za-z0-9_.:-]+$` not already registered, a JSON {{RFC8259}} value
-syntax precise enough for independent implementations to agree on,
-and a subset rule and an intersection rule both stated in
-value-space terms, with the intersection of any two valid values
-never broader than either operand. Registration does not require IETF
-review or a Standards Track document; a Specification Required
-reference that a Designated Expert can review against these criteria
-suffices.
+This document establishes the "Mission Common Constraints" registry. The
+registration policy is Specification Required ({{RFC8126}}). The
+Designated Expert checks that a submission:
+
+- uses a name matching `^[A-Za-z0-9_.:-]+$` that is not already
+  registered;
+- gives a JSON {{RFC8259}} value syntax precise enough for independent
+  implementations to agree on; and
+- states a subset rule and an intersection rule, both in value-space
+  terms ({{value-space-comparison}}), with the intersection of any two
+  valid values never broader than either operand.
+
+A specification-defined name is coordinated through this registry. Any
+other `constraints` member name is either collision-resistant or
+deployment-defined, and stays outside the registry.
 
 Each registration records:
 
 - **Key Name**: the `constraints` member name.
-- **Value Space**: the JSON value type and any additional syntax
-  rules.
+- **Value Syntax**: the JSON value type and any additional syntax rules.
 - **Subset Rule**: how a candidate value is judged no broader than a
   reference value.
 - **Intersection Rule**: how two values for the key combine into a
@@ -1001,28 +1003,24 @@ Each registration records:
   registration.
 - **Reference**: the specification defining the key.
 
-This document populates the registry with the Common Constraints it
-defines ({{common-constraints}}); the "Ref" column below is this
-document, at the section shown, for every row, and the full Subset
-Rule and Intersection Rule text is there, not restated in the table:
+The initial contents of the registry are the Common Constraints of
+{{initial-common-constraints}}. For every entry, the Change Controller
+is IETF and the Reference is {{initial-common-constraints}} of this
+document, which holds the full Subset Rule and Intersection Rule text;
+the table summarizes them.
 
-| Key Name | Value Space | Subset / Intersection | Controller | Ref |
-|---|---|---|---|---|
-| `max_amount` | Object: `amount` (decimal string), `currency` (ISO 4217) | Same currency, candidate <= reference; intersection is the smaller amount | IETF | {{common-constraints}} |
-| `resource_issued_after` | String, RFC 3339 date-time | Candidate >= reference; intersection is the later instant | IETF | {{common-constraints}} |
-| `resource_issued_before` | String, RFC 3339 date-time | Candidate <= reference; intersection is the earlier instant | IETF | {{common-constraints}} |
-| `tenant` | String | Equal; intersection is the shared value | IETF | {{common-constraints}} |
-| `recipient_domain` | String, DNS name | Equal or a subdomain; intersection is the narrower value | IETF | {{common-constraints}} |
-| `time_window` | Object: `not_before` and `not_after` (RFC 3339 date-time) | Candidate window within reference window; intersection is the overlap | IETF | {{common-constraints}} |
-| `data_classification` | Array of strings | Candidate array a subset of reference array; intersection is the common members | IETF | {{common-constraints}} |
-| `allowed_tools` | Array of strings | Candidate array a subset of reference array; intersection is the common members | IETF | {{common-constraints}} |
-| `requires_action_approval` | Boolean | Candidate `true` or equal to reference; intersection is the logical OR | IETF | {{common-constraints}} |
-
-Names are kept collision-free by the convention
-{{common-constraints}} already uses: a specification-defined name is
-coordinated through this registry, and any other name is either
-collision-resistant or remains deployment-defined and outside the
-registry.
+| Key Name | Value Syntax | Subset Rule | Intersection Rule |
+|---|---|---|---|
+| `max_amount` | Object: `amount` (decimal string), `currency` (ISO 4217 code) | Same currency; candidate <= reference | Same currency; the smaller amount |
+| `resource_issued_after` | String, RFC 3339 date-time | Candidate >= reference | The later instant |
+| `resource_issued_before` | String, RFC 3339 date-time | Candidate <= reference | The earlier instant |
+| `tenant` | String | Equal | The shared value |
+| `recipient_domain` | String, DNS name | Equal or a subdomain | The narrower value |
+| `time_window` | Object: `not_before` and `not_after` (RFC 3339 date-time) | Candidate window within reference window | The overlap |
+| `data_classification` | Array of strings | Candidate a subset of reference | The common members |
+| `allowed_tools` | Array of strings | Candidate a subset of reference | The common members |
+| `requires_action_approval` | Boolean | Candidate `true` or equal to reference | The logical OR |
+{: title="Initial Mission Common Constraints registry"}
 
 --- back
 
