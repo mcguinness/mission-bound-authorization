@@ -112,7 +112,8 @@ This document is that specification for one type,
 
 - the entry: a resource matched exactly or by path prefix, an action
   namespace with wildcard families, machine-actionable constraints, and
-  a per-entry delegation policy ({{resource-access-type}});
+  a per-entry delegation policy ({{resource-access-type}}), and how a
+  `resource` is matched ({{resource-matching}});
 - the subset rule that compares two entries ({{subset}}), and the Common
   Constraints with their subset and intersection rules
   ({{common-constraints}});
@@ -125,8 +126,8 @@ This document is that specification for one type,
 
 The issuance profile keeps the type-agnostic machinery: the approved-set
 commitment, derivation gating, and its own scope-projection rule and
-issuance algorithm. This document supplies `mission_resource_access`'s
-instance of each.
+issuance algorithm. This document defines the type-specific comparison,
+delegation, and scope-projection rules for `mission_resource_access`.
 
 This document defines one `authorization_details` type a deployment of
 the issuance profile {{I-D.draft-mcguinness-oauth-mission}} MAY support;
