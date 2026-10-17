@@ -3108,6 +3108,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         sendInvalidRequest(`operation ${operation} is not enabled on this deployment`);
         return;
       }
+      // @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency:
+      // the members every operation shares, parsed ONCE, after the retained-nonce
+      // recovery above and before dispatch, so an extension never silently
+      // drops the stale-version guard or a schedule (adapters/lifecycle-endpoint.ts).
+      const members = parseTransitionMembers(operation, body);
+      if (!members.ok) {
+        sendInvalidRequest(members.description);
+        return;
+      }
+      const { expectedVersion } = members.value;
       // @spec discharge#discharge-operation, discharge#discharge-commit ("States")
       // — the fifth operation: it changes no
       // Mission state, so it is handled entirely outside the state machine
@@ -3190,9 +3200,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // transition that discovering it committed.
           kernel.materializeExpiry(missionId);
           const contained = withTransaction(kernel.db, () => {
+            // @spec status#idempotency: the guard is compared inside this
+            // transaction, before the narrowing commits (kernel.contain).
             const { record, evidence } = kernel.contain(missionId, {
               event: containEvent,
               remove: remove as Array<{ resource: string; actions?: string[] }>,
+              ...(expectedVersion !== undefined ? { expectedVersion } : {}),
             });
             const outcome = {
               id: record.id,
@@ -3214,22 +3227,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           sendJson(200, contained.outcome);
           return;
         }
-        // @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency
-        // the request members of `revoke`, `suspend`, `resume` and `complete`,
-        // parsed in one place (adapters/lifecycle-endpoint.ts).
         const lifecycleOperation = body.operation as LifecycleOperation;
-        const members = parseTransitionMembers(lifecycleOperation, body);
-        if (!members.ok) {
-          sendInvalidRequest(members.description);
-          return;
-        }
         // A schedule this deployment cannot honor is refused, never accepted
         // without effect (#1002 implements `suspend_until` and `on_expiry`).
         if (members.value.schedule) {
           sendInvalidRequest("suspend_until and on_expiry are not supported by this deployment");
           return;
         }
-        const { expectedVersion } = members.value;
         // @spec control-plane#serialization — the expiry clock runs FIRST, in
         // its own transaction, and stays OUT of the transition's. The clock
         // MATERIALIZES a narrowing transition; the operation then requested may
