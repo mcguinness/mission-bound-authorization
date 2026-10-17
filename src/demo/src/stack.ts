@@ -86,6 +86,7 @@ import { ConsoleBff } from "@mission/console-bff";
 import type { AccessRequestService } from "@mission/access-request";
 import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResourcePolicy } from "./resource-policy-store.js";
 import { type ApprovalConsole, type ApproverLogin, recordApproverLogin } from "./approval-console.js";
+import { type LifecycleConsoleCredentials, newLifecycleConsole } from "./lifecycle-client.js";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
 export const ISS = TOPOLOGY.issuers.as;
@@ -126,6 +127,13 @@ export interface AuthServerExtras {
    * service's registration. Trusted console/driver only, like the token.
    */
   approverConsole: ApprovalConsole;
+  /**
+   * @spec status#lifecycle-authorization — the dedicated lifecycle console's
+   * private-key-JWT credential at the advertised Mission Lifecycle endpoint. It
+   * generated its own key; the AS holds only the public half and binds the
+   * `mission_lifecycle` grant to this client alone. Trusted console only.
+   */
+  lifecycleConsole: LifecycleConsoleCredentials;
   /** AROP Deferred Token Response store (drive open/approve/deny headlessly). */
   deferrals: DeferralStore;
   ras: ResourceAuthorizationServer;
@@ -444,10 +452,14 @@ export async function composeStack(opts: {
         ? new Set<ProviderCapability>([...AS_NATIVE_CAPABILITIES, "dev-token"])
         : AS_NATIVE_CAPABILITIES
       : undefined;
+    const lifecycleConsole = await newLifecycleConsole();
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
       approvalSessions,
+      // @spec status#lifecycle-authorization: one dedicated lifecycle console
+      // holds the lifecycle grant; no other client does.
+      lifecycleClients: [lifecycleConsole.registration],
       serviceTokenPrincipals: {
         [approverServiceToken]: { principal_id: "svc:approver-console", scopes: [MISSION_APPROVAL_SCOPE],
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
@@ -628,6 +640,7 @@ export async function composeStack(opts: {
       childClientJwk: as.childClientJwk,
       approverServiceToken,
       approverConsole: { sessions: approvalSessions, login: approverLogin },
+      lifecycleConsole: lifecycleConsole.credentials,
       deferrals: as.deferrals,
       ras,
       saas,
