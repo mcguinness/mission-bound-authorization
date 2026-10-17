@@ -244,7 +244,15 @@ the store.
   `invalid_request` before any interaction. That is the accepted limitation
   (D305): client-requested strength on a delegated approval, including a
   client registration's incompatible OIDC defaults, is unsupported and fails
-  closed, never ignored or downgraded. The published approval-authentication
+  closed, never ignored or downgraded. A registration naming
+  `default_acr_values` is invalid client metadata here, since this AS
+  configures no acr values, so every request from such a client is refused
+  before any interaction; `default_max_age` and `require_auth_time` require
+  `openid`, and with it a delegated approval refuses `invalid_scope`. The
+  `claims` parameter is not supported (`claims_parameter_supported` is
+  false, oidc-provider's default): a request carrying it, an essential `acr`
+  included, is served without essential-claim treatment. That is a disclosed
+  limitation, not acceptance. The published approval-authentication
   floor governs the Approver's strength on high-risk authority (§3.1), and
   no other carrier is defined. An Expansion deferral approval
   (`ExpansionDeferralStore.approve`, an in-process API) meets the same floor

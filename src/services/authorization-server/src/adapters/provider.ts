@@ -4035,9 +4035,10 @@ async function handleMissionDispatchGrant(
  * `max_age`? Approver-scoped, never Subject-scoped: this checks only the
  * principal acting as Approver for THIS approval event, never the Mission
  * Subject, who MAY be a different principal. Absence of either request
- * parameter trivially satisfies that parameter. This AS publishes and
- * enforces no approval-authentication floor of its own: the high-risk floor
- * of @spec mission#approval-authentication is not implemented here (#826).
+ * parameter trivially satisfies that parameter. The issuer's published
+ * approval-authentication floor is enforced separately, in `decide()`, on the
+ * complete derived authority (@spec mission#approval-authentication, #826,
+ * D425; `config/approval-floor.json`); this check never relaxes it.
  */
 function approverAuthenticationSatisfies(
   requested: { acrValues?: string; maxAge?: string; forceFreshLogin?: boolean },
