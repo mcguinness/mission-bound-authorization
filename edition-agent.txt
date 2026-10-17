@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-17T05:53:53Z
-Source repository commit: 4994bebb31ba604782c4454381b9b462bfe7b543
+Generated: 2026-10-17T16:33:37Z
+Source repository commit: c9c729030734d234f2d9c04ac7c36dcf25d4b2f6
 Member count: 9
 
 Reading order:
@@ -7495,11 +7495,11 @@ Table of Contents
    1.  Introduction
      1.1.  Implementation Map
      1.2.  Applicability
-   2.  Conventions and Terminology
-   3.  Overview
-     3.1.  Protocol Flow
-       3.1.1.  One Mission from Approval to Revocation
-     3.2.  Principal Model
+   2.  Overview
+     2.1.  Protocol Flow
+       2.1.1.  One Mission from Approval to Revocation
+   3.  Conventions and Terminology
+     3.1.  Principal Model
    4.  Mission Intent
      4.1.  Submission via PAR
      4.2.  Authority Proposal
@@ -7728,7 +7728,7 @@ Table of Contents
    capabilities.  The starting path is one client, one authorization
    server, direct approval, and a single resource audience.  It needs no
    runtime profile, delegated token, or cross-domain projection.  The
-   worked flow (Section 3.1.1) follows one Mission along this path with
+   worked flow (Section 2.1.1) follows one Mission along this path with
    concrete times, and the table lists where each implementer reads
    next.
 
@@ -7826,7 +7826,96 @@ Table of Contents
    prevention, redaction) are complementary; under mediated execution
    they fit at the mediating enforcement component (Section 19.3.1).
 
-2.  Conventions and Terminology
+2.  Overview
+
+2.1.  Protocol Flow
+
+   Besides the agent (the OAuth client) and the Mission Issuer (the AS),
+   the flow involves two principals: the Subject, on whose behalf the
+   Mission is approved, and the Approver, the accountable principal who
+   approves it.  Section 3 defines these terms and the rest of this
+   document's vocabulary.
+
+   The following figure shows the protocol flow between the agent and
+   the Mission Issuer:
+
+    Agent (client)                       Mission Issuer (AS)
+         |                                     |
+         | 1. PAR: intent + proposal --------->| derive authority
+         |<----------- request_uri ------------| (authz_details)
+         |                                     |
+         | 2. authorization request ---------->| Approver consents
+         |                                     |   -> authority_hash
+         |<-------------- code ----------------| -> Mission active
+         |                                     |   (bound to the grant)
+         |                                     |
+         | 3. token request ------------------>| gate: active?
+         |<----------- access token -----------| + authz_details
+         |                                     |   + mission claim
+         v
+
+   The flow then leaves the AS: (4) the agent calls the resource server
+   with the token; the resource server enforces the
+   authorization_details statelessly and can check the mission claim
+   (Section 11), with no callback to the AS required. (5) A management
+   revoke, or expires_at passing, moves the Mission to terminated, with
+   reason revoked or expired, after which the AS refuses further
+   issuance and refresh; a deployment can also treat [RFC7009]
+   revocation of the refresh token as revoking the Mission
+   (Section 9.3).  The end-to-end example (Appendix A) walks this flow
+   with concrete messages.
+
+2.1.1.  One Mission from Approval to Revocation
+
+   Consider a registered client reading invoices from one ERP resource
+   for Alice.  Alice is both the Subject and the Approver; the authority
+   source is user-delegated.  The AS and ERP support the
+   mission_resource_access type defined by
+   [I-D.draft-mcguinness-oauth-mission-resource-access].  This example
+   uses a direct approval, a JWT access token, no delegated token, and
+   no submission evidence; the AS's admission policy requires none.  The
+   times below are on the same day in UTC.
+
+   1.  *Submit.* The client pushes a Mission Intent naming
+       https://erp.example.com and requesting expiry at 13:00.
+       Alongside it, the client proposes an authorization_details entry
+       of type mission_resource_access for that resource and the action
+       invoices.read.  It follows the PAR request_uri into the
+       authorization interaction (Section 4.1).
+
+   2.  *Approve and commit.* At 12:00 the AS authenticates Alice,
+       verifies the authority source and proposed read authority, and
+       renders that authority and the effective 13:00 expiry for her
+       approval.  On approval it atomically creates the active Mission,
+       records its commitments, and binds the authorization code to it
+       (Section 6, Section 6.4.1).
+
+   3.  *Issue.* Still at 12:00, the client redeems the code.  The AS
+       resolves and checks the Mission and returns a sender-constrained
+       ERP token that expires at 12:05, with the read authority and a
+       mission reference.  The response also carries the granted
+       authority, mission_id, and mission_expires_at (Section 6.4.4).
+       The access token's five-minute lifetime is distinct from the
+       Mission's one-hour lifetime (Section 10).
+
+   4.  *Use.* The ERP, a Mission-aware Resource Server, validates the
+       token and proof of possession and permits the authorized read.
+       The token grants no write authority.  No Mission-state lookup or
+       complete-set retrieval is part of this example's resource request
+       (Section 11).
+
+   5.  *Stop further issuance.* At 12:02 an authorized revocation makes
+       the Mission non-active.  A subsequent refresh, if the AS issued a
+       refresh token, is refused with invalid_grant (Section 9.2).  The
+       already-issued access token can still be honored on this
+       stateless path until 12:05; revocation does not undo a completed
+       read (Section 9.3).
+
+   An ERP that instead introspects on every request stops honoring the
+   token on its next request after revocation, through the composite
+   active result (Section 13.2).
+
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -7927,90 +8016,7 @@ Table of Contents
       document; a token that only references or carries Mission data
       without the gates is not Mission-bound (Section 18).
 
-3.  Overview
-
-3.1.  Protocol Flow
-
-   The following figure shows the protocol flow between the agent and
-   the Mission Issuer:
-
-    Agent (client)                       Mission Issuer (AS)
-         |                                     |
-         | 1. PAR: intent + proposal --------->| derive authority
-         |<----------- request_uri ------------| (authz_details)
-         |                                     |
-         | 2. authorization request ---------->| Approver consents
-         |                                     |   -> authority_hash
-         |<-------------- code ----------------| -> Mission active
-         |                                     |   (bound to the grant)
-         |                                     |
-         | 3. token request ------------------>| gate: active?
-         |<----------- access token -----------| + authz_details
-         |                                     |   + mission claim
-         v
-
-   The flow then leaves the AS: (4) the agent calls the resource server
-   with the token; the resource server enforces the
-   authorization_details statelessly and can check the mission claim
-   (Section 11), with no callback to the AS required. (5) A management
-   revoke, or expires_at passing, moves the Mission to terminated, with
-   reason revoked or expired, after which the AS refuses further
-   issuance and refresh; a deployment can also treat [RFC7009]
-   revocation of the refresh token as revoking the Mission
-   (Section 9.3).  The end-to-end example (Appendix A) walks this flow
-   with concrete messages.
-
-3.1.1.  One Mission from Approval to Revocation
-
-   Consider a registered client reading invoices from one ERP resource
-   for Alice.  Alice is both the Subject and the Approver; the authority
-   source is user-delegated.  The AS and ERP support the
-   mission_resource_access type defined by
-   [I-D.draft-mcguinness-oauth-mission-resource-access].  This example
-   uses a direct approval, a JWT access token, no delegated token, and
-   no submission evidence; the AS's admission policy requires none.  The
-   times below are on the same day in UTC.
-
-   1.  *Submit.* The client pushes a Mission Intent naming
-       https://erp.example.com and requesting expiry at 13:00.
-       Alongside it, the client proposes an authorization_details entry
-       of type mission_resource_access for that resource and the action
-       invoices.read.  It follows the PAR request_uri into the
-       authorization interaction (Section 4.1).
-
-   2.  *Approve and commit.* At 12:00 the AS authenticates Alice,
-       verifies the authority source and proposed read authority, and
-       renders that authority and the effective 13:00 expiry for her
-       approval.  On approval it atomically creates the active Mission,
-       records its commitments, and binds the authorization code to it
-       (Section 6, Section 6.4).
-
-   3.  *Issue.* Still at 12:00, the client redeems the code.  The AS
-       resolves and checks the Mission and returns a sender-constrained
-       ERP token that expires at 12:05, with the read authority and a
-       mission reference.  The response also carries the granted
-       authority, mission_id, and mission_expires_at (Section 6.4.4).
-       The access token's five-minute lifetime is distinct from the
-       Mission's one-hour lifetime (Section 10).
-
-   4.  *Use.* The ERP, a Mission-aware Resource Server, validates the
-       token and proof of possession and permits the authorized read.
-       The token grants no write authority.  No Mission-state lookup or
-       complete-set retrieval is part of this example's resource request
-       (Section 11).
-
-   5.  *Stop further issuance.* At 12:02 an authorized revocation makes
-       the Mission non-active.  A subsequent refresh, if the AS issued a
-       refresh token, is refused with invalid_grant (Section 9.2).  The
-       already-issued access token can still be honored on this
-       stateless path until 12:05; revocation does not undo a completed
-       read (Section 9.3).
-
-   An ERP that instead introspects on every request stops honoring the
-   token on its next request after revocation, through the composite
-   active result (Section 13.2).
-
-3.2.  Principal Model
+3.1.  Principal Model
 
    This document maps principals onto native OAuth constructs:
 
@@ -8815,7 +8821,7 @@ Table of Contents
    The direct realization runs as an OAuth 2.0 [RFC6749] authorization-
    code flow initiated from the PAR-issued request_uri (Section 4.1).
    Because the authorization code is the artifact the Mission grant
-   binds to (Section 6.4) and it passes through the front channel, the
+   binds to (Section 6.4.1) and it passes through the front channel, the
    AS MUST bind the code to the requesting client with PKCE ([RFC7636],
    S256 challenge method) or, equivalently, issue a DPoP-bound
    authorization code ([RFC9449]).  Redemption is then verified as
@@ -10163,11 +10169,21 @@ Table of Contents
 
 10.  Mission-Bound Access Tokens
 
-   Access tokens issued under a Mission are JWTs per [RFC9068], which
-   fixes the required claims (including jti), the at+jwt typ header
-   parameter, and resource server validation (Section 2.1 of [RFC9068],
-   Section 2.2 of [RFC9068], Section 4 of [RFC9068]).  In addition to
-   what that profile requires, a derived token:
+   An access token issued under a Mission takes one of two forms.  The
+   self-contained form is a JWT per [RFC9068], which a resource server
+   can enforce from the token alone (Section 11); this document's token-
+   carried enforcement assumes it.  The other form, an opaque Mission-
+   bound token, is profiled only under the introspected consumption mode
+   (Section 13.4), where introspection or issuer-local resolution is its
+   claims carriage, with the same enforcement obligations.  A deployment
+   whose AS can issue neither deploys a Mission Authority Server
+   ([I-D.draft-mcguinness-mission-authority-server]), which governs
+   ordinary tokens at the enforcement layer.
+
+   [RFC9068] fixes the JWT's required claims (including jti), the at+jwt
+   typ header parameter, and resource server validation (Section 2.1 of
+   [RFC9068], Section 2.2 of [RFC9068], Section 4 of [RFC9068]).  In
+   addition to what that profile requires, a derived token:
 
    *  carries the token's Mission-derived authority as
       authorization_details ([RFC9396]); this MAY be the full Authority
@@ -10204,15 +10220,6 @@ Table of Contents
    (Section 14); the cross-domain companion requires sender-constraint
    for credentials that cross a trust domain
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
-
-   This document's token-carried enforcement assumes the JWT above.  An
-   opaque Mission-bound token is profiled only under the introspected
-   consumption mode (Section 13.4), where introspection or issuer-local
-   resolution is its claims carriage, with the same enforcement
-   obligations.  A deployment whose AS can issue neither deploys a
-   Mission Authority Server
-   ([I-D.draft-mcguinness-mission-authority-server]), which governs
-   ordinary tokens at the enforcement layer.
 
    An AS MUST publish its token verification keys (for example, at its
    [RFC8414] jwks_uri, as Section 4 of [RFC9068] recommends); rotation
@@ -11527,7 +11534,7 @@ Table of Contents
       steps and their atomicity with the approval decision hold
       unchanged and no Mission reference exists before the record is
       active; the Mission then binds to that profile-defined reusable
-      grant (Section 6.4).
+      grant (Section 6.4.1).
 
    This document defines no capability-negotiation mechanism or profile-
    version field; an extension declares its own identifiers and, where
@@ -11702,9 +11709,14 @@ Table of Contents
    an evidence type, whether its evidence is optional or required.
 
    A *Mission-aware Resource Server* implements resource server
-   enforcement (Section 11), from the token's own claims or, under the
-   introspected consumption mode, from its active introspection response
-   or issuer-local resolution (Section 13.4).
+   enforcement (Section 11).  It enforces a JWT from the token's own
+   claims, needing no Mission-state store and no call to the AS, or,
+   under the introspected consumption mode, from the token-specific
+   inputs of its active introspection response or issuer-local
+   resolution (Section 13.4); in either form it enforces each applicable
+   entry its tokens carry under that entry's type, which for
+   mission_resource_access is work a plain [RFC9068] resource server
+   does not do.
 
    A *Mission Client* implements the client surfaces:
 
@@ -13213,7 +13225,7 @@ A.2.  Stage 1: Mission Creation
 A.3.  Stage 2: Mission-Bound Token Issuance
 
    The agent redeems the authorization code at the token endpoint.  The
-   AS resolves the Mission from the grant (Section 6.4), gates on it
+   AS resolves the Mission from the grant (Section 6.4.1), gates on it
    being active (Section 9), and issues a Mission-bound access token for
    the ERP.  The token response carries the granted
    authorization_details echo (Section 10) and the mission_id and
@@ -13353,7 +13365,7 @@ B.2.  Relationship to Adjacent Work
    translation into authorization requirements out of scope.  This
    document specifies that translation, reusing its agent-as-client and
    delegating-principal-as-token-sub assignments unchanged
-   (Section 3.2); an agent authenticated and delegated per it uses the
+   (Section 3.1); an agent authenticated and delegated per it uses the
    mechanisms here to obtain Mission-bound tokens.
 
    Decision-layer access-request and approval workflows, such as the
@@ -14252,13 +14264,17 @@ Appendix G.  Document History
 
    *  Editorial (#910): the Introduction leads with the Mission, its
       guarantees and the residual of already-issued access tokens, and
-      its chain steps carry labels.  The protocol flow and its worked
-      example precede the Principal Model; the Implementation Map links
+      its chain steps carry labels.  The Overview, with the protocol
+      flow and its worked example, precedes Conventions and Terminology,
+      which ends with the Principal Model; the Implementation Map links
       the reading paths; Terminology points to the Mission-aware
-      Resource Server role; the approval algorithm's steps carry labels;
-      and Binding the Mission to the Grant has named subsections, one
-      for the mission_id and mission_expires_at response parameters.  No
-      requirement changes.
+      Resource Server role, and Conformance states that role's inputs;
+      the approval algorithm's steps carry labels; Binding the Mission
+      to the Grant has named subsections, among them one for
+      establishing and resolving a binding, which the pointers to that
+      rule cite, and one for the mission_id and mission_expires_at
+      response parameters; and Mission-Bound Access Tokens introduces
+      the JWT and opaque forms together.  No requirement changes.
 
    *  Submission via PAR scopes its PAR carriage rule to the
       authorization-code path.  A Mission Intent travels on another
