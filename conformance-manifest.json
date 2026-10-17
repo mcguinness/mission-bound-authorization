@@ -6261,9 +6261,15 @@
      "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a client registered with an authentication default (%s) cannot have it honored on a delegated approval: without openid PAR refuses, with openid the delegated approval refuses, creating nothing",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > holds the device approval to the published approval-authentication floor: high-risk authority needs an accepted acr",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row."
+   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
@@ -40992,7 +40998,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "notes": "#1202: the reference AS side is built (opt-in device-authorization capability); no reference Mission client implements this profile's client rules, so this row stays todo."
   },
   {
    "id": "device-authorization.discovery.no-ordinary-fallback",
@@ -41014,7 +41020,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "notes": "#1202: the reference AS side is built (opt-in device-authorization capability); no reference Mission client implements this profile's client rules, so this row stays todo."
   },
   {
    "id": "device-authorization.request.no-request-object",
@@ -41034,9 +41040,16 @@
     "normative": "A device authorization request carrying mission_intent and a request or request_uri parameter receives invalid_request, and no device_code is issued."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > refuses mission_intent with a request or request_uri parameter as invalid_request, issuing no device_code",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Both parameters are refused invalid_request with no code issued. Proved by removing the intake's refusal: the provider then answers request_not_supported or request_uri_not_supported and the test fails."
   },
   {
    "id": "device-authorization.request.whole-or-refuse",
@@ -41053,12 +41066,38 @@
    "surface": "device-authorization-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "A request carrying mission_intent either yields a session whose approval creates a Mission from the whole submission or is refused; it never yields an ordinary device grant whose token lacks the mission claim, and no envelope member is dropped."
+    "normative": "A request carrying mission_intent either yields a session whose approval creates a Mission from the whole submission or is refused; it never yields an ordinary device grant whose token lacks the mission claim, and no envelope member is dropped.",
+    "local": "This AS also refuses a device authorization request without mission_intent (invalid_request), so its device endpoint yields no ordinary device grant at all. The Submission envelope's evidence member is verified at submission and at the decision and recorded as submission_evidence."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > validates the whole submission before issuing a device_code, refusing with the code PAR assigns",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > creates the Mission from the whole submission: the bound Intent, evidence and proposal, and a Mission-bound token",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > answers a device request without mission_intent with a refusal, never an ordinary device authorization session",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > always runs the approval: a provider session and grant the verification user agent already holds never complete a Mission device session",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A refused submission issues no code; an accepted one yields a Mission recording the submitted Intent, verified evidence and proposal, and a token with the mission claim. A verification user agent already holding a provider session and a grant for the client never completes the session under that grant: the interaction policy always prompts for a device session carrying mission_intent. Proved by skipping the device submission's validation, by not restoring the proposal, by accepting a request without mission_intent, by dropping verified evidence from the record, and by removing the forced prompt (each fails a cited test)."
   },
   {
    "id": "device-authorization.request.validate-before-device-code",
@@ -41078,9 +41117,16 @@
     "normative": "A malformed envelope or Intent, an unsupported or failing evidence entry, an invalid proposed entry, or a proposed resource outside target_resources is refused at the device authorization endpoint with the code the OAuth binding's error mapping assigns at PAR, and no device_code or user_code is issued."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > validates the whole submission before issuing a device_code, refusing with the code PAR assigns",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Nine failing submissions (bare Intent, unknown envelope member, invalid Intent, unsupported evidence type, evidence failing its schema, evidence failing verification, resource outside target_resources, unadvertised type, schema failure) are each refused with the error code the same submission receives at PAR, with no device_code or user_code; a type the client is not registered for is refused as PAR refuses it; a repeated authorization_details is refused invalid_request. Proved by skipping validation at the device endpoint, by not restoring the proposal, by skipping evidence verification there, and by not applying the client's registered types."
   },
   {
    "id": "device-authorization.binding.verification-values-ignored",
@@ -41100,9 +41146,16 @@
     "normative": "mission_intent, authorization_details or scope values added to the verification URI change neither the rendering nor the Mission created; the Approver sees and approves the bound submission."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization session binding (@spec device-authorization#session-binding, #1202) > ignores mission_intent, authorization_details and scope presented at the verification URI",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Values injected on verification_uri_complete, the code forms and the approval page's query leave the rendering, the Mission's Intent and proposal, and the issued scope unchanged. Proved by reading mission_intent from the approval page's query (the page then renders the injected goal)."
   },
   {
    "id": "device-authorization.binding.token-request-intent-ignored",
@@ -41122,9 +41175,16 @@
     "normative": "A device access token request carrying a different mission_intent yields the Mission created from the bound submission, unchanged."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization session binding (@spec device-authorization#session-binding, #1202) > ignores mission_intent on the device access token request: the Mission is the bound one, unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. The token endpoint strips mission_intent for the device_code grant; the poll returns the bound Mission unchanged. Proved by mutating oidc-provider to keep the parameter and refuse on it: the test fails."
   },
   {
    "id": "device-authorization.binding.decision-to-entered-session",
@@ -41141,12 +41201,20 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "After an approval through one session's user_code, polling with another session's device_code never returns that Mission's tokens."
+    "normative": "After an approval through one session's user_code, polling with another session's device_code never returns that Mission's tokens.",
+    "local": "Witnessed exactly as the binding of code to interaction to record: the interaction a verified user_code starts names that session's device code, the decision resolves only that code (a user_code sent with the decision is ignored), the record the decision commits is bound to it, and only it redeems that Mission. No crash-atomicity claim: that residual belongs to device-authorization.approval.record-atomic-with-decision."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization session binding (@spec device-authorization#session-binding, #1202) > applies a decision only to the session whose user_code was entered: a swapped code in the decision changes nothing",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. The decision is applied to the session the interaction's entered user_code bound; another session's user_code sent with the decision changes nothing, and that session's poll stays authorization_pending. Witnessed across the approval interaction and the token endpoint. Proved by resolving the session from a request-supplied user_code: the other session then redeems the Mission and the test fails."
   },
   {
    "id": "device-authorization.binding.wrong-client",
@@ -41166,9 +41234,16 @@
     "normative": "A device access token request presenting the session's device_code from a different client, authenticated, or identified by its own client_id when public, receives invalid_grant and no token."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization session binding (@spec device-authorization#session-binding, #1202) > refuses a device access token request from another client than the bound one with invalid_grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A confidential client presenting a public client's code, and a public client presenting a confidential client's, both receive invalid_grant and no token; each bound client then redeems its own. Proved by removing oidc-provider's device_code client check."
   },
   {
    "id": "device-authorization.binding.client-authentication-failure",
@@ -41188,9 +41263,16 @@
     "normative": "For a session bound to a client that must authenticate, a device access token request with no or failed client authentication receives invalid_client and no token. A public client identified by the bound client_id without client authentication is not refused for that absence."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization session binding (@spec device-authorization#session-binding, #1202) > refuses a request omitting or failing the bound client's authentication with invalid_client, and never refuses a public client for its absence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A private_key_jwt client presenting only its client_id, or an assertion signed by another key, receives invalid_client (HTTP 401); the public client identified by its client_id redeems. Proved by mutating oidc-provider's client authentication to accept an omitted assertion."
   },
   {
    "id": "device-authorization.binding.public-client-not-service-owned",
@@ -41212,7 +41294,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "notes": "#1202: the reference AS side is built, but this requirement is not: the decision applies no public-client check to a service_owned source, and the shipped catalog's only service_owned source names a confidential client, so no witness can be built without a configurable catalog."
   },
   {
    "id": "device-authorization.approval.user-code-not-authentication",
@@ -41232,9 +41314,16 @@
     "normative": "Entering a valid user_code without Approver authentication reaches no decision, and the Subject is never taken from the session or the code."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > reaches no decision on an entered user_code alone: the Approver must authenticate, and the Subject is the approval surface's",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. With a verified user_code but no Approver session, the approval page answers 401 with no decision and a decision is refused 401, creating no Mission; once authenticated, the Mission's Subject is the approval surface's selection, not the login_hint the device request carried. Proved by rendering the page without Approver authentication and by taking the Subject from the request's login_hint."
   },
   {
    "id": "device-authorization.approval.record-atomic-with-decision",
@@ -41251,12 +41340,38 @@
    "surface": "approval-ceremony",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "No Mission exists, and polling yields authorization_pending or slow_down, until the decision commits; the Mission exists from that commit, and the device_code becomes redeemable subject to its lifetime, one-time use, and issuance gating."
+    "normative": "No Mission exists, and polling yields authorization_pending or slow_down, until the decision commits; the Mission exists from that commit, and the device_code becomes redeemable subject to its lifetime, one-time use, and issuance gating.",
+    "local": "The decision request saves the Mission grant under an identity derived from the interaction, commits the record already bound to it in the kernel store (#916's order of writes), then writes the device code's activation to the provider adapter, all under the session's claim, which every exit releases. A grant-store failure precedes the commit and leaves no Mission; a live failure after the commit (the activation write) leaves an active, bound Mission. Either way the session stays pending, and a retry of the same decision finds the record its approval event created, if any, and rebinds the same derived grant, so it never duplicates the Mission or its grant; a retried record no longer active ends the session denied. A failed decision never retried leaves the Mission to the unredeemed-session rule. Not atomic across a crash: the two stores share no transaction, so a crash between the commit and the activation write leaves an active Mission whose code expires unredeemed (the cross-step domain #250 tracks)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > creates the Mission active with the decision, which alone makes the device_code redeemable",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > recovers from a grant-store failure before the commit: no Mission exists, the session stays pending, and a retry completes one Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > recovers from a failed activation write: a retry reuses the committed Mission and its grant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > never activates a retried decision whose committed Mission is no longer active: the session ends denied",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Witnessed: no Mission and authorization_pending before the decision; the Mission active and the device_code redeemable after it, with no visit to the provider's device resume. Live failures are witnessed with an injected grant-store fault (before the commit: no Mission) and an injected activation-write fault (after it). Proved by dropping the activation write, by not releasing the claim on a failure, by not reusing the committed grant binding, by giving each retry a new approval event, and by activating a retried Mission that is no longer active. Partial for the crash residual in observation.local. Merged onto #916's order of writes: the retried-but-revoked case now injects its fault at the activation write, and disabling the active check on a retried Mission was re-run and caught; the other proofs ran on the earlier order."
   },
   {
    "id": "device-authorization.approval.commit-session-pending",
@@ -41276,9 +41391,16 @@
     "normative": "A decision reached after the session expired, or after the AS ended it, creates no Mission."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > creates no Mission for a decision reached after the session expired or ended",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A decision after the device_code lifetime lapsed, or after the session's device code recorded an ending, is refused and creates no Mission. The session is claimed and re-read immediately before the record commit. Proved by removing the decision's pending checks."
   },
   {
    "id": "device-authorization.approval.render-client",
@@ -41298,9 +41420,16 @@
     "normative": "The verification page names the requesting client from registration data and says whether the AS authenticated it; for a public client it says the client is not authenticated."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > names the requesting client from registration data, whether the AS authenticated it, and its client-supplied name as inert text",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. The page names the client_id from the provider's registration and says the AS did not authenticate a public (token_endpoint_auth_method none) client and did authenticate a private_key_jwt one. Proved by rendering every client as authenticated."
   },
   {
    "id": "device-authorization.approval.render-client-display-inert",
@@ -41320,9 +41449,16 @@
     "normative": "A client name or other client-supplied display value containing markup renders as literal text."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > names the requesting client from registration data, whether the AS authenticated it, and its client-supplied name as inert text",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A registered client_name containing markup renders escaped on the approval page and on the provider's code confirmation page. Proved by rendering the name unescaped."
   },
   {
    "id": "device-authorization.approval.render-subject",
@@ -41342,9 +41478,16 @@
     "normative": "The verification page names the Subject on every Mission approval, including self-approval."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > names the Subject the authority is granted for, self-approval included",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. The page names the Subject for an approval on another's behalf and for two self-approvals. Proved by omitting the Subject section."
   },
   {
    "id": "device-authorization.approval.user-code-confirmation",
@@ -41364,9 +41507,22 @@
     "normative": "Whether the Approver typed the code or arrived through verification_uri_complete, the page shows the user_code and asks for both confirmations before offering the decision."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > displays the user_code and asks for both confirmations before the decision, typed or through verification_uri_complete",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > always runs the approval: a provider session and grant the verification user agent already holds never complete a Mission device session",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. For a typed code and for verification_uri_complete, the page shows the user_code as the device authorization response returned it with both confirmation inputs, and an approval missing either confirmation is refused with no Mission. A provider session and grant the verification user agent already holds still lead to this page, never to a completed session. Proved by removing the confirmation check, by not displaying the code, and by removing the forced prompt."
   },
   {
    "id": "device-authorization.outcomes.denied",
@@ -41383,12 +41539,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "After a decline, a creation commit that creates no Mission, or the AS ending the session, the next poll receives access_denied; an openid request whose Approver is not the Subject receives invalid_scope."
+    "normative": "After a decline, a creation commit that creates no Mission, or the AS ending the session, the next poll receives access_denied; an openid request whose Approver is not the Subject receives invalid_scope.",
+    "local": "This AS ends a session on a decline, a refusal at the decision, or the Approver's abort at the provider's code confirmation; all three are witnessed. It implements no AS-initiated cancellation, such as user_code guessing detection, so that clause is not exercised: the test that records an ending on the device code shows only how a poll answers such an ending, not an AS path that produces it."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > answers access_denied after a decline, a refused creation commit or an abort, and invalid_scope for openid when the Approver is not the Subject",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > creates no Mission for a decision reached after the session expired or ended",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A decline, a creation commit refused by the authority-source gates (Dana activates no source this client resolves), an abort, and an ending recorded on the device code each answer the next poll access_denied; openid with an Approver who is not the Subject answers invalid_scope. Partial until an AS cancellation path exists and is exercised. Proved by answering every refusal access_denied, by not recording the denial, and by removing oidc-provider's raising of the recorded error."
   },
   {
    "id": "device-authorization.outcomes.expired",
@@ -41408,9 +41578,16 @@
     "normative": "A poll after the device_code lifetime elapsed while the session was pending receives expired_token."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > answers expired_token once a pending session's device_code lifetime elapsed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Proved by removing oidc-provider's device_code expiry check (the poll then answers authorization_pending)."
   },
   {
    "id": "device-authorization.outcomes.redemption-gates",
@@ -41430,9 +41607,40 @@
     "normative": "After approval, a poll whose Mission was revoked or expired before redemption receives the issuance-gating refusal and no token; only a poll with an unexpired, unconsumed device_code and an active Mission receives the success response."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > refuses redemption with the issuance-gating refusal once the Mission was revoked after approval",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > refuses redemption with the issuance-gating refusal once the Mission expired after approval",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > answers expired_token for an approved device_code that expired unredeemed, its Mission still active",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization issuance (@spec device-authorization#issuance, #1202) > refuses every later request presenting a redeemed device_code with invalid_grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization issuance (@spec device-authorization#issuance, #1202) > returns the Mission-bound token with mission_id, mission_expires_at and the granted authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A Mission revoked, or past its expires_at, between the decision and the poll is refused invalid_grant with no token; an expired code answers expired_token and a consumed one invalid_grant; only the unexpired, unconsumed code of an active Mission succeeds. Proved by skipping the issuance gate (revocation) and the gate with the expiry clamp (expiry)."
   },
   {
    "id": "device-authorization.outcomes.expired-after-approval",
@@ -41452,9 +41660,16 @@
     "normative": "A poll presenting an approved session's device_code after its lifetime elapsed unredeemed receives expired_token and no token, while the Mission remains active until the deployment's unredeemed-code choice applies."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > answers expired_token for an approved device_code that expired unredeemed, its Mission still active",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Approval does not extend the device_code lifetime: the decision's activation write keeps its exp. Proved by removing oidc-provider's device_code expiry check."
   },
   {
    "id": "device-authorization.outcomes.unredeemed-approved-session",
@@ -41476,7 +41691,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "notes": "#1202: the reference AS side is built. This deployment never revokes the Mission of an approved session whose device_code expired unredeemed, so the Mission runs to its expires_at, but the choice is not yet documented as deployment documentation and has no introspection witness."
   },
   {
    "id": "device-authorization.issuance.mission-id-required",
@@ -41496,9 +41711,16 @@
     "normative": "The device access token response that creates the Mission carries mission_id and mission_expires_at."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization issuance (@spec device-authorization#issuance, #1202) > returns the Mission-bound token with mission_id, mission_expires_at and the granted authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. The success response carries mission_id, the committed mission_expires_at, and the granted authorization_details (the Mission's Authority Set, which the access token carries too). Proved by not stamping the device response and by not setting the device token's authority."
   },
   {
    "id": "device-authorization.issuance.one-time",
@@ -41518,9 +41740,16 @@
     "normative": "A second device access token request presenting a redeemed device_code receives invalid_grant and no token."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization issuance (@spec device-authorization#issuance, #1202) > refuses every later request presenting a redeemed device_code with invalid_grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. As for an authorization code, oidc-provider also revokes the grant's tokens on the refused replay. Proved by removing oidc-provider's device_code consumption check."
   },
   {
    "id": "device-authorization.issuance.at-most-one-success",
@@ -41537,12 +41766,20 @@
    "surface": "token-endpoint",
    "assertion": "concurrency",
    "observation": {
-    "normative": "Concurrent device access token requests presenting one approved device_code yield exactly one success response."
+    "normative": "Concurrent device access token requests presenting one approved device_code yield exactly one success response.",
+    "local": "Single process: oidc-provider's device_code grant checks and consumes the code with no I/O between them on the in-memory adapter, so a concurrent request sees the code consumed; its refusal also revokes the grant's tokens, as for an authorization code."
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization issuance (@spec device-authorization#issuance, #1202) > yields exactly one success response to concurrent requests presenting one approved device_code",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Six concurrent polls on one approved code yield one success and invalid_grant for the rest. Proved by removing oidc-provider's consumption check (every poll then succeeds)."
   },
   {
    "id": "device-authorization.issuance.lineage-root",
@@ -41562,9 +41799,16 @@
     "normative": "A refresh token from the first redemption resolves to the same Mission on every refresh, and no client input changes that Mission."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization issuance (@spec device-authorization#issuance, #1202) > roots the Mission's grant lineage at the device grant: every refresh resolves to the same Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. The device code carries the Mission's own grant, so the refresh token from the first redemption resolves to the same Mission on each refresh, including one presenting another mission_intent. Proved by binding the device code to an unbound grant, and by mutating oidc-provider to act on a refresh request's mission_intent."
   },
   {
    "id": "device-authorization.issuance.client-requires-mission-members",
@@ -41586,7 +41830,37 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1202 specification: no reference implementation. Rows stay todo until endpoint witnesses exist (unknown support, stripped or invalid Intent, code swapping, wrong client, denial and expiry, poll replay, and success returning a bounded Mission credential)."
+   "notes": "#1202: the reference AS side is built (opt-in device-authorization capability); no reference Mission client implements this profile's client rules, so this row stays todo."
+  },
+  {
+   "id": "device-authorization.conformance.as-advertises",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "conformance",
+   "text": "advertises `mission_device_authorization_supported` ({{discovery}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "device-authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An AS supporting this profile publishes mission_device_authorization_supported as true in its authorization server metadata, beside mission_bound_authorization_supported and its device_authorization_endpoint; an AS without the profile does not.",
+    "local": "Published on this AS's OpenID Connect discovery document, only where the opt-in device-authorization capability is on."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization discovery (@spec device-authorization#discovery, #1202) > advertises mission_device_authorization_supported with the device authorization endpoint only where the opt-in capability is on",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Proved by removing the metadata member and by enabling the capability by default (the default assembly then advertises it)."
   },
   {
    "id": "core.submission.alternative-carriage-only-by-profile",
@@ -41605,12 +41879,20 @@
    "surface": "device-authorization-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "An AS that implements no profile defining a carriage creates no Mission from a mission_intent presented on any other request, such as a device authorization request, whatever grant types it supports."
+    "normative": "An AS that implements no profile defining a carriage creates no Mission from a mission_intent presented on any other request, such as a device authorization request, whatever grant types it supports.",
+    "local": "This assembly enables the device grant only with the device companion, so an AS without the profile here serves no device authorization endpoint at all; the case of an AS that supports the device grant without the profile does not arise in this deployment."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202 seam: no witness yet. A future endpoint test presents mission_intent at the device authorization endpoint of an AS without the device-authorization companion and observes that no Mission is created."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization discovery (@spec device-authorization#discovery, #1202) > creates no Mission from a mission_intent at the device authorization endpoint of an assembly without the opt-in capability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    }
+   ],
+   "notes": "#1202: an assembly without the opt-in device-authorization capability answers a device authorization request carrying mission_intent 404 and creates no Mission. Proved by enabling the capability by default (the request then yields a device_code). Partial: only the device authorization request is witnessed, and only on an AS without the device grant."
   }
  ]
 }

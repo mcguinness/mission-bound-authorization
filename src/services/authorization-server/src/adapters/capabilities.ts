@@ -6,7 +6,8 @@
  * interaction, the `authorization_details` types metadata, and introspection)
  * is always on and is not listed here. Each capability below is a surface a
  * deployment may leave out. An assembly built with no capability set enables
- * every one of them, which is the full reference provider.
+ * every one of them except the opt-in ones ({@link OPT_IN_PROVIDER_CAPABILITIES}),
+ * which is the full reference provider.
  *
  * A disabled capability refuses with the standard error its path already uses
  * when it is not configured: an unregistered grant type answers
@@ -48,9 +49,15 @@ export type ProviderCapability =
   /** OIDC: `openid` and the OIDC scope values, userinfo, and RP-initiated logout. */
   | "oidc"
   /** RFC 7009 token revocation. */
-  | "token-revocation";
+  | "token-revocation"
+  /**
+   * @spec device-authorization (#1202): Mission Intent carriage at the RFC
+   * 8628 device authorization endpoint. Opt-in (D412): off unless a set
+   * names it.
+   */
+  | "device-authorization";
 
-/** Every capability, in declaration order. */
+/** Every capability an absent set enables, in declaration order. */
 export const ALL_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = [
   "async-delegation",
   "child-delegation",
@@ -83,12 +90,19 @@ export const TOKEN_EXCHANGE_CAPABILITIES: readonly ProviderCapability[] = [
 ];
 
 /**
- * Whether `capability` is enabled. An absent set enables everything (the full
- * reference provider).
+ * The experimental capabilities no default enables (D412: nothing
+ * default-on): each is on only where a capability set names it.
+ */
+export const OPT_IN_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = ["device-authorization"];
+
+/**
+ * Whether `capability` is enabled. An absent set enables everything but the
+ * opt-in capabilities (the full reference provider).
  */
 export function capabilityEnabled(
   opts: { capabilities?: ReadonlySet<ProviderCapability> | undefined },
   capability: ProviderCapability,
 ): boolean {
+  if (OPT_IN_PROVIDER_CAPABILITIES.includes(capability)) return opts.capabilities?.has(capability) === true;
   return opts.capabilities === undefined || opts.capabilities.has(capability);
 }

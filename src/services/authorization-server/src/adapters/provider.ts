@@ -414,6 +414,23 @@ import {
   type ProviderCapability,
   TOKEN_EXCHANGE_CAPABILITIES,
 } from "./capabilities.js";
+import {
+  claimDeviceDecision,
+  DEVICE_CODE_GRANT_TYPE,
+  DEVICE_CODE_GTY,
+  deviceAuthorizationIntake,
+  deviceClientView,
+  deviceDecisionPage,
+  deviceFlowFeature,
+  devicePending,
+  formatUserCode,
+  loadDeviceSession,
+  missionInteractionPolicy,
+  releaseDeviceDecision,
+  renderDeviceClient,
+  takeDeviceIntake,
+  type DeviceClientView,
+} from "./device-authorization.js";
 
 /**
  * @spec mission-template#dispatch — the impl-local grant type a dispatcher
@@ -849,15 +866,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
     [CHILD_JWT_BEARER_GRANT_TYPE, enabled("child-delegation") || enabled("templates")],
     [MISSION_DISPATCH_GRANT_TYPE, enabled("templates")],
     [TOKEN_EXCHANGE_GRANT_TYPE, TOKEN_EXCHANGE_CAPABILITIES.some(enabled)],
+    // @spec device-authorization (#1202): the device_code grant exists only
+    // where the opt-in capability is on.
+    [DEVICE_CODE_GRANT_TYPE, enabled("device-authorization")],
   ]);
-  const clients = opts.capabilities
-    ? opts.clients.map((c) => {
-        const grantTypes = (c as { grant_types?: unknown }).grant_types;
-        return Array.isArray(grantTypes)
-          ? { ...c, grant_types: grantTypes.filter((g) => grantEnabled.get(String(g)) !== false) }
-          : c;
-      })
-    : opts.clients;
+  // Filtered under an absent set too: the opt-in device grant is off there.
+  const clients = opts.clients.map((c) => {
+    const grantTypes = (c as { grant_types?: unknown }).grant_types;
+    return Array.isArray(grantTypes)
+      ? { ...c, grant_types: grantTypes.filter((g) => grantEnabled.get(String(g)) !== false) }
+      : c;
+  });
 
   // Effective Authority Set projection (#589): a stored oidc grant copies its
   // rar at issuance, so a refresh (or a late code redemption) could echo
@@ -1266,10 +1285,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * inherits as `scope`, split into OIDC values (their own semantics,
    * unaffected by the projection) and resource values (projected). A request
    * `scope` naming resource values is explicit; a code carries the resource
-   * values its authorization request named (explicit). A refresh inherits the
+   * values its authorization request named (explicit), and so does a device
+   * code (@spec device-authorization#request). A refresh inherits the
    * refresh token's granted scope (RFC 6749 Section 6, not explicit) only when
    * it omits `scope`; a refresh naming only OIDC values explicitly asks for no
-   * resource value. Only the code and refresh grants issue OIDC artifacts.
+   * resource value. Only the code, device code and refresh grants issue OIDC
+   * artifacts.
    */
   function missionScopeRequest(ctx: unknown): {
     requested?: RequestedScope;
@@ -1284,11 +1305,19 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const params = oidc?.params ?? {};
     const entities = (oidc?.entities ?? {}) as {
       AuthorizationCode?: { scope?: string };
+      DeviceCode?: { scope?: string };
       RefreshToken?: { scope?: string };
       Grant?: { getOIDCScope(): string };
     };
     const grantType = params.grant_type;
-    const oidcGrantable = grantType === "authorization_code" || grantType === "refresh_token";
+    const codeGrant =
+      grantType === "authorization_code"
+        ? entities.AuthorizationCode
+        : grantType === DEVICE_CODE_GRANT_TYPE
+          ? entities.DeviceCode
+          : undefined;
+    const oidcGrantable =
+      grantType === "authorization_code" || grantType === DEVICE_CODE_GRANT_TYPE || grantType === "refresh_token";
     const explicit = splitScope(params.scope);
     let requested: RequestedScope | undefined;
     let oidcValues = explicit.oidc;
@@ -1297,8 +1326,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
       requested = { values: explicit.resource, explicit: true };
     } else if (explicit.resource.length) {
       requested = { values: explicit.resource, explicit: true };
-    } else if (grantType === "authorization_code") {
-      const code = splitScope(entities.AuthorizationCode?.scope);
+    } else if (grantType === "authorization_code" || grantType === DEVICE_CODE_GRANT_TYPE) {
+      const code = splitScope(codeGrant?.scope);
       if (code.resource.length) requested = { values: code.resource, explicit: true };
       if (typeof params.scope !== "string") oidcValues = code.oidc;
     } else if (grantType === "refresh_token") {
@@ -1393,7 +1422,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
         ? false
         : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
-    interactions: { url: (_ctx, interaction) => `/interaction/${interaction.uid}` },
+    interactions: {
+      url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
+      // @spec device-authorization#approval (#1202): a Mission device session
+      // always prompts (missionInteractionPolicy); no other route changes.
+      policy: missionInteractionPolicy(),
+    },
     // @spec mission#downgrade-by-omission — the per-client Mission-governance
     // flag (a deployment MAY register a client as Mission-governed). Declared so
     // oidc-provider retains it on the client registration; read by the RAR
@@ -1473,6 +1507,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         },
       },
       dPoP: { enabled: true },
+      // @spec device-authorization (#1202): the RFC 8628 device flow carries
+      // a Mission Intent only (the `mission_intent` validator below refuses
+      // any other device request), and only where the opt-in capability is on.
+      deviceFlow: deviceFlowFeature(enabled("device-authorization")),
       revocation: { enabled: enabled("token-revocation") },
       // With OIDC off, no grant can carry `openid`; userinfo and RP-initiated
       // logout are removed too, so their routes answer 404.
@@ -1514,6 +1552,21 @@ export function buildProvider(opts: AdapterOptions): Provider {
             throw new errors.InvalidScope("OIDC is not enabled on this deployment", oidcValues.join(" "));
           }
         }
+        // @spec device-authorization#request (#1202): the device authorization
+        // endpoint accepts a Mission submission or nothing. The intake lifted
+        // the proposal off the form before the provider refused it there
+        // (deviceAuthorizationIntake); it is restored here, after client
+        // authentication, so it is validated with the envelope and stored
+        // with the session. A request the intake never saw is refused.
+        const device = (ctx as { oidc: { route?: string } }).oidc.route === "device_authorization";
+        if (device) {
+          if (value === undefined) {
+            throw new errors.InvalidRequest("this device authorization endpoint accepts only a Mission submission");
+          }
+          const intake = takeDeviceIntake((ctx as { req: IncomingMessage }).req);
+          if (!intake) throw new errors.InvalidRequest("device authorization request not recognized");
+          if (intake.proposal !== undefined) params.authorization_details = intake.proposal;
+        }
         if (value === undefined) return;
         try {
           const submission = kernel.validateSubmission(String(value));
@@ -1526,7 +1579,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
           // validate hook above also enforces the latter two).
           const proposalRaw = params.authorization_details;
           if (typeof proposalRaw === "string") {
-            kernel.validateProposal(proposalRaw, intent.target_resources);
+            const proposed = kernel.validateProposal(proposalRaw, intent.target_resources);
+            // @spec device-authorization#request (#1202): the provider's RAR
+            // check never runs at the device authorization endpoint, so the
+            // client's registered `authorization_details_types` are applied
+            // here, with the refusal it gives at PAR.
+            const allowed = (oidc.client as { authorizationDetailsTypes?: string[] } | undefined)
+              ?.authorizationDetailsTypes;
+            const refused = device && allowed ? proposed.find((e) => !allowed.includes(e.type)) : undefined;
+            if (refused) {
+              throw new InvalidAuthorizationDetails(`authorization details type '${refused.type}' is not allowed for this client`);
+            }
           }
           // @spec mission#scope-projection, mission#error-mapping — the early
           // requested-scope check (same error class as the issuance): under a
@@ -1556,7 +1619,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
             ...(submission.evidence ? { evidence: submission.evidence } : {}),
             presenter: { clientId },
             required: requiredEvidenceTypesFor(opts, oidc.client),
-            requestContext: { carrier: "par" },
+            requestContext: { carrier: device ? "device-authorization" : "par" },
           });
         } catch (e) {
           if (e instanceof IntentError) {
@@ -1585,6 +1648,21 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // (missionGateTarget, missionGate), here in its authoritative mode.
       const target = missionGateTarget(grantId);
       if (!target) return {};
+      // @spec device-authorization#issuance (#1202): oidc-provider's
+      // device_code grant mints from the device code, which holds no
+      // `authorization_details` (lib/actions/grants/device_code.js 9.10.0
+      // L96-101), so the first redemption's authority is the Mission grant's,
+      // projected through the effective set exactly as an authorization
+      // code's is (rarForCodeResponse): a fully contained grant refuses.
+      // Before the scope projection reads it; the JWT customizer carries it
+      // into the token, and the response middleware into the response.
+      const minted = token as { gty?: string; rar?: unknown };
+      if (minted.gty === DEVICE_CODE_GTY && minted.rar === undefined) {
+        const grant = (_ctx as { oidc?: { entities?: { Grant?: { jti?: string; rar?: unknown } } } } | undefined)
+          ?.oidc?.entities?.Grant;
+        if (grant?.jti !== grantId) throw new errors.InvalidGrant("device code grant does not resolve");
+        minted.rar = rarThroughEffectiveSet(grant);
+      }
       if (!target.counted) {
         // @spec async-delegation — per-delegation family fallback. The grant is NOT
         // a Mission approval grant (findByGrant missed), so it may be a
@@ -1715,10 +1793,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
       customizers: {
         jwt: async (_ctx: unknown, token: unknown, jwt: { payload: Record<string, unknown> }) => {
           if (jwt.payload.mission === undefined) return;
-          const t = token as { scope?: string; grantId?: string };
+          const t = token as { scope?: string; grantId?: string; gty?: string; rar?: unknown };
           if (!projectedTokens.has(t)) {
             throw new errors.InvalidTarget("Mission-bound token without a scope projection");
           }
+          // @spec device-authorization#issuance: the payload was assembled
+          // before extraTokenClaims set the device redemption's authority.
+          if (t.gty === DEVICE_CODE_GTY) jwt.payload.authorization_details = t.rar;
           // @spec mission#mission-bound-tokens, mission#approval-authentication
           // (#826): a Mission-bound token's `sub` is the Mission's Subject.
           // oidc-provider writes `sub` from the grant's account, which is the
@@ -1839,6 +1920,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
       }
     },
   );
+
+  // @spec device-authorization#request (#1202): the device authorization
+  // intake, before the provider parses the request (Provider#use splices it
+  // ahead of the route dispatcher).
+  if (enabled("device-authorization")) provider.use(deviceAuthorizationIntake);
 
   // @spec DTR (draft-gerber-oauth-deferred-token-response-00): the AROP deferred
   // grant on the REAL /token endpoint. Registered AFTER construction so the URN
@@ -2009,16 +2095,26 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // Mission-bound token response, where the member is a SHOULD this deployment
   // does not take up. A grant with no Mission (an ordinary OAuth grant) is left
   // untouched.
+  //
+  // @spec device-authorization#issuance (#1202): the device access token
+  // response that creates the Mission is the same single-use,
+  // creation-completing body, where `mission_id` is a MUST too.
   provider.use(async (ctx, next) => {
     await next();
     if (ctx.oidc?.route !== "token") return;
-    if (ctx.oidc.params?.grant_type !== "authorization_code") return;
+    const grantType = ctx.oidc.params?.grant_type;
+    if (grantType !== "authorization_code" && grantType !== DEVICE_CODE_GRANT_TYPE) return;
     const body = ctx.body as Record<string, unknown> | undefined;
     if (ctx.status !== 200 || !body || typeof body.access_token !== "string") return;
-    const grantId = (ctx.oidc.entities?.AccessToken as { grantId?: string } | undefined)?.grantId;
+    const at = ctx.oidc.entities?.AccessToken as { grantId?: string; rar?: unknown } | undefined;
+    const grantId = at?.grantId;
     if (!grantId) return;
     const record = opts.kernel.findByGrant(grantId);
     if (!record) return;
+    // @spec device-authorization#issuance: oidc-provider's device_code grant
+    // renders no `authorization_details` (lib/actions/grants/device_code.js
+    // 9.10.0 L118-120); the granted ones are what the token carries.
+    if (grantType === DEVICE_CODE_GRANT_TYPE) body.authorization_details = at.rar;
     body.mission_id = record.id;
     // @spec mission#grant-binding — the COMMITTED record value, verbatim: the
     // effective expiry is read back from the record, never recomputed while
@@ -2711,6 +2807,25 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     if (interactionMatch && ctx.method === "GET") {
       const details = await provider.interactionDetails(ctx.req, ctx.res);
       const params = details.params as Record<string, unknown>;
+      // @spec device-authorization#approval (#1202): an interaction a verified
+      // `user_code` started renders only while its session is pending, and
+      // only for an authenticated Approver: entering the code selected the
+      // session and established neither the Approver nor the Subject.
+      const deviceJti = (details as { deviceCode?: string }).deviceCode;
+      const deviceSession = deviceJti ? await loadDeviceSession(provider, deviceJti) : undefined;
+      const deviceSubject = deviceJti
+        ? opts.approvalSessions?.subjectFor(ctx.get("cookie"), interactionMatch[1] as string)
+        : undefined;
+      if (deviceJti && !devicePending(deviceSession)) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: "the device authorization session is no longer pending" };
+        return;
+      }
+      if (deviceJti && !deviceSubject) {
+        ctx.status = 401;
+        ctx.body = { error: "unauthorized", error_description: "authenticate as the Approver to review this request" };
+        return;
+      }
       // @spec mission#submission-via-par — the pushed parameter is the
       // Submission envelope; the approval renders the SEMANTIC intent (the
       // object intent_hash commits), never the envelope.
@@ -2755,7 +2870,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             opts,
             opts.clients.find((c) => c.client_id === params.client_id),
           ),
-          requestContext: { carrier: "par" },
+          requestContext: { carrier: deviceJti ? "device-authorization" : "par" },
         });
       } catch (e) {
         if (e instanceof IntentError) {
@@ -2790,6 +2905,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         }
         throw e;
       }
+      // @spec device-authorization#approval: the verification page also
+      // names the requesting client from registration data, whether the AS
+      // authenticated it, the Subject, and the `user_code` to confirm.
+      const deviceClient =
+        deviceSession && deviceSubject ? await provider.Client.find(String(params.client_id)) : undefined;
+      if (deviceJti && !deviceClient) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_client", error_description: "the requesting client is no longer registered" };
+        return;
+      }
       ctx.status = 200;
       ctx.set("content-type", "text/html; charset=utf-8");
       ctx.body = renderApprovalPage(
@@ -2799,6 +2924,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         proposal,
         provenance,
         authoritySource,
+        deviceSession && deviceSubject && deviceClient
+          ? {
+              userCode: formatUserCode(deviceSession.userCode),
+              client: deviceClientView(deviceClient),
+              subject: deviceSubject,
+            }
+          : undefined,
       );
       return;
     }
@@ -3976,6 +4108,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // continuation transport (RFC 8693 token exchange with request_refresh_token
       // -> a per-delegation grant with a rotated, sender-constrained refresh token).
       if (enabled("async-delegation")) meta.delegated_refresh_token_profile_supported = true;
+      // @spec device-authorization#discovery (#1202): this AS accepts a Mission
+      // Intent at its device authorization endpoint. Generic device-grant
+      // metadata (device_authorization_endpoint) never implies it.
+      if (enabled("device-authorization")) meta.mission_device_authorization_supported = true;
       // @spec status#as-metadata, discharge#discharge-receipt — the response-signing
       // algorithms of the Mission Status Response shape, wherever it (or the
       // Discharge Receipt, signed the same way) can be served: the Status
@@ -4391,6 +4527,66 @@ async function decide(
     return;
   }
   const params = details.params as Record<string, unknown>;
+  // @spec device-authorization#approval (#1202): an interaction a verified
+  // `user_code` started is a `direct` approval event on the verification user
+  // agent. It decides only for an Approver authenticated there, only while
+  // the session is pending, and approves only with both confirmations of the
+  // displayed `user_code`. Its outcome lands on the device code, never on a
+  // redirect: approval makes the `device_code` redeemable, and a decline or a
+  // refusal that creates no Mission ends the session `denied`.
+  const deviceJti = (details as { deviceCode?: string }).deviceCode;
+  let deviceClaimed = false;
+  const devicePendingRefusal = () => {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: "the device authorization session is no longer pending" };
+  };
+  if (deviceJti) {
+    if (!interactive) {
+      ctx.status = 401;
+      ctx.body = { error: "unauthorized", error_description: "a device approval is made on the verification user agent" };
+      return;
+    }
+    if (!devicePending(await loadDeviceSession(provider, deviceJti))) {
+      devicePendingRefusal();
+      return;
+    }
+    if (body.decision === "approve" && (body.confirm_user_code !== true || body.confirm_started !== true)) {
+      ctx.status = 400;
+      ctx.body = {
+        error: "invalid_request",
+        error_description: "confirm that the code matches the requesting client's and that you started this request",
+      };
+      return;
+    }
+  }
+  // @spec device-authorization#outcomes: the `denied` outcome. The next poll
+  // receives `access_denied`, or `invalid_scope` where the OAuth binding
+  // assigns it (an `openid` request whose Approver is not the Subject). The
+  // session is claimed for the write, so it never races a committing approval.
+  const finishDevice = async (jti: string, result: Record<string, unknown>) => {
+    if (!deviceClaimed && !claimDeviceDecision(jti)) {
+      devicePendingRefusal();
+      return;
+    }
+    deviceClaimed = true;
+    try {
+      const current = await loadDeviceSession(provider, jti);
+      if (!devicePending(current)) {
+        devicePendingRefusal();
+        return;
+      }
+      current.error = result.error === "invalid_scope" ? "invalid_scope" : "access_denied";
+      current.errorDescription = typeof result.error_description === "string" ? result.error_description : undefined;
+      await current.save();
+      await details.destroy();
+      ctx.status = 200;
+      ctx.set("content-type", "text/html; charset=utf-8");
+      ctx.body = deviceDecisionPage("denied");
+    } finally {
+      releaseDeviceDecision(jti);
+      deviceClaimed = false;
+    }
+  };
   // @spec mission#approval-authentication (#826): a browser approval in a
   // user agent whose provider session belongs to another account completes
   // isolated, as a headless approval does. Otherwise its resume meets
@@ -4408,6 +4604,10 @@ async function decide(
   // before it handles an error result, and this resume runs without the user
   // agent's session.
   const finish = async (result: Record<string, unknown>) => {
+    if (deviceJti) {
+      await finishDevice(deviceJti, result);
+      return;
+    }
     if (isolated && details.session?.uid) {
       delete (details.session as { uid?: string }).uid;
       await details.save(Math.max(1, (details.exp ?? 0) - Math.floor(Date.now() / 1000)));
@@ -4437,7 +4637,7 @@ async function decide(
         opts,
         opts.clients.find((c) => c.client_id === params.client_id),
       ),
-      requestContext: { carrier: "par" },
+      requestContext: { carrier: deviceJti ? "device-authorization" : "par" },
     });
   } catch (e) {
     if (e instanceof IntentError) {
@@ -4653,105 +4853,180 @@ async function decide(
     clientId: String(params.client_id),
     approvalEventId,
   };
-  const existing = opts.kernel.findByApprovalEvent(approvalEventId);
-  // A retry recovers the committed approval only when it is the same decision:
-  // the same Approver, Subject and client as the committed record. Anything
-  // else is refused before the grant is touched, so a retry can neither
-  // rewrite the committed approval's grant nor complete its code under
-  // another login.
-  if (
-    existing &&
-    (existing.approval_basis.consent_principal?.sub !== approver ||
-      existing.subject.sub !== subject ||
-      existing.client_id !== String(params.client_id))
-  ) {
-    ctx.status = 403;
-    ctx.body = {
-      error: "approval_forbidden",
-      error_description: "this interaction's approval is already committed for another Approver, Subject or client",
-    };
-    return;
-  }
-  let prepared: PreparedApproval | undefined;
-  if (!existing) {
-    try {
-      prepared = opts.kernel.prepareApproval(approveInput);
-    } catch (e) {
-      if (e instanceof IntentError) {
-        await finish({
-          error: e.code,
-          error_description: e.message,
-        });
-        return;
-      }
-      throw e;
+
+  // The commit, shared by the browser and device paths: the retry check, the
+  // prepared approval, the reservation, the provider grant, and the record
+  // bound to it, in the order above. It returns undefined when it has already
+  // answered the request (a refusal or an `approval_forbidden`), having
+  // written nothing a retry cannot overwrite.
+  const commitApproval = async (): Promise<
+    { record: MissionRecord; effective: ReturnType<typeof opts.kernel.effectiveAuthoritySet> } | undefined
+  > => {
+    const existing = opts.kernel.findByApprovalEvent(approvalEventId);
+    // A retry recovers the committed approval only when it is the same decision:
+    // the same Approver, Subject and client as the committed record. Anything
+    // else is refused before the grant is touched, so a retry can neither
+    // rewrite the committed approval's grant nor complete its code under
+    // another login.
+    if (
+      existing &&
+      (existing.approval_basis.consent_principal?.sub !== approver ||
+        existing.subject.sub !== subject ||
+        existing.client_id !== String(params.client_id))
+    ) {
+      ctx.status = 403;
+      ctx.body = {
+        error: "approval_forbidden",
+        error_description: "this interaction's approval is already committed for another Approver, Subject or client",
+      };
+      return undefined;
     }
-  }
-  // The interaction's approval is reserved for this decision before the
-  // asynchronous grant save, with no await since the checks above: the first
-  // decision to reserve names the Approver, Subject, client and grant, and a
-  // concurrent decision that differs is refused here, so the committed Mission
-  // and its provider grant always agree on who approved.
-  if (
-    !opts.kernel.reserveApproval({
-      approvalEventId,
-      approver: approveInput.approver,
-      subject: approveInput.subject,
-      clientId: approveInput.clientId,
-      grantId,
-    })
-  ) {
-    ctx.status = 403;
-    ctx.body = {
-      error: "approval_forbidden",
-      error_description: "this interaction's approval is reserved for another Approver, Subject or client",
-    };
+    let prepared: PreparedApproval | undefined;
+    if (!existing) {
+      try {
+        prepared = opts.kernel.prepareApproval(approveInput);
+      } catch (e) {
+        if (e instanceof IntentError) {
+          await finish({
+            error: e.code,
+            error_description: e.message,
+          });
+          return undefined;
+        }
+        throw e;
+      }
+    }
+    // The interaction's approval is reserved for this decision before the
+    // asynchronous grant save, with no await since the checks above: the first
+    // decision to reserve names the Approver, Subject, client and grant, and a
+    // concurrent decision that differs is refused here, so the committed Mission
+    // and its provider grant always agree on who approved.
+    if (
+      !opts.kernel.reserveApproval({
+        approvalEventId,
+        approver: approveInput.approver,
+        subject: approveInput.subject,
+        clientId: approveInput.clientId,
+        grantId,
+      })
+    ) {
+      ctx.status = 403;
+      ctx.body = {
+        error: "approval_forbidden",
+        error_description: "this interaction's approval is reserved for another Approver, Subject or client",
+      };
+      return undefined;
+    }
+
+    // @spec mission#approval-authentication (#826): the provider account is the
+    // authenticated Approver; the Mission records the Subject, and every
+    // Mission-bound token projects it (the JWT customizer).
+    const grant = new provider.Grant({ jti: grantId, accountId: approver, clientId: String(params.client_id) } as never);
+    // @spec mission#scope-projection — the grant holds exactly what the
+    // request named: its OIDC values (openid enables an id_token), and any
+    // resource values the check above let through, so the authorization code
+    // carries them to the token request. Authority itself is the grant's rar;
+    // no resource scope stands in for it.
+    if (requestedScope.oidc.length) grant.addOIDCScope(requestedScope.oidc.join(" "));
+    if (requestedScope.resource.length && audience) {
+      grant.addResourceScope(audience, requestedScope.resource.join(" "));
+    }
+    // Containment: the grant's rar copies the EFFECTIVE set: on a retry, the
+    // committed record's; otherwise the prepared set, which is exactly what the
+    // commit records (a freshly approved Mission has no containment).
+    const grantAuthority = existing
+      ? opts.kernel.effectiveAuthoritySet(existing)
+      : (prepared as PreparedApproval).authoritySet;
+    for (const entry of grantAuthority) {
+      (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
+    }
+    await grant.save();
+    let record: MissionRecord;
+    if (existing) {
+      // Idempotent for the grant it already holds; refuses any other.
+      opts.kernel.bindGrant(existing.id, grantId);
+      record = existing;
+    } else {
+      try {
+        record = opts.kernel.approve({ ...approveInput, grantId }, prepared);
+      } catch (e) {
+        if (e instanceof IntentError) {
+          await finish({
+            error: e.code,
+            error_description: e.message,
+          });
+          return undefined;
+        }
+        throw e;
+      }
+    }
+    return { record, effective: opts.kernel.effectiveAuthoritySet(record) };
+  };
+
+  // @spec device-authorization#approval, device-authorization#issuance
+  // (#1202): the device commit. The pending re-check, the commit above and
+  // the activation that makes the `device_code` redeemable all run in this
+  // request, with the decision, never at a later visit to the provider's
+  // device resume. The device code carries the Mission grant, the root of its
+  // lineage, and what the code redeems (the requested scope and the
+  // resource); approval does not extend its lifetime (save() keeps `exp`).
+  //
+  // Recovery from a failure during the commit or the activation write: the
+  // session stays pending and its claim is released, so the Approver can
+  // retry the same decision. The retry commits nothing new: it finds the
+  // record this interaction's approval event created and rebinds the same
+  // interaction-derived grant (#916), so neither the Mission nor its grant is
+  // duplicated. A retried record no longer `active` is never activated: the
+  // session ends `denied`. A failed decision that is never retried leaves the
+  // Mission to the unredeemed-session rule (it runs to its `expires_at`).
+  const commitDeviceApproval = async (jti: string): Promise<void> => {
+    const device = await loadDeviceSession(provider, jti);
+    if (!devicePending(device)) {
+      devicePendingRefusal();
+      return;
+    }
+    const committed = await commitApproval();
+    if (!committed) return;
+    if (committed.record.state !== "active") {
+      await finish({ error: "access_denied", error_description: "the Mission this decision committed is no longer active" });
+      return;
+    }
+    device.accountId = approver;
+    device.grantId = grantId;
+    device.acr = principal.acr;
+    device.authTime = principal.auth_time;
+    const granted = [...requestedScope.oidc, ...requestedScope.resource];
+    if (granted.length) device.scope = granted.join(" ");
+    if (audience) device.resource = audience;
+    await device.save();
+    await details.destroy();
+    ctx.status = 200;
+    ctx.set("content-type", "text/html; charset=utf-8");
+    ctx.body = deviceDecisionPage("approved");
+  };
+
+  // @spec device-authorization#approval (#1202): the session's claim is taken
+  // before the pending re-check and held through the activation, so no other
+  // decision over the session writes in between; it is released on every
+  // exit, an error included.
+  if (deviceJti) {
+    if (!claimDeviceDecision(deviceJti)) {
+      devicePendingRefusal();
+      return;
+    }
+    deviceClaimed = true;
+    try {
+      await commitDeviceApproval(deviceJti);
+    } finally {
+      releaseDeviceDecision(deviceJti);
+      deviceClaimed = false;
+    }
     return;
   }
 
-  // @spec mission#approval-authentication (#826): the provider account is the
-  // authenticated Approver; the Mission records the Subject, and every
-  // Mission-bound token projects it (the JWT customizer).
-  const grant = new provider.Grant({ jti: grantId, accountId: approver, clientId: String(params.client_id) } as never);
-  // @spec mission#scope-projection — the grant holds exactly what the
-  // request named: its OIDC values (openid enables an id_token), and any
-  // resource values the check above let through, so the authorization code
-  // carries them to the token request. Authority itself is the grant's rar;
-  // no resource scope stands in for it.
-  if (requestedScope.oidc.length) grant.addOIDCScope(requestedScope.oidc.join(" "));
-  if (requestedScope.resource.length && audience) {
-    grant.addResourceScope(audience, requestedScope.resource.join(" "));
-  }
-  // Containment: the grant's rar copies the EFFECTIVE set: on a retry, the
-  // committed record's; otherwise the prepared set, which is exactly what the
-  // commit records (a freshly approved Mission has no containment).
-  const grantAuthority = existing
-    ? opts.kernel.effectiveAuthoritySet(existing)
-    : (prepared as PreparedApproval).authoritySet;
-  for (const entry of grantAuthority) {
-    (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
-  }
-  await grant.save();
-  let record: MissionRecord;
-  if (existing) {
-    // Idempotent for the grant it already holds; refuses any other.
-    opts.kernel.bindGrant(existing.id, grantId);
-    record = existing;
-  } else {
-    try {
-      record = opts.kernel.approve({ ...approveInput, grantId }, prepared);
-    } catch (e) {
-      if (e instanceof IntentError) {
-        await finish({
-          error: e.code,
-          error_description: e.message,
-        });
-        return;
-      }
-      throw e;
-    }
-  }
-  const effective = opts.kernel.effectiveAuthoritySet(record);
+  const committed = await commitApproval();
+  if (!committed) return;
+  const { effective } = committed;
 
   // @spec mission#scope-projection — an Intent-only request (configured
   // mapping: no `authorization_details`, and no resource `scope` either,
@@ -4793,6 +5068,8 @@ function renderApprovalPage(
   proposal?: unknown,
   provenance?: unknown[],
   authoritySource?: AuthoritySource,
+  /** @spec device-authorization#approval: the verification user agent's additions. */
+  device?: { userCode: string; client: DeviceClientView; subject: string },
 ): string {
   // @spec mission#approval-event — the rendering distinguishes the submitted
   // proposal (untrusted client input) from the derived Authority Set (what
@@ -4827,15 +5104,31 @@ function renderApprovalPage(
         ),
       )}</pre>`
     : "";
+  // @spec device-authorization#approval (#1202): on the verification user
+  // agent the page also names the requesting client from registration data
+  // (and whether the AS authenticated it), the Subject the authority is
+  // granted for, and the `user_code`, with both confirmations the decision
+  // requires. Every value is inert text.
+  const deviceSection = device
+    ? `${renderDeviceClient(device.client)}
+<h2>Subject (the authority is granted for)</h2><p class="subject"><code>${escapeHtml(device.subject)}</code></p>
+<h2>Device code</h2><p>Code: <code class="user-code">${escapeHtml(device.userCode)}</code></p>
+`
+    : "";
+  const deviceConfirmations = device
+    ? `<label><input type="checkbox" name="confirm_user_code" value="true" required> This code matches the code the requesting client displays.</label>
+<label><input type="checkbox" name="confirm_started" value="true" required> I started this request.</label>
+`
+    : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
-<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
+${deviceSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
 ${sourceSection}
 ${proposalSection}
 ${provenanceSection}
 <h2>Derived authority (what approval grants)</h2><pre>${escapeHtml(JSON.stringify(authority, null, 2))}</pre>
 <form method="post" action="/interaction/${uid}/decide" enctype="application/json">
-<button name="decision" value="approve">Approve</button>
+${deviceConfirmations}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`;
 }
 

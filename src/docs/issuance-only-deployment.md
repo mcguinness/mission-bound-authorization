@@ -470,7 +470,8 @@ with `pnpm install --frozen-lockfile`.
 - **The reference AS**, at `http://localhost:4400`. This is the
   `buildAuthorizationServer` assembly restricted to the capability set of §8
   (`ISSUANCE_ONLY_CAPABILITIES`). `src/server.ts` runs the same assembly with
-  every capability on. It is the issuer, and its JWKS is at `/jwks`.
+  no capability set: every default-on capability, with the opt-in
+  `device-authorization` off. It is the issuer, and its JWKS is at `/jwks`.
 - **`plain-rs`**, at `http://localhost:4410`, audience
   `http://localhost:4410/api`.
 
@@ -566,7 +567,9 @@ as `buildAuthorizationServer`'s `capabilities` option
 profile is always on. Of the optional capabilities, only the lifecycle
 endpoint's `revoke` is enabled. Every other one is off, and a request for it
 gets the standard refusal its path already uses. With no `capabilities` set,
-the assembly is the full reference provider.
+the assembly is the full reference provider: every capability except the
+opt-in ones (`OPT_IN_PROVIDER_CAPABILITIES`, today `device-authorization`),
+which are on only where a capability set names them.
 
 How a capability is turned off:
 
@@ -634,7 +637,7 @@ gate is tested:
 The child-creation, continuation, cross-org and expansion branch gates have
 no test of their own yet.
 
-**The default stays the full provider.**
+**The default stays the full provider** (every default-on capability).
 `capability gates the launcher's wiring shadows, and the default assembly (#873) > the default assembly (no capability set) is the full provider: every grant registered and every capability member advertised, and no withdrawn member`.
 
 A reader adopting this deployment depends only on the "On" rows.
