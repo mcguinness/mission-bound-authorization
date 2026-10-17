@@ -847,11 +847,11 @@ document requires for any type without a declared projection.
 A **resource server** conforms by implementing the enforcement duties of
 {{rs-enforcement}}: exact or prefix resource matching, action and
 action-family matching, and every carried `constraints` key, failing
-closed on a `resource_match` value or `constraints` key it does not
-implement. A resource server does not implement narrowing, delegate
-eligibility, or the Transformation Capabilities declaration; those are
-the authorization server's, and their presence or absence does not bear
-on a resource server's conformance.
+closed on a member, matching mode, or key it does not implement. A
+resource server does not implement narrowing, delegate eligibility, or
+the Transformation Capabilities declaration; those are the authorization
+server's, and their presence or absence does not bear on a resource
+server's conformance.
 
 # Security Considerations {#security-considerations}
 
