@@ -56,6 +56,7 @@ import type { EffectiveAuthoritySource } from "./kernel/derive.js";
 import type { DischargeAuthorityPolicy } from "./kernel/discharge.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
+import { type ScheduleTimers, SuspensionScheduler } from "./kernel/suspension-scheduler.js";
 import type { TxnAuthorizationOptions } from "./adapters/transaction-authorization.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
 import type { ActivationPolicyRegistry } from "./kernel/activation-policy.js";
@@ -70,13 +71,24 @@ export {
   MissionKernel,
   GateError,
   LifecycleConflictError,
+  MissionNotFoundError,
   ObservationWatermarkError,
+  StaleVersionError,
   STATUS_SIGNING_ALG,
   type DischargeReceiptObservation,
   type ObservationWatermark,
+  type ScheduleFire,
   type StatusObservation,
   type StatusObservationOptions,
 } from "./kernel/kernel.js";
+export {
+  MAX_TIMER_DELAY_MS,
+  SCHEDULE_RETRY_DELAY_MS,
+  type ScheduleDelivery,
+  type ScheduleTimers,
+  SuspensionScheduler,
+  SYSTEM_SCHEDULE_TIMERS,
+} from "./kernel/suspension-scheduler.js";
 export {
   DerivationReservationStore,
   type DerivationReservation,
@@ -140,6 +152,7 @@ export {
   DEFAULT_SERVICE_TOKEN_PRINCIPALS,
   MISSION_DISCHARGE_SCOPE,
   MISSION_LIFECYCLE_SCOPE,
+  MISSION_RESUME_SCOPE,
   MISSION_STATUS_RESPONSE_MEDIA_TYPE,
   MISSION_STATUS_SCOPE,
   type ServiceTokenPrincipal,
@@ -436,6 +449,61 @@ export {
   type RetainedActivationPolicySnapshot,
 } from "./kernel/activation-policy-snapshots.js";
 export {
+  AGR_ENVELOPE_FORMAT,
+  AGR_JWS_CTY,
+  AGR_JWS_TYP,
+  type AgrAssertion,
+  type ApprovalGovernanceRecord,
+  ApprovalGovernanceError,
+  ApprovalGovernanceRecordStore,
+  approvalGovernanceRecordDigest,
+  assertGovernedPolicyRecord,
+  assertMissionBinding,
+  signApprovalGovernanceRecord,
+  type UnsignedApprovalGovernanceRecord,
+  verifyApprovalGovernanceRecord,
+} from "./kernel/approval-governance.js";
+export {
+  activateGovernedPolicy,
+  classifyHighRisk,
+  eligibleGovernedPolicyConsents,
+  evaluateGovernedPolicyRules,
+  type GovernedActivation,
+  type GovernedActivationInput,
+  type GovernedPolicyApprovalConfig,
+  GovernedPolicyConfigError,
+  type GovernedPolicyConsent,
+  GovernedPolicyConsentStore,
+  type GovernedPolicyDecision,
+  GovernedPolicyError,
+  type GovernedPolicyInputs,
+  type GovernedPolicyRefusal,
+  type GovernedPolicyRoot,
+  type GovernedPolicyRules,
+  HIGH_RISK_CLASSES,
+  type HighRiskClass,
+  parseGovernedPolicyRoot,
+  parseGovernedPolicyRules,
+  previewGovernedActivation,
+  recheckGovernedActivation,
+  type RecordedModelOutput,
+  recordGovernedPolicyConsent,
+  STANDARD_CLASS,
+  unclassifiedActions,
+  validateGovernedPolicyApprovalConfig,
+  withdrawGovernedPolicyConsent,
+} from "./kernel/governed-policy-approval.js";
+export {
+  type MissionApprovalDeferralOptions,
+  MissionApprovalDeferralError,
+  MissionApprovalDeferralStore,
+  type MissionApprovalPoll,
+  type MissionApprovalState,
+  type ModelAdvisor,
+  type ModelAdvisorRequest,
+  type PolicyCompletionResult,
+} from "./kernel/mission-approval-deferral.js";
+export {
   createTemplate,
   dispatchFromTemplate,
   findDispatch,
@@ -604,6 +672,19 @@ function publicJwkOf(jwk: JWK): Record<string, unknown> {
   return pub;
 }
 
+/**
+ * @spec status#lifecycle-authorization: a dedicated client of the Mission
+ * Lifecycle endpoint ({@link buildAuthorizationServer}'s `lifecycleClients`).
+ */
+export interface LifecycleClientRegistration {
+  client_id: string;
+  client_name: string;
+  /** The public half of the client's ES256 signing key; the private half stays at the client. */
+  jwks: { keys: Record<string, unknown>[] };
+  /** The lifecycle grants bound to this client, `mission_lifecycle` for the state operations. */
+  grants: readonly string[];
+}
+
 export interface BuiltAs {
   provider: Provider;
   kernel: MissionKernel;
@@ -684,6 +765,12 @@ export interface BuiltAs {
    * Absent: every capability is on, the full reference provider.
    */
   capabilities?: ReadonlySet<ProviderCapability>;
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): the suspension
+   * scheduler, present exactly where this assembly adopted schedules
+   * (`suspensionSchedules`) and serves `suspend`.
+   */
+  suspensionScheduler?: SuspensionScheduler;
 }
 
 export async function buildAuthorizationServer(opts: {
@@ -846,6 +933,41 @@ export async function buildAuthorizationServer(opts: {
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   /**
+   * @spec status#lifecycle-authorization: the grants bound to a client that
+   * authenticates to the Mission Lifecycle endpoint by private-key JWT, keyed by
+   * `client_id`. Absent (the default), no client holds any.
+   */
+  lifecycleClientGrants?: Record<string, readonly string[]>;
+  /**
+   * @spec status#lifecycle-authorization, status#mission-status-authentication:
+   * dedicated Lifecycle clients a deployment registers, each with the PUBLIC
+   * half of its own signing key (the private half stays at the client) and the
+   * lifecycle grants bound to it. Registered beside the shipped clients, never
+   * in place of one; no other client gains a lifecycle grant. Absent (the
+   * default), none is registered.
+   */
+  lifecycleClients?: LifecycleClientRegistration[];
+  /**
+   * @spec status#lifecycle-authorization: require the distinct
+   * `mission_resume` grant, beside `mission_lifecycle`, for a direct `resume`
+   * and for scheduling one. Absent (the default), `mission_lifecycle` alone
+   * authorizes both.
+   */
+  distinctResumeGrant?: boolean;
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): adopt
+   * `suspend_until` and `on_expiry` and run the suspension scheduler that
+   * applies them, on the given timers (the process's own by default). Absent
+   * (the default), a schedule is refused `invalid_request` and no scheduler
+   * runs. Ignored where `suspend` is not served (`lifecycle-extended` off).
+   */
+  suspensionSchedules?: { timers?: ScheduleTimers };
+  /**
+   * The kernel's clock. Absent, the system clock. A test drives a schedule's
+   * deadline or a Mission's expiry with a controlled one.
+   */
+  now?: () => Date;
+  /**
    * @spec discharge#discharge-authority — the issuer-held discharge-authority
    * policy handed to the kernel: which principals may assert which
    * `event_type`, resolved through a condition's `discharge_authority` value or
@@ -935,6 +1057,31 @@ export async function buildAuthorizationServer(opts: {
       throw new Error(`testClients MUST NOT redefine the config-shipped client ${id}`);
     }
   }
+  // @spec status#lifecycle-authorization: a dedicated Lifecycle client is a
+  // private-key-JWT registration with no grant at /token, holding only the
+  // lifecycle grants the deployment binds to it.
+  const lifecycleClientMetadata = (opts.lifecycleClients ?? []).map((c) => {
+    if (shippedClientIds.has(c.client_id)) {
+      throw new Error(`lifecycleClients MUST NOT redefine the config-shipped client ${c.client_id}`);
+    }
+    if (c.jwks.keys.length === 0 || c.jwks.keys.some((k) => Object.hasOwn(k, "d"))) {
+      throw new Error(`lifecycleClients: ${c.client_id} registers public keys only, at least one`);
+    }
+    return {
+      client_id: c.client_id,
+      client_name: c.client_name,
+      grant_types: [],
+      response_types: [],
+      redirect_uris: [],
+      token_endpoint_auth_method: "private_key_jwt",
+      token_endpoint_auth_signing_alg: "ES256",
+      jwks: c.jwks,
+    } as Record<string, unknown>;
+  });
+  const lifecycleClientGrants: Record<string, readonly string[]> = {
+    ...(opts.lifecycleClientGrants ?? {}),
+    ...Object.fromEntries((opts.lifecycleClients ?? []).map((c) => [c.client_id, c.grants])),
+  };
   // @spec containment#protected-events — the trusted protected-event source
   // registry: config seeds kid+alg per source (D25), the ES256 keypair is
   // generated per boot. The registry resolves the report's payload `source`
@@ -999,6 +1146,13 @@ export async function buildAuthorizationServer(opts: {
   // tombstone horizon short of the retry window this deployment declared.
   const dischargeEventRetentionSeconds =
     opts.dischargeEventRetentionSeconds ?? DEFAULT_DISCHARGE_EVENT_TTL_S;
+  // @spec status#mission-lifecycle-endpoint ("Operations"): the suspension
+  // scheduler runs only where schedules are adopted and `suspend` is served.
+  // Created after the kernel; it joins the fan-out below by forward reference,
+  // like the Status List republisher.
+  const schedulesAdopted =
+    opts.suspensionSchedules !== undefined && capabilityEnabled(opts, "lifecycle-extended");
+  let suspensionScheduler: SuspensionScheduler | undefined;
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
@@ -1042,6 +1196,7 @@ export async function buildAuthorizationServer(opts: {
     authoritySourceCatalog: AUTHORITY_SOURCES as never,
     statusKey: statusKeys.privateKey,
     statusKid: asStatus.kid,
+    ...(opts.now ? { now: opts.now } : {}),
     // Fan the committed transition out to the Status List republisher (PULL), the
     // continuation store (terminal propagation), and any injected subscriber, e.g.
     // the Mission Signals emitter (PUSH).
@@ -1068,10 +1223,45 @@ export async function buildAuthorizationServer(opts: {
       // make this subscriber replay-unsafe. `created_at` and `client_id` are the
       // only record facts the rooting needs and both ride the event.
       if (isActivatingCommit(commit)) rootMissionContinuation(continuationStore, commit);
+      // @spec status#mission-lifecycle-endpoint ("Operations"): arm the timer
+      // of a committed schedule, cancel it when its suspension ends.
+      suspensionScheduler?.onLifecycleCommit(commit);
       opts.onLifecycleCommit?.(commit);
     },
   });
-  // @spec control-plane#fanout — the ONE durable retryable subscriber. Its
+  if (schedulesAdopted) {
+    suspensionScheduler = new SuspensionScheduler(kernel, {
+      ...(opts.suspensionSchedules?.timers ? { timers: opts.suspensionSchedules.timers } : {}),
+    });
+  }
+  // @spec status#mission-lifecycle-endpoint ("Operations"), control-plane#fanout:
+  // a scheduled revocation also destroys the Mission's OAuth grant, as the
+  // Lifecycle endpoint's own `revoke` does, so refresh fails structurally. The
+  // effect follows the COMMITTED terminal event that names the schedule it
+  // applied, so it is owed whichever path committed the transition (a read, a
+  // request, or the timer), and it is a durable delivery: a failed attempt
+  // stays pending with its backoff and the next drain retries it. `capture`
+  // snapshots the grant identifier inside the commit transaction; destroying
+  // an already-destroyed grant finds nothing and succeeds, so a redelivery is
+  // harmless. Registered whatever the deployment's schedule setting, so a
+  // schedule committed before a restart that turned schedules off still owes
+  // it.
+  kernel.registerDurableSubscriber<{ grantId: string }>({
+    id: "scheduled-termination-grant-destroy",
+    capture: (commit) => {
+      if (!TERMINAL_STATES.has(commit.state) || !commit.applied_schedule) return undefined;
+      const grantId = kernel.get(commit.id)?.grant_id;
+      return grantId ? { grantId } : undefined;
+    },
+    deliver: async ({ grantId }) => {
+      const p = terminalProvider;
+      // Retryable, never accepted-by-default, as the family revocation below.
+      if (!p) throw new Error("provider is not constructed yet");
+      const grant = await p.Grant.find(grantId);
+      await grant?.destroy();
+    },
+  });
+  // @spec control-plane#fanout: a durable retryable subscriber. Its
   // effect leaves this process (it revokes and destroys oidc-provider grants),
   // so it cannot be acknowledged by returning: it gets a durable delivery row
   // with attempts and a next-retry time, and the promise-returning drain awaits
@@ -1162,6 +1352,7 @@ export async function buildAuthorizationServer(opts: {
       governed.metadata,
       ledgerReconciler.metadata,
       ...(opts.testClients ?? []),
+      ...lifecycleClientMetadata,
     ],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
@@ -1183,6 +1374,9 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.serviceTokenPrincipals
       ? { serviceTokenPrincipals: opts.serviceTokenPrincipals }
       : {}),
+    ...(Object.keys(lifecycleClientGrants).length > 0 ? { lifecycleClientGrants } : {}),
+    ...(opts.distinctResumeGrant ? { distinctResumeGrant: true } : {}),
+    ...(schedulesAdopted ? { suspensionSchedules: true } : {}),
     ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
     // @spec txn-authorization#challenge-redemption — the endpoint's
     // configuration, assembled from the caller's deployment inputs plus this
@@ -1263,6 +1457,10 @@ export async function buildAuthorizationServer(opts: {
   // on the in-memory default; the `store.file` opt-in is what makes it
   // observable across a restart.
   await kernel.recoverAtBoot();
+  // @spec status#mission-lifecycle-endpoint ("Operations"): re-arm every
+  // persisted schedule, delivering any whose deadline passed while the
+  // process was down, before this assembly serves a request.
+  await suspensionScheduler?.recover();
 
   return {
     provider,
@@ -1283,5 +1481,6 @@ export async function buildAuthorizationServer(opts: {
     protectedEventSources: seededSources,
     devOrdinaryIssuance: opts.devOrdinaryIssuance === true,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
+    ...(suspensionScheduler ? { suspensionScheduler } : {}),
   };
 }

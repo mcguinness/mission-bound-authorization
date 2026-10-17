@@ -110,20 +110,46 @@ export interface ActivationPolicySnapshot {
 }
 
 /**
- * @spec mission#standing-consent-bases — the activation policy `digest`: the
+ * @spec approval-governance#record, approval-governance#governed-policy-root ,
+ * the integrity-anchor `typ` for an Approval Governance Record's
+ * `approval_policy.digest`: the retained snapshot of the governing policy,
+ * which under `governed_policy` is the consented root a human approved. A
+ * domain distinct from {@link ACTIVATION_POLICY_TYP} (a separate evaluator) and
+ * {@link GOVERNED_POLICY_TYP} (an `organizational` source's policy): the same
+ * bytes hash differently under each, so neither digest stands in for another.
+ */
+export const APPROVAL_POLICY_TYP = "mission-approval-policy";
+
+/** The snapshot-content anchor both policy digests share, under its own `typ`. */
+function snapshotAnchor(typ: string, iss: string, snapshot: ActivationPolicySnapshot): string {
+  const bytes =
+    typeof snapshot.content === "string"
+      ? Buffer.from(snapshot.content, "utf8")
+      : Buffer.from(snapshot.content);
+  return computeAnchor(typ, iss, {
+    content_type: snapshot.content_type,
+    content: bytes.toString("base64url"),
+  });
+}
+
+/**
+ * @spec mission#standing-consent-bases: the activation policy `digest`: the
  * integrity anchor with `typ` `mission-activation-policy`, `iss` the activating
  * issuer, and `value` an object of `content_type` and `content` (the
  * base64url, no-padding encoding of the snapshot's exact bytes).
  */
 export function activationPolicyDigest(iss: string, snapshot: ActivationPolicySnapshot): string {
-  const bytes =
-    typeof snapshot.content === "string"
-      ? Buffer.from(snapshot.content, "utf8")
-      : Buffer.from(snapshot.content);
-  return computeAnchor(ACTIVATION_POLICY_TYP, iss, {
-    content_type: snapshot.content_type,
-    content: bytes.toString("base64url"),
-  });
+  return snapshotAnchor(ACTIVATION_POLICY_TYP, iss, snapshot);
+}
+
+/**
+ * @spec approval-governance#record: `approval_policy.digest`: the integrity
+ * anchor with `typ` `mission-approval-policy`, `iss` the Mission issuer, and
+ * `value` an object of `content_type` and `content` over the retained policy
+ * snapshot's exact bytes.
+ */
+export function approvalPolicyDigest(iss: string, snapshot: ActivationPolicySnapshot): string {
+  return snapshotAnchor(APPROVAL_POLICY_TYP, iss, snapshot);
 }
 
 const ANCHOR_RE = /^sha-256:[A-Za-z0-9_-]{43}$/;

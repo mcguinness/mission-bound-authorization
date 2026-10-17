@@ -96,6 +96,15 @@ const lifecycleOn = (issuer: string, missionId: string, body: unknown): Promise<
 const lifecycle = (missionId: string, body: unknown): Promise<Response> =>
   lifecycleOn(ISSUER, missionId, body);
 
+/**
+ * The payload of a signed Lifecycle response. A response recovered after its
+ * bytes were lost is signed again over the retained observation, so its bytes
+ * differ (ECDSA) while this payload, `iat` and `exp` included, is the original's.
+ */
+const signedPayload = (text: string): Record<string, unknown> => decodeJwt(text) as Record<string, unknown>;
+const signedMission = (text: string): Record<string, unknown> =>
+  signedPayload(text).mission as Record<string, unknown>;
+
 /** The retained row for one exchange, straight out of the kernel database. */
 const retained = (missionId: string, nonce: string): Record<string, unknown> | undefined =>
   as.kernel.db
@@ -140,7 +149,7 @@ describe("control-plane lifecycle response boundary", () => {
     // between retention and delivery replays rather than re-executes.
     expect(row?.state).toBe("final");
     expect(row?.body).toBe(delivered);
-    expect(JSON.parse(delivered)).toEqual({
+    expect(signedMission(delivered)).toMatchObject({
       id: record.id,
       state: "suspended",
       version: record.version + 1,
@@ -166,7 +175,7 @@ describe("control-plane lifecycle response boundary", () => {
 
     const retry = await lifecycle(record.id, { operation: "resume", nonce });
     expect(retry.status).toBe(200);
-    expect(await retry.text()).toBe(original);
+    expect(signedPayload(await retry.text())).toEqual(signedPayload(original));
     // Recovery finalized the row from its retained material rather than
     // re-executing the operation, so the version did not move again.
     expect(retained(record.id, nonce)?.state).toBe("final");
@@ -197,14 +206,22 @@ describe("control-plane lifecycle response boundary", () => {
     const first = await lifecycle(record.id, { operation: "revoke", nonce });
     expect(first.status).toBe(200);
     const original = await first.text();
-    const outcome = JSON.parse(original) as { state: string; termination?: { reason: string; version: number }; version: number };
+    const outcome = signedMission(original) as {
+      state: string;
+      termination?: { reason: string; version: number };
+      version: number;
+    };
     expect(outcome.state).toBe("terminated");
     expect(outcome.termination).toMatchObject({ reason: "revoked", version: outcome.version });
     // Same resulting state AND reason under a fresh nonce: idempotent success
     // reporting the recorded termination, with no new version.
     const again = await lifecycle(record.id, { operation: "revoke", nonce: freshNonce() });
     expect(again.status).toBe(200);
-    expect(await again.json()).toEqual(outcome);
+    expect(signedMission(await again.text())).toMatchObject({
+      state: outcome.state,
+      termination: outcome.termination,
+      version: outcome.version,
+    });
     // Same state, different reason: a conflict, and the cause is unchanged.
     const completed = await lifecycle(record.id, { operation: "complete", nonce: freshNonce() });
     expect(completed.status).toBe(409);
@@ -321,7 +338,7 @@ describe("control-plane lifecycle response boundary", () => {
     // And the original retransmit still replays its success.
     const retry = await lifecycle(record.id, { operation: "suspend", nonce });
     expect(retry.status).toBe(200);
-    expect(await retry.text()).toBe(original);
+    expect(signedPayload(await retry.text())).toEqual(signedPayload(original));
   });
 
   it("claims the containment outcome with the narrowing commit", async () => {

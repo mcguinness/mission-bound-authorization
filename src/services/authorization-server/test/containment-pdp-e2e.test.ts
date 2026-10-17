@@ -160,6 +160,7 @@ d("containment end-to-end: taint -> contain -> authority_contained -> expansion 
       headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
       body: JSON.stringify({
         operation: "contain",
+        nonce: crypto.randomUUID(),
         event: {
           type: "tainted_read",
           source: "https://siem.example/detections",

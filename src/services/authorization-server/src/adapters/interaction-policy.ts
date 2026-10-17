@@ -11,6 +11,14 @@
  * gains one check: a request carrying `mission_intent` needs the Mission
  * approval interaction unless that interaction has just finished for it.
  * Under `prompt=none` the check refuses `consent_required`.
+ *
+ * @spec device-authorization#approval, device-authorization#request (#1202):
+ * the same holds on the device flow. A verification user agent already
+ * holding a provider session and a grant for the client covering the
+ * requested scope would otherwise complete the device session itself, and
+ * the device code would redeem under that earlier grant and its Mission. A
+ * device decision finishes on the device code, never through the resume, so
+ * that check needs no finished-approval guard.
  */
 
 import { interactionPolicy, type KoaContextWithOIDC } from "oidc-provider";
@@ -29,11 +37,27 @@ export function missionApprovalRequired(ctx: KoaContextWithOIDC): boolean {
   return params?.mission_intent !== undefined && !ctx.oidc.result?.consent;
 }
 
-/** oidc-provider's base policy, with the consent prompt's Mission approval check appended. */
+/** Request the interaction for a device session carrying a Mission Intent, at verification and on resume. */
+export function missionDeviceApprovalRequired(ctx: KoaContextWithOIDC): boolean {
+  return (
+    (ctx.oidc.route === "code_verification" || ctx.oidc.route === "device_resume") &&
+    (ctx.oidc.params as { mission_intent?: unknown }).mission_intent !== undefined
+  );
+}
+
+/** oidc-provider's base policy, with the consent prompt's Mission approval checks appended. */
 export function missionInteractionPolicy(): interactionPolicy.DefaultPolicy {
   const policy = interactionPolicy.base();
   const consent = policy.get("consent");
   if (!consent) throw new Error("oidc-provider's base interaction policy has no consent prompt");
+  consent.checks.add(
+    new interactionPolicy.Check(
+      "mission_device_approval",
+      "a Mission device session requires the Mission approval",
+      "consent_required",
+      missionDeviceApprovalRequired,
+    ),
+  );
   consent.checks.add(
     new interactionPolicy.Check(
       MISSION_APPROVAL_CHECK,

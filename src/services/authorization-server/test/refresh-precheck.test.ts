@@ -23,7 +23,7 @@ import { FIXTURE_BROWSER_LOGIN, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
-import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
+import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { gateErrorToMissionError } from "../src/adapters/provider.js";
@@ -198,8 +198,10 @@ async function lifecycle(missionId: string, operation: "suspend" | "resume"): Pr
     headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
     body: JSON.stringify({ operation, nonce: crypto.randomUUID() }),
   });
-  const body = (await res.json()) as { state?: string };
-  expect(res.status, JSON.stringify(body)).toBe(200);
+  const text = await res.text();
+  expect(res.status, text).toBe(200);
+  // The signed state-only Mission Status Response (@spec status#mission-lifecycle-endpoint).
+  const body = (decodeJwt(text) as { mission: { state?: string } }).mission;
   expect(body.state).toBe(operation === "suspend" ? "suspended" : "active");
 }
 
