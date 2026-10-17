@@ -8478,7 +8478,7 @@
    "assertion": "replay",
    "observation": {
     "normative": "a same-nonce retry after an `unavailable`, `rate_limited` or other 5xx response is processed afresh and can succeed; no transient failure is retained for the nonce",
-    "local": "every unexpected failure on the Lifecycle endpoint (the nonce lookup, the transition's storage, signing) is 503 unavailable, delivered without retention, and the kernel's unknown Mission is a typed error answered not_found and retained; the reference emits no rate_limited. A fault after a commit leaves the commit's claim, so the retry recovers the committed outcome at its original observation rather than re-executing it"
+    "local": "every unexpected failure on the Lifecycle endpoint (the nonce lookup, the transition's storage, signing) is 503 unavailable, delivered without retention, and the kernel's unknown Mission is a typed error answered not_found and retained; the reference emits no rate_limited. A fault after a commit (grant destruction, signing, delivery) leaves the commit's claim, so the same-nonce retry recovers the committed outcome at its original observation rather than re-executing it; the #1240 review ruled this recovery correct, and the ephemeral 503 itself is never a retained result"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -8621,7 +8621,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a lifecycle request whose `expected_version` differs from the Mission's current state version is refused 409 `stale_version` and leaves the Mission's state and version unchanged",
-    "local": "expected_version is the decimal form of a positive integer (anything else is invalid_request); the check runs inside the transition's transaction, after the lifecycle authorization and the Mission lookup, so an unauthorized caller learns no version"
+    "local": "expected_version is the decimal form of a positive integer (anything else is invalid_request), parsed once before the operation is dispatched; revoke, suspend, resume and complete and this deployment's contain each compare it inside the transaction of their own mutation, after the lifecycle authorization and the Mission lookup, so an unauthorized caller learns no version. discharge adopts no guard (its companion's \"No expected_version\") and refuses the member (status.discharge.no-expected-version)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -8631,9 +8631,15 @@
      "name": "Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191) > refuses a stale expected_version 409 stale_version before the transition rule, leaving the Mission unchanged, and applies a current one",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint extension operations and the common guard (@spec status#idempotency, discharge#discharge-operation, #1191) > contain honors the common expected_version guard: a stale one is refused 409 stale_version and nothing commits, a current one narrows",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Status interface audit (#705); #1191 (D416)."
+   "notes": "Status interface audit (#705); #1191 (D416); #1240 review: the guard binds contain too."
   },
   {
    "id": "status.lifecycle.stale-version-precedence",
@@ -9341,6 +9347,42 @@
    "notes": "handleDischarge refuses a body carrying condition_selector beside either digest member, or carrying neither form, with invalid_request before any Mission lookup; a malformed selector is invalid_request too. Nothing latches."
   },
   {
+   "id": "status.discharge.no-expected-version",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-operation",
+   "text": "A stale-version refusal would delay a safety-reducing operation; the digest selectors above and the idempotency rules of {{discharge-idempotency}} are the guards instead.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a discharge is never refused for a stale state version: no guard binds the targeted record or, after carryover, its replacement",
+    "local": "the endpoint parses expected_version once for every operation; a discharge carrying it is refused invalid_request before any target, forwarded or not, is resolved, rather than accepted with a guard it never applies (#1240 review). A discharge without it is processed as before"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint extension operations and the common guard (@spec status#idempotency, discharge#discharge-operation, #1191) > refuses the schedule members on contain and discharge, and expected_version on discharge, before any Mission is read",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > refuses expected_version on a forwarded discharge before resolving its target: the guard binds no record, and neither the old child nor the replacement latches (#1191)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1191 (D416), #1240 review."
+  },
+  {
    "id": "status.discharge.selector-collapse",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-anti-oracle",
@@ -9987,7 +10029,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a deployment serving `revoke` revokes for an authorized caller holding none of the Mission's tokens, after which every derivation refuses and a racing refresh either commits first or is refused; refuses every operation it has not adopted `invalid_request`; replays a same-nonce retry and refuses a nonce mismatch; answers a fresh `revoke` of a revoked Mission with no transition and a `revoke` of a completed or expired Mission with `conflict`; answers an unauthorized caller as an unknown Mission; and answers each `revoke` with the signed, state-only Mission Status Response whose `aud` is the requesting client's `client_id` and whose `nonce` is the request's. The class requires no other operation and not the Mission Status operation, without forbidding either; the witness deployment adopts neither",
-    "local": "witnessed on the reference configured revoke-only (lifecycle-revoke alone, the Status operation, discharge and every other Lifecycle operation off), at the advertised mission_lifecycle_endpoint: a form body carrying mission_id, private_key_jwt client authentication (the one method it accepts, of the three Status allows), a deployment-defined lifecycle grant bound to the client (lifecycleClientGrants), and the signed state-only response with aud and sub the client_id and the request's nonce; discovery advertises mission_lifecycle_endpoint, its auth methods and assertion algorithms, and mission_status_signing_alg_values_supported. The capability stays unclaimed: the owner rules the claim (D416)"
+    "local": "witnessed on the reference configured revoke-only (lifecycle-revoke alone, the Status operation, discharge and every other Lifecycle operation off), at the advertised mission_lifecycle_endpoint: a form body carrying mission_id, private_key_jwt client authentication (the one method it accepts, of the three Status allows, ruled sufficient), a deployment-defined lifecycle grant bound to the client, and the signed state-only response with aud and sub the client_id and the request's nonce; discovery advertises mission_lifecycle_endpoint, its auth methods and assertion algorithms, and mission_status_signing_alg_values_supported. The shipped launchers bind the grant to one dedicated lifecycle console. The capability is not claimed while status.lifecycle.tls is unwitnessed (#1240 review)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -10137,7 +10179,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the Lifecycle endpoint is reachable only over TLS 1.2 or later",
-    "local": "the reference listens on plain HTTP for local development; TLS termination belongs to the deployment, and no deployment test witnesses it"
+    "local": "the reference listens on plain HTTP for local development, so no test witnesses this; the deployment evidence that would is a TLS terminator in front of mission_lifecycle_endpoint that refuses protocol versions below TLS 1.2, recorded with the deployment (#1240 review)"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -10160,7 +10202,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a POST whose body is not form-urlencoded, or repeats a member, is refused `invalid_request` and changes nothing; a form carrying `mission_id`, `operation` and `nonce` is served",
-    "local": "the dev-only path route also accepts a JSON body, takes the Mission from the path and runs the same engine; it is not advertised"
+    "local": "the dev-only path route also accepts a JSON body, takes the Mission from the path and runs the same engine; it is not advertised. The base operations answer with the signed Mission Status Response; this deployment's contain extension answers a plain JSON outcome, and discharge its companion's result shape"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -10550,12 +10592,19 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a client authenticating to the Status or Lifecycle endpoint by private-key JWT types its assertion `client-authentication+jwt`",
-    "local": "the AS accepts client-authentication+jwt, an absent typ and the generic JWT, and refuses an assertion explicitly typed as another kind of JWT (lifecycle-endpoint.test.ts); no reference client authenticates to these endpoints by private-key JWT: the demo walkthroughs use the dev-only path route (#1191)"
+    "local": "the reference lifecycle console (demo/src/lifecycle-client.ts), the reference's one private-key-JWT client of these endpoints, types every assertion client-authentication+jwt; the witness captures the assertion it sends. The AS also accepts an absent typ and the generic JWT, and refuses an assertion explicitly typed as another kind of JWT"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Status interface audit (#705)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/issuance-only-capabilities.test.ts",
+     "name": "the launcher's lifecycle console at the advertised endpoint (@spec status#mission-status-authentication, status#lifecycle-authorization, #1191) > the reference console types its client assertion client-authentication+jwt, names the issuer as its sole aud, and revokes a Mission whose tokens it does not hold",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status interface audit (#705); #1191 (D416); #1240 review: the launchers' dedicated lifecycle console."
   },
   {
    "id": "status.auth.mechanism-supported",
@@ -11371,7 +11420,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a client authenticated by private-key JWT is authorized by the lifecycle grant the deployment binds to that client: one holding none, or another grant only, is refused as an unknown Mission and the Mission is unchanged",
-    "local": "the grant is the deployment's lifecycleClientGrants entry for the client_id (mission_lifecycle); an unknown grant name fails the boot"
+    "local": "the grant is the deployment's lifecycleClientGrants entry for the client_id, or a dedicated client registered through lifecycleClients with its public key and grants; the shipped launchers bind mission_lifecycle to one lifecycle console and to no other client; an unknown grant name fails the boot"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -11385,6 +11434,12 @@
     {
      "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
      "name": "Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191) > refuses at boot a lifecycle grant that names no Lifecycle authorization",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/issuance-only-capabilities.test.ts",
+     "name": "the launcher's lifecycle console at the advertised endpoint (@spec status#mission-status-authentication, status#lifecycle-authorization, #1191) > no other client holds a lifecycle grant: the Mission's own client is answered as for an unknown Mission",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     }
@@ -11408,7 +11463,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the signed Lifecycle response's envelope `sub` is the acting party",
-    "local": "the acting party is the authenticated client_id; its record is the retained response row's principal, not a separate audit log"
+    "local": "the acting party is the authenticated client_id; its record is the retained response row's principal, not a separate audit log. discharge keeps its companion's result shape and its envelope sub stays the Mission's client: a visible SHOULD departure on that operation (#1240 review)"
    },
    "level": "endpoint",
    "coverage": "tested",
