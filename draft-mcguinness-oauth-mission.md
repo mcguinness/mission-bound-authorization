@@ -6379,7 +6379,10 @@ Cross-Domain:
 - Editorial: a readability pass shortens paragraphs, turns
   enumerations into lists, cuts restatement, and follows OAuth
   conventions for naming parameters, claims and error codes and for
-  example lead-ins. No requirement changes.
+  example lead-ins. The `terminated_at` definition names its existing
+  exception for historical terminations, and `mission.expires_at` is
+  described as a lifetime bound, not current state. No requirement
+  changes.
 
 - Error and Challenge Mapping: a Token Exchange refuses a
   `subject_token` or `actor_token` that is invalid, whose sender
