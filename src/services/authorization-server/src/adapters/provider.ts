@@ -4330,7 +4330,10 @@ async function decide(
   //
   // @spec mission#approval-event (step 7) (#916) — the order of writes. The
   // approval is prepared first, so every refusal (above, and in
-  // `prepareApproval`) happens before anything is written. The provider grant
+  // `prepareApproval`) happens before anything is written, except that
+  // the progressive ceiling consent, established at the commit's creation
+  // instant, refuses after the grant save (an inert grant a retry
+  // overwrites). The provider grant
   // is saved next, under an identity derived from this interaction, and the
   // record then commits already bound to it. A failure before that commit
   // leaves an inert grant (no code, no Mission, no index entry) that a retry

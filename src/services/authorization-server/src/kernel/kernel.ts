@@ -1073,7 +1073,9 @@ export class MissionKernel {
    * computes before anything is written: the principal checks, the derived
    * Authority Set with its capability-source bindings, and the established
    * authority source and its ceiling. Every refusal of the approval happens
-   * here. The approval decision calls it once, saves the provider grant from
+   * here, except the progressive ceiling consent, which `approve` establishes
+   * at the commit's creation instant. The approval decision calls it once,
+   * saves the provider grant from
    * its result, then commits exactly that result through {@link approve},
    * which recomputes nothing.
    */

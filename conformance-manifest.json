@@ -5811,7 +5811,7 @@
    "assertion": "concurrency",
    "observation": {
     "normative": "the Mission Record is created active atomically with the approval decision and the issuance of the authorization code",
-    "local": "decide() prepares the approval (every refusal before any write), saves the provider grant under an identity derived from the interaction, then commits the record already bound to it (kernel.approve with grantId; bindGrant is compare-and-set). A failure before the commit leaves no Mission, only an inert grant a retry overwrites; a repeated or concurrent decision recovers the one grant and binding. oidc-provider issues the code on the later resume request, so a committed active, grant-bound Mission can precede code creation."
+    "local": "decide() prepares the approval (every refusal before any write, except the progressive ceiling consent the commit establishes at its creation instant, which leaves an inert grant), saves the provider grant under an identity derived from the interaction, then commits the record already bound to it (kernel.approve with grantId; bindGrant is compare-and-set). A failure before the commit leaves no Mission, only an inert grant a retry overwrites; a repeated or concurrent decision recovers the one grant and binding. oidc-provider issues the code on the later resume request, so a committed active, grant-bound Mission can precede code creation."
    },
    "level": "endpoint",
    "coverage": "partial",
