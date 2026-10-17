@@ -104,12 +104,12 @@ authorization server supports, or both.
 Mission-Bound Authorization for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}}
 (the "issuance profile") commits a Mission's Authority Set as one or more
 {{RFC9396}} `authorization_details` entries, of whatever `authorization_details`
-type or types the authorization server (AS) supports. The issuance
+type or types the authorization server supports. The issuance
 profile is
-type-agnostic: it derives, commits, and gates entries of any AS-supported
+type-agnostic: it derives, commits, and gates entries of any authorization-server-supported
 type the same way, and leaves each type's own comparison and
 transformation semantics to the specification that defines the type,
-exactly as {{RFC9396}} Section 2 permits.
+exactly as {{Section 2 of RFC9396}} permits.
 
 This document defines that specification for one type: `mission_resource_access`,
 a cross-resource authorization language matching a resource exactly or by
@@ -167,9 +167,9 @@ a general-purpose, cross-resource authorization language. An entry is a
   scope distinct authority to distinct resources. A Mission-bound
   token's `aud` is derived from the carried entries' `resource`
   values and is typically coarser
-  ({{I-D.draft-mcguinness-oauth-mission}}). Per {{RFC9396}}
-  Section 3.2, the `resource` authorization request parameter does
-  not affect how the AS processes `authorization_details`, and this
+  ({{I-D.draft-mcguinness-oauth-mission}}). Per {{Section 3.2 of RFC9396}},
+  the `resource` authorization request parameter does
+  not affect how the authorization server processes `authorization_details`, and this
   member is distinct from the {{RFC9396}} common `locations` field.
 
 `resource_match`:
@@ -179,7 +179,7 @@ a general-purpose, cross-resource authorization language. An entry is a
   `resource` itself and any URI beneath it at a path-segment boundary
   (the `resource` followed by `/` and further path). A `resource`
   value under `prefix` MUST NOT carry a query or fragment component;
-  the AS refuses such an entry with `invalid_authorization_details`.
+  the authorization server refuses such an entry with `invalid_authorization_details`.
   For prefix purposes, a `resource` with an empty path and one whose
   path is `/` denote the same base: `https://a.example` and
   `https://a.example/` authorize the same set. These two values
@@ -201,12 +201,12 @@ a general-purpose, cross-resource authorization language. An entry is a
     `resource` that defines it: a consumer enforces only the actions
     it recognizes for that resource and honors no others, so an
     unrecognized action is fail-closed by construction.
-  - An AS SHOULD draw action identifiers from a namespace the
+  - An authorization server SHOULD draw action identifiers from a namespace the
     serving resource documents, so the set is interpretable
     cross-vendor rather than ad hoc.
   - A consent rendering MUST present a family as the breadth it is:
     all actions under the name, not one action.
-  - An AS SHOULD treat deriving a family as high-risk breadth.
+  - An authorization server SHOULD treat deriving a family as high-risk breadth.
 
 `constraints`:
 : OPTIONAL. An object. Machine-actionable per-resource
@@ -217,7 +217,7 @@ a general-purpose, cross-resource authorization language. An entry is a
   - Because a `constraints` member narrows authority, a resource server
     that cannot enforce one MUST fail closed
     ({{rs-enforcement}}).
-  - To avoid that failure mode, the AS SHOULD emit for a given
+  - To avoid that failure mode, the authorization server SHOULD emit for a given
     `resource` only `constraints` keys that the resource server serving
     it is known (by registration, deployment policy, or the resource's
     advertised `mission_constraints_supported`
@@ -239,7 +239,7 @@ a general-purpose, cross-resource authorization language. An entry is a
     delegates, each a `may_act`-style matcher
     ({{delegate-eligibility}}): `{ "sub": "<client_id>" }` for a
     specific delegate, or `{ "sub_profile": "<actor-type>" }` for an
-    actor-type class. When absent, eligibility falls to the AS's
+    actor-type class. When absent, eligibility falls to the authorization server's
     delegation-authorization policy, which MUST be applied at every
     exchange ({{delegate-eligibility}}); absence delegates the
     decision to policy, it never grants blanket eligibility. The
@@ -249,7 +249,7 @@ a general-purpose, cross-resource authorization language. An entry is a
   A companion profile MAY define additional `delegation` members.
   Such a member is policy, not authority ({{delegate-eligibility}}):
   a derived entry's value for it MUST NOT be broader than the parent
-  entry's, and a member the AS does not understand is carried
+  entry's, and a member the authorization server does not understand is carried
   unchanged.
 
 Example Authority Set (the read entry is delegable to depth 2 and
@@ -287,7 +287,7 @@ the write entry carries no `delegation` and so is non-delegable, because
 and refuses an entry that is not one. This section defines that
 relation.
 
-When the AS narrows the Authority Set for a derived token, a derived
+When the authorization server narrows the Authority Set for a derived token, a derived
 `mission_resource_access` entry A is a subset of a Mission entry B
 when:
 
@@ -317,7 +317,7 @@ when:
 Resource containment under a `prefix` reference is compared after
 RFC 3986 {{RFC3986}} syntax-based normalization of both URIs: lowercase
 the scheme and host, remove a default port, uppercase the hexadecimal
-digits of any percent-encoding ({{RFC3986}} Section 2.1, so `%2f` and
+digits of any percent-encoding ({{Section 2.1 of RFC3986}}, so `%2f` and
 `%2F` are equivalent), decode percent-encoded octets of unreserved
 characters, and remove dot-segments. This
 normalization applies to comparison only, never to hashing:
@@ -368,14 +368,14 @@ deployment-defined and is interpreted only within the issuing
 deployment; a consumer that does not recognize it MUST fail closed
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
-The same duty binds the AS side of narrowing: whenever the AS derives
+The same duty binds the authorization server side of narrowing: whenever the authorization server derives
 a candidate entry from a ceiling (a client's authority proposal
 narrowed to the Authority Set, or an Authority Set entry narrowed to
 a derived or delegated token, {{I-D.draft-mcguinness-oauth-mission}},
 {{delegate-eligibility}}), a
 registered Common Constraint key present in the ceiling entry that the
-AS does not implement narrowing for MUST NOT be dropped while the
-entry survives. The AS MUST instead fail closed: refuse the whole
+authorization server does not implement narrowing for MUST NOT be dropped while the
+entry survives. The authorization server MUST instead fail closed: refuse the whole
 derivation, or omit the entry from the result, exactly as an
 unrecognized `target_resources` value already may be; the granted
 `authorization_details` echo reflects any such omission
@@ -536,7 +536,7 @@ metadata {{RFC9728}}:
 `mission_constraints_supported`:
 : OPTIONAL. An array of strings: the `constraints` keys (Common
   Constraints and deployment-defined names) the resource understands
-  and enforces ({{rs-enforcement}}). It gives the AS's duty to emit
+  and enforces ({{rs-enforcement}}). It gives the authorization server's duty to emit
   only keys the serving resource is known to understand
   ({{resource-access-type}}) a discovery surface, and lets a client
   predict a fail-closed constraint mismatch before making the
@@ -556,8 +556,8 @@ issued at delegation depth `d` only if all of the following hold:
 2. `d` is less than or equal to the entry's `delegation.max_depth`;
    and
 3. the delegate is permitted by `delegation.allowed_delegates` or,
-   when that member is absent, by the AS's delegation-authorization
-   policy, which the AS MUST apply at every exchange: an absent
+   when that member is absent, by the authorization server's delegation-authorization
+   policy, which the authorization server MUST apply at every exchange: an absent
    matcher list is a decision deferred to policy, never a blanket
    grant of eligibility.
 
@@ -568,8 +568,7 @@ comparison; surviving entries are carried with their `delegation`
 member intact so the next hop is evaluated the same way.
 
 **Matching `allowed_delegates`.** Each entry is a matcher object
-modeled on the RFC 8693 `may_act` actor object ({{RFC8693}} Section
-4.4): where `may_act` names a single party eligible to act on a token,
+modeled on the RFC 8693 `may_act` actor object ({{Section 4.4 of RFC8693}}): where `may_act` names a single party eligible to act on a token,
 `allowed_delegates` is a per-Authority-Set-entry *list* of such
 matchers, generalized to actor-type classes. A `{ "sub": ... }`
 matcher permits a specific delegate by client identifier; a
@@ -581,12 +580,12 @@ can thus permit a specific client,
 a class of actors, or both, and a delegate is permitted if it matches
 any entry.
 
-The AS MUST authenticate the delegate at the Token Exchange
+The authorization server MUST authenticate the delegate at the Token Exchange
 and assert the actor's `sub` and `sub_profile` itself. A self-asserted
 `sub_profile` MUST NOT satisfy a matcher; otherwise a client could
 claim any actor type to bypass the constraint.
 
-A `{ "sub": ... }` matcher is a client identifier in the issuing AS's
+A `{ "sub": ... }` matcher is a client identifier in the issuing authorization server's
 namespace and is not portable across a trust domain; how a Resource AS
 evaluates conveyed matchers, failing closed and narrowing out any
 `sub` matcher it cannot resolve, is specified by the companion
@@ -647,7 +646,7 @@ carried entry supplies a safe projection.
 ## Transformation Capabilities {#transformation-capabilities}
 
 {{I-D.draft-mcguinness-oauth-mission}} requires an authorization
-server to declare, for every AS-supported `authorization_details`
+server to declare, for every authorization-server-supported `authorization_details`
 type, whether it understands the type's narrowing, delegation, and
 scope-projection semantics, through deployment documentation or,
 where available, the machine-readable `mission_transformation_capabilities`
@@ -824,7 +823,7 @@ specific to this type:
 ## Resource Boundary Canonicalization {#resource-boundary-canonicalization}
 
 A `prefix` entry ({{resource-access-type}}) draws an authority
-boundary in URI space. The AS's containment test ({{subset}}) and the
+boundary in URI space. The authorization server's containment test ({{subset}}) and the
 resource server's request matching
 ({{rs-enforcement}}) MUST apply the single RFC
 3986 {{RFC3986}} normalization defined in {{subset}}, so issuance and
@@ -882,7 +881,7 @@ matches as follows:
 {: title="Prefix matching for https://api.example/orders"}
 
 A deployment MAY agree out of band on the canonicalization profile its
-AS and resource servers apply; this document defines one rule
+authorization server and resource servers apply; this document defines one rule
 ({{subset}}), so no profile identifier is required for interoperation.
 
 # Privacy Considerations {#privacy-considerations}
@@ -899,7 +898,7 @@ that carries them.
 ## The Mission Resource Access Authorization Details Type {#type-registration}
 
 `mission_resource_access` is an `authorization_details` type per
-{{RFC9396}} Section 2, defined by this document in
+{{Section 2 of RFC9396}}, defined by this document in
 {{resource-access-type}}. RFC 9396 does not establish an IANA
 registry of authorization details types (type identifiers are
 interpreted by the authorization server), so this document creates no
