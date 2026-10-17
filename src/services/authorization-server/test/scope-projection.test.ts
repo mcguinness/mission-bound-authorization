@@ -15,6 +15,8 @@ import type { Server } from "node:http";
 import { startPlainResourceServer } from "@mission/plain-rs";
 import {
   DERIVATION_POLICY,
+  DEV_SERVICE_TOKEN,
+  demoReconciliationTemplate,
   INTROSPECTION_PRINCIPALS,
   SCOPE_PROJECTION,
   TOPOLOGY,
@@ -28,8 +30,12 @@ import {
   type JWK,
   SignJWT,
 } from "jose";
+// oidc-provider 9.10.0's internal instance cache, the one its JWT format
+// reads the configured customizer from (no published types).
+import instance from "oidc-provider/lib/helpers/weak_cache.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
+import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { browserApprovalHeaders, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
@@ -529,6 +535,213 @@ describe("scope projection on derived tokens (@spec mission#scope-projection)", 
     expect(refused.body.error).toBe("invalid_target");
     expect(refused.body.error_description).toMatch(/no safe scope projection/);
     expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+  });
+});
+
+describe("scope projection on the dispatch and expansion-successor mints (@spec mission#scope-projection)", () => {
+  /** A fresh copy of the demo read-only reconciliation template, through the admin plane. */
+  async function newTemplate(): Promise<string> {
+    const res = await fetch(`${ISSUER}/templates`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+      body: JSON.stringify({ ...demoReconciliationTemplate(ISSUER), approval_event_id: `scope-tmpl-${crypto.randomUUID()}` }),
+    });
+    const body = (await res.json()) as Json;
+    expect(res.status, JSON.stringify(body)).toBe(201);
+    return body.template_id as string;
+  }
+  const submission = (goal: string) =>
+    JSON.stringify({ intent: { goal, target_resources: [PLAIN], expires_at: "2027-01-01T00:00:00Z" } });
+
+  it("a template dispatch to the scope-only target carries only the scope the instance's template-bounded entry proves, which the plain RS enforces, and refuses invalid_target while the target's mapping is unknown", async () => {
+    const templateId = await newTemplate();
+    const keys = await newKeys();
+    const dispatchEventId = crypto.randomUUID();
+    const dispatch = () =>
+      token(
+        {
+          grant_type: MISSION_DISPATCH_GRANT_TYPE,
+          template_id: templateId,
+          mission_intent: submission("Read the quarterly reports"),
+          dispatch_event_id: dispatchEventId,
+        },
+        keys,
+      );
+
+    await withPlain(undefined, async () => {
+      const refused = await dispatch();
+      expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      expect(refused.body.error_description).toMatch(/no scope-projection mapping/);
+      expect(refused.body.access_token).toBeUndefined();
+    });
+
+    // The template's ceiling keeps only the read action, while the policy
+    // ceiling and the target's mapping also name the write action: the
+    // token's scope is the projection of the derived entry alone.
+    const res = await dispatch();
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(res.body.authorization_details).toEqual([{ type: "mission_resource_access", resource: PLAIN, actions: [READ] }]);
+    expect(res.body.scope).toBe("reports.read");
+    const at = res.body.access_token as string;
+    const claims = decodeJwt(at);
+    expect(claims.aud).toBe(PLAIN);
+    expect((claims.mission as { id?: string }).id).toBe(res.body.mission_id);
+    expect(claims.scope).toBe("reports.read");
+    expect(claims.authorization_details).toEqual(res.body.authorization_details);
+    expect((await callRs(RS_PORT, "GET", at, keys)).status).toBe(200);
+    expect((await callRs(RS_PORT, "POST", at, keys)).status).toBe(403);
+  });
+
+  it("an expansion successor's first token carries the scope projected from the successor's own derived entry, which drops a requested action beyond the ceiling, and the plain RS enforces the widened scope", async () => {
+    const DELETE = "reports:report.delete";
+    const predecessor = await issue([entry([READ])]);
+    expect(predecessor.status, JSON.stringify(predecessor.body)).toBe(200);
+    expect(predecessor.body.scope).toBe("reports.read");
+    const keys = predecessor.keys;
+    const before = predecessor.body.access_token as string;
+    expect((await callRs(RS_PORT, "POST", before, keys)).status).toBe(403);
+
+    // The mapping also names a value for an action the policy ceiling never
+    // grants at this target: only the derived entry can keep it out of `scope`.
+    await withPlain(
+      {
+        ...structuredClone(SHIPPED_PLAIN),
+        scopes: {
+          ...structuredClone(SHIPPED_PLAIN?.scopes),
+          "reports.delete": { rights: rights([DELETE]), mandatory_controls: {} },
+        },
+      },
+      async () => {
+        const opened = await token(
+          {
+            grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+            subject_token: before,
+            subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+            requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+            login_hint: "alice",
+            mission_intent: submission("Publish and retire the quarterly reports"),
+            authorization_details: JSON.stringify([entry([READ, WRITE, DELETE])]),
+            creation_request_id: crypto.randomUUID(),
+          },
+          keys,
+        );
+        expect(opened.status, JSON.stringify(opened.body)).toBe(400);
+        expect(opened.body.error).toBe("authorization_pending");
+        as.expansionDeferrals.approve(opened.body.deferral_code as string, {
+          approver: { iss: ISSUER, sub: "bob" },
+          approvalEventId: `scope-exp-${crypto.randomUUID()}`,
+          approvedUntil: "2027-01-01T00:00:00Z",
+        });
+        const polled = await token(
+          {
+            grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+            requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+            deferral_code: opened.body.deferral_code as string,
+          },
+          keys,
+        );
+        expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+        const successor = as.kernel.get(polled.body.mission_id as string);
+        expect(successor?.predecessor).toBeDefined();
+        expect(polled.body.authorization_details).toEqual([
+          { type: "mission_resource_access", resource: PLAIN, actions: [READ, WRITE] },
+        ]);
+        expect(polled.body.scope).toBe("reports.read reports.write");
+        const at = polled.body.access_token as string;
+        const claims = decodeJwt(at);
+        expect(claims.aud).toBe(PLAIN);
+        expect((claims.mission as { id?: string }).id).toBe(successor?.id);
+        expect(claims.scope).toBe("reports.read reports.write");
+        expect(claims.authorization_details).toEqual(polled.body.authorization_details);
+        expect((await callRs(RS_PORT, "POST", at, keys)).status).toBe(201);
+      },
+    );
+  });
+});
+
+describe("the JWT customizer backstop, invoked directly (@spec mission#scope-projection, mission#rs-enforcement)", () => {
+  // No mint reaches either refusal today: every Mission-bound token passes
+  // through the save-time projection, and no oidc-provider mint carries
+  // `act`. These cases call the customizer this AS configured, read the way
+  // oidc-provider 9.10.0 reads it (lib/models/formats/jwt.js), with a token
+  // the projection decided at a real issuance. The endpoint witness of the
+  // `act` branch waits on a same-Mission delegation mint (#869).
+  type JwtCustomizer = (ctx: unknown, token: object, jwt: { payload: Json }) => Promise<void>;
+  const customizer = (): JwtCustomizer =>
+    (instance as (p: object) => { configuration: { formats: { customizers: { jwt: JwtCustomizer } } } })(as.provider)
+      .configuration.formats.customizers.jwt;
+
+  /** A real issuance to the plain RS, and the AccessToken instance its save() projected. */
+  async function projectedToken(): Promise<{ token: { jti?: string; grantId?: string; scope?: string }; claims: Json }> {
+    const issued: Array<{ jti?: string; grantId?: string; scope?: string }> = [];
+    const listener = (t: { jti?: string; grantId?: string; scope?: string }) => issued.push(t);
+    as.provider.on("access_token.issued", listener);
+    let claims: Json;
+    try {
+      const res = await issue([entry([READ])]);
+      expect(res.status, JSON.stringify(res.body)).toBe(200);
+      claims = decodeJwt(res.body.access_token as string) as Json;
+    } finally {
+      as.provider.off("access_token.issued", listener);
+    }
+    const t = issued.find((x) => x.jti === claims.jti);
+    expect(t?.scope).toBe("reports.read");
+    return { token: t as { jti?: string; grantId?: string; scope?: string }, claims };
+  }
+  /** The payload oidc-provider assembles for a Mission-bound token, before the customizer. */
+  const payload = (claims: Json, extra: Json = {}): Json => ({
+    sub: "the-approver",
+    aud: PLAIN,
+    mission: claims.mission,
+    authorization_details: claims.authorization_details,
+    scope: "reports.read reports.write",
+    ...extra,
+  });
+
+  it("refuses invalid_target a Mission-bound payload whose token the scope projection did not decide, and applies the decided scope for a projected token", async () => {
+    const { token: projected, claims } = await projectedToken();
+
+    const undecided = { grantId: projected.grantId, scope: "reports.read reports.write" };
+    await expect(customizer()(undefined, undecided, { payload: payload(claims) })).rejects.toMatchObject({
+      error: "invalid_target",
+      error_description: expect.stringMatching(/without a scope projection/),
+    });
+    // A token carrying no `mission` claim is not Mission-bound: untouched.
+    const ordinary = { payload: { aud: PLAIN, scope: "reports.write" } as Json };
+    await customizer()(undefined, undecided, ordinary);
+    expect(ordinary.payload.scope).toBe("reports.write");
+
+    const decided = { payload: payload(claims) };
+    await customizer()(undefined, projected, decided);
+    expect(decided.payload.scope).toBe("reports.read");
+    expect(decided.payload.sub).toBe(claims.sub);
+  });
+
+  it("refuses invalid_target an act-bearing Mission-bound payload to an audience not classified Mission-aware or not mapped, and passes it to a Mission-aware audience", async () => {
+    const { token: projected, claims } = await projectedToken();
+    const act = { sub: "subagent-invoice-extractor" };
+
+    await expect(
+      customizer()(undefined, projected, { payload: payload(claims, { act }) }),
+    ).rejects.toMatchObject({
+      error: "invalid_target",
+      error_description: expect.stringMatching(/not classified mission_aware/),
+    });
+    await expect(
+      customizer()(undefined, projected, { payload: payload(claims, { act, aud: "https://unmapped.example/api" }) }),
+    ).rejects.toMatchObject({
+      error: "invalid_target",
+      error_description: expect.stringMatching(/no scope-projection mapping/),
+    });
+
+    // The same payload without `act` passes to the same audience.
+    await customizer()(undefined, projected, { payload: payload(claims) });
+    // And with `act` to an audience the mapping classifies Mission-aware.
+    expect(MAPPING.audiences[PAYMENTS]?.mission_aware).toBe(true);
+    const aware = { payload: payload(claims, { act, aud: PAYMENTS }) };
+    await customizer()(undefined, projected, aware);
+    expect(aware.payload.act).toEqual(act);
   });
 });
 
