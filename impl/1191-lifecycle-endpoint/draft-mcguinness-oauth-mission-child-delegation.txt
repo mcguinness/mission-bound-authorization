@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         16 October 2026
-Expires: 19 April 2027
+Intended status: Standards Track                         17 October 2026
+Expires: 20 April 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 19 April 2027.
+   This Internet-Draft will expire on 20 April 2027.
 
 Copyright Notice
 
@@ -728,10 +728,21 @@ Table of Contents
         creation_request_id) reservation atomically (Section 5.8), and
         record Child Evidence.
 
-   On any failure the Mission Issuer MUST refuse with invalid_request,
-   invalid_grant, or invalid_token as appropriate, and MUST NOT create a
-   child.  The child actor then authenticates at the token endpoint and
-   redeems its own grant for the Child Mission's tokens (Section 5.1).
+   On any failure the Mission Issuer MUST refuse and MUST NOT create a
+   child.  A failure to which this document assigns a code, such as a
+   parent mismatch or a denial reason (Section 5.10), uses that code.
+   Otherwise, a subject_token or actor_token that is invalid, whose
+   sender constraint is not proven, or that is unacceptable for the
+   exchange is refused with invalid_request (Section 2.2.2 of
+   [RFC8693]); a required DPoP proof that is missing, or a DPoP proof
+   that fails its own validation, with invalid_dpop_proof (Section 5 of
+   [RFC9449]); and any other failure with invalid_request,
+   invalid_grant, or invalid_token as appropriate.  An authorization
+   server that requires a DPoP nonce answers a proof lacking its current
+   nonce with use_dpop_nonce and a DPoP-Nonce header (Section 8 of
+   [RFC9449]), not invalid_dpop_proof.  The child actor then
+   authenticates at the token endpoint and redeems its own grant for the
+   Child Mission's tokens (Section 5.1).
 
 5.8.  Creation Idempotency
 
@@ -2516,6 +2527,13 @@ Appendix A.  Experimental Consumer-Verified Cascade Modes
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  A failed child-creation exchange uses the code this document
+      assigns to the failure; otherwise an invalid, unproven or
+      unacceptable subject_token or actor_token is invalid_request, as
+      Section 2.2.2 of RFC 8693 requires; a required DPoP proof that is
+      missing, or one that fails validation, is invalid_dpop_proof, and
+      a proof lacking a required nonce keeps use_dpop_nonce (#1178).
 
    *  The authority the presented subject_token carries bounds the child
       as well as the parent's does, and the token's own children

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         16 October 2026
-Expires: 19 April 2027
+Intended status: Standards Track                         17 October 2026
+Expires: 20 April 2027
 
 
              Mission Cross-Domain Projection for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 19 April 2027.
+   This Internet-Draft will expire on 20 April 2027.
 
 Copyright Notice
 
@@ -991,7 +991,7 @@ Table of Contents
       | or an access, delegated, or bare         |                 |
       | identity-assertion token is presented    |                 |
       +------------------------------------------+-----------------+
-      | The subject token does not resolve to a  | invalid_grant   |
+      | The subject token does not resolve to a  | invalid_request |
       | Mission                                  |                 |
       +------------------------------------------+-----------------+
       | The Mission is not active                | invalid_request |
@@ -1791,6 +1791,11 @@ Appendix B.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Changes a requirement: grant issuance refuses a subject token that
+      does not resolve to a Mission with invalid_request, where it was
+      invalid_grant, as Section 2.2.2 of RFC 8693 requires for an
+      invalid subject token; redemption keeps invalid_grant (#1178).
 
    *  Grant issuance at the originating AS refuses a Mission that is not
       active with invalid_request, following the issuance profile's
