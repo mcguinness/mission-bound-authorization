@@ -224,13 +224,18 @@ the store.
 - **Approver and Subject identities (#826).** The provider account and Grant
   are the Approver's: `interactionFinished` logs the Approver in with the
   achieved `acr` and authentication time, never the Subject. A browser
-  approval keeps that session. A headless approval leaves none, and a
-  session the user agent already holds is neither read nor refreshed: its
-  user agent is the client's, so on every completion, a refusal or a denial
-  as much as a success, the resume runs without the session cookie that user
+  approval keeps that session when the user agent holds none or the
+  Approver's own. A headless approval leaves none, and so does a browser
+  approval in a user agent whose provider session belongs to another
+  account, which would otherwise meet oidc-provider's account switch (its
+  logout confirmation). In both, a session the user agent already holds is
+  neither read nor refreshed: on every completion, a refusal or a denial as
+  much as a success, the resume runs without the session cookie that user
   agent holds, the session the login created is destroyed before the
   response is flushed and its cookie removed, and the code is not
-  session-bound (`expiresWithSession`). Every
+  session-bound (`expiresWithSession`). Such an isolated approval keeps no
+  End-User authentication in the user agent, so `openid` is refused
+  `invalid_scope` on it. Every
   Mission-bound access token carries the Subject: `formats.customizers.jwt`
   sets `sub` from the Mission its grant resolves to, failing closed when it
   no longer resolves, and refresh-token introspection reports the Subject,
@@ -244,7 +249,15 @@ the store.
   `invalid_request` before any interaction. That is the accepted limitation
   (D305): client-requested strength on a delegated approval, including a
   client registration's incompatible OIDC defaults, is unsupported and fails
-  closed, never ignored or downgraded. The published approval-authentication
+  closed, never ignored or downgraded. A registration naming
+  `default_acr_values` is invalid client metadata here, since this AS
+  configures no acr values, so every request from such a client is refused
+  before any interaction; `default_max_age` and `require_auth_time` require
+  `openid`, and with it a delegated approval refuses `invalid_scope`. The
+  `claims` parameter is not supported (`claims_parameter_supported` is
+  false, oidc-provider's default): a request carrying it, an essential `acr`
+  included, is served without essential-claim treatment. That is a disclosed
+  limitation, not acceptance. The published approval-authentication
   floor governs the Approver's strength on high-risk authority (§3.1), and
   no other carrier is defined. An Expansion deferral approval
   (`ExpansionDeferralStore.approve`, an in-process API) meets the same floor
@@ -345,13 +358,22 @@ the store.
      for a refused decision, except the progressive ceiling consent: `approve`
      establishes it at the commit's creation instant, so its refusal comes
      after the grant save and leaves an inert grant a retry overwrites.
-  2. `new provider.Grant(...)` under `approvalGrantId(uid)`, an identity
+  2. `kernel.reserveApproval`: a synchronous reservation of the interaction's
+     approval event for this decision's Approver, Subject, client and grant,
+     taken with no await since the checks before it. A later or concurrent
+     decision that differs is refused 403 `approval_forbidden` before it
+     saves a grant, so the committed Mission and its grant agree on who
+     approved.
+  3. `new provider.Grant(...)` under `approvalGrantId(uid)`, an identity
      derived from the interaction, with the request's OIDC and resource scopes
      and the prepared Authority Set as its `rar`; then `grant.save()`, a
      provider adapter write. oidc-provider keeps a supplied `jti`, and its
      adapter's upsert overwrites the same id, so a repeated or concurrent
      decision names and rewrites the one grant.
-  3. `kernel.approve({..., grantId}, prepared)`, then `insertRecord`: the
+  4. `kernel.approve({..., grantId}, prepared)`, which first revalidates the
+     prepared authority source (the same root with the same provenance must
+     still pass every gate; a withdrawn or changed source refuses
+     `access_denied`, and no other root is substituted), then `insertRecord`: the
      authoritative Mission commit (§4.1), with `grant_id` set in the same
      insert, so the record never commits unbound; then `missionBoundGrants.record`
      on its own handle. The `approval_event_id` is `apev_{interaction uid}`,
@@ -366,9 +388,9 @@ the store.
      continuation and drawdown mint) bind a Mission's first grant through
      `kernel.bindFirstGrant`: a concurrent loser mints under the winner's
      grant rather than moving the binding.
-  4. For an Intent-only request, `details.save()` of the marked
+  5. For an Intent-only request, `details.save()` of the marked
      `authorization_details` (§7).
-  5. `interactionFinished`: a 303 to the resume URL (`lib/provider.js`
+  6. `interactionFinished`: a 303 to the resume URL (`lib/provider.js`
      L229-233). oidc-provider issues the authorization code on that later
      request.
 
@@ -386,7 +408,7 @@ the store.
   Mission's `grant_id` no longer names) still counts against the derivation
   limit (`missionGateTarget`), so no approval grant escapes the count.
 - **Boundary.** Every refusal happens before any write, except the
-  progressive ceiling consent at the commit (step 1). The grant save, the
+  progressive ceiling consent and the source revalidation at the commit (steps 1 and 4). The grant save, the
   record commit with its binding, and the code are separate writes, in two
   stores and two requests; the bound-grant index is written right after the
   record commit, on its own handle, and a bound record resolves through
@@ -414,6 +436,8 @@ the store.
   - `> a failure after the record commit leaves an active, bound Mission whose code is not issued yet (the #250 window), which a retry on the interaction completes`
   - `> a Mission's grant binding never moves: bindGrant is idempotent for the grant it holds and refuses any other`
   - `> the minting paths' first bind adopts the winner: bindFirstGrant binds an unbound Mission once and returns that grant to every later caller`
+  - `> concurrent decisions by different principals cannot disagree on identity: the first to reserve holds the interaction, the other is refused before saving a grant`
+  - `> the commit revalidates the prepared authority source: a source withdrawn during the grant save refuses access_denied and creates no Mission`
   - `> a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes`
 - **Unsupported or residual.**
   - `{#approval-event}` step 7's record/code atomicity is not met. The record

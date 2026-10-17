@@ -19,6 +19,8 @@ import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
+import { IntentError } from "../src/kernel/intent.js";
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const PORT = 14794;
@@ -151,6 +153,16 @@ async function open(intentOver: Json = {}) {
     }
     return new URL(location).searchParams.get("code") as string;
   };
+  /** Follow a decision's redirect to the client's redirect URI: its error, if any. */
+  const errorOf = async (decided: Response) => {
+    let location = decided.headers.get("location") ?? "";
+    while (location.startsWith(ISSUER)) {
+      const r = await fetch(location, { redirect: "manual", headers: { cookie: cookie() } });
+      keep(r);
+      location = r.headers.get("location") ?? "";
+    }
+    return new URL(location).searchParams.get("error");
+  };
   /** Redeem a code: the Mission and its refresh token. */
   const redeem = async (code: string) => {
     const keys = await newKeys();
@@ -164,7 +176,7 @@ async function open(intentOver: Json = {}) {
     ) as { mission: { id: string } };
     return { missionId: claims.mission.id, refreshToken: exchanged.body.refresh_token as string, keys };
   };
-  return { uid, approvalEventId: `apev_${uid}`, decide, finish, redeem };
+  return { uid, approvalEventId: `apev_${uid}`, decide, finish, errorOf, redeem };
 }
 
 /** The grant identity the approval decision derives from the interaction. */
@@ -341,5 +353,66 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     expect(as.kernel.bindFirstGrant(id, "second-grant")).toBe("first-grant");
     expect(as.kernel.get(id)?.grant_id).toBe("first-grant");
     expect(as.kernel.missionBoundGrants.resolve("second-grant")).toBeUndefined();
+  });
+
+  it("concurrent decisions by different principals cannot disagree on identity: the first to reserve holds the interaction, the other is refused before saving a grant", async () => {
+    const flow = await open();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const save = as.provider.Grant.prototype.save;
+    const accounts: string[] = [];
+    vi.spyOn(as.provider.Grant.prototype, "save").mockImplementation(async function (this: { accountId?: string }, ...args: unknown[]) {
+      accounts.push(this.accountId as string);
+      if (accounts.length === 1) await gate;
+      return (save as (...a: unknown[]) => Promise<string>).apply(this, args);
+    });
+    // Bob's decision for Alice reserves the interaction, then waits at its grant save.
+    const bob = flow.decide();
+    await until(() => accounts.length >= 1);
+    // Alice deciding for herself meanwhile is refused before any grant save.
+    const alice = await flow.decide(trustedApprovalHeaders("alice", {}, null));
+    expect(alice.status).toBe(403);
+    expect(((await alice.json()) as { error?: string }).error).toBe("approval_forbidden");
+    expect(accounts).toEqual(["bob"]);
+    release();
+    const decided = await bob;
+    expect(decided.status).toBe(303);
+    const { missionId } = await flow.redeem(await flow.finish(decided));
+    const record = as.kernel.get(missionId);
+    expect(record?.approval_basis.consent_principal?.sub).toBe("bob");
+    expect(record?.subject.sub).toBe("alice");
+    const grant = (await as.provider.Grant.find(record?.grant_id as string)) as unknown as { accountId?: string };
+    expect(grant.accountId).toBe("bob");
+  });
+
+  it("the commit revalidates the prepared authority source: a source withdrawn during the grant save refuses access_denied and creates no Mission", async () => {
+    const flow = await open();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const save = as.provider.Grant.prototype.save;
+    let saves = 0;
+    vi.spyOn(as.provider.Grant.prototype, "save").mockImplementation(async function (this: object, ...args: unknown[]) {
+      saves += 1;
+      if (saves === 1) await gate;
+      return (save as (...a: unknown[]) => Promise<string>).apply(this, args);
+    });
+    const held = flow.decide();
+    await until(() => saves >= 1);
+    // The source is withdrawn while the grant is being saved: the resolver no
+    // longer resolves it for an approval.
+    const resolver = (as.kernel as unknown as { sourceResolver: AuthoritySourceResolver }).sourceResolver;
+    vi.spyOn(resolver, "resolveForApproval").mockImplementation(() => {
+      throw new IntentError("access_denied", "the authority source was withdrawn");
+    });
+    release();
+    const decided = await held;
+    expect(decided.status).toBe(303);
+    expect(await flow.errorOf(decided)).toBe("access_denied");
+    expect(as.kernel.findByApprovalEvent(flow.approvalEventId)).toBeUndefined();
+    expect(as.kernel.findByGrant(grantIdFor(flow.uid))).toBeUndefined();
   });
 });
