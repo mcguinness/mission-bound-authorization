@@ -41341,7 +41341,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "No Mission exists, and polling yields authorization_pending or slow_down, until the decision commits; the Mission exists from that commit, and the device_code becomes redeemable subject to its lifetime, one-time use, and issuance gating.",
-    "local": "The decision request commits the record in the kernel store, binds the Mission grant, then writes the device code's activation to the provider adapter, all under the session's claim, which every exit releases. A live failure after the commit (the grant store, the binding, the activation write) leaves the session pending: a retry of the same decision returns the record its approval event already created and reuses its grant binding, so it never duplicates the Mission or its grant, and a retried record no longer active ends the session denied. A failed decision never retried leaves the Mission to the unredeemed-session rule. Not atomic across a crash: the two stores share no transaction, so a crash between the commit and the activation write leaves an active Mission whose code expires unredeemed (the cross-step domain #250 tracks)."
+    "local": "The decision request saves the Mission grant under an identity derived from the interaction, commits the record already bound to it in the kernel store (#916's order of writes), then writes the device code's activation to the provider adapter, all under the session's claim, which every exit releases. A grant-store failure precedes the commit and leaves no Mission; a live failure after the commit (the activation write) leaves an active, bound Mission. Either way the session stays pending, and a retry of the same decision finds the record its approval event created, if any, and rebinds the same derived grant, so it never duplicates the Mission or its grant; a retried record no longer active ends the session denied. A failed decision never retried leaves the Mission to the unredeemed-session rule. Not atomic across a crash: the two stores share no transaction, so a crash between the commit and the activation write leaves an active Mission whose code expires unredeemed (the cross-step domain #250 tracks)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -41354,7 +41354,7 @@
     },
     {
      "file": "src/services/authorization-server/test/device-authorization.test.ts",
-     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > recovers from a grant-store failure after the commit: the session stays pending and a retry completes the same Mission",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > recovers from a grant-store failure before the commit: no Mission exists, the session stays pending, and a retry completes one Mission",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -41371,7 +41371,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Witnessed: no Mission and authorization_pending before the decision; the Mission active and the device_code redeemable after it, with no visit to the provider's device resume. Live post-commit failures are witnessed with an injected grant-store fault and an injected activation-write fault. Proved by dropping the activation write, by not releasing the claim on a failure, by not reusing the committed grant binding, by giving each retry a new approval event, and by activating a retried Mission that is no longer active. Partial for the crash residual in observation.local."
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Witnessed: no Mission and authorization_pending before the decision; the Mission active and the device_code redeemable after it, with no visit to the provider's device resume. Live failures are witnessed with an injected grant-store fault (before the commit: no Mission) and an injected activation-write fault (after it). Proved by dropping the activation write, by not releasing the claim on a failure, by not reusing the committed grant binding, by giving each retry a new approval event, and by activating a retried Mission that is no longer active. Partial for the crash residual in observation.local. Merged onto #916's order of writes: the retried-but-revoked case now injects its fault at the activation write, and disabling the active check on a retried Mission was re-run and caught; the other proofs ran on the earlier order."
   },
   {
    "id": "device-authorization.approval.commit-session-pending",
