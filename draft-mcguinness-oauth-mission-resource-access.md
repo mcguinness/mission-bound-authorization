@@ -241,7 +241,7 @@ with these members:
 
   `allowed_delegates`:
   : RECOMMENDED. An array of objects. The permitted delegates, each a
-    `may_act`-style matcher ({{matching-allowed-delegates}}):
+    `may_act`-style delegate matcher ({{matching-allowed-delegates}}):
     `{ "sub": "<client_id>" }` for a specific delegate, or
     `{ "sub_profile": "<actor-type>" }` for an actor-type class.
 
@@ -414,7 +414,7 @@ Common Constraints are defined by specification and registered
 
 A Common Constraint definition fixes:
 
-- **Value syntax**: the JSON {{RFC8259}} value type and any additional
+- **Value syntax**: the JSON value type ({{RFC8259}}) and any additional
   rules.
 - **Subset rule**: how a candidate value is judged no broader than a
   reference value, used by the subset comparison of {{subset}}.
@@ -461,7 +461,7 @@ This document defines the following Common Constraints.
 
   - Value: an object with two members, `amount` (REQUIRED, a string
     containing a decimal number, {{decimal-values}}) and `currency`
-    (REQUIRED, an ISO 4217 currency code {{ISO4217}}).
+    (REQUIRED, a currency code as defined in {{ISO4217}}).
   - Subset: no broader when the `currency` values are equal and the
     candidate `amount` is less than or equal to the reference `amount`,
     compared in decimal value space; differing currencies fail the
@@ -473,7 +473,7 @@ This document defines the following Common Constraints.
 `resource_issued_after`:
 : The action applies only to resources issued at or after this instant.
 
-  - Value: a string, an {{RFC3339}} date-time.
+  - Value: a date-time string as defined in {{RFC3339}}.
   - Subset: no broader when greater than or equal to the reference.
   - Intersection: the later instant.
 
@@ -482,7 +482,7 @@ This document defines the following Common Constraints.
   The `resource_` qualifier in both names marks that the window bounds
   resource issuance, not token issuance.
 
-  - Value: a string, an {{RFC3339}} date-time.
+  - Value: a date-time string as defined in {{RFC3339}}.
   - Subset: no broader when less than or equal to the reference.
   - Intersection: the earlier instant.
 
@@ -497,7 +497,7 @@ This document defines the following Common Constraints.
 `recipient_domain`:
 : The action applies only to recipients within the named domain.
 
-  - Value: a string, a DNS name.
+  - Value: a string containing a DNS name.
   - Subset: no broader when equal to the reference or a DNS subdomain of
     it.
   - Intersection: the narrower value when one is equal to or a subdomain
@@ -511,8 +511,8 @@ This document defines the following Common Constraints.
   token's `exp`, which bounds the credential.
 
   - Value: an object with two members, `not_before` and `not_after`,
-    each an {{RFC3339}} date-time; at least one MUST be present, and an
-    absent member is unbounded on that side.
+    each a date-time string as defined in {{RFC3339}}; at least one MUST
+    be present, and an absent member is unbounded on that side.
   - Subset: no broader when the candidate window lies within the
     reference window, an absent candidate bound counting as unbounded
     and therefore broader than any present reference bound.
@@ -599,11 +599,12 @@ floating-point type: that representation does not hold every value the
 grammar above admits exactly and can compare or combine two values
 incorrectly.
 
-A numeric constraint value MUST lie within the range JCS {{RFC8785}}
-serializes exactly. Monetary amounts avoid that hazard: `max_amount`
-carries its `amount` as a string containing a decimal number, paired
-with an ISO 4217 `currency` code, and a future Common Constraint for a
-monetary value SHOULD reuse this shape rather than a JSON number.
+A numeric constraint value MUST lie within the range that the JSON
+Canonicalization Scheme (JCS) {{RFC8785}} serializes exactly. Monetary
+amounts avoid that hazard: `max_amount` carries its `amount` as a string
+containing a decimal number, paired with an ISO 4217 `currency` code,
+and a future Common Constraint for a monetary value SHOULD reuse this
+shape rather than a JSON number.
 
 ## Resource Server Enforcement {#rs-enforcement}
 
@@ -664,8 +665,8 @@ delegation depth `d` only if all of the following hold:
 3. the delegate is permitted by `delegation.allowed_delegates` or, when
    that member is absent, by the authorization server's
    delegation-authorization policy, which the authorization server MUST
-   apply at every exchange: an absent matcher list is a decision
-   deferred to policy, never a blanket grant of eligibility.
+   apply at every exchange: an absent list of delegate matchers is a
+   decision deferred to policy, never a blanket grant of eligibility.
 
 An entry failing any of these narrows out of the delegated token,
 consistent with the subset rule ({{subset}}). Surviving entries are
@@ -674,9 +675,9 @@ evaluated the same way.
 
 ### Matching `allowed_delegates` {#matching-allowed-delegates}
 
-Each `allowed_delegates` value is a matcher object modeled on the actor
-object of the `may_act` claim ({{Section 4.4 of RFC8693}}). Where
-`may_act` names a single party eligible to act on a token,
+Each `allowed_delegates` value is a delegate matcher: an object modeled
+on the actor object of the `may_act` claim ({{Section 4.4 of RFC8693}}).
+Where `may_act` names a single party eligible to act on a token,
 `allowed_delegates` is a per-entry list of such matchers, generalized to
 actor-type classes:
 
@@ -687,19 +688,20 @@ actor-type classes:
   space-separated values; a `{ "sub_profile": ... }` matcher is
   satisfied when its value is among the actor's values.
 
-A delegate is permitted if it matches any matcher, so a deployment can
-permit a specific client, a class of actors, or both.
+A delegate is permitted if it matches any of the entry's delegate
+matchers, so a deployment can permit a specific client, a class of
+actors, or both.
 
 The authorization server MUST authenticate the delegate at the Token
 Exchange and assert the actor's `sub` and `sub_profile` itself. A
-self-asserted `sub_profile` MUST NOT satisfy a matcher; otherwise a
-client could claim any actor type to bypass the constraint.
+self-asserted `sub_profile` MUST NOT satisfy a delegate matcher;
+otherwise a client could claim any actor type to bypass the constraint.
 
 A `{ "sub": ... }` matcher is a client identifier in the issuing
 authorization server's namespace and is not portable across a trust
 domain. How an authorization server in another trust domain (a "Resource
-AS") evaluates conveyed matchers, failing closed and narrowing out any
-`sub` matcher it cannot resolve, is specified by
+AS") evaluates conveyed delegate matchers, failing closed and narrowing
+out any `sub` matcher it cannot resolve, is specified by
 {{I-D.draft-mcguinness-oauth-mission-cross-domain}}.
 
 ## Scope Projection {#scope-projection}
@@ -1009,7 +1011,7 @@ Designated Expert checks that a submission:
 
 - uses a name matching `^[A-Za-z0-9_.:-]+$` that is not already
   registered;
-- gives a JSON {{RFC8259}} value syntax precise enough for independent
+- gives a JSON value syntax ({{RFC8259}}) precise enough for independent
   implementations to agree on; and
 - states a subset rule and an intersection rule, both in value-space
   terms ({{value-space-comparison}}), with the intersection of any two
