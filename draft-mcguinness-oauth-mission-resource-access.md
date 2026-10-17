@@ -80,73 +80,70 @@ informative:
 
 --- abstract
 
-Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
-derives a Mission's Authority Set as one or more OAuth 2.0 Rich
-Authorization Requests (RAR) `authorization_details` entries, of any
-authorization server-supported type, and is type-agnostic toward that
-type's own semantics. This document defines `mission_resource_access`: a
-general-purpose, cross-resource `authorization_details` type carrying a
-resource identifier matched exactly or by path prefix, an action
-namespace with wildcard families, machine-actionable constraints
-(including a registered Common Constraints vocabulary), and a per-entry
-delegation policy, together with the subset and intersection algebra a
-deployment uses to compare and narrow two entries. It also defines this
-type's scope-projection safety conditions and its declaration under the
-issuance profile's machine-readable transformation-capability map. This
-document is a profile of the issuance profile; a deployment can support
-`mission_resource_access`, another `authorization_details` type its
-authorization server supports, or both.
+This document defines `mission_resource_access`, a general-purpose OAuth
+2.0 Rich Authorization Requests (RAR) `authorization_details` type for
+Mission-Bound Authorization for OAuth 2.0 (the "issuance profile"). An
+entry names one protected resource, matched exactly or by path prefix;
+the actions permitted there, including wildcard action families;
+machine-actionable constraints, including a registered Common
+Constraints vocabulary; and a per-entry delegation policy.
+
+The document also defines how two entries compare and narrow, how a
+resource server enforces an entry, when an entry can be projected to
+OAuth `scope`, and how an authorization server declares its support for
+these semantics. The issuance profile is type-agnostic: a deployment can
+support `mission_resource_access`, another `authorization_details` type
+its authorization server supports, or both.
 
 --- middle
 
 # Introduction
 
-Mission-Bound Authorization for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}}
-(the "issuance profile") commits a Mission's Authority Set as one or more
-{{RFC9396}} `authorization_details` entries, of whatever `authorization_details`
-type or types the authorization server supports. The issuance
-profile is
-type-agnostic: it derives, commits, and gates entries of any authorization-server-supported
-type the same way, and leaves each type's own comparison and
-transformation semantics to the specification that defines the type,
-exactly as {{Section 2 of RFC9396}} permits.
+The issuance profile {{I-D.draft-mcguinness-oauth-mission}} commits a
+Mission's Authority Set as one or more {{RFC9396}}
+`authorization_details` entries, of whatever type or types the
+authorization server supports. It derives, commits, and gates entries of
+every type the same way, and leaves each type's comparison and
+transformation semantics to the specification that defines the type, as
+{{Section 2 of RFC9396}} permits.
 
-This document defines that specification for one type: `mission_resource_access`,
-a cross-resource authorization language matching a resource exactly or by
-prefix, an action namespace with wildcard families, machine-actionable
-constraints drawn from a registered Common Constraints vocabulary or a
-deployment's own names, and a per-entry delegation policy, together with
-the subset and intersection algebra a deployment uses to compare and
-narrow two entries. `mission_resource_access` is a general-purpose type:
-an authorization server with no reason to define a narrower,
-audience-specific `authorization_details` type can use it directly, and
-the issuance profile's own worked examples use it throughout.
+This document is that specification for one type,
+`mission_resource_access`. It defines:
 
-`mission_resource_access` was originally defined inline in the issuance
-profile. This document relocates that definition without changing it:
-every relocated rule keeps its member names and comparison semantics
-unchanged. The issuance profile keeps the type-agnostic machinery: the
-approved-set commitment, derivation gating, and its own type-agnostic
-scope-projection rule and issuance algorithm. This document supplies
-`mission_resource_access`'s concrete instance of each: its subset and
-intersection algebra, its scope-projection safety conditions, and its
-declaration under the issuance profile's transformation-capability map.
+- the entry: a resource matched exactly or by path prefix, an action
+  namespace with wildcard families, machine-actionable constraints, and
+  a per-entry delegation policy ({{resource-access-type}});
+- the subset rule that compares two entries ({{subset}}), and the Common
+  Constraints with their subset and intersection rules
+  ({{common-constraints}});
+- resource server enforcement ({{rs-enforcement}}) and delegate
+  eligibility ({{delegate-eligibility}}); and
+- the conditions under which an entry can be projected to `scope`
+  ({{scope-projection}}), and the type's declaration under the issuance
+  profile's transformation-capability map
+  ({{transformation-capabilities}}).
+
+The issuance profile keeps the type-agnostic machinery: the approved-set
+commitment, derivation gating, and its own scope-projection rule and
+issuance algorithm. This document supplies `mission_resource_access`'s
+instance of each.
 
 This document defines one `authorization_details` type a deployment of
-the issuance profile {{I-D.draft-mcguinness-oauth-mission}} MAY
-support; the issuance profile is complete, and type-agnostic, without
-it. A deployment adopts this document when it has no reason to define
-its own audience-specific type and wants `mission_resource_access`'s
-resource, action, constraint, and delegation vocabulary instead.
+the issuance profile {{I-D.draft-mcguinness-oauth-mission}} MAY support;
+the issuance profile is complete, and type-agnostic, without it. The
+type is general-purpose: an authorization server with no reason to
+define a narrower, audience-specific type can use it directly, and the
+issuance profile's worked examples use it throughout.
 
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}
 
-All JSON shown in this document is non-normative and illustrative; the
-member definitions in the surrounding text are authoritative. Terms such
-as Mission, Authority Set, Subject, and Approver are defined by
-{{I-D.draft-mcguinness-oauth-mission}} and used here with the same
+All JSON in this document is non-normative and illustrative; the member
+definitions in the surrounding text are authoritative.
+
+Terms such as Mission, Authority Set, Subject, and Approver are defined
+by {{I-D.draft-mcguinness-oauth-mission}} and used here with the same
 meaning.
 
 # The Mission Resource Access Type {#resource-access-type}
