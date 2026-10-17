@@ -87,7 +87,10 @@ export async function handleDelegationHandleExchange(
   }
 
   // Subject token, Mission, and possession of the token's own key.
-  const subject = await verifySubjectPossession(opts, ctx);
+  // @spec continuation#transport-async, RFC 8693 Section 2.2.2 (#1178, D415):
+  // neither the transport nor Self-Exchange assigns a code to an invalid or
+  // unacceptable subject_token, so each such refusal is invalid_request.
+  const subject = await verifySubjectPossession(opts, ctx, { subjectError: "invalid_request" });
   if (!subject) return;
   const { record, jkt, claims } = subject;
   if (claims.act !== undefined) {
@@ -95,7 +98,7 @@ export async function handleDelegationHandleExchange(
     return;
   }
   if (claims.client_id !== client.clientId) {
-    txError(ctx, 400, "invalid_grant", "subject_token was not issued to the requesting client");
+    txError(ctx, 400, "invalid_request", "subject_token was not issued to the requesting client");
     return;
   }
   // @spec mission#self-exchange rule 1: only the Mission's approved agent.
@@ -106,7 +109,7 @@ export async function handleDelegationHandleExchange(
   // @spec mission#self-exchange rule 2: the presented token's own authority bounds the handle.
   const presented = presentedTokenAuthority(claims);
   if (!presented) {
-    txError(ctx, 400, "invalid_grant", "subject_token carries no readable authorization_details");
+    txError(ctx, 400, "invalid_request", "subject_token carries no readable authorization_details");
     return;
   }
   // @spec mission#issuance-gating (#1154, D369): a Mission that is not active

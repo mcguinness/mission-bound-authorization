@@ -977,6 +977,11 @@ export async function handleAsyncDelegationExchange(
 
   // Step 2: resolve the Mission from the base mission access token (mirror the
   // /transaction handler's resolution: verify on the AS jwks, read mission.id).
+  // @spec continuation#transport-async, RFC 8693 Section 2.2.2 (#1178, D415):
+  // the transport assigns no code of its own, so a subject_token that is
+  // invalid or unacceptable (unverifiable, without a Mission, issued or
+  // audienced to another client, bound to another key, or carrying no readable
+  // authority) is invalid_request.
   if (params.subject_token_type !== ACCESS_TOKEN_TOKEN_TYPE) {
     throw new errors.InvalidRequest("subject_token_type MUST be the access_token token type");
   }
@@ -991,13 +996,13 @@ export async function handleAsyncDelegationExchange(
     });
     baseClaims = payload as Record<string, unknown>;
   } catch {
-    txError(ctx, 400, "invalid_grant", "subject_token verification failed");
+    txError(ctx, 400, "invalid_request", "subject_token verification failed");
     return;
   }
   const missionRef = baseClaims.mission as { id?: string } | undefined;
   const missionId = missionRef?.id;
   if (typeof missionId !== "string") {
-    txError(ctx, 400, "invalid_grant", "subject_token is missing the mission claim");
+    txError(ctx, 400, "invalid_request", "subject_token is missing the mission claim");
     return;
   }
   // @spec continuation#transport-async, mission#rs-enforcement — a
@@ -1012,7 +1017,7 @@ export async function handleAsyncDelegationExchange(
   // authenticated acting client, so an authenticated client cannot present a base
   // token issued to a DIFFERENT client and continue that Mission.
   if (baseClaims.client_id !== client.clientId) {
-    txError(ctx, 400, "invalid_grant", "subject_token was not issued to the acting client");
+    txError(ctx, 400, "invalid_request", "subject_token was not issued to the acting client");
     return;
   }
   // @spec draft-zhu-oauth-async-delegation-05 Section 4.3,
@@ -1023,20 +1028,22 @@ export async function handleAsyncDelegationExchange(
   // by possession of the handle's OWN confirmation key. Client authentication
   // never satisfies a constraint bound to another key. Both run before the
   // idempotency lookup, so a retry recovers a recorded family only through a
-  // handle it can present.
+  // handle it can present. The token's own `aud` claim is checked here, not
+  // the request's `audience` parameter, so the refusal is an unacceptable
+  // subject_token, never invalid_target.
   if (baseClaims.aud !== client.clientId) {
-    txError(ctx, 400, "invalid_grant", "subject_token is not a delegation handle audienced to the acting client");
+    txError(ctx, 400, "invalid_request", "subject_token is not a delegation handle audienced to the acting client");
     return;
   }
   // A handle without `cnf.jkt` never matches a DPoP key thumbprint, so this
   // one comparison refuses both an unconstrained token and a wrong key.
   if ((baseClaims.cnf as { jkt?: unknown } | undefined)?.jkt !== jkt) {
-    txError(ctx, 400, "invalid_grant", "possession proof does not match the subject_token confirmation key (cnf.jkt)");
+    txError(ctx, 400, "invalid_request", "possession proof does not match the subject_token confirmation key (cnf.jkt)");
     return;
   }
   const record = kernel.get(missionId);
   if (!record) {
-    txError(ctx, 400, "invalid_grant", "subject_token mission not found");
+    txError(ctx, 400, "invalid_request", "subject_token mission not found");
     return;
   }
   // @spec mission#self-exchange rule 1 (#825 PR 2c, D353) — a no-actor
@@ -1052,7 +1059,7 @@ export async function handleAsyncDelegationExchange(
   // lookup, so a retry recovers a recorded family only within it.
   const presentedAuthority = presentedTokenAuthority(baseClaims);
   if (!presentedAuthority) {
-    txError(ctx, 400, "invalid_grant", "subject_token carries no readable authorization_details");
+    txError(ctx, 400, "invalid_request", "subject_token carries no readable authorization_details");
     return;
   }
 
@@ -1613,12 +1620,19 @@ export interface ResolvedSubject {
  */
 export interface SubjectPossessionOptions {
   /**
-   * @spec expansion#request-binding, child-delegation#child-creation (#1210):
-   * the code for a `subject_token` that is not sender-constrained. Expansion
-   * and Child Delegation state `invalid_request`; the Template's Dispatch
-   * Handoff refuses its steps 1 and 2 with `invalid_grant`, the default.
+   * The caller's code for a `subject_token` that is invalid or unacceptable:
+   * one that fails verification, carries no `mission` claim, is not
+   * sender-constrained or is bound to a key this exchange cannot verify, is
+   * bound to a key other than the proof's, or names an unknown Mission. A
+   * missing, malformed or unverifiable DPoP proof is `invalid_dpop_proof`
+   * whatever the contract. @spec RFC 8693 Section 2.2.2 (#1178, D415): the
+   * generic exchanges (Expansion, Child Delegation, the delegation handle) use
+   * `invalid_request`, as expansion#request-binding and
+   * child-delegation#child-creation state for an unconstrained token (#1210).
+   * @spec mission-template#dispatch-handoff: the Dispatch Handoff refuses its
+   * steps 1 and 2 with `invalid_grant`.
    */
-  unconstrained?: "invalid_request" | "invalid_grant";
+  subjectError: "invalid_request" | "invalid_grant";
   /**
    * The rest of the caller's step-1 parsing (its required parameters), run
    * once the `subject_token` parameters are parsed and before the token is
@@ -1632,8 +1646,9 @@ export interface SubjectPossessionOptions {
 export async function verifySubjectPossession(
   opts: AdapterOptions,
   ctx: KoaContextWithOIDC,
-  options: SubjectPossessionOptions = {},
+  options: SubjectPossessionOptions,
 ): Promise<ResolvedSubject | null> {
+  const { subjectError } = options;
   const params = ctx.oidc.params as Record<string, unknown>;
   // Step 1: subject_token type. A refresh token MUST NOT be the carrier (#448).
   if (params.subject_token_type === REFRESH_TOKEN_TOKEN_TYPE) {
@@ -1663,14 +1678,14 @@ export async function verifySubjectPossession(
     });
     claims = payload as Record<string, unknown>;
   } catch {
-    txError(ctx, 400, "invalid_grant", "subject_token verification failed");
+    txError(ctx, 400, subjectError, "subject_token verification failed");
     return null;
   }
   // Step 2: the Mission is selected BY subject_token (replaces predecessor_token/parent_token).
   const missionRef = claims.mission as { id?: string } | undefined;
   const missionId = missionRef?.id;
   if (typeof missionId !== "string") {
-    txError(ctx, 400, "invalid_grant", "subject_token is missing the mission claim");
+    txError(ctx, 400, subjectError, "subject_token is missing the mission claim");
     return null;
   }
   const cnf = claims.cnf;
@@ -1681,10 +1696,10 @@ export async function verifySubjectPossession(
     // sender-constrained, by a key this exchange does not verify: a possession
     // failure, never "not sender-constrained".
     if (cnf !== null && typeof cnf === "object" && Object.keys(cnf).length > 0) {
-      txError(ctx, 400, "invalid_grant", "subject_token's sender constraint is not a DPoP key this exchange can verify");
+      txError(ctx, 400, subjectError, "subject_token's sender constraint is not a DPoP key this exchange can verify");
       return null;
     }
-    txError(ctx, 400, options.unconstrained ?? "invalid_grant", "subject_token is not sender-constrained (no cnf)");
+    txError(ctx, 400, subjectError, "subject_token is not sender-constrained (no cnf)");
     return null;
   }
   // Step 3: POSSESSION. The presenter controls the subject_token's OWN cnf key,
@@ -1700,13 +1715,15 @@ export async function verifySubjectPossession(
     return null;
   }
   const { jkt, jwk: dpopJwk } = verified.proof;
+  // A valid proof under another key: the subject_token is not the
+  // presenter's, so the token is unacceptable; the proof itself is not invalid.
   if (jkt !== cnfJkt) {
-    txError(ctx, 400, "invalid_grant", "possession proof does not match the subject_token confirmation key");
+    txError(ctx, 400, subjectError, "possession proof does not match the subject_token confirmation key");
     return null;
   }
   const record = opts.kernel.get(missionId);
   if (!record) {
-    txError(ctx, 400, "invalid_grant", "subject_token mission not found");
+    txError(ctx, 400, subjectError, "subject_token mission not found");
     return null;
   }
   return { record, jkt, dpopJwk, claims };
@@ -1717,14 +1734,18 @@ export async function verifySubjectPossession(
  * acting agent. The acting agent is the authenticated client (client auth ran
  * before this handler). Phase 1 CARRIES `actor_token`; it does NOT restructure the
  * act chain (that is #433, out of scope). When an actor_token is present it MUST be
- * sender-constrained to the presenter key (cnf.jkt === jkt). Returns the acting
- * agent, or null after setting the error body.
+ * sender-constrained to the presenter key (cnf.jkt === jkt). `actorError` is
+ * the caller's code for an `actor_token` that fails verification or is not
+ * sender-constrained to the presenter: `invalid_request` on both callers
+ * (@spec RFC 8693 Section 2.2.2, #1178, D415). Returns the acting agent, or
+ * null after setting the error body.
  */
 async function carryActingAgent(
   opts: AdapterOptions,
   ctx: KoaContextWithOIDC,
   dpopJwk: JWK,
   jkt: string,
+  actorError: "invalid_request" | "invalid_grant",
 ): Promise<{ iss: string; sub: string } | null> {
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const acting = { iss: opts.issuer, sub: client.clientId };
@@ -1737,11 +1758,11 @@ async function carryActingAgent(
   try {
     const { payload } = await jwtVerify(actorTokenRaw, dpopJwk, { algorithms: ["ES256"] });
     if ((payload.cnf as { jkt?: unknown } | undefined)?.jkt !== jkt) {
-      txError(ctx, 400, "invalid_grant", "actor_token is not sender-constrained to the presenter key");
+      txError(ctx, 400, actorError, "actor_token is not sender-constrained to the presenter key");
       return null;
     }
   } catch {
-    txError(ctx, 400, "invalid_grant", "actor_token verification failed");
+    txError(ctx, 400, actorError, "actor_token verification failed");
     return null;
   }
   return acting; // carried, not restructured (#433).
@@ -2017,9 +2038,12 @@ export async function handleChildCreationExchange(
   // requires creation_request_id (@spec child-delegation#creation-request-id,
   // REQUIRED in every completion mode) and refuses an expansion's parameter,
   // before possession (@spec child-delegation#request-processing, #1210).
+  // @spec child-delegation#request-processing, RFC 8693 Section 2.2.2 (#1178,
+  // D415): an invalid or unacceptable subject_token or actor_token is
+  // invalid_request; the parent cross-check below keeps its invalid_grant.
   let creationRequestId = "";
   const resolved = await verifySubjectPossession(opts, ctx, {
-    unconstrained: "invalid_request",
+    subjectError: "invalid_request",
     afterParse: () => {
       refuseChildActorWithPredecessor(params);
       creationRequestId = readCreationRequestId(params);
@@ -2028,14 +2052,14 @@ export async function handleChildCreationExchange(
   if (!resolved) return;
   const parent = resolved.record;
   // Step 4: acting agent (the authenticated parent client; carry actor_token).
-  const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
+  const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt, "invalid_request");
   if (!acting) return;
   // @spec child-delegation#attenuation (#825, D353): the presented token's own
   // authority bounds the child. Read here, before the idempotency lookup, so a
   // retry recovers a recorded child only within it.
   const presentedAuthority = presentedTokenAuthority(resolved.claims);
   if (!presentedAuthority) {
-    txError(ctx, 400, "invalid_grant", "subject_token carries no readable authorization_details");
+    txError(ctx, 400, "invalid_request", "subject_token carries no readable authorization_details");
     return;
   }
 
@@ -2399,9 +2423,12 @@ export async function handleExpansionExchange(
   // initiation, in every completion mode, since initiation is mode-agnostic
   // (the client cannot know in advance whether the request defers or goes
   // interactive; missing -> invalid_request).
+  // @spec expansion#verification-order, RFC 8693 Section 2.2.2 (#1178, D415):
+  // an invalid or unacceptable subject_token or actor_token is
+  // invalid_request; the predecessor cross-check below keeps its invalid_grant.
   let creationRequestId = "";
   const resolved = await verifySubjectPossession(opts, ctx, {
-    unconstrained: "invalid_request",
+    subjectError: "invalid_request",
     afterParse: () => {
       refuseChildActorWithPredecessor(params);
       creationRequestId = readCreationRequestId(params);
@@ -2409,7 +2436,7 @@ export async function handleExpansionExchange(
   });
   if (!resolved) return;
   // Step 4: acting agent.
-  const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt);
+  const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt, "invalid_request");
   if (!acting) return;
 
   // @spec expansion#request-binding — the non-authoritative `predecessor`

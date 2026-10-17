@@ -29063,7 +29063,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a handoff whose DPoP proof is under any key but the subject token's cnf.jkt is refused invalid_grant"
+    "normative": "a subject token that fails verification, carries no mission claim, names an unknown Mission, or is bound by mTLS or to another key than the proof's, and a handoff whose DPoP proof is under any key but the subject token's cnf.jkt, are refused invalid_grant, issuing no handoff grant"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -29073,9 +29073,15 @@
      "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > wrong key: a DPoP proof under any key but the instance token's is refused invalid_grant",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the Dispatch Handoff keeps the Template's code for an invalid or unacceptable subject_token (@spec mission-template#dispatch-handoff, #1178) > refuses %s with invalid_grant and issues no handoff grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "D357 acceptance bar item 1 (the Dispatcher proves possession of the instance token's key). Shares the child and expansion exchanges' possession check. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "D357 acceptance bar item 1 (the Dispatcher proves possession of the instance token's key). Shares the child and expansion exchanges' possession check. Proved by disabling the check (dispatch-handoff mutation harness, #1158). #1178: the shared possession check answers in each caller's contract; the Template's is invalid_grant."
   },
   {
    "id": "template.handoff.exchange-client",
@@ -30842,7 +30848,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the async-delegation exchange refuses a subject_token whose aud is not the authenticated acting client's client_id, including the agent's own resource-audienced Mission access token, before any family, reservation or derivation count; a retry under a recorded creation_request_id presenting such a token recovers nothing"
+    "normative": "the async-delegation exchange refuses a subject_token whose aud is not the authenticated acting client's client_id, including the agent's own resource-audienced Mission access token, before any family, reservation or derivation count; a retry under a recorded creation_request_id presenting such a token recovers nothing",
+    "local": "the reference AS answers invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -30856,6 +30863,12 @@
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
      "name": "the async-delegation subject_token is a delegation handle (@spec continuation#transport-async, draft-zhu-oauth-async-delegation-05 Section 4.3, #1157) > recovery revalidates the handle: a retry presenting the raw token or another key never retrieves the recorded family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "invalid or unacceptable subject tokens at the async exchange and the delegation-handle request (@spec continuation#transport-async, RFC 8693 Section 2.2.2, #1178) > the async exchange refuses %s with invalid_request, no Mission diagnostic, and no family, reservation or count",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -30877,7 +30890,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the async-delegation exchange refuses a delegation handle presented with a DPoP proof under any key other than the handle's own cnf.jkt, though the client authenticates, and a recovery retry under another key retrieves nothing"
+    "normative": "the async-delegation exchange refuses a delegation handle presented with a DPoP proof under any key other than the handle's own cnf.jkt, though the client authenticates, and a recovery retry under another key retrieves nothing",
+    "local": "the reference AS answers invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -30899,9 +30913,15 @@
      "name": "Dispatch Handoff: complete, fresh DPoP proofs on both legs (@spec RFC 9449 Section 4.3, #1163 review) > the delegation-handle request and the async exchange refuse an incomplete, stale or future-dated proof; within the window both succeed (#1157 review P1)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "invalid or unacceptable subject tokens at the async exchange and the delegation-handle request (@spec continuation#transport-async, RFC 8693 Section 2.2.2, #1178) > the async exchange refuses %s with invalid_request, no Mission diagnostic, and no family, reservation or count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body). Owner review of #1165: the proof is complete and fresh (RFC 9449 Section 4.3) at both the handle request and the async exchange."
+   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body). Owner review of #1165: the proof is complete and fresh (RFC 9449 Section 4.3) at both the handle request and the async exchange. #1178 adds the mTLS-bound handle and one bound to another key, each refused before any family, reservation or count."
   },
   {
    "id": "continuation.async-transport.handle-request",
@@ -30918,7 +30938,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Token Exchange presenting the agent's own Mission access token, with a DPoP proof of that token's key and audience equal to the agent's client_id, yields an access token whose aud is that client_id; an audience naming anything else, or a proof under another key, is refused"
+    "normative": "a Token Exchange presenting the agent's own Mission access token, with a DPoP proof of that token's key and audience equal to the agent's client_id, yields an access token whose aud is that client_id; an audience naming anything else, or a proof under another key, is refused",
+    "local": "the reference AS answers invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -30950,6 +30971,12 @@
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
      "name": "the delegation-handle request (@spec continuation#transport-async, mission#self-exchange, #1157, D358) > refuses audience combined with the async selector before routing: no family and no derivation count (#1157 review P2)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "invalid or unacceptable subject tokens at the async exchange and the delegation-handle request (@spec continuation#transport-async, RFC 8693 Section 2.2.2, #1178) > the delegation-handle request refuses %s with invalid_request, no Mission diagnostic, and no handle or count",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -33799,7 +33826,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the child-creation exchange creates a child within the presented token's authority, and refuses with invalid_request and mission_denial_reason not_strict_subset a child beyond it (an action the token lacks, or a delegation right the token lacks), though the parent allows it, creating no child; a subject_token whose authority cannot be read is refused invalid_grant; the deny Child Evidence records attenuation result exceeds_presented_authority"
+    "normative": "the child-creation exchange creates a child within the presented token's authority, and refuses with invalid_request and mission_denial_reason not_strict_subset a child beyond it (an action the token lacks, or a delegation right the token lacks), though the parent allows it, creating no child; a subject_token whose authority cannot be read is refused, creating no child; the deny Child Evidence records attenuation result exceeds_presented_authority",
+    "local": "the reference AS answers an unreadable subject_token invalid_request (RFC 8693 Section 2.2.2, #1178, D415)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -34006,14 +34034,14 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a child-creation exchange whose DPoP proof is missing or not under the subject_token's own confirmation key is refused",
-    "local": "the reference AS answers a missing proof invalid_dpop_proof and a wrong-key proof invalid_grant (#1178); the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
+    "local": "the reference AS answers a missing proof invalid_dpop_proof and a wrong-key proof invalid_request (RFC 8693 Section 2.2.2, #1178, D415); the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, also invalid_request, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
-     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_request)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -34180,7 +34208,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "possession is verified after step 1: a request missing both creation_request_id and its DPoP proof is refused for the missing creation_request_id (invalid_request, RFC 6749 Section 5.2), and a proof not under the subject_token's confirmation key, or a replayed one, is refused",
-    "local": "the reference AS answers a wrong-key proof invalid_grant (#1178) and a replayed one invalid_dpop_proof; the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
+    "local": "the reference AS answers a wrong-key proof invalid_request (RFC 8693 Section 2.2.2, #1178, D415) and a replayed one invalid_dpop_proof; the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -34193,7 +34221,7 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
-     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_request)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -34211,6 +34239,41 @@
     }
    ],
    "notes": "#1210 (D398). The possession arm is partial: see observation.local. The lead-in carries the MUST."
+  },
+  {
+   "id": "child-delegation.request-processing.failure-refusal",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "request-processing",
+   "text": "On any failure the Mission Issuer MUST refuse with `invalid_request`, `invalid_grant`, or `invalid_token` as appropriate, and MUST NOT create a child.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an invalid or unacceptable subject_token (one failing verification, without a mission claim, naming an unknown Mission, bound by mTLS or to another key than the proof's, or without readable authorization_details) or actor_token (one failing verification, or not sender-constrained to the presenter) refuses the child-creation exchange with one of invalid_request, invalid_grant or invalid_token, and no child, creation_request_id reservation or derivation count results",
+    "local": "the reference AS answers each witnessed failure invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only; this row witnesses the subject_token and actor_token failure classes, and the other steps' failures keep their own rows. A DPoP proof that fails its own checks is RFC 9449's invalid_dpop_proof, outside the three codes this clause lists"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178) > refuses %s with invalid_request, no Mission diagnostic, and no child, reservation or count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178) > refuses a subject_token without readable authorization_details with invalid_request, creating nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178 (D415, with D369). Proved by mutation (PR body): each refusal's code returned to invalid_grant, a mission_error spliced onto the refusal, a derivation counted before the key check, and a creation_request_id reserved before the subject check; each was caught."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
@@ -36470,14 +36533,14 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an expansion exchange whose DPoP proof is not under the subject_token's own confirmation key is refused",
-    "local": "the reference AS answers that refusal invalid_grant (whether a Token Exchange answers invalid_request is #1178's question); the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
+    "local": "the reference AS answers that refusal invalid_request (RFC 8693 Section 2.2.2, #1178, D415); the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: possession (@spec expansion, #448) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "name": "expansion wire: possession (@spec expansion, #448) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_request)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -36593,7 +36656,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "possession is verified after step 1: a request missing both creation_request_id and its DPoP proof is refused for the missing creation_request_id (invalid_request, RFC 6749 Section 5.2), and a proof not under the subject_token's confirmation key, or a replayed one, is refused",
-    "local": "the reference AS answers a wrong-key proof invalid_grant (#1178) and a replayed one invalid_dpop_proof; the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
+    "local": "the reference AS answers a wrong-key proof invalid_request (RFC 8693 Section 2.2.2, #1178, D415) and a replayed one invalid_dpop_proof; the reference AS verifies DPoP proofs only: it refuses an mTLS-bound subject_token (cnf x5t#S256, no jkt) as a sender constraint it cannot verify, so the mTLS arm is not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -36606,7 +36669,7 @@
     },
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: possession (@spec expansion, #448) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)",
+     "name": "expansion wire: possession (@spec expansion, #448) > possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_request)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -36624,6 +36687,36 @@
     }
    ],
    "notes": "#1210 (D398). The possession arm is partial: see observation.local. The lead-in carries the MUST."
+  },
+  {
+   "id": "expansion.verification-order.failure-refusal",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "verification-order",
+   "text": "On any failure the Mission Issuer MUST refuse with `invalid_request`, `invalid_grant`, or `invalid_token` as appropriate, and MUST NOT create a successor.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an invalid or unacceptable subject_token (one failing verification, without a mission claim, naming an unknown Mission, or bound by mTLS or to another key than the proof's) or actor_token (one failing verification, or not sender-constrained to the presenter) refuses the expansion exchange with one of invalid_request, invalid_grant or invalid_token, leaving the predecessor active with its derivation count, and no deferral, successor or creation_request_id reservation results",
+    "local": "the reference AS answers each witnessed failure invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only; this row witnesses the subject_token and actor_token failure classes, and the other steps' failures keep their own rows. A DPoP proof that fails its own checks is RFC 9449's invalid_dpop_proof, outside the three codes this clause lists"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the expansion exchange (@spec expansion#verification-order, RFC 8693 Section 2.2.2, #1178) > refuses %s with invalid_request, no Mission diagnostic, and no deferral, reservation or count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178 (D415, with D369). Proved by mutation (PR body): each refusal's code returned to invalid_grant, a mission_error spliced onto the refusal, a derivation counted before the key check, and a creation_request_id reserved before the subject check; each was caught."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
