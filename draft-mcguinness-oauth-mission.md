@@ -378,10 +378,9 @@ requires. That work leaves out of scope:
   artifact; and
 - how later token issuance stays bound to what the user approved.
 
-With OAuth alone, each token is individually valid and each request
-individually in scope, but no OAuth object records the task the user
-approved. A grant obtained for a task therefore keeps yielding tokens
-after that approval lapses or is withdrawn.
+OAuth does not define a task record that links approval of a task to
+every grant obtained for it. Without that linkage, withdrawing task
+approval need not stop issuance under those grants.
 
 A Mission is created and used in a single chain:
 
@@ -575,7 +574,8 @@ the Mission Issuer:
       v
 ~~~
 
-The remaining steps take place outside the AS:
+After token issuance, resource access and lifecycle management proceed
+as follows:
 
 (4) The agent calls the resource server with the token. The resource
 server enforces the `authorization_details` statelessly and can check
@@ -4933,8 +4933,9 @@ of a Mission and its descendants) is the metering profile's role
 
 Where a deployment runs the Mission Containment profile
 ({{I-D.draft-mcguinness-oauth-mission-containment}}), containment
-narrows an Authority Set entry for later derivations and propagates to
-Child Missions justified by that entry.
+narrows the authority available from an entry for later derivations;
+the approved Authority Set and its commitments remain unchanged.
+Containment also propagates to Child Missions justified by that entry.
 
 Containment does not reach authority materialized before the
 containment transition. A cross-domain grant already redeemed at a
@@ -5560,7 +5561,8 @@ derivation, but this token remains valid until its own `exp`
 The agent calls the ERP resource server (`erp.example.com`) with that
 token. The resource server:
 
-- validates the JWT and its `cnf` claim;
+- validates the JWT and verifies the request's DPoP proof against the
+  key identified by the token's `cnf` claim;
 - enforces the `authorization_details` whose `resource` it serves,
   permitting `invoices.read` within the Q3 issuance window and
   `journal-entries.write` up to the `max_amount` ceiling of 500.00
@@ -5650,7 +5652,7 @@ document uses deployed OAuth 2.0 surfaces: Pushed Authorization
 Requests ({{RFC9126}}), Rich Authorization Requests ({{RFC9396}}),
 DPoP ({{RFC9449}}), and {{RFC9068}} access tokens. A deployment that
 runs PAR, RAR, and sender-constrained tokens adopts the Mission model
-without a GNAP grant endpoint or client migration.
+without a GNAP grant endpoint or migrating its clients to GNAP.
 
 The Authority Set's subset rule ({{subset}}) follows capability
 systems in which a holder narrows what it passes on without
@@ -5658,7 +5660,7 @@ contacting an issuer: macaroons' caveat narrowing, Biscuit's
 offline attenuation blocks, UCAN's delegation chains, SPKI/SDSI's
 local-name reduction, and object-capability designs generally.
 
-Unlike those systems, this document narrows a durable,
+In this document, narrowing applies to a durable,
 approval-anchored object that its issuer can revoke for the Mission's
 full lifetime, not a bearer credential bounded only by its caveats.
 Revoking the Mission therefore still reaches everything derived from
