@@ -220,9 +220,10 @@ export class ActivationPolicySnapshotStore {
 /**
  * The activation policy reference a Mission record commits for its own
  * activation: a template instance's `template.dispatch_policy`, a
- * policy-adjudicated child's `approval_basis.activation` policy members, or a
- * policy-adjudicated Progressive successor's `drawdown_policy`. Undefined when
- * the record commits none.
+ * policy-adjudicated child's `approval_basis.activation` policy members, a
+ * policy-adjudicated Progressive successor's `drawdown_policy`, or a
+ * `governed_policy` instance's separate evaluator. Undefined when the record
+ * commits none.
  */
 export function committedActivationPolicy(record: MissionRecord): ActivationPolicyRef | undefined {
   if (record.template) return record.template.dispatch_policy;
@@ -235,6 +236,13 @@ export function committedActivationPolicy(record: MissionRecord): ActivationPoli
     return ref && ref.id === basis.activation.policy_id && ref.version === basis.activation.policy_version
       ? ref
       : undefined;
+  }
+  // @spec approval-governance#governed-policy-root: only a separate
+  // evaluator is an activation policy. When the root itself decides,
+  // `activation.policy.digest` is the root's `mission-approval-policy` digest
+  // (`root_commitment`), a different domain this store never verifies.
+  if (basis.type === "governed_policy") {
+    return basis.activation.policy.digest === basis.root_commitment ? undefined : basis.activation.policy;
   }
   if (basis.type === "policy_drawdown") {
     const { policy_id, policy_version, policy_digest } = basis.activation;
