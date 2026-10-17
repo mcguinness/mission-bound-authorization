@@ -6376,8 +6376,9 @@ Cross-Domain:
   conventions for naming parameters, claims and error codes and for
   example lead-ins. The `terminated_at` definition names its existing
   exception for historical terminations, and `mission.expires_at` is
-  described as a lifetime bound, not current state. No requirement
-  changes.
+  described as a lifetime bound, not current state. The `adjudication`
+  object is defined once, in Mission Record; Standing-Consent Bases
+  keeps its standing-consent restriction. No requirement changes.
 
 - Error and Challenge Mapping: a Token Exchange refuses a
   `subject_token` or `actor_token` that is invalid, whose sender
