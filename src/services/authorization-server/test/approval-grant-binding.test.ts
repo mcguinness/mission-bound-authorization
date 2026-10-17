@@ -130,11 +130,12 @@ async function open(intentOver: Json = {}) {
   );
   keep(res);
   const uid = (res.headers.get("location") ?? "").split("/interaction/")[1] as string;
-  const decide = async () => {
+  /** A decision on this interaction: Bob for Alice unless another approval is given. */
+  const decide = async (approval: Record<string, string> = trustedApprovalHeaders()) => {
     const r = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() },
+      headers: { ...approval, "content-type": "application/json", cookie: cookie() },
       body: JSON.stringify({ decision: "approve" }),
     });
     keep(r);
@@ -237,6 +238,35 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     expect([...saved]).toEqual([grantIdFor(flow.uid)]);
     expect(record?.grant_id).toBe(grantIdFor(flow.uid));
     expect(boundGrantsOf(record?.id as string)).toEqual([grantIdFor(flow.uid)]);
+    // The one grant carries the committed decision: Bob's account and the
+    // record's authority, whichever decision wrote it last.
+    const grant = (await as.provider.Grant.find(grantIdFor(flow.uid))) as unknown as { accountId?: string; rar?: unknown };
+    expect(grant.accountId).toBe("bob");
+    expect(grant.rar).toEqual(record?.authority_set);
+  });
+
+  it("a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes", async () => {
+    const flow = await open();
+    const first = await flow.decide();
+    expect(first.status).toBe(303);
+    const grantId = grantIdFor(flow.uid);
+    const record = as.kernel.findByApprovalEvent(flow.approvalEventId);
+    expect(record?.grant_id).toBe(grantId);
+    // Alice approving for herself, and Bob selecting another Subject, are not
+    // this committed decision.
+    const otherApprover = await flow.decide(trustedApprovalHeaders("alice", {}, null));
+    expect(otherApprover.status).toBe(403);
+    expect(((await otherApprover.json()) as { error?: string }).error).toBe("approval_forbidden");
+    const otherSubject = await flow.decide(trustedApprovalHeaders("bob", {}, "acme-accounts-payable"));
+    expect(otherSubject.status).toBe(403);
+    const grant = (await as.provider.Grant.find(grantId)) as unknown as { accountId?: string };
+    expect(grant.accountId).toBe("bob");
+    expect(as.kernel.get(record?.id as string)?.grant_id).toBe(grantId);
+    expect(as.kernel.get(record?.id as string)?.subject.sub).toBe("alice");
+    const retried = await flow.decide();
+    expect(retried.status).toBe(303);
+    const { missionId } = await flow.redeem(await flow.finish(retried));
+    expect(missionId).toBe(record?.id);
   });
 
   it("a grant-save failure commits no Mission, and a retry on the interaction recovers one grant and one binding", async () => {

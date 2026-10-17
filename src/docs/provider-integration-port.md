@@ -354,10 +354,12 @@ the store.
      insert, so the record never commits unbound; then `missionBoundGrants.record`
      on its own handle. The `approval_event_id` is `apev_{interaction uid}`,
      `UNIQUE` in the `missions` table, and a repeat returns the stored record.
-     A decision that finds the approval event already committed binds the same
-     grant through `kernel.bindGrant`, which is compare-and-set: idempotent for
-     the grant a Mission holds, refused for any other, so a binding never
-     moves.
+     A decision that finds the approval event already committed is a retry of
+     that decision only if its Approver, Subject and client match the
+     committed record; otherwise it is refused 403 `approval_forbidden` before
+     the grant is touched. A matching retry binds the same grant through
+     `kernel.bindGrant`, which is compare-and-set: idempotent for the grant a
+     Mission holds, refused for any other, so a binding never moves.
   4. For an Intent-only request, `details.save()` of the marked
      `authorization_details` (§7).
   5. `interactionFinished`: a 303 to the resume URL (`lib/provider.js`
@@ -404,6 +406,7 @@ the store.
   - `> a commit failure after the grant save leaves only an inert grant, no Mission and no binding, and the retry recovers through that grant`
   - `> a failure after the record commit leaves an active, bound Mission whose code is not issued yet (the #250 window), which a retry on the interaction completes`
   - `> a Mission's grant binding never moves: bindGrant is idempotent for the grant it holds and refuses any other`
+  - `> a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes`
 - **Unsupported or residual.**
   - `{#approval-event}` step 7's record/code atomicity is not met. The record
     commits `active` and bound one request before the code is issued, so a

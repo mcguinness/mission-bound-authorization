@@ -4348,6 +4348,24 @@ async function decide(
     approvalEventId,
   };
   const existing = opts.kernel.findByApprovalEvent(approvalEventId);
+  // A retry recovers the committed approval only when it is the same decision:
+  // the same Approver, Subject and client as the committed record. Anything
+  // else is refused before the grant is touched, so a retry can neither
+  // rewrite the committed approval's grant nor complete its code under
+  // another login.
+  if (
+    existing &&
+    (existing.approval_basis.consent_principal?.sub !== approver ||
+      existing.subject.sub !== subject ||
+      existing.client_id !== String(params.client_id))
+  ) {
+    ctx.status = 403;
+    ctx.body = {
+      error: "approval_forbidden",
+      error_description: "this interaction's approval is already committed for another Approver, Subject or client",
+    };
+    return;
+  }
   let prepared: PreparedApproval | undefined;
   if (!existing) {
     try {
