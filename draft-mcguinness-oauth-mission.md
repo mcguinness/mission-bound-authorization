@@ -4856,8 +4856,6 @@ marks it with a compromise time, rather than only rotating it out.
 A compromised issuer signing key voids every guarantee the signature
 carries. Holding issuer signing keys in non-exportable, HSM- or
 KMS-grade custody with dual-controlled generation reduces that risk.
-Recovery from a signing-key compromise follows the deployment's
-documented procedures.
 
 Segmenting keys by artifact class under distinct `kid` values within
 the one `jwks_uri` lets high-value, low-volume signing (long-lived
@@ -4900,9 +4898,9 @@ generation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 
 The aggregate surface that a Mission's descendants can reach (the
 product of delegation depth, the number of trust domains projected into,
-and the number of child generations) can therefore exceed what a
-single approval appears to bound at consent time. This is a composition
-property of independently bounded mechanisms.
+and the number of child generations, each bounded independently) can
+therefore exceed what a single approval appears to bound at consent
+time.
 
 Child Delegation's `max_children` and `max_child_depth` limit the
 descendant Missions live at once, not those created over the root's
