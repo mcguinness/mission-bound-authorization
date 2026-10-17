@@ -225,8 +225,8 @@ with these members:
   ({{common-constraints}}) has shared semantics across deployments; any
   other name is deployment-defined.
 
-  - Because a `constraints` member narrows authority, a resource server
-    that cannot enforce one MUST fail closed ({{rs-enforcement}}).
+  - Because a `constraints` member narrows authority, {{rs-enforcement}}
+    requires a resource server that cannot enforce one to fail closed.
   - To avoid that failure mode, the authorization server SHOULD emit for
     a given `resource` only `constraints` keys that the resource server
     serving it is known to understand and enforce: by registration, by
@@ -251,11 +251,11 @@ with these members:
     `{ "sub_profile": "<actor-type>" }` for an actor-type class.
 
     When absent, eligibility falls to the authorization server's
-    delegation-authorization policy, which MUST be applied at every
-    exchange ({{delegate-eligibility}}); absence delegates the decision
-    to policy, it never grants blanket eligibility. The member is
-    RECOMMENDED so that eligibility is committed and rendered with the
-    entry rather than left wholly to policy.
+    delegation-authorization policy, applied at every exchange
+    ({{delegate-eligibility}}): absence defers the decision to policy
+    and never grants blanket eligibility. The member is RECOMMENDED so
+    that eligibility is committed and rendered with the entry rather
+    than left wholly to policy.
 
   A companion profile MAY define additional `delegation` members. Such a
   member is policy, not authority ({{subset}}): a derived entry's value
@@ -585,13 +585,12 @@ A decimal-string value in a Common Constraint (`max_amount`'s `amount`
 member, and any future Common Constraint with a decimal-valued member)
 MUST match `^[0-9]+(\.[0-9]{1,18})?$`: one or more decimal digits,
 optionally followed by a single `.` and one to 18 further decimal
-digits. A leading `-` is out of scope for a ceiling value and MUST be
-rejected.
+digits.
 
 A value of any other form, including scientific notation (`"1e300"`), a
-sign, a thousands separator, or a non-numeric token (`"NaN"`,
-`"Infinity"`), is malformed, and a consumer MUST reject it rather than
-attempt to parse it:
+sign (a ceiling value is never negative), a thousands separator, or a
+non-numeric token (`"NaN"`, `"Infinity"`), is malformed, and a consumer
+MUST reject it rather than attempt to parse it:
 
 - an authority proposal carrying one is refused at submission
   ({{I-D.draft-mcguinness-oauth-mission}}); and
@@ -792,8 +791,8 @@ this document in full declares:
 `projection`: `true`
 : A safe scope projection is defined, and decidable per entry, by
   {{scope-projection}}; it is not unconditionally available for every
-  entry, and an authorization server MUST still apply that section's
-  conditions per entry before emitting `scope`.
+  entry, and that section's conditions apply to each entry before
+  `scope` is emitted.
 
 An authorization server that implements only part of this document (for
 example, `mission_resource_access` entries without ever emitting `scope`
@@ -935,9 +934,9 @@ anchors, and issuance gating. Three risks are specific to this type:
 - **A safe projection is per entry, not per type.** That
   `mission_resource_access` defines a projection relation
   ({{scope-projection}}) does not make every entry of the type safely
-  projectable; an authorization server MUST evaluate the three
-  conditions of {{scope-projection}} for the specific entry and mapping
-  in force, not assume the type's general capability extends to it.
+  projectable: {{scope-projection}}'s three conditions must hold for the
+  specific entry and mapping in force, and the type's general capability
+  does not extend to an entry by default.
 
 ## Resource Boundary Canonicalization {#resource-boundary-canonicalization}
 
