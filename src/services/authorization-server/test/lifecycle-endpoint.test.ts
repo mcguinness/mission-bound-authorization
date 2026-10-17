@@ -623,6 +623,69 @@ describe("Mission Lifecycle endpoint transient failures (@spec status#idempotenc
   });
 });
 
+describe("Mission Lifecycle endpoint extension operations and the common guard (@spec status#idempotency, discharge#discharge-operation, #1191)", () => {
+  const containMembers = () => ({
+    operation: "contain",
+    event: JSON.stringify({
+      type: "incident",
+      source: "review",
+      observed_at: new Date().toISOString(),
+      event_id: crypto.randomUUID(),
+    }),
+    remove: JSON.stringify([{ resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }]),
+  });
+
+  it("contain honors the common expected_version guard: a stale one is refused 409 stale_version and nothing commits, a current one narrows", async () => {
+    const m = approve();
+    const n = nonce();
+    const stale = await op({ mission_id: m.id, nonce: n, expected_version: String(m.version + 10), ...containMembers() });
+    expect(stale.status, stale.text).toBe(409);
+    expect(stale.json).toMatchObject({ error: "stale_version", nonce: n });
+    expect(as.kernel.get(m.id)?.version).toBe(m.version);
+    expect(as.kernel.get(m.id)?.containment).toBeUndefined();
+    const currentNonce = nonce();
+    const currentMembers = { mission_id: m.id, nonce: currentNonce, expected_version: String(m.version), ...containMembers() };
+    const current = await op(currentMembers);
+    expect(current.status, current.text).toBe(200);
+    expect(current.json).toMatchObject({ state: "active", version: m.version + 1, containment_version: 1 });
+    // The retained response stays ahead of the guard: the retransmit replays
+    // its success although its expected_version is now stale.
+    const retry = await op(currentMembers);
+    expect(retry.status, retry.text).toBe(200);
+    expect(retry.text).toBe(current.text);
+    expect(as.kernel.get(m.id)?.version).toBe(m.version + 1);
+  });
+
+  it("refuses the schedule members on contain and discharge, and expected_version on discharge, before any Mission is read", async () => {
+    const m = approve();
+    const before = as.kernel.get(m.id);
+    const discharge = {
+      operation: "discharge",
+      entry_digest: `sha-256:${"A".repeat(43)}`,
+      condition_digest: `sha-256:${"B".repeat(43)}`,
+      event_type: "accounting-period-closed",
+      event_id: "close-guard-1",
+    };
+    for (const members of [
+      { ...containMembers(), suspend_until: "2026-12-01T00:00:00Z", on_expiry: "revoke" },
+      { ...discharge, suspend_until: "2026-12-01T00:00:00Z", on_expiry: "resume" },
+      { ...discharge, expected_version: String(m.version) },
+    ]) {
+      const known = await op({ mission_id: m.id, nonce: nonce(), ...members });
+      const unknown = await op({ mission_id: UNKNOWN, nonce: nonce(), ...members });
+      expect(known.status, `${members.operation}: ${known.text}`).toBe(400);
+      expect(known.json?.error).toBe("invalid_request");
+      expect(unknown.status).toBe(400);
+      expect(unknown.json?.error_description).toBe(known.json?.error_description);
+    }
+    // Without the refused member, the same discharge reaches the endpoint's
+    // authority check: this caller holds no discharge grant.
+    const plain = await op({ mission_id: m.id, nonce: nonce(), ...discharge });
+    expect(plain.status, plain.text).toBe(404);
+    expect(as.kernel.get(m.id)).toEqual(before);
+  });
+});
+
 describe("the dev-only path route runs the same engine (@spec status#mission-lifecycle-endpoint, #1191)", () => {
   const dev = async (missionId: string, body: Record<string, unknown>): Promise<LifecycleAnswer> =>
     readAnswer(

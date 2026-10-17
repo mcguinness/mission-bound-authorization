@@ -19,19 +19,21 @@ import {
 import {
   type CryptoKey,
   decodeJwt,
+  decodeProtectedHeader,
   exportJWK,
   generateKeyPair,
   importJWK,
   type JWK,
   SignJWT,
 } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   type IssuanceOnlyDeployment,
   ISSUANCE_ONLY_CAPABILITIES,
   PLAIN_RS_AUDIENCE,
   startIssuanceOnly,
 } from "../src/issuance-only.js";
+import { requestLifecycle } from "../src/lifecycle-client.js";
 
 type Json = Record<string, unknown>;
 type Keys = { publicJwk: JWK; privateKey: CryptoKey };
@@ -511,6 +513,62 @@ async function boot(
   await new Promise<void>((r) => server.once("listening", () => r()));
   return { as, issuer, close: () => new Promise<void>((r) => server.close(() => r())) };
 }
+
+describe("the launcher's lifecycle console at the advertised endpoint (@spec status#mission-status-authentication, status#lifecycle-authorization, #1191)", () => {
+  it("the reference console types its client assertion client-authentication+jwt, names the issuer as its sole aud, and revokes a Mission whose tokens it does not hold", async () => {
+    const m = await issueBase();
+    // Capture what the reference client puts on the wire.
+    const sent: string[] = [];
+    const realFetch = globalThis.fetch;
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      if (typeof init?.body === "string" && init.body.includes("client_assertion=")) sent.push(init.body);
+      return realFetch(input, init);
+    });
+    let revoke: Awaited<ReturnType<typeof requestLifecycle>>;
+    try {
+      revoke = await requestLifecycle(asUrl, deployment.credentials.lifecycleConsole, {
+        mission_id: m.missionId,
+        operation: "revoke",
+        nonce: randomUUID(),
+      });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(revoke.status, revoke.text).toBe(200);
+    expect(revoke.contentType).toBe("application/mission-status-response+jwt");
+    expect(sent).toHaveLength(1);
+    const form = new URLSearchParams(sent[0]);
+    expect(form.get("mission_id")).toBe(m.missionId);
+    const assertion = form.get("client_assertion") as string;
+    expect(decodeProtectedHeader(assertion).typ).toBe("client-authentication+jwt");
+    expect(decodeJwt(assertion)).toMatchObject({
+      iss: deployment.credentials.lifecycleConsole.clientId,
+      sub: deployment.credentials.lifecycleConsole.clientId,
+      aud: asUrl,
+    });
+    expect(decodeJwt(revoke.text).aud).toBe(deployment.credentials.lifecycleConsole.clientId);
+    expect(deployment.as.kernel.get(m.missionId)?.termination?.reason).toBe("revoked");
+  });
+
+  it("no other client holds a lifecycle grant: the Mission's own client is answered as for an unknown Mission", async () => {
+    const m = await issueBase();
+    const res = await fetch(`${asUrl}/mission/lifecycle`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        mission_id: m.missionId,
+        operation: "revoke",
+        nonce: randomUUID(),
+        client_assertion_type: ASSERTION_TYPE,
+        client_assertion: await agentAssertion(asUrl, deployment.as),
+      }).toString(),
+    });
+    const body = await readJson(res);
+    expect(res.status, JSON.stringify(body)).toBe(404);
+    expect(body.error).toBe("not_found");
+    expect(deployment.as.kernel.get(m.missionId)?.state).toBe("active");
+  });
+});
 
 describe("capability gates the launcher's wiring shadows, and the default assembly (#873)", () => {
   it("with the exchange grant registered for one profile, a disabled profile's exchange is refused invalid_request", async () => {

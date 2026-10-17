@@ -20,7 +20,7 @@
  *    output feeds the standard parameter with no re-wrapping.
  */
 
-import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { browserApprovalHeaders, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { computeAnchor, PROPOSED_AUTHORITY_TYP, proposalHash } from "@mission/core";
@@ -473,7 +473,7 @@ describe("end-to-end issuance under the new carriage", () => {
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+      headers: { ...floorApprovalHeaders(SESSIONS, uid, cookieHeader()), "content-type": "application/json" },
       body: JSON.stringify({ decision: "approve" }),
     });
     storeCookies(res);

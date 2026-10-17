@@ -19,6 +19,8 @@ import {
   SCOPE_PROJECTION,
   TOPOLOGY,
   USERS,
+  APPROVAL_FLOOR,
+  type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import type { ScopeProjectionMapping } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
@@ -480,6 +482,7 @@ export {
   DEFERRED_GRANT_TYPE,
   ExpansionDeferralStore,
   ExpansionDeferralError,
+  ApprovalFloorRefusedError,
   type ApplyCarryoverOutcome,
   type ExpansionApproval,
   type ExpansionDeferredResult,
@@ -487,6 +490,7 @@ export {
   type DeferralSlowDown,
   type DeferredToken,
 } from "./kernel/deferred.js";
+export { evaluateApprovalFloor, type ApprovalFloorOutcome, type AchievedApproverContext } from "./kernel/approval-floor.js";
 export {
   ChallengeError,
   type ChallengeErrorCode,
@@ -597,6 +601,19 @@ function publicJwkOf(jwk: JWK): Record<string, unknown> {
     qi?: string;
   };
   return pub;
+}
+
+/**
+ * @spec status#lifecycle-authorization: a dedicated client of the Mission
+ * Lifecycle endpoint ({@link buildAuthorizationServer}'s `lifecycleClients`).
+ */
+export interface LifecycleClientRegistration {
+  client_id: string;
+  client_name: string;
+  /** The public half of the client's ES256 signing key; the private half stays at the client. */
+  jwks: { keys: Record<string, unknown>[] };
+  /** The lifecycle grants bound to this client, `mission_lifecycle` for the state operations. */
+  grants: readonly string[];
 }
 
 export interface BuiltAs {
@@ -727,6 +744,12 @@ export async function buildAuthorizationServer(opts: {
   /** Independent approver login integration; OAuth interaction cookies never establish this login. */
   approvalSessions?: ApprovalSessionStore;
   /**
+   * @spec mission#approval-authentication (#826, D425) — override the
+   * published approval-authentication floor. Defaults to the config-shipped
+   * {@link APPROVAL_FLOOR}.
+   */
+  approvalFloor?: ApprovalFloorPolicy;
+  /**
    * @spec mission#intent-submission-evidence — the deployment-GLOBAL
    * policy-required Intent Submission Evidence types (the anti-downgrade
    * hook), unioned per submission with the presenting client's registered
@@ -847,6 +870,15 @@ export async function buildAuthorizationServer(opts: {
    */
   lifecycleClientGrants?: Record<string, readonly string[]>;
   /**
+   * @spec status#lifecycle-authorization, status#mission-status-authentication:
+   * dedicated Lifecycle clients a deployment registers, each with the PUBLIC
+   * half of its own signing key (the private half stays at the client) and the
+   * lifecycle grants bound to it. Registered beside the shipped clients, never
+   * in place of one; no other client gains a lifecycle grant. Absent (the
+   * default), none is registered.
+   */
+  lifecycleClients?: LifecycleClientRegistration[];
+  /**
    * @spec status#lifecycle-authorization: require the distinct
    * `mission_resume` grant, beside `mission_lifecycle`, for a direct `resume`
    * and for scheduling one. Absent (the default), `mission_lifecycle` alone
@@ -950,6 +982,31 @@ export async function buildAuthorizationServer(opts: {
       throw new Error(`testClients MUST NOT redefine the config-shipped client ${id}`);
     }
   }
+  // @spec status#lifecycle-authorization: a dedicated Lifecycle client is a
+  // private-key-JWT registration with no grant at /token, holding only the
+  // lifecycle grants the deployment binds to it.
+  const lifecycleClientMetadata = (opts.lifecycleClients ?? []).map((c) => {
+    if (shippedClientIds.has(c.client_id)) {
+      throw new Error(`lifecycleClients MUST NOT redefine the config-shipped client ${c.client_id}`);
+    }
+    if (c.jwks.keys.length === 0 || c.jwks.keys.some((k) => Object.hasOwn(k, "d"))) {
+      throw new Error(`lifecycleClients: ${c.client_id} registers public keys only, at least one`);
+    }
+    return {
+      client_id: c.client_id,
+      client_name: c.client_name,
+      grant_types: [],
+      response_types: [],
+      redirect_uris: [],
+      token_endpoint_auth_method: "private_key_jwt",
+      token_endpoint_auth_signing_alg: "ES256",
+      jwks: c.jwks,
+    } as Record<string, unknown>;
+  });
+  const lifecycleClientGrants: Record<string, readonly string[]> = {
+    ...(opts.lifecycleClientGrants ?? {}),
+    ...Object.fromEntries((opts.lifecycleClients ?? []).map((c) => [c.client_id, c.grants])),
+  };
   // @spec containment#protected-events — the trusted protected-event source
   // registry: config seeds kid+alg per source (D25), the ES256 keypair is
   // generated per boot. The registry resolves the report's payload `source`
@@ -1177,6 +1234,7 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     () => kernel.nowDate(),
     opts.childMissionCarryover ?? CHILD_MISSION_CARRYOVER,
+    opts.approvalFloor ?? APPROVAL_FLOOR,
   );
   // @spec expansion#creation-request-id — the creation-idempotency store over
   // the kernel database (instances over the same kernel share the table; this
@@ -1219,6 +1277,7 @@ export async function buildAuthorizationServer(opts: {
       governed.metadata,
       ledgerReconciler.metadata,
       ...(opts.testClients ?? []),
+      ...lifecycleClientMetadata,
     ],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
@@ -1230,6 +1289,7 @@ export async function buildAuthorizationServer(opts: {
       ? { requiredIntentEvidenceTypes: opts.requiredIntentEvidenceTypes }
       : {}),
     approverRoleSubs: new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub)),
+    approvalFloor: opts.approvalFloor ?? APPROVAL_FLOOR,
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
     // @spec mission#caller-authorization-and-minimization — the registered
     // RFC 7662 introspection principals (config/introspection.json).
@@ -1239,7 +1299,7 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.serviceTokenPrincipals
       ? { serviceTokenPrincipals: opts.serviceTokenPrincipals }
       : {}),
-    ...(opts.lifecycleClientGrants ? { lifecycleClientGrants: opts.lifecycleClientGrants } : {}),
+    ...(Object.keys(lifecycleClientGrants).length > 0 ? { lifecycleClientGrants } : {}),
     ...(opts.distinctResumeGrant ? { distinctResumeGrant: true } : {}),
     ...(schedulesAdopted ? { suspensionSchedules: true } : {}),
     ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),

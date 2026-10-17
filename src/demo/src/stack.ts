@@ -9,8 +9,10 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
+  ApprovalSessionStore,
   type AuthorityEntry,
   buildAuthorizationServer,
+  evaluateApprovalFloor,
   MISSION_APPROVAL_SCOPE,
   type ChallengeIssuers,
   CatalogProvider,
@@ -24,7 +26,7 @@ import {
   type ProviderCapability,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   createDecisionPoint,
@@ -83,6 +85,8 @@ import { signStatement, TransparencyService, type Receipt, type SignedStatement 
 import { ConsoleBff } from "@mission/console-bff";
 import type { AccessRequestService } from "@mission/access-request";
 import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResourcePolicy } from "./resource-policy-store.js";
+import { type ApprovalConsole, type ApproverLogin, recordApproverLogin } from "./approval-console.js";
+import { type LifecycleConsoleCredentials, newLifecycleConsole } from "./lifecycle-client.js";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
 export const ISS = TOPOLOGY.issuers.as;
@@ -115,6 +119,21 @@ export interface AuthServerExtras {
   childClientJwk: Record<string, unknown>;
   /** Trusted console/driver only. Never included in agent dependencies or tool results. */
   approverServiceToken: string;
+  /**
+   * @spec mission#approval-authentication (#826, D425) — the trusted
+   * console's Approver on the browser approval surface: Bob, logging in with
+   * `mfa` at each approval. A high-risk approval needs it, because the
+   * published approval-authentication floor accepts no headless approval
+   * service's registration. Trusted console/driver only, like the token.
+   */
+  approverConsole: ApprovalConsole;
+  /**
+   * @spec status#lifecycle-authorization: the dedicated lifecycle console's
+   * private-key-JWT credential at the advertised Mission Lifecycle endpoint. It
+   * generated its own key; the AS holds only the public half and binds the
+   * `mission_lifecycle` grant to this client alone. Trusted console only.
+   */
+  lifecycleConsole: LifecycleConsoleCredentials;
   /** AROP Deferred Token Response store (drive open/approve/deny headlessly). */
   deferrals: DeferralStore;
   ras: ResourceAuthorizationServer;
@@ -156,6 +175,14 @@ export interface AuthServerExtras {
 
 export interface DemoStack {
   kernel: MissionKernel;
+  /**
+   * @spec mission#approval-authentication (#826, D425) — the console
+   * Approver's recorded login (Bob, `mfa`, recorded when the stack is
+   * composed). The AS's approval console presents it, and the demo's direct
+   * kernel approvals check the floor against it. Simulated (no Approver
+   * identity provider); `logInAgain` records a new one.
+   */
+  approverLogin: ApproverLogin;
   fga: Fga;
   modelId: string;
   payments: PaymentsStore;
@@ -312,6 +339,7 @@ export async function composeStack(opts: {
    */
   dischargeAuthority?: DischargeAuthorityPolicy;
 }): Promise<DemoStack> {
+  const approverLogin = recordApproverLogin({ sub: "bob", acr: "mfa" });
   const asNative = opts.target === "as-native";
   const masGovernedResources =
     opts.masGovernedResources ??
@@ -414,6 +442,7 @@ export async function composeStack(opts: {
       ],
     ]);
     const approverServiceToken = crypto.randomUUID();
+    const approvalSessions = new ApprovalSessionStore();
     // D332: the as-native target's AS runs exactly AS_NATIVE_CAPABILITIES,
     // plus `dev-token` only under the test fixture. The shared demo passes no
     // set, which is the full reference assembly.
@@ -423,9 +452,14 @@ export async function composeStack(opts: {
         ? new Set<ProviderCapability>([...AS_NATIVE_CAPABILITIES, "dev-token"])
         : AS_NATIVE_CAPABILITIES
       : undefined;
+    const lifecycleConsole = await newLifecycleConsole();
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
+      approvalSessions,
+      // @spec status#lifecycle-authorization: one dedicated lifecycle console
+      // holds the lifecycle grant; no other client does.
+      lifecycleClients: [lifecycleConsole.registration],
       serviceTokenPrincipals: {
         [approverServiceToken]: { principal_id: "svc:approver-console", scopes: [MISSION_APPROVAL_SCOPE],
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
@@ -605,6 +639,8 @@ export async function composeStack(opts: {
       agentClientJwk: as.agentClientJwk,
       childClientJwk: as.childClientJwk,
       approverServiceToken,
+      approverConsole: { sessions: approvalSessions, login: approverLogin },
+      lifecycleConsole: lifecycleConsole.credentials,
       deferrals: as.deferrals,
       ras,
       saas,
@@ -1062,6 +1098,7 @@ export async function composeStack(opts: {
 
   return {
     kernel,
+    approverLogin,
     decisionChannel,
     pdpClaims,
     writeReservations,
@@ -1099,6 +1136,20 @@ export async function composeStack(opts: {
 /** The options {@link composeStack} takes. */
 export type ComposeStackOptions = Parameters<typeof composeStack>[0];
 
+/**
+ * @spec mission#approval-authentication (#826, D425) — a demo approval that
+ * goes straight to the kernel meets the same published floor as the approval
+ * interaction: the derived authority is classified, and any invoked floor is
+ * checked against the stack's recorded console login. Refuses by throwing.
+ */
+export function assertDemoApprovalFloor(stack: DemoStack, authority: readonly AuthorityEntry[]): void {
+  const floor = evaluateApprovalFloor(APPROVAL_FLOOR, authority, stack.approverLogin, {
+    interactive: true,
+    nowSeconds: Math.floor(stack.kernel.nowDate().getTime() / 1000),
+  });
+  if (floor.outcome === "refused") throw new Error(`approval refused: ${floor.reason}`);
+}
+
 /** Approve a demo mission for alice, approved by bob (write-bearing governance). */
 export function approveDemoMission(stack: DemoStack): { id: string } {
   const intent = validateMissionIntent(
@@ -1108,18 +1159,20 @@ export function approveDemoMission(stack: DemoStack): { id: string } {
       expires_at: "2027-01-01T00:00:00Z",
     }),
   );
+  // The authority proposal: what the wire submits as the standard RFC 9396
+  // authorization_details parameter beside mission_intent.
+  const proposedAuthority: AuthorityEntry[] = [
+    {
+      type: "mission_resource_access",
+      resource: DERIVATION_POLICY.ceiling[0].resource,
+      actions: ["payments:invoice.read", "payments:payment.schedule", "payments:payment.execute", "payments:remittance.send"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ];
+  assertDemoApprovalFloor(stack, stack.kernel.derive(intent, proposedAuthority));
   return stack.kernel.approve({
     intent,
-    // The authority proposal: what the wire submits as the standard RFC 9396
-    // authorization_details parameter beside mission_intent.
-    proposedAuthority: [
-      {
-        type: "mission_resource_access",
-        resource: DERIVATION_POLICY.ceiling[0].resource,
-        actions: ["payments:invoice.read", "payments:payment.schedule", "payments:payment.execute", "payments:remittance.send"],
-        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-      },
-    ],
+    proposedAuthority,
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },
     clientId: "ap-agent",

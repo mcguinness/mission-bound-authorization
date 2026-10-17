@@ -15,6 +15,7 @@ import {
   DISPATCH_PROHIBITED_ACTIONS,
   USERS,
   WRITE_ACTIONS,
+  type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
@@ -343,6 +344,7 @@ import {
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { IntentError } from "../kernel/intent.js";
+import { evaluateApprovalFloor } from "../kernel/approval-floor.js";
 import {
   type DischargeReceiptObservation,
   GateError,
@@ -545,6 +547,12 @@ export interface AdapterOptions {
    */
   requiredIntentEvidenceTypes?: string[];
   approverRoleSubs: Set<string>;
+  /**
+   * @spec mission#approval-authentication (#826, D425) — the published
+   * approval-authentication floor, evaluated over the complete derived
+   * Authority Set at every approval decision (kernel/approval-floor.ts).
+   */
+  approvalFloor: ApprovalFloorPolicy;
   /** Access-token lifetime (seconds) for issued mission tokens. Default 300. */
   accessTokenTTL?: number;
   /**
@@ -3137,6 +3145,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         sendInvalidRequest(`operation ${operation} is not enabled on this deployment`);
         return;
       }
+      // @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency:
+      // the members every operation shares, parsed ONCE, after the retained-nonce
+      // recovery above and before dispatch, so an extension never silently
+      // drops the stale-version guard or a schedule (adapters/lifecycle-endpoint.ts).
+      const members = parseTransitionMembers(operation, body);
+      if (!members.ok) {
+        sendInvalidRequest(members.description);
+        return;
+      }
+      const { expectedVersion } = members.value;
       // @spec discharge#discharge-operation, discharge#discharge-commit ("States")
       // — the fifth operation: it changes no
       // Mission state, so it is handled entirely outside the state machine
@@ -3219,9 +3237,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // transition that discovering it committed.
           kernel.materializeExpiry(missionId);
           const contained = withTransaction(kernel.db, () => {
+            // @spec status#idempotency: the guard is compared inside this
+            // transaction, before the narrowing commits (kernel.contain).
             const { record, evidence } = kernel.contain(missionId, {
               event: containEvent,
               remove: remove as Array<{ resource: string; actions?: string[] }>,
+              ...(expectedVersion !== undefined ? { expectedVersion } : {}),
             });
             const outcome = {
               id: record.id,
@@ -3243,16 +3264,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           sendJson(200, contained.outcome);
           return;
         }
-        // @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency
-        // the request members of `revoke`, `suspend`, `resume` and `complete`,
-        // parsed in one place (adapters/lifecycle-endpoint.ts).
         const lifecycleOperation = body.operation as LifecycleOperation;
-        const members = parseTransitionMembers(lifecycleOperation, body);
-        if (!members.ok) {
-          sendInvalidRequest(members.description);
-          return;
-        }
-        const { expectedVersion, schedule } = members.value;
+        // The members were parsed once, before dispatch.
+        const { schedule } = members.value;
         // A schedule this deployment has not adopted is refused, never
         // accepted without effect.
         if (schedule && opts.suspensionSchedules !== true) {
@@ -3644,7 +3658,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ctx.body = inactive;
           return;
         }
-        const { jti, sub, clientId, exp, iat, confirmation } = profile;
+        const { jti, sub, clientId, exp, iat, confirmation, act } = profile;
         const credentialAuthority = payload.authorization_details as AuthorityEntry[];
 
         // Mission resolution: a token the AS cannot bind to a known Mission
@@ -3677,7 +3691,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // (the record's template basis). A primary token may be a bearer
         // token, so its `cnf` may be absent.
         const senderConstrainedProfile =
-          payload.act !== undefined || record.parent !== undefined || record.approval_basis.type === "template";
+          act !== undefined || record.parent !== undefined || record.approval_basis.type === "template";
         if (!confirmation && senderConstrainedProfile) {
           ctx.body = inactive;
           return;
@@ -3744,6 +3758,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           jti,
           ...(typeof payload.scope === "string" ? { scope: payload.scope } : {}),
           ...(cnf ? { cnf } : {}),
+          // @spec mission#introspected-consumption, RFC 8693 Section 4.1 (#904):
+          // a delegated token's actor chain, validated by the profile reader and
+          // carried unchanged. Only this active body carries it; every inactive
+          // or unauthorized answer is built without it.
+          ...(act !== undefined ? { act } : {}),
           token_type: confirmation?.jkt ? "DPoP" : "Bearer",
           authorization_details,
           mission: disclosedMission,
@@ -4501,6 +4520,23 @@ async function decide(
   if (writeBearing && (approver === subject || !opts.approverRoleSubs.has(approver))) {
     ctx.status = 403;
     ctx.body = { error: "approval_forbidden", error_description: "write-bearing missions require a distinct approver" };
+    return;
+  }
+
+  // @spec mission#approval-authentication (#826, D425): the published
+  // approval-authentication floor over the complete derived Authority Set,
+  // after derivation and before any Mission, Grant or code exists. Both it and
+  // the client's requested strength (checked above) must hold: an absent or
+  // weaker request never relaxes the floor. The achieved context is the
+  // approval surface's, never the request's.
+  const floor = evaluateApprovalFloor(
+    opts.approvalFloor,
+    authority,
+    { acr: principal.acr, auth_time: principal.auth_time },
+    { interactive, nowSeconds: Math.floor(opts.kernel.nowDate().getTime() / 1000) },
+  );
+  if (floor.outcome === "refused") {
+    await finish({ error: "access_denied", error_description: floor.reason });
     return;
   }
 

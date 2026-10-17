@@ -493,9 +493,12 @@ It writes the per-boot dev credentials, mode 0600, to
 `$TMPDIR/mission-issuance-only.credentials.json` (override with
 `ISSUANCE_ONLY_CREDENTIALS`): the `ap-agent` private key, which is generated
 per boot (D25), the approver console's token, and the lifecycle console's
-token. In a real deployment three different parties hold these three
-credentials. Here the walkthrough plays all three, each step under its own
-credential.
+private key. The lifecycle console generates its own key; the AS registers
+only the public half, with the `mission_lifecycle` grant, and binds that grant
+to no other client. The file also carries the dev-only lifecycle route's
+service token. In a real deployment three different parties hold the agent,
+approver and lifecycle credentials. Here the walkthrough plays all three, each
+step under its own credential.
 
 **Stopping.** The wrapper (`scripts/run-demo-ts.mjs`) runs the server process
 as its only child (`node --import tsx`), forwards SIGINT, SIGTERM and SIGHUP
@@ -518,7 +521,10 @@ approval input. It is the `svc:approver-console` service principal (approver
 the demo stack uses (`demo/src/stack.ts`). The approver identity comes from
 that registration, never from the `decide` body. It is not a browser login
 and not end-user consent. A deployment replaces it with its own approver
-authentication (`ApprovalSessionStore`).
+authentication (`ApprovalSessionStore`). The published approval-authentication
+floor (`config/approval-floor.json`) does not apply here: `reports.read` is
+not high-risk, so the headless input still completes. A high-risk approval
+would need a browser Approver (provider-integration-port.md §3.1).
 
 **The walkthrough** (`runWalkthrough`), over real HTTP. The `mission_intent`
 targets the plain RS, the `authorization_details` proposal is
@@ -533,8 +539,8 @@ targets the plain RS, the `authorization_details` proposal is
                                    "mission":{"id":"msn_...","issuer":"http://localhost:4400"},"cnf":{"jkt":"..."}}}
 4. GET /api/reports        <- 200 {"reports":[]}
 5. POST /api/reports       <- 403 {"error":"insufficient_scope", ... scope="reports.write" ...}
-6. Revoke                  <- 200 {"state":"terminated","termination":{"reason":"revoked", ...},"signed":true}
-                                                                                    (as svc:console)
+6. Revoke                  <- 200 {"state":"terminated","termination":{"reason":"revoked", ...},"aud":"lifecycle-console","signed":true}
+                                                     (as lifecycle-console, private_key_jwt, at mission_lifecycle_endpoint)
 6a. Refresh after revoke   <- 400 {"error":"invalid_grant"}
 6b. GET after revoke       <- 200 {"reports":[]}                                    JWT only: honored until exp
 6b. GET after revoke       <- 401 {"error":"invalid_token","error_description":"the access token is not active"}
@@ -684,10 +690,11 @@ companion at `5702bdd0`:
   `> refuses a divergent retry without retaining it, leaving the committed success replayable`,
   `> conflicts on the same retry when no claim was retained, which is what the claim fixes`.
 - The endpoint's Authorization subsection: a `mission_lifecycle` grant is
-  required (here the `svc:console` service principal holds it), and a caller
-  without it gets the not-found shape of § Error Responses
-  (`{#mission-status-errors}`). No test yet for a state operation; the
-  distinct discharge grant is
+  required (here the dedicated `lifecycle-console` client holds it, and the
+  dev-only route's `svc:console` service principal), and a caller without it
+  gets the not-found shape of § Error Responses (`{#mission-status-errors}`):
+  `the launcher's lifecycle console at the advertised endpoint (@spec status#mission-status-authentication, status#lifecycle-authorization, #1191) > no other client holds a lifecycle grant: the Mission's own client is answered as for an unknown Mission`.
+  The distinct discharge grant is
   `the discharge operation on the lifecycle endpoint > mission_lifecycle does not imply mission_discharge`.
 - § Revocation Propagation (`{#revocation-enforcement-classes}`) and its
   Recommended Access-Token TTL subsection: the AS advertises
@@ -705,10 +712,13 @@ the companion's endpoint (#1191): `mission_lifecycle_endpoint` takes a
 form-urlencoded body carrying `mission_id`, authenticates the caller by
 private-key JWT, answers `revoke` with the signed state-only Mission Status
 Response, and is advertised with its auth-methods member and
-`mission_status_signing_alg_values_supported`. This launcher binds no client
-a lifecycle grant there, so the walkthrough revokes through the dev-only
+`mission_status_signing_alg_values_supported`. The walkthrough's step 6
+revokes there as the dedicated lifecycle console:
+`the launcher's lifecycle console at the advertised endpoint (@spec status#mission-status-authentication, status#lifecycle-authorization, #1191) > the reference console types its client assertion client-authentication+jwt, names the issuer as its sole aud, and revokes a Mission whose tokens it does not hold`.
+The class is not claimed because the endpoint is served over plain HTTP here
+and no deployment evidence witnesses its TLS requirement. The dev-only
 `POST /missions/{id}/lifecycle` route, under the `svc:console` service token,
-which runs the same engine and returns the same signed response.
+runs the same engine and is not advertised.
 
 The refusal of an operation not adopted, which the revoke-only class also
 requires, matches the companion (§8).

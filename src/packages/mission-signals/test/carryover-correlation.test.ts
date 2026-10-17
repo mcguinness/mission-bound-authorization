@@ -123,7 +123,37 @@ describe("carryover cascade propagated by Mission Signals", () => {
     await emitter.drain();
     delivered.length = 0;
 
-    const store = new ExpansionDeferralStore(kernel, () => NOW, CARRYOVER);
+    // @spec mission#approval-authentication (#826, D425): this kernel's own
+    // read-only resources, classified below the approval-authentication floor.
+    const floor = {
+      policy_id: "carryover-signal-test",
+      deployment_scope: "this test's kernel",
+      floors: [
+        {
+          id: "high-risk-authority",
+          applies_to: ["irreversible_action" as const],
+          approval_surface: "browser" as const,
+          accepted_acr: ["mfa"],
+          max_authentication_age_seconds: 300,
+        },
+      ],
+      classification: [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: {
+            "payments:invoice.read": "consequential_read" as const,
+            "payments:invoice.list": "consequential_read" as const,
+          },
+        },
+        {
+          type: "mission_resource_access",
+          resource: LEDGER,
+          actions: { "ledger:vendor.read": "consequential_read" as const },
+        },
+      ],
+    };
+    const store = new ExpansionDeferralStore(kernel, () => NOW, CARRYOVER, floor);
     const pending = store.open({
       predecessorId: predecessor.id,
       intent: intentFor([RESOURCE, LEDGER]),

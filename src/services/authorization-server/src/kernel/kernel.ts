@@ -2080,9 +2080,20 @@ export class MissionKernel {
        * monotonic union, idempotency, or the commit.
        */
       policyRule?: string;
+      /**
+       * @spec status#idempotency: the Lifecycle request's stale-version guard,
+       * compared before the terminal-state refusal and the `event_id`
+       * idempotent arm, inside the caller's transaction.
+       */
+      expectedVersion?: number;
     },
   ): { record: MissionRecord; evidence: ContainmentEvidence } {
     const record = this.applyExpiry(this.mustGet(id));
+    if (input.expectedVersion !== undefined && input.expectedVersion !== record.version) {
+      throw new StaleVersionError(
+        `expected_version ${input.expectedVersion} differs from the current state version`,
+      );
+    }
     if (TERMINAL_STATES.has(record.state)) {
       throw new LifecycleConflictError(`contain is not legal from ${describeLifecycle(record)}`);
     }

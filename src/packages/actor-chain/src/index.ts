@@ -51,7 +51,13 @@ export function flattenActChain(act: ActObject | undefined): FlatActEntry[] {
   const leafFirst: FlatActEntry[] = [];
   let node: ActObject | undefined = act;
   const guard = new Set<ActObject>();
-  while (node) {
+  // RFC 8693 Section 4.1: every `act` is a JSON object. Only an absent member
+  // ends the chain; a present null, false, string, number or array at any
+  // hop is malformed, never read as the end of the chain.
+  while (node !== undefined) {
+    if (typeof node !== "object" || node === null || Array.isArray(node)) {
+      throw new ActorChainError("act must be an object at every hop");
+    }
     if (guard.has(node)) throw new ActorChainError("cyclic act chain");
     guard.add(node);
     const { act: inner, ...entry } = node;

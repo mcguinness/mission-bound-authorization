@@ -12,7 +12,6 @@
 
 import type { IncomingMessage } from "node:http";
 import { createLocalJWKSet, decodeJwt, decodeProtectedHeader, type JWK, jwtVerify } from "jose";
-import type { LifecycleOperation } from "../kernel/types.js";
 import { DPOP_PROOF_REPLAY_WINDOW_S, type DpopProofReplay } from "./dpop-replay.js";
 
 /** The advertised endpoint's path, published as `mission_lifecycle_endpoint`. */
@@ -217,7 +216,10 @@ export interface SuspendSchedule {
   onExpiry: "resume" | "revoke";
 }
 
-/** The parsed request members of `revoke`, `suspend`, `resume` and `complete`. */
+/**
+ * The parsed request members every Lifecycle operation shares: `reason`, the
+ * `expected_version` guard and the schedule pair.
+ */
 export interface TransitionMembers {
   reason?: string;
   /** @spec status#idempotency: the state version the caller last observed. */
@@ -230,16 +232,36 @@ export type MembersResult<T> = { ok: true; value: T } | { ok: false; description
 
 /**
  * @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency:
- * parse the request members of a state-changing operation. Request-shape
- * failures are `invalid_request`; nothing here reads the Mission.
+ * parse the request members every Lifecycle operation shares, once, before
+ * the operation is dispatched, so no operation silently ignores one.
+ * Request-shape failures are `invalid_request`; nothing here reads the
+ * Mission.
+ *
+ * - `expected_version` is the common stale-version guard. Each operation that
+ *   adopts it compares it inside the transaction of its own mutation:
+ *   `revoke`, `suspend`, `resume` and `complete`, and this deployment's
+ *   `contain`. `discharge` does not adopt it: its companion defines the
+ *   operation's members completely and gives it no stale-version guard
+ *   (discharge#discharge-operation, "No `expected_version`"), so a
+ *   `discharge` carrying one is refused here, before any target, forwarded
+ *   or not, is resolved, rather than accepted with a guard it never applies.
+ * - `suspend_until` and `on_expiry` are valid only on `suspend`
+ *   ({@link parseSuspendSchedule}), extension operations included.
+ * - `reason` is bounded; `discharge` refuses it in its own handler.
  */
 export function parseTransitionMembers(
-  operation: LifecycleOperation,
+  operation: string,
   body: Record<string, unknown>,
 ): MembersResult<TransitionMembers> {
   const value: TransitionMembers = {};
+  if (operation === "discharge" && body.expected_version !== undefined) {
+    return {
+      ok: false,
+      description: "expected_version is not a discharge request member: discharge has no stale-version guard",
+    };
+  }
   const reason = body.reason;
-  if (reason !== undefined) {
+  if (reason !== undefined && operation !== "discharge") {
     if (typeof reason !== "string" || reason.length > REASON_MAX_CHARS) {
       return { ok: false, description: `reason must be a string of at most ${REASON_MAX_CHARS} characters` };
     }
@@ -271,7 +293,7 @@ const RFC3339_DATE_TIME = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[
  * is invalid and changes nothing. Undefined when the request carries neither.
  */
 export function parseSuspendSchedule(
-  operation: LifecycleOperation,
+  operation: string,
   body: Record<string, unknown>,
 ): MembersResult<SuspendSchedule | undefined> {
   const until = body.suspend_until;
