@@ -14,7 +14,7 @@ import { evaluate, type EvaluateOptions, type EvaluationRequest } from "../src/e
 import { DOMAIN_MODEL, Fga, FgaAttachError, FgaDomainAdmin } from "../src/fga.js";
 import { type AuthorityEntry, deriveContextualTuples, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
-import { fgaResourcePolicy, issuerLocalPrincipals, principalObject, type ResourcePolicy } from "../src/resource-policy.js";
+import { clientObject, fgaResourcePolicy, issuerLocalClients, issuerLocalPrincipals, principalObject, type ResourcePolicy } from "../src/resource-policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
 
@@ -39,6 +39,7 @@ if (!up) console.warn("OpenFGA unreachable; skipping the Resource-policy OpenFGA
 const NOW = new Date("2026-07-22T12:00:00Z");
 const CLAIMS = openTestClaims({ now: () => NOW });
 const ALICE = principalObject({ iss: ISSUER, sub: "alice" });
+const AP_AGENT = clientObject({ iss: ISSUER, client: "ap-agent" });
 const CONNECTION = { apiUrl: API_URL, presharedKey: KEY, ...(CA ? { caCertPath: CA } : {}) };
 
 const READ_ENTRY: AuthorityEntry = {
@@ -84,12 +85,12 @@ const payReq = (invoiceId: string, vendorId: string, iss = ISSUER): EvaluationRe
     context: context({ action_class: "irreversible_action", parameter_digest: `sha-256:pd-${invoiceId}`, amount: { amount: "125.00", currency: "USD" } }),
   });
 
-const readReq = (invoiceId: string, vendorId: string, iss = ISSUER): EvaluationRequest =>
+const readReq = (invoiceId: string, vendorId: string, iss = ISSUER, clientId = "ap-agent"): EvaluationRequest =>
   withCredential({
     subject: { id: "alice", properties: { iss } },
     resource: { type: "invoice", id: invoiceId, properties: { audience: RESOURCE, vendor_id: vendorId } },
     action: { name: "payments:invoice.read" },
-    context: context({ action_class: "consequential_read" }),
+    context: context({ action_class: "consequential_read", actor: { client_id: clientId } }),
   });
 
 const listReq = (vendorIds: string[]): EvaluationRequest =>
@@ -107,8 +108,13 @@ let admin: FgaDomainAdmin;
 
 const PAY_ACME = { user: ALICE, relation: "authorized_payer", object: "vendor:acme" };
 const READ_ACME = { user: ALICE, relation: "authorized_reader", object: "vendor:acme" };
+/** The client's own entitlement on acme (D429). */
+const CLIENT_ACME = { user: AP_AGENT, relation: "authorized_client", object: "vendor:acme" };
+/** Alice's and the client's membership of the tenant acme and globex belong to (D429). */
+const ALICE_IN_TENANT = { user: ALICE, relation: "member", object: "tenant:payments" };
 
-const policyOver = (checker: Fga): ResourcePolicy => fgaResourcePolicy(checker, { principals: issuerLocalPrincipals(ISSUER) });
+const policyOver = (checker: Fga): ResourcePolicy =>
+  fgaResourcePolicy(checker, { principals: issuerLocalPrincipals(ISSUER), clients: issuerLocalClients(ISSUER) });
 const opts = (resourcePolicy: ResourcePolicy, v: MissionView = view()): EvaluateOptions => ({
   view: v,
   fga,
@@ -125,11 +131,19 @@ d("independent Resource policy against OpenFGA (@spec runtime#input-resource-pol
   beforeAll(async () => {
     ({ fga, storeId, modelId } = await Fga.bootstrap(CONNECTION));
     admin = new FgaDomainAdmin(fga);
-    // The administrator's grants: alice may read and pay Acme; every invoice's
-    // owning vendor. Nothing here comes from a Mission or a token.
+    // The administrator's grants: alice may read and pay Acme, through the
+    // client ap-agent, both members of the tenant acme and globex belong to;
+    // every invoice's owning vendor. Nothing here comes from a Mission or a
+    // token.
     await admin.grant([
       PAY_ACME,
       READ_ACME,
+      CLIENT_ACME,
+      { user: AP_AGENT, relation: "authorized_client", object: "vendor:globex" },
+      { user: "tenant:payments", relation: "tenant", object: "vendor:acme" },
+      { user: "tenant:payments", relation: "tenant", object: "vendor:globex" },
+      ALICE_IN_TENANT,
+      { user: AP_AGENT, relation: "member", object: "tenant:payments" },
       { user: "vendor:acme", relation: "vendor", object: "invoice:inv-1" },
       { user: "vendor:acme", relation: "vendor", object: "invoice:inv-2" },
       { user: "vendor:globex", relation: "vendor", object: "invoice:inv-3" },
@@ -252,5 +266,39 @@ d("independent Resource policy against OpenFGA (@spec runtime#input-resource-pol
 
     expect((await evaluate(listReq(["acme"]), opts(policyOver(fga)))).decision).toBe(true);
     expect((await evaluate(listReq(["acme", "globex"]), opts(policyOver(fga)))).context.denial_reason).toBe("resource_policy");
+  });
+  it("the client and the tenant are policy dimensions (D429): another client, a revoked client entitlement, and the same subject outside the vendor's tenant each deny resource_policy; restoring each permits", async () => {
+    expect((await evaluate(readReq("inv-1", "acme"), opts(policyOver(fga)))).decision).toBe(true);
+    // A client with no entitlement of its own, the subject's unchanged.
+    expect((await evaluate(readReq("inv-1", "acme", ISSUER, "intruder"), opts(policyOver(fga)))).context.denial_reason).toBe("resource_policy");
+    await admin.revoke([CLIENT_ACME]);
+    try {
+      expect((await evaluate(readReq("inv-1", "acme"), opts(policyOver(fga)))).context.denial_reason).toBe("resource_policy");
+    } finally {
+      await admin.grant([CLIENT_ACME]);
+    }
+    expect((await evaluate(readReq("inv-1", "acme"), opts(policyOver(fga)))).decision).toBe(true);
+
+    // A vendor in another tenant: alice and the client hold direct grants on
+    // it, and the Mission covers it, but neither is that tenant's member.
+    const umbrellaView = view([{ ...READ_ENTRY, constraints: { vendors: ["acme", "globex", "umbrella"] } }]);
+    await admin.grant([
+      { user: "tenant:other", relation: "tenant", object: "vendor:umbrella" },
+      { user: "vendor:umbrella", relation: "vendor", object: "invoice:inv-9" },
+      { user: ALICE, relation: "authorized_reader", object: "vendor:umbrella" },
+      { user: AP_AGENT, relation: "authorized_client", object: "vendor:umbrella" },
+    ]);
+    expect((await evaluate(readReq("inv-9", "umbrella"), opts(policyOver(fga), umbrellaView))).context.denial_reason).toBe("resource_policy");
+    const joinOther = [
+      { user: ALICE, relation: "member", object: "tenant:other" },
+      { user: AP_AGENT, relation: "member", object: "tenant:other" },
+    ];
+    await admin.grant(joinOther);
+    expect((await evaluate(readReq("inv-9", "umbrella"), opts(policyOver(fga), umbrellaView))).decision).toBe(true);
+    // Leaving the tenant takes effect on the next decision.
+    await admin.revoke([joinOther[0] as (typeof joinOther)[number]]);
+    expect((await evaluate(readReq("inv-9", "umbrella"), opts(policyOver(fga), umbrellaView))).context.denial_reason).toBe("resource_policy");
+    // Acme's own tenant membership still holds.
+    expect((await evaluate(readReq("inv-1", "acme"), opts(policyOver(fga)))).decision).toBe(true);
   });
 });

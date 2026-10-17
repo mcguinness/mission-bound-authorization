@@ -14,8 +14,8 @@
  *   Mission approval or a token.
  */
 
-import { Fga, FgaDomainAdmin, principalObject } from "@mission/pdp";
-import { RESOURCE_POLICY_SEED } from "@mission/demo-data";
+import { clientObject, Fga, FgaDomainAdmin, principalObject } from "@mission/pdp";
+import { RESOURCE_POLICY_SEED, type ResourcePolicyPrincipalSeed } from "@mission/demo-data";
 
 type TupleKey = { user: string; relation: string; object: string };
 
@@ -48,17 +48,20 @@ export async function openResourcePolicyStore(
 }
 
 /**
- * The development grants: each seeded entitlement for its subject under
- * `issuer` (the issuer-local mapping), and each invoice's owning vendor as
+ * The development grants, every principal under `issuer` (the issuer-local
+ * mapping): each seeded tenant's vendors and members (D429), each seeded
+ * entitlement for its subject or client, and each invoice's owning vendor as
  * the payments store records it.
  */
 export function developmentResourcePolicyTuples(issuer: string, invoices: ReadonlyArray<{ id: string; vendor_id: string }>): TupleKey[] {
+  const principal = (p: ResourcePolicyPrincipalSeed) =>
+    "sub" in p ? principalObject({ iss: issuer, sub: p.sub }) : clientObject({ iss: issuer, client: p.client });
   return [
-    ...RESOURCE_POLICY_SEED.map((e) => ({
-      user: principalObject({ iss: issuer, sub: e.sub }),
-      relation: e.relation,
-      object: `vendor:${e.vendor}`,
-    })),
+    ...RESOURCE_POLICY_SEED.tenants.flatMap((t) => [
+      ...t.vendors.map((v) => ({ user: `tenant:${t.tenant}`, relation: "tenant", object: `vendor:${v}` })),
+      ...t.members.map((m) => ({ user: principal(m), relation: "member", object: `tenant:${t.tenant}` })),
+    ]),
+    ...RESOURCE_POLICY_SEED.entitlements.map((e) => ({ user: principal(e), relation: e.relation, object: `vendor:${e.vendor}` })),
     ...invoices.map((inv) => ({ user: `vendor:${inv.vendor_id}`, relation: "vendor", object: `invoice:${inv.id}` })),
   ];
 }
