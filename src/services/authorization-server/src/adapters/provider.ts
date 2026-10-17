@@ -49,8 +49,10 @@ import {
  * parameter allow-list drops it from every PAR and authorization request.
  */
 export const DERIVED_AUTHORIZATION_DETAILS_MARKER = "__mission_derived_authorization_details";
-/** Interaction-result member marking an approval no End-User authenticated
- *  in the user agent (a headless approval service's, #826). */
+/** Interaction-result member marking an approval that completes isolated
+ *  from the user agent's provider session (#826): a headless approval
+ *  service's, or a browser approval in a user agent whose session belongs to
+ *  another account. */
 const HEADLESS_APPROVAL_RESULT = "mission_headless_approval";
 
 /**
@@ -311,6 +313,7 @@ import {
 } from "./transaction-authorization.js";
 export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
+import { ceilingConsentOf, type ProgressiveDrawdownOptions } from "../kernel/progressive.js";
 import { ID_JAG_TOKEN_TYPE } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
@@ -349,8 +352,10 @@ import {
   type DischargeReceiptObservation,
   GateError,
   LifecycleConflictError,
+  type ApproveInput,
   type MissionKernel,
   MissionNotFoundError,
+  type PreparedApproval,
   StaleVersionError,
   STATUS_SIGNING_ALG,
   type StatusObservation,
@@ -702,6 +707,13 @@ export interface AdapterOptions {
    * disabled capability refuses with its path's standard error.
    */
   capabilities?: ReadonlySet<ProviderCapability>;
+  /**
+   * @spec progressive#in-ceiling-expansion: the policy-adjudicated drawdown
+   * path, default off. Absent, an approval decision's ceiling members are
+   * ignored and an expansion of a Mission that carries a ceiling takes the
+   * ordinary fresh-approval path.
+   */
+  progressive?: ProgressiveDrawdownOptions;
 }
 
 /**
@@ -911,10 +923,15 @@ export function buildProvider(opts: AdapterOptions): Provider {
    *
    * - `counted: true` — the Mission's own approval grant (`kernel.findByGrant`):
    *   each derivation counts against its `derivation_limit`;
-   * - `counted: false` — a delegation-family grant, or a durable-index hit whose
-   *   Mission's `grant_id` has moved on: live state only, never counted (a
+   * - `counted: false` — a delegation-family grant, or another durable-index hit
+   *   that is not an approval grant: live state only, never counted (a
    *   family's single count was spent at the exchange that created it,
    *   @spec async-delegation).
+   *
+   * An approval grant the index resolves (its Mission's `grant_id` no longer
+   * names it) still counts (#916): a Mission's binding never moves
+   * (`kernel.bindGrant` is compare-and-set), and if it ever did, an approval
+   * grant must not escape the derivation limit.
    *
    * Undefined for a grant that was never Mission-bound, or a family whose
    * Mission no longer resolves. An index hit with no Mission refuses
@@ -924,8 +941,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const record = kernel.findByGrant(grantId);
     if (record) return { record, counted: true };
     const fam = opts.familyStore?.resolve(grantId);
-    const famRecord = fam ? kernel.get(fam.missionId) : missionForBoundGrant(grantId);
-    return famRecord ? { record: famRecord, counted: false } : undefined;
+    if (fam) {
+      const famRecord = kernel.get(fam.missionId);
+      return famRecord ? { record: famRecord, counted: false } : undefined;
+    }
+    const indexed = missionForBoundGrant(grantId);
+    if (!indexed) return undefined;
+    return { record: indexed, counted: kernel.missionBoundGrants.resolve(grantId)?.kind === "approval" };
   }
 
   /**
@@ -1994,8 +2016,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
     await opts.kernel.drainLifecycleOutbox();
   });
 
-  // @spec mission#approval-authentication (#826): a headless approval
-  // leaves the client's user agent no End-User session. Its resume runs
+  // @spec mission#approval-authentication (#826): a headless approval, and a
+  // browser approval in a user agent whose provider session belongs to
+  // another account, leave the user agent's session as it was and add none:
+  // `decide()` marks both alike. The resume runs
   // without the session cookie this user agent holds, so that session is
   // neither read nor modified. Once the route returns, before the response is
   // flushed, the session the resume's login created is destroyed and its
@@ -2407,8 +2431,7 @@ async function handleChildJwtBearerGrant(
     for (const entry of effective) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     }
-    grantId = await grant.save();
-    kernel.bindGrant(record.id, grantId);
+    grantId = kernel.bindFirstGrant(record.id, await grant.save());
   }
 
   // 7. Resource + TTL — mirror mintDeferredToken; clamp the TTL to the child's
@@ -4198,8 +4221,7 @@ async function handleMissionDispatchGrant(
     for (const entry of effective) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     }
-    grantId = await grant.save();
-    kernel.bindGrant(record.id, grantId);
+    grantId = kernel.bindFirstGrant(record.id, await grant.save());
   }
 
   // Resource + TTL — mirror mintDeferredToken; clamp the TTL to the instance's
@@ -4247,9 +4269,10 @@ async function handleMissionDispatchGrant(
  * `max_age`? Approver-scoped, never Subject-scoped: this checks only the
  * principal acting as Approver for THIS approval event, never the Mission
  * Subject, who MAY be a different principal. Absence of either request
- * parameter trivially satisfies that parameter. This AS publishes and
- * enforces no approval-authentication floor of its own: the high-risk floor
- * of @spec mission#approval-authentication is not implemented here (#826).
+ * parameter trivially satisfies that parameter. The issuer's published
+ * approval-authentication floor is enforced separately, in `decide()`, on the
+ * complete derived authority (@spec mission#approval-authentication, #826,
+ * D425; `config/approval-floor.json`); this check never relaxes it.
  */
 function approverAuthenticationSatisfies(
   requested: { acrValues?: string; maxAge?: string; forceFreshLogin?: boolean },
@@ -4277,6 +4300,16 @@ function approverAuthenticationSatisfies(
   return true;
 }
 
+/**
+ * @spec mission#approval-event (step 7) (#916) — the provider grant identity
+ * of the approval decided on interaction `uid`: one grant per interaction, so
+ * a repeated or concurrent decision names the same grant (oidc-provider keeps
+ * a supplied `jti`, and its adapter's upsert overwrites the same id).
+ */
+function approvalGrantId(uid: string): string {
+  return createHash("sha256").update(`mission-approval-grant:${uid}`).digest("base64url");
+}
+
 async function decide(
   provider: Provider,
   opts: AdapterOptions,
@@ -4294,23 +4327,31 @@ async function decide(
     return;
   }
   const params = details.params as Record<string, unknown>;
-  // @spec mission#approval-authentication (#826): every completion of a
-  // headless approval, a refusal or a denial as much as a success, is marked
-  // for the headless-resume middleware and detached from the session this
-  // user agent held when the interaction began, so its resume neither reads
-  // nor refreshes that session. The detachment is needed because
+  // @spec mission#approval-authentication (#826): a browser approval in a
+  // user agent whose provider session belongs to another account completes
+  // isolated, as a headless approval does. Otherwise its resume meets
+  // oidc-provider's account switch (the logout confirmation): that session
+  // is saved with logout state and its cookie sent again, and, once the
+  // Mission exists, no code is issued. The Approver's own session, or none,
+  // keeps the ordinary browser completion.
+  const sessionAccount = details.session?.accountId;
+  const isolated = !interactive || (sessionAccount !== undefined && sessionAccount !== principal.sub);
+  // Every isolated completion, a refusal or a denial as much as a success, is
+  // marked for the isolated-resume middleware and detached from the session
+  // this user agent held when the interaction began, so its resume neither
+  // reads nor refreshes that session. The detachment is needed because
   // oidc-provider's resume compares the interaction's session with its own
   // before it handles an error result, and this resume runs without the user
   // agent's session.
   const finish = async (result: Record<string, unknown>) => {
-    if (!interactive && details.session?.uid) {
+    if (isolated && details.session?.uid) {
       delete (details.session as { uid?: string }).uid;
       await details.save(Math.max(1, (details.exp ?? 0) - Math.floor(Date.now() / 1000)));
     }
     await provider.interactionFinished(
       ctx.req,
       ctx.res,
-      interactive ? result : { ...result, [HEADLESS_APPROVAL_RESULT]: true },
+      isolated ? { ...result, [HEADLESS_APPROVAL_RESULT]: true } : result,
     );
   };
   // @spec mission#submission-via-par — re-parse the pushed Submission envelope;
@@ -4380,20 +4421,23 @@ async function decide(
   // Token about the End-User this interaction authenticates, the Approver.
   // Refused `invalid_scope` before anything is created when the Approver is
   // not the Subject (issuer-qualified principals compared), and when no
-  // End-User authenticated in this user agent at all: a headless approval
-  // service's credential is not an interactive login.
+  // End-User authentication stays in this user agent: a headless approval
+  // service's credential is not an interactive login, and an isolated
+  // browser approval keeps no session for the Approver here.
   const requestedScope = splitScope(params.scope);
   if (requestedScope.oidc.includes("openid")) {
     const approverPrincipal = { iss: opts.issuer, sub: approver };
     const subjectPrincipal = { iss: opts.issuer, sub: subject };
     const samePrincipal =
       approverPrincipal.iss === subjectPrincipal.iss && approverPrincipal.sub === subjectPrincipal.sub;
-    if (!samePrincipal || !interactive) {
+    if (!samePrincipal || isolated) {
       await finish({
         error: "invalid_scope",
-        error_description: samePrincipal
-          ? "openid requires an End-User authenticated in this user agent; a headless approval is not one"
-          : "openid is unavailable when the Approver is not the Mission's Subject",
+        error_description: !samePrincipal
+          ? "openid is unavailable when the Approver is not the Mission's Subject"
+          : !interactive
+            ? "openid requires an End-User authenticated in this user agent; a headless approval is not one"
+            : "openid requires an End-User whose session this user agent keeps; it holds another account's session",
       });
       return;
     }
@@ -4511,35 +4555,100 @@ async function decide(
   // requested ceiling that passes while the approval is pending refuses HERE and
   // creates no Mission. Mapped like the derivation refusal above: the
   // interaction finishes with the error, never a 500.
-  let record: MissionRecord;
-  try {
-    record = opts.kernel.approve({
-      intent: intent as MissionIntent,
-      ...(proposedAuthority ? { proposedAuthority } : {}),
-      // @spec mission#intent-submission-evidence — the verified facts land on
-      // the Mission Record (outside all anchors), request-derived, never
-      // fabricated downstream.
-      ...(submissionEvidence?.length ? { submissionEvidence } : {}),
-      subject: { iss: opts.issuer, sub: subject },
-      approver: { iss: opts.issuer, sub: approver },
-      clientId: String(params.client_id),
-      approvalEventId: `apev_${details.uid}`,
-    });
-  } catch (e) {
-    if (e instanceof IntentError) {
-      await finish({
-        error: e.code,
-        error_description: e.message,
-      });
-      return;
+  //
+  // @spec mission#approval-event (step 7) (#916) — the order of writes. The
+  // approval is prepared first, so every refusal (above, and in
+  // `prepareApproval`) happens before anything is written, except that
+  // the progressive ceiling consent, established at the commit's creation
+  // instant, refuses after the grant save (an inert grant a retry
+  // overwrites). The provider grant
+  // is saved next, under an identity derived from this interaction, and the
+  // record then commits already bound to it. A failure before that commit
+  // leaves an inert grant (no code, no Mission, no index entry) that a retry
+  // overwrites. A failure after it leaves an `active`, bound Mission whose code
+  // is not issued yet: the window #250's cross-store atomicity owns. A repeated
+  // or concurrent decision on this interaction names the same grant and the
+  // same approval event, so it recovers the one binding instead of creating
+  // another.
+  const approvalEventId = `apev_${details.uid}`;
+  const grantId = approvalGrantId(details.uid);
+  // @spec progressive#progressive-authorization: the authority ceiling and
+  // drawdown policy the Approver consented on this approval surface, read only
+  // where the deployment selects Progressive authorization.
+  const ceiling = opts.progressive ? ceilingConsentOf(body) : undefined;
+  const approveInput: ApproveInput = {
+    intent: intent as MissionIntent,
+    ...(proposedAuthority ? { proposedAuthority } : {}),
+    ...(ceiling ? { ceiling } : {}),
+    // @spec mission#intent-submission-evidence — the verified facts land on
+    // the Mission Record (outside all anchors), request-derived, never
+    // fabricated downstream.
+    ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+    subject: { iss: opts.issuer, sub: subject },
+    approver: { iss: opts.issuer, sub: approver },
+    clientId: String(params.client_id),
+    approvalEventId,
+  };
+  const existing = opts.kernel.findByApprovalEvent(approvalEventId);
+  // A retry recovers the committed approval only when it is the same decision:
+  // the same Approver, Subject and client as the committed record. Anything
+  // else is refused before the grant is touched, so a retry can neither
+  // rewrite the committed approval's grant nor complete its code under
+  // another login.
+  if (
+    existing &&
+    (existing.approval_basis.consent_principal?.sub !== approver ||
+      existing.subject.sub !== subject ||
+      existing.client_id !== String(params.client_id))
+  ) {
+    ctx.status = 403;
+    ctx.body = {
+      error: "approval_forbidden",
+      error_description: "this interaction's approval is already committed for another Approver, Subject or client",
+    };
+    return;
+  }
+  let prepared: PreparedApproval | undefined;
+  if (!existing) {
+    try {
+      prepared = opts.kernel.prepareApproval(approveInput);
+    } catch (e) {
+      if (e instanceof IntentError) {
+        await finish({
+          error: e.code,
+          error_description: e.message,
+        });
+        return;
+      }
+      throw e;
     }
-    throw e;
+  }
+  // The interaction's approval is reserved for this decision before the
+  // asynchronous grant save, with no await since the checks above: the first
+  // decision to reserve names the Approver, Subject, client and grant, and a
+  // concurrent decision that differs is refused here, so the committed Mission
+  // and its provider grant always agree on who approved.
+  if (
+    !opts.kernel.reserveApproval({
+      approvalEventId,
+      approver: approveInput.approver,
+      subject: approveInput.subject,
+      clientId: approveInput.clientId,
+      grantId,
+    })
+  ) {
+    ctx.status = 403;
+    ctx.body = {
+      error: "approval_forbidden",
+      error_description: "this interaction's approval is reserved for another Approver, Subject or client",
+    };
+    return;
   }
 
   // @spec mission#approval-authentication (#826): the provider account is the
   // authenticated Approver; the Mission records the Subject, and every
   // Mission-bound token projects it (the JWT customizer).
-  const grant = new provider.Grant({ accountId: approver, clientId: String(params.client_id) });
+  const grant = new provider.Grant({ jti: grantId, accountId: approver, clientId: String(params.client_id) } as never);
   // @spec mission#scope-projection — the grant holds exactly what the
   // request named: its OIDC values (openid enables an id_token), and any
   // resource values the check above let through, so the authorization code
@@ -4549,14 +4658,36 @@ async function decide(
   if (requestedScope.resource.length && audience) {
     grant.addResourceScope(audience, requestedScope.resource.join(" "));
   }
-  // Containment: the grant's rar copies the EFFECTIVE set. A freshly approved
-  // Mission has no containment, so this is the approved set as-is (fast path).
-  const effective = opts.kernel.effectiveAuthoritySet(record);
-  for (const entry of effective) {
+  // Containment: the grant's rar copies the EFFECTIVE set: on a retry, the
+  // committed record's; otherwise the prepared set, which is exactly what the
+  // commit records (a freshly approved Mission has no containment).
+  const grantAuthority = existing
+    ? opts.kernel.effectiveAuthoritySet(existing)
+    : (prepared as PreparedApproval).authoritySet;
+  for (const entry of grantAuthority) {
     (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
   }
-  const grantId = await grant.save();
-  opts.kernel.bindGrant(record.id, grantId);
+  await grant.save();
+  let record: MissionRecord;
+  if (existing) {
+    // Idempotent for the grant it already holds; refuses any other.
+    opts.kernel.bindGrant(existing.id, grantId);
+    record = existing;
+  } else {
+    try {
+      record = opts.kernel.approve({ ...approveInput, grantId }, prepared);
+    } catch (e) {
+      if (e instanceof IntentError) {
+        await finish({
+          error: e.code,
+          error_description: e.message,
+        });
+        return;
+      }
+      throw e;
+    }
+  }
+  const effective = opts.kernel.effectiveAuthoritySet(record);
 
   // @spec mission#scope-projection — an Intent-only request (configured
   // mapping: no `authorization_details`, and no resource `scope` either,
@@ -4582,10 +4713,9 @@ async function decide(
   // Approver's own, with its achieved `acr` and authentication time, never a
   // time manufactured from the approval click and never an authentication of
   // a different Subject. oidc-provider finishes an interaction only through
-  // a login, which on a headless approval is the code's account and nothing
-  // more: this user agent is the client's, no End-User authenticated in it,
-  // and the resume leaves it no session (`finish` and the headless-resume
-  // middleware).
+  // a login, which on an isolated approval is the code's account and nothing
+  // more: the resume leaves this user agent the session it held, and no
+  // other (`finish` and the isolated-resume middleware).
   await finish({
     login: { accountId: approver, acr: principal.acr, ts: principal.auth_time, remember: interactive },
     consent: { grantId },

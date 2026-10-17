@@ -10,8 +10,10 @@
  * recomputes `digest` over the snapshot it holds for that `id` and refuses the
  * activation when the version or digest differs: editing a policy's content,
  * even under an unchanged version, never adjudicates an activation the human
- * did not consent to. The registry is the reference implementation's retained
- * snapshot store; it holds the current snapshot per `id`, not a history.
+ * did not consent to. The registry is the CURRENT eligibility source: it holds
+ * the current snapshot per `id`, and removing an `id` retires that policy. The
+ * history an auditor needs is the separate retained snapshot store
+ * (`ActivationPolicySnapshotStore`), which no activation gate reads.
  */
 import { type ActivationPolicyRef, activationPolicyDigest } from "@mission/core";
 
@@ -55,6 +57,24 @@ export function activationPolicyMatches(
   registry: ActivationPolicyRegistry | undefined,
   ref: ActivationPolicyRef,
 ): boolean {
+  return verifiedActivationPolicy(iss, registry, ref) !== undefined;
+}
+
+/**
+ * @spec mission#standing-consent-bases: the activation gate's form of
+ * {@link activationPolicyMatches}: the held snapshot this issuer evaluates for
+ * `ref`, when it matches the committed `digest`, else undefined. The caller
+ * hands the returned snapshot to the record funnel
+ * (`insertRecord`'s `activationPolicies`), which retains exactly those bytes.
+ * Only the current registry is consulted: a retained snapshot never makes a
+ * replaced or retired policy eligible.
+ */
+export function verifiedActivationPolicy(
+  iss: string,
+  registry: ActivationPolicyRegistry | undefined,
+  ref: ActivationPolicyRef,
+): RegisteredActivationPolicy | undefined {
   const current = mintActivationPolicyRef(iss, registry, ref.id, ref.version);
-  return current !== undefined && current.digest === ref.digest;
+  if (current === undefined || current.digest !== ref.digest) return undefined;
+  return (registry as ActivationPolicyRegistry)[ref.id];
 }

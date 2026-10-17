@@ -1037,7 +1037,7 @@ At issuance (the token exchange at the Mission Issuer,
 | Condition | Error |
 |---|---|
 | `subject_token_type` is not `refresh_token`, or an access, delegated, or bare identity-assertion token is presented | `invalid_request` |
-| The subject token does not resolve to a Mission | `invalid_grant` |
+| The subject token does not resolve to a Mission | `invalid_request` |
 | The Mission is not `active` | `invalid_request` |
 | The target Resource AS is not authorized for the requested resources under the Authority Set | `invalid_target` |
 
@@ -1596,6 +1596,11 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Changes a requirement: grant issuance refuses a subject token that
+  does not resolve to a Mission with `invalid_request`, where it was
+  `invalid_grant`, as Section 2.2.2 of RFC 8693 requires for an
+  invalid subject token; redemption keeps `invalid_grant` (#1178).
 
 - Grant issuance at the originating AS refuses a Mission that is not
   `active` with `invalid_request`, following the issuance profile's

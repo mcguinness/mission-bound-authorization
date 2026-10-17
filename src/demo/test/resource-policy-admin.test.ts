@@ -7,7 +7,7 @@
  * resource-policy-as-native.test.ts.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Fga, FgaDomainAdmin, principalObject } from "@mission/pdp";
+import { clientObject, Fga, FgaDomainAdmin, principalObject } from "@mission/pdp";
 import {
   parseResourcePolicyCommand,
   ResourcePolicyUsageError,
@@ -18,6 +18,7 @@ import {
 const ISS = "http://localhost:4400";
 const DEFAULTS = { url: "https://openfga.test", presharedKey: "key" };
 const ALICE = principalObject({ iss: ISS, sub: "alice" });
+const AP_AGENT = clientObject({ iss: ISS, client: "ap-agent" });
 
 /** A stand-in OpenFGA client that records each write. */
 function recordingFga() {
@@ -51,6 +52,32 @@ describe("pnpm resource-policy administers the stored entitlements (@spec runtim
     ]);
   });
 
+  it("administers the client and tenant dimensions (D429): a client's entitlement, a subject's or client's tenant membership, and a vendor's tenant, each one tuple", async () => {
+    const { fga, writes } = recordingFga();
+    const admin = new FgaDomainAdmin(fga);
+    const lines = [];
+    for (const argv of [
+      ["revoke", "--iss", ISS, "--client", "ap-agent", "--relation", "client", "--vendor", "acme"],
+      ["grant", "--iss", ISS, "--sub", "alice", "--relation", "member", "--tenant", "payments"],
+      ["grant", "--iss", ISS, "--client", "ap-agent", "--relation", "member", "--tenant", "payments"],
+      ["grant", "--relation", "tenant", "--tenant", "payments", "--vendor", "acme"],
+    ]) {
+      lines.push(await runResourcePolicyCommand(parseResourcePolicyCommand(argv), admin));
+    }
+    expect(lines).toEqual([
+      `revoked ${AP_AGENT} authorized_client vendor:acme`,
+      `granted ${ALICE} member tenant:payments`,
+      `granted ${AP_AGENT} member tenant:payments`,
+      "granted tenant:payments tenant vendor:acme",
+    ]);
+    expect(writes.map((w) => (w as { body: unknown }).body)).toEqual([
+      { deletes: [{ user: AP_AGENT, relation: "authorized_client", object: "vendor:acme" }] },
+      { writes: [{ user: ALICE, relation: "member", object: "tenant:payments" }] },
+      { writes: [{ user: AP_AGENT, relation: "member", object: "tenant:payments" }] },
+      { writes: [{ user: "tenant:payments", relation: "tenant", object: "vendor:acme" }] },
+    ]);
+  });
+
   it("refuses a command it does not fully understand, before any write", () => {
     const refused = [
       [],
@@ -63,6 +90,16 @@ describe("pnpm resource-policy administers the stored entitlements (@spec runtim
       ["revoke", "--iss", ISS, "--iss", ISS, "--sub", "alice", "--relation", "reader", "--vendor", "acme"],
       ["revoke", "--iss", ISS, "--sub", "--relation", "reader", "--vendor", "acme"],
       ["move-invoice", "--invoice", "inv-1", "--to", "globex"],
+      // D429: a client's entitlement takes a client and a vendor only.
+      ["grant", "--iss", ISS, "--sub", "alice", "--relation", "client", "--vendor", "acme"],
+      ["grant", "--iss", ISS, "--client", "ap-agent", "--relation", "client", "--invoice", "inv-1"],
+      // A membership names exactly one member and a tenant.
+      ["grant", "--iss", ISS, "--sub", "alice", "--client", "ap-agent", "--relation", "member", "--tenant", "payments"],
+      ["grant", "--iss", ISS, "--relation", "member", "--tenant", "payments"],
+      ["grant", "--iss", ISS, "--sub", "alice", "--relation", "member", "--vendor", "acme"],
+      // A vendor's tenant takes no principal.
+      ["grant", "--iss", ISS, "--relation", "tenant", "--tenant", "payments", "--vendor", "acme"],
+      ["grant", "--relation", "tenant", "--tenant", "payments", "--invoice", "inv-1"],
     ];
     for (const argv of refused) expect(() => parseResourcePolicyCommand(argv), JSON.stringify(argv)).toThrow(ResourcePolicyUsageError);
   });

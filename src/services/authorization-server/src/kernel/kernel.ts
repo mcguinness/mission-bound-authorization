@@ -4,12 +4,14 @@
  * oidc-provider types cross this boundary.
  */
 
-import { KeyObject, randomBytes, randomInt, sign } from "node:crypto";
+import { createPublicKey, KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
   type ApprovalContextManifestInput,
   authorityHash,
+  canonicalize,
   COMMIT_IS_EFFECT_REASONS,
   intentHash,
+  type JsonValue,
   proposalHash,
 } from "@mission/core";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
@@ -114,9 +116,22 @@ import {
   type TombstoneRetentionInputs,
 } from "./tombstones.js";
 import type { ActivationPolicyRegistry } from "./activation-policy.js";
+import {
+  type ActivationPolicyCommitmentCheck,
+  ActivationPolicySnapshotStore,
+  committedActivationPolicy,
+  type EvaluatedActivationPolicy,
+} from "./activation-policy-snapshots.js";
+import { ApprovalGovernanceRecordStore } from "./approval-governance.js";
+import {
+  type GovernedPolicyApprovalConfig,
+  GovernedPolicyConsentStore,
+  validateGovernedPolicyApprovalConfig,
+} from "./governed-policy-approval.js";
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { newMissionId } from "./mission-id.js";
+import { type CeilingConsent, ceilingMembersOf, consentCeiling, serializeCeiling } from "./progressive.js";
 import {
   IntentError,
   type IntentSubmissionPresenter,
@@ -217,7 +232,18 @@ CREATE TABLE IF NOT EXISTS missions (
   containment_json TEXT,
   discharged_json TEXT,
   submission_evidence_json TEXT,
-  termination_json TEXT
+  termination_json TEXT,
+  ceiling_json TEXT
+) STRICT;
+CREATE TABLE IF NOT EXISTS approval_reservations (
+  approval_event_id TEXT PRIMARY KEY,
+  approver_iss TEXT NOT NULL,
+  approver_sub TEXT NOT NULL,
+  subject_iss TEXT NOT NULL,
+  subject_sub TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  grant_id TEXT NOT NULL,
+  created_at TEXT NOT NULL
 ) STRICT;
 `;
 
@@ -251,6 +277,12 @@ function migrateMissions(db: Database): void {
   // columns, which stay readable for exactly those rows.
   if (!columns.has("termination_json")) {
     db.exec("ALTER TABLE missions ADD COLUMN termination_json TEXT");
+  }
+  // @spec progressive#progressive-authorization: the consented ceiling and
+  // its commitment, written once at creation. Nullable with no default: a
+  // row without it carries no ceiling, so it has no progressive authorization.
+  if (!columns.has("ceiling_json")) {
+    db.exec("ALTER TABLE missions ADD COLUMN ceiling_json TEXT");
   }
 }
 
@@ -330,6 +362,32 @@ export interface ApproveInput {
    * member absent.
    */
   capabilityResolution?: CapabilitySourceResolution[];
+  /**
+   * @spec mission#approval-event (step 7) (#916) — the provider grant, already
+   * saved, that this approval binds. The record commits with it as its
+   * `grant_id`, so the Mission is never committed unbound, and a repeated
+   * decision (the same `approvalEventId`) that names another grant is refused
+   * rather than rebinding the Mission.
+   */
+  grantId?: string;
+  /**
+   * @spec progressive#progressive-authorization: the authority ceiling and
+   * drawdown policy the Approver consented at this approval event, from the
+   * authenticated approval surface, never from the client. The drawdown
+   * policy's `digest` is minted here from the snapshot this issuer holds.
+   * Absent: the Mission has no progressive authorization.
+   */
+  ceiling?: CeilingConsent;
+}
+
+/**
+ * @spec mission#approval-event (steps 2-3) (#916) — everything an approval
+ * computes before anything is written ({@link MissionKernel.prepareApproval}).
+ */
+export interface PreparedApproval {
+  proposal: AuthorityEntry[] | undefined;
+  authoritySet: AuthorityEntry[];
+  resolvedSource: AuthoritySourceResolution;
 }
 
 /**
@@ -469,6 +527,13 @@ export interface KernelOptions {
    * absent, no carried child-creation policy can match.
    */
   activationPolicies?: ActivationPolicyRegistry;
+  /**
+   * @spec approval-governance#governed-policy: the `governed_policy`
+   * standing-consent basis: the consented roots this issuer holds and the
+   * humans authorized to approve each. OPTIONAL and default off: absent, no
+   * consent is recorded and nothing activates under this basis.
+   */
+  governedPolicyApproval?: GovernedPolicyApprovalConfig;
   /**
    * @spec mission#authority-sources, mission#approval-event — the deployment's
    * TRUSTED authority-source catalog. The approval event establishes
@@ -617,6 +682,25 @@ export class MissionKernel {
    */
   readonly tombstones: MissionTombstoneStore;
   /**
+   * @spec mission#standing-consent-bases: the retained activation policy
+   * snapshots, on this kernel's database and written in `insertRecord`'s
+   * transaction, kept for the audit horizon of every Mission activated under
+   * each. An audit read only: no activation gate consults it.
+   */
+  readonly activationPolicySnapshots: ActivationPolicySnapshotStore;
+  /**
+   * @spec approval-governance#atomic-commitment: the signed Approval
+   * Governance Records, on this kernel's database and written only in the
+   * creation transaction of the Mission each governs.
+   */
+  readonly governanceRecords: ApprovalGovernanceRecordStore;
+  /**
+   * @spec approval-governance#governed-policy-root: the retained governance
+   * state of the `governed_policy` basis (consented roots, human consents,
+   * recorded activation inputs), on this kernel's database.
+   */
+  readonly governedPolicyConsents: GovernedPolicyConsentStore;
+  /**
    * @spec control-plane#serialization — the in-flight owner of each
    * (mission, operation) identity; see {@link exclusiveDerivation}.
    */
@@ -714,8 +798,21 @@ export class MissionKernel {
       retentionSeconds: dischargeRetentionSeconds,
     });
     this.derivationReservations = new DerivationReservationStore(this.db, { now: this.now });
+    // @spec mission#standing-consent-bases, mission#mission-record: the
+    // snapshot horizon is each Mission's expiry plus the SAME declared audit
+    // retention the tombstones compose, so the deployment declares one audit
+    // horizon, not two that can drift.
+    this.activationPolicySnapshots = new ActivationPolicySnapshotStore(this.db, {
+      now: this.now,
+      auditRetentionSeconds: this.tombstones.horizons().audit_retention_seconds,
+    });
     this.dischargePins = new DischargeMappingPinStore(this.db);
     this.dischargeSelectors = new DischargeSelectorStore(this.db, this.now);
+    // @spec approval-governance#governed-policy: a configuration fault refuses
+    // construction, never an activation at request time.
+    if (opts.governedPolicyApproval) validateGovernedPolicyApprovalConfig(opts.governedPolicyApproval);
+    this.governanceRecords = new ApprovalGovernanceRecordStore(this.db);
+    this.governedPolicyConsents = new GovernedPolicyConsentStore(this.db);
   }
 
   validateIntent(raw: string): MissionIntent {
@@ -834,6 +931,46 @@ export class MissionKernel {
   }
 
   /**
+   * @spec approval-governance#governed-policy: the governed policy
+   * configuration, or undefined when the deployment leaves the basis off.
+   */
+  governedPolicyApproval(): GovernedPolicyApprovalConfig | undefined {
+    return this.opts.governedPolicyApproval;
+  }
+
+  /** The Mission Issuer this kernel creates records for. */
+  issuerId(): string {
+    return this.opts.issuer;
+  }
+
+  /** The derivation policy version a Mission created here records as `policy_version`. */
+  policyVersion(): string {
+    return this.opts.policy.policy_version;
+  }
+
+  /**
+   * The public half of the Status key {@link statusSigner} signs with, as a
+   * verifier resolves it by `kid` from the issuer's published key material.
+   */
+  statusVerificationKey(): KeyObject {
+    if (!this.statusPublicKey) this.statusPublicKey = createPublicKey(KeyObject.from(this.opts.statusKey));
+    return this.statusPublicKey;
+  }
+  private statusPublicKey?: KeyObject;
+
+  /**
+   * @spec mission#standing-consent-bases: the auditor's check of a Mission's
+   * committed activation policy, recomputed from the retained snapshot alone.
+   * Independent of the current registry: a policy since replaced or retired
+   * still verifies within the audit horizon, and verifying grants nothing.
+   */
+  verifyActivationPolicyCommitment(record: MissionRecord): ActivationPolicyCommitmentCheck {
+    const ref = committedActivationPolicy(record);
+    if (!ref) return { status: "not_applicable" };
+    return this.activationPolicySnapshots.verify(record.issuer, ref);
+  }
+
+  /**
    * @spec approval-governance#approval-context-manifest — the Approval Context
    * Manifest input for a Mission, taken FROM THE RECORD. `authority_source` is
    * a REQUIRED manifest input, so the manifest is computable only because the
@@ -847,6 +984,7 @@ export class MissionKernel {
       intent_hash: fresh.intent_hash,
       ...(fresh.proposal_hash ? { proposal_hash: fresh.proposal_hash } : {}),
       authority_hash: fresh.authority_hash,
+      ...(fresh.ceiling_hash ? { ceiling_hash: fresh.ceiling_hash } : {}),
       subject: fresh.subject,
       // @spec approval-governance#approval-context-manifest (#705): the
       // closed v1 manifest keeps its `approver` member; its value is the
@@ -1017,7 +1155,18 @@ export class MissionKernel {
    * proposal was submitted, the third); approval_event_id is the idempotency
    * key.
    */
-  approve(input: ApproveInput): MissionRecord {
+  /**
+   * @spec mission#approval-event (steps 2-3) (#916) — everything an approval
+   * computes before anything is written: the principal checks, the derived
+   * Authority Set with its capability-source bindings, and the established
+   * authority source and its ceiling. Every refusal of the approval happens
+   * here, except the progressive ceiling consent, which `approve` establishes
+   * at the commit's creation instant. The approval decision calls it once,
+   * saves the provider grant from
+   * its result, then commits exactly that result through {@link approve},
+   * which recomputes nothing.
+   */
+  prepareApproval(input: ApproveInput): PreparedApproval {
     // Trusted wiring modes are exclusive. Reject before derivation or resolver
     // side effects; an empty fact list still means no caller-supplied facts.
     if (this.opts.capabilityResolver && input.capabilityResolution?.length) {
@@ -1057,6 +1206,90 @@ export class MissionKernel {
       approver: input.approver,
     });
     this.assertAuthorityWithinSource(resolvedSource, authoritySet);
+    return { proposal, authoritySet, resolvedSource };
+  }
+
+  /**
+   * @spec mission#approval-event (step 7) (#916) — reserve an interaction's
+   * approval for one decision, synchronously, before the decision's
+   * asynchronous grant save. The first decision to reserve names the
+   * Approver, Subject, client and grant every later decision on the
+   * interaction must match: a matching decision (a retry) proceeds, any other
+   * refuses. So concurrent decisions cannot leave a Mission recording one
+   * Approver and a provider grant owned by another. Returns whether this
+   * decision holds the reservation.
+   */
+  reserveApproval(input: {
+    approvalEventId: string;
+    approver: { iss: string; sub: string };
+    subject: { iss: string; sub: string };
+    clientId: string;
+    grantId: string;
+  }): boolean {
+    const inserted = this.db
+      .prepare(
+        `INSERT INTO approval_reservations (approval_event_id, approver_iss, approver_sub, subject_iss, subject_sub, client_id, grant_id, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (approval_event_id) DO NOTHING`,
+      )
+      .run(
+        input.approvalEventId,
+        input.approver.iss,
+        input.approver.sub,
+        input.subject.iss,
+        input.subject.sub,
+        input.clientId,
+        input.grantId,
+        this.now().toISOString(),
+      );
+    if (inserted.changes === 1) return true;
+    const held = this.db
+      .prepare("SELECT * FROM approval_reservations WHERE approval_event_id = ?")
+      .get(input.approvalEventId) as Record<string, string> | undefined;
+    return (
+      held !== undefined &&
+      held.approver_iss === input.approver.iss &&
+      held.approver_sub === input.approver.sub &&
+      held.subject_iss === input.subject.iss &&
+      held.subject_sub === input.subject.sub &&
+      held.client_id === input.clientId &&
+      held.grant_id === input.grantId
+    );
+  }
+
+  /**
+   * @spec mission#approval-event (step 3) (#916) — revalidate, at the commit,
+   * the authority source an approval was prepared under. The same root, with
+   * the same provenance, must still pass every gate; a source withdrawn or
+   * changed in between refuses `access_denied`, and no other root is ever
+   * substituted. Returns the current resolution.
+   */
+  private revalidatePreparedSource(input: ApproveInput, prepared: PreparedApproval): AuthoritySourceResolution {
+    const current = this.establishAuthoritySource({
+      clientId: input.clientId,
+      subject: input.subject,
+      approver: input.approver,
+    });
+    if (
+      current.rootId !== prepared.resolvedSource.rootId ||
+      canonicalize(current.provenance as unknown as JsonValue) !==
+        canonicalize(prepared.resolvedSource.provenance as unknown as JsonValue)
+    ) {
+      throw new IntentError(
+        "access_denied",
+        "the authority source changed between the approval's preparation and its commit",
+      );
+    }
+    this.assertAuthorityWithinSource(current, prepared.authoritySet);
+    return current;
+  }
+
+  approve(input: ApproveInput, preparedEarlier?: PreparedApproval): MissionRecord {
+    // A result prepared earlier (the approval decision prepares, then saves its
+    // grant asynchronously) is revalidated here, at the commit.
+    const prepared = preparedEarlier
+      ? { ...preparedEarlier, resolvedSource: this.revalidatePreparedSource(input, preparedEarlier) }
+      : this.prepareApproval(input);
+    const { proposal, authoritySet, resolvedSource } = prepared;
     const authoritySource = resolvedSource.provenance;
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
     // drawn from the single mission-id.ts minting helper.
@@ -1074,6 +1307,12 @@ export class MissionKernel {
     // the same read, so the established expiry and the committed creation time
     // can never drift apart.
     const createdAt = this.now().toISOString();
+    // @spec progressive#progressive-authorization: a ceiling consented at this
+    // approval event is recorded with its `ceiling_hash`, and its consent
+    // instant is this event's own.
+    const ceiling = input.ceiling
+      ? consentCeiling(this.opts.issuer, this.opts.activationPolicies, input.ceiling, createdAt)
+      : undefined;
     // @spec mission#approval-basis — direct: the human approval event itself
     // creates the record; consent_principal == activation_actor == approver,
     // and root_commitment is this Mission's own authority_hash.
@@ -1125,19 +1364,33 @@ export class MissionKernel {
         this.opts.policy.derivation_limit_ceiling,
       ),
       derivation_count: 0,
-      grant_id: null,
+      // @spec mission#approval-event (step 7) (#916): bound at the commit, never after.
+      grant_id: input.grantId ?? null,
       status_list_idx: null,
+      ...(ceiling ?? {}),
     };
     try {
       this.insertRecord(record, undefined, { source: resolvedSource });
     } catch (e) {
       if (e instanceof UniqueViolationError) {
         // Idempotent approval: return the record this event already created.
+        // @spec mission#approval-event (step 7) (#916): a repeated decision
+        // binds nothing new. It names the same grant (the approval decision
+        // derives the grant's identity from the interaction), and a different
+        // one is refused, never a rebind.
         const existing = this.findByApprovalEvent(input.approvalEventId);
-        if (existing) return existing;
+        if (existing) {
+          if (input.grantId) this.bindGrant(existing.id, input.grantId);
+          return this.get(existing.id) ?? existing;
+        }
       }
       throw e;
     }
+    // @spec issuance-grant#effective-set-projection — the durable discriminator,
+    // on its own store handle (it must outlive the record), written once the
+    // record commits. A record whose `grant_id` is set resolves through
+    // `findByGrant` first, so the gap before this write refuses nothing.
+    if (input.grantId) this.missionBoundGrants.record({ grantId: input.grantId, missionId: id, kind: "approval" });
     return record;
   }
 
@@ -1164,6 +1417,14 @@ export class MissionKernel {
        * in the record transaction; nothing resolves a source from provenance.
        */
       source: AuthoritySourceResolution | { inherited: AuthoritySourceBinding };
+      /**
+       * @spec mission#standing-consent-bases: each activation policy this
+       * activation was adjudicated under, with the held snapshot its gate
+       * verified. Retained in the record transaction, so the Mission never
+       * commits without the bytes an auditor needs to recompute the digest;
+       * bytes that do not reproduce the committed digest refuse the creation.
+       */
+      activationPolicies?: readonly EvaluatedActivationPolicy[];
     },
   ): void {
     // @spec control-plane#isolation — one issuer owns a kernel store.
@@ -1240,8 +1501,8 @@ export class MissionKernel {
            approval_basis_json, authority_source_json, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, derivation_limit,
            derivation_count, grant_id, predecessor, related_to, parent_id, parent_json, template_id,
-           template_json, projected_from, submission_evidence_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           template_json, projected_from, submission_evidence_json, ceiling_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -1300,6 +1561,9 @@ export class MissionKernel {
           // @spec mission#intent-submission-evidence — verified facts, immutable
           // after creation (like approval_basis), written only here.
           record.submission_evidence ? JSON.stringify(record.submission_evidence) : null,
+          // @spec progressive#progressive-authorization: the consented ceiling,
+          // immutable after creation, written only here.
+          serializeCeiling(record),
         );
       // @spec mission#authority-sources (#827): the committed root, in the
       // SAME transaction as the record: a Mission never exists without the
@@ -1336,6 +1600,12 @@ export class MissionKernel {
           }
           this.dischargePins.pinInCallerTx(record.id, eDigest, conditionDigest(condition), mapping);
         }
+      }
+      // @spec mission#standing-consent-bases: retain every activation policy
+      // snapshot this activation evaluated, in the SAME transaction as the
+      // record, for this Mission's audit horizon.
+      for (const evaluated of options.activationPolicies ?? []) {
+        this.activationPolicySnapshots.retainInCallerTx(record, evaluated);
       }
       // The activating event: version 1, no prior_state. Shared by approve()
       // and expansion; the commit is built from the persisted row and its
@@ -1510,8 +1780,42 @@ export class MissionKernel {
    * row is gone.
    */
   bindGrant(missionId: string, grantId: string): void {
-    this.db.prepare("UPDATE missions SET grant_id = ? WHERE id = ?").run(grantId, missionId);
+    // @spec mission#approval-event (step 7) (#916): a Mission's grant binding
+    // never moves. Binding is compare-and-set: idempotent for the grant it
+    // already holds, refused for any other, so a repeated or concurrent
+    // decision cannot rebind the Mission and strand its first grant outside
+    // the derivation count.
+    const changed = this.db
+      .prepare("UPDATE missions SET grant_id = ? WHERE id = ? AND (grant_id IS NULL OR grant_id = ?)")
+      .run(grantId, missionId, grantId);
+    if (changed.changes !== 1) {
+      const current = this.get(missionId);
+      if (!current) throw new Error(`cannot bind a grant to unknown Mission ${missionId}`);
+      throw new Error(`Mission ${missionId} is already bound to another grant; a binding never moves`);
+    }
     this.missionBoundGrants.record({ grantId, missionId, kind: "approval" });
+  }
+
+  /**
+   * @spec mission#approval-event (step 7) (#916) — bind `grantId` to a Mission
+   * that holds no grant yet, or adopt the one it already holds. The
+   * check-then-bind minting paths (child redemption, template dispatch, the
+   * continuation and drawdown mint) race on a Mission's first grant: the
+   * loser mints under the winner's grant rather than moving the binding, and
+   * its own saved grant stays inert (never bound, never indexed). Returns the
+   * grant the Mission is bound to.
+   */
+  bindFirstGrant(missionId: string, grantId: string): string {
+    const changed = this.db
+      .prepare("UPDATE missions SET grant_id = ? WHERE id = ? AND grant_id IS NULL")
+      .run(grantId, missionId);
+    if (changed.changes === 1) {
+      this.missionBoundGrants.record({ grantId, missionId, kind: "approval" });
+      return grantId;
+    }
+    const bound = this.get(missionId)?.grant_id;
+    if (!bound) throw new Error(`cannot bind a grant to unknown Mission ${missionId}`);
+    return bound;
   }
 
   /** @spec child-delegation#parent-member — the immediate Child Missions of a parent. */
@@ -3672,6 +3976,9 @@ export class MissionKernel {
     await this.outbox.drain();
     this.outbox.pruneSettled(this.tombstones.retentionSeconds);
     this.tombstones.pruneDetails();
+    // @spec mission#standing-consent-bases: only snapshots past their audit
+    // horizon are deleted.
+    this.activationPolicySnapshots.pruneExpired();
     // @spec control-plane#serialization — an unreleased reservation is
     // ambiguous, not evidence that no artifact was accepted, so recovery
     // records the ambiguity and leaves the count spent. Only an authoritative
@@ -3862,6 +4169,8 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     ...(row.discharged_json
       ? { discharged: JSON.parse(row.discharged_json as string) as DischargedEntry[] }
       : {}),
+    // @spec progressive#progressive-authorization: absent means no ceiling.
+    ...ceilingMembersOf(row.ceiling_json),
   };
 }
 

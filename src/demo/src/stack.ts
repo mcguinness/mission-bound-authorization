@@ -40,6 +40,7 @@ import {
   deriveJoinDelegation,
   type Fga,
   fgaResourcePolicy,
+  issuerLocalClients,
   issuerLocalPrincipals,
   type MissionView,
   relationForAction,
@@ -757,7 +758,7 @@ export async function composeStack(opts: {
       audience: CANONICAL_RESOURCE,
     },
     claims: pdpClaims,
-    resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer) }),
+    resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer), clients: issuerLocalClients(issuer) }),
   });
   // @spec runtime#idempotency (#918, D223): the PEP's own durable,
   // single-writer reservation store for keyed reversible writes, named in

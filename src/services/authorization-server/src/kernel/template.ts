@@ -34,7 +34,12 @@ import {
   catalogAuthoritySourceResolver,
   resolveApprovalSource,
 } from "./authority-source.js";
-import { activationPolicyMatches, mintActivationPolicyRef, type RegisteredActivationPolicy } from "./activation-policy.js";
+import {
+  activationPolicyMatches,
+  mintActivationPolicyRef,
+  type RegisteredActivationPolicy,
+  verifiedActivationPolicy,
+} from "./activation-policy.js";
 import { inheritCapabilitySources, resolveFreshCapabilitySources, type CapabilitySourceResolver } from "./capability-binding.js";
 import { UniqueViolationError } from "@mission/store";
 import { CreationIdempotencyStore, type CreationReservation, creationFingerprint } from "./creation-idempotency.js";
@@ -617,8 +622,10 @@ export function dispatchFromTemplate(
   // @spec mission-template#dispatch (step 3), mission#standing-consent-bases —
   // verify the Dispatch Policy snapshot this issuer would evaluate against the
   // `digest` the template committed: a policy edited after consent, even
-  // under an unchanged version, never adjudicates a Dispatch.
-  if (!activationPolicyMatches(template.issuer, input.dispatchPolicies, template.dispatch_policy)) {
+  // under an unchanged version, never adjudicates a Dispatch. The verified
+  // snapshot is retained with the instance below.
+  const dispatchPolicy = verifiedActivationPolicy(template.issuer, input.dispatchPolicies, template.dispatch_policy);
+  if (!dispatchPolicy) {
     throw new DispatchError(
       "dispatch_policy_changed",
       `template ${template.id} dispatch policy ${template.dispatch_policy.id} no longer matches its committed digest`,
@@ -852,7 +859,12 @@ export function dispatchFromTemplate(
   };
   try {
     idem.createCompleted(reservation, () => {
-      kernel.insertRecord(record, undefined, { source: { inherited: recipientRoot } });
+      kernel.insertRecord(record, undefined, {
+        source: { inherited: recipientRoot },
+        // @spec mission#standing-consent-bases: the Dispatch Policy snapshot
+        // verified above, retained for this instance's audit horizon.
+        activationPolicies: [{ ref: template.dispatch_policy, snapshot: dispatchPolicy }],
+      });
       return { missionId: id, value: undefined };
     });
   } catch (e) {

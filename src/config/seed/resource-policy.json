@@ -1,8 +1,29 @@
 {
+  "tenants": [
+    {
+      "tenant": "payments-demo",
+      "vendors": ["acme", "globex"],
+      "members": [
+        { "sub": "alice" },
+        { "client": "ap-agent" },
+        { "client": "subagent-invoice-extractor" },
+        { "client": "governed-agent" },
+        { "client": "ledger-reconciler" }
+      ]
+    }
+  ],
   "entitlements": [
     { "sub": "alice", "relation": "authorized_reader", "vendor": "acme" },
     { "sub": "alice", "relation": "authorized_payer", "vendor": "acme" },
     { "sub": "alice", "relation": "authorized_reader", "vendor": "globex" },
-    { "sub": "alice", "relation": "authorized_payer", "vendor": "globex" }
+    { "sub": "alice", "relation": "authorized_payer", "vendor": "globex" },
+    { "client": "ap-agent", "relation": "authorized_client", "vendor": "acme" },
+    { "client": "ap-agent", "relation": "authorized_client", "vendor": "globex" },
+    { "client": "subagent-invoice-extractor", "relation": "authorized_client", "vendor": "acme" },
+    { "client": "subagent-invoice-extractor", "relation": "authorized_client", "vendor": "globex" },
+    { "client": "governed-agent", "relation": "authorized_client", "vendor": "acme" },
+    { "client": "governed-agent", "relation": "authorized_client", "vendor": "globex" },
+    { "client": "ledger-reconciler", "relation": "authorized_client", "vendor": "acme" },
+    { "client": "ledger-reconciler", "relation": "authorized_client", "vendor": "globex" }
   ]
 }
