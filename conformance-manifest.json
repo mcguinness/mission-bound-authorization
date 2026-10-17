@@ -71,8 +71,8 @@
     "content_sha256": "915ce9e168b188bc3a34d94309750d8204b02a558b92b9ffcceafe165b7e2d1e"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "59c80be1282c8b510065c3f78cee69031a693a7c",
-    "content_sha256": "d498d551de7033d23752a77afff341d506594cf5f0a34c7b470a32a57abc0590"
+    "revision": "5b48c693327e06cfd4891bb130cb75c6f51c0cd1",
+    "content_sha256": "2319f34faea5a1e52418fb0224eacc0bdbe4b32821b790751694397d18694473"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
@@ -5959,6 +5959,61 @@
     }
    ],
    "notes": "Partial (#916, D415). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry or a concurrent decision by another Approver, Subject or client is refused before the grant is touched: a synchronous per-interaction reservation, taken before the asynchronous grant save, so the Mission's Approver and the grant's account always agree); the commit revalidates the prepared authority source (same root and provenance, every gate) and a withdrawn source refuses, and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
+  },
+  {
+   "id": "core.approval-event.every-mission-own-event",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "Every Mission is created at its own approval event, which the record's `approval_event_id` identifies.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission submission reaches its own approval event even when the client's user agent already holds a session and grant from an earlier approval: no authorization code, Mission or grant results from a submission without its own approval, a submission that cannot interact is refused, and the approved submission yields its own Mission, never an earlier one",
+    "local": "oidc-provider's consent prompt carries a mission_approval_required check (adapters/interaction-policy.ts): a request with mission_intent requests the interaction until it has finished for it, and prompt=none refuses consent_required; ordinary requests without mission_intent keep the provider's consent reuse"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a new Mission submission reaches its own approval despite prior browser consent (@spec mission#approval-event, #1247) > a second Intent-only submission with a different goal, in a user agent holding the first approval's session and Grant, opens the Mission approval interaction: no code, no Mission and no Grant until it is approved",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a new Mission submission reaches its own approval despite prior browser consent (@spec mission#approval-event, #1247) > under prompt=none the second submission is refused consent_required, with no code and no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a new Mission submission reaches its own approval despite prior browser consent (@spec mission#approval-event, #1247) > approved and redeemed, the second submission yields its own Mission, never the first one's",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a new Mission submission reaches its own approval despite prior browser consent (@spec mission#approval-event, #1247) > the newly reached interaction applies the approval floor (#1234): a high-risk Intent-only submission in the same user agent is refused at its approval by a password-authenticated Approver, with no code and no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a new Mission submission reaches its own approval despite prior browser consent (@spec mission#approval-event, #1247) > an ordinary request carrying no mission_intent keeps consent reuse: the session's Grant answers it with a code and no interaction",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1247. Before the check, a second Intent-only PAR from the same client under an existing browser session was answered with a code under the first Mission's grant, so its redemption minted a token for the first Mission. Proved by three mutations: removing the policy fails the four Mission witnesses; dropping the finished-approval guard re-prompts every resume and fails all five; firing the check on every request fails the ordinary consent-reuse witness."
   },
   {
    "id": "core.response.mission-expires-at-on-creation",
@@ -33464,7 +33519,7 @@
    "id": "resource-access.type.prefix-query-fragment-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-access-type",
-   "text": "the AS refuses such an entry with `invalid_authorization_details`",
+   "text": "the authorization server refuses such an entry with the `invalid_authorization_details` error code",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -33625,7 +33680,7 @@
    "id": "resource-access.delegate-eligibility.as-authenticates-delegate",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "delegate-eligibility",
-   "text": "The AS MUST authenticate the delegate at the Token Exchange",
+   "text": "The authorization server MUST authenticate the delegate at the Token Exchange",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -33817,7 +33872,7 @@
    "id": "resource-access.transformation-capabilities.projection-undeclared-fallback",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "transformation-capabilities",
-   "text": "declares `projection` as undeclared rather than `true`",
+   "text": "leaves `projection` undeclared rather than declaring it `true`",
    "role": "AS",
    "strength": "stated",
    "applicability": {

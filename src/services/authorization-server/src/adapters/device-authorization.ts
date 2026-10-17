@@ -26,7 +26,7 @@
 
 import type { IncomingMessage } from "node:http";
 import { parse as parseForm } from "node:querystring";
-import { interactionPolicy, type KoaContextWithOIDC, type Provider } from "oidc-provider";
+import { type KoaContextWithOIDC, type Provider } from "oidc-provider";
 
 /** The RFC 8628 grant type. */
 export const DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
@@ -131,32 +131,6 @@ async function readForm(req: IncomingMessage): Promise<string | undefined> {
     chunks.push(buf);
   }
   return Buffer.concat(chunks).toString("utf8");
-}
-
-/**
- * @spec device-authorization#approval, device-authorization#request (#1202):
- * the provider's interaction policy plus one consent check, so a device
- * session carrying a Mission Intent always reaches the Mission approval. A
- * verification user agent already holding a provider session and a grant
- * for the client covering the requested scope would otherwise complete the
- * session itself (lib/actions/authorization/interactions.js 9.10.0, the
- * branch with no prompt, then device_user_flow_response.js): the device
- * code would redeem under that earlier grant and its Mission, with no
- * decision, rendering or confirmation.
- */
-export function missionInteractionPolicy(): interactionPolicy.Prompt[] {
-  const policy = interactionPolicy.base();
-  policy.get("consent")?.checks.add(
-    new interactionPolicy.Check(
-      "mission_device_approval",
-      "a Mission device session requires the Mission approval",
-      "consent_required",
-      (ctx) =>
-        (ctx.oidc.route === "code_verification" || ctx.oidc.route === "device_resume") &&
-        (ctx.oidc.params as { mission_intent?: unknown }).mission_intent !== undefined,
-    ),
-  );
-  return policy;
 }
 
 /** The device code state a decision and a redemption read. */
