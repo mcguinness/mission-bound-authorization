@@ -48,6 +48,7 @@ import { DOMAIN_MODEL, Fga } from "@mission/pdp";
 import { issueMissionToken } from "../src/approval-console.js";
 import { asNativeLaunchOptions, launchAsNative } from "../src/as-native.js";
 import { ISSUANCE_ONLY_CAPABILITIES } from "../src/issuance-only.js";
+import { requestLifecycle } from "../src/lifecycle-client.js";
 import { resourcePolicyAdmin } from "../src/resource-policy-admin.js";
 import {
   clientAssertionSigner,
@@ -450,7 +451,8 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
         await lifecycleOn(missionId, { operation: "discharge", entry: "e1", condition: "c1", event_id: randomUUID() }),
         "discharge",
       );
-      expectAbsent(meta, "mission_status_signing_alg_values_supported");
+      // `mission_status_signing_alg_values_supported` stays advertised: the
+      // Lifecycle endpoint's `revoke` signs its response (capabilitySet).
     },
     "lifecycle-extended": async () => {
       for (const operation of ["suspend", "resume", "complete"]) {
@@ -461,7 +463,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       expectUnservedRoute(
         await send(`/missions/${missionId}/status`, { headers: { "x-service-token": DEV_SERVICE_TOKEN } }),
       );
-      expectAbsent(meta, "mission_status_signing_alg_values_supported");
+      expectAbsent(meta, "mission_status_endpoint");
     },
     "status-list": async () => {
       const r = await send(`/statuslist/${STATUS_LIST_ID}`);
@@ -561,6 +563,11 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       const meta = (await (await fetch(`${asUrl}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
       // oidc-provider always lists `implicit`; no client registers a response type that uses it.
       expect(meta.grant_types_supported).toEqual(["implicit", "authorization_code", "refresh_token"]);
+      // `lifecycle-revoke` serves the Mission Lifecycle endpoint, answered with
+      // the signed Mission Status Response (#1191).
+      expect(meta.mission_lifecycle_endpoint).toBe(`${asUrl}/mission/lifecycle`);
+      expect(meta.mission_lifecycle_endpoint_auth_methods_supported).toEqual(["private_key_jwt"]);
+      expect(meta.mission_status_signing_alg_values_supported).toEqual(["ES256"]);
       expect(meta.transaction_authorization_endpoint).toBe(`${asUrl}/transaction`);
       for (const member of [
         "mission_child_delegation_supported",
@@ -602,9 +609,15 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       expect(suspendBody.error).toBe("invalid_request");
       expect(suspendBody.error_description).toBe("operation suspend is not enabled on this deployment");
       expect(stack.kernel.get(spareId)?.state).toBe("active");
-      // `lifecycle-revoke` is on.
-      const revoke = await lifecycle("revoke");
-      expect(revoke.status, await revoke.clone().text()).toBe(200);
+      // `lifecycle-revoke` is on: the dedicated lifecycle console revokes at the
+      // advertised endpoint by private-key JWT (#1191).
+      const revoke = await requestLifecycle(asUrl, authServer().lifecycleConsole, {
+        mission_id: spareId,
+        operation: "revoke",
+        nonce: randomUUID(),
+      });
+      expect(revoke.status, revoke.text).toBe(200);
+      expect(revoke.contentType).toBe("application/mission-status-response+jwt");
       expect(stack.kernel.get(spareId)?.termination?.reason).toBe("revoked");
     },
 
@@ -1437,9 +1450,9 @@ dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a 
   };
 
   /** The administrator's change to Alice's read entitlement on acme, from its own connection to the attached store. */
-  const administer = (op: "grant" | "revoke", stack: DemoStack) =>
+  const administer = (op: "grant" | "revoke", stack: DemoStack, who: string[] = ["--sub", "alice", "--relation", "reader"]) =>
     resourcePolicyAdmin(
-      [op, "--iss", stack.issuer, "--sub", "alice", "--relation", "reader", "--vendor", "acme"],
+      [op, "--iss", stack.issuer, ...who, "--vendor", "acme"],
       { ...BASE_ENV, OPENFGA_STORE_ID: stack.fga.storeId, OPENFGA_MODEL_ID: stack.modelId },
       TOPOLOGY.openfga,
     );
@@ -1486,6 +1499,23 @@ dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a 
         expectPermitted(await read(second.stack, issued), "restored after restart");
       } finally {
         await shutdown(second);
+      }
+    }, 180_000);
+
+    it(`an AS-issued DPoP-bound read is refused resource_policy with no effect once the administrator revokes only its client's entitlement on acme, the subject's unchanged, and permitted once it is restored (${pdpMode}) (D429)`, async () => {
+      const launched = await launch({ MISSION_PDP_MODE: pdpMode });
+      try {
+        const issued = await issueRead(launched.stack);
+        const clientId = decodeJwt(issued.accessToken).client_id;
+        if (typeof clientId !== "string") throw new Error("the AS-issued token names no client");
+        const client = ["--client", clientId, "--relation", "client"];
+        expectPermitted(await read(launched.stack, issued), "before revocation");
+        await administer("revoke", launched.stack, client);
+        expectRefused(await read(launched.stack, issued), "after revoking the client");
+        await administer("grant", launched.stack, client);
+        expectPermitted(await read(launched.stack, issued), "after restoring the client");
+      } finally {
+        await shutdown(launched);
       }
     }, 180_000);
   }

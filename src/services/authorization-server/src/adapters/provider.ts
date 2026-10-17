@@ -49,8 +49,10 @@ import {
  * parameter allow-list drops it from every PAR and authorization request.
  */
 export const DERIVED_AUTHORIZATION_DETAILS_MARKER = "__mission_derived_authorization_details";
-/** Interaction-result member marking an approval no End-User authenticated
- *  in the user agent (a headless approval service's, #826). */
+/** Interaction-result member marking an approval that completes isolated
+ *  from the user agent's provider session (#826): a headless approval
+ *  service's, or a browser approval in a user agent whose session belongs to
+ *  another account. */
 const HEADLESS_APPROVAL_RESULT = "mission_headless_approval";
 
 /**
@@ -311,6 +313,7 @@ import {
 } from "./transaction-authorization.js";
 export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
+import { ceilingConsentOf, type ProgressiveDrawdownOptions } from "../kernel/progressive.js";
 import { ID_JAG_TOKEN_TYPE } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
@@ -349,7 +352,11 @@ import {
   type DischargeReceiptObservation,
   GateError,
   LifecycleConflictError,
+  type ApproveInput,
   type MissionKernel,
+  MissionNotFoundError,
+  type PreparedApproval,
+  StaleVersionError,
   STATUS_SIGNING_ALG,
   type StatusObservation,
 } from "../kernel/kernel.js";
@@ -367,6 +374,15 @@ import type {
   MissionRecord,
 } from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
+import {
+  authenticateLifecycleClient,
+  LIFECYCLE_CLIENT_ASSERTION_ALGS,
+  LIFECYCLE_ENDPOINT_AUTH_METHODS,
+  LIFECYCLE_ENDPOINT_PATH,
+  parseTransitionMembers,
+  readLifecycleForm,
+  wellFormedNonce,
+} from "./lifecycle-endpoint.js";
 import { DISPATCH_HANDOFF_TYP, handleDispatchHandoffRedemption } from "./dispatch-handoff.js";
 import type { CrossOrgOptions } from "./cross-org-grant.js";
 import {
@@ -442,6 +458,16 @@ export const MISSION_LIFECYCLE_SCOPE = "mission_lifecycle";
 export const MISSION_DISCHARGE_SCOPE = "mission_discharge";
 
 /**
+ * @spec status#lifecycle-authorization: the distinct grant a deployment that
+ * sets `distinctResumeGrant` requires for `resume`, beside
+ * {@link MISSION_LIFECYCLE_SCOPE}: the distinct or elevated authorization the
+ * profile says a deployment SHOULD require, since `resume` undoes the
+ * containment a `suspend` established. The same grant then governs a
+ * `suspend` whose `on_expiry` is `resume`, which schedules that resume.
+ */
+export const MISSION_RESUME_SCOPE = "mission_resume";
+
+/**
  * @spec status#mission-status-authentication — the explicit read authorization
  * the Mission Status operation requires of an authenticated caller. A caller
  * without it is refused with the not-found response. The same grant decides
@@ -450,6 +476,17 @@ export const MISSION_DISCHARGE_SCOPE = "mission_discharge";
  * (@spec discharge#discharge-carryover, "Response").
  */
 export const MISSION_STATUS_SCOPE = "mission_status";
+
+/**
+ * @spec status#lifecycle-authorization: the grants a directly authenticated
+ * client can hold at the Mission Lifecycle endpoint (`lifecycleClientGrants`).
+ */
+const LIFECYCLE_CLIENT_GRANTS: ReadonlySet<string> = new Set([
+  MISSION_LIFECYCLE_SCOPE,
+  MISSION_RESUME_SCOPE,
+  MISSION_DISCHARGE_SCOPE,
+  MISSION_STATUS_SCOPE,
+]);
 
 /**
  * A registered service-token caller of the AS's operational surfaces: the
@@ -466,14 +503,14 @@ export interface ServiceTokenPrincipal {
 }
 
 /**
- * The shipped dev token carries every grant (lifecycle, discharge, status
- * read), so every existing operational caller keeps working; a deployment (or a test proving non-implication)
+ * The shipped dev token carries every grant (lifecycle, resume, discharge,
+ * status read), so every existing operational caller keeps working; a deployment (or a test proving non-implication)
  * registers additional tokens, which are merged OVER this default.
  */
 export const DEFAULT_SERVICE_TOKEN_PRINCIPALS: Readonly<Record<string, ServiceTokenPrincipal>> = {
   [DEV_SERVICE_TOKEN]: {
     principal_id: "svc:console",
-    scopes: [MISSION_LIFECYCLE_SCOPE, MISSION_DISCHARGE_SCOPE, MISSION_STATUS_SCOPE],
+    scopes: [MISSION_LIFECYCLE_SCOPE, MISSION_RESUME_SCOPE, MISSION_DISCHARGE_SCOPE, MISSION_STATUS_SCOPE],
   },
 };
 
@@ -488,6 +525,31 @@ export interface AdapterOptions {
    * itself, @spec discharge#discharge-anti-oracle).
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
+  /**
+   * @spec status#lifecycle-authorization: the deployment-defined grants bound
+   * to a client that authenticates to the Mission Lifecycle endpoint by
+   * private-key JWT, keyed by `client_id`: `mission_lifecycle` for `revoke`,
+   * `suspend`, `resume` and `complete`, `mission_discharge` for `discharge`,
+   * and `mission_status` deciding a forwarded discharge's response. Absent (the
+   * default), no client holds any, and every authenticated client is refused
+   * as an unknown Mission.
+   */
+  lifecycleClientGrants?: Record<string, readonly string[]>;
+  /**
+   * @spec status#lifecycle-authorization: require the distinct
+   * {@link MISSION_RESUME_SCOPE} grant, beside `mission_lifecycle`, for a
+   * direct `resume` and for a `suspend` whose `on_expiry` is `resume`. Absent
+   * (the default), `mission_lifecycle` alone authorizes both, so this
+   * deployment departs from the profile's SHOULD until it sets this.
+   */
+  distinctResumeGrant?: boolean;
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): this deployment
+   * adopts `suspend_until` and `on_expiry`, and runs the suspension
+   * scheduler that applies them. Absent (the default), a `suspend` carrying
+   * them is refused `invalid_request`.
+   */
+  suspensionSchedules?: boolean;
   clients: Record<string, unknown>[];
   jwks: { keys: Record<string, unknown>[] };
   publicJwks: { keys: Record<string, unknown>[] };
@@ -688,6 +750,13 @@ export interface AdapterOptions {
    * disabled capability refuses with its path's standard error.
    */
   capabilities?: ReadonlySet<ProviderCapability>;
+  /**
+   * @spec progressive#in-ceiling-expansion: the policy-adjudicated drawdown
+   * path, default off. Absent, an approval decision's ceiling members are
+   * ignored and an expansion of a Mission that carries a ceiling takes the
+   * ordinary fresh-approval path.
+   */
+  progressive?: ProgressiveDrawdownOptions;
 }
 
 /**
@@ -770,6 +839,15 @@ export function buildProvider(opts: AdapterOptions): Provider {
   opts.creationIdempotency ??= new CreationIdempotencyStore(kernel);
   // @spec RFC 9449 — proof-jti replay protection for the manual DPoP blocks.
   opts.dpopProofReplay ??= newDpopProofReplay();
+  // @spec status#lifecycle-authorization: a lifecycle grant names one of the
+  // endpoint's authorizations; anything else is a configuration error.
+  for (const [clientId, grants] of Object.entries(opts.lifecycleClientGrants ?? {})) {
+    for (const grant of grants) {
+      if (!LIFECYCLE_CLIENT_GRANTS.has(grant)) {
+        throw new Error(`lifecycleClientGrants: ${clientId} names unknown grant ${grant}`);
+      }
+    }
+  }
   // @spec mission#introspection (issue #541 P1-2) — the issuance index is NOT
   // optional wiring either: default it so a caller that omits it still gets
   // correct (fail-closed) individual revocation, never a silent "every access
@@ -890,10 +968,15 @@ export function buildProvider(opts: AdapterOptions): Provider {
    *
    * - `counted: true` — the Mission's own approval grant (`kernel.findByGrant`):
    *   each derivation counts against its `derivation_limit`;
-   * - `counted: false` — a delegation-family grant, or a durable-index hit whose
-   *   Mission's `grant_id` has moved on: live state only, never counted (a
+   * - `counted: false` — a delegation-family grant, or another durable-index hit
+   *   that is not an approval grant: live state only, never counted (a
    *   family's single count was spent at the exchange that created it,
    *   @spec async-delegation).
+   *
+   * An approval grant the index resolves (its Mission's `grant_id` no longer
+   * names it) still counts (#916): a Mission's binding never moves
+   * (`kernel.bindGrant` is compare-and-set), and if it ever did, an approval
+   * grant must not escape the derivation limit.
    *
    * Undefined for a grant that was never Mission-bound, or a family whose
    * Mission no longer resolves. An index hit with no Mission refuses
@@ -903,8 +986,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const record = kernel.findByGrant(grantId);
     if (record) return { record, counted: true };
     const fam = opts.familyStore?.resolve(grantId);
-    const famRecord = fam ? kernel.get(fam.missionId) : missionForBoundGrant(grantId);
-    return famRecord ? { record: famRecord, counted: false } : undefined;
+    if (fam) {
+      const famRecord = kernel.get(fam.missionId);
+      return famRecord ? { record: famRecord, counted: false } : undefined;
+    }
+    const indexed = missionForBoundGrant(grantId);
+    if (!indexed) return undefined;
+    return { record: indexed, counted: kernel.missionBoundGrants.resolve(grantId)?.kind === "approval" };
   }
 
   /**
@@ -2050,8 +2138,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
     await opts.kernel.drainLifecycleOutbox();
   });
 
-  // @spec mission#approval-authentication (#826): a headless approval
-  // leaves the client's user agent no End-User session. Its resume runs
+  // @spec mission#approval-authentication (#826): a headless approval, and a
+  // browser approval in a user agent whose provider session belongs to
+  // another account, leave the user agent's session as it was and add none:
+  // `decide()` marks both alike. The resume runs
   // without the session cookie this user agent holds, so that session is
   // neither read nor modified. Once the route returns, before the response is
   // flushed, the session the resume's login created is destroyed and its
@@ -2463,8 +2553,7 @@ async function handleChildJwtBearerGrant(
     for (const entry of effective) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     }
-    grantId = await grant.save();
-    kernel.bindGrant(record.id, grantId);
+    grantId = kernel.bindFirstGrant(record.id, await grant.save());
   }
 
   // 7. Resource + TTL — mirror mintDeferredToken; clamp the TTL to the child's
@@ -2657,6 +2746,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
 
   /**
+   * @spec status#lifecycle-authorization: the authorization this deployment
+   * requires for a direct `resume`, in ONE place: a direct `resume` and a
+   * `suspend` whose `on_expiry` is `resume` both call it, so scheduling a
+   * resume never needs less than resuming does. `mission_lifecycle`, and,
+   * where the deployment sets `distinctResumeGrant`, `mission_resume` too.
+   */
+  const mayResume = (principal: ServiceTokenPrincipal): boolean =>
+    principal.scopes.includes(MISSION_LIFECYCLE_SCOPE) &&
+    (opts.distinctResumeGrant !== true || principal.scopes.includes(MISSION_RESUME_SCOPE));
+
+  /**
    * @spec discharge#condition-selectors — add `discharge_selectors` to an ACTIVE
    * introspection `mission` projection, for exactly the `authorization_details`
    * this response returns to this caller, and only where this deployment
@@ -2682,6 +2782,24 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const lifecycleResponses = new LifecycleResponseStore(kernel.db, {
     now: () => kernel.nowDate(),
   });
+
+  /**
+   * @spec status#lifecycle-authorization: the lifecycle grants bound to a
+   * client that authenticates directly (private-key JWT): never a scope, and
+   * none unless the deployment registers them. Null-prototype for the reason
+   * the service-token registry is.
+   */
+  const lifecycleClientGrants: Record<string, readonly string[]> = Object.assign(
+    Object.create(null) as Record<string, readonly string[]>,
+    opts.lifecycleClientGrants ?? {},
+  );
+
+  /**
+   * @spec status#mission-lifecycle-endpoint, status#as-metadata: the endpoint
+   * is served, and advertised, exactly where the deployment enables one of its
+   * operations (adapters/capabilities.ts).
+   */
+  const lifecycleServed = Object.values(LIFECYCLE_OPERATION_CAPABILITY).some(enabled);
 
   return async (ctx: KoaCtx, next: () => Promise<void>) => {
     // --- Approval interaction (minimal approver surface + headless path) ---
@@ -2914,42 +3032,143 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       return;
     }
 
-    // --- Lifecycle operations (@spec status#legal-transitions) ---
+    // --- Mission Lifecycle endpoint (@spec status#mission-lifecycle-endpoint) ---
+    // Two routes and ONE engine (the block after them): they differ only in how
+    // the caller authenticates and how its members arrive, so the nonce rule,
+    // the operation refusals, the lifecycle authorization, the anti-oracle
+    // refusal, the signed response and the transient-failure rule are shared.
+    let lifecycleCall:
+      | {
+          principal: ServiceTokenPrincipal;
+          missionId: string | undefined;
+          body: Record<string, unknown>;
+          digest: string;
+        }
+      | undefined;
+    // The advertised `mission_lifecycle_endpoint`: a form body carrying
+    // `mission_id`, the caller authenticated by private-key JWT.
+    if (ctx.path === LIFECYCLE_ENDPOINT_PATH && ctx.method === "POST" && lifecycleServed) {
+      const form = await readLifecycleForm(ctx.req, ctx.get("content-type") ?? "");
+      // @spec status#mission-status-errors: every refusal before the engine
+      // echoes the request's `nonce` when it carried a well-formed one, and
+      // none is retained: the nonce key needs an authenticated client.
+      if (!form.ok) {
+        ctx.status = 400;
+        ctx.set("cache-control", "no-store");
+        ctx.body = {
+          error: "invalid_request",
+          error_description: form.description,
+          ...(form.nonce ? { nonce: form.nonce } : {}),
+        };
+        return;
+      }
+      const echo = wellFormedNonce(form.params.nonce);
+      // @spec status#mission-status-authentication, status#mission-status-auth-failures
+      // a failed private-key-JWT authentication, or no credential where no
+      // access-token scheme is accepted, is HTTP 400 `invalid_client` with no
+      // challenge, decided before any Mission is read.
+      const auth = await authenticateLifecycleClient(
+        {
+          issuer: opts.issuer,
+          clients: opts.clients,
+          replay: opts.dpopProofReplay as DpopProofReplay,
+          now: () => kernel.nowDate(),
+        },
+        form.params,
+        ctx.get("authorization") ?? "",
+      );
+      if (!auth.ok) {
+        ctx.set("cache-control", "no-store");
+        if (auth.retryAfterS !== undefined) {
+          ctx.status = 503;
+          ctx.set("Retry-After", String(auth.retryAfterS));
+          ctx.body = { error: "unavailable", error_description: auth.description, ...(echo ? { nonce: echo } : {}) };
+        } else {
+          ctx.status = 400;
+          ctx.body = { error: "invalid_client", error_description: auth.description, ...(echo ? { nonce: echo } : {}) };
+        }
+        return;
+      }
+      lifecycleCall = {
+        principal: { principal_id: auth.clientId, scopes: [...(lifecycleClientGrants[auth.clientId] ?? [])] },
+        missionId: form.params.mission_id ? form.params.mission_id : undefined,
+        body: form.params,
+        digest: requestMembersDigest(form.params),
+      };
+    }
+    // DEV ONLY, and not advertised: the path-parameter route, a development
+    // convenience over the shipped service-token stand-in. It takes the
+    // Mission from the path and a JSON (or form) body, then runs the same
+    // engine as the advertised endpoint.
     const lifecycleMatch = ctx.path.match(/^\/missions\/([^/]+)\/lifecycle$/);
     if (lifecycleMatch && ctx.method === "POST") {
       const principal = authenticateService(ctx);
       if (!principal) return;
-      const missionId = lifecycleMatch[1] as string;
+      const pathMissionId = lifecycleMatch[1] as string;
       // Read the body ONCE and keep the digest of its operation members: the
       // `nonce` rule of @spec status#idempotency compares those, not the bytes.
       const { body, digest } = await readBodyWithDigest(ctx.req);
-      const rawNonce = body.nonce;
-      const nonce =
-        typeof rawNonce === "string" && rawNonce.length > 0 && rawNonce.length <= 255
-          ? rawNonce
-          : undefined;
-      const nonceKey: LifecycleNonceKey | undefined = nonce
-        ? {
-            endpoint: LIFECYCLE_ENDPOINT_KEY,
-            principal: principal.principal_id,
-            missionId,
-            nonce,
-          }
-        : undefined;
+      if (body.mission_id !== undefined && body.mission_id !== pathMissionId) {
+        const echo = wellFormedNonce(body.nonce);
+        ctx.status = 400;
+        ctx.set("cache-control", "no-store");
+        ctx.body = {
+          error: "invalid_request",
+          error_description: "mission_id does not match the path",
+          ...(echo ? { nonce: echo } : {}),
+        };
+        return;
+      }
+      lifecycleCall = { principal, missionId: pathMissionId, body, digest };
+    }
+
+    // --- Lifecycle operations (@spec status#legal-transitions) ---
+    if (lifecycleCall) {
+      const { principal, body, digest } = lifecycleCall;
+      const nonce = wellFormedNonce(body.nonce);
       /**
-       * @spec status#mission-status-errors — send and, when the request carried
-       * a well-formed `nonce`, REMEMBER this response for that nonce. The store
-       * is first-writer-wins, so a later divergent-retry refusal never
-       * overwrites the response a retransmission must replay.
+       * Deliver a JSON body WITHOUT retaining it: a refusal no nonce key can
+       * hold, or a transient failure.
+       */
+      const deliver = (status: number, json: Record<string, unknown>): void => {
+        ctx.status = status;
+        ctx.set("content-type", "application/json");
+        ctx.set("cache-control", "no-store");
+        ctx.body = JSON.stringify(json);
+      };
+      // @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency
+      // `nonce` is REQUIRED: an absent, empty, longer or non-string one is
+      // malformed and refused with no `nonce` echoed.
+      if (nonce === undefined) {
+        deliver(400, {
+          error: "invalid_request",
+          error_description: "nonce is REQUIRED: a string of 1 to 255 characters",
+        });
+        return;
+      }
+      if (lifecycleCall.missionId === undefined) {
+        deliver(400, { error: "invalid_request", error_description: "mission_id is REQUIRED", nonce });
+        return;
+      }
+      const missionId = lifecycleCall.missionId;
+      const nonceKey: LifecycleNonceKey = {
+        endpoint: LIFECYCLE_ENDPOINT_KEY,
+        principal: principal.principal_id,
+        missionId,
+        nonce,
+      };
+      /**
+       * @spec status#mission-status-errors: send and REMEMBER this response
+       * for the request's nonce. The store is first-writer-wins, so a later
+       * divergent-retry refusal never overwrites the response a
+       * retransmission must replay.
        */
       const send = (status: number, contentType: string, text: string): void => {
         // @spec control-plane#serialization — RETENTION PRECEDES DELIVERY: the
         // exact bytes are durable before they are handed to the network, so a
         // crash between the two replays the same response instead of
         // re-executing the operation.
-        if (nonceKey) {
-          lifecycleResponses.record(nonceKey, { requestDigest: digest, status, contentType, body: text });
-        }
+        lifecycleResponses.record(nonceKey, { requestDigest: digest, status, contentType, body: text });
         ctx.status = status;
         ctx.set("content-type", contentType);
         ctx.set("cache-control", "no-store");
@@ -2994,13 +3213,25 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...(nonce ? { nonce } : {}),
         });
       };
+      /**
+       * @spec status#mission-status-errors, status#idempotency: an UNEXPECTED
+       * failure (a lookup, storage or signing fault) is `unavailable`, never
+       * the unknown-Mission answer, and is delivered WITHOUT retention, so a
+       * retry is processed as a new request. A commit that preceded the fault
+       * left its claim behind, and that retry recovers the committed outcome.
+       */
+      const sendUnavailable = (): void =>
+        deliver(503, {
+          error: "unavailable",
+          error_description: "The authorization server cannot serve this request now.",
+          nonce,
+        });
       // @spec status#idempotency, control-plane#serialization — the
       // retransmission rule, evaluated FIRST and BEFORE ANY STATE-DEPENDENT
       // CHECK: it governs the HTTP exchange, so a request that already
-      // succeeded replays its success even after the Mission moved on. A
-      // conditional precondition this endpoint may grow (`expected_version`)
-      // belongs strictly AFTER this lookup, never in front of it.
-      if (nonceKey) {
+      // succeeded replays its success even after the Mission moved on. The
+      // `expected_version` precondition sits strictly AFTER this lookup.
+      try {
         const stored = lifecycleResponses.find(nonceKey);
         // ONE clock, the nonce window: both halves of the rule run on it. A
         // divergent retry is refused for the whole window, and a retransmit with
@@ -3047,6 +3278,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ctx.body = recovered;
           return;
         }
+      } catch {
+        sendUnavailable();
+        return;
       }
       // @spec status#mission-lifecycle-endpoint ("Operations"): an operation this
       // deployment does not serve, one it does not recognize (an absent value or
@@ -3066,6 +3300,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         sendInvalidRequest(`operation ${operation} is not enabled on this deployment`);
         return;
       }
+      // @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency:
+      // the members every operation shares, parsed ONCE, after the retained-nonce
+      // recovery above and before dispatch, so an extension never silently
+      // drops the stale-version guard or a schedule (adapters/lifecycle-endpoint.ts).
+      const members = parseTransitionMembers(operation, body);
+      if (!members.ok) {
+        sendInvalidRequest(members.description);
+        return;
+      }
+      const { expectedVersion } = members.value;
       // @spec discharge#discharge-operation, discharge#discharge-commit ("States")
       // — the fifth operation: it changes no
       // Mission state, so it is handled entirely outside the state machine
@@ -3076,13 +3320,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           principal,
           missionId,
           body,
-          ...(nonce !== undefined ? { nonce } : {}),
+          nonce,
           mayReadStatus,
           // @spec control-plane#serialization — the discharge latch, the nonce
           // claim and the OBSERVATION (or receipt) the response reports commit
           // together; only the signature happens after.
           claimResponse: (material, contentType, validUntilMs) => {
-            if (!nonceKey) return;
             lifecycleResponses.claimInCallerTx(nonceKey, {
               requestDigest: digest,
               status: 200,
@@ -3095,7 +3338,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           sendJson,
           sendNotFound,
           sendInvalidRequest,
-        });
+        }).catch(sendUnavailable);
         return;
       }
       // @spec status#mission-status-errors — every other operation is a
@@ -3112,10 +3355,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // operations' response shape plus containment_version; a terminal-state
         // contain maps to 409 through the shared LifecycleConflictError catch.
         if (body.operation === "contain") {
-          const event = body.event as
+          // JSON values; on the form-encoded endpoint each arrives JSON-encoded.
+          const event = jsonMember(body.event) as
             | { type?: unknown; source?: unknown; observed_at?: unknown; event_id?: unknown }
             | undefined;
-          const remove = body.remove;
+          const remove = jsonMember(body.remove);
           if (
             !event ||
             typeof event.type !== "string" ||
@@ -3148,9 +3392,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // transition that discovering it committed.
           kernel.materializeExpiry(missionId);
           const contained = withTransaction(kernel.db, () => {
+            // @spec status#idempotency: the guard is compared inside this
+            // transaction, before the narrowing commits (kernel.contain).
             const { record, evidence } = kernel.contain(missionId, {
               event: containEvent,
               remove: remove as Array<{ resource: string; actions?: string[] }>,
+              ...(expectedVersion !== undefined ? { expectedVersion } : {}),
             });
             const outcome = {
               id: record.id,
@@ -3158,20 +3405,43 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
               version: record.version,
               containment_version: record.containment?.containment_version ?? 0,
             };
-            if (nonceKey) {
-              lifecycleResponses.claimInCallerTx(nonceKey, {
-                requestDigest: digest,
-                status: 200,
-                contentType: "application/json",
-                material: { kind: "json", body: outcome },
-              });
-            }
+            lifecycleResponses.claimInCallerTx(nonceKey, {
+              requestDigest: digest,
+              status: 200,
+              contentType: "application/json",
+              material: { kind: "json", body: outcome },
+            });
             return { evidence, outcome };
           });
           // Retain the returned Containment Evidence issuer-side (break-glass
           // path: its evidence `policy` is "manual"). Previously discarded.
           opts.issuerEvidence?.retainContainment(contained.evidence);
           sendJson(200, contained.outcome);
+          return;
+        }
+        const lifecycleOperation = body.operation as LifecycleOperation;
+        // The members were parsed once, before dispatch.
+        const { schedule } = members.value;
+        // A schedule this deployment has not adopted is refused, never
+        // accepted without effect.
+        if (schedule && opts.suspensionSchedules !== true) {
+          sendInvalidRequest("suspend_until and on_expiry are not supported by this deployment");
+          return;
+        }
+        // A deadline already passed sets no deadline to wait for: refused as
+        // a request this deployment cannot honor, before any Mission is read.
+        if (schedule && Date.parse(schedule.suspendUntil) <= kernel.nowDate().getTime()) {
+          sendInvalidRequest("suspend_until must lie in the future");
+          return;
+        }
+        // @spec status#lifecycle-authorization: a `suspend` whose `on_expiry`
+        // is `resume` schedules a later resume, so it needs the authorization a
+        // direct `resume` needs, checked before any change and refused as an
+        // unauthorized request, whether it would arm a schedule or replace one
+        // on a Mission another party suspended. `on_expiry` `revoke` needs
+        // only the authorization for `suspend`, checked above.
+        if ((lifecycleOperation === "resume" || schedule?.onExpiry === "resume") && !mayResume(principal)) {
+          sendNotFound();
           return;
         }
         // @spec control-plane#serialization — the expiry clock runs FIRST, in
@@ -3182,32 +3452,48 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // transition and without its publication. The counter path already
         // keeps the gate outside its transaction for exactly this reason.
         kernel.materializeExpiry(missionId);
-        // @spec control-plane#serialization — the transition, the nonce claim
-        // and the committed outcome are ONE transaction. Before this, a process
-        // lost between the commit and the response answered a retry 409 for an
-        // operation that had in fact succeeded. The grant destruction stays
-        // OUTSIDE: it is asynchronous and reaches the provider's own store, so
-        // it can neither join nor roll back with this commit.
+        // @spec control-plane#serialization, control-plane#fresh-observation:
+        // the transition, the observation the response reports and the nonce
+        // claim are ONE transaction; only the signature happens after. Before
+        // this, a process lost between the commit and the response answered a
+        // retry 409 for an operation that had in fact succeeded. The grant
+        // destruction stays OUTSIDE: it is asynchronous and reaches the
+        // provider's own store, so it can neither join nor roll back with this
+        // commit.
         const transitioned = withTransaction(kernel.db, () => {
-          const record = kernel.transition(missionId, body.operation as LifecycleOperation);
-          // @spec status#mission-lifecycle-endpoint, mission#termination: the
-          // committed outcome reports `termination` beside `state` exactly when
-          // it is `terminated` (with the committing `version`).
-          const outcome = {
-            id: record.id,
-            state: record.state,
-            ...(record.termination ? { termination: record.termination } : {}),
-            version: record.version,
-          };
-          if (nonceKey) {
-            lifecycleResponses.claimInCallerTx(nonceKey, {
-              requestDigest: digest,
-              status: 200,
-              contentType: "application/json",
-              material: { kind: "json", body: outcome },
-            });
-          }
-          return { record, outcome };
+          // @spec status#lifecycle-authorization: the committing party of a
+          // schedule is this request's acting party.
+          const record = kernel.transition(missionId, lifecycleOperation, {
+            ...(expectedVersion !== undefined ? { expectedVersion } : {}),
+            ...(schedule
+              ? {
+                  schedule: {
+                    suspend_until: schedule.suspendUntil,
+                    on_expiry: schedule.onExpiry,
+                    committing_party: principal.principal_id,
+                  },
+                }
+              : {}),
+          });
+          // @spec status#mission-lifecycle-endpoint, status#mission-status-response
+          // the state-only Mission Status Response: the request names no
+          // `audience`, so `aud` is the authenticated client and nothing
+          // carries `authorization_details`; `sub` is the acting party
+          // (status#lifecycle-authorization); `nonce` is the request's. An
+          // idempotent success reports the current state.
+          const observation = kernel.observeInCallerTx(missionId, {
+            requester: principal.principal_id,
+            actingParty: principal.principal_id,
+            nonce,
+          });
+          lifecycleResponses.claimInCallerTx(nonceKey, {
+            requestDigest: digest,
+            status: 200,
+            contentType: MISSION_STATUS_RESPONSE_MEDIA_TYPE,
+            material: { kind: "status-observation", observation: observation as unknown as Record<string, unknown> },
+            responseValidUntil: observation.exp * 1000,
+          });
+          return { record, observation };
         });
         const record = transitioned.record;
         // Revocation/terminal states also revoke the OAuth grant so refresh
@@ -3216,19 +3502,24 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           const grant = await provider.Grant.find(record.grant_id);
           await grant?.destroy();
         }
-        sendJson(200, transitioned.outcome);
+        send(200, MISSION_STATUS_RESPONSE_MEDIA_TYPE, await kernel.signObservation(transitioned.observation));
       } catch (e) {
-        if (e instanceof LifecycleConflictError) {
+        if (e instanceof StaleVersionError) {
+          // @spec status#idempotency: checked before the transition rule.
+          sendJson(409, { error: "stale_version", error_description: e.message, nonce });
+        } else if (e instanceof LifecycleConflictError) {
           sendJson(409, {
             error: "conflict",
             error_description: e.message,
             ...(nonce ? { nonce } : {}),
           });
-        } else {
+        } else if (e instanceof MissionNotFoundError) {
           // @spec status#mission-status-errors — the endpoint's vocabulary is
           // `not_found` (the same body an unauthorized reference gets), never a
           // distinguishing symbol of its own.
           sendNotFound();
+        } else {
+          sendUnavailable();
         }
       }
       return;
@@ -3824,10 +4115,18 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec status#as-metadata, discharge#discharge-receipt — the response-signing
       // algorithms of the Mission Status Response shape, wherever it (or the
       // Discharge Receipt, signed the same way) can be served: the Status
-      // operation, and the Lifecycle endpoint's `discharge` operation, which
-      // answers with either even where the Status route itself is disabled.
-      if (enabled("status") || enabled("discharge")) {
+      // operation, and the Lifecycle endpoint, whose operations answer with
+      // either even where the Status route itself is disabled.
+      if (enabled("status") || lifecycleServed) {
         meta.mission_status_signing_alg_values_supported = [STATUS_SIGNING_ALG];
+      }
+      // @spec status#as-metadata, status#mission-lifecycle-endpoint: the
+      // Lifecycle endpoint, the methods it accepts and, for private_key_jwt,
+      // the client-assertion algorithms, wherever it is served.
+      if (lifecycleServed) {
+        meta.mission_lifecycle_endpoint = `${opts.issuer}${LIFECYCLE_ENDPOINT_PATH}`;
+        meta.mission_lifecycle_endpoint_auth_methods_supported = [...LIFECYCLE_ENDPOINT_AUTH_METHODS];
+        meta.mission_lifecycle_endpoint_auth_signing_alg_values_supported = [...LIFECYCLE_CLIENT_ASSERTION_ALGS];
       }
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
       // @spec mission#caller-authorization-and-minimization (cleanup, issue
@@ -4122,8 +4421,7 @@ async function handleMissionDispatchGrant(
     for (const entry of effective) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     }
-    grantId = await grant.save();
-    kernel.bindGrant(record.id, grantId);
+    grantId = kernel.bindFirstGrant(record.id, await grant.save());
   }
 
   // Resource + TTL — mirror mintDeferredToken; clamp the TTL to the instance's
@@ -4171,9 +4469,10 @@ async function handleMissionDispatchGrant(
  * `max_age`? Approver-scoped, never Subject-scoped: this checks only the
  * principal acting as Approver for THIS approval event, never the Mission
  * Subject, who MAY be a different principal. Absence of either request
- * parameter trivially satisfies that parameter. This AS publishes and
- * enforces no approval-authentication floor of its own: the high-risk floor
- * of @spec mission#approval-authentication is not implemented here (#826).
+ * parameter trivially satisfies that parameter. The issuer's published
+ * approval-authentication floor is enforced separately, in `decide()`, on the
+ * complete derived authority (@spec mission#approval-authentication, #826,
+ * D425; `config/approval-floor.json`); this check never relaxes it.
  */
 function approverAuthenticationSatisfies(
   requested: { acrValues?: string; maxAge?: string; forceFreshLogin?: boolean },
@@ -4199,6 +4498,16 @@ function approverAuthenticationSatisfies(
     if (nowEpochSeconds - achieved.authTime > maxAge) return false;
   }
   return true;
+}
+
+/**
+ * @spec mission#approval-event (step 7) (#916) — the provider grant identity
+ * of the approval decided on interaction `uid`: one grant per interaction, so
+ * a repeated or concurrent decision names the same grant (oidc-provider keeps
+ * a supplied `jti`, and its adapter's upsert overwrites the same id).
+ */
+function approvalGrantId(uid: string): string {
+  return createHash("sha256").update(`mission-approval-grant:${uid}`).digest("base64url");
 }
 
 async function decide(
@@ -4278,11 +4587,19 @@ async function decide(
       deviceClaimed = false;
     }
   };
-  // @spec mission#approval-authentication (#826): every completion of a
-  // headless approval, a refusal or a denial as much as a success, is marked
-  // for the headless-resume middleware and detached from the session this
-  // user agent held when the interaction began, so its resume neither reads
-  // nor refreshes that session. The detachment is needed because
+  // @spec mission#approval-authentication (#826): a browser approval in a
+  // user agent whose provider session belongs to another account completes
+  // isolated, as a headless approval does. Otherwise its resume meets
+  // oidc-provider's account switch (the logout confirmation): that session
+  // is saved with logout state and its cookie sent again, and, once the
+  // Mission exists, no code is issued. The Approver's own session, or none,
+  // keeps the ordinary browser completion.
+  const sessionAccount = details.session?.accountId;
+  const isolated = !interactive || (sessionAccount !== undefined && sessionAccount !== principal.sub);
+  // Every isolated completion, a refusal or a denial as much as a success, is
+  // marked for the isolated-resume middleware and detached from the session
+  // this user agent held when the interaction began, so its resume neither
+  // reads nor refreshes that session. The detachment is needed because
   // oidc-provider's resume compares the interaction's session with its own
   // before it handles an error result, and this resume runs without the user
   // agent's session.
@@ -4291,14 +4608,14 @@ async function decide(
       await finishDevice(deviceJti, result);
       return;
     }
-    if (!interactive && details.session?.uid) {
+    if (isolated && details.session?.uid) {
       delete (details.session as { uid?: string }).uid;
       await details.save(Math.max(1, (details.exp ?? 0) - Math.floor(Date.now() / 1000)));
     }
     await provider.interactionFinished(
       ctx.req,
       ctx.res,
-      interactive ? result : { ...result, [HEADLESS_APPROVAL_RESULT]: true },
+      isolated ? { ...result, [HEADLESS_APPROVAL_RESULT]: true } : result,
     );
   };
   // @spec mission#submission-via-par — re-parse the pushed Submission envelope;
@@ -4368,20 +4685,23 @@ async function decide(
   // Token about the End-User this interaction authenticates, the Approver.
   // Refused `invalid_scope` before anything is created when the Approver is
   // not the Subject (issuer-qualified principals compared), and when no
-  // End-User authenticated in this user agent at all: a headless approval
-  // service's credential is not an interactive login.
+  // End-User authentication stays in this user agent: a headless approval
+  // service's credential is not an interactive login, and an isolated
+  // browser approval keeps no session for the Approver here.
   const requestedScope = splitScope(params.scope);
   if (requestedScope.oidc.includes("openid")) {
     const approverPrincipal = { iss: opts.issuer, sub: approver };
     const subjectPrincipal = { iss: opts.issuer, sub: subject };
     const samePrincipal =
       approverPrincipal.iss === subjectPrincipal.iss && approverPrincipal.sub === subjectPrincipal.sub;
-    if (!samePrincipal || !interactive) {
+    if (!samePrincipal || isolated) {
       await finish({
         error: "invalid_scope",
-        error_description: samePrincipal
-          ? "openid requires an End-User authenticated in this user agent; a headless approval is not one"
-          : "openid is unavailable when the Approver is not the Mission's Subject",
+        error_description: !samePrincipal
+          ? "openid is unavailable when the Approver is not the Mission's Subject"
+          : !interactive
+            ? "openid requires an End-User authenticated in this user agent; a headless approval is not one"
+            : "openid requires an End-User whose session this user agent keeps; it holds another account's session",
       });
       return;
     }
@@ -4499,25 +4819,110 @@ async function decide(
   // requested ceiling that passes while the approval is pending refuses HERE and
   // creates no Mission. Mapped like the derivation refusal above: the
   // interaction finishes with the error, never a 500.
-  const approveInput: Parameters<typeof opts.kernel.approve>[0] = {
+  //
+  // @spec mission#approval-event (step 7) (#916) — the order of writes. The
+  // approval is prepared first, so every refusal (above, and in
+  // `prepareApproval`) happens before anything is written, except that
+  // the progressive ceiling consent, established at the commit's creation
+  // instant, refuses after the grant save (an inert grant a retry
+  // overwrites). The provider grant
+  // is saved next, under an identity derived from this interaction, and the
+  // record then commits already bound to it. A failure before that commit
+  // leaves an inert grant (no code, no Mission, no index entry) that a retry
+  // overwrites. A failure after it leaves an `active`, bound Mission whose code
+  // is not issued yet: the window #250's cross-store atomicity owns. A repeated
+  // or concurrent decision on this interaction names the same grant and the
+  // same approval event, so it recovers the one binding instead of creating
+  // another.
+  const approvalEventId = `apev_${details.uid}`;
+  const grantId = approvalGrantId(details.uid);
+  // @spec progressive#progressive-authorization: the authority ceiling and
+  // drawdown policy the Approver consented on this approval surface, read only
+  // where the deployment selects Progressive authorization.
+  const ceiling = opts.progressive ? ceilingConsentOf(body) : undefined;
+  const approveInput: ApproveInput = {
     intent: intent as MissionIntent,
     ...(proposedAuthority ? { proposedAuthority } : {}),
-    // @spec mission#intent-submission-evidence: the verified facts land on
+    ...(ceiling ? { ceiling } : {}),
+    // @spec mission#intent-submission-evidence — the verified facts land on
     // the Mission Record (outside all anchors), request-derived, never
     // fabricated downstream.
     ...(submissionEvidence?.length ? { submissionEvidence } : {}),
     subject: { iss: opts.issuer, sub: subject },
     approver: { iss: opts.issuer, sub: approver },
     clientId: String(params.client_id),
-    approvalEventId: `apev_${details.uid}`,
+    approvalEventId,
   };
 
-  // @spec mission#approval-authentication (#826): the provider account is the
-  // authenticated Approver; the Mission records the Subject, and every
-  // Mission-bound token projects it (the JWT customizer).
-  const saveMissionGrant = async (record: MissionRecord) => {
-    const grant = new provider.Grant({ accountId: approver, clientId: String(params.client_id) });
-    // @spec mission#scope-projection: the grant holds exactly what the
+  // The commit, shared by the browser and device paths: the retry check, the
+  // prepared approval, the reservation, the provider grant, and the record
+  // bound to it, in the order above. It returns undefined when it has already
+  // answered the request (a refusal or an `approval_forbidden`), having
+  // written nothing a retry cannot overwrite.
+  const commitApproval = async (): Promise<
+    { record: MissionRecord; effective: ReturnType<typeof opts.kernel.effectiveAuthoritySet> } | undefined
+  > => {
+    const existing = opts.kernel.findByApprovalEvent(approvalEventId);
+    // A retry recovers the committed approval only when it is the same decision:
+    // the same Approver, Subject and client as the committed record. Anything
+    // else is refused before the grant is touched, so a retry can neither
+    // rewrite the committed approval's grant nor complete its code under
+    // another login.
+    if (
+      existing &&
+      (existing.approval_basis.consent_principal?.sub !== approver ||
+        existing.subject.sub !== subject ||
+        existing.client_id !== String(params.client_id))
+    ) {
+      ctx.status = 403;
+      ctx.body = {
+        error: "approval_forbidden",
+        error_description: "this interaction's approval is already committed for another Approver, Subject or client",
+      };
+      return undefined;
+    }
+    let prepared: PreparedApproval | undefined;
+    if (!existing) {
+      try {
+        prepared = opts.kernel.prepareApproval(approveInput);
+      } catch (e) {
+        if (e instanceof IntentError) {
+          await finish({
+            error: e.code,
+            error_description: e.message,
+          });
+          return undefined;
+        }
+        throw e;
+      }
+    }
+    // The interaction's approval is reserved for this decision before the
+    // asynchronous grant save, with no await since the checks above: the first
+    // decision to reserve names the Approver, Subject, client and grant, and a
+    // concurrent decision that differs is refused here, so the committed Mission
+    // and its provider grant always agree on who approved.
+    if (
+      !opts.kernel.reserveApproval({
+        approvalEventId,
+        approver: approveInput.approver,
+        subject: approveInput.subject,
+        clientId: approveInput.clientId,
+        grantId,
+      })
+    ) {
+      ctx.status = 403;
+      ctx.body = {
+        error: "approval_forbidden",
+        error_description: "this interaction's approval is reserved for another Approver, Subject or client",
+      };
+      return undefined;
+    }
+
+    // @spec mission#approval-authentication (#826): the provider account is the
+    // authenticated Approver; the Mission records the Subject, and every
+    // Mission-bound token projects it (the JWT customizer).
+    const grant = new provider.Grant({ jti: grantId, accountId: approver, clientId: String(params.client_id) } as never);
+    // @spec mission#scope-projection — the grant holds exactly what the
     // request named: its OIDC values (openid enables an id_token), and any
     // resource values the check above let through, so the authorization code
     // carries them to the token request. Authority itself is the grant's rar;
@@ -4526,32 +4931,51 @@ async function decide(
     if (requestedScope.resource.length && audience) {
       grant.addResourceScope(audience, requestedScope.resource.join(" "));
     }
-    // Containment: the grant's rar copies the EFFECTIVE set. A freshly approved
-    // Mission has no containment, so this is the approved set as-is (fast path).
-    const effective = opts.kernel.effectiveAuthoritySet(record);
-    for (const entry of effective) {
+    // Containment: the grant's rar copies the EFFECTIVE set: on a retry, the
+    // committed record's; otherwise the prepared set, which is exactly what the
+    // commit records (a freshly approved Mission has no containment).
+    const grantAuthority = existing
+      ? opts.kernel.effectiveAuthoritySet(existing)
+      : (prepared as PreparedApproval).authoritySet;
+    for (const entry of grantAuthority) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     }
-    const grantId = await grant.save();
-    opts.kernel.bindGrant(record.id, grantId);
-    return { grantId, effective };
+    await grant.save();
+    let record: MissionRecord;
+    if (existing) {
+      // Idempotent for the grant it already holds; refuses any other.
+      opts.kernel.bindGrant(existing.id, grantId);
+      record = existing;
+    } else {
+      try {
+        record = opts.kernel.approve({ ...approveInput, grantId }, prepared);
+      } catch (e) {
+        if (e instanceof IntentError) {
+          await finish({
+            error: e.code,
+            error_description: e.message,
+          });
+          return undefined;
+        }
+        throw e;
+      }
+    }
+    return { record, effective: opts.kernel.effectiveAuthoritySet(record) };
   };
 
   // @spec device-authorization#approval, device-authorization#issuance
-  // (#1202): the device commit. The pending re-check, the record commit, the
-  // Mission grant binding and the activation that makes the `device_code`
-  // redeemable all run in this request, with the decision, never at a later
-  // visit to the provider's device resume. The device code carries the
-  // Mission grant, the root of its lineage, and what the code redeems (the
-  // requested scope and the resource); approval does not extend its lifetime
-  // (save() keeps `exp`).
+  // (#1202): the device commit. The pending re-check, the commit above and
+  // the activation that makes the `device_code` redeemable all run in this
+  // request, with the decision, never at a later visit to the provider's
+  // device resume. The device code carries the Mission grant, the root of its
+  // lineage, and what the code redeems (the requested scope and the
+  // resource); approval does not extend its lifetime (save() keeps `exp`).
   //
-  // Recovery from a failure after the commit (the grant store, the binding,
-  // the activation write): the session stays pending and its claim is
-  // released, so the Approver can retry the same decision. The retry commits
-  // nothing new: approve() returns the record this interaction's approval
-  // event already created, and that record's grant binding is reused when
-  // its grant still exists, so neither the Mission nor its grant is
+  // Recovery from a failure during the commit or the activation write: the
+  // session stays pending and its claim is released, so the Approver can
+  // retry the same decision. The retry commits nothing new: it finds the
+  // record this interaction's approval event created and rebinds the same
+  // interaction-derived grant (#916), so neither the Mission nor its grant is
   // duplicated. A retried record no longer `active` is never activated: the
   // session ends `denied`. A failed decision that is never retried leaves the
   // Mission to the unredeemed-session rule (it runs to its `expires_at`).
@@ -4561,22 +4985,12 @@ async function decide(
       devicePendingRefusal();
       return;
     }
-    let record: MissionRecord;
-    try {
-      record = opts.kernel.approve(approveInput);
-    } catch (e) {
-      if (e instanceof IntentError) {
-        await finish({ error: e.code, error_description: e.message });
-        return;
-      }
-      throw e;
-    }
-    if (record.state !== "active") {
+    const committed = await commitApproval();
+    if (!committed) return;
+    if (committed.record.state !== "active") {
       await finish({ error: "access_denied", error_description: "the Mission this decision committed is no longer active" });
       return;
     }
-    const bound = record.grant_id ? await provider.Grant.find(record.grant_id) : undefined;
-    const grantId = bound && record.grant_id ? record.grant_id : (await saveMissionGrant(record)).grantId;
     device.accountId = approver;
     device.grantId = grantId;
     device.acr = principal.acr;
@@ -4610,20 +5024,9 @@ async function decide(
     return;
   }
 
-  let record: MissionRecord;
-  try {
-    record = opts.kernel.approve(approveInput);
-  } catch (e) {
-    if (e instanceof IntentError) {
-      await finish({
-        error: e.code,
-        error_description: e.message,
-      });
-      return;
-    }
-    throw e;
-  }
-  const { grantId, effective } = await saveMissionGrant(record);
+  const committed = await commitApproval();
+  if (!committed) return;
+  const { effective } = committed;
 
   // @spec mission#scope-projection — an Intent-only request (configured
   // mapping: no `authorization_details`, and no resource `scope` either,
@@ -4649,10 +5052,9 @@ async function decide(
   // Approver's own, with its achieved `acr` and authentication time, never a
   // time manufactured from the approval click and never an authentication of
   // a different Subject. oidc-provider finishes an interaction only through
-  // a login, which on a headless approval is the code's account and nothing
-  // more: this user agent is the client's, no End-User authenticated in it,
-  // and the resume leaves it no session (`finish` and the headless-resume
-  // middleware).
+  // a login, which on an isolated approval is the code's account and nothing
+  // more: the resume leaves this user agent the session it held, and no
+  // other (`finish` and the isolated-resume middleware).
   await finish({
     login: { accountId: approver, acr: principal.acr, ts: principal.auth_time, remember: interactive },
     consent: { grantId },
@@ -5082,6 +5484,20 @@ async function readBodyWithDigest(
     body = Object.fromEntries(new URLSearchParams(text));
   }
   return { body, digest: requestMembersDigest(body) };
+}
+
+/**
+ * A request member that carries a JSON value: on the form-encoded Lifecycle
+ * endpoint it arrives as a JSON string, on the dev route's JSON body as the
+ * value itself. An unparseable string is undefined, which the caller refuses.
+ */
+function jsonMember(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Read a raw text body (e.g. a compact JWS protected-event report). */

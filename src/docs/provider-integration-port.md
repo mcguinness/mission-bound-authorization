@@ -111,7 +111,7 @@ the store.
 | Trusted approval input and achieved authentication context | Yes, both configurations | `/interaction/{uid}/decide` route, then `decide()` (§3.1) | In request, before any write; no commit of its own | None | Approval sessions and pending interactions are in memory and are lost; nothing to recover | Yes, HTTP (§3.1) | Achieved context checked, not retained; no render-to-decision binding (§3.1) |
 | Canonical Subject resolution and approve-for authorization | Yes | `decide()`: the approval surface's Subject selection, `knownSubjects`, `approverApprovesFor`, `approverRoleSubs`; the Approver as provider account (§3.2) | In request, before `kernel.approve` | None | Configuration only; nothing to recover | Yes, HTTP (§3.2) | External Subject unsupported and refused (§3.2) |
 | Source and authority derivation | Yes | `kernel.derive`; the source gates in `kernel.approve` (§3.3) | Computed before the record transaction | None | Nothing written before §4.1 | Yes, HTTP; gate detail is kernel-level (§3.3) | Decision-time `scope` check ignores `capability_sources` (§3.3) |
-| Record and grant binding | Yes | `kernel.approve` and `insertRecord`; `grant.save()`; `kernel.bindGrant`; the code on the resume request (§3.4) | Only the record commit is transactional (§4.1); grant, binding and code are separate writes | Publication of the activating event | A crash before binding leaves an orphan `active` Mission; provider state is lost at restart (§4.5) | Partial (§3.4) | `{#approval-event}` step 7 atomicity not met; a repeated decision binds a second grant (§3.4) |
+| Record and grant binding | Yes | `kernel.prepareApproval`; `grant.save()` under the interaction's grant identity; `kernel.approve` and `insertRecord`, committing the record already bound; the code on the resume request (§3.4) | Every refusal before any write, except the progressive ceiling consent at the commit; the record commits bound (§4.1); the grant save precedes it and the code follows it on a later request | Publication of the activating event | A failure before the commit leaves an inert grant and no Mission; after it, an `active`, bound Mission whose code is not issued yet; provider state is lost at restart (§4.5) | Yes, HTTP (§3.4) | `{#approval-event}` step 7 record/code atomicity not met: the code is issued on a later request (#250; §3.4) |
 | Issuance | Yes | `at.save()`: `extraTokenClaims`, `formats.customizers.jwt`, `access_token.issued` (§3.5) | The counter `UPDATE` autocommits before signing; no acceptance callback (§4.2) | None before delivery | The count stays consumed; nothing reconciles it (§4.3) | Yes, HTTP (§3.5) | Uncoupled counter: a failure after the count stays counted (§4.3); revoke-versus-issue window (§3.5) |
 | Refresh and revocation gating | Yes | `rotateRefreshToken`; the gates in `extraTokenClaims`; the lifecycle route (§3.6) | The lifecycle commit is one kernel transaction; grant destruction follows it | Grant destruction and publication | File-backed state survives; provider grants do not (§4.5) | Yes, HTTP (§3.6) | A state change between the refresh pre-check and the save-time gate is refused after rotation consumes the presented token (§3.6; #250); a fully contained family is refused after rotation, losing no recoverable issuance authority (§3.6) |
 | Scope projection | Yes (`plain-rs` is `scope_only`) | `earlyScopeRefusal`; the decision check; `decideMissionScope`; `preCheckRefreshProjection`; the JWT customizer (§3.7) | In request, before the state gate and before refresh consumption; reads only | None | The mapping is configuration, strictly loaded at boot | Yes, HTTP (§3.7) | Code-exchange refusal after code consumption; JWT-customizer backstop has no test (§3.7) |
@@ -224,13 +224,18 @@ the store.
 - **Approver and Subject identities (#826).** The provider account and Grant
   are the Approver's: `interactionFinished` logs the Approver in with the
   achieved `acr` and authentication time, never the Subject. A browser
-  approval keeps that session. A headless approval leaves none, and a
-  session the user agent already holds is neither read nor refreshed: its
-  user agent is the client's, so on every completion, a refusal or a denial
-  as much as a success, the resume runs without the session cookie that user
+  approval keeps that session when the user agent holds none or the
+  Approver's own. A headless approval leaves none, and so does a browser
+  approval in a user agent whose provider session belongs to another
+  account, which would otherwise meet oidc-provider's account switch (its
+  logout confirmation). In both, a session the user agent already holds is
+  neither read nor refreshed: on every completion, a refusal or a denial as
+  much as a success, the resume runs without the session cookie that user
   agent holds, the session the login created is destroyed before the
   response is flushed and its cookie removed, and the code is not
-  session-bound (`expiresWithSession`). Every
+  session-bound (`expiresWithSession`). Such an isolated approval keeps no
+  End-User authentication in the user agent, so `openid` is refused
+  `invalid_scope` on it. Every
   Mission-bound access token carries the Subject: `formats.customizers.jwt`
   sets `sub` from the Mission its grant resolves to, failing closed when it
   no longer resolves, and refresh-token introspection reports the Subject,
@@ -244,7 +249,15 @@ the store.
   `invalid_request` before any interaction. That is the accepted limitation
   (D305): client-requested strength on a delegated approval, including a
   client registration's incompatible OIDC defaults, is unsupported and fails
-  closed, never ignored or downgraded. The published approval-authentication
+  closed, never ignored or downgraded. A registration naming
+  `default_acr_values` is invalid client metadata here, since this AS
+  configures no acr values, so every request from such a client is refused
+  before any interaction; `default_max_age` and `require_auth_time` require
+  `openid`, and with it a delegated approval refuses `invalid_scope`. The
+  `claims` parameter is not supported (`claims_parameter_supported` is
+  false, oidc-provider's default): a request carrying it, an essential `acr`
+  included, is served without essential-claim treatment. That is a disclosed
+  limitation, not acceptance. The published approval-authentication
   floor governs the Approver's strength on high-risk authority (§3.1), and
   no other carrier is defined. An Expansion deferral approval
   (`ExpansionDeferralStore.approve`, an in-process API) meets the same floor
@@ -339,19 +352,45 @@ the store.
 ### 3.4 Record and grant binding
 
 - **Hook.** In `decide()`, in order:
-  1. `kernel.approve`, then `insertRecord`: the authoritative Mission commit
-     (§4.1). The `approval_event_id` is `apev_{interaction uid}`, `UNIQUE` in
-     the `missions` table. A repeat returns the stored record
-     (`findByApprovalEvent`).
-  2. `new provider.Grant(...)` with the request's OIDC and resource scopes
-     and the effective Authority Set as its `rar`, then `grant.save()`: a
-     provider adapter write.
-  3. `kernel.bindGrant`: `UPDATE missions SET grant_id`, then
-     `missionBoundGrants.record`. Two writes on two handles, in no shared
-     transaction.
-  4. For an Intent-only request, `details.save()` of the marked
+  1. `kernel.prepareApproval`: the principal checks, the derived Authority
+     Set with its capability-source bindings, and the authority source with
+     its ceiling. Every refusal happens here or before, so nothing is written
+     for a refused decision, except the progressive ceiling consent: `approve`
+     establishes it at the commit's creation instant, so its refusal comes
+     after the grant save and leaves an inert grant a retry overwrites.
+  2. `kernel.reserveApproval`: a synchronous reservation of the interaction's
+     approval event for this decision's Approver, Subject, client and grant,
+     taken with no await since the checks before it. A later or concurrent
+     decision that differs is refused 403 `approval_forbidden` before it
+     saves a grant, so the committed Mission and its grant agree on who
+     approved.
+  3. `new provider.Grant(...)` under `approvalGrantId(uid)`, an identity
+     derived from the interaction, with the request's OIDC and resource scopes
+     and the prepared Authority Set as its `rar`; then `grant.save()`, a
+     provider adapter write. oidc-provider keeps a supplied `jti`, and its
+     adapter's upsert overwrites the same id, so a repeated or concurrent
+     decision names and rewrites the one grant.
+  4. `kernel.approve({..., grantId}, prepared)`, which first revalidates the
+     prepared authority source (the same root with the same provenance must
+     still pass every gate; a withdrawn or changed source refuses
+     `access_denied`, and no other root is substituted), then `insertRecord`: the
+     authoritative Mission commit (§4.1), with `grant_id` set in the same
+     insert, so the record never commits unbound; then `missionBoundGrants.record`
+     on its own handle. The `approval_event_id` is `apev_{interaction uid}`,
+     `UNIQUE` in the `missions` table, and a repeat returns the stored record.
+     A decision that finds the approval event already committed is a retry of
+     that decision only if its Approver, Subject and client match the
+     committed record; otherwise it is refused 403 `approval_forbidden` before
+     the grant is touched. A matching retry binds the same grant through
+     `kernel.bindGrant`, which is compare-and-set: idempotent for the grant a
+     Mission holds, refused for any other, so a binding never moves.
+     The other minting paths (child redemption, template dispatch, and the
+     continuation and drawdown mint) bind a Mission's first grant through
+     `kernel.bindFirstGrant`: a concurrent loser mints under the winner's
+     grant rather than moving the binding.
+  5. For an Intent-only request, `details.save()` of the marked
      `authorization_details` (§7).
-  5. `interactionFinished`: a 303 to the resume URL (`lib/provider.js`
+  6. `interactionFinished`: a 303 to the resume URL (`lib/provider.js`
      L229-233). oidc-provider issues the authorization code on that later
      request.
 
@@ -365,38 +404,52 @@ the store.
   the grant index through `missionForBoundGrant`, which refuses `invalid_grant`
   when the index names a grant whose Mission no longer resolves.
   `MissionBoundGrantStore.record` keeps the first Mission for a grant id
-  (`ON CONFLICT DO NOTHING`).
-- **Boundary.** Only step 1 is transactional. Steps 2 and 3 and the code are
-  separate writes, in two stores and two requests.
+  (`ON CONFLICT DO NOTHING`). An approval grant the index resolves (one its
+  Mission's `grant_id` no longer names) still counts against the derivation
+  limit (`missionGateTarget`), so no approval grant escapes the count.
+- **Boundary.** Every refusal happens before any write, except the
+  progressive ceiling consent and the source revalidation at the commit (steps 1 and 4). The grant save, the
+  record commit with its binding, and the code are separate writes, in two
+  stores and two requests; the bound-grant index is written right after the
+  record commit, on its own handle, and a bound record resolves through
+  `findByGrant` first.
 - **Asynchronous work.** Publication of the activating lifecycle event after
   the step 1 commit (the outbox, [control-plane-deployment.md](control-plane-deployment.md)).
-- **Crash and recovery.** On the file-backed kernel, a crash after step 1 and
-  before step 3 leaves an `active` Mission with `grant_id` null and no index
-  row. The interaction was in provider memory, so nothing can resume it.
-  Nothing derives from that Mission and nothing reconciles it; it stays
-  `active` until `expires_at` or a revocation. Code reading; no test yet. On
-  the in-memory default the crash loses all of it.
+- **Crash and recovery.** A failure before the record commit leaves an inert
+  grant (no code, no Mission, no index entry) that a retry on the interaction
+  overwrites. A failure after it leaves an `active`, bound Mission whose code
+  is not issued yet, which a retry on the interaction completes. On the
+  file-backed kernel a crash after the commit leaves that Mission; the
+  interaction was in provider memory, so nothing can resume it, and it stays
+  `active` until `expires_at` or a revocation. On the in-memory default the
+  crash loses all of it.
 - **Tests:**
   - `approval event and record (@spec mission#integrity-anchors) > creates an active record with both anchors and is idempotent by approval_event_id` (kernel-level, `kernel.test.ts`)
   - `unresolvable Mission fails closed (@spec issuance-grant#effective-set-projection) > the Mission's OWN code-flow grant fails closed the same way once its record is purged` (HTTP, `async-delegation.test.ts`)
   - `unresolvable Mission fails closed (@spec issuance-grant#effective-set-projection) > a LIVE Mission whose grant_id column has moved on still refreshes, gated and claimed through the index (never a false refusal, never a claimless token)` (HTTP, same file)
   - `unresolvable Mission fails closed (@spec issuance-grant#effective-set-projection) > the index is the discriminator: it survives the Mission's deletion, and an unknown grant resolves undefined (the pass-through case)` (same file)
-  - `the Intent-only completion workaround is never a client proposal (@spec mission#authority-proposal) > an Intent-only Mission commits no proposal_hash, and re-rendering or re-deciding the same interaction still reads no proposal` (HTTP, `scope-projection.test.ts`): it decides twice on one interaction and asserts two `approve` calls and one proposal-free record. It does not assert the number of grants.
+  - `the Intent-only completion workaround is never a client proposal (@spec mission#authority-proposal) > an Intent-only Mission commits no proposal_hash, and re-rendering or re-deciding the same interaction still reads no proposal` (HTTP, `scope-projection.test.ts`): it decides twice on one interaction and asserts one `approve` call, one proposal-free record and one bound grant.
+  - `the approval decision's order of writes (@spec mission#approval-event, #916, D415) > an overlapping approval retry cannot bypass the derivation limit: the binding never moves, and the first approval grant keeps counting` (HTTP, `approval-grant-binding.test.ts`)
+  - `> concurrent duplicate decisions on one interaction commit one Mission, one grant identity and one binding`
+  - `> a grant-save failure commits no Mission, and a retry on the interaction recovers one grant and one binding`
+  - `> a commit failure after the grant save leaves only an inert grant, no Mission and no binding, and the retry recovers through that grant`
+  - `> a failure after the record commit leaves an active, bound Mission whose code is not issued yet (the #250 window), which a retry on the interaction completes`
+  - `> a Mission's grant binding never moves: bindGrant is idempotent for the grant it holds and refuses any other`
+  - `> the minting paths' first bind adopts the winner: bindFirstGrant binds an unbound Mission once and returns that grant to every later caller`
+  - `> concurrent decisions by different principals cannot disagree on identity: the first to reserve holds the interaction, the other is refused before saving a grant`
+  - `> the commit revalidates the prepared authority source: a source withdrawn during the grant save refuses access_denied and creates no Mission`
+  - `> a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes`
 - **Unsupported or residual.**
-  - `{#approval-event}` step 7 is not met. The record commits `active` before
-    the grant exists, and one request before the code is issued. A client
-    that never follows the redirect leaves an `active` Mission with a bound
-    grant and no code. No test yet. #916 owns the local ordering (a
-    deterministic grant id or a serialized association); the cross-store
-    atomicity stays with #250.
-  - A repeated decision on one interaction binds a second grant to the
-    committed record. `kernel.approve` returns the stored record, and
-    `decide()` saves and binds a new grant each time. `missions.grant_id`
-    names the latest grant; the index keeps both.
+  - `{#approval-event}` step 7's record/code atomicity is not met. The record
+    commits `active` and bound one request before the code is issued, so a
+    failure there, or a client that never follows the redirect, leaves an
+    `active`, grant-bound Mission with no code (the post-commit witness
+    above). #916 delivered the local ordering; full record/code atomicity is
+    #250's (`core.approval-event.record-code-atomicity`, partial).
   - A lineage resolving to more than one Mission is not detected:
-    `findByGrant` returns the first matching row. Each `bindGrant` call in
-    `decide()` uses a grant id saved just before it, so this path does not
-    reach that case. Code reading; no test yet.
+    `findByGrant` returns the first matching row. A grant identity is per
+    interaction and a binding never moves, so this path does not reach that
+    case. Code reading; no test yet.
 
 ### 3.5 Issuance
 
@@ -513,13 +566,20 @@ the store.
   Otherwise it inlines oidc-provider's default (`lib/helpers/defaults.js`
   L528-547): rotate a public client's token that is not sender-constrained,
   else rotate once 70 percent of the lifetime has passed.
-- **Revocation hook.** `POST /missions/{id}/lifecycle` in `makeRoutes`,
-  authenticated by a service token. `kernel.materializeExpiry` commits any
-  expiry first, in its own transaction. One `withTransaction(kernel.db, ...)`
-  then commits `kernel.transition` (state, version, event row and, for a
-  terminal state, the tombstone) with the nonce-keyed outcome. After that
-  commit, outside it, the handler awaits `provider.Grant.find(record.grant_id)`
-  and `destroy()` for a state other than `active` or `suspended`. Family grants are revoked by the
+- **Revocation hook.** The advertised Mission Lifecycle endpoint,
+  `POST /mission/lifecycle` in `makeRoutes`: a form body carrying
+  `mission_id`, the caller authenticated by private-key JWT and authorized by
+  the lifecycle grant the deployment binds to that client
+  (`lifecycleClients`, `lifecycleClientGrants`). The dev-only, unadvertised
+  `POST /missions/{id}/lifecycle` route, authenticated by a service token,
+  runs the same engine. `kernel.materializeExpiry` commits any expiry first,
+  in its own transaction. One `withTransaction(kernel.db, ...)` then commits
+  `kernel.transition` (state, version, event row and, for a terminal state,
+  the tombstone), the signed response's observation and the nonce claim.
+  After that commit, outside it, the handler awaits
+  `provider.Grant.find(record.grant_id)` and `destroy()` for a state other
+  than `active` or `suspended`, then signs the observation: the answer is the
+  state-only Mission Status Response. Family grants are revoked by the
   durable subscriber `delegation-family-grant-revoke` (`index.ts`).
 - **Boundary.** The lifecycle commit is one kernel transaction. The
   approval-grant destruction is a separate provider write with no retry row.
@@ -576,10 +636,9 @@ the store.
   - The JWT-only `plain-rs` keeps accepting an issued token until its `exp`
     plus the clock tolerance (the revocation test above;
     `issuance-only-deployment.md` §2).
-  - Revocation destroys only `record.grant_id`. A grant bound by an earlier
-    repeated decision (§3.4) remains in the provider store. A refresh against
-    it is still refused, through `missionForBoundGrant` and then
-    `gateActive`. Code reading; no test yet.
+  - Revocation destroys `record.grant_id`, the Mission's one approval grant: a
+    repeated decision names the same grant (§3.4), so no earlier approval
+    grant is left behind.
   - The approval-grant destruction has no durable retry. The gate is the
     backstop.
 
@@ -764,8 +823,8 @@ them as unsupported for that reference deployment.
 
 - **Approval.** `approval_event_id` (`apev_{uid}`) is `UNIQUE`. A repeat
   decision returns the stored record and emits no second activating event
-  (`kernel.approve`). The grant is not idempotent: each decision saves and
-  binds a new one (§3.4).
+  (`kernel.approve`). The grant is idempotent too: its identity derives from
+  the interaction, and a Mission's binding never moves (§3.4).
 - **Authorization code.** Single use. oidc-provider refuses a consumed code
   and revokes its grant (`authorization_code.js` L84-87). No test in this
   repository.
@@ -845,8 +904,9 @@ none of that work.
 
 These gaps are not named in #250's items:
 
-- the approval commit ordering against code issuance (§3.4), whose local
-  ordering #916 owns;
+- the window between the approval commit and code issuance (§3.4): #916
+  delivered the local ordering, and full record/code atomicity is #250's
+  (D415);
 - external Subjects (§3.2), whose owner is not verified.
 
 The state gate after rotation (§3.6) is partly fixed by the refresh pre-check
@@ -863,8 +923,8 @@ operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) or naming a later merged
-issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `bb4e8a35`, and every
-`file:line` citation is read at `bb4e8a35`.
+issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `e3f4e789`, and every
+`file:line` citation is read at `e3f4e789`.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -893,7 +953,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 | Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
 | Credential validation | Yes. Met (D411): the PEP and the PDP each enforce the credential's own authority, and introspection, which this path does not consume, validates as the resource does (D402) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check, and the `context.credential` carrier the PDP enforces (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport, PEP- and PDP-level (§5.1) | The mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
-| Independent Resource policy | Yes, not met: acceptance gate (#828) | The decision point's bound `ResourcePolicy`, OpenFGA stored entitlements in `stack.ts` (§5.2) | In the decision | None | Entitlements are stored in OpenFGA; startup attaches or bootstraps a development store (§5.2) | PDP- and PEP-level, [FGA] (§5.2) | Live witnesses CI-only; no client policy; an unresolved vendor lookup names no vendor (D324); its owner and freshness are not yet declared in the profile or statement (§5.2) |
+| Independent Resource policy | Yes, not met: acceptance gate (#828) | The decision point's bound `ResourcePolicy`, OpenFGA stored entitlements in `stack.ts` (§5.2) | In the decision | None | Entitlements are stored in OpenFGA; startup attaches or bootstraps a development store (§5.2) | PDP- and PEP-level, [FGA] (§5.2) | Live witnesses CI-only; an unresolved vendor lookup names no vendor (D324) (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `Pep.intake` (closed schema, NFC) before any decision work; `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level and MCP channel, [FGA] (§5.4) | A single-record read re-derives no digest at use (§5.4) |
 | Permit redemption | Transaction tier, keyed writes, and single-use permits on the unkeyed write path | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation; `takeSingleUse` (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction. An unkeyed-write redemption is one insert, immediately before the effect; a keyed retrieval's is one insert before anything is disclosed (D342) | None; settlement is awaited | Claim, reservation and consumed-identifier records survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | One redemption per operation key per process (§5.5) |
@@ -943,7 +1003,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Asynchronous work.** None.
 - **Crash and recovery.** The DPoP replay cache is in memory. Signing keys are
   generated per boot (D25), so a pre-restart token fails signature
-  validation. The PEP fetches the AS JWKS once at assembly (`stack.ts:509`);
+  validation. The PEP fetches the AS JWKS once at assembly (`stack.ts:532`);
   refresh is #831's.
 - **Tests:**
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
@@ -1008,17 +1068,19 @@ drives an AS-issued Mission-bound token through that assembled path.
   - [FGA] `the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > an unconstrained list names every invoice vendor to the stored policy: revoking only one vendor's entitlement refuses the whole read resource_policy, a read of the other vendor still permits, and restoring it permits both, the same over both channels (#828 step 5)` (PEP-level)
   - [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (co-resident)` and `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (remote)` (the assembled AS-native target over HTTP)
   - `pnpm resource-policy administers the stored entitlements (@spec runtime#input-resource-policy, #828) > attaches to the configured store and model and never bootstraps one; without both ids it refuses before connecting` (the administration command)
+  - `the client dimension (D429): the authenticated client must hold authorized_client on every target; a refused client entitlement refuses though the subject's holds, and no client or a client under another issuer refuses without a check` (PDP-level, D429)
+  - [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > the client and the tenant are policy dimensions (D429): another client, a revoked client entitlement, and the same subject outside the vendor's tenant each deny resource_policy; restoring each permits` (PDP-level)
+  - [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read is refused resource_policy with no effect once the administrator revokes only its client's entitlement on acme, the subject's unchanged, and permitted once it is restored (co-resident) (D429)` and `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read is refused resource_policy with no effect once the administrator revokes only its client's entitlement on acme, the subject's unchanged, and permitted once it is restored (remote) (D429)` (the assembled AS-native target over HTTP)
 - **Required, not met.** #828 stays an acceptance gate. Its live witnesses
-  run only where OpenFGA does (CI). No policy requires a client and there
-  is no tenant dimension (D426). A vendor the store does not hold keeps
+  run only where OpenFGA does (CI). A vendor the store does not hold keeps
   `lookup_vendor`'s server target (D324), which a vendor constraint or the
   policy refuses. The payments Operation Profile
-  (`payments-runtime-profile-v3`) declares the policy's owner, principal,
-  relations, freshness and failure behavior.
+  (`payments-runtime-profile-v4`) declares the policy's owner, principals
+  (subject and client), relations, tenant, freshness and failure behavior.
 
 ### 5.3 Protected state and lifecycle
 
-- **Hook.** `loadView` (`stack.ts:850-857`) reads the kernel's committed state
+- **Hook.** `loadView` (`stack.ts:874-881`) reads the kernel's committed state
   and version for each decision, with `mode: "fresh"` and `freshness_at` set
   to now. Under PEP placement the PEP forwards that observation at
   `context.mission_state_observation`, and the PDP's own view wins on
@@ -1172,7 +1234,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Crash and recovery.** The claim and reservation files survive a restart,
   and with them the consumed identifiers.
   The engine's redemption records do not, and every process reuses the epoch
-  `demo-epoch` (`stack.ts:889`), so single use across a restart rests on the
+  `demo-epoch` (`stack.ts:913`), so single use across a restart rests on the
   persisted claim and reservations (the contract's §7). Surviving is not
 recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Tests:**
@@ -1222,7 +1284,7 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Boundary.** Synchronous, inside the request.
 - **Asynchronous work.** None.
 - **Crash and recovery.** `EvidenceRetentionStore` is in memory as shipped
-  (`stack.ts:744-746`). Retained records are lost at restart.
+  (`stack.ts:768-770`). Retained records are lost at restart.
 - **Tests (PEP-level):**
   - `a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence`
   - `retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart` (on a file-backed store, not the shipped one)
@@ -1332,10 +1394,8 @@ Runtime overlay:
 
 **Residual.**
 
-- A repeated decision binds a second grant to the committed record (§3.4).
-- An abandoned redirect leaves an `active` Mission with no code (§3.4).
-- A crash after the record commit leaves an `active` Mission with no grant on
-  the file-backed kernel (§3.4).
+- An abandoned redirect, or a failure or crash after the record commit,
+  leaves an `active`, grant-bound Mission with no code (§3.4; #250).
 - A state change between the refresh pre-check and the save-time gate is
   refused after rotation consumes the presented refresh token (§3.6; #250).
 - A fully contained delegation family is refused after rotation consumes its
@@ -1350,8 +1410,8 @@ Runtime overlay:
 - The decision carries no render digest, and the page shows no separately
   computed effective expiry (§3.1).
 - The achieved authentication context is not retained (§3.1).
-- The approval-grant destruction is not durable, and an earlier grant from a
-  repeated decision is not destroyed; the gate refuses both (§3.6).
+- The approval-grant destruction is not durable; the gate refuses the grant
+  (§3.6).
 - A refresh presented after `expires_at` is refused by the refresh token's
   own expiry, with no `mission_error` (§3.5).
 - The JWT-only `plain-rs` accepts a token until `exp` plus its clock

@@ -674,17 +674,19 @@ describe("Mission Device Authorization approval (@spec device-authorization#appr
     expect((await poll(PUBLIC, ended.deviceCode, await newKeys())).body.error).toBe("access_denied");
   });
 
-  it("recovers from a grant-store failure after the commit: the session stays pending and a retry completes the same Mission", async () => {
+  it("recovers from a grant-store failure before the commit: no Mission exists, the session stays pending, and a retry completes one Mission", async () => {
     const s = await pendingSession();
     const fault = vi.spyOn(as.provider.Grant.prototype, "save").mockRejectedValueOnce(new Error("grant store fault"));
     const first = await decide(s.uid, s.headers, CONFIRMED);
     fault.mockRestore();
     expect(first.status).toBe(500);
-    const committed = missionOf(s.uid);
-    expect(committed?.state).toBe("active");
+    // #916: the grant is saved before the record commits, so the fault leaves no Mission.
+    expect(missionOf(s.uid)).toBeUndefined();
     expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.error).toBe("authorization_pending");
     const retry = await decide(s.uid, s.headers, CONFIRMED);
     expect(retry.status, retry.text).toBe(200);
+    const committed = missionOf(s.uid);
+    expect(committed?.state).toBe("active");
     expect(as.kernel.allMissions().filter((m) => m.approval_event_id === `apev_${s.uid}`)).toHaveLength(1);
     const res = await poll(PUBLIC, s.deviceCode, await newKeys());
     expect(res.status, JSON.stringify(res.body)).toBe(200);
@@ -708,7 +710,8 @@ describe("Mission Device Authorization approval (@spec device-authorization#appr
 
   it("never activates a retried decision whose committed Mission is no longer active: the session ends denied", async () => {
     const s = await pendingSession();
-    const fault = vi.spyOn(as.provider.Grant.prototype, "save").mockRejectedValueOnce(new Error("grant store fault"));
+    // The activation write is the step after the commit (#916), so a fault there leaves a committed Mission.
+    const fault = vi.spyOn(as.provider.DeviceCode.prototype, "save").mockRejectedValueOnce(new Error("device code store fault"));
     expect((await decide(s.uid, s.headers, CONFIRMED)).status).toBe(500);
     fault.mockRestore();
     as.kernel.transition(missionOf(s.uid)?.id as string, "revoke");

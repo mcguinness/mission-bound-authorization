@@ -10,11 +10,15 @@ export {
   modelFingerprint,
 } from "./fga.js";
 export {
+  CLIENT_ENTITLEMENT,
+  type ClientMapper,
   checkResourcePolicy,
+  clientObject,
   ENTITLEMENT_RELATIONS,
   type EntitlementRelation,
   fgaResourcePolicy,
   isResourcePolicy,
+  issuerLocalClients,
   issuerLocalPrincipals,
   type PrincipalMapper,
   principalObject,

@@ -22,7 +22,7 @@ import {
 import { SAAS_RESOURCE } from "@mission/mcp-saas";
 import type { TokenFacts } from "@mission/mcp-payments";
 import type { Decision, EvaluationRequest } from "@mission/pdp";
-import { calculateJwkThumbprint, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
+import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import {
   assertDemoApprovalFloor,
   callWithTransactionCredential,
@@ -1771,20 +1771,25 @@ async function main() {
     "The operator drives the mission through its lifecycle: suspend, resume, contain a tainted capability, expand via a fresh approval, supersede, and revoke.",
     "each transition gates what follows: suspended and superseded tokens are denied, containment removes one capability while others still permit, and the successor restores it.",
   );
+  // Every Lifecycle request carries the REQUIRED nonce; a state-changing
+  // operation is answered with the signed Mission Status Response, shown here
+  // decoded.
   const lifecycle = async (operation: string, id: string): Promise<{ status: number; body: unknown }> => {
     const res = await fetch(`${asUrl}/missions/${id}/lifecycle`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-      body: JSON.stringify({ operation }),
+      body: JSON.stringify({ operation, nonce: crypto.randomUUID() }),
     });
-    return { status: res.status, body: await res.json() };
+    const text = await res.text();
+    const signed = (res.headers.get("content-type") ?? "").startsWith("application/mission-status-response+jwt");
+    return { status: res.status, body: signed ? decodeJwt(text) : JSON.parse(text) };
   };
 
   // 10a. suspend -> the next action is denied (mission not active).
   hop("Operator", "AS", "POST /missions/{id}/lifecycle (suspend)", "HTTP");
   httpReq("POST", `${asUrl}/missions/${missionId}/lifecycle`, {
     headers: { "content-type": "application/json", "x-service-token": "<service token>" },
-    body: { operation: "suspend" },
+    body: { operation: "suspend", nonce: "<nonce>" },
   });
   const suspendRes = await lifecycle("suspend", missionId);
   httpRes(suspendRes.status, suspendRes.body);
@@ -1803,7 +1808,7 @@ async function main() {
   hop("Operator", "AS", "POST /missions/{id}/lifecycle (resume)", "HTTP");
   httpReq("POST", `${asUrl}/missions/${missionId}/lifecycle`, {
     headers: { "content-type": "application/json", "x-service-token": "<service token>" },
-    body: { operation: "resume" },
+    body: { operation: "resume", nonce: "<nonce>" },
   });
   const resumeRes = await lifecycle("resume", missionId);
   httpRes(resumeRes.status, resumeRes.body);
@@ -1828,6 +1833,7 @@ async function main() {
   // out_of_authority, never approved) while other actions still permit.
   const containBody = {
     operation: "contain",
+    nonce: crypto.randomUUID(),
     event: {
       type: "tainted_read",
       source: "https://siem.example/detections",
@@ -1951,7 +1957,7 @@ async function main() {
   hop("Operator", "AS", "POST /missions/{id}/lifecycle (revoke successor)", "HTTP");
   httpReq("POST", `${asUrl}/missions/${expansion.successor.id}/lifecycle`, {
     headers: { "content-type": "application/json", "x-service-token": "<service token>" },
-    body: { operation: "revoke" },
+    body: { operation: "revoke", nonce: "<nonce>" },
   });
   const revokeRes = await lifecycle("revoke", expansion.successor.id);
   httpRes(revokeRes.status, revokeRes.body);

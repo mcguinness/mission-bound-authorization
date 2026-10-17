@@ -17,10 +17,12 @@ import {
   Fga,
   FgaDomainAdmin,
   fgaResourcePolicy,
+  issuerLocalClients,
   issuerLocalPrincipals,
   loadRuntimePosture,
   type MissionView,
   principalObject,
+  clientObject,
   relationForAction,
   type ResourcePolicy,
   RUNTIME_POSTURE,
@@ -355,12 +357,23 @@ const d = up ? describe : describe.skip;
 if (!up) console.warn("OpenFGA unreachable; skipping the PEP Resource-policy OpenFGA tests");
 
 d("the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828)", () => {
+  /** The tenancy and client grants (D429): `vendors` in one tenant, Alice and the token's client its members, the client entitled on each. */
+  const tenancy = (vendors: readonly string[]) => {
+    const client = clientObject({ iss: ISSUER, client: TOKEN.clientId });
+    return [
+      ...vendors.map((v) => ({ user: "tenant:payments", relation: "tenant", object: `vendor:${v}` })),
+      { user: principalObject({ iss: ISSUER, sub: "alice" }), relation: "member", object: "tenant:payments" },
+      { user: client, relation: "member", object: "tenant:payments" },
+      ...vendors.map((v) => ({ user: client, relation: "authorized_client", object: `vendor:${v}` })),
+    ];
+  };
+
   it("revoking only the stored entitlement refuses the next read resource_policy with no result; restoring it permits, the same over both channels", async () => {
     const { fga } = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, ...(CA ? { caCertPath: CA } : {}) });
     const admin = new FgaDomainAdmin(fga);
     const entitlement = { user: principalObject({ iss: ISSUER, sub: "alice" }), relation: "authorized_reader", object: "vendor:acme" };
-    await admin.grant([entitlement, { user: "vendor:acme", relation: "vendor", object: "invoice:inv-1" }]);
-    const policy = fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(ISSUER) });
+    await admin.grant([entitlement, { user: "vendor:acme", relation: "vendor", object: "invoice:inv-1" }, ...tenancy(["acme"])]);
+    const policy = fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(ISSUER), clients: issuerLocalClients(ISSUER) });
     for (const mode of MODES) {
       // The Mission check runs against the same live OpenFGA, over the
       // Mission's own contextual tuples.
@@ -388,8 +401,8 @@ d("the deployment's OpenFGA Resource policy at the resource (@spec runtime#input
     const admin = new FgaDomainAdmin(fga);
     const alice = principalObject({ iss: ISSUER, sub: "alice" });
     const globex = { user: alice, relation: "authorized_reader", object: "vendor:globex" };
-    await admin.grant([{ user: alice, relation: "authorized_reader", object: "vendor:acme" }, globex]);
-    const policy = fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(ISSUER) });
+    await admin.grant([{ user: alice, relation: "authorized_reader", object: "vendor:acme" }, globex, ...tenancy(["acme", "globex"])]);
+    const policy = fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(ISSUER), clients: issuerLocalClients(ISSUER) });
     for (const mode of MODES) {
       const x = await build(mode, policy, fga, LIST_FIXTURE);
       try {

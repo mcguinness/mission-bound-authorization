@@ -410,8 +410,7 @@ deployment's values: the reference AS and `plain-rs`.
     "the scope-projection mapping's integrity is repository review; it is not fetched or signed",
     "Intent-only requests depend on an oidc-provider workaround (a marked, AS-written authorization_details)",
     "the decision-time scope check projects the derived set without capability_sources, so a catalog-sourced scope_only entry can pass at the decision and refuse at the token endpoint",
-    "a repeated decision on one interaction binds a second grant to the committed record",
-    "the approval commits the Mission active before its grant is bound and its code issued, so a client that never redeems leaves an active Mission with no code (#916)",
+    "the approval commits the Mission active and bound to its grant one request before the code is issued, so a client that never follows the redirect leaves an active Mission with no code (#250)",
     "the JWT-customizer backstop has no test yet (#870)"
   ]
 }
@@ -437,7 +436,7 @@ existing tests only. "No test yet" marks a vector nothing witnesses.
 | A changed mapping version (not by itself stale) | Re-projects | `core.scope-projection.unknown-stale-mapping-fail-closed` | the refresh test above; `projectScope (@spec mission#scope-projection) > evaluates the mapping current at each issuance: a changed version still projects` |
 | Ungrantable requested value | `invalid_scope` | `core.scope-projection.ungrantable-requested-scope-refused` | `ungrantable requested scope (@spec mission#scope-projection, mission#error-mapping) > refuses invalid_scope at PAR a resource scope for an authorization_details target, and a value the scope-only target's mapping does not name`; `> refuses invalid_scope at the authorization decision a mapped value no carried entry makes safe, before any Mission exists`; `> refuses invalid_scope a Token Exchange naming a value no carried entry makes safe, or an OIDC value where no id_token is issued, and grants a safe requested value` |
 | Refresh after a projection-only refusal | Token and grant still valid | `core.scope-projection.refresh-preserved-on-projection-refusal` | `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refused rotating refresh leaves the same refresh token valid: once the trusted mapping is repaired it succeeds once, and its reuse gets the ordinary replay treatment` |
-| Delegated token for a Resource Server that is not Mission-aware | `invalid_target`, no side effect, no automatic Child Mission | No ledger row covers the delegated-routing rule | `delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection`; `delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is` |
+| Delegated token for a Resource Server that is not Mission-aware | `invalid_target`, no side effect, no automatic Child Mission | `core.rs-enforcement.delegated-routing-mission-aware` (partial: the AS issuance gate only) | `delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection`; `delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is` |
 | Token past `exp` at the plain RS | 401 `invalid_token`, no operation | No ledger row covers `plain-rs` | `plain-rs RFC 9068 / RFC 9449 validation > refuses a wrong typ, a wrong audience or issuer, and an expired token`; `plain-rs access-token time boundaries (injected clock) > with clock tolerance 0, a token whose exp is 1 s before now is refused and one whose exp is 1 s after now is accepted` |
 | Token within the declared clock tolerance past `exp` | Accepted inside the tolerance, refused beyond it | No ledger row covers `plain-rs` | `plain-rs access-token time boundaries (injected clock) > with clock tolerance 5 s, a token 3 s past exp is accepted and one 6 s past exp is refused` |
 | DPoP proof at the `iat` window edge | ±60 s accepted, ±61 s refused `invalid_dpop_proof` | No ledger row covers `plain-rs` | `plain-rs access-token time boundaries (injected clock) > a DPoP proof whose iat is exactly 60 s either side of now is accepted, and 61 s is refused` |
@@ -494,9 +493,12 @@ It writes the per-boot dev credentials, mode 0600, to
 `$TMPDIR/mission-issuance-only.credentials.json` (override with
 `ISSUANCE_ONLY_CREDENTIALS`): the `ap-agent` private key, which is generated
 per boot (D25), the approver console's token, and the lifecycle console's
-token. In a real deployment three different parties hold these three
-credentials. Here the walkthrough plays all three, each step under its own
-credential.
+private key. The lifecycle console generates its own key; the AS registers
+only the public half, with the `mission_lifecycle` grant, and binds that grant
+to no other client. The file also carries the dev-only lifecycle route's
+service token. In a real deployment three different parties hold the agent,
+approver and lifecycle credentials. Here the walkthrough plays all three, each
+step under its own credential.
 
 **Stopping.** The wrapper (`scripts/run-demo-ts.mjs`) runs the server process
 as its only child (`node --import tsx`), forwards SIGINT, SIGTERM and SIGHUP
@@ -537,8 +539,8 @@ targets the plain RS, the `authorization_details` proposal is
                                    "mission":{"id":"msn_...","issuer":"http://localhost:4400"},"cnf":{"jkt":"..."}}}
 4. GET /api/reports        <- 200 {"reports":[]}
 5. POST /api/reports       <- 403 {"error":"insufficient_scope", ... scope="reports.write" ...}
-6. Revoke                  <- 200 {"id":"msn_...","state":"terminated","termination":{"reason":"revoked", ...},"version":2}
-                                                                                    (as svc:console)
+6. Revoke                  <- 200 {"state":"terminated","termination":{"reason":"revoked", ...},"aud":"lifecycle-console","signed":true}
+                                                     (as lifecycle-console, private_key_jwt, at mission_lifecycle_endpoint)
 6a. Refresh after revoke   <- 400 {"error":"invalid_grant"}
 6b. GET after revoke       <- 200 {"reports":[]}                                    JWT only: honored until exp
 6b. GET after revoke       <- 401 {"error":"invalid_token","error_description":"the access token is not active"}
@@ -690,10 +692,11 @@ companion at `5702bdd0`:
   `> refuses a divergent retry without retaining it, leaving the committed success replayable`,
   `> conflicts on the same retry when no claim was retained, which is what the claim fixes`.
 - The endpoint's Authorization subsection: a `mission_lifecycle` grant is
-  required (here the `svc:console` service principal holds it), and a caller
-  without it gets the not-found shape of § Error Responses
-  (`{#mission-status-errors}`). No test yet for a state operation; the
-  distinct discharge grant is
+  required (here the dedicated `lifecycle-console` client holds it, and the
+  dev-only route's `svc:console` service principal), and a caller without it
+  gets the not-found shape of § Error Responses (`{#mission-status-errors}`):
+  `the launcher's lifecycle console at the advertised endpoint (@spec status#mission-status-authentication, status#lifecycle-authorization, #1191) > no other client holds a lifecycle grant: the Mission's own client is answered as for an unknown Mission`.
+  The distinct discharge grant is
   `the discharge operation on the lifecycle endpoint > mission_lifecycle does not imply mission_discharge`.
 - § Revocation Propagation (`{#revocation-enforcement-classes}`) and its
   Recommended Access-Token TTL subsection: the AS advertises
@@ -706,22 +709,18 @@ companion at `5702bdd0`:
 
 Of § Conformance's (`{#conformance}`) extensions, this deployment meets only
 Revocation propagation: the advertisement and the token sizing above. It
-claims neither Mission Lifecycle nor its revoke-only class, because the
-reference endpoint's wire differs from the companion's:
-
-- it is `POST /missions/{id}/lifecycle` with a JSON body, not the
-  `mission_lifecycle_endpoint` URL with a form-urlencoded body carrying
-  `mission_id`;
-- the caller authenticates with an `x-service-token` header, not mTLS, a
-  sender-constrained access token or private-key JWT (the endpoint's
-  Authentication subsection);
-- a transition answers `{"id", "state", "version"}` JSON, with
-  `termination` beside a `terminated` state, not a signed Mission Status
-  Response;
-- `mission_lifecycle_endpoint`, its auth-methods member and
-  `mission_status_signing_alg_values_supported` are not advertised; the AS
-  advertises the last only with the Mission Status or discharge capability,
-  both off here.
+claims neither Mission Lifecycle nor its revoke-only class. The AS serves
+the companion's endpoint (#1191): `mission_lifecycle_endpoint` takes a
+form-urlencoded body carrying `mission_id`, authenticates the caller by
+private-key JWT, answers `revoke` with the signed state-only Mission Status
+Response, and is advertised with its auth-methods member and
+`mission_status_signing_alg_values_supported`. The walkthrough's step 6
+revokes there as the dedicated lifecycle console:
+`the launcher's lifecycle console at the advertised endpoint (@spec status#mission-status-authentication, status#lifecycle-authorization, #1191) > the reference console types its client assertion client-authentication+jwt, names the issuer as its sole aud, and revokes a Mission whose tokens it does not hold`.
+The class is not claimed because the endpoint is served over plain HTTP here
+and no deployment evidence witnesses its TLS requirement. The dev-only
+`POST /missions/{id}/lifecycle` route, under the `svc:console` service token,
+runs the same engine and is not advertised.
 
 The refusal of an operation not adopted, which the revoke-only class also
 requires, matches the companion (§8).

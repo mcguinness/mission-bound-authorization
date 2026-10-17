@@ -119,6 +119,37 @@ may be illegal from the state that commit left; a refusal must never roll that
 expiry back, leaving an expired Mission `active` without its transition or its
 publication. The derivation gate follows the same rule.
 
+Suspension schedules (`suspend_until` and `on_expiry`) are off unless a
+deployment adopts them (`suspensionSchedules`). Where adopted, the schedule is
+persisted, not the timer. Each schedule lives in its Mission's row, written in
+the same compare-and-set statement as the `suspend` that arms it or the
+metadata-only commit that replaces it, together with its committing party and
+its generation (the state version of that commit); every transition out of
+`suspended` clears it in the same statement. The schedule is therefore exactly
+as durable as the Mission Record: it survives a restart on the file-backed
+store and, like everything else, not on the in-memory default. Timers are
+in-process and unreferenced. Startup re-arms one per persisted schedule and
+delivers any whose deadline passed while the process was down before the
+assembly serves a request. A delivery claims its generation inside one kernel
+transaction and acts only on that exact schedule of a `suspended` Mission, so a
+stale or replaced timer, a duplicate delivery and a delivery racing a manual
+transition change nothing; nothing depends on cancelling a timer. The expiry
+clock applies a due schedule after expiry, on any read of the record as well as
+at the timer, so a Mission past its `expires_at` is `expired` and never resumed:
+one first observed past `expires_at`, by a late resume or revoke delivery
+included, ends `expired`, while a revocation committed before `expires_at` keeps
+`revoked`. The transition and its durable lifecycle event commit together, as
+for every other transition, and every effect outside the kernel follows that
+commit: the commit names the schedule it applied, and a scheduled revocation's
+destruction of the Mission's OAuth grant is a durable delivery of it, owed
+whether a read, a request or the timer committed the transition, and retried
+after a failure. This deployment refuses a `suspend_until` at or before the
+current time with `invalid_request`; that refusal is its own choice, not a
+requirement of the profile. Delivery is single-process: a second process would run its
+own timers, each still claiming the generation under the version
+compare-and-set, but no multi-process scheduling claim is made. Authorization
+is decided at commit; a delivery never re-checks the committing party's grant.
+
 A reservation replay is the one ungated path, and only when an artifact was
 actually retained: returning a recorded artifact produces nothing new. A
 recorded operation identity with no retained artifact is gated like any fresh
@@ -174,13 +205,32 @@ purged; and the creation-idempotency purge window is one of the composed
 inputs, so a reservation admitted after that purge still cannot name a terminal
 identifier.
 
+A Template Dispatch or policy-adjudicated child creation retains, in its
+record's own transaction, each activation policy snapshot its gate verified:
+the exact bytes and media type, keyed by issuer, policy id, version and digest.
+A retention failure commits no Mission. A write recomputes the digest and
+refuses bytes that do not reproduce it, and never rewrites retained bytes, so
+a policy edited under an unchanged version is a new row and never replaces the
+evidence behind an earlier commitment. Each row is retained until the latest
+expiry of a Mission activated under it plus the declared 7776000 seconds of
+audit retention, the same declaration the tombstones compose. Boot recovery
+deletes only rows past that horizon; replacing, editing or retiring a policy
+in the current registry deletes nothing. Storage is not indefinite: past its
+horizon a snapshot is gone and an audit check reports it unavailable. The
+retained rows are audit evidence only. Activation eligibility reads the current
+registry alone, so a retained snapshot never admits a replaced or retired
+policy. The rows are on the kernel database and survive a restart only on the
+file-backed store.
+
 Namespace inventory for the changed seams:
 
 | Mutable seam | Namespace boundary |
 |---|---|
 | Mission state/version, counters, child accounting and expansion deferrals | One issuer owns the kernel database |
+| Suspension schedules and their generations | The Mission's own row in the kernel database |
 | Durable lifecycle events and per-subscriber delivery rows | One issuer owns the kernel database; each event row records the issuer it committed under |
 | Terminal tombstones | Keyed on the canonical issuer and Mission identity pair |
+| Retained activation policy snapshots | Keyed on issuer, policy id, version and digest |
 | Actor-depth records | Existing structured issuer/Mission/client tuple |
 | Signals receiver state, replay and gap tracking | Structured issuer/local-ID tuple in each registered issuer receiver |
 | Shared Signals delivery outbox | Structured issuer/event-ID storage key plus audience; wire event IDs remain unchanged |
