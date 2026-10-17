@@ -19,7 +19,7 @@
  * endpoint refusal: a refresh of a predecessor's own refresh token after a
  * deferred expansion activated its successor (#1065).
  */
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
@@ -428,6 +428,7 @@ async function expand(m: { accessToken: string; keys: Keys }): Promise<string> {
   const deferralCode = opened.body.deferral_code as string;
   as.expansionDeferrals.approve(deferralCode, {
     approver: { iss: ISSUER, sub: "bob" },
+    authentication: FIXTURE_BROWSER_LOGIN,
     approvalEventId: `apev-refresh-precheck-${crypto.randomUUID()}`,
     approvedUntil: FAR_EXP,
   });
