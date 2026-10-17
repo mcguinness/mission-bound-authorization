@@ -5955,9 +5955,15 @@
      "name": "an expansion approval meets the approval-authentication floor (@spec mission#approval-authentication, #826, D425) > refuses a high-risk expansion approval whose recorded login the floor does not accept, a weaker acr or one older than the age bound, then completes from one it accepts",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > holds the device approval to the published approval-authentication floor: high-risk authority needs an accepted acr",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated."
+   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
@@ -37705,7 +37711,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "After an approval through one session's user_code, polling with another session's device_code never returns that Mission's tokens."
+    "normative": "After an approval through one session's user_code, polling with another session's device_code never returns that Mission's tokens.",
+    "local": "Witnessed exactly as the binding of code to interaction to record: the interaction a verified user_code starts names that session's device code, the decision resolves only that code (a user_code sent with the decision is ignored), the record the decision commits is bound to it, and only it redeems that Mission. No crash-atomicity claim: that residual belongs to device-authorization.approval.record-atomic-with-decision."
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -37844,7 +37851,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "No Mission exists, and polling yields authorization_pending or slow_down, until the decision commits; the Mission exists from that commit, and the device_code becomes redeemable subject to its lifetime, one-time use, and issuance gating.",
-    "local": "The decision request commits the record in the kernel store, binds the Mission grant, then writes the device code's activation to the provider adapter; a failed activation write revokes the record. A crash between the commit and that write leaves an active Mission whose code expires unredeemed: the two stores share no transaction (the cross-step domain #250 tracks for the authorization-code path)."
+    "local": "The decision request commits the record in the kernel store, binds the Mission grant, then writes the device code's activation to the provider adapter, all under the session's claim, which every exit releases. A live failure after the commit (the grant store, the binding, the activation write) leaves the session pending: a retry of the same decision returns the record its approval event already created and reuses its grant binding, so it never duplicates the Mission or its grant, and a retried record no longer active ends the session denied. A failed decision never retried leaves the Mission to the unredeemed-session rule. Not atomic across a crash: the two stores share no transaction, so a crash between the commit and the activation write leaves an active Mission whose code expires unredeemed (the cross-step domain #250 tracks)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -37854,9 +37861,27 @@
      "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > creates the Mission active with the decision, which alone makes the device_code redeemable",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > recovers from a grant-store failure after the commit: the session stays pending and a retry completes the same Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > recovers from a failed activation write: a retry reuses the committed Mission and its grant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > never activates a retried decision whose committed Mission is no longer active: the session ends denied",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Witnessed: no Mission and authorization_pending before the decision; the Mission active and the device_code redeemable after it, with no visit to the provider's device resume. Proved by dropping the activation write. Partial for the crash residual in observation.local."
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Witnessed: no Mission and authorization_pending before the decision; the Mission active and the device_code redeemable after it, with no visit to the provider's device resume. Live post-commit failures are witnessed with an injected grant-store fault and an injected activation-write fault. Proved by dropping the activation write, by not releasing the claim on a failure, by not reusing the committed grant binding, by giving each retry a new approval event, and by activating a retried Mission that is no longer active. Partial for the crash residual in observation.local."
   },
   {
    "id": "device-authorization.approval.commit-session-pending",
@@ -38025,10 +38050,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "After a decline, a creation commit that creates no Mission, or the AS ending the session, the next poll receives access_denied; an openid request whose Approver is not the Subject receives invalid_scope.",
-    "local": "This AS ends a session on a decline, a refusal at the decision, the Approver's abort at the provider's code confirmation, or an ending recorded on the device code; it implements no other ending, such as user_code guessing detection."
+    "local": "This AS ends a session on a decline, a refusal at the decision, or the Approver's abort at the provider's code confirmation; all three are witnessed. It implements no AS-initiated cancellation, such as user_code guessing detection, so that clause is not exercised: the test that records an ending on the device code shows only how a poll answers such an ending, not an AS path that produces it."
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/device-authorization.test.ts",
@@ -38043,7 +38068,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A decline, a creation commit refused by the authority-source gates (Dana activates no source this client resolves), an abort, and an ending recorded on the device code each answer the next poll access_denied; openid with an Approver who is not the Subject answers invalid_scope. Proved by answering every refusal access_denied, by not recording the denial, and by removing oidc-provider's raising of the recorded error."
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A decline, a creation commit refused by the authority-source gates (Dana activates no source this client resolves), an abort, and an ending recorded on the device code each answer the next poll access_denied; openid with an Approver who is not the Subject answers invalid_scope. Partial until an AS cancellation path exists and is exercised. Proved by answering every refusal access_denied, by not recording the denial, and by removing oidc-provider's raising of the recorded error."
   },
   {
    "id": "device-authorization.outcomes.expired",
