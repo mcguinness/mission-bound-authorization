@@ -15,7 +15,7 @@
  */
 
 import { type Server } from "node:http";
-import { TOPOLOGY } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
@@ -69,8 +69,16 @@ const clientAssertion = () =>
     .setJti(crypto.randomUUID())
     .sign(clientKey);
 
-/** A pushed authorization request: Intent-only for `goal`, or, with no goal, an ordinary request carrying no `mission_intent`. */
-async function push(goal: string | undefined, extra: Record<string, string> = {}): Promise<string> {
+/**
+ * A pushed authorization request: Intent-only for `goal` on `resource` (the
+ * reports resource, with `openid`, unless given), or, with no goal, an
+ * ordinary request carrying no `mission_intent`.
+ */
+async function push(
+  goal: string | undefined,
+  extra: Record<string, string> = {},
+  target: { resource: string; scope?: string } = { resource: PLAIN, scope: "openid" },
+): Promise<string> {
   const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER))).toString("base64url");
   const res = await fetch(`${ISSUER}/request`, {
     method: "POST",
@@ -79,12 +87,12 @@ async function push(goal: string | undefined, extra: Record<string, string> = {}
       client_id: "ap-agent",
       response_type: "code",
       redirect_uri: REDIRECT_URI,
-      resource: PLAIN,
-      scope: "openid",
+      resource: target.resource,
+      ...(target.scope ? { scope: target.scope } : {}),
       code_challenge: challenge,
       code_challenge_method: "S256",
       ...(goal !== undefined
-        ? { mission_intent: JSON.stringify({ intent: { goal, target_resources: [PLAIN], expires_at: "2027-01-01T00:00:00Z" } }) }
+        ? { mission_intent: JSON.stringify({ intent: { goal, target_resources: [target.resource], expires_at: "2027-01-01T00:00:00Z" } }) }
         : {}),
       ...extra,
       client_assertion: await clientAssertion(),
@@ -97,7 +105,7 @@ async function push(goal: string | undefined, extra: Record<string, string> = {}
 }
 
 /** The authorization endpoint in `jar`'s user agent: the interaction it opens, or the code or error it returns to the client. */
-async function authorize(requestUri: string, jar: Jar): Promise<{ uid?: string; code?: string; error?: string }> {
+async function authorize(requestUri: string, jar: Jar): Promise<Outcome> {
   const res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri: requestUri })}`, {
     redirect: "manual",
     headers: { cookie: cookieOf(jar) },
@@ -106,18 +114,24 @@ async function authorize(requestUri: string, jar: Jar): Promise<{ uid?: string; 
   return outcome(res.headers.get("location") ?? "");
 }
 
-function outcome(location: string): { uid?: string; code?: string; error?: string } {
+type Outcome = { uid?: string; code?: string; error?: string; description?: string };
+
+function outcome(location: string): Outcome {
   if (location.includes("/interaction/")) return { uid: location.split("/interaction/")[1] as string };
   const q = location ? new URL(location).searchParams : new URLSearchParams();
-  return { ...(q.get("code") ? { code: q.get("code") as string } : {}), ...(q.get("error") ? { error: q.get("error") as string } : {}) };
+  return {
+    ...(q.get("code") ? { code: q.get("code") as string } : {}),
+    ...(q.get("error") ? { error: q.get("error") as string } : {}),
+    ...(q.get("error_description") ? { description: q.get("error_description") as string } : {}),
+  };
 }
 
-/** Alice approves the interaction in the browser, then the resume runs to the client's redirect. */
-async function approve(uid: string, jar: Jar): Promise<{ code?: string; error?: string }> {
+/** The approval surface decides the interaction (Alice in the browser unless given), then the resume runs to the client's redirect. */
+async function approve(uid: string, jar: Jar, approver = ALICE as { sub: string; acr?: string; subject?: string }): Promise<Outcome> {
   let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...browserApprovalHeaders(SESSIONS, uid, ALICE, cookieOf(jar)), "content-type": "application/json" },
+    headers: { ...browserApprovalHeaders(SESSIONS, uid, approver, cookieOf(jar)), "content-type": "application/json" },
     body: JSON.stringify({ decision: "approve" }),
   });
   expect(res.status, await res.clone().text()).toBeLessThan(400);
@@ -205,7 +219,9 @@ describe("a new Mission submission reaches its own approval despite prior browse
     const { jar } = await afterFirstApproval();
     const missions = as.kernel.allMissions().length;
     const refused = await authorize(await push("Publish a report no one approved", { prompt: "none" }), jar);
-    expect(refused).toEqual({ error: "consent_required" });
+    expect(refused.code).toBeUndefined();
+    expect(refused.uid).toBeUndefined();
+    expect(refused).toMatchObject({ error: "consent_required", description: "a Mission submission requires its own Mission approval" });
     expect(as.kernel.allMissions()).toHaveLength(missions);
   });
 
@@ -220,6 +236,18 @@ describe("a new Mission submission reaches its own approval despite prior browse
     expect(tokens.mission_id).not.toBe(firstMission);
     const created = as.kernel.allMissions().find((m) => m.id === tokens.mission_id);
     expect(JSON.stringify(created)).toContain("Publish the quarterly reports");
+  });
+
+  it("the newly reached interaction applies the approval floor (#1234): a high-risk Intent-only submission in the same user agent is refused at its approval by a password-authenticated Approver, with no code and no Mission", async () => {
+    const { jar } = await afterFirstApproval();
+    const missions = as.kernel.allMissions().length;
+    const highRisk = await authorize(await push("Pay the approved Acme invoices", {}, { resource: CANONICAL_RESOURCE }), jar);
+    expect(highRisk.uid, JSON.stringify(highRisk)).toBeTruthy();
+    const refused = await approve(highRisk.uid as string, jar, { sub: "bob", acr: "password", subject: "alice" });
+    expect(refused.code).toBeUndefined();
+    expect(refused.error).toBe("access_denied");
+    expect(refused.description).toMatch(/high-risk-authority floor/);
+    expect(as.kernel.allMissions()).toHaveLength(missions);
   });
 
   it("an ordinary request carrying no mission_intent keeps consent reuse: the session's Grant answers it with a code and no interaction", async () => {
