@@ -33,7 +33,7 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
-import { resignWithCnf } from "./subject-possession.helper.js";
+import { INVALID_SUBJECT_TOKENS, resignWithCnf } from "./subject-possession.helper.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
@@ -355,7 +355,12 @@ describe("Dispatch Handoff: the handoff to the selected Agent and its continuati
     expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before?.derivation_count);
 
     const r = await redeem(hb.access_token);
-    const rb = (await r.json()) as { access_token: string; token_type?: string; authorization_details?: unknown };
+    const rb = (await r.json()) as {
+      access_token: string;
+      token_type?: string;
+      scope?: string;
+      authorization_details?: unknown;
+    };
     expect(r.status, JSON.stringify(rb)).toBe(200);
     expect(rb.token_type).toBe("DPoP");
     const agentToken = decodeJwt(rb.access_token);
@@ -367,6 +372,11 @@ describe("Dispatch Handoff: the handoff to the selected Agent and its continuati
     expect((agentToken.cnf as { jkt?: string }).jkt).not.toBe(dispatcherJkt);
     expect((agentToken.mission as { id?: string }).id).toBe(instance.missionId);
     expect(rb.authorization_details).toEqual(instance.authority);
+    // @spec mission#scope-projection step 4: the handle's consumer is this
+    // AS's async-delegation exchange, which reads `authorization_details`, so
+    // the redeemed Mission-bound token carries no `scope`.
+    expect(rb.scope).toBeUndefined();
+    expect(agentToken.scope).toBeUndefined();
     // One counted derivation, and the Dispatcher's grant stays the instance's.
     const after = as.kernel.get(instance.missionId);
     expect(after?.derivation_count).toBe((before?.derivation_count ?? 0) + 1);
@@ -393,7 +403,8 @@ describe("Dispatch Handoff: the handoff to the selected Agent and its continuati
     // refuses it (#1157)...
     const res = await err(await asyncDelegate(instance.token, crypto.randomUUID(), "dispatcher", dispatcherDpop));
     expect(res.status).toBe(400);
-    expect(res.error).toBe("invalid_grant");
+    // The async exchange's own code for an unacceptable subject_token (RFC 8693 Section 2.2.2, #1178).
+    expect(res.error).toBe("invalid_request");
     expect(res.error_description).toContain("not a delegation handle");
     // ...and the Dispatcher cannot obtain one: rule 1 holds at the handle request.
     const handle = await err(
@@ -1260,6 +1271,21 @@ describe("the Dispatch Handoff exchange's unconstrained subject_token (@spec mis
     expect(res.status, JSON.stringify(res)).toBe(400);
     expect(res.error).toBe("invalid_grant");
     expect(res.error_description).toContain("not sender-constrained");
+  });
+});
+
+describe("the Dispatch Handoff keeps the Template's code for an invalid or unacceptable subject_token (@spec mission-template#dispatch-handoff, #1178)", () => {
+  // The shared possession check answers in its caller's contract: the
+  // generic exchanges' invalid_request never reaches the handoff's steps 1 and 2.
+  it.each(INVALID_SUBJECT_TOKENS)("refuses %s with invalid_grant and issues no handoff grant", async (_name, make, description) => {
+    const instance = await dispatchInstance();
+    const res = await handoff(await make(instance.token, tokenKey));
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain(description);
+    expect(body.access_token).toBeUndefined();
+    expect(body.mission_error).toBeUndefined();
   });
 });
 

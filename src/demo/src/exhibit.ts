@@ -10,7 +10,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { createExpansion, DEFERRED_GRANT_TYPE, successorWidensOnly, validateMissionIntent } from "@mission/authorization-server";
+import { type AuthorityEntry, createExpansion, DEFERRED_GRANT_TYPE, successorWidensOnly, validateMissionIntent } from "@mission/authorization-server";
 import { buildScopeStatement, EgressGate, type MissionState, scopeDigest } from "@mission/agent";
 import {
   aamReconciliationCeiling,
@@ -22,8 +22,9 @@ import {
 import { SAAS_RESOURCE } from "@mission/mcp-saas";
 import type { TokenFacts } from "@mission/mcp-payments";
 import type { Decision, EvaluationRequest } from "@mission/pdp";
-import { calculateJwkThumbprint, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
+import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import {
+  assertDemoApprovalFloor,
   callWithTransactionCredential,
   composeStack,
   type AuthServerExtras,
@@ -873,7 +874,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "the Mission carries remittance.send with a direct approval_basis, distinct approver bob != subject alice, and NO template lineage.",
   );
   hop("Approver (Bob)", "AS", "PAR → authorize → decide → token (ordinary human approval)", "HTTP");
-  const humanIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent() }, as.approverServiceToken);
+  const humanIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent() }, as.approverConsole);
   const humanClaims = decodeClaims(humanIssued.accessToken);
   const humanMissionId = (humanClaims.mission as { id: string }).id;
   const humanRecord = stack.kernel.get(humanMissionId);
@@ -980,7 +981,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "the fresh task carries remittance.send again; the contained mission never regains it mid-run.",
   );
   hop("Approver (Bob)", "AS", "PAR → authorize → decide → token (a fresh human approval)", "HTTP");
-  const restoreIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent() }, as.approverServiceToken);
+  const restoreIssued = await issueMissionToken(asUrl, as.agentClientJwk, { ...aamIntent() }, as.approverConsole);
   const restoreClaims = decodeClaims(restoreIssued.accessToken);
   const restoredHumanMissionId = (restoreClaims.mission as { id: string }).id;
   const restoredRecord = stack.kernel.get(restoredHumanMissionId);
@@ -1179,7 +1180,7 @@ async function main() {
   // OAuth only: Bob approves for Alice, and an approval is never Alice's
   // authentication, so this flow carries no `openid` and yields no ID Token
   // (#826).
-  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, authorizationDetails }, as.approverServiceToken);
+  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, authorizationDetails }, as.approverConsole);
 
   // PAR (Agent → AS, real HTTP): push the request carrying the mission_intent.
   hop("Agent", "AS", "POST /request", "HTTP");
@@ -1770,20 +1771,25 @@ async function main() {
     "The operator drives the mission through its lifecycle: suspend, resume, contain a tainted capability, expand via a fresh approval, supersede, and revoke.",
     "each transition gates what follows: suspended and superseded tokens are denied, containment removes one capability while others still permit, and the successor restores it.",
   );
+  // Every Lifecycle request carries the REQUIRED nonce; a state-changing
+  // operation is answered with the signed Mission Status Response, shown here
+  // decoded.
   const lifecycle = async (operation: string, id: string): Promise<{ status: number; body: unknown }> => {
     const res = await fetch(`${asUrl}/missions/${id}/lifecycle`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-      body: JSON.stringify({ operation }),
+      body: JSON.stringify({ operation, nonce: crypto.randomUUID() }),
     });
-    return { status: res.status, body: await res.json() };
+    const text = await res.text();
+    const signed = (res.headers.get("content-type") ?? "").startsWith("application/mission-status-response+jwt");
+    return { status: res.status, body: signed ? decodeJwt(text) : JSON.parse(text) };
   };
 
   // 10a. suspend -> the next action is denied (mission not active).
   hop("Operator", "AS", "POST /missions/{id}/lifecycle (suspend)", "HTTP");
   httpReq("POST", `${asUrl}/missions/${missionId}/lifecycle`, {
     headers: { "content-type": "application/json", "x-service-token": "<service token>" },
-    body: { operation: "suspend" },
+    body: { operation: "suspend", nonce: "<nonce>" },
   });
   const suspendRes = await lifecycle("suspend", missionId);
   httpRes(suspendRes.status, suspendRes.body);
@@ -1802,7 +1808,7 @@ async function main() {
   hop("Operator", "AS", "POST /missions/{id}/lifecycle (resume)", "HTTP");
   httpReq("POST", `${asUrl}/missions/${missionId}/lifecycle`, {
     headers: { "content-type": "application/json", "x-service-token": "<service token>" },
-    body: { operation: "resume" },
+    body: { operation: "resume", nonce: "<nonce>" },
   });
   const resumeRes = await lifecycle("resume", missionId);
   httpRes(resumeRes.status, resumeRes.body);
@@ -1827,6 +1833,7 @@ async function main() {
   // out_of_authority, never approved) while other actions still permit.
   const containBody = {
     operation: "contain",
+    nonce: crypto.randomUUID(),
     event: {
       type: "tainted_read",
       source: "https://siem.example/detections",
@@ -1881,24 +1888,28 @@ async function main() {
     }),
   );
   hop("Operator", "AS", "expand mission — successor from a fresh approval (kernel op)", "in-process");
+  // The widened proposal: what the wire submits as the standard RFC 9396
+  // authorization_details parameter beside mission_intent.
+  const widened: AuthorityEntry[] = [
+    {
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send", "payments:payment.schedule"],
+      constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme"] },
+    },
+    {
+      type: "mission_resource_access",
+      resource: SAAS_RESOURCE,
+      actions: ["ledger:vendor.read", "ledger:journal.write"],
+    },
+  ];
+  // @spec mission#approval-authentication (#826, D425): the fresh approval
+  // meets the published floor against the stack's recorded console login.
+  assertDemoApprovalFloor(stack, stack.kernel.derive(successorIntent, widened));
   const expansion = createExpansion(stack.kernel, {
     predecessorId: missionId,
     intent: successorIntent,
-    // The widened proposal: what the wire submits as the standard RFC 9396
-    // authorization_details parameter beside mission_intent.
-    proposedAuthority: [
-      {
-        type: "mission_resource_access",
-        resource: CANONICAL_RESOURCE,
-        actions: ["payments:invoice.read", "payments:payment.execute", "payments:remittance.send", "payments:payment.schedule"],
-        constraints: { max_amount: { amount: "999999.00", currency: "USD" }, vendors: ["acme"] },
-      },
-      {
-        type: "mission_resource_access",
-        resource: SAAS_RESOURCE,
-        actions: ["ledger:vendor.read", "ledger:journal.write"],
-      },
-    ],
+    proposedAuthority: widened,
     approver: { iss: asUrl, sub: "bob" },
     approvalEventId: "apev-exhibit-successor",
     approvedUntil: "2027-01-01T00:00:00Z",
@@ -1946,7 +1957,7 @@ async function main() {
   hop("Operator", "AS", "POST /missions/{id}/lifecycle (revoke successor)", "HTTP");
   httpReq("POST", `${asUrl}/missions/${expansion.successor.id}/lifecycle`, {
     headers: { "content-type": "application/json", "x-service-token": "<service token>" },
-    body: { operation: "revoke" },
+    body: { operation: "revoke", nonce: "<nonce>" },
   });
   const revokeRes = await lifecycle("revoke", expansion.successor.id);
   httpRes(revokeRes.status, revokeRes.body);

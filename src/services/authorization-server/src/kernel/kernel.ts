@@ -4,12 +4,14 @@
  * oidc-provider types cross this boundary.
  */
 
-import { KeyObject, randomBytes, randomInt, sign } from "node:crypto";
+import { createPublicKey, KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
   type ApprovalContextManifestInput,
   authorityHash,
+  canonicalize,
   COMMIT_IS_EFFECT_REASONS,
   intentHash,
+  type JsonValue,
   proposalHash,
 } from "@mission/core";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
@@ -114,9 +116,22 @@ import {
   type TombstoneRetentionInputs,
 } from "./tombstones.js";
 import type { ActivationPolicyRegistry } from "./activation-policy.js";
+import {
+  type ActivationPolicyCommitmentCheck,
+  ActivationPolicySnapshotStore,
+  committedActivationPolicy,
+  type EvaluatedActivationPolicy,
+} from "./activation-policy-snapshots.js";
+import { ApprovalGovernanceRecordStore } from "./approval-governance.js";
+import {
+  type GovernedPolicyApprovalConfig,
+  GovernedPolicyConsentStore,
+  validateGovernedPolicyApprovalConfig,
+} from "./governed-policy-approval.js";
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { newMissionId } from "./mission-id.js";
+import { type CeilingConsent, ceilingMembersOf, consentCeiling, serializeCeiling } from "./progressive.js";
 import {
   IntentError,
   type IntentSubmissionPresenter,
@@ -153,6 +168,8 @@ import {
   type MissionRecord,
   type MissionState,
   type ParentRef,
+  type ScheduleRequest,
+  type SuspensionSchedule,
   type TemplateRef,
   TERMINAL_STATES,
   type TerminalWhenCondition,
@@ -217,7 +234,19 @@ CREATE TABLE IF NOT EXISTS missions (
   containment_json TEXT,
   discharged_json TEXT,
   submission_evidence_json TEXT,
-  termination_json TEXT
+  termination_json TEXT,
+  ceiling_json TEXT,
+  schedule_json TEXT
+) STRICT;
+CREATE TABLE IF NOT EXISTS approval_reservations (
+  approval_event_id TEXT PRIMARY KEY,
+  approver_iss TEXT NOT NULL,
+  approver_sub TEXT NOT NULL,
+  subject_iss TEXT NOT NULL,
+  subject_sub TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  grant_id TEXT NOT NULL,
+  created_at TEXT NOT NULL
 ) STRICT;
 `;
 
@@ -252,9 +281,32 @@ function migrateMissions(db: Database): void {
   if (!columns.has("termination_json")) {
     db.exec("ALTER TABLE missions ADD COLUMN termination_json TEXT");
   }
+  // @spec progressive#progressive-authorization: the consented ceiling and
+  // its commitment, written once at creation. Nullable with no default: a
+  // row without it carries no ceiling, so it has no progressive authorization.
+  if (!columns.has("ceiling_json")) {
+    db.exec("ALTER TABLE missions ADD COLUMN ceiling_json TEXT");
+  }
+  // @spec status#mission-lifecycle-endpoint ("Operations"): the current
+  // suspension schedule. Nullable with no default: a row that predates it
+  // holds no schedule, which is what it always meant.
+  if (!columns.has("schedule_json")) {
+    db.exec("ALTER TABLE missions ADD COLUMN schedule_json TEXT");
+  }
 }
 
 export class LifecycleConflictError extends Error {}
+/**
+ * @spec status#mission-status-errors: the referenced Mission does not exist at
+ * this issuer. Typed so a surface can tell an unknown reference (`not_found`)
+ * from a backend failure (`unavailable`) without matching message text.
+ */
+export class MissionNotFoundError extends Error {}
+/**
+ * @spec status#idempotency: a lifecycle request's `expected_version` differs
+ * from the Mission's current state version (`stale_version`, HTTP 409).
+ */
+export class StaleVersionError extends Error {}
 /**
  * @spec control-plane#fresh-observation — raised only under the OPTIONAL
  * `strictObservationWatermark` policy: state advanced between the observation
@@ -319,6 +371,32 @@ export interface ApproveInput {
    * member absent.
    */
   capabilityResolution?: CapabilitySourceResolution[];
+  /**
+   * @spec mission#approval-event (step 7) (#916) — the provider grant, already
+   * saved, that this approval binds. The record commits with it as its
+   * `grant_id`, so the Mission is never committed unbound, and a repeated
+   * decision (the same `approvalEventId`) that names another grant is refused
+   * rather than rebinding the Mission.
+   */
+  grantId?: string;
+  /**
+   * @spec progressive#progressive-authorization: the authority ceiling and
+   * drawdown policy the Approver consented at this approval event, from the
+   * authenticated approval surface, never from the client. The drawdown
+   * policy's `digest` is minted here from the snapshot this issuer holds.
+   * Absent: the Mission has no progressive authorization.
+   */
+  ceiling?: CeilingConsent;
+}
+
+/**
+ * @spec mission#approval-event (steps 2-3) (#916) — everything an approval
+ * computes before anything is written ({@link MissionKernel.prepareApproval}).
+ */
+export interface PreparedApproval {
+  proposal: AuthorityEntry[] | undefined;
+  authoritySet: AuthorityEntry[];
+  resolvedSource: AuthoritySourceResolution;
 }
 
 /**
@@ -328,6 +406,12 @@ export interface ApproveInput {
 export interface StatusObservationOptions {
   audience?: string;
   requester: string;
+  /**
+   * @spec status#lifecycle-authorization: the envelope `sub`: the acting
+   * party of a Lifecycle request, reflected in the signed response's audit
+   * surface. Absent, `sub` is the Mission's client, as before.
+   */
+  actingParty?: string;
   nonce?: string;
   freshnessSeconds?: number;
   /**
@@ -452,6 +536,13 @@ export interface KernelOptions {
    * absent, no carried child-creation policy can match.
    */
   activationPolicies?: ActivationPolicyRegistry;
+  /**
+   * @spec approval-governance#governed-policy: the `governed_policy`
+   * standing-consent basis: the consented roots this issuer holds and the
+   * humans authorized to approve each. OPTIONAL and default off: absent, no
+   * consent is recorded and nothing activates under this basis.
+   */
+  governedPolicyApproval?: GovernedPolicyApprovalConfig;
   /**
    * @spec mission#authority-sources, mission#approval-event — the deployment's
    * TRUSTED authority-source catalog. The approval event establishes
@@ -600,6 +691,25 @@ export class MissionKernel {
    */
   readonly tombstones: MissionTombstoneStore;
   /**
+   * @spec mission#standing-consent-bases: the retained activation policy
+   * snapshots, on this kernel's database and written in `insertRecord`'s
+   * transaction, kept for the audit horizon of every Mission activated under
+   * each. An audit read only: no activation gate consults it.
+   */
+  readonly activationPolicySnapshots: ActivationPolicySnapshotStore;
+  /**
+   * @spec approval-governance#atomic-commitment: the signed Approval
+   * Governance Records, on this kernel's database and written only in the
+   * creation transaction of the Mission each governs.
+   */
+  readonly governanceRecords: ApprovalGovernanceRecordStore;
+  /**
+   * @spec approval-governance#governed-policy-root: the retained governance
+   * state of the `governed_policy` basis (consented roots, human consents,
+   * recorded activation inputs), on this kernel's database.
+   */
+  readonly governedPolicyConsents: GovernedPolicyConsentStore;
+  /**
    * @spec control-plane#serialization — the in-flight owner of each
    * (mission, operation) identity; see {@link exclusiveDerivation}.
    */
@@ -697,8 +807,21 @@ export class MissionKernel {
       retentionSeconds: dischargeRetentionSeconds,
     });
     this.derivationReservations = new DerivationReservationStore(this.db, { now: this.now });
+    // @spec mission#standing-consent-bases, mission#mission-record: the
+    // snapshot horizon is each Mission's expiry plus the SAME declared audit
+    // retention the tombstones compose, so the deployment declares one audit
+    // horizon, not two that can drift.
+    this.activationPolicySnapshots = new ActivationPolicySnapshotStore(this.db, {
+      now: this.now,
+      auditRetentionSeconds: this.tombstones.horizons().audit_retention_seconds,
+    });
     this.dischargePins = new DischargeMappingPinStore(this.db);
     this.dischargeSelectors = new DischargeSelectorStore(this.db, this.now);
+    // @spec approval-governance#governed-policy: a configuration fault refuses
+    // construction, never an activation at request time.
+    if (opts.governedPolicyApproval) validateGovernedPolicyApprovalConfig(opts.governedPolicyApproval);
+    this.governanceRecords = new ApprovalGovernanceRecordStore(this.db);
+    this.governedPolicyConsents = new GovernedPolicyConsentStore(this.db);
   }
 
   validateIntent(raw: string): MissionIntent {
@@ -817,6 +940,46 @@ export class MissionKernel {
   }
 
   /**
+   * @spec approval-governance#governed-policy: the governed policy
+   * configuration, or undefined when the deployment leaves the basis off.
+   */
+  governedPolicyApproval(): GovernedPolicyApprovalConfig | undefined {
+    return this.opts.governedPolicyApproval;
+  }
+
+  /** The Mission Issuer this kernel creates records for. */
+  issuerId(): string {
+    return this.opts.issuer;
+  }
+
+  /** The derivation policy version a Mission created here records as `policy_version`. */
+  policyVersion(): string {
+    return this.opts.policy.policy_version;
+  }
+
+  /**
+   * The public half of the Status key {@link statusSigner} signs with, as a
+   * verifier resolves it by `kid` from the issuer's published key material.
+   */
+  statusVerificationKey(): KeyObject {
+    if (!this.statusPublicKey) this.statusPublicKey = createPublicKey(KeyObject.from(this.opts.statusKey));
+    return this.statusPublicKey;
+  }
+  private statusPublicKey?: KeyObject;
+
+  /**
+   * @spec mission#standing-consent-bases: the auditor's check of a Mission's
+   * committed activation policy, recomputed from the retained snapshot alone.
+   * Independent of the current registry: a policy since replaced or retired
+   * still verifies within the audit horizon, and verifying grants nothing.
+   */
+  verifyActivationPolicyCommitment(record: MissionRecord): ActivationPolicyCommitmentCheck {
+    const ref = committedActivationPolicy(record);
+    if (!ref) return { status: "not_applicable" };
+    return this.activationPolicySnapshots.verify(record.issuer, ref);
+  }
+
+  /**
    * @spec approval-governance#approval-context-manifest — the Approval Context
    * Manifest input for a Mission, taken FROM THE RECORD. `authority_source` is
    * a REQUIRED manifest input, so the manifest is computable only because the
@@ -830,6 +993,7 @@ export class MissionKernel {
       intent_hash: fresh.intent_hash,
       ...(fresh.proposal_hash ? { proposal_hash: fresh.proposal_hash } : {}),
       authority_hash: fresh.authority_hash,
+      ...(fresh.ceiling_hash ? { ceiling_hash: fresh.ceiling_hash } : {}),
       subject: fresh.subject,
       // @spec approval-governance#approval-context-manifest (#705): the
       // closed v1 manifest keeps its `approver` member; its value is the
@@ -1000,7 +1164,18 @@ export class MissionKernel {
    * proposal was submitted, the third); approval_event_id is the idempotency
    * key.
    */
-  approve(input: ApproveInput): MissionRecord {
+  /**
+   * @spec mission#approval-event (steps 2-3) (#916) — everything an approval
+   * computes before anything is written: the principal checks, the derived
+   * Authority Set with its capability-source bindings, and the established
+   * authority source and its ceiling. Every refusal of the approval happens
+   * here, except the progressive ceiling consent, which `approve` establishes
+   * at the commit's creation instant. The approval decision calls it once,
+   * saves the provider grant from
+   * its result, then commits exactly that result through {@link approve},
+   * which recomputes nothing.
+   */
+  prepareApproval(input: ApproveInput): PreparedApproval {
     // Trusted wiring modes are exclusive. Reject before derivation or resolver
     // side effects; an empty fact list still means no caller-supplied facts.
     if (this.opts.capabilityResolver && input.capabilityResolution?.length) {
@@ -1040,6 +1215,90 @@ export class MissionKernel {
       approver: input.approver,
     });
     this.assertAuthorityWithinSource(resolvedSource, authoritySet);
+    return { proposal, authoritySet, resolvedSource };
+  }
+
+  /**
+   * @spec mission#approval-event (step 7) (#916) — reserve an interaction's
+   * approval for one decision, synchronously, before the decision's
+   * asynchronous grant save. The first decision to reserve names the
+   * Approver, Subject, client and grant every later decision on the
+   * interaction must match: a matching decision (a retry) proceeds, any other
+   * refuses. So concurrent decisions cannot leave a Mission recording one
+   * Approver and a provider grant owned by another. Returns whether this
+   * decision holds the reservation.
+   */
+  reserveApproval(input: {
+    approvalEventId: string;
+    approver: { iss: string; sub: string };
+    subject: { iss: string; sub: string };
+    clientId: string;
+    grantId: string;
+  }): boolean {
+    const inserted = this.db
+      .prepare(
+        `INSERT INTO approval_reservations (approval_event_id, approver_iss, approver_sub, subject_iss, subject_sub, client_id, grant_id, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (approval_event_id) DO NOTHING`,
+      )
+      .run(
+        input.approvalEventId,
+        input.approver.iss,
+        input.approver.sub,
+        input.subject.iss,
+        input.subject.sub,
+        input.clientId,
+        input.grantId,
+        this.now().toISOString(),
+      );
+    if (inserted.changes === 1) return true;
+    const held = this.db
+      .prepare("SELECT * FROM approval_reservations WHERE approval_event_id = ?")
+      .get(input.approvalEventId) as Record<string, string> | undefined;
+    return (
+      held !== undefined &&
+      held.approver_iss === input.approver.iss &&
+      held.approver_sub === input.approver.sub &&
+      held.subject_iss === input.subject.iss &&
+      held.subject_sub === input.subject.sub &&
+      held.client_id === input.clientId &&
+      held.grant_id === input.grantId
+    );
+  }
+
+  /**
+   * @spec mission#approval-event (step 3) (#916) — revalidate, at the commit,
+   * the authority source an approval was prepared under. The same root, with
+   * the same provenance, must still pass every gate; a source withdrawn or
+   * changed in between refuses `access_denied`, and no other root is ever
+   * substituted. Returns the current resolution.
+   */
+  private revalidatePreparedSource(input: ApproveInput, prepared: PreparedApproval): AuthoritySourceResolution {
+    const current = this.establishAuthoritySource({
+      clientId: input.clientId,
+      subject: input.subject,
+      approver: input.approver,
+    });
+    if (
+      current.rootId !== prepared.resolvedSource.rootId ||
+      canonicalize(current.provenance as unknown as JsonValue) !==
+        canonicalize(prepared.resolvedSource.provenance as unknown as JsonValue)
+    ) {
+      throw new IntentError(
+        "access_denied",
+        "the authority source changed between the approval's preparation and its commit",
+      );
+    }
+    this.assertAuthorityWithinSource(current, prepared.authoritySet);
+    return current;
+  }
+
+  approve(input: ApproveInput, preparedEarlier?: PreparedApproval): MissionRecord {
+    // A result prepared earlier (the approval decision prepares, then saves its
+    // grant asynchronously) is revalidated here, at the commit.
+    const prepared = preparedEarlier
+      ? { ...preparedEarlier, resolvedSource: this.revalidatePreparedSource(input, preparedEarlier) }
+      : this.prepareApproval(input);
+    const { proposal, authoritySet, resolvedSource } = prepared;
     const authoritySource = resolvedSource.provenance;
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
     // drawn from the single mission-id.ts minting helper.
@@ -1057,6 +1316,12 @@ export class MissionKernel {
     // the same read, so the established expiry and the committed creation time
     // can never drift apart.
     const createdAt = this.now().toISOString();
+    // @spec progressive#progressive-authorization: a ceiling consented at this
+    // approval event is recorded with its `ceiling_hash`, and its consent
+    // instant is this event's own.
+    const ceiling = input.ceiling
+      ? consentCeiling(this.opts.issuer, this.opts.activationPolicies, input.ceiling, createdAt)
+      : undefined;
     // @spec mission#approval-basis — direct: the human approval event itself
     // creates the record; consent_principal == activation_actor == approver,
     // and root_commitment is this Mission's own authority_hash.
@@ -1108,19 +1373,33 @@ export class MissionKernel {
         this.opts.policy.derivation_limit_ceiling,
       ),
       derivation_count: 0,
-      grant_id: null,
+      // @spec mission#approval-event (step 7) (#916): bound at the commit, never after.
+      grant_id: input.grantId ?? null,
       status_list_idx: null,
+      ...(ceiling ?? {}),
     };
     try {
       this.insertRecord(record, undefined, { source: resolvedSource });
     } catch (e) {
       if (e instanceof UniqueViolationError) {
         // Idempotent approval: return the record this event already created.
+        // @spec mission#approval-event (step 7) (#916): a repeated decision
+        // binds nothing new. It names the same grant (the approval decision
+        // derives the grant's identity from the interaction), and a different
+        // one is refused, never a rebind.
         const existing = this.findByApprovalEvent(input.approvalEventId);
-        if (existing) return existing;
+        if (existing) {
+          if (input.grantId) this.bindGrant(existing.id, input.grantId);
+          return this.get(existing.id) ?? existing;
+        }
       }
       throw e;
     }
+    // @spec issuance-grant#effective-set-projection — the durable discriminator,
+    // on its own store handle (it must outlive the record), written once the
+    // record commits. A record whose `grant_id` is set resolves through
+    // `findByGrant` first, so the gap before this write refuses nothing.
+    if (input.grantId) this.missionBoundGrants.record({ grantId: input.grantId, missionId: id, kind: "approval" });
     return record;
   }
 
@@ -1147,6 +1426,14 @@ export class MissionKernel {
        * in the record transaction; nothing resolves a source from provenance.
        */
       source: AuthoritySourceResolution | { inherited: AuthoritySourceBinding };
+      /**
+       * @spec mission#standing-consent-bases: each activation policy this
+       * activation was adjudicated under, with the held snapshot its gate
+       * verified. Retained in the record transaction, so the Mission never
+       * commits without the bytes an auditor needs to recompute the digest;
+       * bytes that do not reproduce the committed digest refuse the creation.
+       */
+      activationPolicies?: readonly EvaluatedActivationPolicy[];
     },
   ): void {
     // @spec control-plane#isolation — one issuer owns a kernel store.
@@ -1223,8 +1510,8 @@ export class MissionKernel {
            approval_basis_json, authority_source_json, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, derivation_limit,
            derivation_count, grant_id, predecessor, related_to, parent_id, parent_json, template_id,
-           template_json, projected_from, submission_evidence_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           template_json, projected_from, submission_evidence_json, ceiling_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -1283,6 +1570,9 @@ export class MissionKernel {
           // @spec mission#intent-submission-evidence — verified facts, immutable
           // after creation (like approval_basis), written only here.
           record.submission_evidence ? JSON.stringify(record.submission_evidence) : null,
+          // @spec progressive#progressive-authorization: the consented ceiling,
+          // immutable after creation, written only here.
+          serializeCeiling(record),
         );
       // @spec mission#authority-sources (#827): the committed root, in the
       // SAME transaction as the record: a Mission never exists without the
@@ -1319,6 +1609,12 @@ export class MissionKernel {
           }
           this.dischargePins.pinInCallerTx(record.id, eDigest, conditionDigest(condition), mapping);
         }
+      }
+      // @spec mission#standing-consent-bases: retain every activation policy
+      // snapshot this activation evaluated, in the SAME transaction as the
+      // record, for this Mission's audit horizon.
+      for (const evaluated of options.activationPolicies ?? []) {
+        this.activationPolicySnapshots.retainInCallerTx(record, evaluated);
       }
       // The activating event: version 1, no prior_state. Shared by approve()
       // and expansion; the commit is built from the persisted row and its
@@ -1493,8 +1789,42 @@ export class MissionKernel {
    * row is gone.
    */
   bindGrant(missionId: string, grantId: string): void {
-    this.db.prepare("UPDATE missions SET grant_id = ? WHERE id = ?").run(grantId, missionId);
+    // @spec mission#approval-event (step 7) (#916): a Mission's grant binding
+    // never moves. Binding is compare-and-set: idempotent for the grant it
+    // already holds, refused for any other, so a repeated or concurrent
+    // decision cannot rebind the Mission and strand its first grant outside
+    // the derivation count.
+    const changed = this.db
+      .prepare("UPDATE missions SET grant_id = ? WHERE id = ? AND (grant_id IS NULL OR grant_id = ?)")
+      .run(grantId, missionId, grantId);
+    if (changed.changes !== 1) {
+      const current = this.get(missionId);
+      if (!current) throw new Error(`cannot bind a grant to unknown Mission ${missionId}`);
+      throw new Error(`Mission ${missionId} is already bound to another grant; a binding never moves`);
+    }
     this.missionBoundGrants.record({ grantId, missionId, kind: "approval" });
+  }
+
+  /**
+   * @spec mission#approval-event (step 7) (#916) — bind `grantId` to a Mission
+   * that holds no grant yet, or adopt the one it already holds. The
+   * check-then-bind minting paths (child redemption, template dispatch, the
+   * continuation and drawdown mint) race on a Mission's first grant: the
+   * loser mints under the winner's grant rather than moving the binding, and
+   * its own saved grant stays inert (never bound, never indexed). Returns the
+   * grant the Mission is bound to.
+   */
+  bindFirstGrant(missionId: string, grantId: string): string {
+    const changed = this.db
+      .prepare("UPDATE missions SET grant_id = ? WHERE id = ? AND grant_id IS NULL")
+      .run(grantId, missionId);
+    if (changed.changes === 1) {
+      this.missionBoundGrants.record({ grantId, missionId, kind: "approval" });
+      return grantId;
+    }
+    const bound = this.get(missionId)?.grant_id;
+    if (!bound) throw new Error(`cannot bind a grant to unknown Mission ${missionId}`);
+    return bound;
   }
 
   /** @spec child-delegation#parent-member — the immediate Child Missions of a parent. */
@@ -1858,14 +2188,45 @@ export class MissionKernel {
    * terminated `revoked` is idempotent, while `revoke` on one terminated
    * `completed` (or `expired`), and `complete` on one terminated `revoked`,
    * are conflicts: the recorded cause never changes.
+   *
+   * @spec status#idempotency: `expectedVersion`, when given, is checked
+   * against the current state version BEFORE that rule, so a stale guard is
+   * refused ({@link StaleVersionError}) even where the operation would
+   * otherwise be idempotent success, and the Mission is left unchanged.
+   *
+   * @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency:
+   * `schedule`, valid only on `suspend` and already authorized by the caller,
+   * is committed with the transition from `active`. Against a `suspended`
+   * Mission it is the one idempotent case that carries metadata: a pair
+   * differing from the recorded one, or arming one where none is recorded,
+   * replaces it ({@link replaceSchedule}); the same pair, or none, changes
+   * nothing, so omission never clears a deadline and never replaces the
+   * recorded committing party.
    */
-  transition(id: string, op: LifecycleOperation): MissionRecord {
+  transition(
+    id: string,
+    op: LifecycleOperation,
+    opts: { expectedVersion?: number; schedule?: ScheduleRequest } = {},
+  ): MissionRecord {
+    if (opts.schedule && op !== "suspend") {
+      throw new Error(`a schedule is valid only on suspend, not ${op}`);
+    }
     // @spec control-plane#serialization — the expiry clock may materialize a
     // terminal transition here, so the legality check reads the record that
     // materialization left behind (or, when that write fails, the observed
     // `expired` termination), never the pre-expiry snapshot.
     const record = this.applyExpiry(this.mustGet(id));
+    if (opts.expectedVersion !== undefined && opts.expectedVersion !== record.version) {
+      throw new StaleVersionError(
+        `expected_version ${opts.expectedVersion} differs from the current state version`,
+      );
+    }
     const rule = LEGAL_TRANSITIONS[op];
+    if (op === "suspend" && record.state === "suspended") {
+      return opts.schedule && !sameSchedule(record.schedule, opts.schedule)
+        ? this.replaceSchedule(record, opts.schedule)
+        : record;
+    }
     if (
       op !== "resume" &&
       record.state === rule.to &&
@@ -1876,7 +2237,89 @@ export class MissionKernel {
     if (!rule.from.includes(record.state)) {
       throw new LifecycleConflictError(`${op} is not legal from ${describeLifecycle(record)}`);
     }
-    return this.setState(record, rule.to, rule.reason ? { termination: { reason: rule.reason } } : {});
+    return this.setState(record, rule.to, {
+      ...(rule.reason ? { termination: { reason: rule.reason } } : {}),
+      ...(opts.schedule ? { schedule: opts.schedule } : {}),
+    });
+  }
+
+  /**
+   * @spec status#idempotency, status#lifecycle-authorization: replace the
+   * schedule of a `suspended` Mission: a metadata-only commit (state
+   * unchanged, version incremented) recording the new pair, its committing
+   * party and its generation (this commit's version), and emitting the change
+   * with `prior_state` and `state` both `suspended` and the updated values.
+   * The compare-and-set on `(version, state)` admits it from the stored row.
+   */
+  private replaceSchedule(record: MissionRecord, schedule: ScheduleRequest): MissionRecord {
+    return withTransaction(this.db, () => {
+      const committedAt = this.now().toISOString();
+      const next: SuspensionSchedule = { ...schedule, generation: record.version + 1 };
+      const changed = this.db
+        .prepare(
+          "UPDATE missions SET schedule_json = ?, version = version + 1 WHERE id = ? AND version = ? AND state = 'suspended'",
+        )
+        .run(JSON.stringify(next), record.id, record.version);
+      if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
+      const fresh = this.mustGet(record.id);
+      this.emitCommit(fresh, "suspended", false, false, committedAt, scheduleCommitMembers(fresh.schedule));
+      return fresh;
+    });
+  }
+
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"), status#legal-transitions,
+   * status#state-machine: a schedule timer's delivery for `generation`.
+   *
+   * The delivery CLAIMS the generation inside one transaction: it acts only
+   * while the stored row is `suspended` under a schedule of exactly that
+   * generation, so a stale or replaced timer, a duplicate delivery, and a
+   * delivery after any manual transition change nothing. A claimed delivery
+   * runs the expiry clock ({@link applyExpiry}), which gives a Mission past
+   * its `expires_at` the `expired` termination (or one under a terminated
+   * parent its `parent_terminated` termination) and applies a due schedule
+   * whose deadline precedes `expires_at` under the `(version, state)`
+   * compare-and-set. Nothing re-checks the committing party's authority: the
+   * schedule was authorized when it was committed.
+   */
+  fireSchedule(id: string, generation: number): ScheduleFire {
+    return withTransaction(this.db, () => {
+      const stored = this.get(id);
+      if (!stored) return { outcome: "superseded" };
+      if (stored.state !== "suspended" || stored.schedule?.generation !== generation) {
+        return { outcome: "superseded", record: stored };
+      }
+      const dueAtMs = scheduleDueAtMs(stored);
+      const after = this.applyExpiry(stored);
+      if (after.version === stored.version) {
+        // Nothing committed: an early delivery waits for its deadline; a due
+        // one whose write failed is retried, never dropped.
+        return this.now().getTime() < dueAtMs
+          ? { outcome: "not-due", record: after, dueAtMs }
+          : { outcome: "retry", record: after, dueAtMs };
+      }
+      const scheduled = dueScheduleTransition(stored, Number.POSITIVE_INFINITY);
+      const applied =
+        scheduled !== undefined &&
+        after.state === scheduled.to &&
+        after.termination?.reason === scheduled.termination?.reason;
+      return { outcome: applied ? "applied" : "ended", record: after };
+    });
+  }
+
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): every current
+   * schedule in the kernel database, for the scheduler to arm at boot. The
+   * schedule persists in the Mission's own row, so it is exactly as durable
+   * as the record: on the file-backed store it survives a restart.
+   */
+  currentSchedules(): Array<{ missionId: string; generation: number; dueAtMs: number }> {
+    const rows = this.db
+      .prepare("SELECT * FROM missions WHERE state = 'suspended' AND schedule_json IS NOT NULL")
+      .all() as Record<string, unknown>[];
+    return rows.map(rowToRecord).flatMap((r) =>
+      r.schedule ? [{ missionId: r.id, generation: r.schedule.generation, dueAtMs: scheduleDueAtMs(r) }] : [],
+    );
   }
 
   /**
@@ -1941,9 +2384,20 @@ export class MissionKernel {
        * monotonic union, idempotency, or the commit.
        */
       policyRule?: string;
+      /**
+       * @spec status#idempotency: the Lifecycle request's stale-version guard,
+       * compared before the terminal-state refusal and the `event_id`
+       * idempotent arm, inside the caller's transaction.
+       */
+      expectedVersion?: number;
     },
   ): { record: MissionRecord; evidence: ContainmentEvidence } {
     const record = this.applyExpiry(this.mustGet(id));
+    if (input.expectedVersion !== undefined && input.expectedVersion !== record.version) {
+      throw new StaleVersionError(
+        `expected_version ${input.expectedVersion} differs from the current state version`,
+      );
+    }
     if (TERMINAL_STATES.has(record.state)) {
       throw new LifecycleConflictError(`contain is not legal from ${describeLifecycle(record)}`);
     }
@@ -2839,14 +3293,48 @@ export class MissionKernel {
    * Its failure or rollback never changes the result: the caller still gets
    * the observed termination, re-observed from the current row when that can
    * be read.
+   *
+   * @spec status#state-machine, status#legal-transitions: the same clock
+   * applies a due suspension schedule, AFTER expiry, so a Mission past its
+   * `expires_at` is `expired` and never resumed, and a deadline at or after
+   * `expires_at` never applies. Unlike expiry, a due
+   * schedule is never projected: a resume or revocation that did not commit
+   * is not reported, and the caller gets the stored `suspended` row (which
+   * derives nothing) until the commit lands.
    */
   applyExpiry(record: MissionRecord): MissionRecord {
     const observed = this.observe(record);
-    if (observed.state !== "terminated" || record.state === "terminated" || !observed.termination) {
-      return observed;
-    }
+    if (observed.state !== "terminated") return this.applyDueSchedule(record, observed);
+    if (record.state === "terminated" || !observed.termination) return observed;
     try {
       return this.setState(record, "terminated", { termination: observed.termination });
+    } catch {
+      try {
+        const current = this.get(record.id);
+        return current ? this.observe(current) : observed;
+      } catch {
+        return observed;
+      }
+    }
+  }
+
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): commit the
+   * transition a due schedule owes ({@link dueScheduleTransition}) under the
+   * `(version, state)` compare-and-set, which clears the schedule with it.
+   * On a failed write the caller gets the current row, never a projection.
+   * Whichever path reaches it (a read, a request, or the timer), the commit
+   * names the schedule it applied, so every effect outside the kernel follows
+   * that commit through the durable fan-out.
+   */
+  private applyDueSchedule(record: MissionRecord, observed: MissionRecord): MissionRecord {
+    const due = dueScheduleTransition(record, this.now().getTime());
+    if (!due || !record.schedule) return observed;
+    try {
+      return this.setState(record, due.to, {
+        ...(due.termination ? { termination: due.termination } : {}),
+        appliedSchedule: record.schedule,
+      });
     } catch {
       try {
         const current = this.get(record.id);
@@ -3362,7 +3850,7 @@ export class MissionKernel {
       ? this.effectiveAuthoritySet(record).filter((e) => e.resource === opts.audience)
       : undefined;
     const payload: Record<string, unknown> = {
-      sub: record.client_id,
+      sub: opts.actingParty ?? record.client_id,
       mission: {
         ...this.missionClaim(record),
         // @spec mission-status#mission-status-response (#702) — OPTIONAL,
@@ -3379,6 +3867,12 @@ export class MissionKernel {
         // absent only while an `expired` or `parent_terminated` termination is
         // observed but not yet committed.
         ...(record.termination ? { termination: record.termination } : {}),
+        // @spec status#mission-status-response, status#mission-lifecycle-endpoint:
+        // CONDITIONAL, present only while the Mission is `suspended` under a
+        // deadline, so a consumer sees the pending outcome.
+        ...(record.state === "suspended" && record.schedule
+          ? { suspend_until: record.schedule.suspend_until, on_expiry: record.schedule.on_expiry }
+          : {}),
         version: record.version,
         expires_at: record.expires_at,
         fresh_until: new Date((nowS + freshness) * 1000).toISOString(),
@@ -3499,9 +3993,23 @@ export class MissionKernel {
   private setState(
     record: MissionRecord,
     to: MissionState,
-    opts: { projectedFrom?: MissionState; termination?: Termination } = {},
+    opts: {
+      projectedFrom?: MissionState;
+      termination?: Termination;
+      schedule?: ScheduleRequest;
+      /** The schedule whose deadline this transition applies ({@link applyDueSchedule}). */
+      appliedSchedule?: SuspensionSchedule;
+    } = {},
   ): MissionRecord {
     const { projectedFrom } = opts;
+    // @spec status#mission-lifecycle-endpoint ("Operations"): the schedule is
+    // written in the SAME statement as the state. Only a `suspend` commits
+    // one, under this commit's version as its generation; every other
+    // transition clears it, since a schedule is current only for the
+    // suspension it was armed for.
+    const schedule: SuspensionSchedule | undefined =
+      to === "suspended" && opts.schedule ? { ...opts.schedule, generation: record.version + 1 } : undefined;
+    const scheduleJson = schedule ? JSON.stringify(schedule) : null;
     // @spec control-plane#serialization — state/version and descendant
     // projection commit together, and the CAS on (version, state) admits the
     // transition from the stored row rather than the caller's snapshot.
@@ -3533,7 +4041,7 @@ export class MissionKernel {
         };
         const changed = this.db
           .prepare(
-            "UPDATE missions SET state = 'terminated', termination_json = ?, version = version + 1 WHERE id = ? AND version = ? AND state = ?",
+            "UPDATE missions SET state = 'terminated', termination_json = ?, schedule_json = NULL, version = version + 1 WHERE id = ? AND version = ? AND state = ?",
           )
           .run(JSON.stringify(termination), record.id, record.version, record.state);
         if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
@@ -3544,19 +4052,35 @@ export class MissionKernel {
         // `active`), and CLEARED (`NULL`) whenever a Mission returns to `active` (a
         // resume or a restore), so it is present only for the duration of the hold.
         const changed = this.db
-          .prepare("UPDATE missions SET state = ?, version = version + 1, projected_from = ? WHERE id = ? AND version = ? AND state = ?")
-          .run(to, projectedFrom ?? null, record.id, record.version, record.state);
+          .prepare(
+            "UPDATE missions SET state = ?, version = version + 1, projected_from = ?, schedule_json = ? WHERE id = ? AND version = ? AND state = ?",
+          )
+          .run(to, projectedFrom ?? null, scheduleJson, record.id, record.version, record.state);
         if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
       } else {
         const changed = this.db
-          .prepare("UPDATE missions SET state = ?, version = version + 1 WHERE id = ? AND version = ? AND state = ?")
-          .run(to, record.id, record.version, record.state);
+          .prepare(
+            "UPDATE missions SET state = ?, version = version + 1, schedule_json = ? WHERE id = ? AND version = ? AND state = ?",
+          )
+          .run(to, scheduleJson, record.id, record.version, record.state);
         if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
       }
       // Commit from the persisted row, not the in-memory spread: transition()
       // discards applyExpiry()'s return, so the spread `version` can be off by one.
       const fresh = this.get(record.id);
-      if (fresh) this.emitCommit(fresh, record.state, false, false, committedAt);
+      if (fresh) {
+        this.emitCommit(fresh, record.state, false, false, committedAt, {
+          ...(schedule ? scheduleCommitMembers(fresh.schedule) : {}),
+          ...(opts.appliedSchedule
+            ? {
+                applied_schedule: {
+                  generation: opts.appliedSchedule.generation,
+                  committing_party: opts.appliedSchedule.committing_party,
+                },
+              }
+            : {}),
+        });
+      }
       // @spec child-delegation#cascade — a terminal transition cascades to
       // dependent Child Missions. Gating here (inside the transaction) covers every
       // terminal funnel that flows through setState: transition(revoke/complete)
@@ -3634,6 +4158,9 @@ export class MissionKernel {
     await this.outbox.drain();
     this.outbox.pruneSettled(this.tombstones.retentionSeconds);
     this.tombstones.pruneDetails();
+    // @spec mission#standing-consent-bases: only snapshots past their audit
+    // horizon are deleted.
+    this.activationPolicySnapshots.pruneExpired();
     // @spec control-plane#serialization — an unreleased reservation is
     // ambiguous, not evidence that no artifact was accepted, so recovery
     // records the ambiguity and leaves the count spent. Only an authoritative
@@ -3686,6 +4213,12 @@ export class MissionKernel {
    * termination holds (`successor`, `parent`, `carried_to`); a commit carries
    * no top-level reference member. `committedAt` is the instant the caller
    * already stamped on the termination, so the two never drift.
+   *
+   * @spec signals#lifecycle-event, status#idempotency: `schedule` is passed
+   * EXPLICITLY by the two funnels that commit a schedule (a `suspend` that
+   * arms one, {@link replaceSchedule}), never inferred from the record, so a
+   * metadata-only commit that leaves the schedule as it was carries none; and
+   * by the funnel that applies a due schedule, which names it.
    */
   private emitCommit(
     record: MissionRecord,
@@ -3693,6 +4226,7 @@ export class MissionKernel {
     authorityChanged = false,
     containmentAdvanced = false,
     committedAt?: string,
+    schedule: ScheduleCommitMembers = {},
   ): void {
     const event: LifecycleCommit = {
       id: record.id,
@@ -3716,6 +4250,7 @@ export class MissionKernel {
       ...(record.containment
         ? { containment_version: record.containment.containment_version }
         : {}),
+      ...schedule,
     };
     const persisted: PersistedLifecycleCommit = this.outbox.enqueueInCallerTx(event);
     if (TERMINAL_STATES.has(record.state)) {
@@ -3733,7 +4268,7 @@ export class MissionKernel {
 
   private mustGet(id: string): MissionRecord {
     const record = this.get(id);
-    if (!record) throw new Error(`unknown mission: ${id}`);
+    if (!record) throw new MissionNotFoundError(`unknown mission: ${id}`);
     return record;
   }
 }
@@ -3741,6 +4276,86 @@ export class MissionKernel {
 /** A record's lifecycle for a message: its state, with the reason when terminated. */
 function describeLifecycle(record: Pick<MissionRecord, "state" | "termination">): string {
   return record.state === "terminated" ? `terminated (${record.termination?.reason ?? "unknown"})` : record.state;
+}
+
+/**
+ * @spec status#mission-lifecycle-endpoint ("Operations"), status#legal-transitions,
+ * status#state-machine: one delivery of a schedule timer.
+ *
+ *  - `applied`: the deadline passed before `expires_at` and `on_expiry`
+ *    committed;
+ *  - `ended`: the expiry clock ended the Mission first (its own `expires_at`,
+ *    or an ancestor's termination) and that termination committed; the
+ *    schedule never applies;
+ *  - `superseded`: the generation is not the stored row's current schedule
+ *    (replaced, ended by a transition, or already applied), so nothing
+ *    changed;
+ *  - `not-due`: delivered before its deadline; nothing changed;
+ *  - `retry`: due, but the commit did not land; nothing changed.
+ */
+export type ScheduleFire =
+  | { outcome: "applied" | "ended"; record: MissionRecord }
+  | { outcome: "superseded"; record?: MissionRecord }
+  | { outcome: "not-due" | "retry"; record: MissionRecord; dueAtMs: number };
+
+/** The schedule members a commit carries ({@link LifecycleCommit}). */
+type ScheduleCommitMembers = Pick<
+  LifecycleCommit,
+  "suspend_until" | "on_expiry" | "schedule_committing_party" | "applied_schedule"
+>;
+
+function scheduleCommitMembers(schedule: SuspensionSchedule | undefined): ScheduleCommitMembers {
+  return schedule
+    ? {
+        suspend_until: schedule.suspend_until,
+        on_expiry: schedule.on_expiry,
+        schedule_committing_party: schedule.committing_party,
+      }
+    : {};
+}
+
+/**
+ * @spec status#idempotency: whether a supplied pair is the recorded one. The
+ * deadline compares as an instant, so two spellings of one RFC 3339 instant
+ * are the same deadline.
+ */
+function sameSchedule(recorded: SuspensionSchedule | undefined, supplied: ScheduleRequest): boolean {
+  return (
+    recorded !== undefined &&
+    recorded.on_expiry === supplied.on_expiry &&
+    Date.parse(recorded.suspend_until) === Date.parse(supplied.suspend_until)
+  );
+}
+
+/**
+ * @spec status#legal-transitions: when a schedule's timer next has work: its
+ * deadline, or the Mission's `expires_at` when that comes first, since expiry
+ * then governs and the deadline never applies.
+ */
+function scheduleDueAtMs(record: Pick<MissionRecord, "schedule" | "expires_at">): number {
+  const until = Date.parse(record.schedule?.suspend_until ?? record.expires_at);
+  return Math.min(until, Date.parse(record.expires_at));
+}
+
+/**
+ * @spec status#mission-lifecycle-endpoint ("Operations"): the transition a
+ * record's current schedule owes at `nowMs`, or undefined. Only a `suspended`
+ * record under a schedule whose deadline has passed owes one. Expiry
+ * precedence is the caller's ({@link MissionKernel.applyExpiry} runs the
+ * expiry clock first), which is why a deadline at or after `expires_at`
+ * never applies: by then the Mission is `expired`.
+ */
+function dueScheduleTransition(
+  record: MissionRecord,
+  nowMs: number,
+): { to: MissionState; termination?: Termination } | undefined {
+  const schedule = record.schedule;
+  if (record.state !== "suspended" || !schedule) return undefined;
+  const until = Date.parse(schedule.suspend_until);
+  if (until > nowMs) return undefined;
+  return schedule.on_expiry === "resume"
+    ? { to: "active" }
+    : { to: "terminated", termination: { reason: "revoked", terminated_at: new Date(until).toISOString() } };
 }
 
 /**
@@ -3815,6 +4430,11 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
       : {}),
     // Only the held-from `active` is ever recorded; anything else is dropped.
     ...(row.projected_from === "active" ? { projected_from: "active" as const } : {}),
+    // @spec status#mission-lifecycle-endpoint ("Operations"): absent means no
+    // current schedule; only a `suspended` row ever holds one.
+    ...(row.schedule_json && lifecycle.state === "suspended"
+      ? { schedule: JSON.parse(row.schedule_json as string) as SuspensionSchedule }
+      : {}),
     // Absent means no containment was ever applied; written only by contain().
     ...(row.containment_json
       ? { containment: JSON.parse(row.containment_json as string) as MissionContainment }
@@ -3824,6 +4444,8 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     ...(row.discharged_json
       ? { discharged: JSON.parse(row.discharged_json as string) as DischargedEntry[] }
       : {}),
+    // @spec progressive#progressive-authorization: absent means no ceiling.
+    ...ceilingMembersOf(row.ceiling_json),
   };
 }
 

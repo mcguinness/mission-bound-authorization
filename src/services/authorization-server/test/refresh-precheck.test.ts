@@ -13,12 +13,17 @@
  * oidc-provider's reuse detection. The last test documents the residual: a
  * suspension landing between the pre-check and the save-time gate is still
  * refused by that gate, after rotation (#250).
+ *
+ * The `mission_error` describes pair endpoint refusals with unit checks of the
+ * shared mapper (`gateErrorToMissionError`). The supersession case is an
+ * endpoint refusal: a refresh of a predecessor's own refresh token after a
+ * deferred expansion activated its successor (#1065).
  */
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
-import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
+import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { gateErrorToMissionError } from "../src/adapters/provider.js";
@@ -193,8 +198,10 @@ async function lifecycle(missionId: string, operation: "suspend" | "resume"): Pr
     headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
     body: JSON.stringify({ operation, nonce: crypto.randomUUID() }),
   });
-  const body = (await res.json()) as { state?: string };
-  expect(res.status, JSON.stringify(body)).toBe(200);
+  const text = await res.text();
+  expect(res.status, text).toBe(200);
+  // The signed state-only Mission Status Response (@spec status#mission-lifecycle-endpoint).
+  const body = (decodeJwt(text) as { mission: { state?: string } }).mission;
   expect(body.state).toBe(operation === "suspend" ? "suspended" : "active");
 }
 
@@ -392,5 +399,100 @@ describe("mission_error for Mission Status states (@spec status#mission-lifecycl
     expect(gateErrorToMissionError("mission_not_active", terminated("quantum_supervened"))).toBeUndefined();
     expect(gateErrorToMissionError("mission_not_active", { state: "terminated" })).toBeUndefined();
     expect(gateErrorToMissionError("derivation_cap_exhausted", { state: "active" })).toBe("derivations_exhausted");
+  });
+});
+
+/**
+ * Expand `m` through the deferred token exchange (@spec expansion#deferred-window):
+ * a widening request under the predecessor's own access token and key, an
+ * asynchronous approval, and the resolving poll that activates the successor.
+ * Returns the successor's mission_id.
+ */
+async function expand(m: { accessToken: string; keys: Keys }): Promise<string> {
+  const widened = [{ ...READ[0], actions: ["payments:invoice.read", "payments:remittance.send"] }];
+  const opened = await token(
+    {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: m.accessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      login_hint: "alice",
+      mission_intent: JSON.stringify({
+        intent: { goal: "Read and remit Acme invoices", target_resources: [RESOURCE], expires_at: FAR_EXP },
+      }),
+      authorization_details: JSON.stringify(widened),
+      creation_request_id: crypto.randomUUID(),
+    },
+    m.keys,
+  );
+  expect(opened.status, JSON.stringify(opened.body)).toBe(400);
+  expect(opened.body.error).toBe("authorization_pending");
+  const deferralCode = opened.body.deferral_code as string;
+  as.expansionDeferrals.approve(deferralCode, {
+    approver: { iss: ISSUER, sub: "bob" },
+    authentication: FIXTURE_BROWSER_LOGIN,
+    approvalEventId: `apev-refresh-precheck-${crypto.randomUUID()}`,
+    approvedUntil: FAR_EXP,
+  });
+  const poll = await token(
+    { grant_type: TOKEN_EXCHANGE_GRANT_TYPE, requested_token_type: ACCESS_TOKEN_TOKEN_TYPE, deferral_code: deferralCode },
+    m.keys,
+  );
+  expect(poll.status, JSON.stringify(poll.body)).toBe(200);
+  return poll.body.mission_id as string;
+}
+
+/** Run `fn`, counting each named oidc-provider model event emitted meanwhile. */
+async function countingEvents<T>(
+  names: string[],
+  fn: () => Promise<T>,
+): Promise<{ result: T; counts: Record<string, number> }> {
+  const counts: Record<string, number> = Object.fromEntries(names.map((n) => [n, 0]));
+  const listeners = names.map((n) => [n, () => (counts[n] = (counts[n] ?? 0) + 1)] as const);
+  // oidc-provider types each event name separately; the names here are model events.
+  const emitter = as.provider as unknown as NodeJS.EventEmitter;
+  for (const [n, l] of listeners) emitter.on(n, l);
+  try {
+    return { result: await fn(), counts };
+  } finally {
+    for (const [n, l] of listeners) emitter.removeListener(n, l);
+  }
+}
+
+describe("mission_error on a refresh after expansion (@spec expansion#superseded-state, mission#issuance-gating, #1065)", () => {
+  it("a refresh of the superseded predecessor's refresh token is refused invalid_grant with mission_error superseded, issuing, saving and counting nothing", async () => {
+    const m = await issue();
+    const successorId = await expand(m);
+    const predecessor = as.kernel.get(m.missionId);
+    expect(predecessor?.state).toBe("terminated");
+    expect(predecessor?.termination?.reason).toBe("superseded");
+    expect(predecessor?.termination?.successor).toBe(successorId);
+    const before = { predecessor: derivations(m.missionId), successor: derivations(successorId) };
+
+    // Past 70% of its lifetime the approval refresh would rotate, so a refusal
+    // after consumption would spend the token: the second attempt checks it did not.
+    pastSeventyPercent();
+    const events = [
+      "refresh_token.saved",
+      "access_token.saved",
+      "access_token.issued",
+      "grant.saved",
+      "grant.destroyed",
+    ];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const refused = await countingEvents(events, () => refresh(m.refreshToken, m.keys));
+      expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
+      expect(refused.result.body.error).toBe("invalid_grant");
+      // The Mission gate's own refusal both times: a consumed token's replay
+      // is reuse, which carries no mission_error.
+      expect(refused.result.body.mission_error).toBe("superseded");
+      expect(refused.result.body.access_token).toBeUndefined();
+      expect(refused.result.body.refresh_token).toBeUndefined();
+      expect(refused.counts).toEqual(Object.fromEntries(events.map((n) => [n, 0])));
+    }
+    expect(derivations(m.missionId)).toBe(before.predecessor);
+    expect(derivations(successorId)).toBe(before.successor);
+    expect(as.kernel.get(m.missionId)?.termination?.reason).toBe("superseded");
+    expect(as.kernel.get(successorId)?.state).toBe("active");
   });
 });

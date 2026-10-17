@@ -197,11 +197,12 @@ async function introspect(tokenValue: string): Promise<Record<string, unknown>> 
   return (await res.json()) as Record<string, unknown>;
 }
 
-const lifecycle = (missionId: string, body: unknown, serviceToken: string): Promise<Response> =>
+/** A Lifecycle request; it carries the REQUIRED nonce (@spec status#idempotency) unless `body` names one. */
+const lifecycle = (missionId: string, body: Record<string, unknown>, serviceToken: string): Promise<Response> =>
   fetch(`${ISSUER}/missions/${missionId}/lifecycle`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-service-token": serviceToken },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ nonce: crypto.randomUUID(), ...body }),
   });
 
 // One Mission, shared by the ordered steps below.
@@ -294,12 +295,13 @@ describe("an agent acting for its own workload principal (@spec mission#authorit
   });
 
   it("step 7 (lifecycle authorization): a caller without the lifecycle grant, the approval service included, is refused revoke with the not-found response and the Mission stays active", async () => {
-    const refused = await lifecycle(missionId, { operation: "revoke" }, APPROVAL_ONLY_TOKEN);
+    const nonce = crypto.randomUUID();
+    const refused = await lifecycle(missionId, { operation: "revoke", nonce }, APPROVAL_ONLY_TOKEN);
     const refusedBody = (await refused.json()) as Record<string, unknown>;
     expect(refused.status).toBe(404);
     expect(refusedBody.error).toBe("not_found");
     // The same response an unknown Mission reference gets: no enumeration oracle.
-    const unknown = await lifecycle("msn_no_such_mission_1194", { operation: "revoke" }, LIFECYCLE_TOKEN);
+    const unknown = await lifecycle("msn_no_such_mission_1194", { operation: "revoke", nonce }, LIFECYCLE_TOKEN);
     expect(unknown.status).toBe(404);
     expect(refusedBody).toEqual(await unknown.json());
     expect(as.kernel.get(missionId)?.state).toBe("active");
@@ -307,8 +309,10 @@ describe("an agent acting for its own workload principal (@spec mission#authorit
 
   it("step 8 (revoke): the administrator's lifecycle grant revokes the Mission, after which refresh and the agent's exchange are refused", async () => {
     const res = await lifecycle(missionId, { operation: "revoke" }, LIFECYCLE_TOKEN);
-    const body = (await res.json()) as { state?: string; termination?: { reason?: string } };
-    expect(res.status, JSON.stringify(body)).toBe(200);
+    const text = await res.text();
+    expect(res.status, text).toBe(200);
+    // The signed state-only Mission Status Response (@spec status#mission-lifecycle-endpoint).
+    const body = (decodeJwt(text) as { mission: { state?: string; termination?: { reason?: string } } }).mission;
     expect(body.state).toBe("terminated");
     expect(body.termination?.reason).toBe("revoked");
 

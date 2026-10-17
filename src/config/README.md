@@ -4,6 +4,32 @@ Each file here is static deployment configuration, read once at boot by the
 typed, validating loaders in `packages/demo-data/src/index.ts`. A file that
 fails validation stops the boot with a `ConfigError` naming the file.
 
+## `approval-floor.json`
+
+The published approval-authentication floor (`@spec
+mission#approval-authentication`, #826, D425): its deployment scope, the
+floors, and the AS-owned classification of every action the AS can admit,
+keyed by authority type, resource and action. The shipped floor,
+`high-risk-authority`, applies to `irreversible_action`,
+`external_commitment` and `privileged_administration`. It accepts only a
+browser Approver whose achieved `acr` is `mfa`, authenticated at most 300
+seconds before the decision. Payment execution and remittance are its
+high-risk actions, matching the payments Operation Profile. The approval
+interaction and an Expansion deferral approval both apply it. The demo's
+approval console presents a login recorded once (simulated; the demo has no
+Approver identity provider) and never at an approval, so it ages out of the
+floor until the demo server's `POST /bff/approver/login` records a new one.
+
+- **Owner.** The deployment's security owner owns the floors; each Resource
+  Server's operator owns its actions' classes, which follow that server's
+  operation definitions.
+- **Integrity.** Repository review and the strict loader, which refuses
+  unknown members, duplicate member names, an unknown action class, an empty
+  floor and a second classification for one type and resource. An admitted
+  action the classification does not name refuses at the approval decision.
+- **Updating.** Edit, review, and restart the AS. A change applies to the
+  next approval decision; Missions already approved are unaffected.
+
 ## `scope-projection.json`
 
 The trusted scope-projection mapping (`@spec mission#scope-projection`, step

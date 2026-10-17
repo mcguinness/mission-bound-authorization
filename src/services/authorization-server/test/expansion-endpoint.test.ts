@@ -27,10 +27,13 @@
  * proof are both refused (#448).
  */
 
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { ApprovalFloorRefusedError, ApprovalSessionStore } from "../src/index.js";
+const FLOOR_SESSIONS = new ApprovalSessionStore();
+
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE } from "@mission/demo-data";
+import { APPROVAL_FLOOR, CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
   compactVerify,
   createRemoteJWKSet,
@@ -44,7 +47,15 @@ import {
   SignJWT,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { asTokenSigningKeyPair, MTLS_CNF, resignWithCnf, tokenRequestOnce } from "./subject-possession.helper.js";
+import {
+  asTokenSigningKeyPair,
+  BARE_REFUSAL_MEMBERS,
+  INVALID_ACTOR_TOKENS,
+  INVALID_SUBJECT_TOKENS,
+  MTLS_CNF,
+  resignWithCnf,
+  tokenRequestOnce,
+} from "./subject-possession.helper.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   JWT_TOKEN_TYPE,
@@ -229,7 +240,7 @@ async function issuePredecessor(actions: string[]): Promise<{ missionId: string;
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader(jar) },
+    headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)), "content-type": "application/json" },
     body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res, jar);
@@ -294,6 +305,7 @@ async function pollExpansion(
 function approveDeferral(deferralCode: string): void {
   as.expansionDeferrals.approve(deferralCode, {
     approver: { iss: ISSUER, sub: "bob" },
+    authentication: FIXTURE_BROWSER_LOGIN,
     approvalEventId: `apev-exp-${apev++}`,
     approvedUntil: FAR_EXP,
   });
@@ -324,6 +336,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: FLOOR_SESSIONS,
     testTokenSigningJwk: (await exportJWK(asSigning.privateKey)) as JWK,
     testClients: [
       {
@@ -647,6 +660,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     // later than its creation instant, so the creation transaction refuses.
     as.expansionDeferrals.approve(ob.deferral_code as string, {
       approver: { iss: ISSUER, sub: "bob" },
+      authentication: FIXTURE_BROWSER_LOGIN,
       approvalEventId: `apev-exp-past-${apev++}`,
       approvedUntil: "2020-01-01T00:00:00Z",
     });
@@ -978,7 +992,7 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
     expect(body.error_description).toContain("refresh token");
   });
 
-  it("possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_grant)", async () => {
+  it("possession: an exchange DPoP proof from a key other than the subject_token cnf is refused (invalid_request)", async () => {
     const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);
     const wrongDpop = await generateKeyPair("ES256", { extractable: true });
     const res = await tokenRequestWithDpop(wrongDpop, {
@@ -994,7 +1008,7 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
+    expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("confirmation key");
   });
 });
@@ -1332,7 +1346,8 @@ describe("subject-token possession at the expansion exchange (@spec expansion#re
     const pred = await issuePredecessor(["payments:invoice.read"]);
     const res = await refusal(await send(expandParams(await resignWithCnf(pred.accessToken, asSigningKey, MTLS_CNF)), await freshProof()));
     expect(res.status, JSON.stringify(res)).toBe(400);
-    expect(res.error).toBe("invalid_grant");
+    // RFC 8693 Section 2.2.2 (#1178): an unacceptable subject_token.
+    expect(res.error).toBe("invalid_request");
     expect(res.error_description).toContain("sender constraint");
     expect(res.error_description).not.toContain("not sender-constrained");
   });
@@ -1373,5 +1388,144 @@ describe("subject-token possession at the expansion exchange (@spec expansion#re
     expect(res.error).toBe("invalid_request");
     expect(res.error_description).toContain("child_actor");
     expect(res.deferral_code).toBeUndefined();
+  });
+});
+
+describe("invalid or unacceptable subject and actor tokens at the expansion exchange (@spec expansion#verification-order, RFC 8693 Section 2.2.2, #1178)", () => {
+  const WIDE = ["payments:invoice.read", "payments:remittance.send"];
+
+  /**
+   * Send one widening expansion exchange as ap-agent under `proof` (a fresh
+   * proof of the predecessor token's key unless given) and report the
+   * response with what the exchange left behind: the predecessor's state and
+   * count, and any reservation of the operation's creation_request_id.
+   */
+  async function attempt(
+    pred: { missionId: string },
+    subjectToken: string,
+    extra: Record<string, string> = {},
+    proof?: string,
+  ) {
+    const count = as.kernel.get(pred.missionId)?.derivation_count;
+    const creationRequestId = crypto.randomUUID();
+    const res = await tokenRequestOnce(
+      ISSUER,
+      {
+        grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+        subject_token: subjectToken,
+        subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        mission_intent: intentJson("Widen to add remittance", WIDE),
+        authorization_details: JSON.stringify(authority(WIDE)),
+        creation_request_id: creationRequestId,
+        ...extra,
+      },
+      await clientAssertion(),
+      proof ?? (await dpopProof(`${ISSUER}/token`, "POST")),
+    );
+    const body = (await res.json()) as Record<string, unknown>;
+    return {
+      status: res.status,
+      body,
+      untouched:
+        as.kernel.get(pred.missionId)?.state === "active" && as.kernel.get(pred.missionId)?.derivation_count === count,
+      reserved: as.creationIdempotency.find("ap-agent", creationRequestId) !== undefined,
+    };
+  }
+
+  /** The refusal is invalid_request, carries no diagnostic, and defers, reserves and counts nothing. */
+  function expectRefused(r: Awaited<ReturnType<typeof attempt>>, description: string): void {
+    expect(r.status, JSON.stringify(r.body)).toBe(400);
+    expect(r.body.error).toBe("invalid_request");
+    expect(r.body.error_description).toContain(description);
+    expect(Object.keys(r.body).sort()).toEqual([...BARE_REFUSAL_MEMBERS]);
+    expect(r.untouched).toBe(true);
+    expect(r.reserved).toBe(false);
+  }
+
+  it.each(INVALID_SUBJECT_TOKENS)(
+    "refuses %s with invalid_request, no Mission diagnostic, and no deferral, reservation or count",
+    async (_name, make, description) => {
+      const pred = await issuePredecessor(["payments:invoice.read"]);
+      expectRefused(await attempt(pred, await make(pred.accessToken, asSigningKey)), description);
+    },
+  );
+
+  it.each(INVALID_ACTOR_TOKENS)(
+    "refuses %s with invalid_request, no Mission diagnostic, and no deferral, reservation or count",
+    async (_name, make, description) => {
+      const pred = await issuePredecessor(["payments:invoice.read"]);
+      expectRefused(
+        await attempt(pred, pred.accessToken, { actor_token: await make(dpopKeys), actor_token_type: JWT_TOKEN_TYPE }),
+        description,
+      );
+    },
+  );
+
+  it("keeps invalid_dpop_proof for a proof that fails its own checks, distinct from a valid proof under another key", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    // Signed by the token's own key, but for another endpoint: the proof is invalid.
+    const r = await attempt(pred, pred.accessToken, {}, await dpopProof(`${ISSUER}/elsewhere`, "POST"));
+    expect(r.status, JSON.stringify(r.body)).toBe(400);
+    expect(r.body.error).toBe("invalid_dpop_proof");
+    expect(r.body.mission_error).toBeUndefined();
+    expect(r.untouched).toBe(true);
+    expect(r.reserved).toBe(false);
+  });
+});
+
+describe("an expansion approval meets the approval-authentication floor (@spec mission#approval-authentication, #826, D425)", () => {
+  const maxAge = APPROVAL_FLOOR.floors[0]?.max_authentication_age_seconds as number;
+  const approval = (extra: Record<string, unknown> = {}) => ({
+    approver: { iss: ISSUER, sub: "bob" },
+    approvalEventId: `apev-exp-floor-${apev++}`,
+    approvedUntil: FAR_EXP,
+    ...extra,
+  });
+  const successorsOf = (id: string) => as.kernel.allMissions().filter((m) => m.predecessor === id);
+  async function openWidening(actions: string[]): Promise<{ predecessorId: string; code: string }> {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await expandViaExchange(pred.accessToken, "Widen the Acme invoice work", actions);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(ob.error, JSON.stringify(ob)).toBe("authorization_pending");
+    return { predecessorId: pred.missionId, code: ob.deferral_code as string };
+  }
+
+  it("refuses a high-risk expansion approval that carries no achieved authentication: nothing is recorded, the deferral stays pending, and no successor exists", async () => {
+    const { predecessorId, code } = await openWidening(["payments:invoice.read", "payments:remittance.send"]);
+    expect(() => as.expansionDeferrals.approve(code, approval())).toThrow(ApprovalFloorRefusedError);
+    const poll = await pollExpansion(code);
+    const pb = (await poll.json()) as { error?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(400);
+    expect(pb.error).toBe("authorization_pending");
+    expect(successorsOf(predecessorId)).toHaveLength(0);
+    expect(as.kernel.get(predecessorId)?.state).toBe("active");
+  });
+
+  it("refuses a high-risk expansion approval whose recorded login the floor does not accept, a weaker acr or one older than the age bound, then completes from one it accepts", async () => {
+    const { predecessorId, code } = await openWidening(["payments:invoice.read", "payments:remittance.send"]);
+    expect(() =>
+      as.expansionDeferrals.approve(code, approval({ authentication: { ...FIXTURE_BROWSER_LOGIN, acr: "password" } })),
+    ).toThrow(/high-risk-authority floor/);
+    const stale = Math.floor(as.kernel.nowDate().getTime() / 1000) - maxAge - 5;
+    expect(() =>
+      as.expansionDeferrals.approve(code, approval({ authentication: { ...FIXTURE_BROWSER_LOGIN, auth_time: stale } })),
+    ).toThrow(/older than the high-risk-authority floor allows/);
+    expect(successorsOf(predecessorId)).toHaveLength(0);
+    as.expansionDeferrals.approve(code, approval({ authentication: FIXTURE_BROWSER_LOGIN }));
+    const poll = await pollExpansion(code);
+    const pb = (await poll.json()) as { error?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    expect(successorsOf(predecessorId)).toHaveLength(1);
+  });
+
+  it("admits a low-risk widening with no achieved authentication: the floor does not apply", async () => {
+    // payment.schedule is a consequential write, below the floor.
+    const { predecessorId, code } = await openWidening(["payments:invoice.read", "payments:payment.schedule"]);
+    as.expansionDeferrals.approve(code, approval());
+    const poll = await pollExpansion(code);
+    const pb = (await poll.json()) as { error?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    expect(successorsOf(predecessorId)).toHaveLength(1);
   });
 });

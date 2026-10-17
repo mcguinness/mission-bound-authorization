@@ -471,48 +471,109 @@ function loadInvoices(): InvoiceSeed[] {
 
 export const INVOICES: InvoiceSeed[] = loadInvoices();
 
+/** A policy principal under the deployment's own issuer: a subject or an authenticated client (D429). */
+export type ResourcePolicyPrincipalSeed = { sub: string } | { client: string };
+
 /**
- * @spec runtime#input-resource-policy (#828): one stored entitlement the
- * development demo grants when it bootstraps its Resource-policy store. The
- * principal is `sub` under the deployment's own issuer (the issuer-local
- * mapping); the grant is on a vendor, and every invoice that vendor owns
- * inherits it.
+ * @spec runtime#input-resource-policy (#828, D429): one stored entitlement the
+ * development demo grants when it bootstraps its Resource-policy store. A
+ * subject (`sub`) holds `authorized_reader` or `authorized_payer`; a client
+ * holds `authorized_client`. Each is a principal under the deployment's own
+ * issuer (the issuer-local mapping); the grant is on a vendor, every invoice
+ * that vendor owns inherits it, and it counts only for a member of the
+ * vendor's tenant.
  */
-export interface ResourcePolicyEntitlementSeed {
-  sub: string;
-  relation: "authorized_reader" | "authorized_payer";
-  vendor: string;
+export type ResourcePolicyEntitlementSeed =
+  | { sub: string; relation: "authorized_reader" | "authorized_payer"; vendor: string }
+  | { client: string; relation: "authorized_client"; vendor: string };
+
+/** One tenant: the vendors it holds and the subjects and clients that are its members (D429). */
+export interface ResourcePolicyTenantSeed {
+  tenant: string;
+  vendors: string[];
+  members: ResourcePolicyPrincipalSeed[];
 }
 
-const ENTITLEMENT_SEED_MEMBERS = new Set(["sub", "relation", "vendor"]);
+export interface ResourcePolicySeed {
+  tenants: ResourcePolicyTenantSeed[];
+  entitlements: ResourcePolicyEntitlementSeed[];
+}
 
-function loadResourcePolicySeed(): ResourcePolicyEntitlementSeed[] {
+/** Exactly one of `sub` or `client`, as a non-empty string. */
+function principalSeed(
+  file: string,
+  o: Record<string, unknown>,
+  ctx: string,
+): ResourcePolicyPrincipalSeed {
+  const hasSub = "sub" in o;
+  if (hasSub === "client" in o)
+    throw new ConfigError(file, `${ctx} must name exactly one of sub or client`);
+  return hasSub
+    ? { sub: reqString(file, o, "sub", ctx) }
+    : { client: reqString(file, o, "client", ctx) };
+}
+
+function onlyMembers(
+  file: string,
+  o: Record<string, unknown>,
+  allowed: ReadonlySet<string>,
+  ctx: string,
+): void {
+  for (const key of Object.keys(o))
+    if (!allowed.has(key)) throw new ConfigError(file, `${ctx} has unknown member ${key}`);
+}
+
+const SEED_ROOT_MEMBERS = new Set(["tenants", "entitlements"]);
+const TENANT_SEED_MEMBERS = new Set(["tenant", "vendors", "members"]);
+const MEMBER_SEED_MEMBERS = new Set(["sub", "client"]);
+const ENTITLEMENT_SEED_MEMBERS = new Set(["sub", "client", "relation", "vendor"]);
+
+function loadResourcePolicySeed(): ResourcePolicySeed {
   const file = "seed/resource-policy.json";
   const root = asObject(file, readJson(file), "resource-policy");
-  for (const key of Object.keys(root)) {
-    if (key !== "entitlements") throw new ConfigError(file, `unknown member ${key}`);
-  }
-  return asArray(file, root.entitlements, "entitlements").map((raw, i) => {
-    const ctx = `entitlements[${i}]`;
-    const e = asObject(file, raw, ctx);
-    for (const key of Object.keys(e)) {
-      if (!ENTITLEMENT_SEED_MEMBERS.has(key))
-        throw new ConfigError(file, `${ctx} has unknown member ${key}`);
-    }
-    const relation = reqString(file, e, "relation", ctx);
-    if (relation !== "authorized_reader" && relation !== "authorized_payer") {
-      throw new ConfigError(file, `${ctx}.relation must be authorized_reader or authorized_payer`);
-    }
+  onlyMembers(file, root, SEED_ROOT_MEMBERS, "resource-policy");
+  const tenants = asArray(file, root.tenants, "tenants").map((raw, i) => {
+    const ctx = `tenants[${i}]`;
+    const o = asObject(file, raw, ctx);
+    onlyMembers(file, o, TENANT_SEED_MEMBERS, ctx);
     return {
-      sub: reqString(file, e, "sub", ctx),
-      relation,
-      vendor: reqString(file, e, "vendor", ctx),
+      tenant: reqString(file, o, "tenant", ctx),
+      vendors: reqStringArray(file, o, "vendors", ctx),
+      members: asArray(file, o.members, `${ctx}.members`).map((m, j) => {
+        const mctx = `${ctx}.members[${j}]`;
+        const mo = asObject(file, m, mctx);
+        onlyMembers(file, mo, MEMBER_SEED_MEMBERS, mctx);
+        return principalSeed(file, mo, mctx);
+      }),
     };
   });
+  const entitlements = asArray(file, root.entitlements, "entitlements").map(
+    (raw, i): ResourcePolicyEntitlementSeed => {
+      const ctx = `entitlements[${i}]`;
+      const e = asObject(file, raw, ctx);
+      onlyMembers(file, e, ENTITLEMENT_SEED_MEMBERS, ctx);
+      const principal = principalSeed(file, e, ctx);
+      const relation = reqString(file, e, "relation", ctx);
+      const vendor = reqString(file, e, "vendor", ctx);
+      if ("client" in principal) {
+        if (relation !== "authorized_client")
+          throw new ConfigError(file, `${ctx}.relation must be authorized_client for a client`);
+        return { client: principal.client, relation, vendor };
+      }
+      if (relation !== "authorized_reader" && relation !== "authorized_payer") {
+        throw new ConfigError(
+          file,
+          `${ctx}.relation must be authorized_reader or authorized_payer for a subject`,
+        );
+      }
+      return { sub: principal.sub, relation, vendor };
+    },
+  );
+  return { tenants, entitlements };
 }
 
-/** The development demo's stored entitlements, granted only by an explicit development bootstrap. */
-export const RESOURCE_POLICY_SEED: ResourcePolicyEntitlementSeed[] = loadResourcePolicySeed();
+/** The development demo's stored policy, granted only by an explicit development bootstrap. */
+export const RESOURCE_POLICY_SEED: ResourcePolicySeed = loadResourcePolicySeed();
 
 export interface CeilingConstraints {
   max_amount?: { amount: string; currency: string };
@@ -1869,6 +1930,150 @@ export function loadScopeProjection(
 
 /** The validated shipped scope-projection mapping (@see loadScopeProjection). */
 export const SCOPE_PROJECTION: ScopeProjectionMapping = loadScopeProjection();
+
+/**
+ * @spec mission#approval-authentication (#826, D425) — an action class of the
+ * approval-authentication floor's classification: the runtime's action
+ * classes, plus `privileged_administration`, the binding's third high-risk
+ * kind, which no shipped action carries.
+ */
+export const APPROVAL_FLOOR_ACTION_CLASSES = [
+  "non_consequential",
+  "consequential_read",
+  "consequential_write",
+  "irreversible_action",
+  "external_commitment",
+  "privileged_administration",
+] as const;
+export type ApprovalFloorActionClass = (typeof APPROVAL_FLOOR_ACTION_CLASSES)[number];
+
+/** One published floor: the classes that invoke it, and what satisfies it. */
+export interface ApprovalFloor {
+  id: string;
+  applies_to: ApprovalFloorActionClass[];
+  /** The only approval surface whose achieved context can satisfy it. */
+  approval_surface: "browser";
+  /** Accepted achieved `acr` values, by exact match; no ordering among them. */
+  accepted_acr: string[];
+  /** The longest time since the Approver authenticated that still satisfies it. */
+  max_authentication_age_seconds: number;
+}
+
+/** The AS-owned class of each action of one authority type at one resource. */
+export interface ApprovalFloorClassification {
+  type: string;
+  resource: string;
+  actions: Record<string, ApprovalFloorActionClass>;
+}
+
+/**
+ * @spec mission#approval-authentication (#826, D425) — the published
+ * approval-authentication floor: its deployment scope, the floors, and the
+ * AS-owned classification of every action the AS can admit. Nothing a client
+ * sends classifies authority.
+ */
+export interface ApprovalFloorPolicy {
+  policy_id: string;
+  deployment_scope: string;
+  floors: ApprovalFloor[];
+  classification: ApprovalFloorClassification[];
+}
+
+/**
+ * Load + validate config/approval-floor.json. Parsed strictly: a duplicated
+ * member, an unknown member, an unknown action class, an empty floor or a
+ * second classification for one type and resource refuses at load. The
+ * payments resource resolves to the possibly env-overridden
+ * CANONICAL_RESOURCE, like the ceiling.
+ */
+export function loadApprovalFloor(
+  text: string = readText("approval-floor.json"),
+): ApprovalFloorPolicy {
+  const file = "approval-floor.json";
+  let raw: unknown;
+  try {
+    raw = parseStrictJson(text);
+  } catch (e) {
+    if (e instanceof DuplicateMemberError)
+      throw new ConfigError(file, `ambiguous policy: ${e.message}`);
+    throw new ConfigError(file, `invalid JSON: ${(e as Error).message}`);
+  }
+  const only = (obj: Record<string, unknown>, keys: readonly string[], ctx: string) => {
+    for (const k of Object.keys(obj)) {
+      if (!keys.includes(k)) throw new ConfigError(file, `${ctx} has unknown member ${k}`);
+    }
+  };
+  const isClass = (v: unknown): v is ApprovalFloorActionClass =>
+    typeof v === "string" && (APPROVAL_FLOOR_ACTION_CLASSES as readonly string[]).includes(v);
+  const root = asObject(file, raw, "approval-floor");
+  only(root, ["policy_id", "deployment_scope", "floors", "classification"], "approval-floor");
+  const floorIds = new Set<string>();
+  const floors = asArray(file, root.floors, "floors").map((rawFloor, i) => {
+    const ctx = `floors[${i}]`;
+    const f = asObject(file, rawFloor, ctx);
+    only(
+      f,
+      ["id", "applies_to", "approval_surface", "accepted_acr", "max_authentication_age_seconds"],
+      ctx,
+    );
+    const id = reqString(file, f, "id", ctx);
+    if (floorIds.has(id)) throw new ConfigError(file, `${ctx}.id ${id} is not unique`);
+    floorIds.add(id);
+    const appliesTo = reqStringArray(file, f, "applies_to", ctx);
+    if (appliesTo.length === 0 || !appliesTo.every(isClass)) {
+      throw new ConfigError(file, `${ctx}.applies_to must name one or more known action classes`);
+    }
+    const acr = reqStringArray(file, f, "accepted_acr", ctx);
+    if (acr.length === 0 || acr.some((a) => a.length === 0) || new Set(acr).size !== acr.length) {
+      throw new ConfigError(file, `${ctx}.accepted_acr must be distinct non-empty strings`);
+    }
+    const age = reqNumber(file, f, "max_authentication_age_seconds", ctx);
+    if (!Number.isSafeInteger(age) || age <= 0) {
+      throw new ConfigError(
+        file,
+        `${ctx}.max_authentication_age_seconds must be a positive integer`,
+      );
+    }
+    return {
+      id,
+      applies_to: appliesTo as ApprovalFloorActionClass[],
+      approval_surface: reqEnum(file, f, "approval_surface", ctx, ["browser"] as const),
+      accepted_acr: acr,
+      max_authentication_age_seconds: age,
+    };
+  });
+  if (floors.length === 0) throw new ConfigError(file, "floors must be non-empty");
+  const remap = (uri: string) => (uri === DEFAULT_PAYMENTS_RESOURCE ? CANONICAL_RESOURCE : uri);
+  const seen = new Set<string>();
+  const classification = asArray(file, root.classification, "classification").map((rawEntry, i) => {
+    const ctx = `classification[${i}]`;
+    const e = asObject(file, rawEntry, ctx);
+    only(e, ["type", "resource", "actions"], ctx);
+    const type = reqString(file, e, "type", ctx);
+    const resource = remap(reqString(file, e, "resource", ctx));
+    const key = JSON.stringify([type, resource]);
+    if (seen.has(key))
+      throw new ConfigError(file, `${ctx} classifies ${type} at ${resource} a second time`);
+    seen.add(key);
+    const actions = asObject(file, e.actions, `${ctx}.actions`);
+    if (Object.keys(actions).length === 0)
+      throw new ConfigError(file, `${ctx}.actions must be non-empty`);
+    for (const [action, cls] of Object.entries(actions)) {
+      if (!isClass(cls))
+        throw new ConfigError(file, `${ctx}.actions.${action} is not a known action class`);
+    }
+    return { type, resource, actions: actions as Record<string, ApprovalFloorActionClass> };
+  });
+  return {
+    policy_id: reqString(file, root, "policy_id", "approval-floor"),
+    deployment_scope: reqString(file, root, "deployment_scope", "approval-floor"),
+    floors,
+    classification,
+  };
+}
+
+/** The validated shipped approval-authentication floor (@see loadApprovalFloor). */
+export const APPROVAL_FLOOR: ApprovalFloorPolicy = loadApprovalFloor();
 
 /** Build a confidential client (private_key_jwt) from a seed: fresh key per boot (D25). */
 async function buildSeededClient(client: ClientSeed): Promise<SeededClient> {

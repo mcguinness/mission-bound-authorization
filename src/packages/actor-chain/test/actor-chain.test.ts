@@ -38,6 +38,17 @@ describe("flattenActChain golden vectors (@spec authzen#context-actor)", () => {
     ]);
   });
 
+  it("rejects a value that is not an object at any hop, ending the chain only at an absent act (#904)", () => {
+    const hop = { sub: "a", iss: "https://as.test" };
+    for (const inner of [null, false, 0, "", "agent", []]) {
+      expect(() => flattenActChain({ ...hop, act: inner } as never), String(inner)).toThrow(
+        ActorChainError,
+      );
+    }
+    expect(() => flattenActChain(null as never)).toThrow(ActorChainError);
+    expect(flattenActChain({ ...hop, act: undefined } as never)).toEqual([{ ...hop }]);
+  });
+
   it("empty when there is no act claim", () => {
     expect(flattenActChain(undefined)).toEqual([]);
   });

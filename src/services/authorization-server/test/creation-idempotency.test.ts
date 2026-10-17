@@ -24,7 +24,10 @@
  *    pending retry returns the SAME deferral_code.
  */
 
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { ApprovalSessionStore } from "../src/index.js";
+const FLOOR_SESSIONS = new ApprovalSessionStore();
+
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
@@ -161,7 +164,7 @@ async function issueMission(actions: string[]): Promise<{ missionId: string; acc
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader(jar) },
+    headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)), "content-type": "application/json" },
     body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res, jar);
@@ -234,6 +237,7 @@ beforeAll(async () => {
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: FLOOR_SESSIONS,
     actorProfiles: aiAgents("subagent-extractor"),
     onLifecycleCommit: (c) => commits.push(c),
   });
@@ -508,6 +512,7 @@ describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
     // superseded on this first redemption.
     as.expansionDeferrals.approve(ob.deferral_code as string, {
       approver: { iss: ISSUER, sub: "bob" },
+      authentication: FIXTURE_BROWSER_LOGIN,
       approvalEventId: `apev-idem-${crypto.randomUUID()}`,
       approvedUntil: FAR_EXP,
     });

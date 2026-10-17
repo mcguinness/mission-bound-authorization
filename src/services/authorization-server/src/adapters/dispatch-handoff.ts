@@ -177,8 +177,9 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
   if (params.scope !== undefined) {
     throw new errors.InvalidScope("scope is not supported on this exchange", String(params.scope));
   }
-  // 1. The subject token, and possession of the key it is bound to.
-  const resolved = await verifySubjectPossession(opts, ctx);
+  // 1. The subject token, and possession of the key it is bound to. A failure
+  //    of step 1 or 2 is invalid_grant, the Template's own code.
+  const resolved = await verifySubjectPossession(opts, ctx, { subjectError: "invalid_grant" });
   if (!resolved) return;
   // 2. The authenticated client is the client the token was issued to.
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;

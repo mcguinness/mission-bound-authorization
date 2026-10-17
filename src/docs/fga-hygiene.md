@@ -7,9 +7,13 @@ Decisions D26/D39, #828. How the PDP uses OpenFGA correctly.
   (`payer` and `reader` on invoices and vendors, `approved` on vendors) admit
   only `mission` subjects and are never stored. Stored entitlement relations
   (`authorized_payer` and `authorized_reader`) admit only `user` principals,
-  granted on a vendor or an invoice; an invoice inherits its owning vendor's
-  entitlements through the stored `invoice#vendor` tuple. No rewrite links
-  the families, so no `mission:` tuple can satisfy an entitlement.
+  granted on a vendor or an invoice, and `authorized_client` admits only
+  `client` principals, granted on a vendor (D429); an invoice inherits its
+  owning vendor's entitlements through the stored `invoice#vendor` tuple.
+  Each vendor names its `tenant`, whose `member`s are users and clients, and
+  a direct entitlement counts only for a member of the vendor's tenant. No
+  rewrite links the families, so no `mission:` tuple can satisfy an
+  entitlement.
 - **Contextual tuples (D26).** Mission authority is never written to the
   store. Per check, the PDP derives contextual tuples from the Mission
   Record's `authority_set` and sends them with the Mission-authority query
@@ -41,10 +45,13 @@ Decisions D26/D39, #828. How the PDP uses OpenFGA correctly.
   - `Fga.attach verifies the configured model and never creates a store (@spec runtime#input-resource-policy, #828) > the model fingerprint compares conditions: a condition on a directly related type and a condition's key, name, expression and parameters each change it; condition metadata does not`
   - [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > a conditional model refuses attach: the domain model with one condition declared and one entitlement conditional on it, both named`
 - **Administration.** `FgaDomainAdmin` grants and revokes stored
-  entitlements and moves an invoice between vendors. It refuses any tuple
-  that is not a `user` entitlement on a vendor or invoice, or an invoice's
-  owning vendor, before anything reaches the store, so nothing a Mission
-  approval or a token carries is written as durable policy.
+  entitlements and moves an invoice between vendors; `pnpm resource-policy`
+  is its command, attached to the configured store and never creating one. It refuses any tuple
+  that is not a `user` entitlement on a vendor or invoice, a `client`
+  entitlement on a vendor, a vendor's tenant, a tenant's user or client
+  member, or an invoice's owning vendor, before anything reaches the store,
+  so nothing a Mission approval or a token carries is written as durable
+  policy.
 - **Model pinning.** Every check and every administrative write sends an
   explicit `authorization_model_id`. `policy_view_id` is the content hash of
   (Mission Record version + model id), so a model change visibly changes

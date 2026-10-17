@@ -29,7 +29,8 @@
 import { randomBytes } from "node:crypto";
 import { type ActObject, ActorChainError, extendChain, validateActChain } from "@mission/actor-chain";
 import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash } from "@mission/core";
-import { activationPolicyMatches } from "./activation-policy.js";
+import { verifiedActivationPolicy } from "./activation-policy.js";
+import type { EvaluatedActivationPolicy } from "./activation-policy-snapshots.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
@@ -502,15 +503,24 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // separate policy that adjudicates this creation; the snapshot this issuer
   // would evaluate MUST match the committed `digest`, else creation is denied
   // `policy_denied`. Content edited under an unchanged version is a mismatch.
+  // Each verified snapshot is retained with the child below.
+  const evaluatedPolicies: EvaluatedActivationPolicy[] = [];
   for (const pi of drawnOn) {
     const policyRef = childrenOf(parentEntry(pi))?.child_creation_policy;
-    if (policyRef && !activationPolicyMatches(parent.issuer, kernel.activationPolicies(), policyRef)) {
+    if (!policyRef) continue;
+    const snapshot = verifiedActivationPolicy(parent.issuer, kernel.activationPolicies(), policyRef);
+    if (!snapshot) {
       throw new ChildDelegationError(
         "policy_denied",
         `child creation policy ${policyRef.id} does not match its committed digest`,
         makeEvidence("denied", "strict_subset", "policy_denied"),
       );
     }
+    // One retention per policy identity, however many justifying entries carry it.
+    const seen = evaluatedPolicies.some(
+      ({ ref }) => ref.id === policyRef.id && ref.version === policyRef.version && ref.digest === policyRef.digest,
+    );
+    if (!seen) evaluatedPolicies.push({ ref: policyRef, snapshot });
   }
 
   // @spec child-delegation#fanout — allowed_child_actors: the child actor MUST be
@@ -690,7 +700,12 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     status_list_idx: null,
     parent: parentRef,
   };
-  kernel.insertRecord(child, assertFanout, { source: { inherited: parentRoot } });
+  kernel.insertRecord(child, assertFanout, {
+    source: { inherited: parentRoot },
+    // @spec mission#standing-consent-bases: every child creation policy that
+    // adjudicated this creation, retained for the child's audit horizon.
+    activationPolicies: evaluatedPolicies,
+  });
 
   // @spec child-delegation#child-evidence — permit record. `fanout` is recorded
   // for the PRIMARY justifying entry (the child's first Authority Set entry);

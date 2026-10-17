@@ -133,6 +133,11 @@ export interface ExpiryCeilings {
   approvedUntil?: string;
   /** @spec mission-template#dispatch — the template's own expiry and per-instance lifetime. */
   template?: { expiresAt: string; instanceLifetimeS: number };
+  /**
+   * @spec approval-governance#governed-policy-activation (step 5): the
+   * consented root's lifetime limit, measured from the creation instant.
+   */
+  governedPolicy?: { maxLifetimeS: number };
 }
 
 /** The earliest of several {ms, iso} candidates, returning the winner's iso
@@ -199,6 +204,7 @@ export function resolveEffectiveExpiry(input: {
       addIso(c.template.expiresAt);
       addLifetime(c.template.instanceLifetimeS);
     }
+    if (c.governedPolicy) addLifetime(c.governedPolicy.maxLifetimeS);
   }
   return earliestIso(candidates);
 }
