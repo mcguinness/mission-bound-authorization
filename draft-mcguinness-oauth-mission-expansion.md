@@ -656,10 +656,13 @@ successor. A failure to which this document assigns a code, such as a
 that code. Otherwise, a `subject_token` or `actor_token` that is
 invalid, whose sender constraint is not proven, or that is unacceptable
 for the exchange is refused with `invalid_request`
-({{Section 2.2.2 of RFC8693}}); a missing DPoP proof, or one that fails
-its own validation, with `invalid_dpop_proof` ({{Section 5 of RFC9449}});
-and any other failure with `invalid_request`, `invalid_grant`, or
-`invalid_token` as appropriate.
+({{Section 2.2.2 of RFC8693}}); a required DPoP proof that is missing,
+or a DPoP proof that fails its own validation, with `invalid_dpop_proof`
+({{Section 5 of RFC9449}}); and any other failure with
+`invalid_request`, `invalid_grant`, or `invalid_token` as appropriate.
+An authorization server that requires a DPoP nonce answers a proof
+lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce`
+header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`.
 
 The predecessor's Effective Authority Set, the right-hand side of step
 7's subset test, is the term {{I-D.draft-mcguinness-oauth-mission-status}}
@@ -2153,8 +2156,9 @@ composition with the issuance flow.
 - A failed expansion exchange uses the code this document assigns to
   the failure; otherwise an invalid, unproven or unacceptable
   `subject_token` or `actor_token` is `invalid_request`, as Section
-  2.2.2 of RFC 8693 requires, and a missing or invalid DPoP proof is
-  `invalid_dpop_proof` (#1178).
+  2.2.2 of RFC 8693 requires; a required DPoP proof that is missing, or
+  one that fails validation, is `invalid_dpop_proof`, and a proof
+  lacking a required nonce keeps `use_dpop_nonce` (#1178).
 
 - A predecessor that is not `active` refuses the expansion exchange
   with `invalid_request`, following the issuance profile's Token
