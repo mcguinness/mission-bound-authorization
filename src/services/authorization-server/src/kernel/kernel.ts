@@ -3008,12 +3008,18 @@ export class MissionKernel {
    * transition a due schedule owes ({@link dueScheduleTransition}) under the
    * `(version, state)` compare-and-set, which clears the schedule with it.
    * On a failed write the caller gets the current row, never a projection.
+   * Whichever path reaches it (a read, a request, or the timer), the commit
+   * names the schedule it applied, so every effect outside the kernel follows
+   * that commit through the durable fan-out.
    */
   private applyDueSchedule(record: MissionRecord, observed: MissionRecord): MissionRecord {
     const due = dueScheduleTransition(record, this.now().getTime());
-    if (!due) return observed;
+    if (!due || !record.schedule) return observed;
     try {
-      return this.setState(record, due.to, due.termination ? { termination: due.termination } : {});
+      return this.setState(record, due.to, {
+        ...(due.termination ? { termination: due.termination } : {}),
+        appliedSchedule: record.schedule,
+      });
     } catch {
       try {
         const current = this.get(record.id);
@@ -3672,7 +3678,13 @@ export class MissionKernel {
   private setState(
     record: MissionRecord,
     to: MissionState,
-    opts: { projectedFrom?: MissionState; termination?: Termination; schedule?: ScheduleRequest } = {},
+    opts: {
+      projectedFrom?: MissionState;
+      termination?: Termination;
+      schedule?: ScheduleRequest;
+      /** The schedule whose deadline this transition applies ({@link applyDueSchedule}). */
+      appliedSchedule?: SuspensionSchedule;
+    } = {},
   ): MissionRecord {
     const { projectedFrom } = opts;
     // @spec status#mission-lifecycle-endpoint ("Operations"): the schedule is
@@ -3742,7 +3754,17 @@ export class MissionKernel {
       // discards applyExpiry()'s return, so the spread `version` can be off by one.
       const fresh = this.get(record.id);
       if (fresh) {
-        this.emitCommit(fresh, record.state, false, false, committedAt, schedule ? scheduleCommitMembers(fresh.schedule) : {});
+        this.emitCommit(fresh, record.state, false, false, committedAt, {
+          ...(schedule ? scheduleCommitMembers(fresh.schedule) : {}),
+          ...(opts.appliedSchedule
+            ? {
+                applied_schedule: {
+                  generation: opts.appliedSchedule.generation,
+                  committing_party: opts.appliedSchedule.committing_party,
+                },
+              }
+            : {}),
+        });
       }
       // @spec child-delegation#cascade — a terminal transition cascades to
       // dependent Child Missions. Gating here (inside the transaction) covers every
@@ -3877,7 +3899,8 @@ export class MissionKernel {
    * @spec signals#lifecycle-event, status#idempotency: `schedule` is passed
    * EXPLICITLY by the two funnels that commit a schedule (a `suspend` that
    * arms one, {@link replaceSchedule}), never inferred from the record, so a
-   * metadata-only commit that leaves the schedule as it was carries none.
+   * metadata-only commit that leaves the schedule as it was carries none; and
+   * by the funnel that applies a due schedule, which names it.
    */
   private emitCommit(
     record: MissionRecord,
@@ -3958,7 +3981,10 @@ export type ScheduleFire =
   | { outcome: "not-due" | "retry"; record: MissionRecord; dueAtMs: number };
 
 /** The schedule members a commit carries ({@link LifecycleCommit}). */
-type ScheduleCommitMembers = Pick<LifecycleCommit, "suspend_until" | "on_expiry" | "schedule_committing_party">;
+type ScheduleCommitMembers = Pick<
+  LifecycleCommit,
+  "suspend_until" | "on_expiry" | "schedule_committing_party" | "applied_schedule"
+>;
 
 function scheduleCommitMembers(schedule: SuspensionSchedule | undefined): ScheduleCommitMembers {
   return schedule

@@ -706,6 +706,14 @@ export interface LifecycleCommit {
    */
   schedule_committing_party?: string;
   /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): the schedule whose
+   * deadline committed this transition: its generation and committing party.
+   * Present on that transition alone, whether a read, a request or the timer
+   * applied it, so a subscriber that owes the transition an effect outside
+   * the kernel keys on the committed event. Not a wire member.
+   */
+  applied_schedule?: { generation: number; committing_party: string };
+  /**
    * @spec control-plane#fanout — the Mission's own `created_at`, carried so a
    * subscriber acting on the ACTIVATING commit consumes the payload instead of
    * re-reading live state. A record read at delivery time can have advanced (or

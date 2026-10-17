@@ -1100,18 +1100,36 @@ export async function buildAuthorizationServer(opts: {
   if (schedulesAdopted) {
     suspensionScheduler = new SuspensionScheduler(kernel, {
       ...(opts.suspensionSchedules?.timers ? { timers: opts.suspensionSchedules.timers } : {}),
-      // A transition to `terminated` also destroys the OAuth grant, as the
-      // Lifecycle endpoint's own `revoke` does, so refresh fails structurally.
-      onApplied: async (record) => {
-        const p = terminalProvider;
-        if (record.state === "terminated" && record.grant_id && p) {
-          const grant = await p.Grant.find(record.grant_id);
-          await grant?.destroy();
-        }
-      },
     });
   }
-  // @spec control-plane#fanout — the ONE durable retryable subscriber. Its
+  // @spec status#mission-lifecycle-endpoint ("Operations"), control-plane#fanout:
+  // a scheduled revocation also destroys the Mission's OAuth grant, as the
+  // Lifecycle endpoint's own `revoke` does, so refresh fails structurally. The
+  // effect follows the COMMITTED terminal event that names the schedule it
+  // applied, so it is owed whichever path committed the transition (a read, a
+  // request, or the timer), and it is a durable delivery: a failed attempt
+  // stays pending with its backoff and the next drain retries it. `capture`
+  // snapshots the grant identifier inside the commit transaction; destroying
+  // an already-destroyed grant finds nothing and succeeds, so a redelivery is
+  // harmless. Registered whatever the deployment's schedule setting, so a
+  // schedule committed before a restart that turned schedules off still owes
+  // it.
+  kernel.registerDurableSubscriber<{ grantId: string }>({
+    id: "scheduled-termination-grant-destroy",
+    capture: (commit) => {
+      if (!TERMINAL_STATES.has(commit.state) || !commit.applied_schedule) return undefined;
+      const grantId = kernel.get(commit.id)?.grant_id;
+      return grantId ? { grantId } : undefined;
+    },
+    deliver: async ({ grantId }) => {
+      const p = terminalProvider;
+      // Retryable, never accepted-by-default, as the family revocation below.
+      if (!p) throw new Error("provider is not constructed yet");
+      const grant = await p.Grant.find(grantId);
+      await grant?.destroy();
+    },
+  });
+  // @spec control-plane#fanout: a durable retryable subscriber. Its
   // effect leaves this process (it revokes and destroys oidc-provider grants),
   // so it cannot be acknowledged by returning: it gets a durable delivery row
   // with attempts and a next-retry time, and the promise-returning drain awaits

@@ -27,10 +27,16 @@
  * The expiry clock ({@link MissionKernel.applyExpiry}) also applies a due
  * schedule on any read of the record, so the deadline holds even between its
  * passing and the timer's delivery.
+ *
+ * EFFECTS FOLLOW THE COMMIT. Nothing here acts on a transition directly. An
+ * effect outside the kernel (the provider grant a scheduled revocation
+ * destroys) is a durable subscriber of the committed lifecycle event, which
+ * names the schedule it applied, so it is owed and retried the same way
+ * whether a read, a request or this scheduler committed the transition.
  */
 
 import { MissionNotFoundError, type MissionKernel } from "./kernel.js";
-import type { LifecycleCommit, MissionRecord } from "./types.js";
+import type { LifecycleCommit } from "./types.js";
 
 /**
  * The timer facility. The default is the process's own; a test injects a
@@ -72,12 +78,6 @@ export interface ScheduleDelivery {
 
 export interface SuspensionSchedulerOptions {
   timers?: ScheduleTimers;
-  /**
-   * Called once for each transition a delivery committed, after the commit:
-   * the adapter's hook for effects outside the kernel (the provider grant a
-   * terminal transition destroys). A failure here never undoes the commit.
-   */
-  onApplied?: (record: MissionRecord) => Promise<void>;
 }
 
 /** The scheduler's own record of the delivery a deadline or a retry is waiting on. */
@@ -149,13 +149,9 @@ export class SuspensionScheduler {
       this.arm(delivery, this.kernel.nowDate().getTime() + SCHEDULE_RETRY_DELAY_MS);
     } else if (fired.outcome === "applied" || fired.outcome === "ended") {
       try {
-        await this.opts.onApplied?.(fired.record);
-      } catch {
-        // The transition committed; the state gate refuses derivation from it
-        // whatever became of this effect.
-      }
-      try {
-        // A terminal commit can owe durable deliveries (control-plane#fanout).
+        // @spec control-plane#fanout: the transition's effects outside the
+        // kernel are durable deliveries of its committed event, owed whichever
+        // path committed it; deliver them now rather than at the next request.
         await this.kernel.drainLifecycleOutbox();
       } catch {
         // Retried by the next drain, from boot or a request path.
