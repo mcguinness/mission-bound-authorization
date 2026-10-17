@@ -991,7 +991,7 @@ Table of Contents
       | or an access, delegated, or bare         |                 |
       | identity-assertion token is presented    |                 |
       +------------------------------------------+-----------------+
-      | The subject token does not resolve to a  | invalid_grant   |
+      | The subject token does not resolve to a  | invalid_request |
       | Mission                                  |                 |
       +------------------------------------------+-----------------+
       | The Mission is not active                | invalid_request |
@@ -1791,6 +1791,11 @@ Appendix B.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Changes a requirement: grant issuance refuses a subject token that
+      does not resolve to a Mission with invalid_request, where it was
+      invalid_grant, as Section 2.2.2 of RFC 8693 requires for an
+      invalid subject token; redemption keeps invalid_grant (#1178).
 
    *  Grant issuance at the originating AS refuses a Mission that is not
       active with invalid_request, following the issuance profile's

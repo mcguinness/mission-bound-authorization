@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-17T00:30:41Z
-Source repository commit: f06bdf0426c0b47af01b6d38b8299b3aac63deee
+Generated: 2026-10-17T15:18:26Z
+Source repository commit: 738c9784f54c62bb2f10602e23eb35d7e9917492
 Member count: 7
 
 Reading order:
@@ -4653,91 +4653,70 @@ Appendix B.  Comparison to a Conventional Stack
    mark where that local composition meets what this family
    standardizes:
 
-   +=============+===============+=====================+===============+
-   | Requirement | Conventional  | Mission             | Illustrative  |
-   |             | OAuth+PDP     | standardization     | added Mission |
-   |             | realization   |                     | cost          |
-   +=============+===============+=====================+===============+
-   | Durable     | OAuth grants, | An independently    | Durable-      |
-   | task        | refresh       | addressable,        | object and    |
-   | semantics   | families, or  | lifecycle-bearing   | lifecycle     |
-   | across      | PDP records   | approved task with  | storage       |
-   | tokens and  | outlive the   | anchors             |               |
-   | restarts    | token         | consistently        |               |
-   |             |               | interpreted by the  |               |
-   |             |               | authorization       |               |
-   |             |               | server, PDP,        |               |
-   |             |               | agents, audiences,  |               |
-   |             |               | and evidence        |               |
-   |             |               | producers; it does  |               |
-   |             |               | not make            |               |
-   |             |               | persistence newly   |               |
-   |             |               | possible (the       |               |
-   |             |               | OAuth binding's     |               |
-   |             |               | Why a New Object    |               |
-   |             |               | and Relationship    |               |
-   |             |               | to Other            |               |
-   |             |               | Authorization       |               |
-   |             |               | Objects sections)   |               |
-   +-------------+---------------+---------------------+---------------+
-   | Multi-      | A deployment- | Stable approved-    | New claims    |
-   | credential, | invented      | task semantics for  | and endpoints |
-   | multi-actor | transaction,  | that join, bound    |               |
-   | join        | grant, or     | to authority and    |               |
-   |             | workflow      | carried through     |               |
-   |             | identifier    | delegation and      |               |
-   |             | shared across | fan-out outside     |               |
-   |             | credentials   | one private PDP     |               |
-   |             |               | schema              |               |
-   |             |               | (Section 7.7)       |               |
-   +-------------+---------------+---------------------+---------------+
-   | A second    | The partner   | Bounded local       | State         |
-   | trust       | calls the     | credentials and     | consistency   |
-   | domain      | origin PDP,   | common anchors      | and           |
-   |             | shares state, | carried by Cross-   | distribution; |
-   |             | or federates  | Domain Projection,  | privacy and   |
-   |             | policy,       | accepting local-    | correlation   |
-   |             | trading       | token revocation    | surface       |
-   |             | synchronous   | latency (the        |               |
-   |             | coupling,     | Project verb): a    |               |
-   |             | availability, | portability         |               |
-   |             | and           | choice, not the     |               |
-   |             | disclosure    | only possible       |               |
-   |             |               | design              |               |
-   +-------------+---------------+---------------------+---------------+
-   | Approval as | A local       | A standardized      | Evidence      |
-   | a first-    | consent or    | immutable           | operations    |
-   | class       | grant         | snapshot,           |               |
-   | record      | database plus | integrity anchors,  |               |
-   |             | versioned     | and one reference   |               |
-   |             | decision logs | portable evidence   |               |
-   |             |               | can cite (the       |               |
-   |             |               | OAuth binding's     |               |
-   |             |               | Why a New Object    |               |
-   |             |               | section; the Prove  |               |
-   |             |               | verb)               |               |
-   +-------------+---------------+---------------------+---------------+
-   | Persistent  | A stateful    | Monotonic subset    | AS or MAS     |
-   | narrowing   | authorization | semantics across    | integration;  |
-   |             | server or PDP | issuance,           | ecosystem     |
-   |             | stores        | delegation,         | adoption      |
-   |             | reduced       | attenuation, and    |               |
-   |             | entitlements  | cross-domain        |               |
-   |             | and consults  | projections,        |               |
-   |             | them at       | auditable across    |               |
-   |             | issuance      | components          |               |
-   |             |               | (Section 8)         |               |
-   +-------------+---------------+---------------------+---------------+
+   +===========+=============+======================================+=============+
+   |Requirement|Conventional |Mission standardization               |Illustrative |
+   |           |OAuth+PDP    |                                      |added Mission|
+   |           |realization  |                                      |cost         |
+   +===========+=============+======================================+=============+
+   |Durable    |OAuth grants,|An independently addressable,         |Durable-     |
+   |task       |refresh      |lifecycle-bearing approved task with  |object and   |
+   |semantics  |families, or |anchors consistently interpreted by   |lifecycle    |
+   |across     |PDP records  |the authorization server, PDP, agents,|storage      |
+   |tokens and |outlive the  |audiences, and evidence producers; it |             |
+   |restarts   |token        |does not make persistence newly       |             |
+   |           |             |possible                              |             |
+   |           |             |([I-D.draft-mcguinness-oauth-mission],|             |
+   |           |             |Sections "Relationship to Existing    |             |
+   |           |             |OAuth Objects" and "Relationship to   |             |
+   |           |             |Adjacent Work")                       |             |
+   +-----------+-------------+--------------------------------------+-------------+
+   |Multi-     |A deployment-|Stable approved-task semantics for    |New claims   |
+   |credential,|invented     |that join, bound to authority and     |and endpoints|
+   |multi-actor|transaction, |carried through delegation and fan-out|             |
+   |join       |grant, or    |outside one private PDP schema        |             |
+   |           |workflow     |(Section 7.7)                         |             |
+   |           |identifier   |                                      |             |
+   |           |shared across|                                      |             |
+   |           |credentials  |                                      |             |
+   +-----------+-------------+--------------------------------------+-------------+
+   |A second   |The partner  |Bounded local credentials and common  |State        |
+   |trust      |calls the    |anchors carried by Cross-Domain       |consistency  |
+   |domain     |origin PDP,  |Projection, accepting local-token     |and          |
+   |           |shares state,|revocation latency (the Project verb):|distribution;|
+   |           |or federates |a portability choice, not the only    |privacy and  |
+   |           |policy,      |possible design                       |correlation  |
+   |           |trading      |                                      |surface      |
+   |           |synchronous  |                                      |             |
+   |           |coupling,    |                                      |             |
+   |           |availability,|                                      |             |
+   |           |and          |                                      |             |
+   |           |disclosure   |                                      |             |
+   +-----------+-------------+--------------------------------------+-------------+
+   |Approval as|A local      |A standardized immutable snapshot,    |Evidence     |
+   |a first-   |consent or   |integrity anchors, and one reference  |operations   |
+   |class      |grant        |portable evidence can cite            |             |
+   |record     |database plus|([I-D.draft-mcguinness-oauth-mission],|             |
+   |           |versioned    |Section "Relationship to Existing     |             |
+   |           |decision logs|OAuth Objects"; the Prove verb)       |             |
+   +-----------+-------------+--------------------------------------+-------------+
+   |Persistent |A stateful   |Monotonic subset semantics across     |AS or MAS    |
+   |narrowing  |authorization|issuance, delegation, attenuation, and|integration; |
+   |           |server or PDP|cross-domain projections, auditable   |ecosystem    |
+   |           |stores       |across components (Section 8)         |adoption     |
+   |           |reduced      |                                      |             |
+   |           |entitlements |                                      |             |
+   |           |and consults |                                      |             |
+   |           |them at      |                                      |             |
+   |           |issuance     |                                      |             |
+   +-----------+-------------+--------------------------------------+-------------+
 
      Table 16: Where a conventional stack meets Mission standardization
 
-   The OAuth binding's sections named in the table are in
-   [I-D.draft-mcguinness-oauth-mission].  Past these crossovers, a
-   conventional deployment often accumulates a durable task record, a
-   stable join key, lifecycle checks, narrowing rules, and audit
-   correlations.  Mission standardizes that recurring shape across
-   bindings and trust domains; it does not claim local policy systems
-   cannot implement equivalent outcomes.
+   Past these crossovers, a conventional deployment often accumulates a
+   durable task record, a stable join key, lifecycle checks, narrowing
+   rules, and audit correlations.  Mission standardizes that recurring
+   shape across bindings and trust domains; it does not claim local
+   policy systems cannot implement equivalent outcomes.
 
 Appendix C.  A Worked Composition
 
@@ -5545,6 +5524,10 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The conventional-stack table cites the OAuth binding's sections by
+      their current titles, "Relationship to Existing OAuth Objects" and
+      "Relationship to Adjacent Work" (#1125).
 
    *  Mission Creation Paths, Propose, Approve and Record, and the
       document map add the experimental Mission Device Authorization
@@ -10843,6 +10826,17 @@ Table of Contents
    |Token endpoint: the requested RAR subset exceeds the      |invalid_authorization_details (Section 6 of     |safe detail      |
    |Mission's granted authority                               |[RFC9396])                                      |                 |
    +----------------------------------------------------------+------------------------------------------------+-----------------+
+   |Token exchange: a subject_token or actor_token that is    |invalid_request (Section 2.2.2 of [RFC8693]),   |safe             |
+   |invalid, whose sender constraint is not proven, or that is|unless a Token Exchange profile assigns the     |error_description|
+   |unacceptable for the exchange                             |failure its own code; a required DPoP proof that|                 |
+   |                                                          |is missing, or a DPoP proof that fails its own  |                 |
+   |                                                          |validation, is invalid_dpop_proof (Section 5 of |                 |
+   |                                                          |[RFC9449]), not an unproven sender constraint;  |                 |
+   |                                                          |an authorization server that requires a DPoP    |                 |
+   |                                                          |nonce answers a proof lacking its current nonce |                 |
+   |                                                          |with use_dpop_nonce and a DPoP-Nonce header     |                 |
+   |                                                          |(Section 8 of [RFC9449]), not invalid_dpop_proof|                 |
+   +----------------------------------------------------------+------------------------------------------------+-----------------+
    |Token exchange with no actor (Section 14.2): the          |invalid_request (Section 2.2.2 of [RFC8693])    |safe             |
    |authenticated client is not the Mission's approved agent  |                                                |error_description|
    +----------------------------------------------------------+------------------------------------------------+-----------------+
@@ -14234,6 +14228,15 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Error and Challenge Mapping: a Token Exchange refuses a
+      subject_token or actor_token that is invalid, whose sender
+      constraint is not proven, or that is unacceptable for the exchange
+      with invalid_request, as Section 2.2.2 of RFC 8693 requires,
+      unless a Token Exchange profile assigns its own code; a required
+      DPoP proof that is missing, or one that fails validation, is
+      invalid_dpop_proof, and a proof lacking a required nonce keeps
+      use_dpop_nonce (#1178).
 
    *  Extensibility: a back-channel carriage profile can couple the
       approval decision to establishing the Mission grant binding and

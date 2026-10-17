@@ -1975,9 +1975,19 @@ completion, re-verify the predecessor's Mission state before issuing
 (<a href="#deferred-window" class="auto internal xref">Section 5.4</a>).<a href="#section-5.1-2.8.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-5.1-3">On any failure the Mission Issuer <span class="bcp14">MUST</span> refuse with <code>invalid_request</code>,
-<code>invalid_grant</code>, or <code>invalid_token</code> as appropriate, and <span class="bcp14">MUST NOT</span> create
-a successor.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-3">On any failure the Mission Issuer <span class="bcp14">MUST</span> refuse and <span class="bcp14">MUST NOT</span> create a
+successor. A failure to which this document assigns a code, such as a
+<code>predecessor</code> mismatch or a denial reason (<a href="#denial-reasons" class="auto internal xref">Section 12</a>), uses
+that code. Otherwise, a <code>subject_token</code> or <code>actor_token</code> that is
+invalid, whose sender constraint is not proven, or that is unacceptable
+for the exchange is refused with <code>invalid_request</code>
+(<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>); a required DPoP proof that is missing,
+or a DPoP proof that fails its own validation, with <code>invalid_dpop_proof</code>
+(<span><a href="https://rfc-editor.org/rfc/rfc9449#section-5" class="relref">Section 5</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>); and any other failure with
+<code>invalid_request</code>, <code>invalid_grant</code>, or <code>invalid_token</code> as appropriate.
+An authorization server that requires a DPoP nonce answers a proof
+lacking its current nonce with <code>use_dpop_nonce</code> and a <code>DPoP-Nonce</code>
+header (<span><a href="https://rfc-editor.org/rfc/rfc9449#section-8" class="relref">Section 8</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>), not <code>invalid_dpop_proof</code>.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
 <p id="section-5.1-4">The predecessor's Effective Authority Set, the right-hand side of step
 7's subset test, is the term <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>
 defines: the approved Authority Set after applying every issuer-held
@@ -4086,54 +4096,62 @@ composition with the issuance flow.<a href="#section-18-1" class="pilcrow">¶</a
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">A predecessor that is not <code>active</code> refuses the expansion exchange
-with <code>invalid_request</code>, following the issuance profile's Token
-Exchange rule; a predecessor cross-check mismatch, and a completion
-by code redemption or deferred poll, keep <code>invalid_grant</code> (#1154).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">A failed expansion exchange uses the code this document assigns to
+the failure; otherwise an invalid, unproven or unacceptable
+<code>subject_token</code> or <code>actor_token</code> is <code>invalid_request</code>, as Section
+2.2.2 of RFC 8693 requires; a required DPoP proof that is missing, or
+one that fails validation, is <code>invalid_dpop_proof</code>, and a proof
+lacking a required nonce keeps <code>use_dpop_nonce</code> (#1178).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Supersession terminates the predecessor: it becomes <code>terminated</code> with
+          <p id="appendix-A-2.2.1">A predecessor that is not <code>active</code> refuses the expansion exchange
+with <code>invalid_request</code>, following the issuance profile's Token
+Exchange rule; a predecessor cross-check mismatch, and a completion
+by code redemption or deferred poll, keep <code>invalid_grant</code> (#1154).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Supersession terminates the predecessor: it becomes <code>terminated</code> with
 reason <code>superseded</code>, registered in the Mission Termination Reasons
 registry, and its <code>termination</code> carries the <span class="bcp14">REQUIRED</span> <code>successor</code>; the
 record's mutable members are <code>state</code> and <code>termination</code>, and a
-refused derivation's <code>mission_error</code> is <code>superseded</code> (#705).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+refused derivation's <code>mission_error</code> is <code>superseded</code> (#705).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Successor Subject and authority source: every successor keeps the
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Successor Subject and authority source: every successor keeps the
 predecessor's <code>subject</code> and <code>authority_source</code>, whatever approval
 basis creates it; another Subject or source needs a separately
 approved Mission outside succession, and the activating commit
 verifies that the source applies and that its current ceiling covers
-the successor (#1118).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+the successor (#1118).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Interactive completion has a defined handoff: the token exchange
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Interactive completion has a defined handoff: the token exchange
 answers <code>mission_interaction_required</code> with a <code>mission_continuation</code>
 handle, the client pushes an RFC 9126 request carrying it, and code
 redemption activates the successor; the handle names the durable
-operation and each <code>request_uri</code> is a temporary reference.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">An in-ceiling drawdown under the progressive authorization companion
-completes synchronously in the token-exchange response, a third
-issuance point; fresh-consent expansion still completes deferred or
-interactively.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+operation and each <code>request_uri</code> is a temporary reference.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Successor activation's compare-and-set also rechecks the complete
-successor Authority Set against current containment and discharge
-restrictions, refusing with <code>authority_restricted_since_approval</code>
-when narrowing landed after adjudication.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.6.1">An in-ceiling drawdown under the progressive authorization companion
+completes synchronously in the token-exchange response, a third
+issuance point; fresh-consent expansion still completes deferred or
+interactively.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">A fresh-consent restoration of authority under a discharge
-restriction authorizes that authority explicitly and discloses the
-discharged entry and its condition; the consent also surfaces the
-chain's outstanding containment restrictions.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.7.1">Successor activation's compare-and-set also rechecks the complete
+successor Authority Set against current containment and discharge
+restrictions, refusing with <code>authority_restricted_since_approval</code>
+when narrowing landed after adjudication.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.8">
-          <p id="appendix-A-2.8.1">Added explicitly approved carryover hooks for disclosure, atomic completion,
-and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.8.1">A fresh-consent restoration of authority under a discharge
+restriction authorizes that authority explicitly and discloses the
+discharged entry and its condition; the consent also surfaces the
+chain's outstanding containment restrictions.<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.9">
+          <p id="appendix-A-2.9.1">Added explicitly approved carryover hooks for disclosure, atomic completion,
+and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
