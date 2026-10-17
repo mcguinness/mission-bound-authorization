@@ -329,7 +329,11 @@ export interface ContainmentEventRecord {
  * {@link MissionClaim.approval_basis}) that MUST NOT be relied on to grant
  * authority.
  */
-export type ApprovalBasis = ApprovalBasisDirect | ApprovalBasisTemplate | ApprovalBasisPolicyDrawdown;
+export type ApprovalBasis =
+  | ApprovalBasisDirect
+  | ApprovalBasisTemplate
+  | ApprovalBasisPolicyDrawdown
+  | ApprovalBasisCeilingDrawdown;
 
 export type ApprovalBasisType = ApprovalBasis["type"];
 
@@ -451,6 +455,33 @@ export interface ApprovalBasisPolicyDrawdown {
    * reference rides the committed entry the human approved), so this is the
    * parent record's own `created_at`, read from retained state, never from
    * the child-creation request.
+   */
+  approved_at: string;
+}
+
+/**
+ * @spec progressive#in-ceiling-expansion: a policy-adjudicated in-ceiling
+ * successor's basis. The Approver consented the ceiling at an earlier
+ * approval event; the drawdown policy adjudicates this successor with no
+ * fresh human approval. `activation_actor` is the requesting client.
+ */
+export interface ApprovalBasisCeilingDrawdown {
+  type: "ceiling_drawdown";
+  /** The Approver who consented the ceiling. */
+  consent_principal: { iss: string; sub: string };
+  /**
+   * Exactly the drawdown policy's `id` and the `version` this adjudication
+   * evaluated, whose content the Mission's `drawdown_policy.digest` commits.
+   */
+  activation: { policy_id: string; policy_version: string };
+  /** The requesting client. */
+  activation_actor: { iss: string; sub: string };
+  /** The `ceiling_hash`. */
+  root_commitment: string;
+  /**
+   * The instant the Approver consented the ceiling `ceiling_hash` commits,
+   * read from the issuer's retained record of that consent
+   * ({@link MissionRecord.ceiling_consented_at}), never from the request.
    */
   approved_at: string;
 }
@@ -578,6 +609,36 @@ export interface MissionRecord {
    * `discharge()`; MUST NOT revert.
    */
   discharged?: DischargedEntry[];
+  /**
+   * @spec progressive#progressive-authorization: the pre-consented maximum any
+   * expansion of this Mission may reach without a further human approval.
+   * Present only where the Approver consented a ceiling (and on a
+   * policy-adjudicated successor, which carries it unchanged). A bound on
+   * future expansions, not present authority: committed by `ceiling_hash`,
+   * never by `authority_hash`, and never carried on a token.
+   */
+  authority_ceiling?: AuthorityEntry[];
+  /**
+   * @spec progressive#progressive-authorization: the activation policy
+   * reference under which the Mission Issuer MAY adjudicate an in-ceiling
+   * expansion by policy. Present only beside `authority_ceiling`.
+   */
+  drawdown_policy?: ActivationPolicyRef;
+  /** @spec progressive#progressive-authorization: commits `authority_ceiling` and `drawdown_policy`. */
+  ceiling_hash?: string;
+  /**
+   * @spec progressive#in-ceiling-expansion, progressive#ceiling-review: the
+   * issuer's retained record of the instant the Approver consented the
+   * ceiling `ceiling_hash` commits. A drawdown's `approved_at` and the ceiling
+   * review cadence are read from it. Present beside `authority_ceiling`.
+   */
+  ceiling_consented_at?: string;
+  /**
+   * @spec progressive#audit-linkage: the chain's cumulative count of
+   * policy-adjudicated drawdowns, this record's own included. Present beside
+   * `authority_ceiling`; 0 on the Mission whose approval consented the ceiling.
+   */
+  drawdown_count?: number;
 }
 
 /**
