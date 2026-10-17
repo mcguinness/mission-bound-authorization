@@ -15,6 +15,7 @@ import {
   DISPATCH_PROHIBITED_ACTIONS,
   USERS,
   WRITE_ACTIONS,
+  type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
@@ -343,6 +344,7 @@ import {
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { IntentError } from "../kernel/intent.js";
+import { evaluateApprovalFloor } from "../kernel/approval-floor.js";
 import {
   type DischargeReceiptObservation,
   GateError,
@@ -488,6 +490,12 @@ export interface AdapterOptions {
    */
   requiredIntentEvidenceTypes?: string[];
   approverRoleSubs: Set<string>;
+  /**
+   * @spec mission#approval-authentication (#826, D425) — the published
+   * approval-authentication floor, evaluated over the complete derived
+   * Authority Set at every approval decision (kernel/approval-floor.ts).
+   */
+  approvalFloor: ApprovalFloorPolicy;
   /** Access-token lifetime (seconds) for issued mission tokens. Default 300. */
   accessTokenTTL?: number;
   /**
@@ -3382,7 +3390,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ctx.body = inactive;
           return;
         }
-        const { jti, sub, clientId, exp, iat, confirmation } = profile;
+        const { jti, sub, clientId, exp, iat, confirmation, act } = profile;
         const credentialAuthority = payload.authorization_details as AuthorityEntry[];
 
         // Mission resolution: a token the AS cannot bind to a known Mission
@@ -3415,7 +3423,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // (the record's template basis). A primary token may be a bearer
         // token, so its `cnf` may be absent.
         const senderConstrainedProfile =
-          payload.act !== undefined || record.parent !== undefined || record.approval_basis.type === "template";
+          act !== undefined || record.parent !== undefined || record.approval_basis.type === "template";
         if (!confirmation && senderConstrainedProfile) {
           ctx.body = inactive;
           return;
@@ -3483,10 +3491,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...(typeof payload.scope === "string" ? { scope: payload.scope } : {}),
           ...(cnf ? { cnf } : {}),
           // @spec mission#introspected-consumption, RFC 8693 Section 4.1 (#904):
-          // a delegated token's actor chain, carried unchanged. Only this active
-          // body carries it; every inactive or unauthorized answer is built
-          // without it.
-          ...(payload.act !== undefined ? { act: payload.act } : {}),
+          // a delegated token's actor chain, validated by the profile reader and
+          // carried unchanged. Only this active body carries it; every inactive
+          // or unauthorized answer is built without it.
+          ...(act !== undefined ? { act } : {}),
           token_type: confirmation?.jkt ? "DPoP" : "Bearer",
           authorization_details,
           mission: disclosedMission,
@@ -4236,6 +4244,23 @@ async function decide(
   if (writeBearing && (approver === subject || !opts.approverRoleSubs.has(approver))) {
     ctx.status = 403;
     ctx.body = { error: "approval_forbidden", error_description: "write-bearing missions require a distinct approver" };
+    return;
+  }
+
+  // @spec mission#approval-authentication (#826, D425): the published
+  // approval-authentication floor over the complete derived Authority Set,
+  // after derivation and before any Mission, Grant or code exists. Both it and
+  // the client's requested strength (checked above) must hold: an absent or
+  // weaker request never relaxes the floor. The achieved context is the
+  // approval surface's, never the request's.
+  const floor = evaluateApprovalFloor(
+    opts.approvalFloor,
+    authority,
+    { acr: principal.acr, auth_time: principal.auth_time },
+    { interactive, nowSeconds: Math.floor(opts.kernel.nowDate().getTime() / 1000) },
+  );
+  if (floor.outcome === "refused") {
+    await finish({ error: "access_denied", error_description: floor.reason });
     return;
   }
 
