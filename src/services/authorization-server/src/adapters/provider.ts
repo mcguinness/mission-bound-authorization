@@ -28,6 +28,7 @@ import {
   type JWK,
 } from "jose";
 import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
+import { missionInteractionPolicy } from "./interaction-policy.js";
 import {
   delegatedRoutingRefusal,
   earlyScopeRefusal,
@@ -425,7 +426,6 @@ import {
   devicePending,
   formatUserCode,
   loadDeviceSession,
-  missionInteractionPolicy,
   releaseDeviceDecision,
   renderDeviceClient,
   takeDeviceIntake,
@@ -1424,8 +1424,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
     pkce: { required: () => true },
     interactions: {
       url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
-      // @spec device-authorization#approval (#1202): a Mission device session
-      // always prompts (missionInteractionPolicy); no other route changes.
+      // @spec mission#approval-event (#1247), device-authorization#approval
+      // (#1202): a Mission submission always reaches its own approval
+      // interaction, whatever Grant the session already holds, on the
+      // authorization-code flow and the device flow alike.
       policy: missionInteractionPolicy(),
     },
     // @spec mission#downgrade-by-omission — the per-client Mission-governance
