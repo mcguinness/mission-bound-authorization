@@ -768,9 +768,12 @@ describe("the Intent-only completion workaround is never a client proposal (@spe
     const record = await missionOf(code as string);
     expect(record?.proposal_hash).toBeUndefined();
     expect((record as { proposed_authority?: unknown } | undefined)?.proposed_authority).toBeUndefined();
-    // Neither decision handed approve() (which computes the anchors) a proposal.
-    expect(approvals.mock.calls.length).toBe(2);
+    // The first decision handed approve() (which computes the anchors) no
+    // proposal. The repeated decision recovers that committed record and binds
+    // the same grant without approving again (#916), so it reads none either.
+    expect(approvals.mock.calls.length).toBe(1);
     for (const [input] of approvals.mock.calls) expect(input.proposedAuthority).toBeUndefined();
+    expect(as.kernel.missionBoundGrants.resolve(record?.grant_id as string)?.missionId).toBe(record?.id);
     approvals.mockRestore();
   });
 

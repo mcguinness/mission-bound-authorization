@@ -319,6 +319,24 @@ export interface ApproveInput {
    * member absent.
    */
   capabilityResolution?: CapabilitySourceResolution[];
+  /**
+   * @spec mission#approval-event (step 7) (#916) — the provider grant, already
+   * saved, that this approval binds. The record commits with it as its
+   * `grant_id`, so the Mission is never committed unbound, and a repeated
+   * decision (the same `approvalEventId`) that names another grant is refused
+   * rather than rebinding the Mission.
+   */
+  grantId?: string;
+}
+
+/**
+ * @spec mission#approval-event (steps 2-3) (#916) — everything an approval
+ * computes before anything is written ({@link MissionKernel.prepareApproval}).
+ */
+export interface PreparedApproval {
+  proposal: AuthorityEntry[] | undefined;
+  authoritySet: AuthorityEntry[];
+  resolvedSource: AuthoritySourceResolution;
 }
 
 /**
@@ -1000,7 +1018,16 @@ export class MissionKernel {
    * proposal was submitted, the third); approval_event_id is the idempotency
    * key.
    */
-  approve(input: ApproveInput): MissionRecord {
+  /**
+   * @spec mission#approval-event (steps 2-3) (#916) — everything an approval
+   * computes before anything is written: the principal checks, the derived
+   * Authority Set with its capability-source bindings, and the established
+   * authority source and its ceiling. Every refusal of the approval happens
+   * here. The approval decision calls it once, saves the provider grant from
+   * its result, then commits exactly that result through {@link approve},
+   * which recomputes nothing.
+   */
+  prepareApproval(input: ApproveInput): PreparedApproval {
     // Trusted wiring modes are exclusive. Reject before derivation or resolver
     // side effects; an empty fact list still means no caller-supplied facts.
     if (this.opts.capabilityResolver && input.capabilityResolution?.length) {
@@ -1040,6 +1067,11 @@ export class MissionKernel {
       approver: input.approver,
     });
     this.assertAuthorityWithinSource(resolvedSource, authoritySet);
+    return { proposal, authoritySet, resolvedSource };
+  }
+
+  approve(input: ApproveInput, prepared: PreparedApproval = this.prepareApproval(input)): MissionRecord {
+    const { proposal, authoritySet, resolvedSource } = prepared;
     const authoritySource = resolvedSource.provenance;
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
     // drawn from the single mission-id.ts minting helper.
@@ -1108,7 +1140,8 @@ export class MissionKernel {
         this.opts.policy.derivation_limit_ceiling,
       ),
       derivation_count: 0,
-      grant_id: null,
+      // @spec mission#approval-event (step 7) (#916): bound at the commit, never after.
+      grant_id: input.grantId ?? null,
       status_list_idx: null,
     };
     try {
@@ -1116,11 +1149,23 @@ export class MissionKernel {
     } catch (e) {
       if (e instanceof UniqueViolationError) {
         // Idempotent approval: return the record this event already created.
+        // @spec mission#approval-event (step 7) (#916): a repeated decision
+        // binds nothing new. It names the same grant (the approval decision
+        // derives the grant's identity from the interaction), and a different
+        // one is refused, never a rebind.
         const existing = this.findByApprovalEvent(input.approvalEventId);
-        if (existing) return existing;
+        if (existing) {
+          if (input.grantId) this.bindGrant(existing.id, input.grantId);
+          return this.get(existing.id) ?? existing;
+        }
       }
       throw e;
     }
+    // @spec issuance-grant#effective-set-projection — the durable discriminator,
+    // on its own store handle (it must outlive the record), written once the
+    // record commits. A record whose `grant_id` is set resolves through
+    // `findByGrant` first, so the gap before this write refuses nothing.
+    if (input.grantId) this.missionBoundGrants.record({ grantId: input.grantId, missionId: id, kind: "approval" });
     return record;
   }
 
@@ -1493,7 +1538,19 @@ export class MissionKernel {
    * row is gone.
    */
   bindGrant(missionId: string, grantId: string): void {
-    this.db.prepare("UPDATE missions SET grant_id = ? WHERE id = ?").run(grantId, missionId);
+    // @spec mission#approval-event (step 7) (#916): a Mission's grant binding
+    // never moves. Binding is compare-and-set: idempotent for the grant it
+    // already holds, refused for any other, so a repeated or concurrent
+    // decision cannot rebind the Mission and strand its first grant outside
+    // the derivation count.
+    const changed = this.db
+      .prepare("UPDATE missions SET grant_id = ? WHERE id = ? AND (grant_id IS NULL OR grant_id = ?)")
+      .run(grantId, missionId, grantId);
+    if (changed.changes !== 1) {
+      const current = this.get(missionId);
+      if (!current) throw new Error(`cannot bind a grant to unknown Mission ${missionId}`);
+      throw new Error(`Mission ${missionId} is already bound to another grant; a binding never moves`);
+    }
     this.missionBoundGrants.record({ grantId, missionId, kind: "approval" });
   }
 

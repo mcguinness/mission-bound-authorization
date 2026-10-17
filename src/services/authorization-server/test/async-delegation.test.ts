@@ -1454,15 +1454,21 @@ describe("unresolvable Mission fails closed (@spec issuance-grant#effective-set-
 
   it("a LIVE Mission whose grant_id column has moved on still refreshes, gated and claimed through the index (never a false refusal, never a claimless token)", async () => {
     const { missionId, missionRefreshToken } = await issueBaseMission();
-    // Rebind the Mission to a different grant id: the credential's own grant is
-    // no longer what `missions.grant_id` holds, so findByGrant misses while the
-    // Mission is perfectly live. The index must RESOLVE it (gate + project),
-    // not refuse it, and not fall through to the claimless pass-through.
-    as.kernel.bindGrant(missionId, "rebound-grant-id-for-test");
+    // Move the Mission's grant column to a different grant id: the credential's
+    // own grant is no longer what `missions.grant_id` holds, so findByGrant
+    // misses while the Mission is perfectly live. The index must RESOLVE it
+    // (gate + project), not refuse it, and not fall through to the claimless
+    // pass-through. `kernel.bindGrant` refuses a move (#916), so the column is
+    // moved directly, as corrupted state would move it.
+    as.kernel.db.prepare("UPDATE missions SET grant_id = ? WHERE id = ?").run("moved-grant-id-for-test", missionId);
+    const countBefore = as.kernel.get(missionId)?.derivation_count as number;
     const res = await refreshFamily(missionRefreshToken, codeDpop);
     const body = (await res.json()) as { access_token?: string; authorization_details?: unknown; error?: string };
     expect(res.status, JSON.stringify(body)).toBe(200);
     expect(body.authorization_details).toEqual(as.kernel.get(missionId)?.authority_set);
+    // @spec mission#issuance-gating (#916): an approval grant the index
+    // resolves still counts against the derivation limit.
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore + 1);
     const { payload } = await jwtVerify(body.access_token as string, remoteJwks, {
       issuer: ISSUER,
       audience: RESOURCE,

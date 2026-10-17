@@ -349,7 +349,9 @@ import {
   type DischargeReceiptObservation,
   GateError,
   LifecycleConflictError,
+  type ApproveInput,
   type MissionKernel,
+  type PreparedApproval,
   STATUS_SIGNING_ALG,
   type StatusObservation,
 } from "../kernel/kernel.js";
@@ -871,10 +873,15 @@ export function buildProvider(opts: AdapterOptions): Provider {
    *
    * - `counted: true` — the Mission's own approval grant (`kernel.findByGrant`):
    *   each derivation counts against its `derivation_limit`;
-   * - `counted: false` — a delegation-family grant, or a durable-index hit whose
-   *   Mission's `grant_id` has moved on: live state only, never counted (a
+   * - `counted: false` — a delegation-family grant, or another durable-index hit
+   *   that is not an approval grant: live state only, never counted (a
    *   family's single count was spent at the exchange that created it,
    *   @spec async-delegation).
+   *
+   * An approval grant the index resolves (its Mission's `grant_id` no longer
+   * names it) still counts (#916): a Mission's binding never moves
+   * (`kernel.bindGrant` is compare-and-set), and if it ever did, an approval
+   * grant must not escape the derivation limit.
    *
    * Undefined for a grant that was never Mission-bound, or a family whose
    * Mission no longer resolves. An index hit with no Mission refuses
@@ -884,8 +891,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const record = kernel.findByGrant(grantId);
     if (record) return { record, counted: true };
     const fam = opts.familyStore?.resolve(grantId);
-    const famRecord = fam ? kernel.get(fam.missionId) : missionForBoundGrant(grantId);
-    return famRecord ? { record: famRecord, counted: false } : undefined;
+    if (fam) {
+      const famRecord = kernel.get(fam.missionId);
+      return famRecord ? { record: famRecord, counted: false } : undefined;
+    }
+    const indexed = missionForBoundGrant(grantId);
+    if (!indexed) return undefined;
+    return { record: indexed, counted: kernel.missionBoundGrants.resolve(grantId)?.kind === "approval" };
   }
 
   /**
@@ -4065,6 +4077,16 @@ function approverAuthenticationSatisfies(
   return true;
 }
 
+/**
+ * @spec mission#approval-event (step 7) (#916) — the provider grant identity
+ * of the approval decided on interaction `uid`: one grant per interaction, so
+ * a repeated or concurrent decision names the same grant (oidc-provider keeps
+ * a supplied `jti`, and its adapter's upsert overwrites the same id).
+ */
+function approvalGrantId(uid: string): string {
+  return createHash("sha256").update(`mission-approval-grant:${uid}`).digest("base64url");
+}
+
 async function decide(
   provider: Provider,
   opts: AdapterOptions,
@@ -4299,35 +4321,53 @@ async function decide(
   // requested ceiling that passes while the approval is pending refuses HERE and
   // creates no Mission. Mapped like the derivation refusal above: the
   // interaction finishes with the error, never a 500.
-  let record: MissionRecord;
-  try {
-    record = opts.kernel.approve({
-      intent: intent as MissionIntent,
-      ...(proposedAuthority ? { proposedAuthority } : {}),
-      // @spec mission#intent-submission-evidence — the verified facts land on
-      // the Mission Record (outside all anchors), request-derived, never
-      // fabricated downstream.
-      ...(submissionEvidence?.length ? { submissionEvidence } : {}),
-      subject: { iss: opts.issuer, sub: subject },
-      approver: { iss: opts.issuer, sub: approver },
-      clientId: String(params.client_id),
-      approvalEventId: `apev_${details.uid}`,
-    });
-  } catch (e) {
-    if (e instanceof IntentError) {
-      await finish({
-        error: e.code,
-        error_description: e.message,
-      });
-      return;
+  //
+  // @spec mission#approval-event (step 7) (#916) — the order of writes. The
+  // approval is prepared first, so every refusal (above, and in
+  // `prepareApproval`) happens before anything is written. The provider grant
+  // is saved next, under an identity derived from this interaction, and the
+  // record then commits already bound to it. A failure before that commit
+  // leaves an inert grant (no code, no Mission, no index entry) that a retry
+  // overwrites. A failure after it leaves an `active`, bound Mission whose code
+  // is not issued yet: the window #250's cross-store atomicity owns. A repeated
+  // or concurrent decision on this interaction names the same grant and the
+  // same approval event, so it recovers the one binding instead of creating
+  // another.
+  const approvalEventId = `apev_${details.uid}`;
+  const grantId = approvalGrantId(details.uid);
+  const approveInput: ApproveInput = {
+    intent: intent as MissionIntent,
+    ...(proposedAuthority ? { proposedAuthority } : {}),
+    // @spec mission#intent-submission-evidence — the verified facts land on
+    // the Mission Record (outside all anchors), request-derived, never
+    // fabricated downstream.
+    ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+    subject: { iss: opts.issuer, sub: subject },
+    approver: { iss: opts.issuer, sub: approver },
+    clientId: String(params.client_id),
+    approvalEventId,
+  };
+  const existing = opts.kernel.findByApprovalEvent(approvalEventId);
+  let prepared: PreparedApproval | undefined;
+  if (!existing) {
+    try {
+      prepared = opts.kernel.prepareApproval(approveInput);
+    } catch (e) {
+      if (e instanceof IntentError) {
+        await finish({
+          error: e.code,
+          error_description: e.message,
+        });
+        return;
+      }
+      throw e;
     }
-    throw e;
   }
 
   // @spec mission#approval-authentication (#826): the provider account is the
   // authenticated Approver; the Mission records the Subject, and every
   // Mission-bound token projects it (the JWT customizer).
-  const grant = new provider.Grant({ accountId: approver, clientId: String(params.client_id) });
+  const grant = new provider.Grant({ jti: grantId, accountId: approver, clientId: String(params.client_id) } as never);
   // @spec mission#scope-projection — the grant holds exactly what the
   // request named: its OIDC values (openid enables an id_token), and any
   // resource values the check above let through, so the authorization code
@@ -4337,14 +4377,36 @@ async function decide(
   if (requestedScope.resource.length && audience) {
     grant.addResourceScope(audience, requestedScope.resource.join(" "));
   }
-  // Containment: the grant's rar copies the EFFECTIVE set. A freshly approved
-  // Mission has no containment, so this is the approved set as-is (fast path).
-  const effective = opts.kernel.effectiveAuthoritySet(record);
-  for (const entry of effective) {
+  // Containment: the grant's rar copies the EFFECTIVE set: on a retry, the
+  // committed record's; otherwise the prepared set, which is exactly what the
+  // commit records (a freshly approved Mission has no containment).
+  const grantAuthority = existing
+    ? opts.kernel.effectiveAuthoritySet(existing)
+    : (prepared as PreparedApproval).authoritySet;
+  for (const entry of grantAuthority) {
     (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
   }
-  const grantId = await grant.save();
-  opts.kernel.bindGrant(record.id, grantId);
+  await grant.save();
+  let record: MissionRecord;
+  if (existing) {
+    // Idempotent for the grant it already holds; refuses any other.
+    opts.kernel.bindGrant(existing.id, grantId);
+    record = existing;
+  } else {
+    try {
+      record = opts.kernel.approve({ ...approveInput, grantId }, prepared);
+    } catch (e) {
+      if (e instanceof IntentError) {
+        await finish({
+          error: e.code,
+          error_description: e.message,
+        });
+        return;
+      }
+      throw e;
+    }
+  }
+  const effective = opts.kernel.effectiveAuthoritySet(record);
 
   // @spec mission#scope-projection — an Intent-only request (configured
   // mapping: no `authorization_details`, and no resource `scope` either,
