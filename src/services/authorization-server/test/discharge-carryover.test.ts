@@ -334,6 +334,29 @@ describe("discharge forwarding after carryover (@spec discharge#discharge-carryo
     expect(oldAfter.discharged).toBeUndefined();
   });
 
+  it("refuses expected_version on a forwarded discharge before resolving its target: the guard binds no record, and neither the old child nor the replacement latches (#1191)", async () => {
+    // @spec discharge#discharge-operation ("No `expected_version`"): discharge
+    // adopts no stale-version guard, so the request is refused as malformed
+    // before the old child or its replacement is read.
+    const pred = approvePredecessor();
+    const child = addChild(pred.id);
+    const replacement = replacementOf(expandAndCarry(pred.id), child);
+    const oldBefore = as.kernel.get(child.id) as MissionRecord;
+    const replacementBefore = as.kernel.get(replacement.id) as MissionRecord;
+    for (const version of [oldBefore.version, replacementBefore.version]) {
+      const res = await lifecycle(child.id, body(child, "payments:invoice.list", { expected_version: String(version) }));
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+    }
+    expect(as.kernel.get(child.id)).toEqual(oldBefore);
+    expect(as.kernel.get(replacement.id)).toEqual(replacementBefore);
+    expect(latched(replacement.id)).toEqual([]);
+    // The same assertion without the member is forwarded and latches.
+    const forwarded = await lifecycle(child.id, body(child, "payments:invoice.list"));
+    expect(forwarded.status).toBe(200);
+    expect(latched(replacement.id)).toEqual([digestOf(replacement, "payments:invoice.list")]);
+  });
+
   it("resolves a chain of two carryovers through both recorded pairings", async () => {
     const a = approvePredecessor();
     const childA = addChild(a.id);
