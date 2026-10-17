@@ -3785,15 +3785,14 @@ standardizes:
 
 | Requirement | Conventional OAuth+PDP realization | Mission standardization | Illustrative added Mission cost |
 |---|---|---|---|
-| Durable task semantics across tokens and restarts | OAuth grants, refresh families, or PDP records outlive the token | An independently addressable, lifecycle-bearing approved task with anchors consistently interpreted by the authorization server, PDP, agents, audiences, and evidence producers; it does not make persistence newly possible (the OAuth binding's Why a New Object and Relationship to Other Authorization Objects sections) | Durable-object and lifecycle storage |
+| Durable task semantics across tokens and restarts | OAuth grants, refresh families, or PDP records outlive the token | An independently addressable, lifecycle-bearing approved task with anchors consistently interpreted by the authorization server, PDP, agents, audiences, and evidence producers; it does not make persistence newly possible ({{I-D.draft-mcguinness-oauth-mission}}, Sections "Relationship to Existing OAuth Objects" and "Relationship to Adjacent Work") | Durable-object and lifecycle storage |
 | Multi-credential, multi-actor join | A deployment-invented transaction, grant, or workflow identifier shared across credentials | Stable approved-task semantics for that join, bound to authority and carried through delegation and fan-out outside one private PDP schema ({{swarm-execution}}) | New claims and endpoints |
 | A second trust domain | The partner calls the origin PDP, shares state, or federates policy, trading synchronous coupling, availability, and disclosure | Bounded local credentials and common anchors carried by Cross-Domain Projection, accepting local-token revocation latency (the Project verb): a portability choice, not the only possible design | State consistency and distribution; privacy and correlation surface |
-| Approval as a first-class record | A local consent or grant database plus versioned decision logs | A standardized immutable snapshot, integrity anchors, and one reference portable evidence can cite (the OAuth binding's Why a New Object section; the Prove verb) | Evidence operations |
+| Approval as a first-class record | A local consent or grant database plus versioned decision logs | A standardized immutable snapshot, integrity anchors, and one reference portable evidence can cite ({{I-D.draft-mcguinness-oauth-mission}}, Section "Relationship to Existing OAuth Objects"; the Prove verb) | Evidence operations |
 | Persistent narrowing | A stateful authorization server or PDP stores reduced entitlements and consults them at issuance | Monotonic subset semantics across issuance, delegation, attenuation, and cross-domain projections, auditable across components ({{invariants}}) | AS or MAS integration; ecosystem adoption |
 {: title="Where a conventional stack meets Mission standardization"}
 
-The OAuth binding's sections named in the table are in
-{{I-D.draft-mcguinness-oauth-mission}}. Past these crossovers, a
+Past these crossovers, a
 conventional deployment often accumulates a durable task record, a
 stable join key, lifecycle checks, narrowing rules, and audit
 correlations. Mission standardizes that recurring shape across bindings
@@ -4303,6 +4302,10 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The conventional-stack table cites the OAuth binding's sections by
+  their current titles, "Relationship to Existing OAuth Objects" and
+  "Relationship to Adjacent Work" (#1125).
 
 - Mission Creation Paths, Propose, Approve and Record, and the
   document map add the experimental Mission Device Authorization
