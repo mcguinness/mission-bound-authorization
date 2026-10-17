@@ -147,6 +147,11 @@ Terms such as Mission, Authority Set, Subject, and Approver are defined
 by {{I-D.draft-mcguinness-oauth-mission}} and used here with the same
 meaning.
 
+A "consumer" of an entry is the authorization server or resource server
+evaluating it in the context at hand: the authorization server when it
+validates, compares, or narrows an entry, and the resource server when
+it enforces one.
+
 # The Mission Resource Access Type {#resource-access-type}
 
 `mission_resource_access` is an `authorization_details` type
@@ -534,7 +539,8 @@ This document defines the following Common Constraints.
 `allowed_tools`:
 : The action may be exercised only through a capability whose identifier
   is among the named values: a tool or function identity, asserted at
-  the point of use by the enforcing component.
+  the point of use by the resource server or a component that enforces
+  on its behalf.
 
   - Value: an array of strings.
   - Subset: no broader when the candidate array's members are a subset
@@ -544,9 +550,10 @@ This document defines the following Common Constraints.
 
 `requires_action_approval`:
 : When `true`, each exercise of the action requires a fresh,
-  action-bound approval at the point of use; the enforcing component
-  MUST NOT permit the action on Mission authority alone. A value of
-  `false` is equivalent to omitting the member.
+  action-bound approval at the point of use; the resource server, or a
+  component that enforces on its behalf, MUST NOT permit the action on
+  Mission authority alone. A value of `false` is equivalent to omitting
+  the member.
 
   - Value: a boolean.
   - Subset: no broader when the candidate is `true` or equals the
@@ -655,9 +662,10 @@ resource metadata ({{RFC9728}}):
 {{I-D.draft-mcguinness-oauth-mission}} gates a delegated token's carried
 entries on the entry type's own delegation policy, evaluated at the
 delegate's delegation depth `d`: the nesting depth of the token's `act`
-claim, as that document defines. For a `mission_resource_access` entry,
-the authorization server includes it in a delegated token issued at
-delegation depth `d` only if all of the following hold:
+claim, as that document's Delegation Constraints section defines. For a
+`mission_resource_access` entry, the authorization server includes it in
+a delegated token issued at delegation depth `d` only if all of the
+following hold:
 
 1. the entry carries a `delegation` member (otherwise it is
    non-delegable, which is the default);
@@ -684,9 +692,11 @@ actor-type classes:
 - A `{ "sub": ... }` matcher permits a specific delegate by client
   identifier.
 - A `{ "sub_profile": ... }` matcher permits any actor of that type (for
-  example, `ai_agent`). An actor's `sub_profile` MAY carry multiple
-  space-separated values; a `{ "sub_profile": ... }` matcher is
-  satisfied when its value is among the actor's values.
+  example, `ai_agent`), as given by the `sub_profile` member of the
+  actor's object in the `act` claim
+  ({{I-D.draft-mcguinness-oauth-mission}}). An actor's `sub_profile` MAY
+  carry multiple space-separated values; a `{ "sub_profile": ... }`
+  matcher is satisfied when its value is among the actor's values.
 
 A delegate is permitted if it matches any of the entry's delegate
 matchers, so a deployment can permit a specific client, a class of
@@ -815,9 +825,10 @@ The mapping is:
   for example an amount ceiling or a recipient domain (the `max_amount`
   and `recipient_domain` Common Constraints, {{common-constraints}}).
   Like all `constraints`, they are committed by `authority_hash` and
-  carried to the point of use, but a runtime enforcement layer evaluates
-  them against the concrete call arguments, not the authorization server
-  at issuance ({{I-D.draft-mcguinness-oauth-mission}}).
+  carried to the point of use, but the resource server, or a runtime
+  enforcement layer acting for it, evaluates them against the concrete
+  call arguments; the authorization server does not evaluate them at
+  issuance ({{I-D.draft-mcguinness-oauth-mission}}).
 
 The following example shows the Authority Set of a Mission authorized to
 read invoices and post small adjustments through a finance MCP server,
