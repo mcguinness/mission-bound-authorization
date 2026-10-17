@@ -355,7 +355,12 @@ describe("Dispatch Handoff: the handoff to the selected Agent and its continuati
     expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before?.derivation_count);
 
     const r = await redeem(hb.access_token);
-    const rb = (await r.json()) as { access_token: string; token_type?: string; authorization_details?: unknown };
+    const rb = (await r.json()) as {
+      access_token: string;
+      token_type?: string;
+      scope?: string;
+      authorization_details?: unknown;
+    };
     expect(r.status, JSON.stringify(rb)).toBe(200);
     expect(rb.token_type).toBe("DPoP");
     const agentToken = decodeJwt(rb.access_token);
@@ -367,6 +372,11 @@ describe("Dispatch Handoff: the handoff to the selected Agent and its continuati
     expect((agentToken.cnf as { jkt?: string }).jkt).not.toBe(dispatcherJkt);
     expect((agentToken.mission as { id?: string }).id).toBe(instance.missionId);
     expect(rb.authorization_details).toEqual(instance.authority);
+    // @spec mission#scope-projection step 4: the handle's consumer is this
+    // AS's async-delegation exchange, which reads `authorization_details`, so
+    // the redeemed Mission-bound token carries no `scope`.
+    expect(rb.scope).toBeUndefined();
+    expect(agentToken.scope).toBeUndefined();
     // One counted derivation, and the Dispatcher's grant stays the instance's.
     const after = as.kernel.get(instance.missionId);
     expect(after?.derivation_count).toBe((before?.derivation_count ?? 0) + 1);
