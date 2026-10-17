@@ -2240,10 +2240,51 @@ This document defines the following members:
     Mission's own `authority_hash`.
 
   `adjudication`:
-  : OPTIONAL. The decision mechanism that adjudicated this instance,
-    present when a Mission-creating profile or deployment chooses to
-    make it explicit; {{standing-consent-bases}} defines the object
-    and the rule it follows for `direct`.
+  : OPTIONAL. A discriminated object naming the decision *mechanism*
+    that adjudicated this instance: distinct from `activation_actor`
+    (who triggered it) and `consent_principal` (who is accountable
+    for it). Present when a Mission-creating profile or deployment
+    chooses to make the mechanism explicit; where absent, the
+    mechanism is still fixed by `type` and the construction rules of
+    this document or a companion profile (below). Members, where
+    present:
+
+    `kind`:
+    : REQUIRED. A string: `human` or `policy`, naming a decision
+      mechanism, not a storage location for supporting evidence; a
+      companion profile MUST NOT define a `kind` value that names a
+      record, an evidence store, or the requesting or dispatching
+      party. An unrecognized value is handled under the same rule as
+      `approval_basis.type` ({{standing-consent-bases}}).
+
+    For `kind: human`: no further members; the deciding human is
+    `consent_principal`.
+
+    For `kind: policy`: `policy`, a REQUIRED object with `id` and
+    `version` identifying the deciding policy or workflow. It decides
+    deterministically over recorded inputs, so re-evaluating that
+    `version` over them re-checks the decision. A model's output can
+    be one such input, recorded with the model's identifier and
+    version: it can refuse an activation or narrow the authority it
+    activates, and the AS MUST NOT let it supply or widen authority.
+    A model is never itself the deciding policy or workflow.
+
+    `governance_record`:
+    : OPTIONAL. A boolean. `true` when an Approval Governance Record
+      is recorded for this approval event
+      ({{I-D.draft-mcguinness-mission-approval-governance}}), joined
+      by this Mission's own `approval_event_id`. It never changes
+      `kind`, which follows the basis (below). Approval Governance
+      aligns the record's accountable assertion, where it carries
+      one, with that `kind`: a governed decision still names its
+      mechanism, and the record supplies the fuller assertion set
+      behind it, including any multi-assertion set, never flattened
+      into it.
+
+    Where `adjudication` is present for `direct`, `kind` MUST be
+    `human`, with or without `governance_record`: a policy decides
+    an instance only under a standing-consent basis
+    ({{standing-consent-bases}}).
 
   `approved_at`:
   : Absent for `direct`, whose approval event carries its own instant
@@ -2344,15 +2385,14 @@ companion profile defines, and `activation_actor` names a dispatching
 or requesting party distinct from the consenting human.
 
 An unrecognized `type`, and likewise an unrecognized
-`adjudication.kind` (below), is preserved unchanged as opaque
-provenance on an otherwise valid record: a consumer MUST NOT
-infer or fabricate the human, policy, or Approval Governance
-Record standing behind it, and MUST refuse only a profile
-operation that itself requires recognized adjudication semantics
-to proceed (for example, evaluating a policy-approval recency
-ceiling). Unlike an unrecognized lifecycle state ({{lifecycle}}),
-an unrecognized value here does not by itself invalidate or
-deactivate the Mission.
+`adjudication.kind` ({{mission-record}}), is preserved unchanged as
+opaque provenance on an otherwise valid record: a consumer MUST NOT
+infer or fabricate the human, policy, or Approval Governance Record
+standing behind it, and MUST refuse only a profile operation that
+itself requires recognized adjudication semantics to proceed (for
+example, evaluating a policy-approval recency ceiling). Unlike an
+unrecognized lifecycle state ({{lifecycle}}), an unrecognized value
+here does not by itself invalidate or deactivate the Mission.
 
 A companion profile defining a standing-consent `type` MUST make its
 `consent_principal` and `root_commitment` trace to an accountable
@@ -2374,58 +2414,13 @@ Mission.
   that exact version; it MUST NOT accept the value as the activating
   request's own uncorroborated assertion.
 
-`adjudication`:
-: A discriminated object naming the decision *mechanism*
-  that adjudicated this instance: distinct from `activation_actor`
-  (who triggered it) and `consent_principal` (who is accountable
-  for it). Present when a Mission-creating profile or deployment
-  chooses to make the mechanism explicit; where absent, the
-  mechanism is still fixed by `type` and the construction rules of
-  this document or a companion profile (below). Members, where
-  present:
-
-  `kind`:
-  : REQUIRED. A string: `human` or `policy`, naming a decision
-    mechanism, not a storage location for supporting evidence; a
-    companion profile MUST NOT define a `kind` value that names a
-    record, an evidence store, or the requesting or dispatching
-    party. An unrecognized value is handled under the same rule as
-    `approval_basis.type` (above).
-
-  For `kind: human`: no further members; the deciding human is
-  `consent_principal`.
-
-  For `kind: policy`: `policy`, a REQUIRED object with `id` and
-  `version` identifying the deciding policy or workflow. It decides
-  deterministically over recorded inputs, so re-evaluating that
-  `version` over them re-checks the decision. A model's output can
-  be one such input, recorded with the model's identifier and
-  version: it can refuse an activation or narrow the authority it
-  activates, and the AS MUST NOT let it supply or widen authority. A
-  model is never itself the deciding policy or workflow.
-
-  `governance_record`:
-  : OPTIONAL. A boolean. `true` when an Approval Governance Record
-    is recorded for this approval event
-    ({{I-D.draft-mcguinness-mission-approval-governance}}), joined
-    by this Mission's own `approval_event_id`. It never changes
-    `kind`, which follows the basis (below). Approval Governance
-    aligns the record's accountable assertion, where it carries one,
-    with that `kind`: a governed decision still names its mechanism,
-    and the record supplies the fuller assertion set behind it,
-    including any multi-assertion set, never flattened into it.
-
-The `adjudication` member, where present, follows the basis:
-
-- Where `adjudication` is present for `direct`, `kind` MUST be
-  `human`, with or without `governance_record`: a policy decides
-  an instance only under a standing-consent basis.
-- Where a companion profile defining a standing-consent `type`
-  populates `adjudication`, `kind` MUST be `policy`, naming the
-  identity and version of the policy or workflow that adjudicated
-  the instance. A companion profile MUST NOT flatten a policy's or
-  an Approval Governance Record's assertion set into a single
-  principal member.
+The `adjudication` member ({{mission-record}}), where present,
+follows the basis. Where a companion profile defining a
+standing-consent `type` populates `adjudication`, `kind` MUST be
+`policy`, naming the identity and version of the policy or workflow
+that adjudicated the instance. A companion profile MUST NOT flatten a
+policy's or an Approval Governance Record's assertion set into a
+single principal member.
 
 **Activation policy commitment.** Where a standing-consent basis lets
 a separate policy artifact adjudicate activation (a dispatch,
