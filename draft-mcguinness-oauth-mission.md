@@ -2853,8 +2853,9 @@ it; a Mission in any other state carries none. Its members are:
   this document, or a reason a companion profile registers.
 
 `terminated_at`:
-: REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time: the instant
-  the termination took effect. For `expired`, it is the Mission's
+: REQUIRED, except for historical terminations described below. A
+  string. An RFC 3339 {{RFC3339}} date-time: the instant the
+  termination took effect. For `expired`, it is the Mission's
   `expires_at`.
 
 A companion profile that registers a reason defines that reason's
