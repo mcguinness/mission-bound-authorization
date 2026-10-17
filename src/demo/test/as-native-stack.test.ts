@@ -48,6 +48,7 @@ import { DOMAIN_MODEL, Fga } from "@mission/pdp";
 import { issueMissionToken } from "../src/approval-console.js";
 import { asNativeLaunchOptions, launchAsNative } from "../src/as-native.js";
 import { ISSUANCE_ONLY_CAPABILITIES } from "../src/issuance-only.js";
+import { requestLifecycle } from "../src/lifecycle-client.js";
 import { resourcePolicyAdmin } from "../src/resource-policy-admin.js";
 import {
   clientAssertionSigner,
@@ -608,9 +609,15 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       expect(suspendBody.error).toBe("invalid_request");
       expect(suspendBody.error_description).toBe("operation suspend is not enabled on this deployment");
       expect(stack.kernel.get(spareId)?.state).toBe("active");
-      // `lifecycle-revoke` is on.
-      const revoke = await lifecycle("revoke");
-      expect(revoke.status, await revoke.clone().text()).toBe(200);
+      // `lifecycle-revoke` is on: the dedicated lifecycle console revokes at the
+      // advertised endpoint by private-key JWT (#1191).
+      const revoke = await requestLifecycle(asUrl, authServer().lifecycleConsole, {
+        mission_id: spareId,
+        operation: "revoke",
+        nonce: randomUUID(),
+      });
+      expect(revoke.status, revoke.text).toBe(200);
+      expect(revoke.contentType).toBe("application/mission-status-response+jwt");
       expect(stack.kernel.get(spareId)?.termination?.reason).toBe("revoked");
     },
 
