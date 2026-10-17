@@ -26,17 +26,46 @@ const VERIFIER = "approver-subject-separation-verifier-0123456789-01";
 const RS_PAYMENTS = ["rs-payments", "dev-introspection-rs-payments"] as const;
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
 const SESSIONS = new ApprovalSessionStore();
+/**
+ * Clients registered with an OIDC authentication default (D305 item 5): each
+ * asks for an Approver strength a delegated approval cannot carry.
+ */
+const DEFAULT_CLIENTS = {
+  "ap-agent-default-acr": { default_acr_values: ["mfa"] },
+  "ap-agent-default-max-age": { default_max_age: 300 },
+  "ap-agent-require-auth-time": { require_auth_time: true },
+} as const;
+type ClientId = "ap-agent" | "governed-agent" | keyof typeof DEFAULT_CLIENTS;
 
 let as: BuiltAs;
 let server: Server;
 const keys: Record<string, CryptoKey> = {};
 
 beforeAll(async () => {
+  const testClients: Record<string, unknown>[] = [];
+  for (const [clientId, defaults] of Object.entries(DEFAULT_CLIENTS)) {
+    const pair = await generateKeyPair("ES256", { extractable: true });
+    keys[clientId] = pair.privateKey as CryptoKey;
+    testClients.push({
+      client_id: clientId,
+      client_name: `AP Agent with ${Object.keys(defaults)[0]}`,
+      grant_types: ["authorization_code", "refresh_token"],
+      response_types: ["code"],
+      redirect_uris: [REDIRECT_URI],
+      token_endpoint_auth_method: "private_key_jwt",
+      token_endpoint_auth_signing_alg: "ES256",
+      scope: "openid profile email",
+      authorization_details_types: ["mission_resource_access"],
+      jwks: { keys: [{ ...(await exportJWK(pair.publicKey)), kid: `${clientId}-auth`, alg: "ES256" }] },
+      ...defaults,
+    });
+  }
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     approvalSessions: SESSIONS,
+    testClients,
   });
   server = as.provider.listen(PORT);
   keys["ap-agent"] = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
@@ -77,7 +106,7 @@ type Approval =
   | { headless: { sub: string; subject: string | null } };
 
 /** A pushed authorization request for the Read Acme invoices Mission. */
-async function push(client: "ap-agent" | "governed-agent", extra: Record<string, string>): Promise<Response> {
+async function push(client: ClientId, extra: Record<string, string>): Promise<Response> {
   const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER))).toString("base64url");
   return fetch(`${ISSUER}/request`, {
     method: "POST",
@@ -105,7 +134,7 @@ async function push(client: "ap-agent" | "governed-agent", extra: Record<string,
  * the trusted approval, and the redirect's code or error.
  */
 async function authorize(args: {
-  client?: "ap-agent" | "governed-agent";
+  client?: ClientId;
   scope?: string;
   extra?: Record<string, string>;
   decideHeaders?: Record<string, string>;
@@ -198,6 +227,32 @@ async function token(client: string, params: Record<string, string>, k: Keys): P
   return body;
 }
 
+/** One token request with DPoP (one nonce retry), returning the status and body unasserted. */
+async function tokenAttempt(client: string, params: Record<string, string>, k: Keys): Promise<{ status: number; body: Record<string, unknown> }> {
+  const htu = `${ISSUER}/token`;
+  const send = async (nonce?: string) =>
+    fetch(htu, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        dpop: await new SignJWT({ htu, htm: "POST", ...(nonce ? { nonce } : {}) })
+          .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: k.jwk })
+          .setIssuedAt()
+          .setJti(crypto.randomUUID())
+          .sign(k.privateKey),
+      },
+      body: new URLSearchParams({
+        ...params,
+        client_assertion: await clientAssertion(client),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send(nonce);
+  return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+}
+
 const redeem = (client: string, code: string, k: Keys) =>
   token(client, { grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, code_verifier: VERIFIER, resource: RESOURCE }, k);
 
@@ -224,12 +279,17 @@ async function sessionOf(jar: Jar): Promise<{ accountId?: string; loginTs?: numb
 type StoredSession = { accountId?: string; loginTs?: number; acr?: string; exp?: number };
 
 /**
- * An Alice session from a browser self-approval, then Bob's headless act for
- * her in the same user agent. Only the act's resume is observed: the session
- * saves it causes and the session cookies it sends. The authorization request
- * before it is the client's own and loads Alice's session as usual.
+ * An Alice session from a browser self-approval, then another principal's act
+ * in the same user agent: Bob's headless approval for her unless `approval`
+ * names another. Only the act's resume is observed: the session saves it
+ * causes and the session cookies it sends. The authorization request before it
+ * is the client's own and loads Alice's session as usual. `missions` and
+ * `grants` count what the act created.
  */
-async function aliceSessionThrough(act: { scope?: string; decision?: string; resume?: { url?: (location: string) => string; method?: string } }) {
+async function aliceSessionThrough(
+  act: { scope?: string; decision?: string; resume?: { url?: (location: string) => string; method?: string } },
+  approval: Approval = { headless: { sub: "bob", subject: "alice" } },
+) {
   const aliceTime = Math.floor(Date.now() / 1000) - 600;
   const first = await authorize({ scope: "openid", approval: { browser: { sub: "alice", acr: "mfa", auth_time: aliceTime } } });
   expect(first.code, first.error).toBeTruthy();
@@ -241,10 +301,16 @@ async function aliceSessionThrough(act: { scope?: string; decision?: string; res
   };
   let expBefore: number | undefined;
   let bob: Awaited<ReturnType<typeof authorize>>;
+  const missionsBefore = as.kernel.allMissions().length;
+  let grants = 0;
+  const onGrant = () => {
+    grants += 1;
+  };
+  as.provider.on("grant.saved", onGrant);
   try {
     bob = await authorize({
       ...act,
-      approval: { headless: { sub: "bob", subject: "alice" } },
+      approval,
       jar: first.jar,
       beforeResume: async () => {
         expBefore = ((await as.provider.Session.find(aliceSession)) as StoredSession | undefined)?.exp;
@@ -253,9 +319,11 @@ async function aliceSessionThrough(act: { scope?: string; decision?: string; res
     });
   } finally {
     as.provider.off("session.saved", onSaved);
+    as.provider.off("grant.saved", onGrant);
   }
   const after = (await as.provider.Session.find(aliceSession)) as StoredSession | undefined;
-  return { bob, jar: first.jar, aliceSession, aliceTime, saved, expBefore, after };
+  const missions = as.kernel.allMissions().length - missionsBefore;
+  return { bob, jar: first.jar, aliceSession, aliceTime, saved, expBefore, after, missions, grants };
 }
 
 /** Alice's session is as she left it: Bob's resume neither saved it nor sent a session cookie. */
@@ -277,10 +345,21 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
       { headless: { sub: "bob", subject: "alice" } },
     ] as Approval[]) {
       const before = as.kernel.allMissions().length;
-      const r = await authorize({ scope: "openid", approval });
+      let grants = 0;
+      const onGrant = () => {
+        grants += 1;
+      };
+      as.provider.on("grant.saved", onGrant);
+      let r: Awaited<ReturnType<typeof authorize>>;
+      try {
+        r = await authorize({ scope: "openid", approval });
+      } finally {
+        as.provider.off("grant.saved", onGrant);
+      }
       expect(r.error).toBe("invalid_scope");
       expect(r.code).toBeUndefined();
       expect(as.kernel.allMissions()).toHaveLength(before);
+      expect(grants).toBe(0);
       // No authentication session for Alice arose from Bob's approval.
       expect((await sessionOf(r.jar))?.accountId).not.toBe("alice");
     }
@@ -454,6 +533,76 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
     expect(fresh.resumeCookies.filter((l) => /^_session(?:\.sig)?=/.test(l))).toEqual([]);
   });
 
+  // A browser approval in a user agent holding another account's provider
+  // session completes isolated, as a headless one does: oidc-provider's
+  // account switch (its logout confirmation) never arises, the session stays
+  // as it was, and the act either completes or creates nothing.
+  it("Bob's browser approval for Alice in her user agent completes isolated: Alice's session is untouched, and the code redeems and refreshes for her", async () => {
+    const o = await aliceSessionThrough({}, { browser: { sub: "bob", acr: "mfa", subject: "alice" } });
+    expect(o.bob.code, o.bob.error).toBeTruthy();
+    expectAliceUntouched(o);
+    expect(o.missions).toBe(1);
+    const k = await newKeys();
+    const issued = await redeem("ap-agent", o.bob.code as string, k);
+    expect(issued.id_token).toBeUndefined();
+    const at = decodeJwt(issued.access_token as string);
+    expect(at.sub).toBe("alice");
+    const record = as.kernel.get((at.mission as { id: string }).id);
+    expect(record?.subject).toEqual({ iss: ISSUER, sub: "alice" });
+    expect(record?.approval_basis.consent_principal).toEqual({ iss: ISSUER, sub: "bob" });
+    const refreshed = await token("ap-agent", { grant_type: "refresh_token", refresh_token: issued.refresh_token as string }, k);
+    expect(decodeJwt(refreshed.access_token as string).sub).toBe("alice");
+  });
+
+  it.each([
+    ["an openid refusal", { scope: "openid" }, "invalid_scope"],
+    ["a denial", { decision: "deny" }, "access_denied"],
+  ] as const)("Bob's browser act for Alice in her user agent ending in %s leaves her session untouched and creates no Mission or Grant", async (_end, act, error) => {
+    const o = await aliceSessionThrough(act, { browser: { sub: "bob", acr: "mfa", subject: "alice" } });
+    expect(o.bob.error).toBe(error);
+    expect(o.bob.code).toBeUndefined();
+    expectAliceUntouched(o);
+    expect(o.missions).toBe(0);
+    expect(o.grants).toBe(0);
+  });
+
+  it("Bob's own browser approval in Alice's user agent completes isolated too: it issues for Bob without openid, refuses openid, and leaves her session untouched", async () => {
+    const plain = await aliceSessionThrough({}, { browser: { sub: "bob", acr: "mfa" } });
+    expect(plain.bob.code, plain.bob.error).toBeTruthy();
+    expectAliceUntouched(plain);
+    const k = await newKeys();
+    const issued = await redeem("ap-agent", plain.bob.code as string, k);
+    expect(decodeJwt(issued.access_token as string).sub).toBe("bob");
+    const refreshed = await token("ap-agent", { grant_type: "refresh_token", refresh_token: issued.refresh_token as string }, k);
+    expect(decodeJwt(refreshed.access_token as string).sub).toBe("bob");
+    // Bob's login does not stay in this user agent, so it yields no ID Token.
+    const oidc = await aliceSessionThrough({ scope: "openid" }, { browser: { sub: "bob", acr: "mfa" } });
+    expect(oidc.bob.error).toBe("invalid_scope");
+    expectAliceUntouched(oidc);
+    expect(oidc.missions).toBe(0);
+    expect(oidc.grants).toBe(0);
+  });
+
+  it("Alice's own browser approval in her user agent stays an ordinary login: her session takes the new authentication and the ID Token reports it", async () => {
+    const earlier = Math.floor(Date.now() / 1000) - 600;
+    const first = await authorize({ scope: "openid", approval: { browser: { sub: "alice", acr: "mfa", auth_time: earlier } } });
+    expect(first.code, first.error).toBeTruthy();
+    const later = Math.floor(Date.now() / 1000) - 30;
+    const again = await authorize({
+      scope: "openid",
+      extra: { max_age: "3600" },
+      approval: { browser: { sub: "alice", acr: "mfa", auth_time: later } },
+      jar: first.jar,
+    });
+    expect(again.code, again.error).toBeTruthy();
+    const session = await sessionOf(again.jar);
+    expect(session?.accountId).toBe("alice");
+    expect(session?.loginTs).toBe(later);
+    const idToken = decodeJwt((await redeem("ap-agent", again.code as string, await newKeys())).id_token as string);
+    expect(idToken.sub).toBe("alice");
+    expect(idToken.auth_time).toBe(later);
+  });
+
   it.each([
     ["a trailing slash", { url: (l: string) => `${l}/` }],
     ["an uppercase path", { url: (l: string) => l.replace("/auth/", "/AUTH/") }],
@@ -516,7 +665,9 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
     expect(as.kernel.allMissions()).toHaveLength(before);
     // The header is the headless service's channel only: on a browser
     // session it selects nothing, and the session's own selection stands.
+    // Nor does the client's login_hint naming Alice select her.
     const browser = await authorize({
+      extra: { login_hint: "alice" },
       approval: { browser: { sub: "bob" } },
       decideHeaders: { [APPROVAL_SUBJECT_HEADER]: "alice" },
     });
@@ -532,6 +683,140 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
       expect(par.status).toBe(400);
       expect(((await par.json()) as { error?: string }).error).toBe("invalid_request");
     }
+  });
+
+  it("self-approval keeps one End-User across a hint, a later prompt=none and a request without openid, and UserInfo refuses the Mission-bound token", async () => {
+    const authTime = Math.floor(Date.now() / 1000) - 120;
+    // A login_hint concerns the Approver who authenticates (D158): one naming
+    // Bob neither changes who authenticated nor selects the Subject.
+    // max_age asks for auth_time in the ID Token (OpenID Connect Core 3.1.2.1).
+    const hinted = await authorize({
+      scope: "openid",
+      extra: { login_hint: "bob", max_age: "3600" },
+      approval: { browser: { sub: "alice", acr: "mfa", auth_time: authTime } },
+    });
+    expect(hinted.code, hinted.error).toBeTruthy();
+    const k = await newKeys();
+    const issued = await redeem("ap-agent", hinted.code as string, k);
+    expect(decodeJwt(issued.id_token as string).sub).toBe("alice");
+    expect(decodeJwt(issued.id_token as string).auth_time).toBe(authTime);
+    expect(decodeJwt(issued.access_token as string).sub).toBe("alice");
+    const session = await sessionOf(hinted.jar);
+    expect(session?.accountId).toBe("alice");
+    expect(session?.loginTs).toBe(authTime);
+    expect(session?.acr).toBe("mfa");
+
+    // UserInfo does not accept the Mission-bound access token, which is
+    // audienced to the resource, so it never asserts another End-User.
+    const userinfoUrl = `${ISSUER}/me`;
+    const ath = Buffer.from(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(issued.access_token as string)),
+    ).toString("base64url");
+    const userinfo = await fetch(userinfoUrl, {
+      headers: {
+        authorization: `DPoP ${issued.access_token as string}`,
+        dpop: await new SignJWT({ htu: userinfoUrl, htm: "GET", ath })
+          .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: k.jwk })
+          .setIssuedAt()
+          .setJti(crypto.randomUUID())
+          .sign(k.privateKey),
+      },
+    });
+    expect(userinfo.status).toBe(401);
+
+    // A later prompt=none request in Alice's user agent is not satisfied by
+    // her session: every Mission needs its own approval. Her session stands.
+    const before = as.kernel.allMissions().length;
+    const par = await push("ap-agent", { scope: "openid", prompt: "none" });
+    expect(par.status).toBe(201);
+    const { request_uri } = (await par.json()) as { request_uri: string };
+    let res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri })}`, {
+      redirect: "manual",
+      headers: { cookie: cookieOf(hinted.jar) },
+    });
+    let location = res.headers.get("location") ?? "";
+    while (location.startsWith(ISSUER)) {
+      res = await fetch(location, { redirect: "manual", headers: { cookie: cookieOf(hinted.jar) } });
+      location = res.headers.get("location") ?? "";
+    }
+    const q = new URL(location).searchParams;
+    expect(q.get("code")).toBeNull();
+    expect(q.get("error")).toBe("consent_required");
+    expect(as.kernel.allMissions()).toHaveLength(before);
+    const after = await sessionOf(hinted.jar);
+    expect(after?.accountId).toBe("alice");
+    expect(after?.loginTs).toBe(authTime);
+
+    // Without openid, a self-approval still issues no ID Token, while the
+    // session and the token name the one End-User.
+    const plain = await authorize({ approval: { browser: { sub: "alice", acr: "mfa", auth_time: authTime } } });
+    expect(plain.code, plain.error).toBeTruthy();
+    const plainIssued = await redeem("ap-agent", plain.code as string, await newKeys());
+    expect(plainIssued.id_token).toBeUndefined();
+    expect(decodeJwt(plainIssued.access_token as string).sub).toBe("alice");
+    expect((await sessionOf(plain.jar))?.accountId).toBe("alice");
+  });
+
+  it("does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)", async () => {
+    const discovery = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
+    expect(discovery.claims_parameter_supported).toBe(false);
+    const claims = JSON.stringify({ id_token: { acr: { essential: true, values: ["urn:example:acr:strong"] } } });
+    const r = await authorize({
+      scope: "openid",
+      extra: { claims },
+      approval: { browser: { sub: "alice", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) - 60 } },
+    });
+    expect(r.code, r.error).toBeTruthy();
+    const idToken = decodeJwt((await redeem("ap-agent", r.code as string, await newKeys())).id_token as string);
+    expect(idToken.sub).toBe("alice");
+    expect(idToken.acr).toBeUndefined();
+  });
+
+  // This AS configures no acr values, so oidc-provider holds a registration
+  // naming default_acr_values invalid: such a client is refused outright,
+  // with or without openid, before any interaction.
+  it("a client registered with default_acr_values is refused invalid_client_metadata on every request, before any interaction, creating nothing", async () => {
+    const before = as.kernel.allMissions().length;
+    for (const extra of [{}, { scope: "openid" }]) {
+      const par = await push("ap-agent-default-acr", extra);
+      expect(par.status).toBe(400);
+      expect(((await par.json()) as { error?: string }).error).toBe("invalid_client_metadata");
+    }
+    expect(as.kernel.allMissions()).toHaveLength(before);
+  });
+
+  it.each(["ap-agent-default-max-age", "ap-agent-require-auth-time"] as const)(
+    "a client registered with an authentication default (%s) cannot have it honored on a delegated approval: without openid PAR refuses, with openid the delegated approval refuses, creating nothing",
+    async (clientId) => {
+      const par = await push(clientId, {});
+      expect(par.status).toBe(400);
+      const body = (await par.json()) as { error?: string; error_description?: string };
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toMatch(/openid scope must be requested for clients with/);
+      const before = as.kernel.allMissions().length;
+      const r = await authorize({ client: clientId, scope: "openid", approval: { browser: { sub: "bob", subject: "alice" } } });
+      expect(r.error).toBe("invalid_scope");
+      expect(r.code).toBeUndefined();
+      expect(as.kernel.allMissions()).toHaveLength(before);
+    },
+  );
+
+  it("a code whose Mission is gone before its first redemption is refused invalid_grant and issues no token", async () => {
+    const before = new Set(as.kernel.allMissions().map((m) => m.id));
+    const r = await authorize({ approval: { headless: { sub: "bob", subject: "alice" } } });
+    expect(r.code, r.error).toBeTruthy();
+    const created = as.kernel.allMissions().filter((m) => !before.has(m.id));
+    expect(created).toHaveLength(1);
+    as.kernel.db.prepare("DELETE FROM missions WHERE id = ?").run(created[0]!.id);
+    expect(as.kernel.get(created[0]!.id)).toBeUndefined();
+    const res = await tokenAttempt(
+      "ap-agent",
+      { grant_type: "authorization_code", code: r.code as string, redirect_uri: REDIRECT_URI, code_verifier: VERIFIER, resource: RESOURCE },
+      await newKeys(),
+    );
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_grant");
+    expect(res.body.access_token).toBeUndefined();
   });
 
   it("knows no account for an id outside the deployment, and no profile for a workload principal", async () => {

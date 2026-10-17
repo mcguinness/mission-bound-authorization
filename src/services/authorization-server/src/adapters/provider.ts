@@ -50,8 +50,10 @@ import {
  * parameter allow-list drops it from every PAR and authorization request.
  */
 export const DERIVED_AUTHORIZATION_DETAILS_MARKER = "__mission_derived_authorization_details";
-/** Interaction-result member marking an approval no End-User authenticated
- *  in the user agent (a headless approval service's, #826). */
+/** Interaction-result member marking an approval that completes isolated
+ *  from the user agent's provider session (#826): a headless approval
+ *  service's, or a browser approval in a user agent whose session belongs to
+ *  another account. */
 const HEADLESS_APPROVAL_RESULT = "mission_headless_approval";
 
 /**
@@ -1977,8 +1979,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
     await opts.kernel.drainLifecycleOutbox();
   });
 
-  // @spec mission#approval-authentication (#826): a headless approval
-  // leaves the client's user agent no End-User session. Its resume runs
+  // @spec mission#approval-authentication (#826): a headless approval, and a
+  // browser approval in a user agent whose provider session belongs to
+  // another account, leave the user agent's session as it was and add none:
+  // `decide()` marks both alike. The resume runs
   // without the session cookie this user agent holds, so that session is
   // neither read nor modified. Once the route returns, before the response is
   // flushed, the session the resume's login created is destroyed and its
@@ -4056,9 +4060,10 @@ async function handleMissionDispatchGrant(
  * `max_age`? Approver-scoped, never Subject-scoped: this checks only the
  * principal acting as Approver for THIS approval event, never the Mission
  * Subject, who MAY be a different principal. Absence of either request
- * parameter trivially satisfies that parameter. This AS publishes and
- * enforces no approval-authentication floor of its own: the high-risk floor
- * of @spec mission#approval-authentication is not implemented here (#826).
+ * parameter trivially satisfies that parameter. The issuer's published
+ * approval-authentication floor is enforced separately, in `decide()`, on the
+ * complete derived authority (@spec mission#approval-authentication, #826,
+ * D425; `config/approval-floor.json`); this check never relaxes it.
  */
 function approverAuthenticationSatisfies(
   requested: { acrValues?: string; maxAge?: string; forceFreshLogin?: boolean },
@@ -4113,23 +4118,31 @@ async function decide(
     return;
   }
   const params = details.params as Record<string, unknown>;
-  // @spec mission#approval-authentication (#826): every completion of a
-  // headless approval, a refusal or a denial as much as a success, is marked
-  // for the headless-resume middleware and detached from the session this
-  // user agent held when the interaction began, so its resume neither reads
-  // nor refreshes that session. The detachment is needed because
+  // @spec mission#approval-authentication (#826): a browser approval in a
+  // user agent whose provider session belongs to another account completes
+  // isolated, as a headless approval does. Otherwise its resume meets
+  // oidc-provider's account switch (the logout confirmation): that session
+  // is saved with logout state and its cookie sent again, and, once the
+  // Mission exists, no code is issued. The Approver's own session, or none,
+  // keeps the ordinary browser completion.
+  const sessionAccount = details.session?.accountId;
+  const isolated = !interactive || (sessionAccount !== undefined && sessionAccount !== principal.sub);
+  // Every isolated completion, a refusal or a denial as much as a success, is
+  // marked for the isolated-resume middleware and detached from the session
+  // this user agent held when the interaction began, so its resume neither
+  // reads nor refreshes that session. The detachment is needed because
   // oidc-provider's resume compares the interaction's session with its own
   // before it handles an error result, and this resume runs without the user
   // agent's session.
   const finish = async (result: Record<string, unknown>) => {
-    if (!interactive && details.session?.uid) {
+    if (isolated && details.session?.uid) {
       delete (details.session as { uid?: string }).uid;
       await details.save(Math.max(1, (details.exp ?? 0) - Math.floor(Date.now() / 1000)));
     }
     await provider.interactionFinished(
       ctx.req,
       ctx.res,
-      interactive ? result : { ...result, [HEADLESS_APPROVAL_RESULT]: true },
+      isolated ? { ...result, [HEADLESS_APPROVAL_RESULT]: true } : result,
     );
   };
   // @spec mission#submission-via-par — re-parse the pushed Submission envelope;
@@ -4199,20 +4212,23 @@ async function decide(
   // Token about the End-User this interaction authenticates, the Approver.
   // Refused `invalid_scope` before anything is created when the Approver is
   // not the Subject (issuer-qualified principals compared), and when no
-  // End-User authenticated in this user agent at all: a headless approval
-  // service's credential is not an interactive login.
+  // End-User authentication stays in this user agent: a headless approval
+  // service's credential is not an interactive login, and an isolated
+  // browser approval keeps no session for the Approver here.
   const requestedScope = splitScope(params.scope);
   if (requestedScope.oidc.includes("openid")) {
     const approverPrincipal = { iss: opts.issuer, sub: approver };
     const subjectPrincipal = { iss: opts.issuer, sub: subject };
     const samePrincipal =
       approverPrincipal.iss === subjectPrincipal.iss && approverPrincipal.sub === subjectPrincipal.sub;
-    if (!samePrincipal || !interactive) {
+    if (!samePrincipal || isolated) {
       await finish({
         error: "invalid_scope",
-        error_description: samePrincipal
-          ? "openid requires an End-User authenticated in this user agent; a headless approval is not one"
-          : "openid is unavailable when the Approver is not the Mission's Subject",
+        error_description: !samePrincipal
+          ? "openid is unavailable when the Approver is not the Mission's Subject"
+          : !interactive
+            ? "openid requires an End-User authenticated in this user agent; a headless approval is not one"
+            : "openid requires an End-User whose session this user agent keeps; it holds another account's session",
       });
       return;
     }
@@ -4467,10 +4483,9 @@ async function decide(
   // Approver's own, with its achieved `acr` and authentication time, never a
   // time manufactured from the approval click and never an authentication of
   // a different Subject. oidc-provider finishes an interaction only through
-  // a login, which on a headless approval is the code's account and nothing
-  // more: this user agent is the client's, no End-User authenticated in it,
-  // and the resume leaves it no session (`finish` and the headless-resume
-  // middleware).
+  // a login, which on an isolated approval is the code's account and nothing
+  // more: the resume leaves this user agent the session it held, and no
+  // other (`finish` and the isolated-resume middleware).
   await finish({
     login: { accountId: approver, acr: principal.acr, ts: principal.auth_time, remember: interactive },
     consent: { grantId },
