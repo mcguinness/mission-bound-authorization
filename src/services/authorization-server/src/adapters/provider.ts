@@ -414,7 +414,6 @@ import {
   renderDeviceClient,
   takeDeviceIntake,
   type DeviceClientView,
-  type DeviceSession,
 } from "./device-authorization.js";
 
 /**
@@ -4500,38 +4499,120 @@ async function decide(
   // requested ceiling that passes while the approval is pending refuses HERE and
   // creates no Mission. Mapped like the derivation refusal above: the
   // interaction finishes with the error, never a 500.
-  // @spec device-authorization#approval (#1202): the commit also verifies
-  // that the session is still pending. The session is claimed first, so no
-  // other decision over it can write between this check and the commit.
-  let device: DeviceSession | undefined;
+  const approveInput: Parameters<typeof opts.kernel.approve>[0] = {
+    intent: intent as MissionIntent,
+    ...(proposedAuthority ? { proposedAuthority } : {}),
+    // @spec mission#intent-submission-evidence: the verified facts land on
+    // the Mission Record (outside all anchors), request-derived, never
+    // fabricated downstream.
+    ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+    subject: { iss: opts.issuer, sub: subject },
+    approver: { iss: opts.issuer, sub: approver },
+    clientId: String(params.client_id),
+    approvalEventId: `apev_${details.uid}`,
+  };
+
+  // @spec mission#approval-authentication (#826): the provider account is the
+  // authenticated Approver; the Mission records the Subject, and every
+  // Mission-bound token projects it (the JWT customizer).
+  const saveMissionGrant = async (record: MissionRecord) => {
+    const grant = new provider.Grant({ accountId: approver, clientId: String(params.client_id) });
+    // @spec mission#scope-projection: the grant holds exactly what the
+    // request named: its OIDC values (openid enables an id_token), and any
+    // resource values the check above let through, so the authorization code
+    // carries them to the token request. Authority itself is the grant's rar;
+    // no resource scope stands in for it.
+    if (requestedScope.oidc.length) grant.addOIDCScope(requestedScope.oidc.join(" "));
+    if (requestedScope.resource.length && audience) {
+      grant.addResourceScope(audience, requestedScope.resource.join(" "));
+    }
+    // Containment: the grant's rar copies the EFFECTIVE set. A freshly approved
+    // Mission has no containment, so this is the approved set as-is (fast path).
+    const effective = opts.kernel.effectiveAuthoritySet(record);
+    for (const entry of effective) {
+      (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
+    }
+    const grantId = await grant.save();
+    opts.kernel.bindGrant(record.id, grantId);
+    return { grantId, effective };
+  };
+
+  // @spec device-authorization#approval, device-authorization#issuance
+  // (#1202): the device commit. The pending re-check, the record commit, the
+  // Mission grant binding and the activation that makes the `device_code`
+  // redeemable all run in this request, with the decision, never at a later
+  // visit to the provider's device resume. The device code carries the
+  // Mission grant, the root of its lineage, and what the code redeems (the
+  // requested scope and the resource); approval does not extend its lifetime
+  // (save() keeps `exp`).
+  //
+  // Recovery from a failure after the commit (the grant store, the binding,
+  // the activation write): the session stays pending and its claim is
+  // released, so the Approver can retry the same decision. The retry commits
+  // nothing new: approve() returns the record this interaction's approval
+  // event already created, and that record's grant binding is reused when
+  // its grant still exists, so neither the Mission nor its grant is
+  // duplicated. A retried record no longer `active` is never activated: the
+  // session ends `denied`. A failed decision that is never retried leaves the
+  // Mission to the unredeemed-session rule (it runs to its `expires_at`).
+  const commitDeviceApproval = async (jti: string): Promise<void> => {
+    const device = await loadDeviceSession(provider, jti);
+    if (!devicePending(device)) {
+      devicePendingRefusal();
+      return;
+    }
+    let record: MissionRecord;
+    try {
+      record = opts.kernel.approve(approveInput);
+    } catch (e) {
+      if (e instanceof IntentError) {
+        await finish({ error: e.code, error_description: e.message });
+        return;
+      }
+      throw e;
+    }
+    if (record.state !== "active") {
+      await finish({ error: "access_denied", error_description: "the Mission this decision committed is no longer active" });
+      return;
+    }
+    const bound = record.grant_id ? await provider.Grant.find(record.grant_id) : undefined;
+    const grantId = bound && record.grant_id ? record.grant_id : (await saveMissionGrant(record)).grantId;
+    device.accountId = approver;
+    device.grantId = grantId;
+    device.acr = principal.acr;
+    device.authTime = principal.auth_time;
+    const granted = [...requestedScope.oidc, ...requestedScope.resource];
+    if (granted.length) device.scope = granted.join(" ");
+    if (audience) device.resource = audience;
+    await device.save();
+    await details.destroy();
+    ctx.status = 200;
+    ctx.set("content-type", "text/html; charset=utf-8");
+    ctx.body = deviceDecisionPage("approved");
+  };
+
+  // @spec device-authorization#approval (#1202): the session's claim is taken
+  // before the pending re-check and held through the activation, so no other
+  // decision over the session writes in between; it is released on every
+  // exit, an error included.
   if (deviceJti) {
     if (!claimDeviceDecision(deviceJti)) {
       devicePendingRefusal();
       return;
     }
     deviceClaimed = true;
-    device = await loadDeviceSession(provider, deviceJti);
-    if (!devicePending(device)) {
+    try {
+      await commitDeviceApproval(deviceJti);
+    } finally {
       releaseDeviceDecision(deviceJti);
       deviceClaimed = false;
-      devicePendingRefusal();
-      return;
     }
+    return;
   }
+
   let record: MissionRecord;
   try {
-    record = opts.kernel.approve({
-      intent: intent as MissionIntent,
-      ...(proposedAuthority ? { proposedAuthority } : {}),
-      // @spec mission#intent-submission-evidence — the verified facts land on
-      // the Mission Record (outside all anchors), request-derived, never
-      // fabricated downstream.
-      ...(submissionEvidence?.length ? { submissionEvidence } : {}),
-      subject: { iss: opts.issuer, sub: subject },
-      approver: { iss: opts.issuer, sub: approver },
-      clientId: String(params.client_id),
-      approvalEventId: `apev_${details.uid}`,
-    });
+    record = opts.kernel.approve(approveInput);
   } catch (e) {
     if (e instanceof IntentError) {
       await finish({
@@ -4540,63 +4621,9 @@ async function decide(
       });
       return;
     }
-    if (deviceJti && deviceClaimed) releaseDeviceDecision(deviceJti);
     throw e;
   }
-
-  // @spec mission#approval-authentication (#826): the provider account is the
-  // authenticated Approver; the Mission records the Subject, and every
-  // Mission-bound token projects it (the JWT customizer).
-  const grant = new provider.Grant({ accountId: approver, clientId: String(params.client_id) });
-  // @spec mission#scope-projection — the grant holds exactly what the
-  // request named: its OIDC values (openid enables an id_token), and any
-  // resource values the check above let through, so the authorization code
-  // carries them to the token request. Authority itself is the grant's rar;
-  // no resource scope stands in for it.
-  if (requestedScope.oidc.length) grant.addOIDCScope(requestedScope.oidc.join(" "));
-  if (requestedScope.resource.length && audience) {
-    grant.addResourceScope(audience, requestedScope.resource.join(" "));
-  }
-  // Containment: the grant's rar copies the EFFECTIVE set. A freshly approved
-  // Mission has no containment, so this is the approved set as-is (fast path).
-  const effective = opts.kernel.effectiveAuthoritySet(record);
-  for (const entry of effective) {
-    (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
-  }
-  const grantId = await grant.save();
-  opts.kernel.bindGrant(record.id, grantId);
-
-  // @spec device-authorization#approval, device-authorization#issuance
-  // (#1202): the commit makes the session's `device_code` redeemable, here,
-  // with the decision, not at a later visit to the provider's device resume.
-  // The device code carries the Mission grant, the root of its lineage, and
-  // what the code redeems (the requested scope and the resource); approval
-  // does not extend its lifetime (save() keeps `exp`). A record whose code
-  // cannot be activated is revoked, so no Mission outlives a session that can
-  // never redeem it.
-  if (deviceJti && device) {
-    try {
-      device.accountId = approver;
-      device.grantId = grantId;
-      device.acr = principal.acr;
-      device.authTime = principal.auth_time;
-      const granted = [...requestedScope.oidc, ...requestedScope.resource];
-      if (granted.length) device.scope = granted.join(" ");
-      if (audience) device.resource = audience;
-      await device.save();
-    } catch (e) {
-      opts.kernel.transition(record.id, "revoke");
-      throw e;
-    } finally {
-      releaseDeviceDecision(deviceJti);
-      deviceClaimed = false;
-    }
-    await details.destroy();
-    ctx.status = 200;
-    ctx.set("content-type", "text/html; charset=utf-8");
-    ctx.body = deviceDecisionPage("approved");
-    return;
-  }
+  const { grantId, effective } = await saveMissionGrant(record);
 
   // @spec mission#scope-projection — an Intent-only request (configured
   // mapping: no `authorization_details`, and no resource `scope` either,

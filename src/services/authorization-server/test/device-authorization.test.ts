@@ -16,7 +16,7 @@
 import { type Server } from "node:http";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ALL_PROVIDER_CAPABILITIES,
   ApprovalSessionStore,
@@ -299,7 +299,7 @@ interface Session {
 /** A device session up to the Approver's authenticated approval page, before any decision. */
 async function pendingSession(
   client: string = PUBLIC,
-  approver: { sub: string; subject?: string } = ALICE_BY_BOB,
+  approver: { sub: string; subject?: string; acr?: string } = ALICE_BY_BOB,
   extra: Record<string, string> = {},
   how: "typed" | "complete" = "typed",
 ): Promise<Session> {
@@ -319,7 +319,7 @@ async function pendingSession(
 /** A device session the Approver approved. */
 async function approvedSession(
   client: string = PUBLIC,
-  approver: { sub: string; subject?: string } = ALICE_BY_BOB,
+  approver: { sub: string; subject?: string; acr?: string } = ALICE_BY_BOB,
   extra: Record<string, string> = {},
 ): Promise<Session> {
   const s = await pendingSession(client, approver, extra);
@@ -672,6 +672,71 @@ describe("Mission Device Authorization approval (@spec device-authorization#appr
     expect(missionOf(ended.uid)).toBeUndefined();
     // The session the AS ended answers its next poll access_denied.
     expect((await poll(PUBLIC, ended.deviceCode, await newKeys())).body.error).toBe("access_denied");
+  });
+
+  it("recovers from a grant-store failure after the commit: the session stays pending and a retry completes the same Mission", async () => {
+    const s = await pendingSession();
+    const fault = vi.spyOn(as.provider.Grant.prototype, "save").mockRejectedValueOnce(new Error("grant store fault"));
+    const first = await decide(s.uid, s.headers, CONFIRMED);
+    fault.mockRestore();
+    expect(first.status).toBe(500);
+    const committed = missionOf(s.uid);
+    expect(committed?.state).toBe("active");
+    expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.error).toBe("authorization_pending");
+    const retry = await decide(s.uid, s.headers, CONFIRMED);
+    expect(retry.status, retry.text).toBe(200);
+    expect(as.kernel.allMissions().filter((m) => m.approval_event_id === `apev_${s.uid}`)).toHaveLength(1);
+    const res = await poll(PUBLIC, s.deviceCode, await newKeys());
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(res.body.mission_id).toBe(committed?.id);
+  });
+
+  it("recovers from a failed activation write: a retry reuses the committed Mission and its grant", async () => {
+    const s = await pendingSession();
+    const fault = vi.spyOn(as.provider.DeviceCode.prototype, "save").mockRejectedValueOnce(new Error("device code store fault"));
+    const first = await decide(s.uid, s.headers, CONFIRMED);
+    fault.mockRestore();
+    expect(first.status).toBe(500);
+    const committed = missionOf(s.uid);
+    expect(committed?.grant_id).toBeTruthy();
+    expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.error).toBe("authorization_pending");
+    expect((await decide(s.uid, s.headers, CONFIRMED)).status).toBe(200);
+    expect(as.kernel.allMissions().filter((m) => m.approval_event_id === `apev_${s.uid}`)).toHaveLength(1);
+    expect(missionOf(s.uid)?.grant_id).toBe(committed?.grant_id);
+    expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.mission_id).toBe(committed?.id);
+  });
+
+  it("never activates a retried decision whose committed Mission is no longer active: the session ends denied", async () => {
+    const s = await pendingSession();
+    const fault = vi.spyOn(as.provider.Grant.prototype, "save").mockRejectedValueOnce(new Error("grant store fault"));
+    expect((await decide(s.uid, s.headers, CONFIRMED)).status).toBe(500);
+    fault.mockRestore();
+    as.kernel.transition(missionOf(s.uid)?.id as string, "revoke");
+    const retry = await decide(s.uid, s.headers, CONFIRMED);
+    expect(retry.status).toBe(200);
+    expect(retry.text).toContain("Mission not approved");
+    expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.error).toBe("access_denied");
+  });
+
+  it("holds the device approval to the published approval-authentication floor: high-risk authority needs an accepted acr", async () => {
+    // Remitting is high-risk under config/approval-floor.json; the floor
+    // accepts only mfa on the browser surface inside its age bound.
+    const remit = JSON.stringify([
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read", "payments:remittance.send"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ]);
+    const weak = await pendingSession(PUBLIC, { ...ALICE_BY_BOB, acr: "password" }, { authorization_details: remit });
+    expect((await decide(weak.uid, weak.headers, CONFIRMED)).status).toBe(200);
+    expect(missionOf(weak.uid)).toBeUndefined();
+    expect((await poll(PUBLIC, weak.deviceCode, await newKeys())).body.error).toBe("access_denied");
+    const strong = await pendingSession(PUBLIC, { ...ALICE_BY_BOB, acr: "mfa" }, { authorization_details: remit });
+    expect((await decide(strong.uid, strong.headers, CONFIRMED)).status).toBe(200);
+    expect(missionOf(strong.uid)?.state).toBe("active");
+    expect((await poll(PUBLIC, strong.deviceCode, await newKeys())).status).toBe(200);
   });
 
   it("names the requesting client from registration data, whether the AS authenticated it, and its client-supplied name as inert text", async () => {
