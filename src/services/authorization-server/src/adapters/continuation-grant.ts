@@ -1809,8 +1809,7 @@ async function mintMissionAccessToken(
   } else {
     const grant = new provider.Grant({ accountId: mission.subject.sub, clientId: mission.client_id });
     for (const entry of effective) (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
-    grantId = await grant.save();
-    opts.kernel.bindGrant(mission.id, grantId);
+    grantId = opts.kernel.bindFirstGrant(mission.id, await grant.save());
   }
   const info = resourceServerInfoFor(resource, opts.accessTokenTTL ?? 300);
   info.accessTokenTTL = Math.min(info.accessTokenTTL, secondsUntil(mission.expires_at));

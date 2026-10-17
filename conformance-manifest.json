@@ -5795,6 +5795,73 @@
    "notes": "insertRecord, the single Mission-record creation funnel, checks created_at < expires_at inside the creation transaction, so every creating surface inherits it. Endpoint arm: a deferred expansion whose approved horizon has passed by completion creates no successor and fails with the profile's denial semantics."
   },
   {
+   "id": "core.approval-event.record-code-atomicity",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "in the `active` state atomically with the approval decision and issuance of the authorization code",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "the Mission Record is created active atomically with the approval decision and the issuance of the authorization code",
+    "local": "decide() prepares the approval (every refusal before any write, except the progressive ceiling consent the commit establishes at its creation instant, which leaves an inert grant), saves the provider grant under an identity derived from the interaction, then commits the record already bound to it (kernel.approve with grantId; bindGrant is compare-and-set). A failure before the commit leaves no Mission, only an inert grant a retry overwrites; a repeated or concurrent decision recovers the one grant and binding. oidc-provider issues the code on the later resume request, so a committed active, grant-bound Mission can precede code creation."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > an overlapping approval retry cannot bypass the derivation limit: the binding never moves, and the first approval grant keeps counting",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > concurrent duplicate decisions on one interaction commit one Mission, one grant identity and one binding",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a grant-save failure commits no Mission, and a retry on the interaction recovers one grant and one binding",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a commit failure after the grant save leaves only an inert grant, no Mission and no binding, and the retry recovers through that grant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a failure after the record commit leaves an active, bound Mission whose code is not issued yet (the #250 window), which a retry on the interaction completes",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a Mission's grant binding never moves: bindGrant is idempotent for the grant it holds and refuses any other",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Partial (#916, D415). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry by another Approver, Subject or client is refused before the grant is touched), and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
+  },
+  {
    "id": "core.response.mission-expires-at-on-creation",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
