@@ -147,6 +147,11 @@ Terms such as Mission, Authority Set, Subject, and Approver are defined
 by {{I-D.draft-mcguinness-oauth-mission}} and used here with the same
 meaning.
 
+A "consumer" of an entry is the authorization server or resource server
+evaluating it in the context at hand: the authorization server when it
+validates, compares, or narrows an entry, and the resource server when
+it enforces one.
+
 # The Mission Resource Access Type {#resource-access-type}
 
 `mission_resource_access` is an `authorization_details` type
@@ -180,10 +185,8 @@ with these members:
   - Under `exact`, the entry applies to the `resource` URI alone.
   - Under `prefix`, the entry authorizes the `resource` itself and any
     URI beneath it at a path-segment boundary (the `resource` followed
-    by `/` and further path). A `resource` value under `prefix` MUST NOT
-    carry a query or fragment component; the authorization server
-    refuses such an entry with the `invalid_authorization_details` error
-    code ({{Section 5 of RFC9396}}).
+    by `/` and further path). {{entry-validation}} limits the `resource`
+    value a `prefix` entry may carry.
   - {{resource-matching}} defines how a `prefix` entry's `resource` is
     compared, including the treatment of an empty path.
   - These two values are the only ones defined; a consumer MUST treat an
@@ -209,8 +212,9 @@ with these members:
   - An authorization server SHOULD draw action identifiers from a
     namespace the serving resource documents, so the set is
     interpretable cross-vendor rather than ad hoc.
-  - A consent rendering MUST present a family as the breadth it is: all
-    actions under the name, not one action.
+  - The authorization server MUST ensure that a consent rendering
+    presents a family as the breadth it is: all actions under the name,
+    not one action.
   - An authorization server SHOULD treat deriving a family as high-risk
     breadth.
 
@@ -220,8 +224,8 @@ with these members:
   ({{common-constraints}}) has shared semantics across deployments; any
   other name is deployment-defined.
 
-  - Because a `constraints` member narrows authority, a resource server
-    that cannot enforce one MUST fail closed ({{rs-enforcement}}).
+  - Because a `constraints` member narrows authority, {{rs-enforcement}}
+    requires a resource server that cannot enforce one to fail closed.
   - To avoid that failure mode, the authorization server SHOULD emit for
     a given `resource` only `constraints` keys that the resource server
     serving it is known to understand and enforce: by registration, by
@@ -246,11 +250,11 @@ with these members:
     `{ "sub_profile": "<actor-type>" }` for an actor-type class.
 
     When absent, eligibility falls to the authorization server's
-    delegation-authorization policy, which MUST be applied at every
-    exchange ({{delegate-eligibility}}); absence delegates the decision
-    to policy, it never grants blanket eligibility. The member is
-    RECOMMENDED so that eligibility is committed and rendered with the
-    entry rather than left wholly to policy.
+    delegation-authorization policy, applied at every exchange
+    ({{delegate-eligibility}}): absence defers the decision to policy
+    and never grants blanket eligibility. The member is RECOMMENDED so
+    that eligibility is committed and rendered with the entry rather
+    than left wholly to policy.
 
   A companion profile MAY define additional `delegation` members. Such a
   member is policy, not authority ({{subset}}): a derived entry's value
@@ -287,6 +291,51 @@ issuance window by the `resource_issued_after` and
 `resource_issued_before` Common Constraints ({{common-constraints}}).
 The write entry carries no `delegation`, so it is non-delegable:
 `delegation` is per entry.
+
+## Entry Validation {#entry-validation}
+
+This section gathers the validity rules for an entry beyond each
+member's type and presence requirements ({{resource-access-type}},
+{{initial-common-constraints}}). The authorization server applies them
+when it validates a proposed or carried entry ({{conformance}}); a
+resource server applies them where a rule says so.
+
+A `resource` value under `prefix` MUST NOT carry a query or fragment
+component; the authorization server refuses such an entry with the
+`invalid_authorization_details` error code ({{Section 5 of RFC9396}}).
+
+### Decimal Values {#decimal-values}
+
+A decimal-string value in a Common Constraint (`max_amount`'s `amount`
+member, and any future Common Constraint with a decimal-valued member)
+MUST match `^[0-9]+(\.[0-9]{1,18})?$`: one or more decimal digits,
+optionally followed by a single `.` and one to 18 further decimal
+digits.
+
+A value of any other form, including scientific notation (`"1e300"`), a
+sign (a ceiling value is never negative), a thousands separator, or a
+non-numeric token (`"NaN"`, `"Infinity"`), is malformed, and a consumer
+MUST reject it rather than attempt to parse it:
+
+- an authority proposal carrying one is refused at submission
+  ({{I-D.draft-mcguinness-oauth-mission}}); and
+- a resource server treats a malformed decimal value the same as a
+  `constraints` key it cannot enforce ({{rs-enforcement}}).
+
+Comparison and intersection over two such decimal-string values MUST be
+computed as exact decimal arithmetic (for example, by scaling both
+values to integers by their fractional digit count and comparing the
+integers) and MUST NOT parse either value into an IEEE 754 binary
+floating-point type: that representation does not hold every value the
+grammar above admits exactly and can compare or combine two values
+incorrectly.
+
+A numeric constraint value MUST lie within the range that the JSON
+Canonicalization Scheme (JCS) {{RFC8785}} serializes exactly. Monetary
+amounts avoid that hazard: `max_amount` carries its `amount` as a string
+containing a decimal number, paired with an ISO 4217 `currency` code,
+and a future Common Constraint for a monetary value SHOULD reuse this
+shape rather than a JSON number.
 
 ## Resource Matching {#resource-matching}
 
@@ -421,6 +470,14 @@ A Common Constraint definition fixes:
 - **Intersection rule**: how two values for the same key combine; the
   result MUST be no broader than either operand.
 
+{{subset}} applies a constraint's subset rule. Its intersection rule
+applies where a derivation combines two bounds for the same key, as in
+the proposal and policy-ceiling example of the Derivation Policy
+appendix of {{I-D.draft-mcguinness-oauth-mission}}. This document does
+not require a derivation to run a particular intersection algorithm, and
+a ceiling whose specification defines a refusal rule is enforced by that
+rule, not silently intersected.
+
 A `constraints` member whose name is a specification-defined Common
 Constraint is interpreted per its definition. Any other member name
 remains deployment-defined and is interpreted only within the issuing
@@ -534,7 +591,8 @@ This document defines the following Common Constraints.
 `allowed_tools`:
 : The action may be exercised only through a capability whose identifier
   is among the named values: a tool or function identity, asserted at
-  the point of use by the enforcing component.
+  the point of use by the resource server or a component that enforces
+  on its behalf.
 
   - Value: an array of strings.
   - Subset: no broader when the candidate array's members are a subset
@@ -544,9 +602,10 @@ This document defines the following Common Constraints.
 
 `requires_action_approval`:
 : When `true`, each exercise of the action requires a fresh,
-  action-bound approval at the point of use; the enforcing component
-  MUST NOT permit the action on Mission authority alone. A value of
-  `false` is equivalent to omitting the member.
+  action-bound approval at the point of use; the resource server, or a
+  component that enforces on its behalf, MUST NOT permit the action on
+  Mission authority alone. A value of `false` is equivalent to omitting
+  the member.
 
   - Value: a boolean.
   - Subset: no broader when the candidate is `true` or equals the
@@ -571,40 +630,6 @@ A Common Constraint definition MUST fix its subset and intersection in
 value-space terms, so that independent deployments compute the same
 result for the same values and the subset rule of {{subset}} is
 reproducible.
-
-### Decimal Values {#decimal-values}
-
-A decimal-string value in a Common Constraint (`max_amount`'s `amount`
-member, and any future Common Constraint with a decimal-valued member)
-MUST match `^[0-9]+(\.[0-9]{1,18})?$`: one or more decimal digits,
-optionally followed by a single `.` and one to 18 further decimal
-digits. A leading `-` is out of scope for a ceiling value and MUST be
-rejected.
-
-A value of any other form, including scientific notation (`"1e300"`), a
-sign, a thousands separator, or a non-numeric token (`"NaN"`,
-`"Infinity"`), is malformed, and a consumer MUST reject it rather than
-attempt to parse it:
-
-- an authority proposal carrying one is refused at submission
-  ({{I-D.draft-mcguinness-oauth-mission}}); and
-- a resource server treats a malformed decimal value the same as a
-  `constraints` key it cannot enforce ({{rs-enforcement}}).
-
-Comparison and intersection over two such decimal-string values MUST be
-computed as exact decimal arithmetic (for example, by scaling both
-values to integers by their fractional digit count and comparing the
-integers) and MUST NOT parse either value into an IEEE 754 binary
-floating-point type: that representation does not hold every value the
-grammar above admits exactly and can compare or combine two values
-incorrectly.
-
-A numeric constraint value MUST lie within the range that the JSON
-Canonicalization Scheme (JCS) {{RFC8785}} serializes exactly. Monetary
-amounts avoid that hazard: `max_amount` carries its `amount` as a string
-containing a decimal number, paired with an ISO 4217 `currency` code,
-and a future Common Constraint for a monetary value SHOULD reuse this
-shape rather than a JSON number.
 
 ## Resource Server Enforcement {#rs-enforcement}
 
@@ -655,9 +680,10 @@ resource metadata ({{RFC9728}}):
 {{I-D.draft-mcguinness-oauth-mission}} gates a delegated token's carried
 entries on the entry type's own delegation policy, evaluated at the
 delegate's delegation depth `d`: the nesting depth of the token's `act`
-claim, as that document defines. For a `mission_resource_access` entry,
-the authorization server includes it in a delegated token issued at
-delegation depth `d` only if all of the following hold:
+claim, as that document's Delegation Constraints section defines. For a
+`mission_resource_access` entry, the authorization server includes it in
+a delegated token issued at delegation depth `d` only if all of the
+following hold:
 
 1. the entry carries a `delegation` member (otherwise it is
    non-delegable, which is the default);
@@ -684,9 +710,11 @@ actor-type classes:
 - A `{ "sub": ... }` matcher permits a specific delegate by client
   identifier.
 - A `{ "sub_profile": ... }` matcher permits any actor of that type (for
-  example, `ai_agent`). An actor's `sub_profile` MAY carry multiple
-  space-separated values; a `{ "sub_profile": ... }` matcher is
-  satisfied when its value is among the actor's values.
+  example, `ai_agent`), as given by the `sub_profile` member of the
+  actor's object in the `act` claim
+  ({{I-D.draft-mcguinness-oauth-mission}}). An actor's `sub_profile` MAY
+  carry multiple space-separated values; a `{ "sub_profile": ... }`
+  matcher is satisfied when its value is among the actor's values.
 
 A delegate is permitted if it matches any of the entry's delegate
 matchers, so a deployment can permit a specific client, a class of
@@ -782,8 +810,8 @@ this document in full declares:
 `projection`: `true`
 : A safe scope projection is defined, and decidable per entry, by
   {{scope-projection}}; it is not unconditionally available for every
-  entry, and an authorization server MUST still apply that section's
-  conditions per entry before emitting `scope`.
+  entry, and that section's conditions apply to each entry before
+  `scope` is emitted.
 
 An authorization server that implements only part of this document (for
 example, `mission_resource_access` entries without ever emitting `scope`
@@ -815,9 +843,10 @@ The mapping is:
   for example an amount ceiling or a recipient domain (the `max_amount`
   and `recipient_domain` Common Constraints, {{common-constraints}}).
   Like all `constraints`, they are committed by `authority_hash` and
-  carried to the point of use, but a runtime enforcement layer evaluates
-  them against the concrete call arguments, not the authorization server
-  at issuance ({{I-D.draft-mcguinness-oauth-mission}}).
+  carried to the point of use, but the resource server, or a runtime
+  enforcement layer acting for it, evaluates them against the concrete
+  call arguments; the authorization server does not evaluate them at
+  issuance ({{I-D.draft-mcguinness-oauth-mission}}).
 
 The following example shows the Authority Set of a Mission authorized to
 read invoices and post small adjustments through a finance MCP server,
@@ -924,9 +953,9 @@ anchors, and issuance gating. Three risks are specific to this type:
 - **A safe projection is per entry, not per type.** That
   `mission_resource_access` defines a projection relation
   ({{scope-projection}}) does not make every entry of the type safely
-  projectable; an authorization server MUST evaluate the three
-  conditions of {{scope-projection}} for the specific entry and mapping
-  in force, not assume the type's general capability extends to it.
+  projectable: {{scope-projection}}'s three conditions must hold for the
+  specific entry and mapping in force, and the type's general capability
+  does not extend to an entry by default.
 
 ## Resource Boundary Canonicalization {#resource-boundary-canonicalization}
 
