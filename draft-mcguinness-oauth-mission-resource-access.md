@@ -426,6 +426,14 @@ A Common Constraint definition fixes:
 - **Intersection rule**: how two values for the same key combine; the
   result MUST be no broader than either operand.
 
+{{subset}} applies a constraint's subset rule. Its intersection rule
+applies where a derivation combines two bounds for the same key, as in
+the proposal and policy-ceiling example of the Derivation Policy
+appendix of {{I-D.draft-mcguinness-oauth-mission}}. This document does
+not require a derivation to run a particular intersection algorithm, and
+a ceiling whose specification defines a refusal rule is enforced by that
+rule, not silently intersected.
+
 A `constraints` member whose name is a specification-defined Common
 Constraint is interpreted per its definition. Any other member name
 remains deployment-defined and is interpreted only within the issuing
