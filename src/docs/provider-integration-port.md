@@ -224,13 +224,18 @@ the store.
 - **Approver and Subject identities (#826).** The provider account and Grant
   are the Approver's: `interactionFinished` logs the Approver in with the
   achieved `acr` and authentication time, never the Subject. A browser
-  approval keeps that session. A headless approval leaves none, and a
-  session the user agent already holds is neither read nor refreshed: its
-  user agent is the client's, so on every completion, a refusal or a denial
-  as much as a success, the resume runs without the session cookie that user
+  approval keeps that session when the user agent holds none or the
+  Approver's own. A headless approval leaves none, and so does a browser
+  approval in a user agent whose provider session belongs to another
+  account, which would otherwise meet oidc-provider's account switch (its
+  logout confirmation). In both, a session the user agent already holds is
+  neither read nor refreshed: on every completion, a refusal or a denial as
+  much as a success, the resume runs without the session cookie that user
   agent holds, the session the login created is destroyed before the
   response is flushed and its cookie removed, and the code is not
-  session-bound (`expiresWithSession`). Every
+  session-bound (`expiresWithSession`). Such an isolated approval keeps no
+  End-User authentication in the user agent, so `openid` is refused
+  `invalid_scope` on it. Every
   Mission-bound access token carries the Subject: `formats.customizers.jwt`
   sets `sub` from the Mission its grant resolves to, failing closed when it
   no longer resolves, and refresh-token introspection reports the Subject,
@@ -244,7 +249,15 @@ the store.
   `invalid_request` before any interaction. That is the accepted limitation
   (D305): client-requested strength on a delegated approval, including a
   client registration's incompatible OIDC defaults, is unsupported and fails
-  closed, never ignored or downgraded. The published approval-authentication
+  closed, never ignored or downgraded. A registration naming
+  `default_acr_values` is invalid client metadata here, since this AS
+  configures no acr values, so every request from such a client is refused
+  before any interaction; `default_max_age` and `require_auth_time` require
+  `openid`, and with it a delegated approval refuses `invalid_scope`. The
+  `claims` parameter is not supported (`claims_parameter_supported` is
+  false, oidc-provider's default): a request carrying it, an essential `acr`
+  included, is served without essential-claim treatment. That is a disclosed
+  limitation, not acceptance. The published approval-authentication
   floor governs the Approver's strength on high-risk authority (§3.1), and
   no other carrier is defined. An Expansion deferral approval
   (`ExpansionDeferralStore.approve`, an in-process API) meets the same floor

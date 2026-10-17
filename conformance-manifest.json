@@ -6150,9 +6150,21 @@
      "name": "an expansion approval meets the approval-authentication floor (@spec mission#approval-authentication, #826, D425) > refuses a high-risk expansion approval whose recorded login the floor does not accept, a weaker acr or one older than the age bound, then completes from one it accepts",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a client registered with default_acr_values is refused invalid_client_metadata on every request, before any interaction, creating nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a client registered with an authentication default (%s) cannot have it honored on a delegated approval: without openid PAR refuses, with openid the delegated approval refuses, creating nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
-   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated."
+   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
@@ -6222,6 +6234,12 @@
      "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's authentication never becomes the Subject's: openid refuses, and the token carries the Subject and none of the Approver's authentication",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > Bob's browser act for Alice in her user agent ending in %s leaves her session untouched and creates no Mission or Grant",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
    "notes": "#826. The Approver is the authenticated principal of the approval interaction; the Subject is the trusted approval surface's selection (never login_hint). openid with a different Subject finishes the interaction invalid_scope before kernel.approve, so no Mission, grant or code exists; the same refusal covers an organizational workload Subject. The reference AS also refuses openid on a headless approval (a service credential is not an End-User authenticated in this user agent), witnessed separately."
@@ -6298,6 +6316,36 @@
     {
      "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
      "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid on a headless approval even for the Approver's own Mission: no End-User authenticated in this user agent",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > self-approval keeps one End-User across a hint, a later prompt=none and a request without openid, and UserInfo refuses the Mission-bound token",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > Bob's browser approval for Alice in her user agent completes isolated: Alice's session is untouched, and the code redeems and refreshes for her",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > Bob's browser act for Alice in her user agent ending in %s leaves her session untouched and creates no Mission or Grant",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > Bob's own browser approval in Alice's user agent completes isolated too: it issues for Bob without openid, refuses openid, and leaves her session untouched",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > Alice's own browser approval in her user agent stays an ordinary login: her session takes the new authentication and the ID Token reports it",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     }
@@ -27937,8 +27985,15 @@
      "name": "unresolvable Mission fails closed (@spec issuance-grant#effective-set-projection) > the index is the discriminator: it survives the Mission's deletion, and an unknown grant resolves undefined (the pass-through case)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a code whose Mission is gone before its first redemption is refused invalid_grant and issues no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "A code whose Mission is purged before its first redemption is refused by the bound-grant lookup (`missionForBoundGrant`); disabling that refusal lets the code redeem as a claimless token, which the token customizer's backstop does not see (#826)."
   },
   {
    "id": "issuance-grant.par-carriage.transient-not-consume-code",
