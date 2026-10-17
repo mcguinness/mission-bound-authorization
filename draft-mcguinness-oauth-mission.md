@@ -3614,8 +3614,8 @@ change which row of the table above applies.
 # Mission State via Token Introspection {#introspection}
 
 Token introspection lets a Mission-state-aware resource server observe
-a Mission's current state per request instead of waiting out a
-token's lifetime. For the JWT carriage it is a state-observable
+a Mission's current state per request instead of waiting for the
+token to expire. For the JWT carriage it is a state-observable
 overlay on the lifecycle-gated baseline ({{mission-bound-tokens}});
 for opaque Mission-bound tokens it is the claims carriage outside
 issuer-local resolution ({{introspected-consumption}}).
@@ -3644,10 +3644,9 @@ member: a JSON object with the following members.
 
 Only the Mission `issuer` reports `state`, `termination`,
 `proposal_hash`, `authority_hash`, `approval_basis`, and
-`authority_source` ({{only-issuer-reports-state}}). `proposal_hash`,
-`authority_hash`, `approval_basis`, and `authority_source` are audit
-and correlation signals. None of these four members is an enforcement input
-({{rs-enforcement}}), and each is disclosed only as
+`authority_source` ({{only-issuer-reports-state}}). The last four are
+audit and correlation signals, not enforcement inputs
+({{rs-enforcement}}); each is disclosed only as
 {{caller-authorization-and-minimization}} permits.
 
 For a malformed, unknown, individually expired, or otherwise
@@ -3664,9 +3663,11 @@ permits a protected resource to cache the response, this document
 defines no caching semantics for the `mission` member: a resource
 server that relies on introspection for Mission state treats each
 response as an observation for that decision, not as a cacheable
-state assertion. A deployment that needs bounded-staleness caching
-adopts the Mission Status companion, whose signed responses carry
-explicit freshness ({{I-D.draft-mcguinness-oauth-mission-status}}).
+state assertion.
+
+A deployment that needs bounded-staleness caching adopts the Mission
+Status companion, whose signed responses carry explicit freshness
+({{I-D.draft-mcguinness-oauth-mission-status}}).
 
 ## Caller Authorization and Minimization {#caller-authorization-and-minimization}
 
@@ -3691,9 +3692,11 @@ Disclosure is member-scoped as well as caller-scoped.
 resource server enforcement, and the AS MUST disclose each only to a
 caller the deployment has granted that member's disclosure privilege.
 By default, an audience-authorized resource server receives the
-audience-filtered enforcement projection above, without them. A
-`mission` member that a companion profile defines for disclosure here
-follows the same member-scoped rule and is not an enforcement input.
+audience-filtered enforcement projection above, without them.
+
+A `mission` member that a companion profile defines for disclosure
+here follows the same member-scoped rule and is not an enforcement
+input.
 
 ## Composite Active State {#composite-active}
 
@@ -3702,17 +3705,20 @@ authorization, not the token in isolation. Strengthening
 {{Section 4 of RFC7662}}, the AS MUST return `active: true` only when
 the access token passes that section's checks (valid signature,
 unexpired, and not individually revoked) and the Mission is
-`active`. The AS does not verify the token's sender-constraint
-(`cnf`) at introspection; the resource server checks proof of
-possession when the token is presented, so `active: true` is not by
-itself evidence that the caller holds the bound key.
+`active`.
+
+The AS does not verify the token's sender-constraint (`cnf`) at
+introspection; the resource server checks proof of possession when
+the token is presented, so `active: true` is not by itself evidence
+that the caller holds the bound key.
 
 When the token is otherwise valid but the Mission is `terminated`,
 the AS MUST return `active: false` and include `mission.state` and
 `mission.termination`, whose `reason` gives the cause, so a resource
-server can distinguish a dead Mission from a bad token. A Mission transition
-does not by itself revoke the token as an individual credential;
-introspection reports the composite authorization as inactive.
+server can distinguish a dead Mission from a bad token. A Mission
+transition does not by itself revoke the token as an individual
+credential; introspection reports the composite authorization as
+inactive.
 
 Reporting the `mission` member, `mission.state` included, for an
 inactive token deviates from the SHOULD NOT of Sections 2.2 and 4 of
@@ -3776,6 +3782,7 @@ introspection keeps its meaning as a network protocol. A resource
 server qualifies only when it is inside the issuer's trusted
 implementation boundary and the AS authorizes it to read that state;
 common ownership or a shared network does not by itself qualify it.
+
 For each resolution, the AS:
 
 1. MUST resolve the presented token to that token's own
@@ -3797,6 +3804,7 @@ establishes a token's validity or authority. An unknown, invalid,
 expired or revoked token, or a Mission that is not `active`, resolves
 as inactive and yields no authority; missing or unavailable state
 yields no valid resolution.
+
 In the resource server duties above, the resolution stands in for the
 introspection response, possession proof and fail-closed refusal
 included, and each resolution is one per-use observation, not a
@@ -3875,16 +3883,17 @@ the Mission is revoked ({{composite-active}}):
 
 Delegation is an optional capability ({{conformance}}). An agent may
 delegate execution to downstream actors (a sub-agent, service, or tool
-that is itself an OAuth client) within a Mission. An intermediary in
-the agent's own trust domain that presents the agent's own tokens,
-such as a gateway holding the agent's credentials, acts as part of
-that client and is not a delegate; acting as that client, it can
-also narrow by self-exchange ({{self-exchange}}), which does not
-delegate. An intermediary authenticated as a distinct actor that
-obtains a delegated token by Token Exchange is a delegate.
-Delegation is represented with the OAuth Actor Profile
+that is itself an OAuth client) within a Mission. Delegation is
+represented with the OAuth Actor Profile
 {{I-D.draft-mcguinness-oauth-actor-profile}}, which profiles the
 `act` (actor) claim of {{Section 4.1 of RFC8693}}.
+
+An intermediary in the agent's own trust domain that presents the
+agent's own tokens, such as a gateway holding the agent's
+credentials, acts as part of the agent and is not a delegate; acting
+as the agent, it can also narrow by self-exchange ({{self-exchange}}),
+which does not delegate. An intermediary authenticated as a distinct
+actor that obtains a delegated token by Token Exchange is a delegate.
 
 A delegate obtains a delegated token by Token Exchange
 ({{RFC8693}}). The AS issues the delegated token subject to all of
@@ -3935,13 +3944,17 @@ basis, such as a Child Mission
 expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
 begins its own delegation basis and chain, and no organizational,
 network, or deployment boundary by itself restarts or extends a
-chain. The chain is attribution, not authority: an `act` entry names
-who acted, for audit; the input to the eligibility matching of
-{{delegation-constraints}} is the delegate the AS authenticates and
-asserts at the exchange, not an entry read from the chain; an
-asserted actor identity grants nothing; and the
-`authorization_details` subset relations ({{subset}}), not the chain,
-show that authority narrowed.
+chain.
+
+The chain is attribution, not authority:
+
+- An `act` entry names who acted, for audit.
+- The input to the eligibility matching of {{delegation-constraints}}
+  is the delegate the AS authenticates and asserts at the exchange,
+  not an entry read from the chain.
+- An asserted actor identity grants nothing.
+- The `authorization_details` subset relations ({{subset}}), not the
+  chain, show that authority narrowed.
 
 ## Instance Context in Delegated Tokens {#delegated-instance-context}
 
@@ -3953,16 +3966,18 @@ authenticated instance represents. Instance evidence does not
 establish that actor
 ({{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}}), so
 the AS establishes the delegate's actor identity, and that actor's
-trusted association with the instance, separately. Because a
-delegated token is sender-constrained to the delegate's own key
-({{delegation}}), and the Actor Profile makes the top-level `cnf` the
-current presenter's key ({{I-D.draft-mcguinness-oauth-actor-profile}}),
-that `cnf` is a key the instance possesses.
+trusted association with the instance, separately.
+
+Because a delegated token is sender-constrained to the delegate's own
+key ({{delegation}}), and the Actor Profile makes the top-level `cnf`
+the current presenter's key
+({{I-D.draft-mcguinness-oauth-actor-profile}}), that `cnf` is a key
+the instance possesses.
 
 A deployment MAY convey `client_instance` in delegated tokens under
-{{I-D.draft-mcguinness-oauth-client-instance-id}}. This optional
-composition selects the authenticated presenting instance for output
-context. The instance specification owns attestation validation,
+{{I-D.draft-mcguinness-oauth-client-instance-id}}. This composition
+selects the authenticated presenting instance for output context.
+The instance specification owns attestation validation,
 instance-to-key association, audience-scoped mapping, and Context
 Consumer validation; this section supplies the Mission-specific
 authorization and context selection. Deployments configure its use
@@ -3988,22 +4003,24 @@ still authorize the exchange; instance evidence satisfies none of them
 by itself. Where deployment policy requires instance attribution, the
 AS MUST refuse the exchange if the required instance evidence or its
 association with the delegate and output key cannot be established.
-{{error-mapping}} gives the error codes for these refusals. If the
-exchange issues a refresh token, the grant-continuity rules of
+{{error-mapping}} gives the error codes for these refusals.
+
+If the exchange issues a refresh token, the grant-continuity rules of
 {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}}
 apply alongside {{grant-binding}}; instance continuity alone does not
 authorize replacement of the recorded instance or key rebinding.
 
 Consumers establish presenter attribution under Sections 7.3 and 7.5
-of {{I-D.draft-mcguinness-oauth-client-instance-id}}. This composition
-does not add provenance to `client_instance`: a consumer can use the
-direct-attestation trust configuration only when the issuer meets
-that configuration's restriction against upstream context. An issuer
-also conveying upstream context needs a separately specified,
-authenticated provenance mechanism before its context can support
-presenter attribution. A consumer requiring attribution rejects
-unestablished associations under
+of {{I-D.draft-mcguinness-oauth-client-instance-id}}. A consumer
+requiring attribution rejects unestablished associations under
 {{Section 7.6 of I-D.draft-mcguinness-oauth-client-instance-id}}.
+
+This composition does not add provenance to `client_instance`: a
+consumer can use the direct-attestation trust configuration only when
+the issuer meets that configuration's restriction against upstream
+context. An issuer also conveying upstream context needs a separately
+specified, authenticated provenance mechanism before its context can
+support presenter attribution.
 
 ## Self-Exchange Down-Scoping {#self-exchange}
 
@@ -4032,39 +4049,45 @@ Set entry by a type-defined delegation policy ({{other-types}}). For
 `mission_resource_access`, the policy is the `delegation` member,
 whose concrete depth and matcher conditions the Mission Resource
 Access Profile defines
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Because the
-policy lives in the entry, `authority_hash` commits it with the rest
-of the Authority Set, and it is carried with the entries wherever
-they go, including across a cross-domain projection
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+
+Because the policy lives in the entry, `authority_hash` commits it
+with the rest of the Authority Set, and it is carried with the entries
+wherever they go, including across a cross-domain projection
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 **Delegation depth.** The delegation depth of a token is the number
 of delegations between the approved agent and the token's current
 actor: the agent's own non-delegated token is depth 0, the first
 delegate is depth 1, and each further delegate adds 1. The depth
-checked against `max_depth` is that of the token
-being issued, computed after appending the new outermost actor, not
-the depth of the delegating token. A credential projected across a
-trust domain carries no `act` chain and enters the target domain at
-depth 0 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+checked against `max_depth` is that of the token being issued,
+computed after appending the new outermost actor, not the depth of
+the delegating token. A credential projected across a trust domain
+carries no `act` chain and enters the target domain at depth 0
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 **Depth accounting.** The AS MUST establish delegation depth from
 accounting it maintains for the tokens it issues under the Mission
 and associates with the credential it validates (for example, recorded
 at issuance against the token), not from the nesting of a presented
 `act` claim. The `act` chain is attribution ({{delegation}}): it
-renders the accounted chain and is not the source of the count. Over
-the exchanges this document defines the accounting is complete: each
-delegated exchange adds exactly one delegate, a self-exchange
-({{self-exchange}}) adds none, and a cross-domain projection is the
-one defined reset. A profile that issues Mission-bound tokens by
-another path specifies how it preserves or reconstructs this
-accounting and any reset it defines. Where the AS cannot establish
-the depth of the token being issued, no entry's delegation policy can
-be evaluated at that depth, so every entry narrows out under the
-per-entry rule below and the exchange is refused as an empty result.
-A resource server bases no authorization decision on a prior actor
-({{Section 4.1 of RFC8693}}).
+renders the accounted chain and is not the source of the count.
+
+Over the exchanges this document defines, the accounting is complete:
+
+- each delegated exchange adds exactly one delegate;
+- a self-exchange ({{self-exchange}}) adds none; and
+- a cross-domain projection is the one defined reset.
+
+A profile that issues Mission-bound tokens by another path specifies
+how it preserves or reconstructs this accounting and any reset it
+defines.
+
+Where the AS cannot establish the depth of the token being issued, no
+entry's delegation policy can be evaluated at that depth, so every
+entry narrows out under the per-entry rule below and the exchange is
+refused as an empty result. A resource server bases no authorization
+decision on a prior actor ({{Section 4.1 of RFC8693}}).
 
 **Per-entry enforcement.** When the AS issues a token to a delegate
 (the actor that becomes the outermost `act`) at delegation depth
@@ -4173,9 +4196,8 @@ This document's extension points are:
 
 - **Authority types.** The Authority Set is open to any AS-supported
   `authorization_details` type ({{other-types}}); the Mission
-  apparatus (commitment, gating, delegation) is type-agnostic toward
-  every type, subject to the delegation and projection limits in
-  {{other-types}}.
+  apparatus (commitment, gating, delegation) is type-agnostic, subject
+  to the delegation and projection limits in {{other-types}}.
 - **Intent Submission Evidence types.** The `evidence` array of the
   Submission envelope is open to evidence types defined by companion
   profiles: each type is a collision-resistant name whose owning
@@ -4220,8 +4242,8 @@ This document's extension points are:
 - **Lifecycle state and termination reason.** The lifecycle state
   space ({{lifecycle}}) is open to additional states that companion
   profiles register in the Mission Lifecycle States registry
-  ({{iana-lifecycle-states}}) for lifecycles they introduce, and the
-  termination reasons ({{termination}}) are open to additional reasons
+  ({{iana-lifecycle-states}}) for lifecycles they introduce. The
+  termination reasons ({{termination}}) are likewise open to reasons
   that companion profiles register in the Mission Termination Reasons
   registry ({{iana-termination-reasons}}). Under the
   forward-compatibility rule of {{lifecycle}}, only `active` permits
@@ -4376,14 +4398,17 @@ type its target accepts.
 
 # Conformance {#conformance}
 
-The smallest useful conforming deployment is a Mission Issuer that
-derives in narrowing mode from the client's authority proposal
-({{authorization-derivation}}), supports one AS-supported
-`authorization_details` type and emits only that type's
-specification-defined vocabulary, and implements none of the optional
-capabilities. A scope-only resource server is served only where the
-AS established a safe scope projection for it ({{scope-projection}}).
-A Mission Issuer can instead start from configured-mapping mode
+The smallest useful conforming deployment is a Mission Issuer that:
+
+- derives in narrowing mode from the client's authority proposal
+  ({{authorization-derivation}});
+- supports one AS-supported `authorization_details` type and emits
+  only that type's specification-defined vocabulary; and
+- implements none of the optional capabilities.
+
+A scope-only resource server is served only where the AS established
+a safe scope projection for it ({{scope-projection}}). A Mission
+Issuer can instead start from configured-mapping mode
 ({{authorization-derivation}}), which is equally conforming. Neither
 starting point is a conformance class.
 
@@ -4411,21 +4436,22 @@ An AS can conform as a Mission Issuer without supporting any Intent
 Submission Evidence type. Such an AS refuses every presented entry
 as an unsupported type under the dispatch and refusal rules
 ({{intent-submission-evidence}}), with
-`invalid_mission_intent_evidence`. It does not need to implement the
-evidence framework of
-{{I-D.draft-mcguinness-oauth-mission-submission-evidence}} for this
-configuration. The companion defines conformance for ASs supporting
-an evidence type, whether its evidence is optional or required.
+`invalid_mission_intent_evidence`. It need not implement the evidence
+framework of {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}
+for this configuration. The companion defines conformance for ASs
+supporting an evidence type, whether its evidence is optional or
+required.
 
 A **Mission-aware Resource Server** implements resource server
 enforcement ({{rs-enforcement}}). It enforces a JWT from the token's
-own claims, needing no Mission-state store and no call to the AS, or,
-under the introspected consumption mode, from the token-specific
-inputs of its active introspection response or issuer-local
-resolution ({{introspected-consumption}}); in either form it enforces
-each applicable entry its tokens carry under that entry's type, which
-for `mission_resource_access` is work a plain {{RFC9068}} resource
-server does not do.
+own claims, needing no Mission-state store and no call to the AS.
+Under the introspected consumption mode, it instead enforces the token
+from the token-specific inputs of its active introspection response
+or issuer-local resolution ({{introspected-consumption}}).
+
+In either form, it enforces each applicable entry its tokens carry
+under that entry's type, which for `mission_resource_access` is work
+a plain {{RFC9068}} resource server does not do.
 
 A **Mission Client** implements the client surfaces:
 
@@ -4437,8 +4463,7 @@ A **Mission Client** implements the client surfaces:
   `authorization_details` echo ({{mission-bound-tokens}}); and
 - obtaining `mission_id` from the `mission_id` token-response parameter
   or the `mission` claim's `id` ({{mission-response-parameters}}),
-  treating it as a
-  reference, not a credential.
+  treating it as a reference, not a credential.
 
 Beyond these mandatory roles, an implementation can additionally claim
 three OPTIONAL capabilities. Each is independent, and an implementation
