@@ -3930,8 +3930,9 @@ the following:
   be sender-constrained ({{mission-bound-tokens}}) to the **delegate's
   own** key: its `cnf` is the delegate's DPoP or mTLS key, not the
   delegating party's, and the delegate proves possession of that key
-  in the Token Exchange. A compromised delegate key therefore cannot
-  be replayed as the agent or as another actor in the chain.
+  in the Token Exchange. Compromise of a delegate's key therefore does
+  not enable use of tokens bound to the agent's or another delegate's
+  key.
 - **Each delegation is gated.** Issuing a delegated token is a
   derivation, refused unless the Mission is `active`
   ({{issuance-gating}}).
