@@ -28,6 +28,8 @@ import {
   prepareCarryover,
 } from "./carryover.js";
 import { CreationIdempotencyStore } from "./creation-idempotency.js";
+import { APPROVAL_FLOOR, type ApprovalFloorPolicy } from "@mission/demo-data";
+import { evaluateApprovalFloor } from "./approval-floor.js";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import { createExpansion } from "./expansion.js";
 import { IntentError } from "./intent.js";
@@ -317,6 +319,29 @@ export interface ExpansionApproval {
   approvalEventId: string;
   /** Bounds the successor credential; MUST NOT be exceeded (approved_until). */
   approvedUntil: string;
+  /**
+   * @spec mission#approval-authentication (#826, D425) — the Approver's
+   * achieved authentication, as the deployment's trusted approval integration
+   * recorded it when the Approver logged in on its browser approval surface:
+   * the same trust boundary as `ApprovalSessionStore.establish`, never a value
+   * the client or the decision supplies, and never stamped at the approval.
+   * Required when the successor's authority invokes the approval-authentication
+   * floor; without it such an approval refuses.
+   */
+  authentication?: { surface: "browser"; acr: string; auth_time: number };
+}
+
+/**
+ * @spec mission#approval-authentication (#826, D425) — an expansion approval
+ * the published approval-authentication floor refuses. Nothing is recorded:
+ * the deferral stays `authorization_pending`, for the integration to deny or
+ * to approve again from an achieved context the floor accepts.
+ */
+export class ApprovalFloorRefusedError extends Error {
+  constructor(readonly reason: string) {
+    super(reason);
+    this.name = "ApprovalFloorRefusedError";
+  }
 }
 
 /** The successful redemption of a deferred expansion: the created successor. */
@@ -405,6 +430,11 @@ export class ExpansionDeferralStore {
      * committed, and ordinary cascade remains the default.
      */
     private readonly carryoverConfig?: CarryoverConfig,
+    /**
+     * @spec mission#approval-authentication (#826, D425) — the published
+     * approval-authentication floor every expansion approval meets.
+     */
+    private readonly approvalFloor: ApprovalFloorPolicy = APPROVAL_FLOOR,
   ) {
     // @spec control-plane#serialization — retiring this row and activating
     // its successor must share the kernel transaction, not two databases.
@@ -551,6 +581,28 @@ export class ExpansionDeferralStore {
 
   /** Approver adjudication: records the approver, the approval event, and the expiry. */
   approve(deferralCode: string, approval: ExpansionApproval): void {
+    // @spec mission#approval-authentication (#826, D425): an expansion
+    // approval is a direct approval of the successor's authority, so it meets
+    // the same published floor as the approval interaction, at this decision.
+    // The successor's authority is derived exactly as `createExpansion` derives
+    // it (which only carries the predecessor's capability-source bindings
+    // forward, leaving every entry's actions unchanged), and every action is
+    // classified. A refusal records nothing and leaves the deferral pending.
+    const pending = this.db
+      .prepare("SELECT intent_json FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'")
+      .get(deferralCode) as { intent_json: string } | undefined;
+    if (pending) {
+      const recorded = JSON.parse(pending.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
+      const successor = this.kernel.derive(recorded.i, recorded.pr?.length ? recorded.pr : undefined);
+      const authentication = approval.authentication;
+      const floor = evaluateApprovalFloor(
+        this.approvalFloor,
+        successor,
+        authentication ? { acr: authentication.acr, auth_time: authentication.auth_time } : {},
+        { interactive: authentication?.surface === "browser", nowSeconds: Math.floor(this.now().getTime() / 1000) },
+      );
+      if (floor.outcome === "refused") throw new ApprovalFloorRefusedError(floor.reason);
+    }
     // @spec child-delegation#carryover-manifest — the approval event COMMITS
     // the exact manifest: the deterministic per-child approval identifiers
     // derive from this committed expansion approval event identifier, and the

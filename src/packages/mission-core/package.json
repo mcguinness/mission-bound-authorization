@@ -8,6 +8,9 @@
     ".": "./src/index.ts",
     "./test-vectors": "./test/credential-profile-vectors.ts"
   },
+  "dependencies": {
+    "@mission/actor-chain": "workspace:*"
+  },
   "scripts": {
     "typecheck": "tsc --build"
   }
