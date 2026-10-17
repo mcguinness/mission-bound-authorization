@@ -130,8 +130,18 @@ the store.
   No principal, or an `auth_time` in the future, is 401. `decide()` then checks
   the requested `acr_values` and `max_age`, and `prompt=login`, which
   oidc-provider substitutes for `max_age=0`, against the principal's `acr` and
-  `auth_time` (`approverAuthenticationSatisfies`). A miss finishes the
-  interaction `access_denied`.
+  `auth_time` (`approverAuthenticationSatisfies`). After derivation it
+  evaluates the published approval-authentication floor
+  (`config/approval-floor.json`, `evaluateApprovalFloor`) over the complete
+  derived Authority Set: every action is classified through the AS-owned
+  classification, and an unclassified one refuses. Payment execution and
+  remittance (`irreversible_action`, `external_commitment`) invoke the
+  `high-risk-authority` floor, which only a browser Approver satisfies, with
+  an achieved `acr` of `mfa` and an `auth_time` at most 300 seconds old. A
+  headless service's registered context never satisfies it. Both the request
+  and the floor must hold, so an absent or weaker request never relaxes the
+  floor. A miss of either finishes the interaction `access_denied`, before any
+  Mission, Grant or code.
 - **Boundary.** In request. Nothing is written before these checks pass.
 - **Asynchronous work.** None.
 - **Crash and recovery.** `ApprovalSessionStore` is an in-process `Map`, and
@@ -149,6 +159,18 @@ the store.
   - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's authentication never becomes the Subject's: openid refuses, and the token carries the Subject and none of the Approver's authentication`
   - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > max_age=0 refuses a stale Approver authentication`
   - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > an unsupported acr is refused`
+- **Tests (HTTP, `approval-floor.test.ts`):**
+  - `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority, with no client request, from a browser Approver whose achieved acr the floor does not accept: no Mission, Grant, code or Subject session`
+  - `> refuses high-risk authority approved headlessly, even when the approval service's registration claims mfa`
+  - `> the age bound: an Approver authenticated exactly max_authentication_age_seconds ago satisfies it, one second older does not`
+  - `> classifies the complete derived set: a high-risk entry after a low-risk one still invokes the floor`
+  - `> refuses admitted authority the classification does not name: unclassified authority fails closed`
+  - `the floor and the client's requested strength are conjunctive (@spec mission#approval-authentication, #826, D425) > a satisfied weaker request does not relax the floor: Alice requests and achieves password, and the floor refuses`
+  - `the floor's classification agrees with the deployment's operation definitions (@spec mission#approval-authentication, #826, D425) > the high-risk payments actions are exactly those with an irreversible or external-commitment operation`
+- **Tests (Expansion approval, `expansion-endpoint.test.ts`):**
+  - `an expansion approval meets the approval-authentication floor (@spec mission#approval-authentication, #826, D425) > refuses a high-risk expansion approval that carries no achieved authentication: nothing is recorded, the deferral stays pending, and no successor exists`
+  - `> refuses a high-risk expansion approval whose recorded login the floor does not accept, a weaker acr or one older than the age bound, then completes from one it accepts`
+  - `> admits a low-risk widening with no achieved authentication: the floor does not apply`
 - **Residual.**
   - The achieved `acr` and `auth_time` are checked and not retained. The
     record's `approval_basis.consent_principal` is `{iss, sub}`
@@ -222,10 +244,14 @@ the store.
   `invalid_request` before any interaction. That is the accepted limitation
   (D305): client-requested strength on a delegated approval, including a
   client registration's incompatible OIDC defaults, is unsupported and fails
-  closed, never ignored or downgraded. No approval-authentication floor is
-  published or enforced: the OAuth binding's high-risk floor
-  (`{#approval-authentication}`) is not implemented here (#826), and no
-  other carrier is defined.
+  closed, never ignored or downgraded. The published approval-authentication
+  floor governs the Approver's strength on high-risk authority (§3.1), and
+  no other carrier is defined. An Expansion deferral approval
+  (`ExpansionDeferralStore.approve`, an in-process API) meets the same floor
+  over the successor's derived authority, from the browser login the trusted
+  approval integration recorded (`ExpansionApproval.authentication`); without
+  one a high-risk expansion approval refuses, recording nothing, and the
+  deferral stays pending.
   Tests (HTTP, `approver-subject-separation.test.ts`):
   `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826)`,
   every case.
@@ -617,7 +643,8 @@ the store.
      (`readMissionAccessProfile`, #825, D402): the typed RFC 9068 claim set
      and its clock bounds, the `mission` claim's profiled members, the
      authority read in full (it only gates; step 9 projects the raw entries),
-     and a present `cnf`'s structure. Possession stays the resource's to
+     a present `act` chain under the Actor Profile, and a present `cnf`'s
+     structure. Possession stays the resource's to
      prove.
   5. `kernel.get(mission.id)`, with `mission.issuer` equal to the record's
      issuer. A delegated token (`act`), a Child Mission's token, or a
@@ -631,7 +658,9 @@ the store.
      effective set and audience-minimized (`projectThroughEffective`,
      `resourcesForAudiences`).
 
-  A failure in steps 3 to 6, or in step 8, is a bare `active: false`. A
+  A failure in steps 3 to 6, or in step 8, is a bare `active: false`. An
+  active response carries a delegated token's `act` chain unchanged; no
+  inactive or unauthorized answer carries it (#904). A
   refresh token takes a parallel branch through `provider.RefreshToken.find`.
 - **Boundary.** Each call reads current kernel state. `applyExpiry` can commit
   the expiry (`terminated`, reason `expired`) during the read. The AS caches
@@ -647,6 +676,7 @@ the store.
   - `composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details` (`introspection-endpoint.test.ts`)
   - `caller authentication (@spec mission#caller-authorization-and-minimization) > refuses an unauthenticated call with 401 + WWW-Authenticate` (`introspection-endpoint.test.ts`)
   - `strict token resolution: bare active:false, no Mission or token detail > wrong-audience caller: the ENTIRE response is minimized` (`introspection-endpoint.test.ts`)
+  - `the active response carries the token's act chain, and no other answer does (@spec mission#introspected-consumption, RFC 8693 Section 4.1, #904) > carries a delegated token's nested act chain unchanged on an active response`, with its absence and non-disclosure cases (`introspection-endpoint.test.ts`; a crafted token on a real issuance record, not delegated issuance)
   - `strict token resolution: bare active:false, no Mission or token detail > a correctly signed token whose jti has no issuance record is never returned active` (`introspection-endpoint.test.ts`)
   - `the credential profile's shared negative vectors (@spec mission#introspection, runtime-oauth#token-validation, #825 D402) > answers a token with %s with a bare active:false, as the resource refuses it`, with its bearer, delegated-token and Child Mission cases (`introspection-endpoint.test.ts`), and `a dispatched instance's token is sender-constrained at introspection too (@spec mission-template#grant-type, mission#introspection, #825 D402) > answers a dispatched token re-signed without cnf with a bare active:false, while the token as issued introspects active as DPoP` (`dispatch-handoff.test.ts`). The vectors are `@mission/core/test-vectors`, which the resource's `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a token with %s on both transports, yielding no facts` also runs.
   - `Mission-bound refresh tokens (@spec mission#introspection) > Mission revocation reports the composite even though it destroys the grant` (`introspection-endpoint.test.ts`)
@@ -833,8 +863,8 @@ operation allowlist, the per-class bounds and the fail-closed table (its §4),
 the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) or naming a later merged
-issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `f62b1311`, and every
-`file:line` citation is read at `f62b1311`.
+issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `bb4e8a35`, and every
+`file:line` citation is read at `bb4e8a35`.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -958,7 +988,8 @@ drives an AS-issued Mission-bound token through that assembled path.
   yields no decision (remote: 503), so the PEP refuses `pdp_unreachable`.
 - **Asynchronous work.** None.
 - **Crash and recovery.** Entitlements are stored in OpenFGA, administered
-  through `FgaDomainAdmin`. `composeStack` attaches to a configured store and
+  with `pnpm resource-policy` (`FgaDomainAdmin`, attached to the configured
+  store, never creating one). `composeStack` attaches to a configured store and
   model, verifying the model and creating nothing, or bootstraps a
   development store seeded from `config/seed/resource-policy.json`. With the
   development memory engine, tuples survive a stack restart only while the
@@ -975,13 +1006,15 @@ drives an AS-issued Mission-bound token through that assembled path.
   - `list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an invoice for a vendor the decision never named is never returned: before the last check it is a parameter mismatch, after it the bound filter drops it` (PEP-level)
   - `list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > a named vendor the store does not hold is refused unknown_vendor before any decision: no policy query, no Decision Evidence, a signed target_unresolvable refusal` (PEP-level)
   - [FGA] `the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > an unconstrained list names every invoice vendor to the stored policy: revoking only one vendor's entitlement refuses the whole read resource_policy, a read of the other vendor still permits, and restoring it permits both, the same over both channels (#828 step 5)` (PEP-level)
+  - [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (co-resident)` and `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (remote)` (the assembled AS-native target over HTTP)
+  - `pnpm resource-policy administers the stored entitlements (@spec runtime#input-resource-policy, #828) > attaches to the configured store and model and never bootstraps one; without both ids it refuses before connecting` (the administration command)
 - **Required, not met.** #828 stays an acceptance gate. Its live witnesses
-  run only where OpenFGA does (CI). No policy requires a client. A vendor
-  the store does not hold keeps `lookup_vendor`'s server target (D324),
-  which a vendor constraint or the policy refuses. The payments Operation
-  Profile specifies every tool's targets and the list form; it and the
-  Enforcement Scope Statement do not yet name the policy's owner or its
-  freshness.
+  run only where OpenFGA does (CI). No policy requires a client and there
+  is no tenant dimension (D426). A vendor the store does not hold keeps
+  `lookup_vendor`'s server target (D324), which a vendor constraint or the
+  policy refuses. The payments Operation Profile
+  (`payments-runtime-profile-v3`) declares the policy's owner, principal,
+  relations, freshness and failure behavior.
 
 ### 5.3 Protected state and lifecycle
 

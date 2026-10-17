@@ -22,7 +22,8 @@
     "demo:serve": "node scripts/serve.mjs",
     "issuance-only": "node scripts/issuance-only.mjs",
     "issuance-only:walkthrough": "node scripts/issuance-only-walkthrough.mjs",
-    "as-native": "node scripts/as-native.mjs"
+    "as-native": "node scripts/as-native.mjs",
+    "resource-policy": "node scripts/resource-policy.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.4",

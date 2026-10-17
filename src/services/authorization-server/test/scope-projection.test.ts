@@ -37,7 +37,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
-import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { browserApprovalHeaders, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14620;
@@ -215,11 +215,12 @@ async function authorize(
     redirect: "manual",
     // An `openid` request needs an End-User authenticated in this user agent
     // and approving for themself (#826): a trusted browser self-approval.
-    // Every other request keeps the headless approval for alice.
+    // Every other request is Bob's browser approval for alice, which the
+    // approval-authentication floor accepts for high-risk authority (D425).
     headers: {
       ...(opts.scope?.split(" ").includes("openid")
         ? browserApprovalHeaders(SESSIONS, uid, { sub: "alice" }, cookie())
-        : { ...trustedApprovalHeaders(), cookie: cookie() }),
+        : floorApprovalHeaders(SESSIONS, uid, cookie())),
       "content-type": "application/json",
     },
     body: JSON.stringify({ decision: "approve" }),
