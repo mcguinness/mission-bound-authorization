@@ -1030,49 +1030,14 @@ the table summarizes them.
 
 -00
 
-- Common Constraints states that the type defines no interoperable
-  cumulative use counter and points to Mission Metering's accounting
-  and settlement rules (#1206).
-- Scope Projection's action condition permits a mapped `scope` value
-  to grant a proper subset of the entry's `actions`, matching the
-  issuance profile's subset condition; any additional action still
-  fails.
-
-- Controls taxonomy retirement (#636): the AS-side no-registered-
-  narrowing failure-closed cross-reference updated from an
-  unrecognized `resources` value to an unrecognized `target_resources`
-  value, matching the issuance profile's rename. No entry-level
-  `constraints` reference changed; this document's own `constraints`
-  is the RAR entry-level object, unaffected by the retirement of the
-  Mission Intent's separate `controls` bucket.
-
-- Review response (#637): relocated the resource server enforcement
-  duties (exact/prefix resource matching, action matching,
-  per-entry `constraints` enforcement) and the
-  `mission_constraints_supported` protected-resource metadata member
-  (definition and IANA registration) from the issuance profile, which
-  had continued to interpret this type's members directly in its
-  generic resource server contract. Split the Conformance section by
-  role (authorization server vs. resource server) so a resource server
-  is not
-  measured against issuer-only duties (subset/intersection, delegate
-  eligibility, Transformation Capabilities declaration) it has no
-  reason to implement. Adds this document's conformance-manifest
-  source pin and its own requirement rows.
-- Initial version: `mission_resource_access`, its resource and action
-  matching, generic constraints, the Common Constraints registry, the
-  delegation policy and delegate-matching rules, the subset and
-  intersection algebra, and the Resource Boundary Canonicalization
-  security analysis, relocated without change from
-  {{I-D.draft-mcguinness-oauth-mission}}, where they were previously
-  defined inline (#637). Adds this type's concrete Scope Projection
-  safety conditions and issuance-algorithm interlock (#698), and its
-  Transformation Capabilities declaration for the issuance profile's
-  machine-readable per-type capability map (#645).
-
-- The abstract names Rich Authorization Requests without a citation
-  and states deployment choice without a BCP 14 keyword; the uncited
-  RAR metadata reference is removed.
+- Initial version. Defines `mission_resource_access`, split from
+  {{I-D.draft-mcguinness-oauth-mission}}: resource and action matching;
+  constraints and the Mission Common Constraints registry; the
+  delegation policy and delegate matching; the subset and intersection
+  rules; resource server enforcement and the
+  `mission_constraints_supported` metadata member; the Resource Boundary
+  Canonicalization analysis; the type's scope-projection safety
+  conditions; and its Transformation Capabilities declaration.
 
 # Acknowledgments
 {:numbered="false"}
