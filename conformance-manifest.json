@@ -5857,9 +5857,21 @@
      "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > concurrent decisions by different principals cannot disagree on identity: the first to reserve holds the interaction, the other is refused before saving a grant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > the commit revalidates the prepared authority source: a source withdrawn during the grant save refuses access_denied and creates no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Partial (#916, D415). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry by another Approver, Subject or client is refused before the grant is touched), and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
+   "notes": "Partial (#916, D415). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry or a concurrent decision by another Approver, Subject or client is refused before the grant is touched: a synchronous per-interaction reservation, taken before the asynchronous grant save, so the Mission's Approver and the grant's account always agree); the commit revalidates the prepared authority source (same root and provenance, every gate) and a withdrawn source refuses, and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
   },
   {
    "id": "core.response.mission-expires-at-on-creation",

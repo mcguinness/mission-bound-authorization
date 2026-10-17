@@ -4395,6 +4395,27 @@ async function decide(
       throw e;
     }
   }
+  // The interaction's approval is reserved for this decision before the
+  // asynchronous grant save, with no await since the checks above: the first
+  // decision to reserve names the Approver, Subject, client and grant, and a
+  // concurrent decision that differs is refused here, so the committed Mission
+  // and its provider grant always agree on who approved.
+  if (
+    !opts.kernel.reserveApproval({
+      approvalEventId,
+      approver: approveInput.approver,
+      subject: approveInput.subject,
+      clientId: approveInput.clientId,
+      grantId,
+    })
+  ) {
+    ctx.status = 403;
+    ctx.body = {
+      error: "approval_forbidden",
+      error_description: "this interaction's approval is reserved for another Approver, Subject or client",
+    };
+    return;
+  }
 
   // @spec mission#approval-authentication (#826): the provider account is the
   // authenticated Approver; the Mission records the Subject, and every
