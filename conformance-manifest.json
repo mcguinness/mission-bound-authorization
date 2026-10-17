@@ -8034,7 +8034,7 @@
    "id": "core.introspection.opaque-rs-resolve-before-service",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "introspected-consumption",
-   "text": "A resource server consuming an opaque Mission-bound token MUST resolve it through introspection or issuer-local resolution (below) before service",
+   "text": "MUST resolve it through introspection or issuer-local resolution (below) before service",
    "role": "RS",
    "strength": "MUST",
    "applicability": {

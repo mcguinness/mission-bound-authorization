@@ -3753,13 +3753,14 @@ profiled.
   only on an active response. An inactive response carries
   `active: false` and the `mission` state facts
   ({{composite-active}}), never the authority itself.
-- A resource server consuming an opaque Mission-bound token MUST
-  resolve it through introspection or issuer-local resolution
-  (below) before service, MUST verify `active` is `true`, its own
-  identity in `aud`, and the sender-constraint binding `cnf` names,
-  and MUST enforce the response's `authorization_details` under the
-  same rules as the token-carried form ({{rs-enforcement}}), the
-  fail-closed duties included.
+- A resource server consuming an opaque Mission-bound token:
+  - MUST resolve it through introspection or issuer-local resolution
+    (below) before service;
+  - MUST verify `active` is `true`, its own identity in `aud`, and
+    the sender-constraint binding `cnf` names; and
+  - MUST enforce the response's `authorization_details` under the
+    same rules as the token-carried form ({{rs-enforcement}}), the
+    fail-closed duties included.
 - A resource server that cannot obtain a valid introspection response
   or issuer-local resolution for an opaque Mission-bound token MUST
   refuse the request rather than serve it from any cached or
