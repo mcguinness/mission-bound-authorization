@@ -1,9 +1,15 @@
 /**
- * @spec status#conformance, status#mission-lifecycle-endpoint, status#idempotency (#1182, D378):
+ * @spec status#conformance, status#mission-lifecycle-endpoint, status#idempotency (#1182, D378, #1191):
  * a deployment that serves the Mission Lifecycle endpoint with `revoke` alone.
  *
  * Built without `lifecycle-extended`, `status`, `status-list`, `discharge` and
- * `containment`, so the only lifecycle operation it serves is `revoke`. Covered:
+ * `containment`, so the only lifecycle operation it serves is `revoke`. Every
+ * request goes to the advertised `mission_lifecycle_endpoint` as a form,
+ * authenticated by private-key JWT. Covered:
+ *  - discovery advertises the endpoint, its methods and the response-signing
+ *    algorithms with the Status operation and `discharge` both off;
+ *  - `revoke` is answered with the signed, state-only Mission Status Response
+ *    whose `aud` is the client's `client_id` and whose `nonce` is the request's;
  *  - a caller holding none of the Mission's tokens revokes it, and the refresh,
  *    the family refresh and a new exchange then refuse, issuing nothing;
  *  - a revoke landing after the refresh pre-check is still refused at the
@@ -18,18 +24,25 @@
 
 import type { Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
-import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
+import { createLocalJWKSet, exportJWK, generateKeyPair, importJWK, type JWK, jwtVerify, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import {
   ALL_PROVIDER_CAPABILITIES,
   type BuiltAs,
   buildAuthorizationServer,
+  MISSION_LIFECYCLE_SCOPE,
   MISSION_STATUS_SCOPE,
   type ProviderCapability,
 } from "../src/index.js";
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import {
+  decodeStatusResponse,
+  type LifecycleTestClient,
+  lifecycleRequest,
+  newLifecycleClient,
+} from "./lifecycle-endpoint.helper.js";
 
 const PORT = 14797;
 const ISSUER = `http://localhost:${PORT}`;
@@ -38,8 +51,9 @@ const RESOURCE = CANONICAL_RESOURCE;
 const FAR_EXP = "2027-06-01T00:00:00Z";
 const VERIFIER = "revoke-only-verifier-0123456789-0123456789-0123456789";
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
-/** A registered service caller that may read status but holds no lifecycle authorization. */
-const READER_TOKEN = "revoke-only-reader-token";
+
+/** The response-signing algorithms a consumer accepts: the ones discovery advertises. */
+const RESPONSE_SIGNING_ALGS = ["ES256"];
 
 /** The revoke-only deployment: every capability except the other lifecycle operations and the Status surfaces. */
 const OFF: readonly ProviderCapability[] = ["lifecycle-extended", "status", "status-list", "discharge", "containment"];
@@ -51,6 +65,10 @@ type Json = Record<string, unknown>;
 let as: BuiltAs;
 let server: Server;
 let clientKey: CryptoKey;
+/** A security tool holding the lifecycle grant and none of the Mission's tokens. */
+let securityTool: LifecycleTestClient;
+/** A registered client that may read status but holds no lifecycle authorization. */
+let reader: LifecycleTestClient;
 
 async function newKeys(): Promise<Keys> {
   return (await generateKeyPair("ES256", { extractable: true })) as Keys;
@@ -185,19 +203,22 @@ async function delegate(baseAccessToken: string, keys: Keys): Promise<{ status: 
   );
 }
 
-/** A Lifecycle request; the response's exact text and parsed body. */
+/**
+ * A request to the advertised Lifecycle endpoint, under a fresh client
+ * assertion; the response's exact text, and its JSON body or, for a signed
+ * response, its `mission` object.
+ */
 async function lifecycle(
   missionId: string,
-  body: Json,
-  serviceToken: string = DEV_SERVICE_TOKEN,
+  body: Record<string, string>,
+  client: LifecycleTestClient = securityTool,
 ): Promise<{ status: number; text: string; json: Json }> {
-  const res = await fetch(`${ISSUER}/missions/${missionId}/lifecycle`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-service-token": serviceToken },
-    body: JSON.stringify(body),
-  });
-  const text = await res.text();
-  return { status: res.status, text, json: JSON.parse(text) as Json };
+  const res = await lifecycleRequest(ISSUER, client, { mission_id: missionId, ...body });
+  return {
+    status: res.status,
+    text: res.text,
+    json: res.json ?? (decodeStatusResponse(res.text).mission as Json),
+  };
 }
 
 /** Run `fn`, counting the access and refresh tokens oidc-provider saves meanwhile. */
@@ -224,13 +245,17 @@ const lifecycleEvents = (missionId: string): number =>
   ).n;
 
 beforeAll(async () => {
+  securityTool = await newLifecycleClient("security-tool");
+  reader = await newLifecycleClient("status-reader");
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     capabilities: REVOKE_ONLY,
-    serviceTokenPrincipals: {
-      ...TEST_APPROVAL_PRINCIPALS,
-      [READER_TOKEN]: { principal_id: "svc:reader", scopes: [MISSION_STATUS_SCOPE] },
+    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    testClients: [securityTool.metadata, reader.metadata],
+    lifecycleClientGrants: {
+      [securityTool.clientId]: [MISSION_LIFECYCLE_SCOPE],
+      [reader.clientId]: [MISSION_STATUS_SCOPE],
     },
   });
   server = as.provider.listen(PORT);
@@ -299,6 +324,46 @@ describe("revoke-only Lifecycle deployment: revocation by a party holding no tok
     expect(res.result.body.error).toBe("invalid_grant");
     expect(res.result.body.mission_error).toBe("revoked");
     expect(res.result.body.access_token).toBeUndefined();
+  });
+});
+
+describe("revoke-only Lifecycle deployment: the advertised endpoint (@spec status#conformance, status#as-metadata, status#mission-status-response, #1191)", () => {
+  it("advertises the endpoint, its private_key_jwt method and the response-signing algorithms with the Status operation and discharge both off", async () => {
+    const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Json;
+    expect(meta.mission_lifecycle_endpoint).toBe(`${ISSUER}/mission/lifecycle`);
+    expect(meta.mission_lifecycle_endpoint_auth_methods_supported).toEqual(["private_key_jwt"]);
+    expect(meta.mission_lifecycle_endpoint_auth_signing_alg_values_supported).toEqual(["ES256"]);
+    expect(meta.mission_status_signing_alg_values_supported).toEqual(["ES256"]);
+    expect(Object.hasOwn(meta, "mission_status_endpoint")).toBe(false);
+  });
+
+  it("answers revoke with the signed state-only Mission Status Response: aud the client's client_id, the request's nonce, and every required member", async () => {
+    const m = await issue();
+    const nonce = crypto.randomUUID();
+    const res = await lifecycleRequest(ISSUER, securityTool, { mission_id: m.missionId, operation: "revoke", nonce });
+    expect(res.status, res.text).toBe(200);
+    expect(res.contentType).toBe("application/mission-status-response+jwt");
+    const jwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: JWK[] };
+    const { payload, protectedHeader } = await jwtVerify(res.text, createLocalJWKSet(jwks), {
+      typ: "mission-status-response+jwt",
+      algorithms: RESPONSE_SIGNING_ALGS,
+      issuer: ISSUER,
+      audience: securityTool.clientId,
+    });
+    expect(protectedHeader.typ).toBe("mission-status-response+jwt");
+    expect(payload.aud).toBe(securityTool.clientId);
+    expect(payload.sub).toBe(securityTool.clientId);
+    expect(payload.nonce).toBe(nonce);
+    expect(Object.hasOwn(payload, "authorization_details")).toBe(false);
+    const record = as.kernel.get(m.missionId);
+    expect(payload.mission).toMatchObject({
+      id: m.missionId,
+      state: "terminated",
+      termination: { reason: "revoked", version: record?.version },
+      version: record?.version,
+      expires_at: record?.expires_at,
+      fresh_until: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    });
   });
 });
 
@@ -403,8 +468,9 @@ describe("revoke-only Lifecycle deployment: retries and terminal states (@spec s
   it("answers a caller without lifecycle authorization exactly as it answers an unknown Mission", async () => {
     const m = await issue();
     const nonce = crypto.randomUUID();
-    const unauthorized = await lifecycle(m.missionId, { operation: "revoke", nonce }, READER_TOKEN);
-    const unknown = await lifecycle("msn_unknown_0000000000000000000000", { operation: "revoke", nonce }, READER_TOKEN);
+    const unauthorized = await lifecycle(m.missionId, { operation: "revoke", nonce }, reader);
+    // An unknown Mission asked of by an AUTHORIZED caller: the same answer.
+    const unknown = await lifecycle("msn_unknown_0000000000000000000000", { operation: "revoke", nonce });
     expect(unauthorized.status, unauthorized.text).toBe(404);
     expect(unauthorized.json.error).toBe("not_found");
     expect(unknown.status).toBe(404);

@@ -288,6 +288,17 @@ function migrateMissions(db: Database): void {
 
 export class LifecycleConflictError extends Error {}
 /**
+ * @spec status#mission-status-errors: the referenced Mission does not exist at
+ * this issuer. Typed so a surface can tell an unknown reference (`not_found`)
+ * from a backend failure (`unavailable`) without matching message text.
+ */
+export class MissionNotFoundError extends Error {}
+/**
+ * @spec status#idempotency: a lifecycle request's `expected_version` differs
+ * from the Mission's current state version (`stale_version`, HTTP 409).
+ */
+export class StaleVersionError extends Error {}
+/**
  * @spec control-plane#fresh-observation — raised only under the OPTIONAL
  * `strictObservationWatermark` policy: state advanced between the observation
  * point and delivery, and this deployment chose refusal over delivering a
@@ -386,6 +397,12 @@ export interface PreparedApproval {
 export interface StatusObservationOptions {
   audience?: string;
   requester: string;
+  /**
+   * @spec status#lifecycle-authorization: the envelope `sub`: the acting
+   * party of a Lifecycle request, reflected in the signed response's audit
+   * surface. Absent, `sub` is the Mission's client, as before.
+   */
+  actingParty?: string;
   nonce?: string;
   freshnessSeconds?: number;
   /**
@@ -2162,13 +2179,23 @@ export class MissionKernel {
    * terminated `revoked` is idempotent, while `revoke` on one terminated
    * `completed` (or `expired`), and `complete` on one terminated `revoked`,
    * are conflicts: the recorded cause never changes.
+   *
+   * @spec status#idempotency: `expectedVersion`, when given, is checked
+   * against the current state version BEFORE that rule, so a stale guard is
+   * refused ({@link StaleVersionError}) even where the operation would
+   * otherwise be idempotent success, and the Mission is left unchanged.
    */
-  transition(id: string, op: LifecycleOperation): MissionRecord {
+  transition(id: string, op: LifecycleOperation, opts: { expectedVersion?: number } = {}): MissionRecord {
     // @spec control-plane#serialization — the expiry clock may materialize a
     // terminal transition here, so the legality check reads the record that
     // materialization left behind (or, when that write fails, the observed
     // `expired` termination), never the pre-expiry snapshot.
     const record = this.applyExpiry(this.mustGet(id));
+    if (opts.expectedVersion !== undefined && opts.expectedVersion !== record.version) {
+      throw new StaleVersionError(
+        `expected_version ${opts.expectedVersion} differs from the current state version`,
+      );
+    }
     const rule = LEGAL_TRANSITIONS[op];
     if (
       op !== "resume" &&
@@ -2245,9 +2272,20 @@ export class MissionKernel {
        * monotonic union, idempotency, or the commit.
        */
       policyRule?: string;
+      /**
+       * @spec status#idempotency: the Lifecycle request's stale-version guard,
+       * compared before the terminal-state refusal and the `event_id`
+       * idempotent arm, inside the caller's transaction.
+       */
+      expectedVersion?: number;
     },
   ): { record: MissionRecord; evidence: ContainmentEvidence } {
     const record = this.applyExpiry(this.mustGet(id));
+    if (input.expectedVersion !== undefined && input.expectedVersion !== record.version) {
+      throw new StaleVersionError(
+        `expected_version ${input.expectedVersion} differs from the current state version`,
+      );
+    }
     if (TERMINAL_STATES.has(record.state)) {
       throw new LifecycleConflictError(`contain is not legal from ${describeLifecycle(record)}`);
     }
@@ -3666,7 +3704,7 @@ export class MissionKernel {
       ? this.effectiveAuthoritySet(record).filter((e) => e.resource === opts.audience)
       : undefined;
     const payload: Record<string, unknown> = {
-      sub: record.client_id,
+      sub: opts.actingParty ?? record.client_id,
       mission: {
         ...this.missionClaim(record),
         // @spec mission-status#mission-status-response (#702) — OPTIONAL,
@@ -4040,7 +4078,7 @@ export class MissionKernel {
 
   private mustGet(id: string): MissionRecord {
     const record = this.get(id);
-    if (!record) throw new Error(`unknown mission: ${id}`);
+    if (!record) throw new MissionNotFoundError(`unknown mission: ${id}`);
     return record;
   }
 }

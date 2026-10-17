@@ -70,7 +70,9 @@ export {
   MissionKernel,
   GateError,
   LifecycleConflictError,
+  MissionNotFoundError,
   ObservationWatermarkError,
+  StaleVersionError,
   STATUS_SIGNING_ALG,
   type DischargeReceiptObservation,
   type ObservationWatermark,
@@ -659,6 +661,19 @@ function publicJwkOf(jwk: JWK): Record<string, unknown> {
   return pub;
 }
 
+/**
+ * @spec status#lifecycle-authorization: a dedicated client of the Mission
+ * Lifecycle endpoint ({@link buildAuthorizationServer}'s `lifecycleClients`).
+ */
+export interface LifecycleClientRegistration {
+  client_id: string;
+  client_name: string;
+  /** The public half of the client's ES256 signing key; the private half stays at the client. */
+  jwks: { keys: Record<string, unknown>[] };
+  /** The lifecycle grants bound to this client, `mission_lifecycle` for the state operations. */
+  grants: readonly string[];
+}
+
 export interface BuiltAs {
   provider: Provider;
   kernel: MissionKernel;
@@ -901,6 +916,21 @@ export async function buildAuthorizationServer(opts: {
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   /**
+   * @spec status#lifecycle-authorization: the grants bound to a client that
+   * authenticates to the Mission Lifecycle endpoint by private-key JWT, keyed by
+   * `client_id`. Absent (the default), no client holds any.
+   */
+  lifecycleClientGrants?: Record<string, readonly string[]>;
+  /**
+   * @spec status#lifecycle-authorization, status#mission-status-authentication:
+   * dedicated Lifecycle clients a deployment registers, each with the PUBLIC
+   * half of its own signing key (the private half stays at the client) and the
+   * lifecycle grants bound to it. Registered beside the shipped clients, never
+   * in place of one; no other client gains a lifecycle grant. Absent (the
+   * default), none is registered.
+   */
+  lifecycleClients?: LifecycleClientRegistration[];
+  /**
    * @spec discharge#discharge-authority — the issuer-held discharge-authority
    * policy handed to the kernel: which principals may assert which
    * `event_type`, resolved through a condition's `discharge_authority` value or
@@ -990,6 +1020,31 @@ export async function buildAuthorizationServer(opts: {
       throw new Error(`testClients MUST NOT redefine the config-shipped client ${id}`);
     }
   }
+  // @spec status#lifecycle-authorization: a dedicated Lifecycle client is a
+  // private-key-JWT registration with no grant at /token, holding only the
+  // lifecycle grants the deployment binds to it.
+  const lifecycleClientMetadata = (opts.lifecycleClients ?? []).map((c) => {
+    if (shippedClientIds.has(c.client_id)) {
+      throw new Error(`lifecycleClients MUST NOT redefine the config-shipped client ${c.client_id}`);
+    }
+    if (c.jwks.keys.length === 0 || c.jwks.keys.some((k) => Object.hasOwn(k, "d"))) {
+      throw new Error(`lifecycleClients: ${c.client_id} registers public keys only, at least one`);
+    }
+    return {
+      client_id: c.client_id,
+      client_name: c.client_name,
+      grant_types: [],
+      response_types: [],
+      redirect_uris: [],
+      token_endpoint_auth_method: "private_key_jwt",
+      token_endpoint_auth_signing_alg: "ES256",
+      jwks: c.jwks,
+    } as Record<string, unknown>;
+  });
+  const lifecycleClientGrants: Record<string, readonly string[]> = {
+    ...(opts.lifecycleClientGrants ?? {}),
+    ...Object.fromEntries((opts.lifecycleClients ?? []).map((c) => [c.client_id, c.grants])),
+  };
   // @spec containment#protected-events — the trusted protected-event source
   // registry: config seeds kid+alg per source (D25), the ES256 keypair is
   // generated per boot. The registry resolves the report's payload `source`
@@ -1217,6 +1272,7 @@ export async function buildAuthorizationServer(opts: {
       governed.metadata,
       ledgerReconciler.metadata,
       ...(opts.testClients ?? []),
+      ...lifecycleClientMetadata,
     ],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
@@ -1238,6 +1294,7 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.serviceTokenPrincipals
       ? { serviceTokenPrincipals: opts.serviceTokenPrincipals }
       : {}),
+    ...(Object.keys(lifecycleClientGrants).length > 0 ? { lifecycleClientGrants } : {}),
     ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
     // @spec txn-authorization#challenge-redemption — the endpoint's
     // configuration, assembled from the caller's deployment inputs plus this

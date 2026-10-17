@@ -876,7 +876,8 @@ describe("lifecycle endpoint operation: contain (end-to-end)", () => {
         "content-type": "application/json",
         ...(token !== null ? { "x-service-token": token } : {}),
       },
-      body: JSON.stringify(body),
+      // Every Lifecycle request carries the REQUIRED nonce (@spec status#idempotency).
+      body: JSON.stringify({ nonce: crypto.randomUUID(), ...(body as object) }),
     });
 
   it("contains via the dev service token, idempotently, and 409s from a terminal state", async () => {

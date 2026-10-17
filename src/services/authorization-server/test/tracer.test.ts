@@ -12,6 +12,7 @@ import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, INVOICES, MISSION_MAX_STALE_SECO
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
+  decodeJwt,
   exportJWK,
   generateKeyPair,
   importJWK,
@@ -304,13 +305,16 @@ describe("M1 tracer slice", () => {
   });
 
   it("suspend gates refresh with invalid_grant; resume restores issuance", async () => {
-    const lifecycle = (operation: string) =>
-      fetch(`${ISSUER}/missions/${missionId}/lifecycle`, {
+    // The state the signed Lifecycle response reports (@spec status#mission-lifecycle-endpoint).
+    const lifecycle = async (operation: string): Promise<string> => {
+      const res = await fetch(`${ISSUER}/missions/${missionId}/lifecycle`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-        body: JSON.stringify({ operation }),
+        body: JSON.stringify({ operation, nonce: crypto.randomUUID() }),
       });
-    expect((await (await lifecycle("suspend")).json() as { state: string }).state).toBe("suspended");
+      return (decodeJwt(await res.text()) as { mission: { state: string } }).mission.state;
+    };
+    expect(await lifecycle("suspend")).toBe("suspended");
 
     let res = await tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });
     let body = (await res.json()) as {
@@ -326,7 +330,7 @@ describe("M1 tracer slice", () => {
     // can tell a `resume` lifts it (@see gateErrorToMissionError).
     expect(body.mission_error).toBe("suspended");
 
-    expect((await (await lifecycle("resume")).json() as { state: string }).state).toBe("active");
+    expect(await lifecycle("resume")).toBe("active");
     res = await tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });
     body = (await res.json()) as { error?: string; refresh_token?: string; access_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(200);
@@ -338,11 +342,11 @@ describe("M1 tracer slice", () => {
     const res1 = await fetch(`${ISSUER}/missions/${missionId}/lifecycle`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-      body: JSON.stringify({ operation: "revoke" }),
+      body: JSON.stringify({ operation: "revoke", nonce: crypto.randomUUID() }),
     });
     // @spec status#mission-lifecycle-endpoint, mission#termination: the
     // lifecycle outcome reports `terminated` with its `termination` beside it.
-    expect(await res1.json()).toMatchObject({
+    expect((decodeJwt(await res1.text()) as { mission: unknown }).mission).toMatchObject({
       state: "terminated",
       termination: { reason: "revoked", version: expect.any(Number) },
     });

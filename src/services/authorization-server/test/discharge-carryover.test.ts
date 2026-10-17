@@ -334,6 +334,29 @@ describe("discharge forwarding after carryover (@spec discharge#discharge-carryo
     expect(oldAfter.discharged).toBeUndefined();
   });
 
+  it("refuses expected_version on a forwarded discharge before resolving its target: the guard binds no record, and neither the old child nor the replacement latches (#1191)", async () => {
+    // @spec discharge#discharge-operation ("No `expected_version`"): discharge
+    // adopts no stale-version guard, so the request is refused as malformed
+    // before the old child or its replacement is read.
+    const pred = approvePredecessor();
+    const child = addChild(pred.id);
+    const replacement = replacementOf(expandAndCarry(pred.id), child);
+    const oldBefore = as.kernel.get(child.id) as MissionRecord;
+    const replacementBefore = as.kernel.get(replacement.id) as MissionRecord;
+    for (const version of [oldBefore.version, replacementBefore.version]) {
+      const res = await lifecycle(child.id, body(child, "payments:invoice.list", { expected_version: String(version) }));
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
+    }
+    expect(as.kernel.get(child.id)).toEqual(oldBefore);
+    expect(as.kernel.get(replacement.id)).toEqual(replacementBefore);
+    expect(latched(replacement.id)).toEqual([]);
+    // The same assertion without the member is forwarded and latches.
+    const forwarded = await lifecycle(child.id, body(child, "payments:invoice.list"));
+    expect(forwarded.status).toBe(200);
+    expect(latched(replacement.id)).toEqual([digestOf(replacement, "payments:invoice.list")]);
+  });
+
   it("resolves a chain of two carryovers through both recorded pairings", async () => {
     const a = approvePredecessor();
     const childA = addChild(a.id);
@@ -891,7 +914,7 @@ describe("discharge response consumers (@spec discharge#discharge-receipt, #disc
 // ---------------------------------------------------------------------------
 
 describe("Mission Status signing algorithms in discovery (@spec status#as-metadata, discharge#discharge-receipt)", () => {
-  it("advertises them wherever a Status response or a Discharge Receipt can be served, the Status route disabled included", async () => {
+  it("advertises them wherever a Status response, a Lifecycle response or a Discharge Receipt can be served, the Status route disabled included", async () => {
     // This deployment serves both.
     expect(await advertisedAlgs(ISSUER)).toEqual(["ES256"]);
     const deployment = async (port: number, capabilities: ReadonlySet<ProviderCapability>) => {
@@ -911,8 +934,18 @@ describe("Mission Status signing algorithms in discovery (@spec status#as-metada
     expect(await deployment(PORT + 1, without("status"))).toEqual(["ES256"]);
     // Status served with discharge off.
     expect(await deployment(PORT + 2, without("discharge"))).toEqual(["ES256"]);
-    // Neither: nothing signs that shape, and the member is absent.
-    expect(await deployment(PORT + 3, without("status", "discharge"))).toEqual([]);
+    // Neither, but the Lifecycle endpoint serves `revoke` alone, and answers it
+    // with the signed state-only Mission Status Response (#1191).
+    expect(
+      await deployment(PORT + 3, without("status", "discharge", "lifecycle-extended", "containment")),
+    ).toEqual(["ES256"]);
+    // None of them: nothing signs that shape, and the member is absent.
+    expect(
+      await deployment(
+        14796, // PORT + 4 is another suite's port
+        without("status", "discharge", "lifecycle-revoke", "lifecycle-extended", "containment"),
+      ),
+    ).toEqual([]);
   });
 });
 
