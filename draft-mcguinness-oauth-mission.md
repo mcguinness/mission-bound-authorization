@@ -1565,25 +1565,26 @@ mapping is specified in
 The approval event is the atomic, adjudicated transition that creates
 a Mission under its approval basis (`approval_basis`,
 {{mission-record}}). Every Mission is created at its own approval
-event, which the record's `approval_event_id` identifies. A `direct`
+event, which the record's `approval_event_id` identifies.
+
+The approval basis and its adjudication semantics, not the event
+alone, establish whether a human decided at that instant. A `direct`
 approval event includes the Approver's contemporaneous consent: it is
 a human approval event. Under a standing-consent basis
 ({{standing-consent-bases}}), the instance is decided under an
 accountable human's earlier approval, with no fresh human approval.
-The approval basis and its adjudication semantics, not the event
-alone, establish whether a human decided at that instant.
 
 The direct realization runs as an OAuth 2.0 {{RFC6749}}
 authorization-code flow initiated from the PAR-issued `request_uri`
-({{submission-via-par}}). Because the authorization code
-is the artifact the Mission grant binds to
-({{grant-binding-resolution}}) and it passes through the front
-channel, the AS MUST bind the code to the requesting client with
-PKCE ({{RFC7636}}, `S256` challenge method) or, equivalently, issue
-a DPoP-bound authorization code ({{RFC9449}}).
-Redemption is then verified as {{Section 4.6 of RFC7636}} or
-{{Section 10 of RFC9449}} specifies. This prevents
-authorization-code injection from yielding the Mission grant.
+({{submission-via-par}}). Because the authorization code is the
+artifact the Mission grant binds to ({{grant-binding-resolution}})
+and it passes through the front channel, the AS MUST bind the code
+to the requesting client with PKCE ({{RFC7636}}, `S256` challenge
+method) or, equivalently, issue a DPoP-bound authorization code
+({{RFC9449}}). Redemption is then verified as
+{{Section 4.6 of RFC7636}} or {{Section 10 of RFC9449}} specifies.
+This prevents authorization-code injection from yielding the Mission
+grant.
 
 The AS SHOULD include the `iss` authorization-response parameter
 ({{RFC9207}}) on the authorization response, so the client can detect
@@ -1677,21 +1678,24 @@ At a direct approval event the AS MUST, in order:
 The `authority_hash` is the **authority commitment**: it commits, by
 cryptographic digest, exactly the authority the Approver approved.
 
-Every Mission is rooted in an approved authorization basis
-(`approval_basis`, {{mission-record}}). The steps above define the
-`direct` basis; a companion profile that relocates a direct approval
-keeps them unchanged ({{extensibility}}). Under a standing-consent
-basis ({{standing-consent-bases}}), the standing consent and the
-instance's adjudication supply the human decision: the Approver's
-authentication (step 1), the Approver's authorization for the Subject
-and the authority source (steps 2 and 3), and the consent rendering
-(step 5). The other creation rules still bind the instance's approval
-event wherever they apply: the Subject is never taken from
-unauthenticated client input and is mapped injectively (step 2), the
-authority source and its ceiling ({{authority-sources}}), the
-effective expiry and its creation-commit check (steps 4 and 7), the
-integrity anchors (step 6), and atomic creation deduplicated on
-`approval_event_id` ({{mission-record}}).
+The steps above define the `direct` approval basis (`approval_basis`,
+{{mission-record}}); a companion profile that relocates a direct
+approval keeps them unchanged ({{extensibility}}).
+
+Under a standing-consent basis ({{standing-consent-bases}}), the
+standing consent and the instance's adjudication supply the human
+decision: the Approver's authentication (step 1), the Approver's
+authorization for the Subject and the authority source (steps 2 and
+3), and the consent rendering (step 5). The other creation rules
+still bind the instance's approval event wherever they apply:
+
+- the Subject is never taken from unauthenticated client input and
+  is mapped injectively (step 2);
+- the authority source and its ceiling ({{authority-sources}});
+- the effective expiry and its creation-commit check (steps 4 and 7);
+- the integrity anchors (step 6); and
+- atomic creation deduplicated on `approval_event_id`
+  ({{mission-record}}).
 
 Refusals follow {{error-mapping}}. A token-endpoint `resource` value
 outside the Authority Set is an invalid `resource` value in the sense
@@ -1709,8 +1713,8 @@ The consent rendering is hardened against client text:
 
 Rendering a bound is not the same as enforcing it: a deployment MUST
 NOT present a rendered bound as enforced when no party enforces it.
-Which party enforces each bound, and what holds when that enforcer is
-absent, is summarized in the enforcement table ({{rs-enforcement}}).
+The enforcement table ({{rs-enforcement}}) summarizes which party
+enforces each bound and what holds when that enforcer is absent.
 An AS SHOULD make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
 binds nowhere.
@@ -1773,19 +1777,22 @@ deciding.
 
 ## Authority Sources {#authority-sources}
 
-A Mission draws its authority from one of three sources: a delegating
-person's own authority (**user-delegated**), a workload's own
-provisioned authority (**service-owned**), or explicitly governed
-organizational policy with a named accountable owner
-(**organizational**). The source names whose authority the approval
-draws on, recorded immutably as the Mission's `authority_source`;
-`approval_basis` records how drawing on it was activated
-({{mission-record}}), and the two compose: any source may activate
-under the `direct` basis or a standing-consent basis a companion
-defines. Approval activates authority the source already
-holds and manufactures none: the AS establishes the source and
-verifies the derived Authority Set against it before approval
-({{approval-event}}).
+A Mission draws its authority from one of three sources:
+
+- **user-delegated**: a delegating person's own authority;
+- **service-owned**: a workload's own provisioned authority; or
+- **organizational**: explicitly governed organizational policy with
+  a named accountable owner.
+
+The source names whose authority the approval draws on, recorded
+immutably as the Mission's `authority_source`; `approval_basis`
+records how drawing on it was activated ({{mission-record}}). The two
+compose: any source may activate under the `direct` basis or a
+standing-consent basis a companion defines.
+
+Approval activates only authority the source already holds: the AS
+establishes the source and verifies the derived Authority Set against
+it before approval ({{approval-event}}).
 
 The subject-representation discipline is the same in every source:
 
@@ -1810,11 +1817,12 @@ The subject-representation discipline is the same in every source:
 A deployment publishes a statement declaring the minimum
 approval-authentication strength (the approval-authentication floor)
 it enforces for Missions whose derived Authority Set carries high-risk
-authority (irreversible, external-commitment, or
+authority, and the deployment scope it applies to. High-risk
+authority means irreversible, external-commitment, or
 privileged-administration actions under the deployment's
 classification, or a consumption bound
-({{I-D.draft-mcguinness-mission-metering}})) and the deployment scope
-it applies to. This document requires no particular serialization.
+({{I-D.draft-mcguinness-mission-metering}}). This document requires
+no particular serialization.
 
 For the direct flow, a client MAY additionally request an
 approval-authentication strength on the authorization request using
@@ -1822,11 +1830,12 @@ the `acr_values` and `max_age` parameters defined in Section 3.1.2.1
 of {{OpenID.Core}}. In a Mission approval interaction these
 parameters describe the requested authentication of the
 **Approver**, not of the token's Subject, who can be a different
-principal ({{approval-event}}, step 2). Requesting them implies
-nothing about the authentication claims of an issued token, which
-describe the token's Subject, not the Approver
-({{mission-bound-tokens}}); when the Approver is the Subject, one
-authentication event can back both.
+principal ({{approval-event}}, step 2).
+
+Requesting these parameters implies nothing about the authentication
+claims of an issued token, which describe the token's Subject, not
+the Approver ({{mission-bound-tokens}}); when the Approver is the
+Subject, one authentication event can back both.
 
 The Approver's authentication satisfies `acr_values` when it matches
 any one listed value under the deployment's own policy mapping (this
@@ -1849,23 +1858,25 @@ the AS MUST NOT issue an ID Token, serve UserInfo, or establish an
 authentication session for the Subject solely as a result of the
 Approver's authentication or approval.
 
-When the Approver is the Subject, `openid`, `acr_values`, and
-`max_age` keep their {{OpenID.Core}} meaning, which then describes the
-same authentication this document requires. In every approval
-interaction, `prompt`, `login_hint`, and `id_token_hint` concern the
-Approver.
+When the Approver is the Subject, the `openid` scope value and the
+`acr_values` and `max_age` parameters keep their {{OpenID.Core}}
+meaning, which then describes the same authentication this document
+requires. In every approval interaction, the `prompt`, `login_hint`,
+and `id_token_hint` parameters concern the Approver.
 
 The authentication actually achieved for the approval event (`acr`,
 `amr`, and `auth_time`, in the sense {{RFC9470}} and {{OpenID.Core}}
 define them) is approval-time provenance, not requested Intent: this
 document never records it as, and an AS MUST NOT read it back from, a
-Mission Intent member. Where a deployment records Consent Evidence,
-the achieved values belong in its `authentication_context` member
+Mission Intent member.
+
+Where a deployment records Consent Evidence, the achieved values
+belong in its `authentication_context` member
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); this
 document defines no Mission Record member for them. A derived access
-token carries authentication claims only as authentication information
-about its own Subject ({{mission-bound-tokens}}), never as evidence of
-approval.
+token carries authentication claims only as authentication
+information about its own Subject ({{mission-bound-tokens}}), never
+as evidence of approval.
 
 ## Binding the Mission to the Grant {#grant-binding}
 
@@ -1879,14 +1890,17 @@ own Mission reference ({{mission-claim}}).
 
 The Mission grant binding is an AS-controlled, functional mapping
 from one persistent, redeemable **grant lineage** to exactly one
-Mission. A grant lineage is state the AS can resolve again on a
-later request: the authorization code issued at approval and, where
-its redemption emits one, the refresh-token family that follows it;
-or another profile-defined reusable grant, such as a refresh-token
-family a continuation transport establishes later for the same
-Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}}). The
-AS alone establishes and resolves a binding; a client never supplies
-or negotiates one.
+Mission. The AS alone establishes and resolves a binding; a client
+never supplies or negotiates one.
+
+A grant lineage is state the AS can resolve again on a later request,
+either:
+
+- the authorization code issued at approval and, where its
+  redemption emits one, the refresh-token family that follows it; or
+- another profile-defined reusable grant, such as a refresh-token
+  family a continuation transport establishes later for the same
+  Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}}).
 
 ### Establishing and Resolving a Binding {#grant-binding-resolution}
 
@@ -1894,12 +1908,14 @@ At a direct approval event the AS binds the Mission to the
 authorization code it issues, or, under a back-channel carriage
 profile, to the grant artifact that profile defines
 ({{extensibility}}). The binding is server-side and is what
-"the referenced Mission" in {{lifecycle}} refers to. The code itself
-carries no refresh-token family: only a successful redemption
-produces one, and where it does, the resulting refresh-token family
-inherits the code's binding atomically with its issuance, extending
-the same Mission grant binding rather than starting a second one. At
-each subsequent derivation the AS resolves the Mission from the
+"the referenced Mission" in {{lifecycle}} refers to.
+
+The code itself carries no refresh-token family; only a successful
+redemption produces one. A refresh-token family so produced inherits
+the code's binding atomically with its issuance, extending the same
+Mission grant binding rather than starting a second one.
+
+At each subsequent derivation the AS resolves the Mission from the
 grant the client presents:
 
 - the authorization code at the token endpoint;
@@ -1990,11 +2006,11 @@ binding.
 ### Mission State Across Bindings {#grant-binding-state}
 
 Non-active state gates every future derivation across every Mission
-grant binding ({{issuance-gating}}). It does not itself
-revoke an OAuth grant the same client or subject holds outside any
-Mission binding, and it does not recall an access token already
-issued before its `exp` absent a runtime state check the token's
-consumer performs ({{revocation}}, {{introspection}}).
+grant binding ({{issuance-gating}}). It does not itself revoke an
+OAuth grant the same client or subject holds outside any Mission
+binding, and it does not recall an access token already issued before
+its `exp` absent a runtime state check the token's consumer performs
+({{revocation}}, {{introspection}}).
 
 An issuer that needs to cascade a lifecycle operation, or to
 enumerate a Mission's bound grant lineages and credentials, maintains
@@ -2014,14 +2030,15 @@ changes nothing.
 
 A client learns its `mission_id` from the `mission` claim's `id` on
 each issued token ({{mission-claim}}) or from the token response.
+
 This document defines `mission_id` as a token-endpoint response
 parameter: a string carrying the Mission Identifier, returned
 alongside the issued token. An AS SHOULD return it, because a client
 need not parse the access token and cannot read the `mission` claim
 of a token that is encrypted or opaque to it. It is an informational
 reference only: presenting it authorizes nothing
-({{grant-binding-resolution}}), and
-a client MUST NOT derive authority from it.
+({{grant-binding-resolution}}), and a client MUST NOT derive
+authority from it.
 
 Alongside it, this document defines `mission_expires_at`: the exact
 RFC 3339 string recorded as the Mission Record's effective
@@ -2046,8 +2063,7 @@ the same way: presenting it authorizes nothing.
 
 This document records exactly one accountable principal,
 `approval_basis.consent_principal`: the principal who approved the
-Mission. Two richer patterns are outside
-the scope of this document:
+Mission. Two richer patterns are out of scope:
 
 - **Multi-party approval** (M-of-N or dual control), where more than
   one principal must approve. The number of approvers does not change
@@ -2066,10 +2082,11 @@ Where a deployment needs either, the Approval Governance Record
 ({{I-D.draft-mcguinness-mission-approval-governance}}) records it,
 and Consent Evidence can carry a partial presentation of that record
 through `co_approvals` and its approval-governance members
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). The
-`adjudication.governance_record` member ({{mission-record}}) marks an
-approval such a record backs, and {{role-mapping}} shows how each
-scenario assigns the three `approval_basis` roles.
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+
+The `adjudication.governance_record` member ({{mission-record}})
+marks an approval such a record backs, and {{role-mapping}} shows how
+each scenario assigns the three `approval_basis` roles.
 
 # Mission Record {#mission-record}
 
