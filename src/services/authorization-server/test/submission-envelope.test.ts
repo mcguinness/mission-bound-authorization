@@ -28,7 +28,10 @@
  *    inputs with different evidence produce a MISMATCH, never a silent replay.
  */
 
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { ApprovalSessionStore } from "../src/index.js";
+const FLOOR_SESSIONS = new ApprovalSessionStore();
+
 
 import { type Server } from "node:http";
 import { computeAnchor, intentHash, MISSION_INTENT_EVIDENCE_TYP } from "@mission/core";
@@ -435,7 +438,7 @@ async function pushPar(issuer: string, key: CryptoKey, params: Record<string, st
 }
 
 beforeAll(async () => {
-  e2eAs = await buildAuthorizationServer({ issuer: ISSUER_E2E, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS });
+  e2eAs = await buildAuthorizationServer({ issuer: ISSUER_E2E, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS, approvalSessions: FLOOR_SESSIONS });
   e2eServer = e2eAs.provider.listen(PORT);
   agentKey = (await importJWK(e2eAs.agentClientJwk as never, "ES256")) as CryptoKey;
   // A second AS whose GLOBAL policy REQUIRES the test evidence type (the
@@ -494,7 +497,7 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
     res = await fetch(`${ISSUER_E2E}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+      headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader()), "content-type": "application/json" },
       body: JSON.stringify({ decision: "approve" }),
     });
     expect(res.status, await res.clone().text()).toBe(303);
