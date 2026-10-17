@@ -224,13 +224,18 @@ the store.
 - **Approver and Subject identities (#826).** The provider account and Grant
   are the Approver's: `interactionFinished` logs the Approver in with the
   achieved `acr` and authentication time, never the Subject. A browser
-  approval keeps that session. A headless approval leaves none, and a
-  session the user agent already holds is neither read nor refreshed: its
-  user agent is the client's, so on every completion, a refusal or a denial
-  as much as a success, the resume runs without the session cookie that user
+  approval keeps that session when the user agent holds none or the
+  Approver's own. A headless approval leaves none, and so does a browser
+  approval in a user agent whose provider session belongs to another
+  account, which would otherwise meet oidc-provider's account switch (its
+  logout confirmation). In both, a session the user agent already holds is
+  neither read nor refreshed: on every completion, a refusal or a denial as
+  much as a success, the resume runs without the session cookie that user
   agent holds, the session the login created is destroyed before the
   response is flushed and its cookie removed, and the code is not
-  session-bound (`expiresWithSession`). Every
+  session-bound (`expiresWithSession`). Such an isolated approval keeps no
+  End-User authentication in the user agent, so `openid` is refused
+  `invalid_scope` on it. Every
   Mission-bound access token carries the Subject: `formats.customizers.jwt`
   sets `sub` from the Mission its grant resolves to, failing closed when it
   no longer resolves, and refresh-token introspection reports the Subject,

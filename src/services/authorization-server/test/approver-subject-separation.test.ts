@@ -279,12 +279,17 @@ async function sessionOf(jar: Jar): Promise<{ accountId?: string; loginTs?: numb
 type StoredSession = { accountId?: string; loginTs?: number; acr?: string; exp?: number };
 
 /**
- * An Alice session from a browser self-approval, then Bob's headless act for
- * her in the same user agent. Only the act's resume is observed: the session
- * saves it causes and the session cookies it sends. The authorization request
- * before it is the client's own and loads Alice's session as usual.
+ * An Alice session from a browser self-approval, then another principal's act
+ * in the same user agent: Bob's headless approval for her unless `approval`
+ * names another. Only the act's resume is observed: the session saves it
+ * causes and the session cookies it sends. The authorization request before it
+ * is the client's own and loads Alice's session as usual. `missions` and
+ * `grants` count what the act created.
  */
-async function aliceSessionThrough(act: { scope?: string; decision?: string; resume?: { url?: (location: string) => string; method?: string } }) {
+async function aliceSessionThrough(
+  act: { scope?: string; decision?: string; resume?: { url?: (location: string) => string; method?: string } },
+  approval: Approval = { headless: { sub: "bob", subject: "alice" } },
+) {
   const aliceTime = Math.floor(Date.now() / 1000) - 600;
   const first = await authorize({ scope: "openid", approval: { browser: { sub: "alice", acr: "mfa", auth_time: aliceTime } } });
   expect(first.code, first.error).toBeTruthy();
@@ -296,10 +301,16 @@ async function aliceSessionThrough(act: { scope?: string; decision?: string; res
   };
   let expBefore: number | undefined;
   let bob: Awaited<ReturnType<typeof authorize>>;
+  const missionsBefore = as.kernel.allMissions().length;
+  let grants = 0;
+  const onGrant = () => {
+    grants += 1;
+  };
+  as.provider.on("grant.saved", onGrant);
   try {
     bob = await authorize({
       ...act,
-      approval: { headless: { sub: "bob", subject: "alice" } },
+      approval,
       jar: first.jar,
       beforeResume: async () => {
         expBefore = ((await as.provider.Session.find(aliceSession)) as StoredSession | undefined)?.exp;
@@ -308,9 +319,11 @@ async function aliceSessionThrough(act: { scope?: string; decision?: string; res
     });
   } finally {
     as.provider.off("session.saved", onSaved);
+    as.provider.off("grant.saved", onGrant);
   }
   const after = (await as.provider.Session.find(aliceSession)) as StoredSession | undefined;
-  return { bob, jar: first.jar, aliceSession, aliceTime, saved, expBefore, after };
+  const missions = as.kernel.allMissions().length - missionsBefore;
+  return { bob, jar: first.jar, aliceSession, aliceTime, saved, expBefore, after, missions, grants };
 }
 
 /** Alice's session is as she left it: Bob's resume neither saved it nor sent a session cookie. */
@@ -518,6 +531,76 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
     expect(fresh.error).toBe(error);
     expect(fresh.jar.has("_session")).toBe(false);
     expect(fresh.resumeCookies.filter((l) => /^_session(?:\.sig)?=/.test(l))).toEqual([]);
+  });
+
+  // A browser approval in a user agent holding another account's provider
+  // session completes isolated, as a headless one does: oidc-provider's
+  // account switch (its logout confirmation) never arises, the session stays
+  // as it was, and the act either completes or creates nothing.
+  it("Bob's browser approval for Alice in her user agent completes isolated: Alice's session is untouched, and the code redeems and refreshes for her", async () => {
+    const o = await aliceSessionThrough({}, { browser: { sub: "bob", acr: "mfa", subject: "alice" } });
+    expect(o.bob.code, o.bob.error).toBeTruthy();
+    expectAliceUntouched(o);
+    expect(o.missions).toBe(1);
+    const k = await newKeys();
+    const issued = await redeem("ap-agent", o.bob.code as string, k);
+    expect(issued.id_token).toBeUndefined();
+    const at = decodeJwt(issued.access_token as string);
+    expect(at.sub).toBe("alice");
+    const record = as.kernel.get((at.mission as { id: string }).id);
+    expect(record?.subject).toEqual({ iss: ISSUER, sub: "alice" });
+    expect(record?.approval_basis.consent_principal).toEqual({ iss: ISSUER, sub: "bob" });
+    const refreshed = await token("ap-agent", { grant_type: "refresh_token", refresh_token: issued.refresh_token as string }, k);
+    expect(decodeJwt(refreshed.access_token as string).sub).toBe("alice");
+  });
+
+  it.each([
+    ["an openid refusal", { scope: "openid" }, "invalid_scope"],
+    ["a denial", { decision: "deny" }, "access_denied"],
+  ] as const)("Bob's browser act for Alice in her user agent ending in %s leaves her session untouched and creates no Mission or Grant", async (_end, act, error) => {
+    const o = await aliceSessionThrough(act, { browser: { sub: "bob", acr: "mfa", subject: "alice" } });
+    expect(o.bob.error).toBe(error);
+    expect(o.bob.code).toBeUndefined();
+    expectAliceUntouched(o);
+    expect(o.missions).toBe(0);
+    expect(o.grants).toBe(0);
+  });
+
+  it("Bob's own browser approval in Alice's user agent completes isolated too: it issues for Bob without openid, refuses openid, and leaves her session untouched", async () => {
+    const plain = await aliceSessionThrough({}, { browser: { sub: "bob", acr: "mfa" } });
+    expect(plain.bob.code, plain.bob.error).toBeTruthy();
+    expectAliceUntouched(plain);
+    const k = await newKeys();
+    const issued = await redeem("ap-agent", plain.bob.code as string, k);
+    expect(decodeJwt(issued.access_token as string).sub).toBe("bob");
+    const refreshed = await token("ap-agent", { grant_type: "refresh_token", refresh_token: issued.refresh_token as string }, k);
+    expect(decodeJwt(refreshed.access_token as string).sub).toBe("bob");
+    // Bob's login does not stay in this user agent, so it yields no ID Token.
+    const oidc = await aliceSessionThrough({ scope: "openid" }, { browser: { sub: "bob", acr: "mfa" } });
+    expect(oidc.bob.error).toBe("invalid_scope");
+    expectAliceUntouched(oidc);
+    expect(oidc.missions).toBe(0);
+    expect(oidc.grants).toBe(0);
+  });
+
+  it("Alice's own browser approval in her user agent stays an ordinary login: her session takes the new authentication and the ID Token reports it", async () => {
+    const earlier = Math.floor(Date.now() / 1000) - 600;
+    const first = await authorize({ scope: "openid", approval: { browser: { sub: "alice", acr: "mfa", auth_time: earlier } } });
+    expect(first.code, first.error).toBeTruthy();
+    const later = Math.floor(Date.now() / 1000) - 30;
+    const again = await authorize({
+      scope: "openid",
+      extra: { max_age: "3600" },
+      approval: { browser: { sub: "alice", acr: "mfa", auth_time: later } },
+      jar: first.jar,
+    });
+    expect(again.code, again.error).toBeTruthy();
+    const session = await sessionOf(again.jar);
+    expect(session?.accountId).toBe("alice");
+    expect(session?.loginTs).toBe(later);
+    const idToken = decodeJwt((await redeem("ap-agent", again.code as string, await newKeys())).id_token as string);
+    expect(idToken.sub).toBe("alice");
+    expect(idToken.auth_time).toBe(later);
   });
 
   it.each([
