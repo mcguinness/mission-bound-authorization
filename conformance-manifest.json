@@ -33464,7 +33464,7 @@
    "id": "resource-access.type.prefix-query-fragment-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-access-type",
-   "text": "the AS refuses such an entry with `invalid_authorization_details`",
+   "text": "the authorization server refuses such an entry with the `invalid_authorization_details` error code",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -33625,7 +33625,7 @@
    "id": "resource-access.delegate-eligibility.as-authenticates-delegate",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "delegate-eligibility",
-   "text": "The AS MUST authenticate the delegate at the Token Exchange",
+   "text": "The authorization server MUST authenticate the delegate at the Token Exchange",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -33817,7 +33817,7 @@
    "id": "resource-access.transformation-capabilities.projection-undeclared-fallback",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "transformation-capabilities",
-   "text": "declares `projection` as undeclared rather than `true`",
+   "text": "leaves `projection` undeclared rather than declaring it `true`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
