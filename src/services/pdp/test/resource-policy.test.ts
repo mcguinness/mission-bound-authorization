@@ -21,6 +21,8 @@ import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import {
   fgaResourcePolicy,
+  clientObject,
+  issuerLocalClients,
   issuerLocalPrincipals,
   principalObject,
   ResourcePolicyConfigError,
@@ -285,19 +287,21 @@ describe("issuer-local principal mapping (@spec runtime#input-resource-policy, #
 });
 
 describe("fgaResourcePolicy checks stored entitlements only (@spec runtime#input-resource-policy, #828)", () => {
-  function recordingChecker(entitled: (object: string) => boolean) {
+  function recordingChecker(entitled: (object: string, user: string) => boolean) {
     const calls: Array<{ check: { user: string; relation: string; object: string }; opts: unknown; extra: number }> = [];
     return {
       calls,
       checkStored: async (check: { user: string; relation: string; object: string }, opts: unknown, ...extra: unknown[]) => {
         calls.push({ check, opts, extra: extra.length });
-        return entitled(check.object);
+        return entitled(check.object, check.user);
       },
     };
   }
   const principal = principalObject({ iss: ISSUER, sub: "alice" });
+  const client = clientObject({ iss: ISSUER, client: "ap-agent" });
   const query = (over: Record<string, unknown> = {}) => ({
     subject: { sub: "alice", iss: ISSUER },
+    client: "ap-agent",
     action: "payments:payment.execute",
     targets: [{ type: "invoice", id: "inv-1" }],
     ...over,
@@ -305,21 +309,23 @@ describe("fgaResourcePolicy checks stored entitlements only (@spec runtime#input
 
   it("checks every target's mapped stored relation with an authoritative read and nothing else", async () => {
     const checker = recordingChecker(() => true);
-    const policy = fgaResourcePolicy(checker, { principals: issuerLocalPrincipals(ISSUER) });
+    const policy = fgaResourcePolicy(checker, { principals: issuerLocalPrincipals(ISSUER), clients: issuerLocalClients(ISSUER) });
     const result = await policy.check(query({ targets: [{ type: "invoice", id: "inv-1" }, { type: "vendor", id: "acme" }] }));
     expect(result).toEqual({ allowed: true });
     expect(checker.calls).toEqual([
       { check: { user: principal, relation: "authorized_payer", object: "invoice:inv-1" }, opts: { higherConsistency: true }, extra: 0 },
+      { check: { user: client, relation: "authorized_client", object: "invoice:inv-1" }, opts: { higherConsistency: true }, extra: 0 },
       { check: { user: principal, relation: "authorized_payer", object: "vendor:acme" }, opts: { higherConsistency: true }, extra: 0 },
+      { check: { user: client, relation: "authorized_client", object: "vendor:acme" }, opts: { higherConsistency: true }, extra: 0 },
     ]);
   });
 
   it("refuses at the first unentitled target, an unmapped subject, an unmapped action and an unadministered target type", async () => {
     const checker = recordingChecker((object) => object !== "vendor:globex");
-    const policy = fgaResourcePolicy(checker, { principals: issuerLocalPrincipals(ISSUER) });
+    const policy = fgaResourcePolicy(checker, { principals: issuerLocalPrincipals(ISSUER), clients: issuerLocalClients(ISSUER) });
     expect(await policy.check(query({ targets: [{ type: "vendor", id: "acme" }, { type: "vendor", id: "globex" }, { type: "vendor", id: "initech" }] })))
       .toEqual({ allowed: false, target: { type: "vendor", id: "globex" } });
-    expect(checker.calls.map((c) => c.check.object)).toEqual(["vendor:acme", "vendor:globex"]);
+    expect(checker.calls.map((c) => c.check.object)).toEqual(["vendor:acme", "vendor:acme", "vendor:globex"]);
     checker.calls.length = 0;
     expect((await policy.check(query({ subject: { sub: "alice", iss: "https://other.test" } }))).allowed).toBe(false);
     expect((await policy.check(query({ action: "payments:unknown" }))).allowed).toBe(false);
@@ -328,8 +334,28 @@ describe("fgaResourcePolicy checks stored entitlements only (@spec runtime#input
     expect(checker.calls).toEqual([]);
   });
 
+  it("the client dimension (D429): the authenticated client must hold authorized_client on every target; a refused client entitlement refuses though the subject's holds, and no client or a client under another issuer refuses without a check", async () => {
+    const checker = recordingChecker((object, user) => !(user === client && object === "vendor:globex"));
+    const policy = fgaResourcePolicy(checker, { principals: issuerLocalPrincipals(ISSUER), clients: issuerLocalClients(ISSUER) });
+    expect(await policy.check(query({ targets: [{ type: "vendor", id: "acme" }, { type: "vendor", id: "globex" }] })))
+      .toEqual({ allowed: false, target: { type: "vendor", id: "globex" } });
+    expect(checker.calls.map((c) => `${c.check.relation} ${c.check.object}`)).toEqual([
+      "authorized_payer vendor:acme",
+      "authorized_client vendor:acme",
+      "authorized_payer vendor:globex",
+      "authorized_client vendor:globex",
+    ]);
+    checker.calls.length = 0;
+    expect((await policy.check(query({ client: undefined }))).allowed).toBe(false);
+    expect((await policy.check(query({ client: "" }))).allowed).toBe(false);
+    expect((await policy.check(query({ subject: { sub: "alice", iss: "https://other.test" } }))).allowed).toBe(false);
+    expect(checker.calls).toEqual([]);
+    expect(issuerLocalClients(ISSUER)({ client: "ap-agent", iss: "https://other.test" })).toBeUndefined();
+    expect(clientObject({ iss: ISSUER, client: "a|b" })).not.toBe(clientObject({ iss: `${ISSUER}|a`, client: "b" }));
+  });
+
   it("a failed read throws ResourcePolicyUnavailableError, never a refusal", async () => {
-    const policy = fgaResourcePolicy({ checkStored: async () => { throw new Error("ECONNREFUSED"); } }, { principals: issuerLocalPrincipals(ISSUER) });
+    const policy = fgaResourcePolicy({ checkStored: async () => { throw new Error("ECONNREFUSED"); } }, { principals: issuerLocalPrincipals(ISSUER), clients: issuerLocalClients(ISSUER) });
     await expect(policy.check(query())).rejects.toBeInstanceOf(ResourcePolicyUnavailableError);
   });
 });
@@ -548,22 +574,24 @@ describe("Fga.attach verifies the configured model and never creates a store (@s
 
   it("sends the stored entitlement check with no contextual tuples, pinned to the attached model at higher consistency", async () => {
     fake = await fakeOpenFga({ model: DOMAIN_MODEL, check: () => ({ status: 200, body: { allowed: true } }) });
-    const policy = fgaResourcePolicy(await attach(fake.url), { principals: issuerLocalPrincipals(ISSUER) });
-    expect(await policy.check({ subject: { sub: "alice", iss: ISSUER }, action: "payments:invoice.read", targets: [{ type: "invoice", id: "inv-1" }] })).toEqual({ allowed: true });
-    const check = fake.requests.find((r) => r.path.endsWith("/check"));
-    expect(check?.body).toMatchObject({
-      tuple_key: { user: principalObject({ iss: ISSUER, sub: "alice" }), relation: "authorized_reader", object: "invoice:inv-1" },
-      authorization_model_id: MODEL_ID,
-      consistency: "HIGHER_CONSISTENCY",
-    });
-    // The SDK always sends the member; it carries no tuple.
-    expect(check?.body?.contextual_tuples ?? { tuple_keys: [] }).toEqual({ tuple_keys: [] });
+    const policy = fgaResourcePolicy(await attach(fake.url), { principals: issuerLocalPrincipals(ISSUER), clients: issuerLocalClients(ISSUER) });
+    expect(await policy.check({ subject: { sub: "alice", iss: ISSUER }, client: "ap-agent", action: "payments:invoice.read", targets: [{ type: "invoice", id: "inv-1" }] })).toEqual({ allowed: true });
+    const checks = fake.requests.filter((r) => r.path.endsWith("/check"));
+    expect(checks.map((c) => c.body?.tuple_key)).toEqual([
+      { user: principalObject({ iss: ISSUER, sub: "alice" }), relation: "authorized_reader", object: "invoice:inv-1" },
+      { user: clientObject({ iss: ISSUER, client: "ap-agent" }), relation: "authorized_client", object: "invoice:inv-1" },
+    ]);
+    for (const check of checks) {
+      expect(check.body).toMatchObject({ authorization_model_id: MODEL_ID, consistency: "HIGHER_CONSISTENCY" });
+      // The SDK always sends the member; it carries no tuple.
+      expect(check.body?.contextual_tuples ?? { tuple_keys: [] }).toEqual({ tuple_keys: [] });
+    }
   });
 
   it("a failing or silent backend makes the decision throw: no permit and no resource_policy refusal", async () => {
     for (const answer of [() => ({ status: 500, body: { code: "internal_error" } }), () => "hang" as const]) {
       fake = await fakeOpenFga({ model: DOMAIN_MODEL, check: answer });
-      const policy = fgaResourcePolicy(await attach(fake.url, 200), { principals: issuerLocalPrincipals(ISSUER) });
+      const policy = fgaResourcePolicy(await attach(fake.url, 200), { principals: issuerLocalPrincipals(ISSUER), clients: issuerLocalClients(ISSUER) });
       await expect(evaluate(req(), opts({ fga: missionFga(true).fga, resourcePolicy: policy }))).rejects.toBeInstanceOf(ResourcePolicyUnavailableError);
       await fake.close();
       fake = undefined;
@@ -587,6 +615,14 @@ describe("FgaDomainAdmin writes durable domain tuples only (@spec runtime#input-
       { user: principal, relation: "vendor", object: "invoice:inv-1" },
       { user: principal, relation: "authorized_reader", object: "mission:msn_rp_1" },
       { user: "client:ap-agent", relation: "authorized_reader", object: "vendor:acme" },
+      // D429: a client's entitlement is on a vendor only, held by a client;
+      // a tenant is named by a vendor and has users and clients as members.
+      { user: "client:ap-agent", relation: "authorized_client", object: "invoice:inv-1" },
+      { user: principal, relation: "authorized_client", object: "vendor:acme" },
+      { user: "tenant:t1", relation: "tenant", object: "invoice:inv-1" },
+      { user: principal, relation: "tenant", object: "vendor:acme" },
+      { user: "vendor:acme", relation: "member", object: "tenant:t1" },
+      { user: principal, relation: "member", object: "vendor:acme" },
     ];
     for (const tuple of refused) {
       expect(() => assertDomainTuple(tuple), JSON.stringify(tuple)).toThrow(DomainTupleError);
@@ -612,5 +648,19 @@ describe("FgaDomainAdmin writes durable domain tuples only (@spec runtime#input-
     writes.length = 0;
     await admin.grant(Array.from({ length: 150 }, (_, i) => ({ user: "vendor:acme", relation: "vendor", object: `invoice:bulk-${i}` })));
     expect(writes.map((w) => (w as { writes: unknown[] }).writes.length)).toEqual([100, 50]);
+  });
+
+  it("administers the client and tenant dimensions (D429): a client's entitlement on a vendor, a vendor's tenant, and a user or client as a tenant member", async () => {
+    const { admin, writes } = recordingAdmin();
+    const client = clientObject({ iss: ISSUER, client: "ap-agent" });
+    const tuples = [
+      { user: client, relation: "authorized_client", object: "vendor:acme" },
+      { user: "tenant:t1", relation: "tenant", object: "vendor:acme" },
+      { user: principal, relation: "member", object: "tenant:t1" },
+      { user: client, relation: "member", object: "tenant:t1" },
+    ];
+    for (const tuple of tuples) expect(() => assertDomainTuple(tuple), JSON.stringify(tuple)).not.toThrow();
+    await admin.grant(tuples);
+    expect(writes).toEqual([{ writes: tuples }]);
   });
 });

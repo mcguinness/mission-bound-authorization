@@ -18,10 +18,22 @@ import { canonicalize, type JsonValue } from "@mission/core";
 import { getTracer } from "@mission/telemetry";
 import { CredentialsMethod, OpenFgaClient, type TupleKey } from "@openfga/sdk";
 
-/** A stored entitlement inherited by every invoice the vendor owns. */
+/** A stored relation inherited by every invoice the vendor owns. */
 const FROM_VENDOR = (relation: string) => ({
   tupleToUserset: { tupleset: { object: "", relation: "vendor" }, computedUserset: { object: "", relation } },
 });
+
+/**
+ * A direct grant that counts only for a member of the object's tenant
+ * (`tenant_member`, read from the vendor's `tenant`), so an entitlement on a
+ * vendor outside the principal's tenant never holds (#828, D429).
+ */
+const DIRECT_IN_TENANT = {
+  intersection: { child: [{ this: {} }, { computedUserset: { object: "", relation: "tenant_member" } }] },
+};
+
+/** A relation no tuple names directly; it is computed from others. */
+const COMPUTED = { directly_related_user_types: [] };
 
 /**
  * Domain model, two disjoint relation families:
@@ -30,10 +42,12 @@ const FROM_VENDOR = (relation: string) => ({
  *   vendors): admits only `mission` subjects and is never stored. Mission
  *   authority arrives as contextual tuples keyed by a per-check ephemeral
  *   `mission:<id>` object.
- * - Stored entitlement (`authorized_payer`/`authorized_reader`, #828):
- *   admits only `user` principals, granted directly on a vendor or invoice,
- *   or inherited by an invoice from its owning vendor (`invoice#vendor`).
- *   No rewrite reaches a Mission-context relation, so no `mission:` tuple,
+ * - Stored entitlement (#828): `authorized_payer`/`authorized_reader` admit
+ *   only `user` principals and `authorized_client` only `client` principals
+ *   (D429). Each is granted on a vendor (subjects also on an invoice), an
+ *   invoice inherits its owning vendor's (`invoice#vendor`), and every
+ *   direct grant counts only for a `member` of the vendor's `tenant`. No
+ *   rewrite reaches a Mission-context relation, so no `mission:` tuple,
  *   stored or contextual, can satisfy an entitlement.
  */
 export const DOMAIN_MODEL = {
@@ -42,19 +56,32 @@ export const DOMAIN_MODEL = {
     { type: "user" },
     { type: "client" },
     {
+      type: "tenant",
+      relations: { member: { this: {} } },
+      metadata: { relations: { member: { directly_related_user_types: [{ type: "user" }, { type: "client" }] } } },
+    },
+    {
       type: "vendor",
       relations: {
         approved: { this: {} },
         reader: { this: {} },
-        authorized_reader: { this: {} },
-        authorized_payer: { this: {} },
+        tenant: { this: {} },
+        tenant_member: {
+          tupleToUserset: { tupleset: { object: "", relation: "tenant" }, computedUserset: { object: "", relation: "member" } },
+        },
+        authorized_reader: DIRECT_IN_TENANT,
+        authorized_payer: DIRECT_IN_TENANT,
+        authorized_client: DIRECT_IN_TENANT,
       },
       metadata: {
         relations: {
           approved: { directly_related_user_types: [{ type: "mission" }] },
           reader: { directly_related_user_types: [{ type: "mission" }] },
+          tenant: { directly_related_user_types: [{ type: "tenant" }] },
+          tenant_member: COMPUTED,
           authorized_reader: { directly_related_user_types: [{ type: "user" }] },
           authorized_payer: { directly_related_user_types: [{ type: "user" }] },
+          authorized_client: { directly_related_user_types: [{ type: "client" }] },
         },
       },
     },
@@ -64,16 +91,20 @@ export const DOMAIN_MODEL = {
         payer: { this: {} },
         reader: { this: {} },
         vendor: { this: {} },
-        authorized_reader: { union: { child: [{ this: {} }, FROM_VENDOR("authorized_reader")] } },
-        authorized_payer: { union: { child: [{ this: {} }, FROM_VENDOR("authorized_payer")] } },
+        tenant_member: FROM_VENDOR("tenant_member"),
+        authorized_reader: { union: { child: [DIRECT_IN_TENANT, FROM_VENDOR("authorized_reader")] } },
+        authorized_payer: { union: { child: [DIRECT_IN_TENANT, FROM_VENDOR("authorized_payer")] } },
+        authorized_client: FROM_VENDOR("authorized_client"),
       },
       metadata: {
         relations: {
           payer: { directly_related_user_types: [{ type: "mission" }] },
           reader: { directly_related_user_types: [{ type: "mission" }] },
           vendor: { directly_related_user_types: [{ type: "vendor" }] },
+          tenant_member: COMPUTED,
           authorized_reader: { directly_related_user_types: [{ type: "user" }] },
           authorized_payer: { directly_related_user_types: [{ type: "user" }] },
+          authorized_client: COMPUTED,
         },
       },
     },
@@ -411,10 +442,13 @@ export class Fga {
 }
 
 /** Relations an administrator may write, with the user and object types each admits. */
-const ADMIN_RELATIONS: Readonly<Record<string, { user: string; objects: readonly string[] }>> = {
-  authorized_reader: { user: "user", objects: ["vendor", "invoice"] },
-  authorized_payer: { user: "user", objects: ["vendor", "invoice"] },
-  vendor: { user: "vendor", objects: ["invoice"] },
+const ADMIN_RELATIONS: Readonly<Record<string, { users: readonly string[]; objects: readonly string[] }>> = {
+  authorized_reader: { users: ["user"], objects: ["vendor", "invoice"] },
+  authorized_payer: { users: ["user"], objects: ["vendor", "invoice"] },
+  authorized_client: { users: ["client"], objects: ["vendor"] },
+  vendor: { users: ["vendor"], objects: ["invoice"] },
+  tenant: { users: ["tenant"], objects: ["vendor"] },
+  member: { users: ["user", "client"], objects: ["tenant"] },
 };
 
 /** Refused before any write reaches the store: not a durable domain tuple. */
@@ -431,15 +465,19 @@ function typeOf(ref: string): string | undefined {
 }
 
 /**
- * A durable domain tuple: a stored entitlement for a `user` principal, or an
- * invoice's owning vendor. Mission-context relations, `mission:` objects and
+ * A durable domain tuple: a stored entitlement for a `user` or `client`
+ * principal, an invoice's owning vendor, a vendor's tenant, or a tenant's
+ * member. Mission-context relations, `mission:` objects and
  * any other shape are refused, so nothing a Mission approval or a token
  * carries can be written as durable policy through this path.
  */
 export function assertDomainTuple(tuple: TupleKey): void {
   const rule = ADMIN_RELATIONS[tuple.relation];
   if (!rule) throw new DomainTupleError(tuple, `relation ${tuple.relation} is not administered`);
-  if (typeOf(tuple.user) !== rule.user) throw new DomainTupleError(tuple, `user must be a ${rule.user}`);
+  const userType = typeOf(tuple.user);
+  if (userType === undefined || !rule.users.includes(userType)) {
+    throw new DomainTupleError(tuple, `user must be one of ${rule.users.join(", ")}`);
+  }
   const objectType = typeOf(tuple.object);
   if (objectType === undefined || !rule.objects.includes(objectType)) {
     throw new DomainTupleError(tuple, `object must be one of ${rule.objects.join(", ")}`);
