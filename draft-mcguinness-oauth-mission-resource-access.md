@@ -212,8 +212,9 @@ with these members:
   - An authorization server SHOULD draw action identifiers from a
     namespace the serving resource documents, so the set is
     interpretable cross-vendor rather than ad hoc.
-  - An authorization server that renders consent MUST present a family
-    as the breadth it is: all actions under the name, not one action.
+  - The authorization server MUST ensure that a consent rendering
+    presents a family as the breadth it is: all actions under the name,
+    not one action.
   - An authorization server SHOULD treat deriving a family as high-risk
     breadth.
 
