@@ -6372,6 +6372,11 @@ Cross-Domain:
 
 -01
 
+- Editorial: a readability pass shortens paragraphs, turns
+  enumerations into lists, cuts restatement, and follows OAuth
+  conventions for naming parameters, claims and error codes and for
+  example lead-ins. No requirement changes.
+
 - Error and Challenge Mapping: a Token Exchange refuses a
   `subject_token` or `actor_token` that is invalid, whose sender
   constraint is not proven, or that is unacceptable for the exchange
