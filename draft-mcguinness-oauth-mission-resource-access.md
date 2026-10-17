@@ -183,9 +183,8 @@ with these members:
     carry a query or fragment component; the authorization server
     refuses such an entry with the `invalid_authorization_details` error
     code ({{Section 5 of RFC9396}}).
-  - For prefix purposes, a `resource` with an empty path and one whose
-    path is `/` denote the same base: `https://a.example` and
-    `https://a.example/` authorize the same set.
+  - {{resource-matching}} defines how a `prefix` entry's `resource` is
+    compared, including the treatment of an empty path.
   - These two values are the only ones defined; a consumer MUST treat an
     entry whose `resource_match` value it does not recognize as
     unenforceable and fail closed
@@ -288,6 +287,69 @@ issuance window by the `resource_issued_after` and
 The write entry carries no `delegation`, so it is non-delegable:
 `delegation` is per entry.
 
+## Resource Matching {#resource-matching}
+
+This section defines how a `prefix` entry's `resource` is compared: with
+another entry's `resource` when the authorization server tests
+containment ({{subset}}), and with a concrete request URI when the
+resource server enforces the entry ({{rs-enforcement}}). A `prefix`
+entry draws an authority boundary in URI space, and both parties draw it
+the same way.
+
+For prefix purposes, a `resource` with an empty path and one whose path
+is `/` denote the same base: `https://a.example` and
+`https://a.example/` authorize the same set.
+
+Resource containment under a `prefix` reference is compared after
+normalizing both URIs with these steps from {{Section 6.2.2 of RFC3986}}
+(syntax-based) and {{Section 6.2.3 of RFC3986}} (scheme-based):
+
+1. lowercase the scheme and host;
+2. remove a default port;
+3. uppercase the hexadecimal digits of any percent-encoding
+   ({{Section 2.1 of RFC3986}}), so `%2f` and `%2F` are equivalent;
+4. decode percent-encoded octets of unreserved characters; and
+5. remove dot-segments.
+
+This normalization applies to comparison only, never to hashing:
+{{I-D.draft-mcguinness-oauth-mission}}'s anchor computation remains
+byte-exact over the recorded values and is untouched by this rule.
+
+The authorization server's containment test ({{subset}}) and the
+resource server's request matching ({{rs-enforcement}}) MUST apply the
+single URI normalization defined in this section, so issuance and
+enforcement draw the same boundary.
+
+The normalization MUST run before the prefix comparison, never after,
+and the boundary MUST be evaluated on the same normalized form a
+downstream component will act on.
+
+An empty path and `/` denote the same base; beyond that equivalence, a
+URI matcher MUST NOT coalesce `//` or trailing-slash differences of its
+own, since the normalization does not.
+
+The normalization lowercases the host but does not define Unicode to
+A-label (IDNA) conversion, so a deployment that accepts non-ASCII hosts
+MUST ensure both sides compare the same form.
+
+The following table shows how request URIs match a `prefix` entry whose
+`resource` is `https://api.example/orders`:
+
+| Request URI | Result | Why |
+| --- | --- | --- |
+| `https://api.example/orders` | ALLOW | The base itself |
+| `https://api.example/orders/123` | ALLOW | An extension at a path-segment boundary |
+| `https://API.EXAMPLE/orders/123` | ALLOW | Scheme and host are case-folded |
+| `https://api.example:443/orders/123` | ALLOW | The default port is removed |
+| `https://api.example/Orders/123` | DENY | The path is case-sensitive: `Orders` is not `orders` |
+| `https://api.example/orders%2F123` (equivalently `%2f`) | DENY | Hex digits normalize to `%2F`, which stays encoded and is not a separator: one segment `orders%2F123`, not an extension of `/orders` |
+| `https://api.example/ordersX` | DENY | The match extends only at a path-segment boundary, not within a segment |
+| `https://api.example/orders/%2e%2e/admin` | DENY | `%2e%2e` decodes to `..` and the dot-segment is removed, yielding `https://api.example/admin`, outside the prefix |
+{: title="Prefix matching for https://api.example/orders"}
+
+{{resource-boundary-canonicalization}} analyzes why each of these rules
+matters.
+
 ## Subset Rule {#subset}
 
 {{I-D.draft-mcguinness-oauth-mission}} derives, narrows, and delegates a
@@ -300,7 +362,8 @@ token, a derived `mission_resource_access` entry A is a subset of a
 Mission entry B when all of the following hold:
 
 1. **Resource.** A's effective resource set is contained in B's
-   (`resource_match`, {{resource-access-type}}):
+   (`resource_match`, {{resource-access-type}}); under a `prefix` B, the
+   `resource` values are compared as {{resource-matching}} defines:
    - when neither entry sets `resource_match: "prefix"`, A.`resource`
      equals B.`resource`;
    - when B is a `prefix` entry, A (whether `exact` or `prefix`) is
@@ -324,21 +387,6 @@ Mission entry B when all of the following hold:
      specification-defined rule when K is a Common Constraint
      ({{common-constraints}}), the deployment-defined comparison
      otherwise.
-
-Resource containment under a `prefix` reference is compared after
-normalizing both URIs with these steps from {{Section 6.2.2 of RFC3986}}
-(syntax-based) and {{Section 6.2.3 of RFC3986}} (scheme-based):
-
-1. lowercase the scheme and host;
-2. remove a default port;
-3. uppercase the hexadecimal digits of any percent-encoding
-   ({{Section 2.1 of RFC3986}}), so `%2f` and `%2F` are equivalent;
-4. decode percent-encoded octets of unreserved characters; and
-5. remove dot-segments.
-
-This normalization applies to comparison only, never to hashing:
-{{I-D.draft-mcguinness-oauth-mission}}'s anchor computation remains
-byte-exact over the recorded values and is untouched by this rule.
 
 Hierarchy is opt-in and closed to two forms: `resource_match: "prefix"`
 for resource containment and `.*` action families for action containment
@@ -573,8 +621,8 @@ server:
 - MUST treat an entry's `resource_match` value it does not recognize as
   unenforceable and fail closed ({{resource-access-type}}).
 - MUST, when it matches a concrete request URI against a `prefix` entry,
-  apply the URI normalization {{subset}} defines for containment, before
-  the prefix comparison rather than after
+  apply the URI normalization {{resource-matching}} defines for
+  containment, before the prefix comparison rather than after
   ({{resource-boundary-canonicalization}}).
 - MUST fail closed on any `constraints` key it does not understand, or
   understands but cannot enforce, in an applicable entry: refuse the
@@ -880,65 +928,44 @@ anchors, and issuance gating. Three risks are specific to this type:
 ## Resource Boundary Canonicalization {#resource-boundary-canonicalization}
 
 A `prefix` entry ({{resource-access-type}}) draws an authority boundary
-in URI space. The authorization server's containment test ({{subset}})
-and the resource server's request matching ({{rs-enforcement}}) MUST
-apply the single URI normalization defined in {{subset}}, so issuance
-and enforcement draw the same boundary. A matcher that normalizes
-differently from the party that derived the entry can admit a request
-the Approver never authorized, or deny one the Approver did.
+in URI space, and {{resource-matching}} requires the authorization
+server and the resource server to draw it with one normalization. A URI
+matcher that normalizes differently from the party that derived the
+entry can admit a request the Approver never authorized, or deny one the
+Approver did. Each of the following vectors turns on such a difference:
 
-The normalization MUST run before the prefix comparison, never after,
-and the boundary MUST be evaluated on the same normalized form a
-downstream component will act on. Each of the following vectors turns on
-such a difference:
-
-- **Encoded slash (`%2F`).** A reserved octet, left encoded by this
+- **Encoded slash (`%2F`).** A reserved octet, left encoded by the
   normalization (which decodes only unreserved octets) and never a
   path-segment separator when matching. An intermediary that decodes it
   before the resource server enforces shifts the boundary; a deployment
   MUST prevent that rewriting or account for it.
-- **Encoded dot (`%2e`, `%2e%2e`).** The `.` octet is unreserved, so
-  this normalization decodes it and then removes dot-segments. The
-  hazard is order: normalizing before the comparison collapses a decoded
-  `%2e%2e` out of the path and draws the boundary correctly, while
-  matching the raw string first and letting a downstream component
-  decode and collapse afterward can escape the prefix.
-- **Double or empty path segments.** An empty path and `/` denote the
-  same base ({{resource-access-type}}); beyond that equivalence, a
-  matcher MUST NOT coalesce `//` or trailing-slash differences of its
-  own, since the {{subset}} normalization does not.
+- **Encoded dot (`%2e`, `%2e%2e`).** The `.` octet is unreserved, so the
+  normalization decodes it and then removes dot-segments. The hazard is
+  order: normalizing before the comparison collapses a decoded `%2e%2e`
+  out of the path and draws the boundary correctly, while matching the
+  raw string first and letting a downstream component decode and
+  collapse afterward can escape the prefix.
+- **Double or empty path segments.** Beyond the empty-path equivalence,
+  a URI matcher that coalesces `//` or trailing-slash differences of its
+  own draws a boundary the normalization does not, which
+  {{resource-matching}} forbids.
 - **Default-port presence.** `https://a.example:443` and
   `https://a.example` are one authority only after the default-port
-  removal {{subset}} performs; a matcher that skips it splits one
-  boundary into two.
-- **Unicode and IDNA host.** The {{subset}} normalization lowercases the
-  host but does not define Unicode to A-label (IDNA) conversion, so a
-  deployment that accepts non-ASCII hosts MUST ensure both sides compare
+  removal of {{resource-matching}}; a URI matcher that skips it splits
+  one boundary into two.
+- **Unicode and IDNA host.** The normalization lowercases the host but
+  defines no IDNA conversion, so two sides that convert differently draw
+  different boundaries; {{resource-matching}} requires them to compare
   the same form.
-- **Percent-decoding order.** This normalization decodes only unreserved
+- **Percent-decoding order.** The normalization decodes only unreserved
   octets and runs before comparison; decoding reserved octets, or
   decoding after the comparison, changes which characters count as
   separators and can move the boundary.
 
-The following table shows how request URIs match a `prefix` entry whose
-`resource` is `https://api.example/orders`:
-
-| Request URI | Result | Why |
-| --- | --- | --- |
-| `https://api.example/orders` | ALLOW | The base itself |
-| `https://api.example/orders/123` | ALLOW | An extension at a path-segment boundary |
-| `https://API.EXAMPLE/orders/123` | ALLOW | Scheme and host are case-folded |
-| `https://api.example:443/orders/123` | ALLOW | The default port is removed |
-| `https://api.example/Orders/123` | DENY | The path is case-sensitive: `Orders` is not `orders` |
-| `https://api.example/orders%2F123` (equivalently `%2f`) | DENY | Hex digits normalize to `%2F`, which stays encoded and is not a separator: one segment `orders%2F123`, not an extension of `/orders` |
-| `https://api.example/ordersX` | DENY | The match extends only at a path-segment boundary, not within a segment |
-| `https://api.example/orders/%2e%2e/admin` | DENY | `%2e%2e` decodes to `..` and the dot-segment is removed, yielding `https://api.example/admin`, outside the prefix |
-{: title="Prefix matching for https://api.example/orders"}
-
 A deployment MAY agree out of band on the canonicalization profile its
 authorization server and resource servers apply; this document defines
-one rule ({{subset}}), so no profile identifier is required for
-interoperation.
+one rule ({{resource-matching}}), so no profile identifier is required
+for interoperation.
 
 # Privacy Considerations {#privacy-considerations}
 
