@@ -856,77 +856,72 @@ on a resource server's conformance.
 # Security Considerations {#security-considerations}
 
 This document defines a subset relation, a delegation policy, and a
-scope-projection safety condition; it inherits
-{{I-D.draft-mcguinness-oauth-mission}}'s Security Considerations for
-everything upstream of a `mission_resource_access` entry (the approval
-event, the integrity anchors, issuance gating). Three risks are
-specific to this type:
+scope-projection safety condition. The Security Considerations of
+{{I-D.draft-mcguinness-oauth-mission}} apply to everything upstream of a
+`mission_resource_access` entry: the approval event, the integrity
+anchors, and issuance gating. Three risks are specific to this type:
 
-- **Comparison, not meaning.** {{subset}} compares members, not
-  effects: a candidate that compares as no broader can still permit
-  an effect the parent's purpose never contemplated. This is a
-  documented limit, not an omission
+- **Comparison, not meaning.** {{subset}} compares members, not effects:
+  a candidate that compares as no broader can still permit an effect the
+  parent's purpose never contemplated
   ({{I-D.draft-mcguinness-oauth-mission}}).
-- **Unenforceable constraints widen silently if not refused.** A
-  resource server or scope projection that treats an unrecognized
-  `constraints` key as absent, or as disclosure-only, grants more
-  than the entry authorizes; {{I-D.draft-mcguinness-oauth-mission}}
-  and {{scope-projection}} both require fail-closed handling instead.
+- **An unenforced constraint widens the grant.** A resource server or
+  scope projection that treats an unrecognized `constraints` key as
+  absent, or as disclosure-only, grants more than the entry authorizes;
+  {{rs-enforcement}} and {{scope-projection}} require fail-closed
+  handling instead.
 - **A safe projection is per entry, not per type.** That
   `mission_resource_access` defines a projection relation
-  ({{scope-projection}}) does not make every entry of the type
-  safely projectable; an authorization server MUST evaluate the
-  three conditions of {{scope-projection}} for the specific entry
-  and mapping in force, not assume the type's general capability
-  extends to it.
+  ({{scope-projection}}) does not make every entry of the type safely
+  projectable; an authorization server MUST evaluate the three
+  conditions of {{scope-projection}} for the specific entry and mapping
+  in force, not assume the type's general capability extends to it.
 
 ## Resource Boundary Canonicalization {#resource-boundary-canonicalization}
 
-A `prefix` entry ({{resource-access-type}}) draws an authority
-boundary in URI space. The authorization server's containment test ({{subset}}) and the
-resource server's request matching
-({{rs-enforcement}}) MUST apply the single RFC
-3986 {{RFC3986}} normalization defined in {{subset}}, so issuance and
-enforcement draw the same boundary. A matcher that normalizes
+A `prefix` entry ({{resource-access-type}}) draws an authority boundary
+in URI space. The authorization server's containment test ({{subset}})
+and the resource server's request matching ({{rs-enforcement}}) MUST
+apply the single URI normalization defined in {{subset}}, so issuance
+and enforcement draw the same boundary. A matcher that normalizes
 differently from the party that derived the entry can admit a request
-the Approver never authorized, or deny one it did.
+the Approver never authorized, or deny one the Approver did.
 
 The normalization MUST run before the prefix comparison, never after,
 and the boundary MUST be evaluated on the same normalized form a
-downstream component will act on. The following vectors each turn on
+downstream component will act on. Each of the following vectors turns on
 such a difference:
 
 - **Encoded slash (`%2F`).** A reserved octet, left encoded by this
   normalization (which decodes only unreserved octets) and never a
-  path-segment separator when matching. An intermediary that decodes
-  it before the resource server enforces shifts the boundary; a
-  deployment MUST prevent that rewriting or account for it.
+  path-segment separator when matching. An intermediary that decodes it
+  before the resource server enforces shifts the boundary; a deployment
+  MUST prevent that rewriting or account for it.
 - **Encoded dot (`%2e`, `%2e%2e`).** The `.` octet is unreserved, so
   this normalization decodes it and then removes dot-segments. The
-  hazard is order: normalizing before the comparison collapses a
-  decoded `%2e%2e` out of the path and draws the boundary correctly,
-  while matching the raw string first and letting a downstream
-  component decode and collapse afterward can escape the prefix.
+  hazard is order: normalizing before the comparison collapses a decoded
+  `%2e%2e` out of the path and draws the boundary correctly, while
+  matching the raw string first and letting a downstream component
+  decode and collapse afterward can escape the prefix.
 - **Double or empty path segments.** An empty path and `/` denote the
-  same base ({{resource-access-type}}); a matcher MUST NOT coalesce
-  `//` or trailing-slash differences of its own, since the {{subset}}
-  normalization does not.
+  same base ({{resource-access-type}}); beyond that equivalence, a
+  matcher MUST NOT coalesce `//` or trailing-slash differences of its
+  own, since the {{subset}} normalization does not.
 - **Default-port presence.** `https://a.example:443` and
   `https://a.example` are one authority only after the default-port
   removal {{subset}} performs; a matcher that skips it splits one
   boundary into two.
-- **Unicode and IDNA host.** The {{subset}} normalization lowercases
-  the host but does not define Unicode to A-label (IDNA) conversion, so
-  a deployment that accepts non-ASCII hosts MUST ensure both sides
-  compare the same form.
-- **Percent-decoding order.** This normalization decodes only
-  unreserved octets and runs before comparison; decoding reserved
-  octets, or decoding after the comparison, changes which characters
-  count as separators and can move the boundary.
+- **Unicode and IDNA host.** The {{subset}} normalization lowercases the
+  host but does not define Unicode to A-label (IDNA) conversion, so a
+  deployment that accepts non-ASCII hosts MUST ensure both sides compare
+  the same form.
+- **Percent-decoding order.** This normalization decodes only unreserved
+  octets and runs before comparison; decoding reserved octets, or
+  decoding after the comparison, changes which characters count as
+  separators and can move the boundary.
 
-These vectors make the rule concrete. For a `prefix` entry whose
-`resource` is `https://api.example/orders`, a concrete request URI
-matches as follows:
+The following table shows how request URIs match a `prefix` entry whose
+`resource` is `https://api.example/orders`:
 
 | Request URI | Result | Why |
 | --- | --- | --- |
@@ -941,17 +936,18 @@ matches as follows:
 {: title="Prefix matching for https://api.example/orders"}
 
 A deployment MAY agree out of band on the canonicalization profile its
-authorization server and resource servers apply; this document defines one rule
-({{subset}}), so no profile identifier is required for interoperation.
+authorization server and resource servers apply; this document defines
+one rule ({{subset}}), so no profile identifier is required for
+interoperation.
 
 # Privacy Considerations {#privacy-considerations}
 
 This document defines no data element beyond what
-{{I-D.draft-mcguinness-oauth-mission}} already carries in
-`authorization_details`; that document's Privacy Considerations apply
-unchanged. The `resource`, `actions`, and `constraints` values chosen
-for an entry are exactly as privacy-sensitive as the Authority Set
-that carries them.
+{{I-D.draft-mcguinness-oauth-mission}} carries in
+`authorization_details`, and that document's Privacy Considerations
+apply unchanged. The `resource`, `actions`, and `constraints` values of
+an entry are as privacy-sensitive as the Authority Set that carries
+them.
 
 # IANA Considerations {#iana}
 
