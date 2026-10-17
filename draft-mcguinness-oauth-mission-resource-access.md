@@ -559,46 +559,46 @@ monetary value SHOULD reuse this shape rather than a JSON number.
 ## Resource Server Enforcement {#rs-enforcement}
 
 {{I-D.draft-mcguinness-oauth-mission}} requires a resource server to
-enforce each applicable `authorization_details` entry according to
-that entry's own type specification, and to fail closed on an entry
-whose type it does not implement or cannot fully evaluate. This
-section states that specification for a `mission_resource_access`
-entry. A resource server:
+enforce each applicable `authorization_details` entry according to that
+entry's own type specification, and to fail closed on an entry whose
+type it does not implement or cannot fully evaluate. This section is
+that specification for a `mission_resource_access` entry. A resource
+server:
 
 - MUST enforce an entry whose `resource` (under `resource_match`,
   {{resource-access-type}}) matches the request, permitting only the
   listed `actions` subject to `constraints`. Where more than one
-  applicable entry matches, entries are alternative grants of
-  authority, not conjunctive filters.
-- MUST treat an entry's `resource_match` value it does not recognize
-  as unenforceable and fail closed ({{resource-access-type}}).
-- MUST, when it matches a concrete request URI against a `prefix`
-  entry, apply the RFC 3986 {{RFC3986}} normalization {{subset}}
-  defines for containment, before the prefix comparison rather than
-  after, per the Resource Boundary Canonicalization analysis
+  applicable entry matches, entries are alternative grants of authority,
+  not conjunctive filters.
+- MUST treat an entry's `resource_match` value it does not recognize as
+  unenforceable and fail closed ({{resource-access-type}}).
+- MUST, when it matches a concrete request URI against a `prefix` entry,
+  apply the URI normalization {{subset}} defines for containment, before
+  the prefix comparison rather than after
   ({{resource-boundary-canonicalization}}).
-- MUST fail closed on any `constraints` key it does not understand,
-  or understands but cannot enforce, in an applicable entry: refuse
-  the request (for example, a `403` with `insufficient_scope`
-  {{RFC6750}}, or the deployment's usual insufficient-authority
-  error) rather than grant access while ignoring the key.
-- MUST NOT reduce a `constraints` key to disclosure-only: an
-  unenforced key that narrows authority silently widens the grant if
-  treated as absent or advisory.
+- MUST fail closed on any `constraints` key it does not understand, or
+  understands but cannot enforce, in an applicable entry: refuse the
+  request (for example, with HTTP status code 403 and the
+  `insufficient_scope` error code ({{Section 3.1 of RFC6750}}), or the
+  deployment's usual insufficient-authority error) rather than grant
+  access while ignoring the key.
+- MUST NOT reduce a `constraints` key to disclosure-only: an unenforced
+  key that narrows authority silently widens the grant if treated as
+  absent or advisory.
 
 ## Protected Resource Metadata {#protected-resource-metadata}
 
-A protected resource MAY advertise, in its protected resource
-metadata {{RFC9728}}:
+A protected resource MAY advertise the following member in its protected
+resource metadata ({{RFC9728}}):
 
 `mission_constraints_supported`:
-: OPTIONAL. An array of strings: the `constraints` keys (Common
-  Constraints and deployment-defined names) the resource understands
-  and enforces ({{rs-enforcement}}). It gives the authorization server's duty to emit
-  only keys the serving resource is known to understand
-  ({{resource-access-type}}) a discovery surface, and lets a client
-  predict a fail-closed constraint mismatch before making the
-  request. When absent, that knowledge is established out of band.
+: OPTIONAL. A JSON array of strings: the `constraints` keys, Common
+  Constraints and deployment-defined names, that the resource
+  understands and enforces ({{rs-enforcement}}). It lets the
+  authorization server discover which keys it can emit for the resource
+  ({{resource-access-type}}), and lets a client predict a fail-closed
+  constraint mismatch before making a request. When absent, that
+  knowledge is established out of band.
 
 ## Delegate Eligibility {#delegate-eligibility}
 
