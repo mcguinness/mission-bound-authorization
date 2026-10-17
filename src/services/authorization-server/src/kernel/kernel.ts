@@ -8,8 +8,10 @@ import { KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
   type ApprovalContextManifestInput,
   authorityHash,
+  canonicalize,
   COMMIT_IS_EFFECT_REASONS,
   intentHash,
+  type JsonValue,
   proposalHash,
 } from "@mission/core";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
@@ -226,6 +228,16 @@ CREATE TABLE IF NOT EXISTS missions (
   submission_evidence_json TEXT,
   termination_json TEXT,
   ceiling_json TEXT
+) STRICT;
+CREATE TABLE IF NOT EXISTS approval_reservations (
+  approval_event_id TEXT PRIMARY KEY,
+  approver_iss TEXT NOT NULL,
+  approver_sub TEXT NOT NULL,
+  subject_iss TEXT NOT NULL,
+  subject_sub TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  grant_id TEXT NOT NULL,
+  created_at TEXT NOT NULL
 ) STRICT;
 `;
 
@@ -1122,7 +1134,86 @@ export class MissionKernel {
     return { proposal, authoritySet, resolvedSource };
   }
 
-  approve(input: ApproveInput, prepared: PreparedApproval = this.prepareApproval(input)): MissionRecord {
+  /**
+   * @spec mission#approval-event (step 7) (#916) — reserve an interaction's
+   * approval for one decision, synchronously, before the decision's
+   * asynchronous grant save. The first decision to reserve names the
+   * Approver, Subject, client and grant every later decision on the
+   * interaction must match: a matching decision (a retry) proceeds, any other
+   * refuses. So concurrent decisions cannot leave a Mission recording one
+   * Approver and a provider grant owned by another. Returns whether this
+   * decision holds the reservation.
+   */
+  reserveApproval(input: {
+    approvalEventId: string;
+    approver: { iss: string; sub: string };
+    subject: { iss: string; sub: string };
+    clientId: string;
+    grantId: string;
+  }): boolean {
+    const inserted = this.db
+      .prepare(
+        `INSERT INTO approval_reservations (approval_event_id, approver_iss, approver_sub, subject_iss, subject_sub, client_id, grant_id, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (approval_event_id) DO NOTHING`,
+      )
+      .run(
+        input.approvalEventId,
+        input.approver.iss,
+        input.approver.sub,
+        input.subject.iss,
+        input.subject.sub,
+        input.clientId,
+        input.grantId,
+        this.now().toISOString(),
+      );
+    if (inserted.changes === 1) return true;
+    const held = this.db
+      .prepare("SELECT * FROM approval_reservations WHERE approval_event_id = ?")
+      .get(input.approvalEventId) as Record<string, string> | undefined;
+    return (
+      held !== undefined &&
+      held.approver_iss === input.approver.iss &&
+      held.approver_sub === input.approver.sub &&
+      held.subject_iss === input.subject.iss &&
+      held.subject_sub === input.subject.sub &&
+      held.client_id === input.clientId &&
+      held.grant_id === input.grantId
+    );
+  }
+
+  /**
+   * @spec mission#approval-event (step 3) (#916) — revalidate, at the commit,
+   * the authority source an approval was prepared under. The same root, with
+   * the same provenance, must still pass every gate; a source withdrawn or
+   * changed in between refuses `access_denied`, and no other root is ever
+   * substituted. Returns the current resolution.
+   */
+  private revalidatePreparedSource(input: ApproveInput, prepared: PreparedApproval): AuthoritySourceResolution {
+    const current = this.establishAuthoritySource({
+      clientId: input.clientId,
+      subject: input.subject,
+      approver: input.approver,
+    });
+    if (
+      current.rootId !== prepared.resolvedSource.rootId ||
+      canonicalize(current.provenance as unknown as JsonValue) !==
+        canonicalize(prepared.resolvedSource.provenance as unknown as JsonValue)
+    ) {
+      throw new IntentError(
+        "access_denied",
+        "the authority source changed between the approval's preparation and its commit",
+      );
+    }
+    this.assertAuthorityWithinSource(current, prepared.authoritySet);
+    return current;
+  }
+
+  approve(input: ApproveInput, preparedEarlier?: PreparedApproval): MissionRecord {
+    // A result prepared earlier (the approval decision prepares, then saves its
+    // grant asynchronously) is revalidated here, at the commit.
+    const prepared = preparedEarlier
+      ? { ...preparedEarlier, resolvedSource: this.revalidatePreparedSource(input, preparedEarlier) }
+      : this.prepareApproval(input);
     const { proposal, authoritySet, resolvedSource } = prepared;
     const authoritySource = resolvedSource.provenance;
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
