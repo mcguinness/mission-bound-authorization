@@ -185,10 +185,8 @@ with these members:
   - Under `exact`, the entry applies to the `resource` URI alone.
   - Under `prefix`, the entry authorizes the `resource` itself and any
     URI beneath it at a path-segment boundary (the `resource` followed
-    by `/` and further path). A `resource` value under `prefix` MUST NOT
-    carry a query or fragment component; the authorization server
-    refuses such an entry with the `invalid_authorization_details` error
-    code ({{Section 5 of RFC9396}}).
+    by `/` and further path). {{entry-validation}} limits the `resource`
+    value a `prefix` entry may carry.
   - {{resource-matching}} defines how a `prefix` entry's `resource` is
     compared, including the treatment of an empty path.
   - These two values are the only ones defined; a consumer MUST treat an
@@ -292,6 +290,51 @@ issuance window by the `resource_issued_after` and
 `resource_issued_before` Common Constraints ({{common-constraints}}).
 The write entry carries no `delegation`, so it is non-delegable:
 `delegation` is per entry.
+
+## Entry Validation {#entry-validation}
+
+This section gathers the validity rules for an entry beyond each
+member's type and presence requirements ({{resource-access-type}},
+{{initial-common-constraints}}). The authorization server applies them
+when it validates a proposed or carried entry ({{conformance}}); a
+resource server applies them where a rule says so.
+
+A `resource` value under `prefix` MUST NOT carry a query or fragment
+component; the authorization server refuses such an entry with the
+`invalid_authorization_details` error code ({{Section 5 of RFC9396}}).
+
+### Decimal Values {#decimal-values}
+
+A decimal-string value in a Common Constraint (`max_amount`'s `amount`
+member, and any future Common Constraint with a decimal-valued member)
+MUST match `^[0-9]+(\.[0-9]{1,18})?$`: one or more decimal digits,
+optionally followed by a single `.` and one to 18 further decimal
+digits.
+
+A value of any other form, including scientific notation (`"1e300"`), a
+sign (a ceiling value is never negative), a thousands separator, or a
+non-numeric token (`"NaN"`, `"Infinity"`), is malformed, and a consumer
+MUST reject it rather than attempt to parse it:
+
+- an authority proposal carrying one is refused at submission
+  ({{I-D.draft-mcguinness-oauth-mission}}); and
+- a resource server treats a malformed decimal value the same as a
+  `constraints` key it cannot enforce ({{rs-enforcement}}).
+
+Comparison and intersection over two such decimal-string values MUST be
+computed as exact decimal arithmetic (for example, by scaling both
+values to integers by their fractional digit count and comparing the
+integers) and MUST NOT parse either value into an IEEE 754 binary
+floating-point type: that representation does not hold every value the
+grammar above admits exactly and can compare or combine two values
+incorrectly.
+
+A numeric constraint value MUST lie within the range that the JSON
+Canonicalization Scheme (JCS) {{RFC8785}} serializes exactly. Monetary
+amounts avoid that hazard: `max_amount` carries its `amount` as a string
+containing a decimal number, paired with an ISO 4217 `currency` code,
+and a future Common Constraint for a monetary value SHOULD reuse this
+shape rather than a JSON number.
 
 ## Resource Matching {#resource-matching}
 
@@ -586,39 +629,6 @@ A Common Constraint definition MUST fix its subset and intersection in
 value-space terms, so that independent deployments compute the same
 result for the same values and the subset rule of {{subset}} is
 reproducible.
-
-### Decimal Values {#decimal-values}
-
-A decimal-string value in a Common Constraint (`max_amount`'s `amount`
-member, and any future Common Constraint with a decimal-valued member)
-MUST match `^[0-9]+(\.[0-9]{1,18})?$`: one or more decimal digits,
-optionally followed by a single `.` and one to 18 further decimal
-digits.
-
-A value of any other form, including scientific notation (`"1e300"`), a
-sign (a ceiling value is never negative), a thousands separator, or a
-non-numeric token (`"NaN"`, `"Infinity"`), is malformed, and a consumer
-MUST reject it rather than attempt to parse it:
-
-- an authority proposal carrying one is refused at submission
-  ({{I-D.draft-mcguinness-oauth-mission}}); and
-- a resource server treats a malformed decimal value the same as a
-  `constraints` key it cannot enforce ({{rs-enforcement}}).
-
-Comparison and intersection over two such decimal-string values MUST be
-computed as exact decimal arithmetic (for example, by scaling both
-values to integers by their fractional digit count and comparing the
-integers) and MUST NOT parse either value into an IEEE 754 binary
-floating-point type: that representation does not hold every value the
-grammar above admits exactly and can compare or combine two values
-incorrectly.
-
-A numeric constraint value MUST lie within the range that the JSON
-Canonicalization Scheme (JCS) {{RFC8785}} serializes exactly. Monetary
-amounts avoid that hazard: `max_amount` carries its `amount` as a string
-containing a decimal number, paired with an ISO 4217 `currency` code,
-and a future Common Constraint for a monetary value SHOULD reuse this
-shape rather than a JSON number.
 
 ## Resource Server Enforcement {#rs-enforcement}
 
