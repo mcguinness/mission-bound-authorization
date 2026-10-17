@@ -358,13 +358,22 @@ the store.
      for a refused decision, except the progressive ceiling consent: `approve`
      establishes it at the commit's creation instant, so its refusal comes
      after the grant save and leaves an inert grant a retry overwrites.
-  2. `new provider.Grant(...)` under `approvalGrantId(uid)`, an identity
+  2. `kernel.reserveApproval`: a synchronous reservation of the interaction's
+     approval event for this decision's Approver, Subject, client and grant,
+     taken with no await since the checks before it. A later or concurrent
+     decision that differs is refused 403 `approval_forbidden` before it
+     saves a grant, so the committed Mission and its grant agree on who
+     approved.
+  3. `new provider.Grant(...)` under `approvalGrantId(uid)`, an identity
      derived from the interaction, with the request's OIDC and resource scopes
      and the prepared Authority Set as its `rar`; then `grant.save()`, a
      provider adapter write. oidc-provider keeps a supplied `jti`, and its
      adapter's upsert overwrites the same id, so a repeated or concurrent
      decision names and rewrites the one grant.
-  3. `kernel.approve({..., grantId}, prepared)`, then `insertRecord`: the
+  4. `kernel.approve({..., grantId}, prepared)`, which first revalidates the
+     prepared authority source (the same root with the same provenance must
+     still pass every gate; a withdrawn or changed source refuses
+     `access_denied`, and no other root is substituted), then `insertRecord`: the
      authoritative Mission commit (§4.1), with `grant_id` set in the same
      insert, so the record never commits unbound; then `missionBoundGrants.record`
      on its own handle. The `approval_event_id` is `apev_{interaction uid}`,
@@ -379,9 +388,9 @@ the store.
      continuation and drawdown mint) bind a Mission's first grant through
      `kernel.bindFirstGrant`: a concurrent loser mints under the winner's
      grant rather than moving the binding.
-  4. For an Intent-only request, `details.save()` of the marked
+  5. For an Intent-only request, `details.save()` of the marked
      `authorization_details` (§7).
-  5. `interactionFinished`: a 303 to the resume URL (`lib/provider.js`
+  6. `interactionFinished`: a 303 to the resume URL (`lib/provider.js`
      L229-233). oidc-provider issues the authorization code on that later
      request.
 
@@ -399,7 +408,7 @@ the store.
   Mission's `grant_id` no longer names) still counts against the derivation
   limit (`missionGateTarget`), so no approval grant escapes the count.
 - **Boundary.** Every refusal happens before any write, except the
-  progressive ceiling consent at the commit (step 1). The grant save, the
+  progressive ceiling consent and the source revalidation at the commit (steps 1 and 4). The grant save, the
   record commit with its binding, and the code are separate writes, in two
   stores and two requests; the bound-grant index is written right after the
   record commit, on its own handle, and a bound record resolves through
@@ -427,6 +436,8 @@ the store.
   - `> a failure after the record commit leaves an active, bound Mission whose code is not issued yet (the #250 window), which a retry on the interaction completes`
   - `> a Mission's grant binding never moves: bindGrant is idempotent for the grant it holds and refuses any other`
   - `> the minting paths' first bind adopts the winner: bindFirstGrant binds an unbound Mission once and returns that grant to every later caller`
+  - `> concurrent decisions by different principals cannot disagree on identity: the first to reserve holds the interaction, the other is refused before saving a grant`
+  - `> the commit revalidates the prepared authority source: a source withdrawn during the grant save refuses access_denied and creates no Mission`
   - `> a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes`
 - **Unsupported or residual.**
   - `{#approval-event}` step 7's record/code atomicity is not met. The record

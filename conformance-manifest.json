@@ -35,8 +35,8 @@
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "96abef0ac2491ba242cca31d8960eb242def5e47",
-    "content_sha256": "99be424ca19917bed51384a000c3c0f9dc6c770d8b4fce13c8fdfffe367431dc"
+    "revision": "b35d256e641cf64448aff25b55dad62ce664316a",
+    "content_sha256": "abbe9f5252d1fc2a52bc762303c71258ddde0d0272427c250890d0beedb746c5"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "67644b7324de546514770950e99147a2fd9470ff",
@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "adcfdec551777f334f5c692fa575bacddfa7f749",
-    "content_sha256": "41796f3f76eb6d89d0bd7bab9e046ecd41e00124fc0d62bc3ca725b973879a59"
+    "revision": "e6697f44e4aae121741d1911d113618bfbac3059",
+    "content_sha256": "7fa404e8a172f4b14fe6a3e22cc94732a371c1da8f976a1407363ac329c38160"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "59c80be1282c8b510065c3f78cee69031a693a7c",
@@ -99,12 +99,12 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
-    "content_sha256": "df4b3cc03ebb756aa96ff79abcefd906cf3d990bb77920b5902143f3f7ad677e"
+    "revision": "e6697f44e4aae121741d1911d113618bfbac3059",
+    "content_sha256": "d88875b2ad94d43f21401d0f0e23bb669f0cc66ae639665a31ea3adebee25f12"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "c610f72718beabdc5f86bdd0825a5f92b0403cd2",
-    "content_sha256": "abecea64b9f889195bab9d3cb812caad6efbc867b4487ede72ddf1cab699a038"
+    "revision": "e6697f44e4aae121741d1911d113618bfbac3059",
+    "content_sha256": "dce437f1e6d66ff1069f09ad0379fc5d6060f637af14319197bdfd4bdc0622d7"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
@@ -281,7 +281,8 @@
    "aauth.reference-projection",
    "aauth-management.update-position",
    "aauth-management.delegation-tree",
-   "device-authorization.carriage"
+   "device-authorization.carriage",
+   "core.dpop-nonce"
   ]
  },
  "profiles": [
@@ -2001,6 +2002,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1154 (D369)."
+  },
+  {
+   "id": "cross-domain.error-responses.unresolved-subject-invalid-request",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "error-responses",
+   "text": "The subject token does not resolve to a Mission | `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "cross-domain grant issuance refuses a subject token that does not resolve to a Mission with invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1178: changed from invalid_grant. The reference AS implements no refresh-token-mode cross-domain issuance exchange (see cross-domain.cross-domain-grant.inactive-mission-invalid-request), so nothing witnesses it."
   },
   {
    "id": "cross-domain.resource-as.derivation-record",
@@ -5857,9 +5880,21 @@
      "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > concurrent decisions by different principals cannot disagree on identity: the first to reserve holds the interaction, the other is refused before saving a grant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > the commit revalidates the prepared authority source: a source withdrawn during the grant save refuses access_denied and creates no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Partial (#916, D415). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry by another Approver, Subject or client is refused before the grant is touched), and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
+   "notes": "Partial (#916, D415). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry or a concurrent decision by another Approver, Subject or client is refused before the grant is touched: a synchronous per-interaction reservation, taken before the asynchronous grant save, so the Mission's Approver and the grant's account always agree); the commit revalidates the prepared authority source (same root and provenance, every gate) and a withdrawn source refuses, and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
   },
   {
    "id": "core.approval-event.every-mission-own-event",
@@ -35547,7 +35582,7 @@
    "id": "child-delegation.request-processing.failure-refusal",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "request-processing",
-   "text": "On any failure the Mission Issuer MUST refuse with `invalid_request`, `invalid_grant`, or `invalid_token` as appropriate, and MUST NOT create a child.",
+   "text": "On any failure the Mission Issuer MUST refuse and MUST NOT create a child.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -35557,8 +35592,8 @@
    "surface": "token-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "an invalid or unacceptable subject_token (one failing verification, without a mission claim, naming an unknown Mission, bound by mTLS or to another key than the proof's, or without readable authorization_details) or actor_token (one failing verification, or not sender-constrained to the presenter) refuses the child-creation exchange with one of invalid_request, invalid_grant or invalid_token, and no child, creation_request_id reservation or derivation count results",
-    "local": "the reference AS answers each witnessed failure invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only; this row witnesses the subject_token and actor_token failure classes, and the other steps' failures keep their own rows. A DPoP proof that fails its own checks is RFC 9449's invalid_dpop_proof, outside the three codes this clause lists"
+    "normative": "an invalid or unacceptable subject_token (one failing verification, without a mission claim, naming an unknown Mission, not sender-constrained, bound by mTLS or to another key than the proof's, or without readable authorization_details), an invalid or unacceptable actor_token (one failing verification, or not sender-constrained to the presenter), or a parent that is not active refuses the child-creation exchange, and no child, creation_request_id reservation or derivation count results",
+    "local": "the reference AS answers each witnessed subject_token and actor_token failure invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only, and a parent that is not active invalid_request with parent_not_active; the codes are the token-refusal-code, dpop-proof-code and profile-code-first rows', and the other steps' failures keep their own rows"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -35574,9 +35609,152 @@
      "name": "invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178) > refuses a subject_token without readable authorization_details with invalid_request, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses a subject_token that is not sender-constrained with invalid_request, creating and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > a parent that is not active refuses the child-creation exchange with invalid_request and parent_not_active, creating no child (@spec child-delegation#denial-reasons, mission#issuance-gating, #1154)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1178 (D415, with D369). Proved by mutation (PR body): each refusal's code returned to invalid_grant, a mission_error spliced onto the refusal, a derivation counted before the key check, and a creation_request_id reserved before the subject check; each was caught."
+   "notes": "#1178 (D415, with D369). Proved by mutation (PR body): each refusal's code returned to invalid_grant, a mission_error spliced onto the refusal, a derivation counted before the key check, and a creation_request_id reserved before the subject check; each was caught. #1249 (#1178) drops the code list from this clause; the codes have their own rows."
+  },
+  {
+   "id": "child-delegation.request-processing.profile-code-first",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "request-processing",
+   "text": "A failure to which this document assigns a code, such as a `parent` mismatch or a denial reason ({{denial-reasons}}), uses that code.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a failure this profile assigns a code keeps it: a parent cross-check mismatch is invalid_grant with parent_mismatch, and a parent that is not active is invalid_request with parent_not_active"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > parent cross-check != the Mission resolved from subject_token -> parent_mismatch (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > a parent that is not active refuses the child-creation exchange with invalid_request and parent_not_active, creating no child (@spec child-delegation#denial-reasons, mission#issuance-gating, #1154)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178. The cited assigned codes are witnessed; the clause covers every code this profile assigns."
+  },
+  {
+   "id": "child-delegation.request-processing.token-refusal-code",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "request-processing",
+   "text": "a `subject_token` or `actor_token` that is invalid, whose sender constraint is not proven, or that is unacceptable for the exchange is refused with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the child-creation exchange refuses an invalid, unproven or unacceptable subject_token or actor_token with invalid_request, creating no child"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses a subject_token that is not sender-constrained with invalid_request, creating and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178) > refuses %s with invalid_request, no Mission diagnostic, and no child, reservation or count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178) > refuses a subject_token without readable authorization_details with invalid_request, creating nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178 (D415). #1239's route-level tests witness the subject_token and actor_token classes; \"unacceptable for the exchange\" is open-ended, so the row stays partial."
+  },
+  {
+   "id": "child-delegation.request-processing.dpop-proof-code",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "request-processing",
+   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation, with `invalid_dpop_proof`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child-creation exchange whose required DPoP proof is missing, or whose DPoP proof is replayed, is refused invalid_dpop_proof",
+    "local": "the reference AS requires no authorization-server DPoP nonce, so the use_dpop_nonce exception never arises (see the dpop-nonce row)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange with no DPoP proof is refused (invalid_dpop_proof)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses a replayed DPoP proof presented with fresh client authentication",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178. Proved by mutation: the token endpoint's proof refusal and the missing-proof refusal answering invalid_request were each caught."
+  },
+  {
+   "id": "child-delegation.request-processing.dpop-nonce",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "request-processing",
+   "text": "An authorization server that requires a DPoP nonce answers a proof lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.dpop-nonce"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an AS that requires a DPoP nonce answers a child-creation exchange whose DPoP proof omits or mismatches its current nonce with HTTP 400, use_dpop_nonce and a fresh DPoP-Nonce header, not invalid_dpop_proof"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1178 (#1249 review): preserves RFC 9449 Section 8's challenge under the invalid_dpop_proof mapping. The reference AS requires no authorization-server DPoP nonce, so nothing witnesses it."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
@@ -35796,6 +35974,137 @@
     }
    ],
    "notes": "#1153 review (D353). The AS issues one Mission access token to a client other than the Mission Record's client_id: a Dispatch returns the instance's token to the Dispatcher while the instance's approved agent is the selected Agent. The Dispatcher's exchange of that token is refused (the dispatch-handoff test); the selected Agent reaches the transport through the Template profile's Dispatch Handoff (#1158). The async-delegation test changes the Mission Record's client_id under a real token."
+  },
+  {
+   "id": "core.error-mapping.token-exchange-token-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "error-mapping",
+   "text": "a `subject_token` or `actor_token` that is invalid, whose sender constraint is not proven, or that is unacceptable for the exchange | `invalid_request` ({{Section 2.2.2 of RFC8693}}), unless a Token Exchange profile assigns the failure its own code",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Token Exchange refuses a subject_token or actor_token that is invalid, whose sender constraint is not proven, or that the exchange does not accept with invalid_request, unless a Token Exchange profile assigns that failure its own code"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses a subject_token that is not sender-constrained with invalid_request, creating and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses a subject_token that is not sender-constrained with invalid_request, leaving the predecessor and its count untouched",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178) > refuses %s with invalid_request, no Mission diagnostic, and no child, reservation or count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178) > refuses a subject_token without readable authorization_details with invalid_request, creating nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the expansion exchange (@spec expansion#verification-order, RFC 8693 Section 2.2.2, #1178) > refuses %s with invalid_request, no Mission diagnostic, and no deferral, reservation or count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178 (D415). #1239's route-level tests witness the subject_token and actor_token classes; \"unacceptable for the exchange\" is open-ended, so the row stays partial."
+  },
+  {
+   "id": "core.error-mapping.token-exchange-dpop-nonce",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "error-mapping",
+   "text": "an authorization server that requires a DPoP nonce answers a proof lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.dpop-nonce"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an AS that requires a DPoP nonce answers a Token Exchange whose DPoP proof omits or mismatches its current nonce with HTTP 400, use_dpop_nonce and a fresh DPoP-Nonce header, not invalid_dpop_proof"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1178 (#1249 review): preserves RFC 9449 Section 8's challenge under the invalid_dpop_proof mapping. The reference AS requires no authorization-server DPoP nonce, so nothing witnesses it."
+  },
+  {
+   "id": "core.error-mapping.token-exchange-dpop-proof",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "error-mapping",
+   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation, is `invalid_dpop_proof` ({{Section 5 of RFC9449}}), not an unproven sender constraint",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Token Exchange whose required DPoP proof is missing, or whose DPoP proof is replayed, lacks iat, or is stale or future-dated, is refused invalid_dpop_proof, not invalid_request",
+    "local": "the reference AS requires no authorization-server DPoP nonce, so the use_dpop_nonce exception never arises (see the dpop-nonce row)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > possession: an exchange with no DPoP proof is refused (invalid_dpop_proof)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses a replayed DPoP proof presented with fresh client authentication",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses a replayed DPoP proof presented with fresh client authentication",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: complete, fresh DPoP proofs on both legs (@spec RFC 9449 Section 4.3, #1163 review) > the exchange refuses an incomplete, stale or future-dated proof; a proof within the window succeeds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: complete, fresh DPoP proofs on both legs (@spec RFC 9449 Section 4.3, #1163 review) > the delegation-handle request and the async exchange refuse an incomplete, stale or future-dated proof; within the window both succeed (#1157 review P1)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178. Proved by mutation: the token endpoint's proof refusal and the missing-proof refusal answering invalid_request were each caught."
   },
   {
    "id": "core.self-exchange.result-subset",
@@ -38011,7 +38320,7 @@
    "id": "expansion.verification-order.failure-refusal",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "verification-order",
-   "text": "On any failure the Mission Issuer MUST refuse with `invalid_request`, `invalid_grant`, or `invalid_token` as appropriate, and MUST NOT create a successor.",
+   "text": "On any failure the Mission Issuer MUST refuse and MUST NOT create a successor.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -38022,8 +38331,8 @@
    "surface": "token-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "an invalid or unacceptable subject_token (one failing verification, without a mission claim, naming an unknown Mission, or bound by mTLS or to another key than the proof's) or actor_token (one failing verification, or not sender-constrained to the presenter) refuses the expansion exchange with one of invalid_request, invalid_grant or invalid_token, leaving the predecessor active with its derivation count, and no deferral, successor or creation_request_id reservation results",
-    "local": "the reference AS answers each witnessed failure invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only; this row witnesses the subject_token and actor_token failure classes, and the other steps' failures keep their own rows. A DPoP proof that fails its own checks is RFC 9449's invalid_dpop_proof, outside the three codes this clause lists"
+    "normative": "an invalid or unacceptable subject_token (one failing verification, without a mission claim, naming an unknown Mission, not sender-constrained, or bound by mTLS or to another key than the proof's), an invalid or unacceptable actor_token (one failing verification, or not sender-constrained to the presenter), or a predecessor that is not active refuses the expansion exchange, leaving the predecessor's state and derivation count unchanged, and no deferral, successor or creation_request_id reservation results",
+    "local": "the reference AS answers each witnessed subject_token and actor_token failure invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only, and a revoked predecessor invalid_request; the codes are the token-refusal-code, dpop-proof-code and profile-code-first rows', and the other steps' failures keep their own rows"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -38033,9 +38342,143 @@
      "name": "invalid or unacceptable subject and actor tokens at the expansion exchange (@spec expansion#verification-order, RFC 8693 Section 2.2.2, #1178) > refuses %s with invalid_request, no Mission diagnostic, and no deferral, reservation or count",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses a subject_token that is not sender-constrained with invalid_request, leaving the predecessor and its count untouched",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1178 (D415, with D369). Proved by mutation (PR body): each refusal's code returned to invalid_grant, a mission_error spliced onto the refusal, a derivation counted before the key check, and a creation_request_id reserved before the subject check; each was caught."
+   "notes": "#1178 (D415, with D369). Proved by mutation (PR body): each refusal's code returned to invalid_grant, a mission_error spliced onto the refusal, a derivation counted before the key check, and a creation_request_id reserved before the subject check; each was caught. #1249 (#1178) drops the code list from this clause; the codes have their own rows."
+  },
+  {
+   "id": "expansion.verification-order.profile-code-first",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "verification-order",
+   "text": "A failure to which this document assigns a code, such as a `predecessor` mismatch or a denial reason ({{denial-reasons}}), uses that code.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a failure this profile assigns a code keeps it: a predecessor cross-check mismatch is invalid_grant, and a non-widening request is invalid_request with nothing_to_expand"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/creation-idempotency.test.ts",
+     "name": "expansion idempotency (@spec expansion#creation-request-id) > predecessor cross-check != the subject_token-resolved Mission -> invalid_grant; a MATCHING cross-check leaves the fingerprint/idempotency behavior unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: NON-WIDENING request is REFUSED (@spec expansion#nothing-to-expand) > a pure subset request refuses (invalid_request + nothing_to_expand): predecessor stays active, nothing created or reserved, no derivation consumed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178. The cited assigned codes are witnessed; the clause covers every code this profile assigns."
+  },
+  {
+   "id": "expansion.verification-order.token-refusal-code",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "verification-order",
+   "text": "a `subject_token` or `actor_token` that is invalid, whose sender constraint is not proven, or that is unacceptable for the exchange is refused with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the expansion exchange refuses an invalid, unproven or unacceptable subject_token or actor_token with invalid_request, creating no successor"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses a subject_token that is not sender-constrained with invalid_request, leaving the predecessor and its count untouched",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "invalid or unacceptable subject and actor tokens at the expansion exchange (@spec expansion#verification-order, RFC 8693 Section 2.2.2, #1178) > refuses %s with invalid_request, no Mission diagnostic, and no deferral, reservation or count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178 (D415). #1239's route-level tests witness the subject_token and actor_token classes; \"unacceptable for the exchange\" is open-ended, so the row stays partial."
+  },
+  {
+   "id": "expansion.verification-order.dpop-proof-code",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "verification-order",
+   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation, with `invalid_dpop_proof`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion exchange with a replayed DPoP proof is refused invalid_dpop_proof",
+    "local": "the reference AS requires no authorization-server DPoP nonce, so the use_dpop_nonce exception never arises (see the dpop-nonce row)"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses a replayed DPoP proof presented with fresh client authentication",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1178. Proved by mutation: the token endpoint's proof refusal and the missing-proof refusal answering invalid_request were each caught. A missing proof is not witnessed on this exchange: a request without one is refused at step 1 first."
+  },
+  {
+   "id": "expansion.verification-order.dpop-nonce",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "verification-order",
+   "text": "An authorization server that requires a DPoP nonce answers a proof lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.dpop-nonce"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an AS that requires a DPoP nonce answers an expansion exchange whose DPoP proof omits or mismatches its current nonce with HTTP 400, use_dpop_nonce and a fresh DPoP-Nonce header, not invalid_dpop_proof"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1178 (#1249 review): preserves RFC 9449 Section 8's challenge under the invalid_dpop_proof mapping. The reference AS requires no authorization-server DPoP nonce, so nothing witnesses it."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
