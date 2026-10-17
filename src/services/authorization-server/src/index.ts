@@ -420,7 +420,20 @@ export {
   type ActivationPolicyRegistry,
   mintActivationPolicyRef,
   type RegisteredActivationPolicy,
+  verifiedActivationPolicy,
 } from "./kernel/activation-policy.js";
+// @spec mission#standing-consent-bases: the retained activation policy
+// snapshots (MissionKernel.activationPolicySnapshots) and the audit check
+// MissionKernel.verifyActivationPolicyCommitment returns.
+export {
+  type ActivationPolicyCommitmentCheck,
+  ActivationPolicyRetentionError,
+  type ActivationPolicySnapshotKey,
+  ActivationPolicySnapshotStore,
+  committedActivationPolicy,
+  type EvaluatedActivationPolicy,
+  type RetainedActivationPolicySnapshot,
+} from "./kernel/activation-policy-snapshots.js";
 export {
   createTemplate,
   dispatchFromTemplate,

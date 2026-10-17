@@ -114,6 +114,12 @@ import {
   type TombstoneRetentionInputs,
 } from "./tombstones.js";
 import type { ActivationPolicyRegistry } from "./activation-policy.js";
+import {
+  type ActivationPolicyCommitmentCheck,
+  ActivationPolicySnapshotStore,
+  committedActivationPolicy,
+  type EvaluatedActivationPolicy,
+} from "./activation-policy-snapshots.js";
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { newMissionId } from "./mission-id.js";
@@ -600,6 +606,13 @@ export class MissionKernel {
    */
   readonly tombstones: MissionTombstoneStore;
   /**
+   * @spec mission#standing-consent-bases: the retained activation policy
+   * snapshots, on this kernel's database and written in `insertRecord`'s
+   * transaction, kept for the audit horizon of every Mission activated under
+   * each. An audit read only: no activation gate consults it.
+   */
+  readonly activationPolicySnapshots: ActivationPolicySnapshotStore;
+  /**
    * @spec control-plane#serialization — the in-flight owner of each
    * (mission, operation) identity; see {@link exclusiveDerivation}.
    */
@@ -697,6 +710,14 @@ export class MissionKernel {
       retentionSeconds: dischargeRetentionSeconds,
     });
     this.derivationReservations = new DerivationReservationStore(this.db, { now: this.now });
+    // @spec mission#standing-consent-bases, mission#mission-record: the
+    // snapshot horizon is each Mission's expiry plus the SAME declared audit
+    // retention the tombstones compose, so the deployment declares one audit
+    // horizon, not two that can drift.
+    this.activationPolicySnapshots = new ActivationPolicySnapshotStore(this.db, {
+      now: this.now,
+      auditRetentionSeconds: this.tombstones.horizons().audit_retention_seconds,
+    });
     this.dischargePins = new DischargeMappingPinStore(this.db);
     this.dischargeSelectors = new DischargeSelectorStore(this.db, this.now);
   }
@@ -814,6 +835,18 @@ export class MissionKernel {
    */
   activationPolicies(): ActivationPolicyRegistry | undefined {
     return this.opts.activationPolicies;
+  }
+
+  /**
+   * @spec mission#standing-consent-bases: the auditor's check of a Mission's
+   * committed activation policy, recomputed from the retained snapshot alone.
+   * Independent of the current registry: a policy since replaced or retired
+   * still verifies within the audit horizon, and verifying grants nothing.
+   */
+  verifyActivationPolicyCommitment(record: MissionRecord): ActivationPolicyCommitmentCheck {
+    const ref = committedActivationPolicy(record);
+    if (!ref) return { status: "not_applicable" };
+    return this.activationPolicySnapshots.verify(record.issuer, ref);
   }
 
   /**
@@ -1147,6 +1180,14 @@ export class MissionKernel {
        * in the record transaction; nothing resolves a source from provenance.
        */
       source: AuthoritySourceResolution | { inherited: AuthoritySourceBinding };
+      /**
+       * @spec mission#standing-consent-bases: each activation policy this
+       * activation was adjudicated under, with the held snapshot its gate
+       * verified. Retained in the record transaction, so the Mission never
+       * commits without the bytes an auditor needs to recompute the digest;
+       * bytes that do not reproduce the committed digest refuse the creation.
+       */
+      activationPolicies?: readonly EvaluatedActivationPolicy[];
     },
   ): void {
     // @spec control-plane#isolation — one issuer owns a kernel store.
@@ -1319,6 +1360,12 @@ export class MissionKernel {
           }
           this.dischargePins.pinInCallerTx(record.id, eDigest, conditionDigest(condition), mapping);
         }
+      }
+      // @spec mission#standing-consent-bases: retain every activation policy
+      // snapshot this activation evaluated, in the SAME transaction as the
+      // record, for this Mission's audit horizon.
+      for (const evaluated of options.activationPolicies ?? []) {
+        this.activationPolicySnapshots.retainInCallerTx(record, evaluated);
       }
       // The activating event: version 1, no prior_state. Shared by approve()
       // and expansion; the commit is built from the persisted row and its
@@ -3634,6 +3681,9 @@ export class MissionKernel {
     await this.outbox.drain();
     this.outbox.pruneSettled(this.tombstones.retentionSeconds);
     this.tombstones.pruneDetails();
+    // @spec mission#standing-consent-bases: only snapshots past their audit
+    // horizon are deleted.
+    this.activationPolicySnapshots.pruneExpired();
     // @spec control-plane#serialization — an unreleased reservation is
     // ambiguous, not evidence that no artifact was accepted, so recovery
     // records the ambiguity and leaves the count spent. Only an authoritative
