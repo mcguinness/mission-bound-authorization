@@ -743,36 +743,34 @@ deployment, as it would for an unsupported type.
 
 ## Modeling Tools and Function Calls {#tools}
 
-This section is non-normative guidance. A "tool" an agent invokes,
-such as a Model Context Protocol (MCP) tool or a function call, is
-modeled as a `mission_resource_access` entry. No separate entry type
-is needed, and the rules above (subset, delegation) apply unchanged;
-derivation, `authority_hash`, and the Authority Set itself remain
+This section is non-normative. A tool an agent invokes, such as a Model
+Context Protocol (MCP) tool or a function call, is modeled as a
+`mission_resource_access` entry. No separate entry type is needed: the
+subset and delegation rules apply unchanged, and derivation,
+`authority_hash`, and the Authority Set itself remain
 {{I-D.draft-mcguinness-oauth-mission}}'s.
 
 The mapping is:
 
 - `resource` is the tool provider. For an MCP tool it is the MCP
-  server's URL. The MCP authorization model ({{MCP}}) makes the
-  server an OAuth
-  2.0 resource server, so this is the resource identifier a token is
-  audience-bound to.
+  server's URL. The MCP authorization model ({{MCP}}) makes the server
+  an OAuth 2.0 resource server, so this is the resource identifier a
+  token is audience-bound to.
 - `actions` are the tool names the task needs at that provider.
-  Authorizing a tool is authorizing its name as an action, which
-  lines up with MCP filtering its tool list by the caller's granted
-  authority and routing each tool call for authorization.
-- `constraints` carry machine-actionable bounds on a tool's
-  arguments, for example an amount ceiling or a recipient domain (the
-  `max_amount` and `recipient_domain` Common Constraints,
-  {{common-constraints}}).
+  Authorizing a tool is authorizing its name as an action, which lines
+  up with MCP filtering its tool list by the caller's granted authority
+  and routing each tool call for authorization.
+- `constraints` carry machine-actionable bounds on a tool's arguments,
+  for example an amount ceiling or a recipient domain (the `max_amount`
+  and `recipient_domain` Common Constraints, {{common-constraints}}).
   Like all `constraints`, they are committed by `authority_hash` and
-  carried to the point of use, but they are evaluated against the
-  concrete call arguments by a runtime enforcement layer, not at
-  issuance ({{I-D.draft-mcguinness-oauth-mission}}).
+  carried to the point of use, but a runtime enforcement layer evaluates
+  them against the concrete call arguments, not the authorization server
+  at issuance ({{I-D.draft-mcguinness-oauth-mission}}).
 
-For example, a Mission authorized to read invoices and post small
-adjustments through a finance MCP server, and to send messages
-through a messaging MCP server, derives:
+The following example shows the Authority Set of a Mission authorized to
+read invoices and post small adjustments through a finance MCP server,
+and to send messages through a messaging MCP server:
 
 ~~~ json
 [
@@ -789,10 +787,10 @@ through a messaging MCP server, derives:
 ]
 ~~~
 
-Delegation to a sub-agent works unchanged: add a `delegation` member
-to a tool entry ({{delegate-eligibility}}). For example, an entry a
-sub-agent of type `ai_agent` may invoke at depth 1, narrowed to the
-read tool only:
+Delegation to a sub-agent uses the same `delegation` member
+({{delegate-eligibility}}). The following example shows an Authority Set
+entry, approved with its `delegation` member, that a sub-agent of type
+`ai_agent` may exercise at depth 1 for the read tool only:
 
 ~~~ json
 { "type": "mission_resource_access",
@@ -804,17 +802,16 @@ read tool only:
   } }
 ~~~
 
-What this profile does not provide for tools is a typed, attenuable
-per-argument constraint grammar: narrowing one tool's argument schema
-against another (for example, `amount` in a `range`, `recipient` in a
-`one_of` set) as the grant is derived or delegated. Argument bounds
-here are the same flat, carried `constraints` used for any resource,
-evaluated at runtime. Structured per-argument attenuation
-({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}, with object
-capability systems such as UCAN as prior art) is a richer primitive
-deferred to future work; it would extend the delegation and subset
-model of this document ({{delegate-eligibility}}, {{subset}})
-rather than introduce a new entry type.
+This document does not define a typed, attenuable per-argument
+constraint grammar for tools: one that narrows a tool's argument schema
+(for example, `amount` in a `range`, or `recipient` in a `one_of` set)
+as the grant is derived or delegated. Argument bounds here are the same
+flat `constraints` used for any resource, evaluated at runtime.
+Structured per-argument attenuation
+({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}, with
+object-capability systems such as UCAN as prior art) would extend the
+delegation and subset model of this document ({{delegate-eligibility}},
+{{subset}}) rather than introduce a new entry type.
 
 # Conformance {#conformance}
 
