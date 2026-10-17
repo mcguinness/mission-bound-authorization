@@ -28,6 +28,7 @@ import {
   type JWK,
 } from "jose";
 import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
+import { missionInteractionPolicy } from "./interaction-policy.js";
 import {
   delegatedRoutingRefusal,
   earlyScopeRefusal,
@@ -1327,7 +1328,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
         ? false
         : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
-    interactions: { url: (_ctx, interaction) => `/interaction/${interaction.uid}` },
+    // @spec mission#approval-event (#1247): a Mission submission always reaches
+    // its own approval interaction, whatever Grant the session already holds.
+    interactions: { url: (_ctx, interaction) => `/interaction/${interaction.uid}`, policy: missionInteractionPolicy() },
     // @spec mission#downgrade-by-omission — the per-client Mission-governance
     // flag (a deployment MAY register a client as Mission-governed). Declared so
     // oidc-provider retains it on the client registration; read by the RAR
