@@ -518,7 +518,10 @@ approval input. It is the `svc:approver-console` service principal (approver
 the demo stack uses (`demo/src/stack.ts`). The approver identity comes from
 that registration, never from the `decide` body. It is not a browser login
 and not end-user consent. A deployment replaces it with its own approver
-authentication (`ApprovalSessionStore`).
+authentication (`ApprovalSessionStore`). The published approval-authentication
+floor (`config/approval-floor.json`) does not apply here: `reports.read` is
+not high-risk, so the headless input still completes. A high-risk approval
+would need a browser Approver (provider-integration-port.md §3.1).
 
 **The walkthrough** (`runWalkthrough`), over real HTTP. The `mission_intent`
 targets the plain RS, the `authorization_details` proposal is
