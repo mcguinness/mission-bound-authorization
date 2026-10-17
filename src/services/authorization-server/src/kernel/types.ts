@@ -140,6 +140,33 @@ export interface Termination {
 export type LifecycleOperation = "revoke" | "suspend" | "resume" | "complete";
 
 /**
+ * @spec status#mission-lifecycle-endpoint ("Operations"), status#lifecycle-authorization:
+ * a `suspend`'s schedule as the request that commits it supplies it: the
+ * deadline, the transition applied when it passes, and the committing party
+ * (the acting party of that request). The kernel receives it already
+ * authorized; it checks no grant.
+ */
+export interface ScheduleRequest {
+  /** An RFC 3339 date-time, as the request carried it. */
+  suspend_until: string;
+  on_expiry: "resume" | "revoke";
+  committing_party: string;
+}
+
+/**
+ * @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency:
+ * the committed schedule of a `suspended` Mission. `generation` is the state
+ * version of the commit that armed or replaced it, so it names one commit and
+ * no later schedule can carry it: a timer delivery for any other generation
+ * is stale. The schedule is current until its suspension ends (it is cleared
+ * with every transition out of `suspended`) or an authorized replacement
+ * supersedes it.
+ */
+export interface SuspensionSchedule extends ScheduleRequest {
+  generation: number;
+}
+
+/**
  * @spec status#legal-transitions: each operation's legal source states, its
  * resulting state and, for a transition to `terminated`, the termination
  * reason it records.
@@ -633,6 +660,13 @@ export interface MissionRecord {
    */
   projected_from?: MissionState;
   /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): the current
+   * schedule, present only while `state` is `suspended` under a deadline.
+   * Written with the `suspend` that arms it or the replacement that supersedes
+   * it; every transition out of `suspended` clears it.
+   */
+  schedule?: SuspensionSchedule;
+  /**
    * The containment overlay (see {@link MissionContainment}). Absent means no
    * containment has ever been applied: the effective authority IS the approved
    * `authority_set`, byte-identical behavior. Written only by `contain()`.
@@ -755,6 +789,29 @@ export interface LifecycleCommit {
    * legible to a subscriber that only compares `state`.
    */
   containment_version?: number;
+  /**
+   * @spec signals#lifecycle-event, status#idempotency: the schedule a commit
+   * to `suspended` armed, or a metadata-only commit replaced (`prior_state`
+   * and `state` both `suspended`), with the values the Status profile
+   * reports. Absent on every other commit, including a metadata-only commit
+   * that leaves the schedule as it was.
+   */
+  suspend_until?: string;
+  on_expiry?: "resume" | "revoke";
+  /**
+   * @spec status#lifecycle-authorization: the committing party of the schedule
+   * this commit carries, so the durable event row keeps who committed each
+   * schedule after the schedule itself ends. Not a wire member.
+   */
+  schedule_committing_party?: string;
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"): the schedule whose
+   * deadline committed this transition: its generation and committing party.
+   * Present on that transition alone, whether a read, a request or the timer
+   * applied it, so a subscriber that owes the transition an effect outside
+   * the kernel keys on the committed event. Not a wire member.
+   */
+  applied_schedule?: { generation: number; committing_party: string };
   /**
    * @spec control-plane#fanout — the Mission's own `created_at`, carried so a
    * subscriber acting on the ACTIVATING commit consumes the payload instead of
