@@ -1437,9 +1437,9 @@ dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a 
   };
 
   /** The administrator's change to Alice's read entitlement on acme, from its own connection to the attached store. */
-  const administer = (op: "grant" | "revoke", stack: DemoStack) =>
+  const administer = (op: "grant" | "revoke", stack: DemoStack, who: string[] = ["--sub", "alice", "--relation", "reader"]) =>
     resourcePolicyAdmin(
-      [op, "--iss", stack.issuer, "--sub", "alice", "--relation", "reader", "--vendor", "acme"],
+      [op, "--iss", stack.issuer, ...who, "--vendor", "acme"],
       { ...BASE_ENV, OPENFGA_STORE_ID: stack.fga.storeId, OPENFGA_MODEL_ID: stack.modelId },
       TOPOLOGY.openfga,
     );
@@ -1486,6 +1486,23 @@ dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a 
         expectPermitted(await read(second.stack, issued), "restored after restart");
       } finally {
         await shutdown(second);
+      }
+    }, 180_000);
+
+    it(`an AS-issued DPoP-bound read is refused resource_policy with no effect once the administrator revokes only its client's entitlement on acme, the subject's unchanged, and permitted once it is restored (${pdpMode}) (D429)`, async () => {
+      const launched = await launch({ MISSION_PDP_MODE: pdpMode });
+      try {
+        const issued = await issueRead(launched.stack);
+        const clientId = decodeJwt(issued.accessToken).client_id;
+        if (typeof clientId !== "string") throw new Error("the AS-issued token names no client");
+        const client = ["--client", clientId, "--relation", "client"];
+        expectPermitted(await read(launched.stack, issued), "before revocation");
+        await administer("revoke", launched.stack, client);
+        expectRefused(await read(launched.stack, issued), "after revoking the client");
+        await administer("grant", launched.stack, client);
+        expectPermitted(await read(launched.stack, issued), "after restoring the client");
+      } finally {
+        await shutdown(launched);
       }
     }, 180_000);
   }

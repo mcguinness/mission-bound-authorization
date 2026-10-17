@@ -1,8 +1,9 @@
 /**
- * @spec runtime#input-resource-policy (#828, D426): `pnpm resource-policy`,
+ * @spec runtime#input-resource-policy (#828, D426, D429): `pnpm resource-policy`,
  * the command the deployment's OpenFGA administrator uses to change the
- * independently administered Resource policy: grant or revoke a stored
- * entitlement, or move an invoice to another owning vendor.
+ * independently administered Resource policy: grant or revoke a subject's or
+ * a client's entitlement, a tenant membership or a vendor's tenant, or move
+ * an invoice to another owning vendor.
  *
  * It only attaches: `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID` name the store
  * and model the resource attaches to, the model is verified, and nothing is
@@ -10,21 +11,20 @@
  * running resource reads. Nothing it writes is derived from a Mission.
  */
 
-import { ENTITLEMENT_RELATIONS, Fga, FgaDomainAdmin, principalObject } from "@mission/pdp";
+import { CLIENT_ENTITLEMENT, clientObject, ENTITLEMENT_RELATIONS, Fga, FgaDomainAdmin, principalObject } from "@mission/pdp";
 
 type TupleKey = { user: string; relation: string; object: string };
 
+/** A grant or revoke is exactly the one stored tuple it writes or deletes. */
 export type ResourcePolicyCommand =
-  | {
-      op: "grant" | "revoke";
-      subject: { iss: string; sub: string };
-      relation: keyof typeof ENTITLEMENT_RELATIONS;
-      target: { type: "vendor" | "invoice"; id: string };
-    }
+  | { op: "grant" | "revoke"; tuple: TupleKey }
   | { op: "move-invoice"; invoice: string; from: string; to: string };
 
 export const RESOURCE_POLICY_USAGE = [
   "usage: pnpm resource-policy grant|revoke --iss <issuer> --sub <subject> --relation reader|payer (--vendor <id> | --invoice <id>)",
+  "       pnpm resource-policy grant|revoke --iss <issuer> --client <client_id> --relation client --vendor <id>",
+  "       pnpm resource-policy grant|revoke --iss <issuer> (--sub <subject> | --client <client_id>) --relation member --tenant <id>",
+  "       pnpm resource-policy grant|revoke --relation tenant --tenant <id> --vendor <id>",
   "       pnpm resource-policy move-invoice --invoice <id> --from <vendor> --to <vendor>",
   "Attaches to OPENFGA_STORE_ID and OPENFGA_MODEL_ID (both required); never creates a store.",
 ].join("\n");
@@ -51,7 +51,7 @@ export function parseResourcePolicyCommand(argv: readonly string[]): ResourcePol
   }
   const take = (allowed: readonly string[]) => {
     for (const flag of flags.keys()) {
-      if (!allowed.includes(flag)) throw new ResourcePolicyUsageError(`${op} does not take ${flag}`);
+      if (!allowed.includes(flag)) throw new ResourcePolicyUsageError(`${op} --relation ${flags.get("--relation") ?? ""} does not take ${flag}`);
     }
     return (flag: string) => {
       const value = flags.get(flag);
@@ -60,28 +60,37 @@ export function parseResourcePolicyCommand(argv: readonly string[]): ResourcePol
     };
   };
   if (op === "grant" || op === "revoke") {
-    const target = flags.has("--vendor") ? "--vendor" : "--invoice";
-    const need = take(["--iss", "--sub", "--relation", target]);
-    if (flags.has("--vendor") && flags.has("--invoice")) throw new ResourcePolicyUsageError("name one target, --vendor or --invoice");
-    const relation = need("--relation");
-    if (relation !== "reader" && relation !== "payer") throw new ResourcePolicyUsageError(`--relation must be reader or payer, not ${relation}`);
-    return {
-      op,
-      subject: { iss: need("--iss"), sub: need("--sub") },
-      relation,
-      target: { type: target === "--vendor" ? "vendor" : "invoice", id: need(target) },
-    };
+    const relation = flags.get("--relation");
+    if (relation === "reader" || relation === "payer") {
+      if (flags.has("--vendor") && flags.has("--invoice")) throw new ResourcePolicyUsageError("name one target, --vendor or --invoice");
+      const target = flags.has("--vendor") ? "--vendor" : "--invoice";
+      const need = take(["--iss", "--sub", "--relation", target]);
+      const object = `${target === "--vendor" ? "vendor" : "invoice"}:${need(target)}`;
+      return { op, tuple: { user: principalObject({ iss: need("--iss"), sub: need("--sub") }), relation: ENTITLEMENT_RELATIONS[relation], object } };
+    }
+    if (relation === "client") {
+      const need = take(["--iss", "--client", "--relation", "--vendor"]);
+      return { op, tuple: { user: clientObject({ iss: need("--iss"), client: need("--client") }), relation: CLIENT_ENTITLEMENT, object: `vendor:${need("--vendor")}` } };
+    }
+    if (relation === "member") {
+      if (flags.has("--sub") === flags.has("--client")) throw new ResourcePolicyUsageError("name one member, --sub or --client");
+      const who = flags.has("--sub") ? "--sub" : "--client";
+      const need = take(["--iss", who, "--relation", "--tenant"]);
+      const iss = need("--iss");
+      const user = who === "--sub" ? principalObject({ iss, sub: need("--sub") }) : clientObject({ iss, client: need("--client") });
+      return { op, tuple: { user, relation: "member", object: `tenant:${need("--tenant")}` } };
+    }
+    if (relation === "tenant") {
+      const need = take(["--relation", "--tenant", "--vendor"]);
+      return { op, tuple: { user: `tenant:${need("--tenant")}`, relation: "tenant", object: `vendor:${need("--vendor")}` } };
+    }
+    throw new ResourcePolicyUsageError(`--relation must be reader, payer, client, member or tenant, not ${relation ?? "absent"}`);
   }
   if (op === "move-invoice") {
     const need = take(["--invoice", "--from", "--to"]);
     return { op, invoice: need("--invoice"), from: need("--from"), to: need("--to") };
   }
   throw new ResourcePolicyUsageError(op === undefined ? "no command" : `unknown command ${op}`);
-}
-
-/** The stored entitlement tuple a grant or revoke writes. */
-export function entitlementTuple(cmd: Extract<ResourcePolicyCommand, { op: "grant" | "revoke" }>): TupleKey {
-  return { user: principalObject(cmd.subject), relation: ENTITLEMENT_RELATIONS[cmd.relation], object: `${cmd.target.type}:${cmd.target.id}` };
 }
 
 /** Apply one command through the admin path, returning the line to print. */
@@ -93,7 +102,7 @@ export async function runResourcePolicyCommand(
     await admin.moveInvoice(cmd.invoice, cmd.from, cmd.to);
     return `moved invoice:${cmd.invoice} from vendor:${cmd.from} to vendor:${cmd.to}`;
   }
-  const tuple = entitlementTuple(cmd);
+  const { tuple } = cmd;
   await (cmd.op === "grant" ? admin.grant([tuple]) : admin.revoke([tuple]));
   return `${cmd.op === "grant" ? "granted" : "revoked"} ${tuple.user} ${tuple.relation} ${tuple.object}`;
 }

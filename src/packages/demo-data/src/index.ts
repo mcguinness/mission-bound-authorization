@@ -471,48 +471,109 @@ function loadInvoices(): InvoiceSeed[] {
 
 export const INVOICES: InvoiceSeed[] = loadInvoices();
 
+/** A policy principal under the deployment's own issuer: a subject or an authenticated client (D429). */
+export type ResourcePolicyPrincipalSeed = { sub: string } | { client: string };
+
 /**
- * @spec runtime#input-resource-policy (#828): one stored entitlement the
- * development demo grants when it bootstraps its Resource-policy store. The
- * principal is `sub` under the deployment's own issuer (the issuer-local
- * mapping); the grant is on a vendor, and every invoice that vendor owns
- * inherits it.
+ * @spec runtime#input-resource-policy (#828, D429): one stored entitlement the
+ * development demo grants when it bootstraps its Resource-policy store. A
+ * subject (`sub`) holds `authorized_reader` or `authorized_payer`; a client
+ * holds `authorized_client`. Each is a principal under the deployment's own
+ * issuer (the issuer-local mapping); the grant is on a vendor, every invoice
+ * that vendor owns inherits it, and it counts only for a member of the
+ * vendor's tenant.
  */
-export interface ResourcePolicyEntitlementSeed {
-  sub: string;
-  relation: "authorized_reader" | "authorized_payer";
-  vendor: string;
+export type ResourcePolicyEntitlementSeed =
+  | { sub: string; relation: "authorized_reader" | "authorized_payer"; vendor: string }
+  | { client: string; relation: "authorized_client"; vendor: string };
+
+/** One tenant: the vendors it holds and the subjects and clients that are its members (D429). */
+export interface ResourcePolicyTenantSeed {
+  tenant: string;
+  vendors: string[];
+  members: ResourcePolicyPrincipalSeed[];
 }
 
-const ENTITLEMENT_SEED_MEMBERS = new Set(["sub", "relation", "vendor"]);
+export interface ResourcePolicySeed {
+  tenants: ResourcePolicyTenantSeed[];
+  entitlements: ResourcePolicyEntitlementSeed[];
+}
 
-function loadResourcePolicySeed(): ResourcePolicyEntitlementSeed[] {
+/** Exactly one of `sub` or `client`, as a non-empty string. */
+function principalSeed(
+  file: string,
+  o: Record<string, unknown>,
+  ctx: string,
+): ResourcePolicyPrincipalSeed {
+  const hasSub = "sub" in o;
+  if (hasSub === "client" in o)
+    throw new ConfigError(file, `${ctx} must name exactly one of sub or client`);
+  return hasSub
+    ? { sub: reqString(file, o, "sub", ctx) }
+    : { client: reqString(file, o, "client", ctx) };
+}
+
+function onlyMembers(
+  file: string,
+  o: Record<string, unknown>,
+  allowed: ReadonlySet<string>,
+  ctx: string,
+): void {
+  for (const key of Object.keys(o))
+    if (!allowed.has(key)) throw new ConfigError(file, `${ctx} has unknown member ${key}`);
+}
+
+const SEED_ROOT_MEMBERS = new Set(["tenants", "entitlements"]);
+const TENANT_SEED_MEMBERS = new Set(["tenant", "vendors", "members"]);
+const MEMBER_SEED_MEMBERS = new Set(["sub", "client"]);
+const ENTITLEMENT_SEED_MEMBERS = new Set(["sub", "client", "relation", "vendor"]);
+
+function loadResourcePolicySeed(): ResourcePolicySeed {
   const file = "seed/resource-policy.json";
   const root = asObject(file, readJson(file), "resource-policy");
-  for (const key of Object.keys(root)) {
-    if (key !== "entitlements") throw new ConfigError(file, `unknown member ${key}`);
-  }
-  return asArray(file, root.entitlements, "entitlements").map((raw, i) => {
-    const ctx = `entitlements[${i}]`;
-    const e = asObject(file, raw, ctx);
-    for (const key of Object.keys(e)) {
-      if (!ENTITLEMENT_SEED_MEMBERS.has(key))
-        throw new ConfigError(file, `${ctx} has unknown member ${key}`);
-    }
-    const relation = reqString(file, e, "relation", ctx);
-    if (relation !== "authorized_reader" && relation !== "authorized_payer") {
-      throw new ConfigError(file, `${ctx}.relation must be authorized_reader or authorized_payer`);
-    }
+  onlyMembers(file, root, SEED_ROOT_MEMBERS, "resource-policy");
+  const tenants = asArray(file, root.tenants, "tenants").map((raw, i) => {
+    const ctx = `tenants[${i}]`;
+    const o = asObject(file, raw, ctx);
+    onlyMembers(file, o, TENANT_SEED_MEMBERS, ctx);
     return {
-      sub: reqString(file, e, "sub", ctx),
-      relation,
-      vendor: reqString(file, e, "vendor", ctx),
+      tenant: reqString(file, o, "tenant", ctx),
+      vendors: reqStringArray(file, o, "vendors", ctx),
+      members: asArray(file, o.members, `${ctx}.members`).map((m, j) => {
+        const mctx = `${ctx}.members[${j}]`;
+        const mo = asObject(file, m, mctx);
+        onlyMembers(file, mo, MEMBER_SEED_MEMBERS, mctx);
+        return principalSeed(file, mo, mctx);
+      }),
     };
   });
+  const entitlements = asArray(file, root.entitlements, "entitlements").map(
+    (raw, i): ResourcePolicyEntitlementSeed => {
+      const ctx = `entitlements[${i}]`;
+      const e = asObject(file, raw, ctx);
+      onlyMembers(file, e, ENTITLEMENT_SEED_MEMBERS, ctx);
+      const principal = principalSeed(file, e, ctx);
+      const relation = reqString(file, e, "relation", ctx);
+      const vendor = reqString(file, e, "vendor", ctx);
+      if ("client" in principal) {
+        if (relation !== "authorized_client")
+          throw new ConfigError(file, `${ctx}.relation must be authorized_client for a client`);
+        return { client: principal.client, relation, vendor };
+      }
+      if (relation !== "authorized_reader" && relation !== "authorized_payer") {
+        throw new ConfigError(
+          file,
+          `${ctx}.relation must be authorized_reader or authorized_payer for a subject`,
+        );
+      }
+      return { sub: principal.sub, relation, vendor };
+    },
+  );
+  return { tenants, entitlements };
 }
 
-/** The development demo's stored entitlements, granted only by an explicit development bootstrap. */
-export const RESOURCE_POLICY_SEED: ResourcePolicyEntitlementSeed[] = loadResourcePolicySeed();
+/** The development demo's stored policy, granted only by an explicit development bootstrap. */
+export const RESOURCE_POLICY_SEED: ResourcePolicySeed = loadResourcePolicySeed();
 
 export interface CeilingConstraints {
   max_amount?: { amount: string; currency: string };
