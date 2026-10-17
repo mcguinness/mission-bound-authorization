@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { activationPolicyDigest, approvalPolicyDigest, authorityHash } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
@@ -10,6 +11,7 @@ import {
   assertGovernedPolicyRecord,
   type AuthorityEntry,
   type AuthoritySourceCatalog,
+  type CapabilitySourceResolver,
   eligibleGovernedPolicyConsents,
   type GovernedActivation,
   type GovernedPolicyApprovalConfig,
@@ -92,13 +94,20 @@ const catalog = (svcCeiling: AuthorityEntry[] = DEPLOYMENT_CEILING): AuthoritySo
   ],
 });
 
+/** Every payments action the deployment ceiling derives, each classified. */
+const CLASSIFICATION: GovernedPolicyRoot["classification"] = {
+  standard: [...READS, "payments:payment.schedule", "payments:payment.schedule.cancel"],
+  irreversible_action: ["payments:payment.execute"],
+  external_commitment: ["payments:remittance.send"],
+};
+
 const rootDoc = (over: Partial<GovernedPolicyRoot> = {}): GovernedPolicyRoot => ({
   admits: { clients: ["svc-agent"], subjects: ["svc-reconciler"], authority_sources: ["service_owned"] },
   authority_ceiling: [readEntry()],
   lifetime: { max_lifetime_s: 3600 },
   rules: { max_entries: 3 },
   recency: { ceilings: { default: 30 * 86400 }, clock_skew_s: 60 },
-  classification: { irreversible_action: ["payments:payment.execute"] },
+  classification: CLASSIFICATION,
   ...over,
 });
 
@@ -126,6 +135,7 @@ const makeKernel = (
     config?: GovernedPolicyApprovalConfig;
     activationPolicies?: Record<string, RegisteredActivationPolicy>;
     catalog?: AuthoritySourceCatalog;
+    capabilityResolver?: CapabilitySourceResolver;
   } = {},
 ) =>
   new MissionKernel({
@@ -136,6 +146,7 @@ const makeKernel = (
     authoritySourceCatalog: (opts.catalog ?? catalog()) as never,
     governedPolicyApproval: opts.config ?? config(opts.doc),
     ...(opts.activationPolicies ? { activationPolicies: opts.activationPolicies } : {}),
+    ...(opts.capabilityResolver ? { capabilityResolver: opts.capabilityResolver } : {}),
     now,
   });
 
@@ -233,7 +244,7 @@ describe("governed policy root and record (@spec approval-governance#governed-po
     expect(root.rules).toEqual({ max_entries: 3 });
     expect(root.recency).toEqual(rootDoc().recency);
     // A root missing any committed term is refused at load, never defaulted.
-    for (const missing of ["admits", "authority_ceiling", "lifetime", "rules", "recency"] as const) {
+    for (const missing of ["admits", "authority_ceiling", "lifetime", "rules", "recency", "classification"] as const) {
       const { [missing]: _drop, ...rest } = rootDoc();
       expect(() => parseGovernedPolicyRoot(JSON.stringify(rest))).toThrow(GovernedPolicyConfigError);
     }
@@ -588,6 +599,41 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     expect(outcome(() => activate(future, c2.consent_id))).toBe("activated");
   });
 
+  it("refuses an action the root does not classify instead of treating it as low-risk", () => {
+    const ceiling = [readEntry(), executeEntry()];
+    const proposal = [{ ...executeEntry(), constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }];
+    // The root classifies the reads but never names payment.execute.
+    const partial = makeKernel({
+      doc: rootDoc({ authority_ceiling: ceiling, classification: { standard: CLASSIFICATION.standard } }),
+    });
+    const c = consent(partial);
+    expect(outcome(() => activate(partial, c.consent_id, { proposedAuthority: proposal }))).toBe("unclassified_action");
+    // Configured mapping derives it too, and is refused the same way.
+    expect(outcome(() => activate(partial, c.consent_id))).toBe("unclassified_action");
+    nothingCommitted(partial);
+    // A root with no classification, or one naming an action both standard
+    // and high-risk, is not a root.
+    const { classification: _drop, ...unclassified } = rootDoc();
+    expect(() => parseGovernedPolicyRoot(JSON.stringify(unclassified))).toThrow(GovernedPolicyConfigError);
+    expect(() =>
+      parseGovernedPolicyRoot(
+        JSON.stringify(
+          rootDoc({
+            classification: {
+              ...CLASSIFICATION,
+              standard: [...(CLASSIFICATION.standard ?? []), "payments:payment.execute"],
+            },
+          }),
+        ),
+      ),
+    ).toThrow(GovernedPolicyConfigError);
+    // Classified, the same proposal is held to its high-risk class.
+    const classified = makeKernel({ doc: rootDoc({ authority_ceiling: ceiling }) });
+    expect(outcome(() => activate(classified, consent(classified).consent_id, { proposedAuthority: proposal }))).toBe(
+      "high_risk_without_exception",
+    );
+  });
+
   it("activates a high-risk class only under a committed, class-named exception, whose age then binds", () => {
     const ceiling = [readEntry(), executeEntry()];
     const proposal = [{ ...executeEntry(), constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }];
@@ -620,6 +666,48 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     expect(outcome(() => activate(excepted, c.consent_id, { proposedAuthority: proposal }))).toBe("recency_exceeded");
     // A Mission without the class is held only to the default ceiling.
     expect(outcome(() => activate(excepted, c.consent_id, { proposedAuthority: [readEntry()] }))).toBe("activated");
+  });
+
+  it("re-checks against the capability resolution retained at activation, while a new activation resolves current trusted state", () => {
+    const digestA = `sha-256:${createHash("sha256").update("definition A").digest("base64url")}`;
+    const digestB = `sha-256:${createHash("sha256").update("definition B").digest("base64url")}`;
+    let digest = digestA;
+    const resolver: CapabilitySourceResolver = {
+      resolve: (entries) =>
+        entries.flatMap((e) =>
+          e.actions
+            .filter((a) => a === "payments:invoice.read")
+            .map((action) => ({
+              resource: e.resource,
+              action,
+              binding: {
+                action,
+                tool_id: "get_invoice",
+                source_uri: "https://catalog.test/payments",
+                source_digest: digest,
+                operation_ref: "get_invoice",
+              },
+            })),
+        ),
+    };
+    const kernel = makeKernel({ capabilityResolver: resolver });
+    const c = consent(kernel);
+    const first = activate(kernel, c.consent_id).mission;
+    expect(first.authority_set[0]?.capability_sources?.map((b) => b.source_digest)).toEqual([digestA]);
+    expect(recheckGovernedActivation(kernel, first.id).reproduced).toBe(true);
+    // The trusted resolver's answer legitimately changes.
+    digest = digestB;
+    // The historical comparison replays what the activation resolved.
+    expect(recheckGovernedActivation(kernel, first.id).reproduced).toBe(true);
+    // A new activation resolves against current trusted state.
+    const second = activate(kernel, c.consent_id).mission;
+    expect(second.authority_set[0]?.capability_sources?.map((b) => b.source_digest)).toEqual([digestB]);
+    expect(recheckGovernedActivation(kernel, second.id).reproduced).toBe(true);
+    // The retained resolution is what is replayed: without it, nothing reproduces.
+    kernel.db
+      .prepare("UPDATE governed_policy_activations SET capability_resolutions_json = '[]' WHERE mission_id = ?")
+      .run(first.id);
+    expect(recheckGovernedActivation(kernel, first.id).reproduced).toBe(false);
   });
 
   it("re-evaluating the recorded policy version over the recorded inputs reproduces the decision", () => {

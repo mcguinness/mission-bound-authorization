@@ -459,6 +459,8 @@ export {
   recheckGovernedActivation,
   type RecordedModelOutput,
   recordGovernedPolicyConsent,
+  STANDARD_CLASS,
+  unclassifiedActions,
   validateGovernedPolicyApprovalConfig,
   withdrawGovernedPolicyConsent,
 } from "./kernel/governed-policy-approval.js";

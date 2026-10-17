@@ -55,6 +55,11 @@ import {
   type UnsignedApprovalGovernanceRecord,
 } from "./approval-governance.js";
 import { AUTHORITY_SOURCE_TYPES, isAuthoritySourceType } from "./authority-source.js";
+import {
+  type CapabilitySourceResolution,
+  type CapabilitySourceResolver,
+  resolveFreshCapabilitySources,
+} from "./capability-binding.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
@@ -72,8 +77,8 @@ import type {
 // ---------------------------------------------------------------------------
 
 /**
- * @spec mission#approval-authentication, approval-governance#policy-approval-recency
- *: the high-risk action classes, under the deployment's classification. The
+ * @spec mission#approval-authentication, approval-governance#policy-approval-recency:
+ * the high-risk action classes, under the deployment's classification. The
  * fourth high-risk class, a consumption bound, is carried by a Mission Intent
  * member this Authorization Server's closed Intent does not admit, so no
  * activation here can carry one.
@@ -84,6 +89,9 @@ export const HIGH_RISK_CLASSES: readonly HighRiskClass[] = [
   "external_commitment",
   "privileged_administration",
 ];
+
+/** The classification an action the root positively classifies as not high-risk carries. */
+export const STANDARD_CLASS = "standard";
 
 /**
  * The deterministic decision rules a deciding policy carries: the root's own
@@ -110,8 +118,9 @@ export interface GovernedPolicyRules {
  * content: the eligible clients, Subjects and sources, the authority ceiling
  * and lifetime limit, the decision rules (or the separate evaluator that
  * decides), the recency ceilings, clock skew and class-named exceptions, and
- * the deployment's classification of actions into high-risk classes. A closed
- * JSON object; the snapshot bytes are what `approval_policy.digest` commits.
+ * the deployment's complete classification of actions: each action is
+ * `standard` or one or more high-risk classes. A closed JSON object; the
+ * snapshot bytes are what `approval_policy.digest` commits.
  */
 export interface GovernedPolicyRoot {
   admits: {
@@ -133,7 +142,12 @@ export interface GovernedPolicyRoot {
     /** Class-named exceptions admitting a `policy` accountable assertion for that high-risk class. */
     exceptions?: Partial<Record<HighRiskClass, { max_age_s: number }>>;
   };
-  classification?: Partial<Record<HighRiskClass, string[]>>;
+  /**
+   * REQUIRED and complete: every action an activation proposes or derives is
+   * listed under `standard` or under a high-risk class. An unlisted action is
+   * refused, never treated as low-risk.
+   */
+  classification: Partial<Record<typeof STANDARD_CLASS | HighRiskClass, string[]>>;
 }
 
 /** Bounded so a root cannot declare an unbounded clock skew. */
@@ -247,11 +261,19 @@ export function parseGovernedPolicyRoot(content: string | Uint8Array): GovernedP
       }
     }
   }
-  if (raw.classification !== undefined) {
-    if (!isObj(raw.classification)) throw new GovernedPolicyConfigError("root.classification must be an object");
-    closed("root.classification", raw.classification, HIGH_RISK_CLASSES);
-    for (const [c, actions] of Object.entries(raw.classification)) {
-      if (!isStrings(actions)) throw new GovernedPolicyConfigError(`root.classification.${c} must list actions`);
+  // The classification is REQUIRED: an action it does not name is unknown,
+  // and an activation never treats an unknown action as low-risk. An action
+  // named both `standard` and high-risk is ambiguous and refused here.
+  if (!isObj(raw.classification)) throw new GovernedPolicyConfigError("root.classification must be an object");
+  closed("root.classification", raw.classification, [STANDARD_CLASS, ...HIGH_RISK_CLASSES]);
+  for (const [c, actions] of Object.entries(raw.classification)) {
+    if (!isStrings(actions)) throw new GovernedPolicyConfigError(`root.classification.${c} must list actions`);
+  }
+  const standard = new Set((raw.classification[STANDARD_CLASS] as string[] | undefined) ?? []);
+  for (const c of HIGH_RISK_CLASSES) {
+    const both = ((raw.classification[c] as string[] | undefined) ?? []).find((a) => standard.has(a));
+    if (both !== undefined) {
+      throw new GovernedPolicyConfigError(`root.classification names ${both} both standard and ${c}`);
     }
   }
   return raw as unknown as GovernedPolicyRoot;
@@ -383,15 +405,35 @@ export function evaluateGovernedPolicyRules(
   return { decision: "approve", authority };
 }
 
-/** The high-risk classes an Authority Set carries under the root's classification. */
+/**
+ * The high-risk classes an Authority Set carries under the root's
+ * classification. Only meaningful over a set {@link unclassifiedActions}
+ * found complete: an action no class names is unknown, not low-risk.
+ */
 export function classifyHighRisk(
   set: readonly AuthorityEntry[],
   classification: GovernedPolicyRoot["classification"],
 ): HighRiskClass[] {
   return HIGH_RISK_CLASSES.filter((c) => {
-    const actions = new Set(classification?.[c] ?? []);
+    const actions = new Set(classification[c] ?? []);
     return set.some((e) => e.actions.some((a) => actions.has(a)));
   });
+}
+
+/**
+ * @spec approval-governance#policy-approval-recency: the actions of these
+ * sets the root's classification does not name, under `standard` or a
+ * high-risk class. An activation refuses any, rather than reading an unknown
+ * action as one that needs no exception.
+ */
+export function unclassifiedActions(
+  sets: ReadonlyArray<readonly AuthorityEntry[]>,
+  classification: GovernedPolicyRoot["classification"],
+): string[] {
+  const known = new Set(Object.values(classification).flatMap((actions) => actions ?? []));
+  const unknown = new Set<string>();
+  for (const set of sets) for (const e of set) for (const a of e.actions) if (!known.has(a)) unknown.add(a);
+  return [...unknown].sort();
 }
 
 // ---------------------------------------------------------------------------
@@ -420,7 +462,8 @@ export type GovernedPolicyRefusal =
   | "approval_in_future"
   | "recency_exceeded"
   | "high_risk_without_exception"
-  | "approval_event_used";
+  | "approval_event_used"
+  | "unclassified_action";
 
 export class GovernedPolicyError extends Error {
   constructor(
@@ -489,7 +532,8 @@ CREATE TABLE IF NOT EXISTS governed_policy_activations (
   mission_id TEXT NOT NULL UNIQUE,
   consent_id TEXT NOT NULL,
   deciding_json TEXT NOT NULL,
-  inputs_json TEXT NOT NULL
+  inputs_json TEXT NOT NULL,
+  capability_resolutions_json TEXT
 ) STRICT;
 `;
 
@@ -543,9 +587,20 @@ export class GovernedPolicyConsentStore {
     return row ? { content_type: row.content_type, content: new Uint8Array(row.content) } : undefined;
   }
 
-  /** The recorded inputs and deciding policy of a governed activation, or undefined. */
+  /**
+   * The recorded inputs and deciding policy of a governed activation, or
+   * undefined. `capability_resolutions` is the trusted capability resolution
+   * the activation applied to the decided set (null when the deployment
+   * configured no resolver), retained so a re-check replays it.
+   */
   activation(missionId: string):
-    | { approval_event_id: string; consent_id: string; deciding: ActivationPolicyRef; inputs: GovernedPolicyInputs }
+    | {
+        approval_event_id: string;
+        consent_id: string;
+        deciding: ActivationPolicyRef;
+        inputs: GovernedPolicyInputs;
+        capability_resolutions: CapabilitySourceResolution[] | null;
+      }
     | undefined {
     const row = this.db.prepare("SELECT * FROM governed_policy_activations WHERE mission_id = ?").get(missionId) as
       | Record<string, string>
@@ -556,6 +611,9 @@ export class GovernedPolicyConsentStore {
       consent_id: row.consent_id as string,
       deciding: JSON.parse(row.deciding_json as string) as ActivationPolicyRef,
       inputs: JSON.parse(row.inputs_json as string) as GovernedPolicyInputs,
+      capability_resolutions: row.capability_resolutions_json
+        ? (JSON.parse(row.capability_resolutions_json) as CapabilitySourceResolution[])
+        : null,
     };
   }
 
@@ -602,16 +660,25 @@ export class GovernedPolicyConsentStore {
     consent_id: string;
     deciding: ActivationPolicyRef;
     inputs: GovernedPolicyInputs;
+    capability_resolutions: CapabilitySourceResolution[] | null;
   }): void {
     if (!this.db.inTransaction) {
       throw new Error("governed activation inputs are retained only inside the Mission's creation transaction");
     }
     this.db
       .prepare(
-        `INSERT INTO governed_policy_activations (approval_event_id, mission_id, consent_id, deciding_json, inputs_json)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO governed_policy_activations (approval_event_id, mission_id, consent_id, deciding_json, inputs_json,
+           capability_resolutions_json)
+         VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .run(row.approval_event_id, row.mission_id, row.consent_id, JSON.stringify(row.deciding), JSON.stringify(row.inputs));
+      .run(
+        row.approval_event_id,
+        row.mission_id,
+        row.consent_id,
+        JSON.stringify(row.deciding),
+        JSON.stringify(row.inputs),
+        row.capability_resolutions ? JSON.stringify(row.capability_resolutions) : null,
+      );
   }
 }
 
@@ -913,6 +980,16 @@ function prepareGovernedActivation(
   // Step 5.
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
   const derived = kernel.derive(input.intent, proposal);
+  // Step 7 classifies the whole derived Mission from trusted, complete
+  // classification: every action proposed or derived must be one the root
+  // classifies, so no unknown action reaches the activation as low-risk.
+  const unknown = unclassifiedActions([proposal ?? [], derived], root.classification);
+  if (unknown.length > 0) {
+    throw new GovernedPolicyError(
+      "unclassified_action",
+      `root ${consent.root.id} does not classify ${unknown.join(", ")}`,
+    );
+  }
   let bounded: AuthorityEntry[];
   try {
     bounded = deriveAuthoritySet(
@@ -1013,7 +1090,11 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
   if (!isSubsetSet(decision.authority, bounded)) {
     throw new Error("governed policy evaluation widened the bounded set");
   }
-  const final = kernel.resolveFreshCapabilities(decision.authority);
+  // The trusted capability resolution runs against CURRENT trusted state, and
+  // what it returned is retained with the activation so a re-check replays
+  // it rather than resolving again.
+  const capability = recordingResolution(kernel.authoritySourceOptions().capabilityResolver);
+  const final = resolveFreshCapabilitySources(decision.authority, capability.resolver);
   const expiresAt = kernel.resolveEffectiveExpiry({
     requested: input.intent.expires_at,
     createdAt,
@@ -1135,6 +1216,7 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
         consent_id: consent.consent_id,
         deciding: deciding.ref,
         inputs,
+        capability_resolutions: capability.recorded,
       });
     });
   } catch (e) {
@@ -1192,10 +1274,54 @@ export function recheckGovernedActivation(
     rules = parseGovernedPolicyRules(JSON.parse(Buffer.from(check.snapshot.content).toString("utf8")), "evaluator");
   }
   const decision = evaluateGovernedPolicyRules(rules, activation.inputs);
-  const reproduced =
-    decision.decision === "approve" &&
-    authorityHash(issuer, kernel.resolveFreshCapabilities(decision.authority) as never) === mission.authority_hash;
+  // The historical comparison replays the capability resolution retained at
+  // activation; the resolver's current answer is for new activations only.
+  let replayed: AuthorityEntry[] | undefined;
+  if (decision.decision === "approve") {
+    try {
+      replayed = resolveFreshCapabilitySources(decision.authority, replayResolution(activation.capability_resolutions));
+    } catch {
+      replayed = undefined;
+    }
+  }
+  const reproduced = replayed !== undefined && authorityHash(issuer, replayed as never) === mission.authority_hash;
   return { reproduced, decision };
+}
+
+/**
+ * The deployment's trusted capability resolver, wrapped to record what it
+ * returned for this activation (null when none is configured).
+ */
+function recordingResolution(resolver: CapabilitySourceResolver | undefined): {
+  resolver: CapabilitySourceResolver | undefined;
+  recorded: CapabilitySourceResolution[] | null;
+} {
+  if (!resolver) return { resolver: undefined, recorded: null };
+  const recorded: CapabilitySourceResolution[] = [];
+  return {
+    recorded,
+    resolver: {
+      resolve: (entries) => {
+        const out = resolver.resolve(entries);
+        recorded.push(...out);
+        return out;
+      },
+    },
+  };
+}
+
+/**
+ * A resolver that answers from a retained resolution, for each entry only
+ * the resolutions naming that entry's resource and actions; null replays no
+ * resolver at all, as at an activation that had none.
+ */
+function replayResolution(recorded: CapabilitySourceResolution[] | null): CapabilitySourceResolver | undefined {
+  if (!recorded) return undefined;
+  const distinct = [...new Map(recorded.map((r) => [JSON.stringify(r), r])).values()];
+  return {
+    resolve: (entries) =>
+      distinct.filter((r) => entries.some((e) => e.resource === r.resource && e.actions.includes(r.action))),
+  };
 }
 
 /**

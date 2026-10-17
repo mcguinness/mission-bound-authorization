@@ -74,6 +74,17 @@ beforeAll(async () => {
             lifetime: { max_lifetime_s: 3600 },
             rules: { max_entries: 1 },
             recency: { ceilings: { default: 86400 }, clock_skew_s: 30 },
+            classification: {
+              standard: [
+                "payments:invoice.list",
+                "payments:invoice.read",
+                "payments:vendor.read",
+                "payments:payment.schedule",
+                "payments:payment.schedule.cancel",
+              ],
+              irreversible_action: ["payments:payment.execute"],
+              external_commitment: ["payments:remittance.send"],
+            },
           }),
         },
       },
