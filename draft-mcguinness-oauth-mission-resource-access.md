@@ -148,112 +148,117 @@ meaning.
 
 # The Mission Resource Access Type {#resource-access-type}
 
-`mission_resource_access` is a {{RFC9396}} `authorization_details` type:
-a general-purpose, cross-resource authorization language. An entry is a
-{{RFC9396}} `authorization_details` object with these members:
+`mission_resource_access` is an `authorization_details` type
+({{Section 2 of RFC9396}}): a general-purpose, cross-resource
+authorization language. An entry is an `authorization_details` object
+with these members:
 
 `type`:
 : REQUIRED. A string. `mission_resource_access`.
 
 `resource`:
-: REQUIRED. A string. The single protected resource the entry
-  applies to: an absolute URI identifying an OAuth protected
-  resource ({{RFC8707}}) or a Protected Resource ({{RFC9728}}), the
-  same kind of identifier as the {{RFC8707}} `resource` value.
-  Carrying it per entry, which {{RFC9396}} permits, lets one token
-  scope distinct authority to distinct resources. A Mission-bound
-  token's `aud` is derived from the carried entries' `resource`
-  values and is typically coarser
-  ({{I-D.draft-mcguinness-oauth-mission}}). Per {{Section 3.2 of RFC9396}},
-  the `resource` authorization request parameter does
-  not affect how the authorization server processes `authorization_details`, and this
-  member is distinct from the {{RFC9396}} common `locations` field.
+: REQUIRED. A string. The single protected resource the entry applies
+  to: an absolute URI identifying an OAuth protected resource
+  ({{RFC9728}}), the same kind of identifier as the {{RFC8707}}
+  `resource` value.
+
+  - Carrying `resource` per entry, which {{RFC9396}} permits, lets one
+    token scope distinct authority to distinct resources. A
+    Mission-bound token's `aud` is derived from the carried entries'
+    `resource` values and is typically coarser
+    ({{I-D.draft-mcguinness-oauth-mission}}).
+  - Per {{Section 3.2 of RFC9396}}, the `resource` authorization request
+    parameter does not affect how the authorization server processes
+    `authorization_details`. This member is also distinct from the
+    {{RFC9396}} common `locations` field.
 
 `resource_match`:
 : OPTIONAL. A string: `exact` (the default, and the behavior when the
-  member is absent) or `prefix`. Under `exact` the entry applies to the
-  `resource` URI alone. Under `prefix` the entry authorizes the
-  `resource` itself and any URI beneath it at a path-segment boundary
-  (the `resource` followed by `/` and further path). A `resource`
-  value under `prefix` MUST NOT carry a query or fragment component;
-  the authorization server refuses such an entry with `invalid_authorization_details`.
-  For prefix purposes, a `resource` with an empty path and one whose
-  path is `/` denote the same base: `https://a.example` and
-  `https://a.example/` authorize the same set. These two values
-  are the only ones defined; a consumer MUST treat an entry whose
-  `resource_match` value it does not recognize as unenforceable and
-  fail closed ({{I-D.draft-mcguinness-oauth-mission}}). Containment
-  between effective resource sets is compared as defined in
+  member is absent) or `prefix`.
+
+  - Under `exact`, the entry applies to the `resource` URI alone.
+  - Under `prefix`, the entry authorizes the `resource` itself and any
+    URI beneath it at a path-segment boundary (the `resource` followed
+    by `/` and further path). A `resource` value under `prefix` MUST NOT
+    carry a query or fragment component; the authorization server
+    refuses such an entry with the `invalid_authorization_details` error
+    code ({{Section 5 of RFC9396}}).
+  - For prefix purposes, a `resource` with an empty path and one whose
+    path is `/` denote the same base: `https://a.example` and
+    `https://a.example/` authorize the same set.
+  - These two values are the only ones defined; a consumer MUST treat an
+    entry whose `resource_match` value it does not recognize as
+    unenforceable and fail closed
+    ({{I-D.draft-mcguinness-oauth-mission}}).
+
+  Containment between effective resource sets is compared as defined in
   {{subset}}.
 
 `actions`:
-: REQUIRED. An array of strings. Permitted action values: each is an
-  action identifier matching `[A-Za-z0-9_.:-]+`, or an action family
-  (an identifier followed by `.*`). An action family authorizes
-  every action whose dot-separated identifier extends the family
-  name at a segment boundary (`invoices.*` authorizes
-  `invoices.read` and `invoices.q3.export`, not `invoicesx.read`).
+: REQUIRED. An array of strings. Each value is an action identifier
+  matching `[A-Za-z0-9_.:-]+`, or an action family: an identifier
+  followed by `.*`. A family authorizes every action whose dot-separated
+  identifier extends the family name at a segment boundary: `invoices.*`
+  authorizes `invoices.read` and `invoices.q3.export`, not
+  `invoicesx.read`.
 
   - Like an OAuth scope, an action value carries meaning only at the
-    `resource` that defines it: a consumer enforces only the actions
-    it recognizes for that resource and honors no others, so an
-    unrecognized action is fail-closed by construction.
-  - An authorization server SHOULD draw action identifiers from a namespace the
-    serving resource documents, so the set is interpretable
-    cross-vendor rather than ad hoc.
-  - A consent rendering MUST present a family as the breadth it is:
-    all actions under the name, not one action.
-  - An authorization server SHOULD treat deriving a family as high-risk breadth.
+    `resource` that defines it: a consumer enforces only the actions it
+    recognizes for that resource and honors no others, so an
+    unrecognized action fails closed.
+  - An authorization server SHOULD draw action identifiers from a
+    namespace the serving resource documents, so the set is
+    interpretable cross-vendor rather than ad hoc.
+  - A consent rendering MUST present a family as the breadth it is: all
+    actions under the name, not one action.
+  - An authorization server SHOULD treat deriving a family as high-risk
+    breadth.
 
 `constraints`:
-: OPTIONAL. An object. Machine-actionable per-resource
-  bounds (for example, `max_amount`). A member name defined as a
-  Common Constraint ({{common-constraints}}) has shared semantics
-  across deployments; any other name is deployment-defined.
+: OPTIONAL. An object. Machine-actionable per-resource bounds (for
+  example, `max_amount`). A member name defined as a Common Constraint
+  ({{common-constraints}}) has shared semantics across deployments; any
+  other name is deployment-defined.
 
   - Because a `constraints` member narrows authority, a resource server
-    that cannot enforce one MUST fail closed
-    ({{rs-enforcement}}).
-  - To avoid that failure mode, the authorization server SHOULD emit for a given
-    `resource` only `constraints` keys that the resource server serving
-    it is known (by registration, deployment policy, or the resource's
-    advertised `mission_constraints_supported`
-    ({{protected-resource-metadata}})) to understand and enforce.
+    that cannot enforce one MUST fail closed ({{rs-enforcement}}).
+  - To avoid that failure mode, the authorization server SHOULD emit for
+    a given `resource` only `constraints` keys that the resource server
+    serving it is known to understand and enforce: by registration, by
+    deployment policy, or by the resource's
+    `mission_constraints_supported` metadata
+    ({{protected-resource-metadata}}).
 
 `delegation`:
-: OPTIONAL. An object. The delegation policy for this
-  entry ({{delegate-eligibility}}). When absent, this entry's
-  authority is non-delegable: it MUST NOT appear in a delegated
-  token. When present, it has these members:
+: OPTIONAL. An object. The delegation policy for this entry
+  ({{delegate-eligibility}}). When absent, this entry's authority is
+  non-delegable: it MUST NOT appear in a delegated token. When present,
+  it has these members:
 
   `max_depth`:
-  : REQUIRED. An integer. The maximum delegation depth at
-    which this entry's authority may be exercised
-    ({{delegate-eligibility}}).
+  : REQUIRED. An integer. The maximum delegation depth at which this
+    entry's authority may be exercised ({{delegate-eligibility}}).
 
   `allowed_delegates`:
-  : RECOMMENDED. An array of objects. The permitted
-    delegates, each a `may_act`-style matcher
-    ({{delegate-eligibility}}): `{ "sub": "<client_id>" }` for a
-    specific delegate, or `{ "sub_profile": "<actor-type>" }` for an
-    actor-type class. When absent, eligibility falls to the authorization server's
+  : RECOMMENDED. An array of objects. The permitted delegates, each a
+    `may_act`-style matcher ({{matching-allowed-delegates}}):
+    `{ "sub": "<client_id>" }` for a specific delegate, or
+    `{ "sub_profile": "<actor-type>" }` for an actor-type class.
+
+    When absent, eligibility falls to the authorization server's
     delegation-authorization policy, which MUST be applied at every
-    exchange ({{delegate-eligibility}}); absence delegates the
-    decision to policy, it never grants blanket eligibility. The
-    member is RECOMMENDED so that eligibility is committed and
-    rendered with the entry rather than left wholly to policy.
+    exchange ({{delegate-eligibility}}); absence delegates the decision
+    to policy, it never grants blanket eligibility. The member is
+    RECOMMENDED so that eligibility is committed and rendered with the
+    entry rather than left wholly to policy.
 
-  A companion profile MAY define additional `delegation` members.
-  Such a member is policy, not authority ({{delegate-eligibility}}):
-  a derived entry's value for it MUST NOT be broader than the parent
-  entry's, and a member the authorization server does not understand is carried
-  unchanged.
+  A companion profile MAY define additional `delegation` members. Such a
+  member is policy, not authority ({{subset}}): a derived entry's value
+  for it MUST NOT be broader than the parent entry's, and a member the
+  authorization server does not understand is carried unchanged.
 
-Example Authority Set (the read entry is delegable to depth 2 and
-bounded to a Q3 issuance window by the `resource_issued_after` and
-`resource_issued_before` Common Constraints ({{common-constraints}});
-the write entry carries no `delegation` and so is non-delegable, because
-`delegation` is per entry):
+The following example shows an Authority Set with two entries for one
+resource:
 
 ~~~ json
 [
@@ -276,6 +281,12 @@ the write entry carries no `delegation` and so is non-delegable, because
     } }
 ]
 ~~~
+
+The read entry is delegable to depth 2 and bounded to a third-quarter
+issuance window by the `resource_issued_after` and
+`resource_issued_before` Common Constraints ({{common-constraints}}).
+The write entry carries no `delegation`, so it is non-delegable:
+`delegation` is per entry.
 
 ## Subset Rule {#subset}
 
@@ -543,50 +554,54 @@ metadata {{RFC9728}}:
 
 {{I-D.draft-mcguinness-oauth-mission}} gates a delegated token's carried
 entries on the entry type's own delegation policy, evaluated at the
-delegate's delegation depth `d` (the nesting depth of the token's `act`
-claim, as that document defines). For a `mission_resource_access`
-entry, the authorization server includes it in a delegated token
-issued at delegation depth `d` only if all of the following hold:
+delegate's delegation depth `d`: the nesting depth of the token's `act`
+claim, as that document defines. For a `mission_resource_access` entry,
+the authorization server includes it in a delegated token issued at
+delegation depth `d` only if all of the following hold:
 
 1. the entry carries a `delegation` member (otherwise it is
    non-delegable, which is the default);
-2. `d` is less than or equal to the entry's `delegation.max_depth`;
-   and
-3. the delegate is permitted by `delegation.allowed_delegates` or,
-   when that member is absent, by the authorization server's delegation-authorization
-   policy, which the authorization server MUST apply at every exchange: an absent
-   matcher list is a decision deferred to policy, never a blanket
-   grant of eligibility.
+2. `d` is less than or equal to the entry's `delegation.max_depth`; and
+3. the delegate is permitted by `delegation.allowed_delegates` or, when
+   that member is absent, by the authorization server's
+   delegation-authorization policy, which the authorization server MUST
+   apply at every exchange: an absent matcher list is a decision
+   deferred to policy, never a blanket grant of eligibility.
 
 An entry failing any of these narrows out of the delegated token,
-consistent with the subset rule ({{subset}}). The `delegation`
-member is policy, not authority, and is not part of the subset
-comparison; surviving entries are carried with their `delegation`
-member intact so the next hop is evaluated the same way.
+consistent with the subset rule ({{subset}}). Surviving entries are
+carried with their `delegation` member intact, so the next hop is
+evaluated the same way.
 
-**Matching `allowed_delegates`.** Each entry is a matcher object
-modeled on the RFC 8693 `may_act` actor object ({{Section 4.4 of RFC8693}}): where `may_act` names a single party eligible to act on a token,
-`allowed_delegates` is a per-Authority-Set-entry *list* of such
-matchers, generalized to actor-type classes. A `{ "sub": ... }`
-matcher permits a specific delegate by client identifier; a
-`{ "sub_profile": ... }` matcher permits any actor of that type (for
-example, `ai_agent`). An actor's `sub_profile` MAY carry multiple
-space-separated values; a `{ "sub_profile": ... }` matcher is
-satisfied when its value is among the actor's values. A deployment
-can thus permit a specific client,
-a class of actors, or both, and a delegate is permitted if it matches
-any entry.
+### Matching `allowed_delegates` {#matching-allowed-delegates}
 
-The authorization server MUST authenticate the delegate at the Token Exchange
-and assert the actor's `sub` and `sub_profile` itself. A self-asserted
-`sub_profile` MUST NOT satisfy a matcher; otherwise a client could
-claim any actor type to bypass the constraint.
+Each `allowed_delegates` value is a matcher object modeled on the actor
+object of the `may_act` claim ({{Section 4.4 of RFC8693}}). Where
+`may_act` names a single party eligible to act on a token,
+`allowed_delegates` is a per-entry list of such matchers, generalized to
+actor-type classes:
 
-A `{ "sub": ... }` matcher is a client identifier in the issuing authorization server's
-namespace and is not portable across a trust domain; how a Resource AS
-evaluates conveyed matchers, failing closed and narrowing out any
-`sub` matcher it cannot resolve, is specified by the companion
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+- A `{ "sub": ... }` matcher permits a specific delegate by client
+  identifier.
+- A `{ "sub_profile": ... }` matcher permits any actor of that type (for
+  example, `ai_agent`). An actor's `sub_profile` MAY carry multiple
+  space-separated values; a `{ "sub_profile": ... }` matcher is
+  satisfied when its value is among the actor's values.
+
+A delegate is permitted if it matches any matcher, so a deployment can
+permit a specific client, a class of actors, or both.
+
+The authorization server MUST authenticate the delegate at the Token
+Exchange and assert the actor's `sub` and `sub_profile` itself. A
+self-asserted `sub_profile` MUST NOT satisfy a matcher; otherwise a
+client could claim any actor type to bypass the constraint.
+
+A `{ "sub": ... }` matcher is a client identifier in the issuing
+authorization server's namespace and is not portable across a trust
+domain. How an authorization server in another trust domain (a "Resource
+AS") evaluates conveyed matchers, failing closed and narrowing out any
+`sub` matcher it cannot resolve, is specified by
+{{I-D.draft-mcguinness-oauth-mission-cross-domain}}.
 
 ## Scope Projection {#scope-projection}
 
