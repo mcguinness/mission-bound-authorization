@@ -1885,8 +1885,9 @@ own Mission reference ({{mission-claim}}).
 
 The Mission grant binding is an AS-controlled, functional mapping
 from one persistent, redeemable **grant lineage** to exactly one
-Mission. The AS alone establishes and resolves a binding; a client
-never supplies or negotiates one.
+Mission. The AS alone establishes a binding and resolves it from the
+grant itself; a client never supplies or negotiates one, and no
+client input selects its Mission.
 
 A grant lineage is state the AS can resolve again on a later request,
 either:
@@ -1929,9 +1930,8 @@ resolved to.
 The AS MUST resolve a bound grant lineage to the same Mission on
 every derivation performed against it: the mapping is fixed for the
 lineage's lifetime and is never reassigned to a different Mission.
-The AS resolves a lineage from the grant itself, and no client input
-names its Mission. An AS that finds a lineage resolving to more than
-one Mission fails closed on that lineage.
+An AS that finds a lineage resolving to more than one Mission fails
+closed on that lineage.
 
 Where a profile-defined operation lets a client present a Mission
 identifier alongside a credential, the identifier is a
