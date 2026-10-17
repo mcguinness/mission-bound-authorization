@@ -1887,7 +1887,7 @@ The Mission grant binding is an AS-controlled, functional mapping
 from one persistent, redeemable **grant lineage** to exactly one
 Mission. The AS alone establishes a binding and resolves it from the
 grant itself; a client never supplies or negotiates one, and no
-client input selects its Mission.
+client input determines its Mission.
 
 A grant lineage is state the AS can resolve again on a later request,
 either:
@@ -2246,8 +2246,8 @@ This document defines the following members:
     for it). Present when a Mission-creating profile or deployment
     chooses to make the mechanism explicit; where absent, the
     mechanism is still fixed by `type` and the construction rules of
-    this document or a companion profile (below). Members, where
-    present:
+    this document or a companion profile (below and
+    {{standing-consent-bases}}). Members, where present:
 
     `kind`:
     : REQUIRED. A string: `human` or `policy`, naming a decision
@@ -2274,7 +2274,8 @@ This document defines the following members:
       is recorded for this approval event
       ({{I-D.draft-mcguinness-mission-approval-governance}}), joined
       by this Mission's own `approval_event_id`. It never changes
-      `kind`, which follows the basis (below). Approval Governance
+      `kind`, which follows the basis (below and
+      {{standing-consent-bases}}). Approval Governance
       aligns the record's accountable assertion, where it carries
       one, with that `kind`: a governed decision still names its
       mechanism, and the record supplies the fuller assertion set
