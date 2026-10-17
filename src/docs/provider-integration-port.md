@@ -360,6 +360,10 @@ the store.
      the grant is touched. A matching retry binds the same grant through
      `kernel.bindGrant`, which is compare-and-set: idempotent for the grant a
      Mission holds, refused for any other, so a binding never moves.
+     The other minting paths (child redemption, template dispatch, and the
+     continuation and drawdown mint) bind a Mission's first grant through
+     `kernel.bindFirstGrant`: a concurrent loser mints under the winner's
+     grant rather than moving the binding.
   4. For an Intent-only request, `details.save()` of the marked
      `authorization_details` (§7).
   5. `interactionFinished`: a 303 to the resume URL (`lib/provider.js`
@@ -406,6 +410,7 @@ the store.
   - `> a commit failure after the grant save leaves only an inert grant, no Mission and no binding, and the retry recovers through that grant`
   - `> a failure after the record commit leaves an active, bound Mission whose code is not issued yet (the #250 window), which a retry on the interaction completes`
   - `> a Mission's grant binding never moves: bindGrant is idempotent for the grant it holds and refuses any other`
+  - `> the minting paths' first bind adopts the winner: bindFirstGrant binds an unbound Mission once and returns that grant to every later caller`
   - `> a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes`
 - **Unsupported or residual.**
   - `{#approval-event}` step 7's record/code atomicity is not met. The record

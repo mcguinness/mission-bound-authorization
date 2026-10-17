@@ -311,6 +311,7 @@ import {
 } from "./transaction-authorization.js";
 export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
+import { ceilingConsentOf, type ProgressiveDrawdownOptions } from "../kernel/progressive.js";
 import { ID_JAG_TOKEN_TYPE } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
@@ -673,6 +674,13 @@ export interface AdapterOptions {
    * disabled capability refuses with its path's standard error.
    */
   capabilities?: ReadonlySet<ProviderCapability>;
+  /**
+   * @spec progressive#in-ceiling-expansion: the policy-adjudicated drawdown
+   * path, default off. Absent, an approval decision's ceiling members are
+   * ignored and an expansion of a Mission that carries a ceiling takes the
+   * ordinary fresh-approval path.
+   */
+  progressive?: ProgressiveDrawdownOptions;
 }
 
 /**
@@ -2379,8 +2387,7 @@ async function handleChildJwtBearerGrant(
     for (const entry of effective) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     }
-    grantId = await grant.save();
-    kernel.bindGrant(record.id, grantId);
+    grantId = kernel.bindFirstGrant(record.id, await grant.save());
   }
 
   // 7. Resource + TTL — mirror mintDeferredToken; clamp the TTL to the child's
@@ -3998,8 +4005,7 @@ async function handleMissionDispatchGrant(
     for (const entry of effective) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     }
-    grantId = await grant.save();
-    kernel.bindGrant(record.id, grantId);
+    grantId = kernel.bindFirstGrant(record.id, await grant.save());
   }
 
   // Resource + TTL — mirror mintDeferredToken; clamp the TTL to the instance's
@@ -4335,9 +4341,14 @@ async function decide(
   // another.
   const approvalEventId = `apev_${details.uid}`;
   const grantId = approvalGrantId(details.uid);
+  // @spec progressive#progressive-authorization: the authority ceiling and
+  // drawdown policy the Approver consented on this approval surface, read only
+  // where the deployment selects Progressive authorization.
+  const ceiling = opts.progressive ? ceilingConsentOf(body) : undefined;
   const approveInput: ApproveInput = {
     intent: intent as MissionIntent,
     ...(proposedAuthority ? { proposedAuthority } : {}),
+    ...(ceiling ? { ceiling } : {}),
     // @spec mission#intent-submission-evidence — the verified facts land on
     // the Mission Record (outside all anchors), request-derived, never
     // fabricated downstream.

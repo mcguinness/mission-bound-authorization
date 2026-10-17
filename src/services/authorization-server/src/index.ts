@@ -59,6 +59,7 @@ import { MissionKernel } from "./kernel/kernel.js";
 import type { TxnAuthorizationOptions } from "./adapters/transaction-authorization.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
 import type { ActivationPolicyRegistry } from "./kernel/activation-policy.js";
+import { type ProgressiveDrawdownOptions, validateProgressiveDrawdownOptions } from "./kernel/progressive.js";
 import { createTemplate, type DispatchPolicies } from "./kernel/template.js";
 import { trustedCapabilityResolver } from "./adapters/capability-resolver.js";
 import { TemplateStore } from "./kernel/template-store.js";
@@ -420,7 +421,20 @@ export {
   type ActivationPolicyRegistry,
   mintActivationPolicyRef,
   type RegisteredActivationPolicy,
+  verifiedActivationPolicy,
 } from "./kernel/activation-policy.js";
+// @spec mission#standing-consent-bases: the retained activation policy
+// snapshots (MissionKernel.activationPolicySnapshots) and the audit check
+// MissionKernel.verifyActivationPolicyCommitment returns.
+export {
+  type ActivationPolicyCommitmentCheck,
+  ActivationPolicyRetentionError,
+  type ActivationPolicySnapshotKey,
+  ActivationPolicySnapshotStore,
+  committedActivationPolicy,
+  type EvaluatedActivationPolicy,
+  type RetainedActivationPolicySnapshot,
+} from "./kernel/activation-policy-snapshots.js";
 export {
   createTemplate,
   dispatchFromTemplate,
@@ -855,6 +869,12 @@ export async function buildAuthorizationServer(opts: {
    * child delegation off the child client is not registered.
    */
   capabilities?: ReadonlySet<ProviderCapability>;
+  /**
+   * @spec progressive#in-ceiling-expansion: select the policy-adjudicated
+   * drawdown path, with the bounds the Mission Deployment Profile publishes.
+   * Absent (the default), no drawdown is adjudicated by policy.
+   */
+  progressive?: ProgressiveDrawdownOptions;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
@@ -1229,6 +1249,7 @@ export async function buildAuthorizationServer(opts: {
     // @spec mission#scope-projection — the trusted out-of-band mapping.
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
+    ...(opts.progressive ? { progressive: validateProgressiveDrawdownOptions(opts.progressive) } : {}),
   });
   // @spec async-delegation — publish the provider to the terminal subscriber now
   // that construction is complete (no lifecycle commit could have fired earlier).

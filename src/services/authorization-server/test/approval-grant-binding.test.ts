@@ -329,4 +329,17 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     expect(as.kernel.get(record?.id as string)?.grant_id).toBe(bound);
     expect(as.kernel.missionBoundGrants.resolve("another-grant")).toBeUndefined();
   });
+
+  it("the minting paths' first bind adopts the winner: bindFirstGrant binds an unbound Mission once and returns that grant to every later caller", async () => {
+    const flow = await open();
+    expect((await flow.decide()).status).toBe(303);
+    const record = as.kernel.findByApprovalEvent(flow.approvalEventId);
+    const id = record?.id as string;
+    // A Mission minted outside the approval decision starts unbound.
+    as.kernel.db.prepare("UPDATE missions SET grant_id = NULL WHERE id = ?").run(id);
+    expect(as.kernel.bindFirstGrant(id, "first-grant")).toBe("first-grant");
+    expect(as.kernel.bindFirstGrant(id, "second-grant")).toBe("first-grant");
+    expect(as.kernel.get(id)?.grant_id).toBe("first-grant");
+    expect(as.kernel.missionBoundGrants.resolve("second-grant")).toBeUndefined();
+  });
 });
