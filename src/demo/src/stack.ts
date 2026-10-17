@@ -128,7 +128,7 @@ export interface AuthServerExtras {
    */
   approverConsole: ApprovalConsole;
   /**
-   * @spec status#lifecycle-authorization — the dedicated lifecycle console's
+   * @spec status#lifecycle-authorization: the dedicated lifecycle console's
    * private-key-JWT credential at the advertised Mission Lifecycle endpoint. It
    * generated its own key; the AS holds only the public half and binds the
    * `mission_lifecycle` grant to this client alone. Trusted console only.
