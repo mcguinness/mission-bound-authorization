@@ -650,9 +650,16 @@ order, refusing on the first failure:
    completion, re-verify the predecessor's Mission state before issuing
    ({{deferred-window}}).
 
-On any failure the Mission Issuer MUST refuse with `invalid_request`,
-`invalid_grant`, or `invalid_token` as appropriate, and MUST NOT create
-a successor.
+On any failure the Mission Issuer MUST refuse and MUST NOT create a
+successor. A failure to which this document assigns a code, such as a
+`predecessor` mismatch or a denial reason ({{denial-reasons}}), uses
+that code. Otherwise, a `subject_token` or `actor_token` that is
+invalid, whose sender constraint is not proven, or that is unacceptable
+for the exchange is refused with `invalid_request`
+({{Section 2.2.2 of RFC8693}}); a missing DPoP proof, or one that fails
+its own validation, with `invalid_dpop_proof` ({{Section 5 of RFC9449}});
+and any other failure with `invalid_request`, `invalid_grant`, or
+`invalid_token` as appropriate.
 
 The predecessor's Effective Authority Set, the right-hand side of step
 7's subset test, is the term {{I-D.draft-mcguinness-oauth-mission-status}}
@@ -2142,6 +2149,12 @@ composition with the issuance flow.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A failed expansion exchange uses the code this document assigns to
+  the failure; otherwise an invalid, unproven or unacceptable
+  `subject_token` or `actor_token` is `invalid_request`, as Section
+  2.2.2 of RFC 8693 requires, and a missing or invalid DPoP proof is
+  `invalid_dpop_proof` (#1178).
 
 - A predecessor that is not `active` refuses the expansion exchange
   with `invalid_request`, following the issuance profile's Token
