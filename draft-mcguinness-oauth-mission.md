@@ -720,7 +720,7 @@ Mission:
   binding: the Approver approves the Authority Set, and the task is
   disclosed and committed beside it.
 
-Mission Grant Binding (Grant Binding):
+Mission grant binding (grant binding):
 : The AS-controlled, functional mapping from one persistent,
   redeemable grant lineage to exactly one Mission ({{grant-binding}}).
   Distinct from a Derived token's own `mission` claim, which every
@@ -1934,7 +1934,7 @@ An AS that finds a lineage resolving to more than one Mission fails
 closed on that lineage.
 
 Where a profile-defined operation lets a client present a Mission
-identifier alongside a credential, the identifier is a
+Identifier alongside a credential, the identifier is a
 non-authoritative cross-check: the AS MUST verify it against the
 Mission the credential resolves to and refuse a mismatch with the
 `invalid_grant` error code. The `predecessor` parameter of
@@ -2677,7 +2677,7 @@ source text the record does not preserve.
 The commitment is not a globally unique entry identifier: the
 envelope binds the issuer, not the Mission, so a protocol that uses
 it to select or cite an entry MUST bind it to the Mission `issuer`
-and Mission identifier whose recorded Authority Set is searched,
+and Mission Identifier whose recorded Authority Set is searched,
 directly or through an enclosing object whose integrity protection
 binds them.
 
@@ -3000,10 +3000,10 @@ derived token:
   that requested this particular token;
 - MUST set `aud` to identify the resource server(s) authorized to
   consume the carried `authorization_details`, and MUST NOT include an
-  audience unrelated to that carried authority (see below);
+  audience unrelated to that carried authority ({{token-audience}});
 - MAY carry an `act` claim when the agent has delegated execution
   ({{delegation}});
-- MAY carry a `scope` claim, subject to {{scope-projection}};
+- MAY carry a `scope` claim, subject to {{scope-projection}}; and
 - can be sender-constrained, as {{Section 2.2.1 of RFC9700}}
   recommends, via a `cnf` claim {{RFC7800}}: DPoP {{RFC9449}}
   (`cnf.jkt`) or mTLS {{RFC8705}} (`cnf.x5t#S256`).
@@ -3033,6 +3033,7 @@ client obtains a single-audience token ({{Section 2.3 of RFC9700}})
 with the {{RFC8707}} `resource` parameter, and can narrow it further
 with `scope`; the AS narrows the Authority Set under {{subset}} to the
 requested resource(s) and sets `aud` accordingly.
+{: #token-audience}
 
 The AS returns the granted `authorization_details` in every token
 response, including refresh and Token Exchange responses
@@ -3794,7 +3795,7 @@ For each resolution, the AS:
    them, and never the Mission's Authority Set or other authority the
    token does not carry.
 
-Mission state alone, or a lookup by Mission identifier, never
+Mission state alone, or a lookup by Mission Identifier, never
 establishes a token's validity or authority. An unknown, invalid,
 expired or revoked token, or a Mission that is not `active`, resolves
 as inactive and yields no authority; missing or unavailable state
@@ -4326,7 +4327,7 @@ task, a credential that is not Mission-bound, such as an ordinary
 access token it already holds, unless a deployment-defined,
 trusted enforcement path establishes that Mission for the request and
 applies the Mission's authority and lifecycle controls to it. Neither
-a Mission identifier the client supplies nor documentation alone
+a Mission Identifier the client supplies nor documentation alone
 establishes the Mission for a request, and the path confers no
 authority beyond the Mission's. The rule does not restrict the
 client's workflows unrelated to the Mission

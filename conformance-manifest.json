@@ -8122,7 +8122,7 @@
    "id": "core.introspection.local-resolution-not-mission-lookup",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "introspected-consumption",
-   "text": "Mission state alone, or a lookup by Mission identifier, never establishes a token's validity or authority",
+   "text": "Mission state alone, or a lookup by Mission Identifier, never establishes a token's validity or authority",
    "role": "AS",
    "strength": "stated",
    "applicability": {
