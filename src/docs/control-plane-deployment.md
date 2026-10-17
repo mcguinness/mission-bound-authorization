@@ -135,9 +135,17 @@ transaction and acts only on that exact schedule of a `suspended` Mission, so a
 stale or replaced timer, a duplicate delivery and a delivery racing a manual
 transition change nothing; nothing depends on cancelling a timer. The expiry
 clock applies a due schedule after expiry, on any read of the record as well as
-at the timer, so a Mission past its `expires_at` is `expired` and never resumed.
-The transition and its durable lifecycle event commit together, as for every
-other transition. Delivery is single-process: a second process would run its
+at the timer, so a Mission past its `expires_at` is `expired` and never resumed:
+one first observed past `expires_at`, by a late resume or revoke delivery
+included, ends `expired`, while a revocation committed before `expires_at` keeps
+`revoked`. The transition and its durable lifecycle event commit together, as
+for every other transition, and every effect outside the kernel follows that
+commit: the commit names the schedule it applied, and a scheduled revocation's
+destruction of the Mission's OAuth grant is a durable delivery of it, owed
+whether a read, a request or the timer committed the transition, and retried
+after a failure. This deployment refuses a `suspend_until` at or before the
+current time with `invalid_request`; that refusal is its own choice, not a
+requirement of the profile. Delivery is single-process: a second process would run its
 own timers, each still claiming the generation under the version
 compare-and-set, but no multi-process scheduling claim is made. Authorization
 is decided at commit; a delivery never re-checks the committing party's grant.

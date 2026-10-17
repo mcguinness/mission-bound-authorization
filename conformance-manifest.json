@@ -11425,7 +11425,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "once a current schedule's suspend_until passes before expires_at, the Mission is reported active (on_expiry resume) or terminated with reason revoked (on_expiry revoke) with the corresponding transition emitted, without any further lifecycle request",
-    "local": "The scheduler arms an in-process timer for each committed schedule; the expiry clock also applies a due schedule on any read of the record, so a read after the deadline reports the committed transition before the timer is delivered. A scheduled revoke records terminated_at at the deadline. The tests read the stored row before any request to show that the timer, not a read, applied it."
+    "local": "The scheduler arms an in-process timer for each committed schedule; the expiry clock also applies a due schedule on any read of the record, so a read after the deadline reports the committed transition before the timer is delivered. A scheduled revoke records terminated_at at the deadline. The tests read the stored row before any request to show that the timer, not a read, applied it. A scheduled revocation also destroys the Mission's OAuth grant, as a direct revoke does; that effect is a durable delivery of the committed terminal event (which names the schedule it applied), owed whether a read, a request or the timer committed it, and retried after a failure (the suspension schedule effects tests)."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -11617,7 +11617,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "with suspend_until equal to or later than expires_at, the Mission is terminated with reason expired at expires_at and is never observed active from the scheduled resume (nor terminated with reason revoked from a revoke schedule)",
-    "local": "Expiry precedence is the expiry clock's order: the clock materializes expiry before it applies a due schedule, so a deadline at or after expires_at never applies, and neither does one before it whose delivery comes after it."
+    "local": "Expiry precedence is the expiry clock's order: the clock materializes expiry before it applies a due schedule, so a deadline at or after expires_at never applies, and neither does one before it whose delivery comes after it: a Mission first observed past expires_at, by a late resume or revoke delivery included, is terminated expired and never transiently active. A revocation committed at its deadline before expires_at keeps its revoked reason once expires_at passes."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -11633,9 +11633,15 @@
      "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > lets expiry govern a deadline before expires_at whose delivery comes only after expires_at: the Mission is terminated expired, never resumed",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > lets expiry govern a revoke deadline delivered only after expires_at, and keeps a revocation committed before it: terminated expired, or terminated revoked, never rewritten",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1002 (D416). Proved by applying a due schedule before the expiry clock (both tests fail)."
+   "notes": "#1002 (D416; the #1246 review ruling on late deliveries). Proved by applying a due schedule before the expiry clock (all three tests fail) and by letting the expiry clock rewrite an already-terminal reason (the late-revoke test fails)."
   },
   {
    "id": "status.lifecycle.schedule-replacement",
