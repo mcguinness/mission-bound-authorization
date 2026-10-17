@@ -34,7 +34,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CANONICAL_RESOURCE, DERIVATION_POLICY, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { decodeJwt, generateKeyPair } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   type AuthorityEntry,
   type BuiltAs,
@@ -435,7 +435,7 @@ describe("suspension schedule record (@spec status#lifecycle-authorization, stat
     expect(hasSchedule(resumed)).toBe(false);
   });
 
-  it("refuses a suspend_until already passed invalid_request, before any change", async () => {
+  it("refuses, as this deployment's choice, a suspend_until already passed invalid_request, before any change", async () => {
     const m = approve();
     const before = as.kernel.get(m.id);
     for (const until of [at(0), at(-1)]) {
@@ -678,6 +678,31 @@ describe("suspension schedule deadlines (@spec status#mission-lifecycle-endpoint
     expect(events(as.kernel, m.id).some((e) => e.state === "active" && e.prior_state === "suspended")).toBe(false);
   });
 
+  it("lets expiry govern a revoke deadline delivered only after expires_at, and keeps a revocation committed before it: terminated expired, or terminated revoked, never rewritten", async () => {
+    // Delivered late: the Mission is past expires_at when the timer first runs.
+    const late = approve(at(120));
+    expect((await op(operator, { mission_id: late.id, operation: "suspend", suspend_until: at(60), on_expiry: "revoke" })).status).toBe(200);
+    const lateGeneration = as.kernel.get(late.id)?.schedule?.generation as number;
+    // Delivered on time: the revocation commits at its deadline, before expires_at.
+    const onTime = approve(at(120));
+    expect((await op(operator, { mission_id: onTime.id, operation: "suspend", suspend_until: at(60), on_expiry: "revoke" })).status).toBe(200);
+    const onTimeGeneration = as.kernel.get(onTime.id)?.schedule?.generation as number;
+    clock.skip(60_000);
+    expect(await scheduler().deliver({ missionId: onTime.id, generation: onTimeGeneration })).toBe("applied");
+    expect(stored(as.kernel, onTime.id)).toMatchObject({ state: "terminated", termination: "revoked" });
+    const revoked = as.kernel.get(onTime.id);
+    clock.skip(61_000);
+    expect(await scheduler().deliver({ missionId: late.id, generation: lateGeneration })).toBe("ended");
+    expect(stored(as.kernel, late.id)).toMatchObject({ state: "terminated", termination: "expired" });
+    expect(await status(late.id)).toMatchObject({ state: "terminated", termination: { reason: "expired" } });
+    expect(events(as.kernel, late.id).filter((e) => e.state === "terminated").map((e) => e.termination?.reason)).toEqual([
+      "expired",
+    ]);
+    // Past expires_at, the committed revocation keeps its reason.
+    expect(await status(onTime.id)).toMatchObject({ state: "terminated", termination: { reason: "revoked" } });
+    expect(as.kernel.get(onTime.id)).toEqual(revoked);
+  });
+
   it("commits one transition under duplicate deliveries of the same timer", async () => {
     const m = approve();
     expect((await op(operator, { mission_id: m.id, operation: "suspend", suspend_until: at(30), on_expiry: "resume" })).status).toBe(200);
@@ -734,6 +759,77 @@ describe("suspension schedule deadlines (@spec status#mission-lifecycle-endpoint
     expect(stored(as.kernel, m.id)).toEqual({ state: "active", version: suspendedAt + 1 });
     await clock.advance(0);
     expect(stored(as.kernel, m.id).version).toBe(suspendedAt + 1);
+  });
+});
+
+describe("suspension schedule effects (@spec status#mission-lifecycle-endpoint, control-plane#fanout, #1002)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** A provider grant bound to `missionId`, as the authorization code's redemption binds one. */
+  async function boundGrant(missionId: string): Promise<string> {
+    const grant = new as.provider.Grant({ accountId: "bob", clientId: "ap-agent" });
+    const grantId = await grant.save();
+    as.kernel.bindGrant(missionId, grantId);
+    return grantId;
+  }
+
+  /** The grant-cleanup deliveries owed for `missionId`'s commits. */
+  function cleanup(missionId: string): Array<{ disposition: string; attempts: number }> {
+    return as.kernel.db
+      .prepare(
+        `SELECT d.disposition AS disposition, d.attempts AS attempts
+           FROM lifecycle_deliveries d JOIN lifecycle_events e ON e.seq = d.seq
+          WHERE e.mission_id = ? AND d.subscriber = 'scheduled-termination-grant-destroy'
+          ORDER BY d.seq`,
+      )
+      .all(missionId) as Array<{ disposition: string; attempts: number }>;
+  }
+
+  it("destroys the Mission's OAuth grant after a scheduled revocation that a Status read committed before the timer ran", async () => {
+    const m = approve();
+    const grantId = await boundGrant(m.id);
+    expect((await op(operator, { mission_id: m.id, operation: "suspend", suspend_until: at(30), on_expiry: "revoke" })).status).toBe(200);
+    clock.skip(30_000);
+    expect((await status(m.id)).state).toBe("terminated");
+    // The read's commit cancelled the timer; the cleanup follows the committed event.
+    await clock.advance(0);
+    await as.kernel.drainLifecycleOutbox();
+    expect(await as.provider.Grant.find(grantId)).toBeUndefined();
+    expect(cleanup(m.id)).toEqual([{ disposition: "accepted", attempts: 1 }]);
+  });
+
+  it("destroys the Mission's OAuth grant after a scheduled revocation that its timer committed, and leaves it after a scheduled resume", async () => {
+    const revoked = approve();
+    const revokedGrant = await boundGrant(revoked.id);
+    const resumed = approve();
+    const resumedGrant = await boundGrant(resumed.id);
+    expect((await op(operator, { mission_id: revoked.id, operation: "suspend", suspend_until: at(30), on_expiry: "revoke" })).status).toBe(200);
+    expect((await op(operator, { mission_id: resumed.id, operation: "suspend", suspend_until: at(30), on_expiry: "resume" })).status).toBe(200);
+    await clock.advance(30_000);
+    expect(stored(as.kernel, revoked.id)).toMatchObject({ state: "terminated", termination: "revoked" });
+    expect(await as.provider.Grant.find(revokedGrant)).toBeUndefined();
+    expect(cleanup(revoked.id)).toEqual([{ disposition: "accepted", attempts: 1 }]);
+    expect(stored(as.kernel, resumed.id).state).toBe("active");
+    expect(await as.provider.Grant.find(resumedGrant)).toBeDefined();
+    expect(cleanup(resumed.id)).toEqual([]);
+  });
+
+  it("keeps a failed grant cleanup pending and completes it on the next drain after its backoff", async () => {
+    const m = approve();
+    const grantId = await boundGrant(m.id);
+    expect((await op(operator, { mission_id: m.id, operation: "suspend", suspend_until: at(30), on_expiry: "revoke" })).status).toBe(200);
+    vi.spyOn(as.provider.Grant, "find").mockRejectedValueOnce(new Error("injected: grant store unavailable"));
+    await clock.advance(30_000);
+    expect(stored(as.kernel, m.id)).toMatchObject({ state: "terminated", termination: "revoked" });
+    expect(cleanup(m.id)).toEqual([{ disposition: "pending", attempts: 1 }]);
+    vi.restoreAllMocks();
+    expect(await as.provider.Grant.find(grantId)).toBeDefined();
+    await clock.advance(1_000);
+    await as.kernel.drainLifecycleOutbox();
+    expect(await as.provider.Grant.find(grantId)).toBeUndefined();
+    expect(cleanup(m.id)).toEqual([{ disposition: "accepted", attempts: 2 }]);
   });
 });
 
