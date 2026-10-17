@@ -17,8 +17,8 @@ production-readiness or interoperability claim (D284 ruling 1).
 Every behavioral statement is true of the reference implementation read at
 origin/main `e9001b2f`, and each statement about the as-native target and its
 launcher (#1105), or naming a later merged issue (such as #1103 or #1104), at
-`583e3806`, and each naming #828 at `f62b1311`. Each cites the function
-(`file:line`, read at `f62b1311`, paths relative to `src/`) or the exact test (`describe > it`)
+`583e3806`, and each naming #828 at `bb4e8a35`. Each cites the function
+(`file:line`, read at `bb4e8a35`, paths relative to `src/`) or the exact test (`describe > it`)
 that shows it. A path with no
 witnessing test says "no test yet". Tests marked [FGA] are skipped without a
 live OpenFGA, so a local run can pass where CI with OpenFGA fails, or the
@@ -75,7 +75,7 @@ The PDP enforces Resource policy, but #828's acceptance is still open.
 
 ## 2. Dimension contract
 
-| Dimension | Adopted (D284, D293) | Reference at `e9001b2f` (citations read at `f62b1311`) | Status | Gap owner |
+| Dimension | Adopted (D284, D293) | Reference at `e9001b2f` (citations read at `bb4e8a35`) | Status | Gap owner |
 |---|---|---|---|---|
 | Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `pnpm as-native` (§11) runs `composeStack({ target: "as-native" })` (`demo/src/stack.ts:251`): the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:386-388`) with the D332 capability set below, the PEP `mcp-payments-pep` (`stack.ts:891-893`) served over HTTP MCP at the resource audience `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:78`), the PDP (`stack.ts:716`), OpenFGA, and the in-process approval service: `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience`. The AS JWKS is fetched once at assembly (`stack.ts:509`) | Partial | JWKS reload: #831 |
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation over HTTP MCP, with a DPoP proof verified on every request, and the AuthZEN request (§4, §5). The in-process mediated channel is outside this target (D315). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, and the shared demo mounts a MAS join route there; the target mounts none, and a configuration that would mount one fails startup: `the as-native target excludes the MAS join route at startup (D315) > fails startup, before connecting to anything, when the payments resource is configured governed` | HTTP entry point only (D315) | #818 owns MAS; #956 Q2 its declaration in the shared demo |
@@ -270,7 +270,14 @@ The policy is stored OpenFGA entitlements (`authorized_reader`,
 `authorized_payer`) disjoint from the Mission-context relations, read with no
 contextual tuples at `HIGHER_CONSISTENCY` for principals authenticated under
 the stack's issuer ([fga-hygiene.md](fga-hygiene.md)). Its owner is the
-deployment's OpenFGA administrator (`FgaDomainAdmin`). `composeStack` attaches
+deployment's OpenFGA administrator, who changes it with `pnpm resource-policy`
+(`FgaDomainAdmin`, attached to the configured store, never creating one):
+`pnpm resource-policy administers the stored entitlements (@spec runtime#input-resource-policy, #828) > attaches to the configured store and model and never bootstraps one; without both ids it refuses before connecting`.
+The Operation Profile (`payments-runtime-profile-v3`) declares its owner,
+principal, relations, freshness (current as of the decision, separate from
+Mission-state freshness) and failure behavior; the Enforcement Scope
+Statement's baseline has no Resource-policy member, and the runtime profile
+is the delta over it that carries the declaration. `composeStack` attaches
 to a configured store and model, or, as a development operation, bootstraps
 one and provisions `config/seed/resource-policy.json`:
 [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > a stored entitlement permits; an external revocation of only that entitlement denies resource_policy on the next decision with signed evidence; restoring it permits`.
@@ -281,11 +288,17 @@ whole when the policy refuses any one vendor (the Operation Profile's List
 form): `list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > a policy refusing one vendor refuses the whole unconstrained read resource_policy with no result, while a read naming the other vendor permits`,
 `list_invoices names its actual targets to Resource policy and binds them (@spec runtime#input-resource-policy, runtime#read-binding, #828 step 5) > an invoice for a vendor the decision never named is never returned: before the last check it is a parameter mismatch, after it the bound filter drops it` and
 [FGA] `the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > an unconstrained list names every invoice vendor to the stored policy: revoking only one vendor's entitlement refuses the whole read resource_policy, a read of the other vendor still permits, and restoring it permits both, the same over both channels (#828 step 5)`.
+On the assembled target, an AS-issued, DPoP-bound read over HTTP MCP is
+refused `resource_policy` with no effect once the administrator revokes
+only that entitlement, permitted once it is restored, and a revocation
+made before a restart still refuses after the launcher attaches to the
+same store, in both PDP modes:
+[FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (co-resident)` and
+[FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (remote)`.
 Remaining under #828: the live witnesses run only in CI; no policy requires
-a client; a vendor the store does not hold keeps `lookup_vendor`'s server
-target (D324), which a vendor constraint or the policy refuses; the payments
-Operation Profile and the Enforcement Scope Statement do not yet name the
-policy's owner or freshness.
+a client and there is no tenant dimension (D426); a vendor the store does
+not hold keeps `lookup_vendor`'s server target (D324), which a vendor
+constraint or the policy refuses.
 
 Deployment-administered gates that do exist: the action-bound approval for
 `payments:remittance.send` (§3), the action-to-relation map (`out_of_authority`,
@@ -368,7 +381,7 @@ That test uses another member; no test names `max_budget`.
 - Blocking acceptance: #828 (Resource policy). Token authority is met for this target (D411).
 - Acceptance-pack prerequisites: #1105 (`pnpm as-native` still builds the cross-domain objects in process; its AS capability set is D332's, §2).
 - Separated deployment only: #1101 (state source under D293).
-- Also open: #826 (Approver versus Subject; implemented by #1074, D306, awaiting acceptance), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
+- Also open: #826 (Approver versus Subject, implemented by #1074 (D306) and #1229 (D424); the approval-authentication floor (D425) this target's high-risk approvals meet; awaiting acceptance), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
 - #917 and #918 are closed as implemented (D245, D247); their leftovers are resolved by #1103 and #1080.
 
 ## 9. Pinned adoption closure
@@ -440,7 +453,7 @@ The pack cannot pass while #828 is unmet (§1); the token-authority gate is met 
 |---|---|---|
 | Valid request | [FGA] `M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded` | not on the assembled path |
 | Narrowed token | at the PEP: `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > narrows by vendor independently of the Mission`; at the PDP: `the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > holds the credential's vendor constraint for one object and for every member of a collection` and `Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)` | not on the assembled path |
-| Independent policy revocation | [FGA] `the deployment's OpenFGA Resource policy at the resource (@spec runtime#input-resource-policy, #828) > revoking only the stored entitlement refuses the next read resource_policy with no result; restoring it permits, the same over both channels` | not on the assembled path; #828; required, blocks acceptance |
+| Independent policy revocation | [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (co-resident)` and `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (remote)` | none for revocation on the assembled path; #828 stays open for client and tenant policy (D426), required, blocks acceptance |
 | Stale or non-active Mission at admission and at each fresh commit-phase decision | the §4 refusal table; `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare` | not on the assembled path |
 | Run to completion after an earlier valid permit | none | no test yet that an admitted action completes only inside its permit and lease bounds and that the next decision refuses; no instantaneous revocation is implied (§4) |
 | Parameter digest mismatch | [FGA] `M4 core enforcement tier > scenario 3: TOCTOU -- invoice mutated between decision and execute -> parameter_mismatch refusal` | |
@@ -448,6 +461,7 @@ The pack cannot pass while #828 is unmet (§1); the token-authority gate is met 
 | Phase mismatch | `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting check_transfer's preflight permit` | |
 | Failed commit predicate with the permit retained | none | applies only to a connector that claims a commit-point predicate; none does at this revision (#817), so the guarantee stays excluded (§8) |
 | Bob for Alice, with and without `openid` | `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject` and `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves for another principal without openid: the token and introspection carry the Subject, the record the Approver, and the provider account and session the Approver` | not on the assembled path; #826 awaits implementation acceptance |
+| High-risk approval below the published floor | `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority approved headlessly, even when the approval service's registration claims mfa` and `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority, with no client request, from a browser Approver whose achieved acr the floor does not accept: no Mission, Grant, code or Subject session` | |
 | Revoke during issuance | none on this surface | #250, #873 |
 | Restart and uncertain recovery | the unit-level witnesses in §7 | no assembled restart test; a prior process's unsettled claims close indeterminate with an operator alert, a stated bound (§7) |
 | Emission failure | the six #1104 tests in §6 | not on the assembled path |
@@ -464,7 +478,16 @@ assembles this target with `launchAsNative` (`demo/src/as-native.ts:72`): the
 AS on 4400 with the issuance profile plus exactly `lifecycle-revoke` and
 `transaction-authorization` (D332, §2), the `mcp-payments` PEP over HTTP MCP
 at `http://localhost:4403/mcp`, the PDP, OpenFGA and the in-process approval
-service, with no MAS join route. It mints no ordinary token. It prints the
+service, with no MAS join route. That service approves on the AS's browser
+approval surface, because the published approval-authentication floor
+(D425, `config/approval-floor.json`) refuses a headless approval of payment
+execution or remittance. It presents a login recorded once when the stack is
+composed (Bob, `mfa`) and never records one at an approval, so 300 seconds
+after that login a high-risk approval refuses until the Approver logs in
+again. The login is simulated: the demo has no Approver identity provider,
+so no person authenticated. #253's high-risk approval acceptance therefore
+does not rest on it, and that gate stays unmet until a deployment's login
+integration supplies the achieved context. It mints no ordinary token. It prints the
 issuer, the AS capability set, the resource audience and the PDP mode, and
 needs only `pnpm setup` and `docker compose up -d` (OpenFGA).
 
@@ -493,6 +516,14 @@ and
 `the as-native launcher process, the entry pnpm as-native runs, against a stand-in OpenFGA (D332) > exits 1 with one startup-failure line, and releases the AS port, when the declared audience's port is taken`.
 The wrapper's dev-CA check and signal forwarding (`scripts/as-native.mjs`)
 have no test yet.
+
+`pnpm resource-policy` (`scripts/resource-policy.mjs`,
+`demo/src/resource-policy-cli.ts`) changes the Resource policy in the store
+the target attaches to: `grant` or `revoke` an entitlement
+(`--iss <issuer> --sub <subject> --relation reader|payer` and `--vendor` or
+`--invoice`), or `move-invoice`. It needs `OPENFGA_STORE_ID` and
+`OPENFGA_MODEL_ID` and never creates a store (#828). Its wrapper has no test
+yet.
 
 The target is HTTP MCP with verified DPoP only (D315). A request without a
 proof, or with a proof under a key other than the token's `cnf.jkt`, is

@@ -17,8 +17,10 @@
  * second ([FGA]) runs against a live OpenFGA and is skipped without one, so
  * only CI with OpenFGA exercises it. Each also has a second composition with
  * the test-only ordinary-token minting fixture on, used only by the
- * baseline-Join refusal. Every composition binds the declared audience's port
- * (4403), so none runs beside a live `pnpm as-native`.
+ * baseline-Join refusal. A further [FGA] block runs the Resource-policy
+ * revocation sequence through the launcher, across a restart (#828). Every
+ * composition binds the declared audience's port (4403), so none runs beside
+ * a live `pnpm as-native`.
  */
 
 import { type ChildProcess, spawn } from "node:child_process";
@@ -46,6 +48,7 @@ import { DOMAIN_MODEL, Fga } from "@mission/pdp";
 import { issueMissionToken } from "../src/approval-console.js";
 import { asNativeLaunchOptions, launchAsNative } from "../src/as-native.js";
 import { ISSUANCE_ONLY_CAPABILITIES } from "../src/issuance-only.js";
+import { resourcePolicyAdmin } from "../src/resource-policy-admin.js";
 import {
   clientAssertionSigner,
   type IssuedMission,
@@ -259,7 +262,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
           { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions, constraints },
         ]),
       },
-      authServer().approverServiceToken,
+      authServer().approverConsole,
     );
   const issueRead = () => issue(["payments:invoice.read"], { vendors: ["acme"] });
 
@@ -1368,4 +1371,122 @@ dLive("the as-native target with the test-only ordinary-token minting fixture ag
   it("refuses a baseline-Join credential (an AS-issued ordinary token with no mission claim) with a valid proof: no join route admits it", async () => {
     await liveJoin.baselineJoin();
   });
+});
+
+/**
+ * @spec runtime#input-resource-policy (#828, D426): the independently
+ * administered Resource policy on the AS-native target, end to end. The AS
+ * issues a DPoP-bound Mission token over PAR, approval and the token
+ * endpoint; the client reads over HTTP MCP; the deployment's administrator
+ * changes the stored entitlement with `pnpm resource-policy`'s own function,
+ * from a separate OpenFGA connection; and the launcher restarts attached to
+ * the same store and model, as `pnpm as-native` does with OPENFGA_STORE_ID
+ * and OPENFGA_MODEL_ID. Both PDP modes; [FGA] only.
+ */
+const POLICY_AS_PORT = 14112;
+dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828)", () => {
+  const BASE_ENV = { OPENFGA_HTTP_URL: API_URL, OPENFGA_PRESHARED_KEY: KEY, ...(CA ? { OPENFGA_CA_CERT: CA } : {}) };
+
+  /** The launcher's composition from `env`, on this block's AS port and its own store files. */
+  const launch = (env: Record<string, string>) =>
+    launchAsNative({
+      ...asNativeLaunchOptions({ ...BASE_ENV, ...env }),
+      asPort: POLICY_AS_PORT,
+      claimsFile: tempClaimsFile(),
+      writeReservationsFile: tempReservationsFile(),
+    });
+
+  /** Close every listener and both store files, then the in-memory stores. */
+  const shutdown = async (launched: Awaited<ReturnType<typeof launchAsNative>>) => {
+    await launched.close();
+    launched.stack.payments.db.close();
+    launched.stack.kernel.db.close();
+  };
+
+  /** A read Mission's AS-issued, DPoP-bound token for Alice, approved by Bob at the trusted console. */
+  const issueRead = (stack: DemoStack): Promise<IssuedMission> => {
+    const as = stack.authServer;
+    if (!as) throw new Error("the as-native target runs the AS");
+    return issueMissionToken(
+      as.asUrl,
+      as.agentClientJwk,
+      {
+        missionIntent: JSON.stringify({
+          intent: { goal: "Read approved Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+        }),
+        authorizationDetails: JSON.stringify([
+          { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } },
+        ]),
+      },
+      as.approverServiceToken,
+    );
+  };
+
+  /** One get_invoice over its own HTTP MCP session, and what it left behind. */
+  const read = async (stack: DemoStack, issued: IssuedMission) => {
+    const executions = () => stack.evidence.all().filter((e) => e.kind === "execution").length;
+    const before = executions();
+    const { client, close } = await createHttpMediatedClient(CANONICAL_RESOURCE, issued.accessToken, issued.dpopKeys);
+    try {
+      const res = await client.callTool("get_invoice", { invoice_id: "inv-1" });
+      const decision = stack.evidence.all().filter((e) => e.kind === "decision").at(-1)?.content as Record<string, unknown> | undefined;
+      return { res, decision, executed: executions() - before };
+    } finally {
+      await close();
+    }
+  };
+
+  /** The administrator's change to Alice's read entitlement on acme, from its own connection to the attached store. */
+  const administer = (op: "grant" | "revoke", stack: DemoStack) =>
+    resourcePolicyAdmin(
+      [op, "--iss", stack.issuer, "--sub", "alice", "--relation", "reader", "--vendor", "acme"],
+      { ...BASE_ENV, OPENFGA_STORE_ID: stack.fga.storeId, OPENFGA_MODEL_ID: stack.modelId },
+      TOPOLOGY.openfga,
+    );
+
+  // A read claims no Execution Evidence (§8 of the deployment contract): a
+  // permitted read is its result and its permit, a refused one neither.
+  const expectPermitted = (x: Awaited<ReturnType<typeof read>>, label: string) => {
+    expect(x.res.ok, `${label} ${JSON.stringify(x.res)}`).toBe(true);
+    expect(x.res.result, label).toMatchObject({ id: "inv-1" });
+    expect(x.decision, label).toMatchObject({ decision: "permit" });
+  };
+  const expectRefused = (x: Awaited<ReturnType<typeof read>>, label: string) => {
+    expect(x.res.ok, label).toBe(false);
+    expect(x.res.denial_reason, label).toBe("resource_policy");
+    expect(x.res.result, label).toBeUndefined();
+    expect(x.decision, label).toMatchObject({ decision: "deny", denial_reason: "resource_policy" });
+    expect(x.executed, label).toBe(0);
+  };
+
+  for (const pdpMode of ["co-resident", "remote"] as const) {
+    it(`an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (${pdpMode})`, async () => {
+      const first = await launch({ MISSION_PDP_MODE: pdpMode });
+      const store = { storeId: first.stack.fga.storeId, modelId: first.stack.modelId };
+      try {
+        expect(first.stack.pdpMode).toBe(pdpMode);
+        const issued = await issueRead(first.stack);
+        expectPermitted(await read(first.stack, issued), "before revocation");
+        await administer("revoke", first.stack);
+        expectRefused(await read(first.stack, issued), "after revocation");
+        await administer("grant", first.stack);
+        expectPermitted(await read(first.stack, issued), "after restoration");
+        await administer("revoke", first.stack);
+      } finally {
+        await shutdown(first);
+      }
+
+      const second = await launch({ MISSION_PDP_MODE: pdpMode, OPENFGA_STORE_ID: store.storeId, OPENFGA_MODEL_ID: store.modelId });
+      try {
+        expect({ storeId: second.stack.fga.storeId, modelId: second.stack.modelId }).toEqual(store);
+        // The AS's stores are per boot, so the restarted target issues afresh.
+        const issued = await issueRead(second.stack);
+        expectRefused(await read(second.stack, issued), "after restart");
+        await administer("grant", second.stack);
+        expectPermitted(await read(second.stack, issued), "restored after restart");
+      } finally {
+        await shutdown(second);
+      }
+    }, 180_000);
+  }
 });

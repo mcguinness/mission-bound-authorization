@@ -27,10 +27,13 @@
  * proof are both refused (#448).
  */
 
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { ApprovalFloorRefusedError, ApprovalSessionStore } from "../src/index.js";
+const FLOOR_SESSIONS = new ApprovalSessionStore();
+
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE } from "@mission/demo-data";
+import { APPROVAL_FLOOR, CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
   compactVerify,
   createRemoteJWKSet,
@@ -229,7 +232,7 @@ async function issuePredecessor(actions: string[]): Promise<{ missionId: string;
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader(jar) },
+    headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)), "content-type": "application/json" },
     body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res, jar);
@@ -294,6 +297,7 @@ async function pollExpansion(
 function approveDeferral(deferralCode: string): void {
   as.expansionDeferrals.approve(deferralCode, {
     approver: { iss: ISSUER, sub: "bob" },
+    authentication: FIXTURE_BROWSER_LOGIN,
     approvalEventId: `apev-exp-${apev++}`,
     approvedUntil: FAR_EXP,
   });
@@ -324,6 +328,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: FLOOR_SESSIONS,
     testTokenSigningJwk: (await exportJWK(asSigning.privateKey)) as JWK,
     testClients: [
       {
@@ -647,6 +652,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     // later than its creation instant, so the creation transaction refuses.
     as.expansionDeferrals.approve(ob.deferral_code as string, {
       approver: { iss: ISSUER, sub: "bob" },
+      authentication: FIXTURE_BROWSER_LOGIN,
       approvalEventId: `apev-exp-past-${apev++}`,
       approvedUntil: "2020-01-01T00:00:00Z",
     });
@@ -1373,5 +1379,61 @@ describe("subject-token possession at the expansion exchange (@spec expansion#re
     expect(res.error).toBe("invalid_request");
     expect(res.error_description).toContain("child_actor");
     expect(res.deferral_code).toBeUndefined();
+  });
+});
+
+describe("an expansion approval meets the approval-authentication floor (@spec mission#approval-authentication, #826, D425)", () => {
+  const maxAge = APPROVAL_FLOOR.floors[0]?.max_authentication_age_seconds as number;
+  const approval = (extra: Record<string, unknown> = {}) => ({
+    approver: { iss: ISSUER, sub: "bob" },
+    approvalEventId: `apev-exp-floor-${apev++}`,
+    approvedUntil: FAR_EXP,
+    ...extra,
+  });
+  const successorsOf = (id: string) => as.kernel.allMissions().filter((m) => m.predecessor === id);
+  async function openWidening(actions: string[]): Promise<{ predecessorId: string; code: string }> {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await expandViaExchange(pred.accessToken, "Widen the Acme invoice work", actions);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(ob.error, JSON.stringify(ob)).toBe("authorization_pending");
+    return { predecessorId: pred.missionId, code: ob.deferral_code as string };
+  }
+
+  it("refuses a high-risk expansion approval that carries no achieved authentication: nothing is recorded, the deferral stays pending, and no successor exists", async () => {
+    const { predecessorId, code } = await openWidening(["payments:invoice.read", "payments:remittance.send"]);
+    expect(() => as.expansionDeferrals.approve(code, approval())).toThrow(ApprovalFloorRefusedError);
+    const poll = await pollExpansion(code);
+    const pb = (await poll.json()) as { error?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(400);
+    expect(pb.error).toBe("authorization_pending");
+    expect(successorsOf(predecessorId)).toHaveLength(0);
+    expect(as.kernel.get(predecessorId)?.state).toBe("active");
+  });
+
+  it("refuses a high-risk expansion approval whose recorded login the floor does not accept, a weaker acr or one older than the age bound, then completes from one it accepts", async () => {
+    const { predecessorId, code } = await openWidening(["payments:invoice.read", "payments:remittance.send"]);
+    expect(() =>
+      as.expansionDeferrals.approve(code, approval({ authentication: { ...FIXTURE_BROWSER_LOGIN, acr: "password" } })),
+    ).toThrow(/high-risk-authority floor/);
+    const stale = Math.floor(as.kernel.nowDate().getTime() / 1000) - maxAge - 5;
+    expect(() =>
+      as.expansionDeferrals.approve(code, approval({ authentication: { ...FIXTURE_BROWSER_LOGIN, auth_time: stale } })),
+    ).toThrow(/older than the high-risk-authority floor allows/);
+    expect(successorsOf(predecessorId)).toHaveLength(0);
+    as.expansionDeferrals.approve(code, approval({ authentication: FIXTURE_BROWSER_LOGIN }));
+    const poll = await pollExpansion(code);
+    const pb = (await poll.json()) as { error?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    expect(successorsOf(predecessorId)).toHaveLength(1);
+  });
+
+  it("admits a low-risk widening with no achieved authentication: the floor does not apply", async () => {
+    // payment.schedule is a consequential write, below the floor.
+    const { predecessorId, code } = await openWidening(["payments:invoice.read", "payments:payment.schedule"]);
+    as.expansionDeferrals.approve(code, approval());
+    const poll = await pollExpansion(code);
+    const pb = (await poll.json()) as { error?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    expect(successorsOf(predecessorId)).toHaveLength(1);
   });
 });

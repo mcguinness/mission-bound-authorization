@@ -9,7 +9,10 @@
  * cnf.jkt = the DPoP key, a `mission` claim, exp <= approved_until.
  */
 
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { ApprovalSessionStore } from "../src/index.js";
+const FLOOR_SESSIONS = new ApprovalSessionStore();
+
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
@@ -167,7 +170,7 @@ async function issueBaseMissionToken(
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
+    headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader()), "content-type": "application/json" },
     body: JSON.stringify({ decision: "approve" }),
   });
   storeCookies(res);
@@ -235,6 +238,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: FLOOR_SESSIONS,
     // @spec #1173 (D375): switchable to full for the cache-bound case.
     dpopProofReplay: replay,
   });

@@ -1,13 +1,17 @@
-# payments-runtime-profile-v2
+# payments-runtime-profile-v3
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v2`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v3`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
 
+- **v3** (#828): declares the Resource policy: its owner and
+  provisioning, the principal it evaluates, its relations, its freshness
+  (separate from Mission-state freshness) and its failure behavior.
+  Decision bytes are unchanged from v2.
 - **v2** (#828): the list form's `all` source enumerates every vendor the
   payments store holds invoices for, so an unconstrained `list_invoices`
   digest binds those vendors; a named `vendor_id` is the store-resolved
@@ -180,6 +184,46 @@ digested as above.
 - Before release the PEP recomputes the list form from the current Mission
   and store; a difference is `parameter_mismatch`. Execution returns only
   invoices whose vendor is in `vendor_scope`.
+
+## Resource policy
+
+Every decision also requires the deployment's independently
+administered Resource policy (runtime § input-resource-policy). The PDP
+evaluates it after the Mission's authority and the credential's, and
+before the parameter, approval and claim steps, and composes it by
+conjunction: an action proceeds only when both Mission authority and
+Resource policy permit it. Nothing in the query is derived from the
+Mission.
+
+- **Owner and provisioning.** The deployment's OpenFGA administrator owns
+  the policy and administers it with `pnpm resource-policy`
+  (`FgaDomainAdmin`), never through a Mission approval or a token. The
+  resource attaches to a configured store and model (`OPENFGA_STORE_ID`,
+  `OPENFGA_MODEL_ID`), verifying the model and writing nothing.
+  Bootstrapping a store seeded from `config/seed/resource-policy.json` is
+  a development operation.
+- **Principal.** The verified token subject under this resource's own
+  issuer, `user:<enc(iss)>|<enc(sub)>`. A subject under any other issuer,
+  or with none, maps to no principal and is refused. The authenticated
+  client and a tenant are not policy dimensions in this version.
+- **Relations.** The read actions (`payments:invoice.read`,
+  `payments:invoice.list`, `payments:vendor.read`) require
+  `authorized_reader`; the payment and remittance actions require
+  `authorized_payer`. Each target is checked: a vendor directly, an
+  invoice directly or through its owning vendor. Every target must be
+  entitled.
+- **Freshness.** Current as of the decision: every check is an
+  authoritative OpenFGA read at `HIGHER_CONSISTENCY`, and the PDP caches
+  nothing, so a revocation written before a decision is in force at it.
+  This is separate from Mission-state freshness, whose per-class staleness
+  bound the Enforcement Scope Statement declares (`state_source`). The
+  check is not atomic with the effect: a revocation after a permit does
+  not withdraw it, and the permit stays bounded by its own validity
+  (Permits, below).
+- **Failure.** A refusal denies `resource_policy` (`next_action: none`)
+  with Decision Evidence. A policy that cannot answer yields no decision,
+  and the PEP refuses `pdp_unreachable`. A store whose model does not
+  match refuses startup.
 
 ## Idempotency keys
 
