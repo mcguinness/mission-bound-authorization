@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-17T21:06:28Z
-Source repository commit: c5d19d737832869bba6bee2784c41aac0a9e82a6
+Generated: 2026-10-17T21:55:13Z
+Source repository commit: dc35c6c6a69f67e4a870e70e9dc3959e0c56ad4d
 Member count: 7
 
 Reading order:
@@ -7644,10 +7644,9 @@ Table of Contents
 
    *  how later token issuance stays bound to what the user approved.
 
-   With OAuth alone, each token is individually valid and each request
-   individually in scope, but no OAuth object records the task the user
-   approved.  A grant obtained for a task therefore keeps yielding
-   tokens after that approval lapses or is withdrawn.
+   OAuth does not define a task record that links approval of a task to
+   every grant obtained for it.  Without that linkage, withdrawing task
+   approval need not stop issuance under those grants.
 
    A Mission is created and used in a single chain:
 
@@ -7868,7 +7867,8 @@ Table of Contents
          |                                     |   + mission claim
          v
 
-   The remaining steps take place outside the AS:
+   After token issuance, resource access and lifecycle management
+   proceed as follows:
 
    (4) The agent calls the resource server with the token.  The resource
    server enforces the authorization_details statelessly and can check
@@ -8009,7 +8009,7 @@ Table of Contents
       task" is shorthand for this binding: the Approver approves the
       Authority Set, and the task is disclosed and committed beside it.
 
-   Mission Grant Binding (Grant Binding):  The AS-controlled, functional
+   Mission grant binding (grant binding):  The AS-controlled, functional
       mapping from one persistent, redeemable grant lineage to exactly
       one Mission (Section 6.4).  Distinct from a Derived token's own
       mission claim, which every issued credential carries without
@@ -9226,8 +9226,9 @@ Table of Contents
 
    The Mission grant binding is an AS-controlled, functional mapping
    from one persistent, redeemable *grant lineage* to exactly one
-   Mission.  The AS alone establishes and resolves a binding; a client
-   never supplies or negotiates one.
+   Mission.  The AS alone establishes a binding and resolves it from the
+   grant itself; a client never supplies or negotiates one, and no
+   client input determines its Mission.
 
    A grant lineage is state the AS can resolve again on a later request,
    either:
@@ -9273,12 +9274,11 @@ Table of Contents
    The AS MUST resolve a bound grant lineage to the same Mission on
    every derivation performed against it: the mapping is fixed for the
    lineage's lifetime and is never reassigned to a different Mission.
-   The AS resolves a lineage from the grant itself, and no client input
-   names its Mission.  An AS that finds a lineage resolving to more than
-   one Mission fails closed on that lineage.
+   An AS that finds a lineage resolving to more than one Mission fails
+   closed on that lineage.
 
    Where a profile-defined operation lets a client present a Mission
-   identifier alongside a credential, the identifier is a non-
+   Identifier alongside a credential, the identifier is a non-
    authoritative cross-check: the AS MUST verify it against the Mission
    the credential resolves to and refuse a mismatch with the
    invalid_grant error code.  The predecessor parameter of
@@ -9563,10 +9563,49 @@ Table of Contents
          committed object, otherwise the committed reference that
          identifies it.  For direct, this Mission's own authority_hash.
 
-      adjudication:  OPTIONAL.  The decision mechanism that adjudicated
-         this instance, present when a Mission-creating profile or
-         deployment chooses to make it explicit; Section 7.1 defines the
-         object and the rule it follows for direct.
+      adjudication:  OPTIONAL.  A discriminated object naming the
+         decision _mechanism_ that adjudicated this instance: distinct
+         from activation_actor (who triggered it) and consent_principal
+         (who is accountable for it).  Present when a Mission-creating
+         profile or deployment chooses to make the mechanism explicit;
+         where absent, the mechanism is still fixed by type and the
+         construction rules of this document or a companion profile
+         (below and Section 7.1).  Members, where present:
+
+         kind:  REQUIRED.  A string: human or policy, naming a decision
+            mechanism, not a storage location for supporting evidence; a
+            companion profile MUST NOT define a kind value that names a
+            record, an evidence store, or the requesting or dispatching
+            party.  An unrecognized value is handled under the same rule
+            as approval_basis.type (Section 7.1).
+
+         For kind: human: no further members; the deciding human is
+         consent_principal.
+
+         For kind: policy: policy, a REQUIRED object with id and version
+         identifying the deciding policy or workflow.  It decides
+         deterministically over recorded inputs, so re-evaluating that
+         version over them re-checks the decision.  A model's output can
+         be one such input, recorded with the model's identifier and
+         version: it can refuse an activation or narrow the authority it
+         activates, and the AS MUST NOT let it supply or widen
+         authority.  A model is never itself the deciding policy or
+         workflow.
+
+         governance_record:  OPTIONAL.  A boolean. true when an Approval
+            Governance Record is recorded for this approval event
+            ([I-D.draft-mcguinness-mission-approval-governance]), joined
+            by this Mission's own approval_event_id.  It never changes
+            kind, which follows the basis (below and Section 7.1).
+            Approval Governance aligns the record's accountable
+            assertion, where it carries one, with that kind: a governed
+            decision still names its mechanism, and the record supplies
+            the fuller assertion set behind it, including any multi-
+            assertion set, never flattened into it.
+
+         Where adjudication is present for direct, kind MUST be human,
+         with or without governance_record: a policy decides an instance
+         only under a standing-consent basis (Section 7.1).
 
       approved_at:  Absent for direct, whose approval event carries its
          own instant (Section 6); a standing-consent basis carries it
@@ -9660,10 +9699,10 @@ Table of Contents
    or requesting party distinct from the consenting human.
 
    An unrecognized type, and likewise an unrecognized adjudication.kind
-   (below), is preserved unchanged as opaque provenance on an otherwise
-   valid record: a consumer MUST NOT infer or fabricate the human,
-   policy, or Approval Governance Record standing behind it, and MUST
-   refuse only a profile operation that itself requires recognized
+   (Section 7), is preserved unchanged as opaque provenance on an
+   otherwise valid record: a consumer MUST NOT infer or fabricate the
+   human, policy, or Approval Governance Record standing behind it, and
+   MUST refuse only a profile operation that itself requires recognized
    adjudication semantics to proceed (for example, evaluating a policy-
    approval recency ceiling).  Unlike an unrecognized lifecycle state
    (Section 9), an unrecognized value here does not by itself invalidate
@@ -9687,56 +9726,12 @@ Table of Contents
       standing consent for that exact version; it MUST NOT accept the
       value as the activating request's own uncorroborated assertion.
 
-   adjudication:  A discriminated object naming the decision _mechanism_
-      that adjudicated this instance: distinct from activation_actor
-      (who triggered it) and consent_principal (who is accountable for
-      it).  Present when a Mission-creating profile or deployment
-      chooses to make the mechanism explicit; where absent, the
-      mechanism is still fixed by type and the construction rules of
-      this document or a companion profile (below).  Members, where
-      present:
-
-      kind:  REQUIRED.  A string: human or policy, naming a decision
-         mechanism, not a storage location for supporting evidence; a
-         companion profile MUST NOT define a kind value that names a
-         record, an evidence store, or the requesting or dispatching
-         party.  An unrecognized value is handled under the same rule as
-         approval_basis.type (above).
-
-      For kind: human: no further members; the deciding human is
-      consent_principal.
-
-      For kind: policy: policy, a REQUIRED object with id and version
-      identifying the deciding policy or workflow.  It decides
-      deterministically over recorded inputs, so re-evaluating that
-      version over them re-checks the decision.  A model's output can be
-      one such input, recorded with the model's identifier and version:
-      it can refuse an activation or narrow the authority it activates,
-      and the AS MUST NOT let it supply or widen authority.  A model is
-      never itself the deciding policy or workflow.
-
-      governance_record:  OPTIONAL.  A boolean. true when an Approval
-         Governance Record is recorded for this approval event
-         ([I-D.draft-mcguinness-mission-approval-governance]), joined by
-         this Mission's own approval_event_id.  It never changes kind,
-         which follows the basis (below).  Approval Governance aligns
-         the record's accountable assertion, where it carries one, with
-         that kind: a governed decision still names its mechanism, and
-         the record supplies the fuller assertion set behind it,
-         including any multi-assertion set, never flattened into it.
-
-   The adjudication member, where present, follows the basis:
-
-   *  Where adjudication is present for direct, kind MUST be human, with
-      or without governance_record: a policy decides an instance only
-      under a standing-consent basis.
-
-   *  Where a companion profile defining a standing-consent type
-      populates adjudication, kind MUST be policy, naming the identity
-      and version of the policy or workflow that adjudicated the
-      instance.  A companion profile MUST NOT flatten a policy's or an
-      Approval Governance Record's assertion set into a single principal
-      member.
+   The adjudication member (Section 7), where present, follows the
+   basis.  Where a companion profile defining a standing-consent type
+   populates adjudication, kind MUST be policy, naming the identity and
+   version of the policy or workflow that adjudicated the instance.  A
+   companion profile MUST NOT flatten a policy's or an Approval
+   Governance Record's assertion set into a single principal member.
 
    *Activation policy commitment.* Where a standing-consent basis lets a
    separate policy artifact adjudicate activation (a dispatch, drawdown,
@@ -9989,7 +9984,7 @@ Table of Contents
    The commitment is not a globally unique entry identifier: the
    envelope binds the issuer, not the Mission, so a protocol that uses
    it to select or cite an entry MUST bind it to the Mission issuer and
-   Mission identifier whose recorded Authority Set is searched, directly
+   Mission Identifier whose recorded Authority Set is searched, directly
    or through an enclosing object whose integrity protection binds them.
 
    authority_hash likewise commits an Authority Set, not a Mission: two
@@ -10172,9 +10167,10 @@ Table of Contents
       Reasons registry (Section 22.8): revoked or expired in this
       document, or a reason a companion profile registers.
 
-   terminated_at:  REQUIRED.  A string.  An RFC 3339 [RFC3339] date-
-      time: the instant the termination took effect.  For expired, it is
-      the Mission's expires_at.
+   terminated_at:  REQUIRED, except for historical terminations
+      described below.  A string.  An RFC 3339 [RFC3339] date-time: the
+      instant the termination took effect.  For expired, it is the
+      Mission's expires_at.
 
    A companion profile that registers a reason defines that reason's
    further members.  A profile that maintains a state version for the
@@ -10331,12 +10327,13 @@ Table of Contents
 
    *  MUST set aud to identify the resource server(s) authorized to
       consume the carried authorization_details, and MUST NOT include an
-      audience unrelated to that carried authority (see below);
+      audience unrelated to that carried authority (Section 10,
+      Paragraph 10);
 
    *  MAY carry an act claim when the agent has delegated execution
       (Section 14);
 
-   *  MAY carry a scope claim, subject to Section 10.1;
+   *  MAY carry a scope claim, subject to Section 10.1; and
 
    *  can be sender-constrained, as Section 2.2.1 of [RFC9700]
       recommends, via a cnf claim [RFC7800]: DPoP [RFC9449] (cnf.jkt) or
@@ -10597,11 +10594,11 @@ Table of Contents
    authority.
 
    expires_at:  OPTIONAL.  A string.  The Mission's expires_at
-      (Section 7), in RFC 3339 [RFC3339] date-time form.  It is a
-      bounding and audit commitment with no liveness: a validator can
-      check that the token's exp does not exceed it, but passing that
-      check says nothing a state surface does not, since expiry is not
-      revocation and only active permits reliance (Section 9).
+      (Section 7), in RFC 3339 [RFC3339] date-time form.  It commits a
+      lifetime bound, not current state: a validator can check that the
+      token's exp does not exceed it, but that check does not establish
+      that the Mission is still active, the only state that permits
+      reliance (Section 9).
 
    A consumer that relies only on the presented token's own validity
    needs nothing further: the token's exp already bounds it.  A profile
@@ -11207,13 +11204,17 @@ Table of Contents
       and the mission state facts (Section 13.2), never the authority
       itself.
 
-   *  A resource server consuming an opaque Mission-bound token MUST
-      resolve it through introspection or issuer-local resolution
-      (below) before service, MUST verify active is true, its own
-      identity in aud, and the sender-constraint binding cnf names, and
-      MUST enforce the response's authorization_details under the same
-      rules as the token-carried form (Section 11), the fail-closed
-      duties included.
+   *  A resource server consuming an opaque Mission-bound token:
+
+      -  MUST resolve it through introspection or issuer-local
+         resolution (below) before service;
+
+      -  MUST verify active is true, its own identity in aud, and the
+         sender-constraint binding cnf names; and
+
+      -  MUST enforce the response's authorization_details under the
+         same rules as the token-carried form (Section 11), the fail-
+         closed duties included.
 
    *  A resource server that cannot obtain a valid introspection
       response or issuer-local resolution for an opaque Mission-bound
@@ -11249,7 +11250,7 @@ Table of Contents
        carries them, and never the Mission's Authority Set or other
        authority the token does not carry.
 
-   Mission state alone, or a lookup by Mission identifier, never
+   Mission state alone, or a lookup by Mission Identifier, never
    establishes a token's validity or authority.  An unknown, invalid,
    expired or revoked token, or a Mission that is not active, resolves
    as inactive and yields no authority; missing or unavailable state
@@ -11381,8 +11382,9 @@ Table of Contents
       be sender-constrained (Section 10) to the *delegate's own* key:
       its cnf is the delegate's DPoP or mTLS key, not the delegating
       party's, and the delegate proves possession of that key in the
-      Token Exchange.  A compromised delegate key therefore cannot be
-      replayed as the agent or as another actor in the chain.
+      Token Exchange.  Compromise of a delegate's key therefore does not
+      enable use of tokens bound to the agent's or another delegate's
+      key.
 
    *  *Each delegation is gated.* Issuing a delegated token is a
       derivation, refused unless the Mission is active (Section 9.2).
@@ -11788,7 +11790,7 @@ Table of Contents
    access token it already holds, unless a deployment-defined, trusted
    enforcement path establishes that Mission for the request and applies
    the Mission's authority and lifecycle controls to it.  Neither a
-   Mission identifier the client supplies nor documentation alone
+   Mission Identifier the client supplies nor documentation alone
    establishes the Mission for a request, and the path confers no
    authority beyond the Mission's.  The rule does not restrict the
    client's workflows unrelated to the Mission (Section 19.1.2).
@@ -12340,8 +12342,6 @@ Table of Contents
    A compromised issuer signing key voids every guarantee the signature
    carries.  Holding issuer signing keys in non-exportable, HSM- or KMS-
    grade custody with dual-controlled generation reduces that risk.
-   Recovery from a signing-key compromise follows the deployment's
-   documented procedures.
 
    Segmenting keys by artifact class under distinct kid values within
    the one jwks_uri lets high-value, low-volume signing (long-lived
@@ -12384,9 +12384,9 @@ Table of Contents
 
    The aggregate surface that a Mission's descendants can reach (the
    product of delegation depth, the number of trust domains projected
-   into, and the number of child generations) can therefore exceed what
-   a single approval appears to bound at consent time.  This is a
-   composition property of independently bounded mechanisms.
+   into, and the number of child generations, each bounded
+   independently) can therefore exceed what a single approval appears to
+   bound at consent time.
 
    Child Delegation's max_children and max_child_depth limit the
    descendant Missions live at once, not those created over the root's
@@ -12415,8 +12415,10 @@ Table of Contents
 
    Where a deployment runs the Mission Containment profile
    ([I-D.draft-mcguinness-oauth-mission-containment]), containment
-   narrows an Authority Set entry for later derivations and propagates
-   to Child Missions justified by that entry.
+   narrows the authority available from an entry for later derivations;
+   the approved Authority Set and its commitments remain unchanged.
+   Containment also propagates to Child Missions justified by that
+   entry.
 
    Containment does not reach authority materialized before the
    containment transition.  A cross-domain grant already redeemed at a
@@ -13537,7 +13539,8 @@ A.4.  Stage 3: The Resource Server Enforces
    The agent calls the ERP resource server (erp.example.com) with that
    token.  The resource server:
 
-   *  validates the JWT and its cnf claim;
+   *  validates the JWT and verifies the request's DPoP proof against
+      the key identified by the token's cnf claim;
 
    *  enforces the authorization_details whose resource it serves,
       permitting invoices.read within the Q3 issuance window and
@@ -13633,7 +13636,7 @@ B.2.  Relationship to Adjacent Work
    Requests ([RFC9126]), Rich Authorization Requests ([RFC9396]), DPoP
    ([RFC9449]), and [RFC9068] access tokens.  A deployment that runs
    PAR, RAR, and sender-constrained tokens adopts the Mission model
-   without a GNAP grant endpoint or client migration.
+   without a GNAP grant endpoint or migrating its clients to GNAP.
 
    The Authority Set's subset rule (Section 5.1) follows capability
    systems in which a holder narrows what it passes on without
@@ -13641,11 +13644,11 @@ B.2.  Relationship to Adjacent Work
    attenuation blocks, UCAN's delegation chains, SPKI/SDSI's local-name
    reduction, and object-capability designs generally.
 
-   Unlike those systems, this document narrows a durable, approval-
-   anchored object that its issuer can revoke for the Mission's full
-   lifetime, not a bearer credential bounded only by its caveats.
-   Revoking the Mission therefore still reaches everything derived from
-   it that has not already left the issuer's reach (Section 9.3).
+   In this document, narrowing applies to a durable, approval-anchored
+   object that its issuer can revoke for the Mission's full lifetime,
+   not a bearer credential bounded only by its caveats.  Revoking the
+   Mission therefore still reaches everything derived from it that has
+   not already left the issuer's reach (Section 9.3).
 
 B.3.  The Mission, the Plan, and Execution
 
@@ -14502,7 +14505,12 @@ Appendix G.  Document History
    *  Editorial: a readability pass shortens paragraphs, turns
       enumerations into lists, cuts restatement, and follows OAuth
       conventions for naming parameters, claims and error codes and for
-      example lead-ins.  No requirement changes.
+      example lead-ins.  The terminated_at definition names its existing
+      exception for historical terminations, and mission.expires_at is
+      described as a lifetime bound, not current state.  The
+      adjudication object is defined once, in Mission Record; Standing-
+      Consent Bases keeps its standing-consent restriction.  No
+      requirement changes.
 
    *  Error and Challenge Mapping: a Token Exchange refuses a
       subject_token or actor_token that is invalid, whose sender
