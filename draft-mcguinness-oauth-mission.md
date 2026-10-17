@@ -3275,11 +3275,11 @@ concrete authority.
 
 `expires_at`:
 : OPTIONAL. A string. The Mission's `expires_at`
-  ({{mission-record}}), in RFC 3339 {{RFC3339}} date-time form. It is
-  a bounding and audit commitment with no liveness: a validator can
-  check that the token's `exp` does not exceed it, but passing that
-  check says nothing a state surface does not, since expiry is not
-  revocation and only `active` permits reliance ({{lifecycle}}).
+  ({{mission-record}}), in RFC 3339 {{RFC3339}} date-time form. It
+  commits a lifetime bound, not current state: a validator can check
+  that the token's `exp` does not exceed it, but that check does not
+  establish that the Mission is still `active`, the only state that
+  permits reliance ({{lifecycle}}).
 
 A consumer that relies only on the presented token's own validity
 needs nothing further: the token's `exp` already bounds it. A profile
