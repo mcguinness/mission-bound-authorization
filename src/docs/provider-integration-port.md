@@ -513,13 +513,20 @@ the store.
   Otherwise it inlines oidc-provider's default (`lib/helpers/defaults.js`
   L528-547): rotate a public client's token that is not sender-constrained,
   else rotate once 70 percent of the lifetime has passed.
-- **Revocation hook.** `POST /missions/{id}/lifecycle` in `makeRoutes`,
-  authenticated by a service token. `kernel.materializeExpiry` commits any
-  expiry first, in its own transaction. One `withTransaction(kernel.db, ...)`
-  then commits `kernel.transition` (state, version, event row and, for a
-  terminal state, the tombstone) with the nonce-keyed outcome. After that
-  commit, outside it, the handler awaits `provider.Grant.find(record.grant_id)`
-  and `destroy()` for a state other than `active` or `suspended`. Family grants are revoked by the
+- **Revocation hook.** The advertised Mission Lifecycle endpoint,
+  `POST /mission/lifecycle` in `makeRoutes`: a form body carrying
+  `mission_id`, the caller authenticated by private-key JWT and authorized by
+  the lifecycle grant the deployment binds to that client
+  (`lifecycleClients`, `lifecycleClientGrants`). The dev-only, unadvertised
+  `POST /missions/{id}/lifecycle` route, authenticated by a service token,
+  runs the same engine. `kernel.materializeExpiry` commits any expiry first,
+  in its own transaction. One `withTransaction(kernel.db, ...)` then commits
+  `kernel.transition` (state, version, event row and, for a terminal state,
+  the tombstone), the signed response's observation and the nonce claim.
+  After that commit, outside it, the handler awaits
+  `provider.Grant.find(record.grant_id)` and `destroy()` for a state other
+  than `active` or `suspended`, then signs the observation: the answer is the
+  state-only Mission Status Response. Family grants are revoked by the
   durable subscriber `delegation-family-grant-revoke` (`index.ts`).
 - **Boundary.** The lifecycle commit is one kernel transaction. The
   approval-grant destruction is a separate provider write with no retry row.

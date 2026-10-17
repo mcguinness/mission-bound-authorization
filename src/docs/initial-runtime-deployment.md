@@ -120,9 +120,9 @@ asserts each refusal and the absence of the metadata it would advertise:
 | `deferred` | deferred grant: unregistered, `unsupported_grant_type` |
 | `templates` | dispatch grant: unregistered, `unsupported_grant_type`; both template admin routes: 501 `temporarily_unavailable` |
 | `containment` | lifecycle `contain`: `invalid_request`, not enabled; protected-event ingestion: 501 `temporarily_unavailable` |
-| `discharge` | lifecycle `discharge`: `invalid_request`, not enabled; no `mission_status_signing_alg_values_supported` |
+| `discharge` | lifecycle `discharge`: `invalid_request`, not enabled; `mission_status_signing_alg_values_supported` stays advertised, because `lifecycle-revoke` answers with the signed Mission Status Response |
 | `lifecycle-extended` | lifecycle `suspend`, `resume` and `complete`: `invalid_request`, not enabled |
-| `status` | the Mission Status operation: 404, not served; no `mission_status_signing_alg_values_supported` |
+| `status` | the Mission Status operation: 404, not served; no `mission_status_endpoint` (the signing algorithms stay advertised for the Lifecycle endpoint) |
 | `status-list` | the Status List fetch: 404 `not_found` |
 | `dev-token` | the dev ordinary-token route: 501 `temporarily_unavailable`, no token |
 | `oidc` | `openid` at PAR: `invalid_scope`; userinfo and RP-initiated logout: 404; no `userinfo_endpoint` or `end_session_endpoint` |
