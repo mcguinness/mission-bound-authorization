@@ -6,7 +6,6 @@
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
-import { assertAudienceSeparation, resourceAudiences } from "./audience-separation.js";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
@@ -585,6 +584,12 @@ export interface AdapterOptions {
    */
   introspectionPrincipals?: IntrospectionPrincipal[];
   /**
+   * @spec mission#designation (#869, D449): the clients a designation may
+   * name (config/delegation.json), the deployment's statement that no
+   * resource server accepts their identifiers as an audience.
+   */
+  designableClients?: readonly string[];
+  /**
    * @spec cross-org-delegation#projection-exchange — the destination Resource
    * AS configuration for accepting Cross-Organizational Delegation Chains.
    * Absent (the default) the chain subject_token_type is refused.
@@ -878,15 +883,6 @@ export function buildProvider(opts: AdapterOptions): Provider {
       ? { ...c, grant_types: grantTypes.filter((g) => grantEnabled.get(String(g)) !== false) }
       : c;
   });
-  // @spec mission#designation (#869, D449): with delegation on, refuse to
-  // start when a client identifier is also a resource audience, so no
-  // designation can ever be accepted for resource access.
-  if (enabled("delegation")) {
-    assertAudienceSeparation(
-      clients.map((c) => String((c as { client_id?: unknown }).client_id)),
-      resourceAudiences(opts),
-    );
-  }
 
   // Effective Authority Set projection (#589): a stored oidc grant copies its
   // rar at issuance, so a refresh (or a late code redemption) could echo

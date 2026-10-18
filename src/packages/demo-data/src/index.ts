@@ -1083,6 +1083,35 @@ function loadActorProfiles(): Record<string, string> {
 export const ACTOR_PROFILES: Readonly<Record<string, string>> = loadActorProfiles();
 
 /**
+ * @spec mission#designation (#869, D449): the clients a same-Mission
+ * delegation may designate (config/delegation.json). Listing a client is the
+ * deployment's statement that no resource server accepts its identifier as
+ * an audience; the strict loader refuses unknown members, an empty identifier
+ * and a duplicate.
+ */
+function loadDesignableClients(): readonly string[] {
+  const file = "delegation.json";
+  const root = asObject(file, readJson(file), "delegation");
+  for (const key of Object.keys(root)) {
+    if (key !== "designable_clients") throw new ConfigError(file, `delegation has unknown member ${key}`);
+  }
+  const list = root.designable_clients;
+  if (!Array.isArray(list)) throw new ConfigError(file, "delegation.designable_clients must be an array");
+  const seen = new Set<string>();
+  for (const id of list) {
+    if (typeof id !== "string" || id.length === 0) {
+      throw new ConfigError(file, "delegation.designable_clients entries must be non-empty strings");
+    }
+    if (seen.has(id)) throw new ConfigError(file, `delegation.designable_clients names ${id} twice`);
+    seen.add(id);
+  }
+  return [...seen];
+}
+
+/** The clients a designation may name (@see loadDesignableClients). */
+export const DESIGNABLE_CLIENTS: readonly string[] = loadDesignableClients();
+
+/**
  * @spec mission-template#prohibited-class — high-consequence actions that no
  * Mission Template dispatch may confer, even within both ceilings. The demo
  * prohibits the irreversible `payments:payment.execute`. The wire PR and the

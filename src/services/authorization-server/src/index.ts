@@ -2,6 +2,7 @@
 
 import {
   INTROSPECTION_PRINCIPALS,
+  DESIGNABLE_CLIENTS,
   type IntrospectionPrincipal,
   ACTOR_PROFILES,
   AUTHORITY_SOURCES,
@@ -908,6 +909,11 @@ export async function buildAuthorizationServer(opts: {
    */
   testIntrospectionPrincipals?: IntrospectionPrincipal[];
   /**
+   * @spec mission#designation (#869, D449): the clients a designation may
+   * name. Defaults to config/delegation.json; a test names its own.
+   */
+  designableClients?: readonly string[];
+  /**
    * @spec cross-org-delegation#projection-exchange — destination Resource AS
    * configuration for Chain acceptance (federation trust, principal mapping,
    * local ceiling, evidence sink). Absent = the exchange is refused.
@@ -1391,6 +1397,8 @@ export async function buildAuthorizationServer(opts: {
     // @spec mission#caller-authorization-and-minimization — the registered
     // RFC 7662 introspection principals (config/introspection.json).
     introspectionPrincipals: [...INTROSPECTION_PRINCIPALS, ...(opts.testIntrospectionPrincipals ?? [])],
+    // @spec mission#designation (#869, D449): config/delegation.json.
+    designableClients: opts.designableClients ?? DESIGNABLE_CLIENTS,
     // @spec mission#delegation-constraints (#869): the issuance index, which
     // is also the delegation accounting, exposed on BuiltAs.
     tokenIssuanceStore,

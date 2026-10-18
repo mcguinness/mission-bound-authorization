@@ -9,7 +9,7 @@ import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixtu
 import { ApprovalSessionStore } from "../src/index.js";
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, SCOPE_PROJECTION } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, SCOPE_PROJECTION, TOPOLOGY } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createLocalJWKSet,
@@ -30,8 +30,17 @@ const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
 const SUBAGENT = "subagent-invoice-extractor";
 const SECOND = "test-second-delegate";
+/** An audience the AS issues (a topology resource) that no registered resource server lists. */
+const ISSUED_AUDIENCE = TOPOLOGY.resources.hrFiles;
+const ALIAS_CLIENT = "test-alias-client";
+const UNDECLARED = "test-undeclared-delegate";
 const RS_PAYMENTS = ["rs-payments", "dev-introspection-rs-payments"] as const;
-const RS_COLLIDING = ["rs-colliding", "dev-introspection-rs-colliding"] as const;
+const RS_ALIAS = ["rs-alias", "dev-introspection-rs-alias"] as const;
+const RS_LATE = ["rs-late", "dev-introspection-rs-late"] as const;
+/** A resource server accepting an alias the AS never issues as an audience. */
+const rsAlias = { principal_id: RS_ALIAS[0], secret: RS_ALIAS[1], audiences: [RESOURCE, ALIAS_CLIENT], disclose: [] as string[] };
+/** A resource server that starts accepting a designated client's identifier only after the designation is issued. */
+const rsLate = { principal_id: RS_LATE[0], secret: RS_LATE[1], audiences: [RESOURCE], disclose: [] as string[] };
 const delegable = (maxDepth = 2) => ({
   type: "mission_resource_access",
   resource: RESOURCE,
@@ -42,7 +51,7 @@ const delegable = (maxDepth = 2) => ({
 
 type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };
 type Body = Record<string, unknown>;
-type Client = "ap-agent" | typeof SUBAGENT | typeof SECOND | "ledger-reconciler";
+type Client = "ap-agent" | typeof SUBAGENT | typeof SECOND | typeof UNDECLARED | "ledger-reconciler";
 
 const sessions = new ApprovalSessionStore();
 let secondKeys: Keys;
@@ -58,26 +67,27 @@ interface Harness {
 
 async function harness(port: number, options: Record<string, unknown>): Promise<Harness> {
   const issuer = `http://localhost:${port}`;
-  const secondJwk = { ...(await exportJWK(secondKeys.publicKey)), kid: `${SECOND}-auth`, alg: "ES256" };
+  const testClient = async (clientId: string) => ({
+    client_id: clientId,
+    grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
+    response_types: [],
+    redirect_uris: [],
+    token_endpoint_auth_method: "private_key_jwt",
+    token_endpoint_auth_signing_alg: "ES256",
+    jwks: { keys: [{ ...(await exportJWK(secondKeys.publicKey)), kid: `${clientId}-auth`, alg: "ES256" }] },
+    authorization_details_types: ["mission_resource_access"],
+  });
   const as = await buildAuthorizationServer({
     issuer,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     approvalSessions: sessions,
-    testClients: [
-      {
-        client_id: SECOND,
-        client_name: "A second ai_agent delegate (token-exchange capable)",
-        grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
-        response_types: [],
-        redirect_uris: [],
-        token_endpoint_auth_method: "private_key_jwt",
-        token_endpoint_auth_signing_alg: "ES256",
-        jwks: { keys: [secondJwk] },
-        authorization_details_types: ["mission_resource_access"],
-      },
-    ],
-    actorProfiles: { [SECOND]: "ai_agent" },
+    // A second ai_agent delegate; a client whose identifier is an audience
+    // the AS issues; one a registered resource server accepts as an alias;
+    // and an eligible client the deployment does not list as designable.
+    testClients: await Promise.all([SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, UNDECLARED].map(testClient)),
+    actorProfiles: { [SECOND]: "ai_agent", [ISSUED_AUDIENCE]: "ai_agent", [ALIAS_CLIENT]: "ai_agent", [UNDECLARED]: "ai_agent" },
+    designableClients: [SUBAGENT, SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT],
     ...options,
   } as never);
   const server = as.provider.listen(port);
@@ -86,6 +96,7 @@ async function harness(port: number, options: Record<string, unknown>): Promise<
     [SUBAGENT, (await importJWK(as.childClientJwk as never, "ES256")) as CryptoKey],
     ["ledger-reconciler", (await importJWK(as.ledgerReconcilerClientJwk as never, "ES256")) as CryptoKey],
     [SECOND, secondKeys.privateKey],
+    [UNDECLARED, secondKeys.privateKey],
   ]);
   return { as, server, issuer, keys };
 }
@@ -278,9 +289,7 @@ beforeAll(async () => {
   }
   on = await harness(14870, {
     capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
-    // A misconfigured resource server whose audience collides with the
-    // designated client: introspection must still answer inactive.
-    testIntrospectionPrincipals: [{ principal_id: RS_COLLIDING[0], secret: RS_COLLIDING[1], audiences: [SUBAGENT], disclose: [] }],
+    testIntrospectionPrincipals: [rsAlias, rsLate],
   });
   // The default deployment: no capability set, so the opt-in delegation is off.
   off = await harness(14871, {});
@@ -632,33 +641,47 @@ describe("one counting and settlement path (@spec mission#delegation, derivation
 });
 
 describe("a designation authorizes no resource access (@spec mission#designation, mission#composite-active)", () => {
-  it("with delegation on, a client whose identifier is a resource audience refuses to start; with it off the same registration starts", async () => {
-    const colliding = {
-      client_id: RESOURCE,
-      grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
-      response_types: [],
-      redirect_uris: [],
-      token_endpoint_auth_method: "private_key_jwt",
-      token_endpoint_auth_signing_alg: "ES256",
-      jwks: { keys: [{ ...(await exportJWK(secondKeys.publicKey)), kid: "colliding-auth", alg: "ES256" }] },
-    };
-    await expect(
-      buildAuthorizationServer({
-        issuer: "http://localhost:14873",
-        allowHeadlessAdjudication: true,
-        capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
-        testClients: [colliding],
-      } as never),
-    ).rejects.toThrow(/audience separation/);
-    await expect(
-      buildAuthorizationServer({ issuer: "http://localhost:14873", allowHeadlessAdjudication: true, testClients: [colliding] } as never),
-    ).resolves.toBeDefined();
+  it("a designation naming a client whose identifier is an audience the AS issues is refused invalid_target, issuing nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const before = derivations(on, missionId);
+    const res = await designate(on, accessToken, ISSUED_AUDIENCE);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_target");
+    expect(res.body.error_description).toMatch(/audience a resource server accepts/);
+    expect(derivations(on, missionId)).toBe(before);
   });
 
-  it("the per-request check also covers the Mission's own resources", () => {
-    const audiences = resourceAudiences({ issuer: on.issuer, scopeProjection: SCOPE_PROJECTION });
+  it("a designation naming a client a resource server accepts as an alias the AS never issues is refused invalid_target, issuing nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    expect(resourceAudiences({ issuer: on.issuer, scopeProjection: SCOPE_PROJECTION }).has(ALIAS_CLIENT)).toBe(false);
+    const before = derivations(on, missionId);
+    const res = await designate(on, accessToken, ALIAS_CLIENT);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_target");
+    expect(res.body.error_description).toMatch(/audience a resource server accepts/);
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
+  it("a designation naming an eligible client for which separation is not established is refused invalid_target, issuing nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const before = derivations(on, missionId);
+    const res = await designate(on, accessToken, UNDECLARED);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_target");
+    expect(res.body.error_description).toMatch(/separation is not established/);
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
+  it("the accepted audiences span the issuer, the configured resources and every registered resource server's audiences and aliases, and the Mission's own resources", () => {
+    const audiences = resourceAudiences({
+      issuer: on.issuer,
+      scopeProjection: SCOPE_PROJECTION,
+      introspectionPrincipals: [{ ...rsAlias, audience_resources: { "urn:example:alias": ["urn:example:target"] } }],
+    });
     expect(audienceCollision(SUBAGENT, audiences)).toBe(false);
-    expect(audienceCollision(RESOURCE, audiences)).toBe(true);
+    for (const id of [on.issuer, RESOURCE, ALIAS_CLIENT, "urn:example:alias", "urn:example:target"]) {
+      expect(audienceCollision(id, audiences), id).toBe(true);
+    }
     expect(audienceCollision("urn:example:resource", audiences, ["urn:example:resource"])).toBe(true);
   });
 
@@ -671,10 +694,15 @@ describe("a designation authorizes no resource access (@spec mission#designation
     ).rejects.toThrow(/aud/);
   });
 
-  it("introspection reports a designation inactive with no Mission data, even to a resource server whose audience collides with the designated client", async () => {
+  it("introspection reports a designation inactive with no Mission data, even to a resource server that starts accepting the designated client's identifier during its life", async () => {
     const { accessToken } = await baseMission(on);
     const designation = (await designate(on, accessToken, SUBAGENT)).body.access_token as string;
-    expect(await introspect(on, designation, RS_COLLIDING)).toEqual({ active: false });
+    rsLate.audiences.push(SUBAGENT);
+    try {
+      expect(await introspect(on, designation, RS_LATE)).toEqual({ active: false });
+    } finally {
+      rsLate.audiences.pop();
+    }
     expect(await introspect(on, designation)).toEqual({ active: false });
   });
 });

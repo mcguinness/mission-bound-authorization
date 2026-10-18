@@ -29,7 +29,7 @@ import { gateDelegableAuthority } from "../kernel/delegation.js";
 import { GateError } from "../kernel/kernel.js";
 import type { AccountedActor, RecordedIssuance } from "../kernel/token-issuance-store.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
-import { audienceCollision, resourceAudiences } from "./audience-separation.js";
+import { audienceCollision, resourceAudiences, separationDeclared } from "./audience-separation.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   authoritySource,
@@ -213,6 +213,17 @@ export async function handleDesignationExchange(
     txError(ctx, 400, "invalid_target", "a designation's audience must name a registered client");
     return;
   }
+  // Audience separation (#1274 review): the deployment must list the client,
+  // its statement that no resource server accepts the identifier, and the
+  // identifier must be none of the audiences the AS knows are accepted.
+  if (!separationDeclared(designee, opts.designableClients)) {
+    txError(ctx, 400, "invalid_target", "audience separation is not established for the designated client");
+    return;
+  }
+  if (audienceCollision(designee, resourceAudiences(opts))) {
+    txError(ctx, 400, "invalid_target", "the designated client's identifier is an audience a resource server accepts for this AS's tokens");
+    return;
+  }
 
   // 2. Possession of the presented token's own key.
   const subject = await verifySubjectPossession(opts, ctx, { subjectError: "invalid_request" });
@@ -267,11 +278,10 @@ export async function handleDesignationExchange(
     txError(ctx, 400, "invalid_target", "the presented authority carries no entry the designated client may be delegated");
     return;
   }
-  // Audience separation, at the request: the designee shares no identifier
-  // with a resource audience, the Mission's own resources included.
+  // Audience separation, against the Mission's own resources.
   const missionResources = [...effective, ...presented].map((e) => e.resource).filter((r): r is string => typeof r === "string");
-  if (audienceCollision(designee, resourceAudiences(opts), missionResources)) {
-    txError(ctx, 400, "invalid_target", "the designated client's identifier is also a resource audience");
+  if (missionResources.includes(designee)) {
+    txError(ctx, 400, "invalid_target", "the designated client's identifier is one of the Mission's resources");
     return;
   }
 
