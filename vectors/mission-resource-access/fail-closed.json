@@ -12,6 +12,9 @@
         "operation-target",
         "rs.alternative-grants"
       ],
+      "unless": [
+        "constraint.x_unknown"
+      ],
       "check": "rs-authorize",
       "input": {
         "target": "https://erp.example.com",
@@ -51,6 +54,9 @@
       "requires": [
         "operation-target",
         "rs.alternative-grants"
+      ],
+      "unless": [
+        "constraint.x_unknown"
       ],
       "check": "rs-authorize",
       "input": {
@@ -175,6 +181,9 @@
         "operation-target",
         "rs.alternative-grants"
       ],
+      "unless": [
+        "member.x_member"
+      ],
       "check": "rs-authorize",
       "input": {
         "target": "https://erp.example.com",
@@ -192,7 +201,7 @@
       },
       "expected": {
         "outcome": "deny",
-        "reason": "an unknown member makes the entry unenforceable"
+        "reason": "an unrecognized member makes the entry unenforceable"
       },
       "refs": [
         "#1258 item 4"
@@ -307,6 +316,82 @@
       },
       "refs": [
         "#1258 item 4"
+      ]
+    },
+    {
+      "id": "fc-09",
+      "description": "An entry carries an extension member whose specification the resource server implements and whose obligations it fulfills",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.member-roles",
+        "rs.extension-members"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "extension_members": {
+          "x_source_binding": "fulfilled"
+        },
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "x_source_binding": {
+              "source_digest": "sha-256:abc"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "allow",
+        "reason": "a defined extension whose obligations are fulfilled leaves the entry enforceable"
+      },
+      "refs": [
+        "#1258 item 4",
+        "#1277 review finding 1"
+      ]
+    },
+    {
+      "id": "fc-10",
+      "description": "An entry carries an extension member whose obligations the resource server cannot fulfill",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.member-roles",
+        "rs.extension-members"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "extension_members": {
+          "x_source_binding": "unfulfilled"
+        },
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "x_source_binding": {
+              "source_digest": "sha-256:abc"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "an extension whose obligations cannot be fulfilled makes the entry unenforceable"
+      },
+      "refs": [
+        "#1258 item 4",
+        "#1277 review finding 1"
       ]
     }
   ]

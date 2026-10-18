@@ -1171,6 +1171,9 @@
       "requires": [
         "refusal.unsupported-input"
       ],
+      "unless": [
+        "constraint.x_registered_later"
+      ],
       "check": "derive",
       "input": {
         "ceiling": [

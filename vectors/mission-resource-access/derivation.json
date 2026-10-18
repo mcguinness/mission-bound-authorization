@@ -9,7 +9,6 @@
       "description": "A proposal's max_amount currency differs from the ceiling's",
       "role": "authorization-server",
       "requires": [
-        "refusal.unsupported-input",
         "constraint.max_amount"
       ],
       "check": "derive",
@@ -125,6 +124,9 @@
       "requires": [
         "refusal.unsupported-input"
       ],
+      "unless": [
+        "resource-match.prefix"
+      ],
       "check": "derive",
       "input": {
         "ceiling": [
@@ -164,6 +166,9 @@
       "requires": [
         "refusal.unsupported-input"
       ],
+      "unless": [
+        "resource-match.prefix"
+      ],
       "check": "derive",
       "input": {
         "ceiling": [
@@ -199,9 +204,7 @@
       "id": "der-05",
       "description": "An explicit resource_match exact derives as the default",
       "role": "authorization-server",
-      "requires": [
-        "refusal.unsupported-input"
-      ],
+      "requires": [],
       "check": "derive",
       "input": {
         "ceiling": [
@@ -226,16 +229,7 @@
       },
       "expected": {
         "outcome": "derived",
-        "reason": "exact is the default",
-        "entries": [
-          {
-            "type": "mission_resource_access",
-            "resource": "https://api.example/orders",
-            "actions": [
-              "invoices.read"
-            ]
-          }
-        ]
+        "reason": "exact is the default; the derived entry may state it or omit it"
       },
       "refs": [
         "#1264"
@@ -247,6 +241,9 @@
       "role": "authorization-server",
       "requires": [
         "refusal.unsupported-input"
+      ],
+      "unless": [
+        "constraint.time_window"
       ],
       "check": "derive",
       "input": {
@@ -291,6 +288,9 @@
       "role": "authorization-server",
       "requires": [
         "refusal.unsupported-input"
+      ],
+      "unless": [
+        "constraint.x_region"
       ],
       "check": "derive",
       "input": {
@@ -382,6 +382,9 @@
       "role": "authorization-server",
       "requires": [
         "refusal.unsupported-input"
+      ],
+      "unless": [
+        "constraint.x_unknown"
       ],
       "check": "derive",
       "input": {

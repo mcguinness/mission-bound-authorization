@@ -3,8 +3,9 @@
  * Mission Resource Access expected-outcome cases in `vectors/mission-resource-access/`.
  *
  * It validates every case file, then runs each case whose `requires` capabilities
- * this implementation has, and reports every other case as skipped with the missing
- * capability in its name. A skipped case is not evidence; a run case is helper-level
+ * this implementation has and none of whose `unless` capabilities it has, and reports
+ * every other case as skipped, naming the missing capability or the implemented one
+ * that makes the case inapplicable. A skipped case is not evidence; a run case is helper-level
  * evidence only (it does not establish endpoint or resource-server enforcement), so
  * ledger rows cite these runs only where the row's role and surface match.
  */
@@ -25,7 +26,7 @@ import {
 const DIR = fileURLToPath(new URL("../../../../vectors/mission-resource-access/", import.meta.url));
 const FORMAT = "mission-resource-access-cases/1";
 
-/** Capabilities this reference implementation runs cases for. */
+/** The deployment capability configuration: what this reference implementation implements. */
 const IMPLEMENTED = new Set([
   "subset.exact-resource",
   "constraint.max_amount",
@@ -52,6 +53,7 @@ const KNOWN_CAPABILITIES = new Set([
   "rs.enforcement",
   "rs.alternative-grants",
   "rs.member-roles",
+  "rs.extension-members",
   "delegation.policy",
   "delegation.inherited-eligibility",
   "transformation-capabilities",
@@ -77,6 +79,7 @@ interface Case {
   description: string;
   role: string;
   requires: string[];
+  unless?: string[];
   check: string;
   input: Record<string, unknown>;
   expected: { outcome: string; reason: string; error?: string; entries?: AuthorityEntry[] };
@@ -121,6 +124,8 @@ function run(c: Case): void {
         }
         expect(error, c.expected.reason).toBeInstanceOf(IntentError);
         expect((error as IntentError).code).toBe(c.expected.error);
+      } else if (c.expected.entries === undefined) {
+        expect(derive, c.expected.reason).not.toThrow();
       } else {
         expect(derive(), c.expected.reason).toEqual(c.expected.entries);
       }
@@ -141,6 +146,19 @@ function run(c: Case): void {
 
 const EXECUTABLE_CHECKS = new Set(["subset", "derive", "delegate-matcher"]);
 
+/** A capability is known when the README names it, or it is one `constraints` key or entry member. */
+const knownCapability = (cap: string) => KNOWN_CAPABILITIES.has(cap) || /^(constraint|member)\.[a-z0-9_]+$/.test(cap);
+
+/** Why a case does not run for a consumer implementing `implemented`, or undefined when it applies. */
+function skipReason(c: Case, implemented: ReadonlySet<string> = IMPLEMENTED): string | undefined {
+  const missing = c.requires.filter((cap) => !implemented.has(cap));
+  if (!EXECUTABLE_CHECKS.has(c.check) && missing.length === 0) missing.push(`executor:${c.check}`);
+  if (missing.length > 0) return `requires ${missing.join(", ")}`;
+  const excluded = (c.unless ?? []).filter((cap) => implemented.has(cap));
+  if (excluded.length > 0) return `not applicable: implements ${excluded.join(", ")}`;
+  return undefined;
+}
+
 /**
  * Cases the conformance ledger cites as witnesses. Each runs once, in the static
  * block below, under a literal test name the ledger can resolve; the loop skips it.
@@ -150,11 +168,12 @@ const byId = new Map(files.flatMap(({ doc }) => doc.cases.map((c) => [c.id, c] a
 function runCited(id: string): void {
   const c = byId.get(id);
   if (!c) throw new Error(`no case ${id}`);
+  expect(skipReason(c), `${id} must apply to this implementation`).toBeUndefined();
   run(c);
 }
 
 describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
-  it("validates every case file: format, group, unique ids, roles, checks, outcomes and capabilities", () => {
+  it("validates every case file: format, group, unique ids, roles, checks, outcomes, capabilities and applicability", () => {
     expect(files.length).toBeGreaterThan(0);
     const ids = new Set<string>();
     for (const { name, doc } of files) {
@@ -169,8 +188,27 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
         expect(OUTCOMES[c.check], c.id).toContain(c.expected.outcome);
         expect(typeof c.expected.reason, c.id).toBe("string");
         expect(Array.isArray(c.requires) && Array.isArray(c.refs) && c.refs.length > 0, c.id).toBe(true);
-        for (const cap of c.requires) expect(KNOWN_CAPABILITIES.has(cap), `${c.id}: unknown capability ${cap}`).toBe(true);
+        for (const cap of [...c.requires, ...(c.unless ?? [])]) {
+          expect(knownCapability(cap), `${c.id}: unknown capability ${cap}`).toBe(true);
+        }
+        if (c.unless !== undefined) expect(c.unless.length, `${c.id}: empty unless`).toBeGreaterThan(0);
+        // A refusal of unsupported input names the capability whose absence it tests.
+        if (c.requires.includes("refusal.unsupported-input")) {
+          expect(c.unless?.length ?? 0, `${c.id}: an unsupported-input case needs unless`).toBeGreaterThan(0);
+        }
         if (c.expected.outcome === "refuse") expect(typeof c.expected.error, c.id).toBe("string");
+      }
+    }
+  });
+
+  it("never runs a refusal of unsupported input for a consumer that implements the input", () => {
+    const refusals = [...byId.values()].filter((c) => c.requires.includes("refusal.unsupported-input"));
+    expect(refusals.length).toBeGreaterThan(0);
+    for (const c of refusals) {
+      for (const cap of c.unless ?? []) {
+        expect(skipReason(c, new Set([...IMPLEMENTED, cap])), `${c.id} with ${cap}`).toBe(
+          `not applicable: implements ${cap}`,
+        );
       }
     }
   });
@@ -197,10 +235,9 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
     describe(`${doc.group} (${name})`, () => {
       for (const c of doc.cases) {
         if (CITED.has(c.id)) continue;
-        const missing = c.requires.filter((cap) => !IMPLEMENTED.has(cap));
-        if (!EXECUTABLE_CHECKS.has(c.check) && missing.length === 0) missing.push(`executor:${c.check}`);
-        if (missing.length > 0) {
-          it.skip(`${c.id}: ${c.description} [skipped: requires ${missing.join(", ")}]`, () => {});
+        const reason = skipReason(c);
+        if (reason !== undefined) {
+          it.skip(`${c.id}: ${c.description} [skipped: ${reason}]`, () => {});
         } else {
           it(`${c.id}: ${c.description}`, () => run(c));
         }

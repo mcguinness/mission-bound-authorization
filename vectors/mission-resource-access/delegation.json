@@ -170,7 +170,7 @@
     },
     {
       "id": "dg-inherit-01",
-      "description": "Policy permits Bob and denies Carol; a child entry adds a list naming Carol",
+      "description": "Policy denies Carol; the derived entry's list names her",
       "role": "authorization-server",
       "requires": [
         "delegation.policy",
@@ -178,6 +178,9 @@
       ],
       "check": "delegate-eligibility",
       "input": {
+        "ceiling_entry_delegation": {
+          "max_depth": 2
+        },
         "approved_entry_delegation": {
           "max_depth": 2
         },
@@ -189,8 +192,8 @@
             "carol"
           ]
         },
-        "derived_entry_delegation": {
-          "max_depth": 1,
+        "entry_delegation": {
+          "max_depth": 2,
           "allowed_delegates": [
             {
               "sub": "carol"
@@ -204,16 +207,17 @@
       },
       "expected": {
         "outcome": "not-eligible",
-        "reason": "a derived list restricts the inherited policy decision and never replaces it"
+        "reason": "the list permits Carol and the depth is within bounds; only the inherited policy denies her"
       },
       "refs": [
         "#1258 item 8",
-        "#1275"
+        "#1275",
+        "#1277 review finding 4"
       ]
     },
     {
       "id": "dg-inherit-02",
-      "description": "The same derivation; Bob at the next hop",
+      "description": "Policy permits Bob; the derived entry's list omits him",
       "role": "authorization-server",
       "requires": [
         "delegation.policy",
@@ -221,6 +225,9 @@
       ],
       "check": "delegate-eligibility",
       "input": {
+        "ceiling_entry_delegation": {
+          "max_depth": 2
+        },
         "approved_entry_delegation": {
           "max_depth": 2
         },
@@ -232,8 +239,8 @@
             "carol"
           ]
         },
-        "derived_entry_delegation": {
-          "max_depth": 1,
+        "entry_delegation": {
+          "max_depth": 2,
           "allowed_delegates": [
             {
               "sub": "carol"
@@ -247,23 +254,35 @@
       },
       "expected": {
         "outcome": "not-eligible",
-        "reason": "Bob is permitted by policy but not by the derived list"
+        "reason": "the policy permits Bob and the depth is within bounds; only the list excludes him"
       },
       "refs": [
-        "#1258 item 8"
+        "#1258 item 8",
+        "#1277 review finding 4"
       ]
     },
     {
       "id": "dg-inherit-03",
-      "description": "The authoritative context (the approved entry) cannot be resolved",
+      "description": "The approved entry cannot be resolved",
       "role": "authorization-server",
       "requires": [
         "delegation.inherited-eligibility"
       ],
       "check": "delegate-eligibility",
       "input": {
+        "ceiling_entry_delegation": {
+          "max_depth": 2
+        },
         "approved_entry_delegation": null,
-        "context": "unresolvable",
+        "context": "approved-entry-unresolvable",
+        "policy": {
+          "permit": [
+            "bob"
+          ],
+          "deny": [
+            "carol"
+          ]
+        },
         "delegate": {
           "sub": "bob"
         },
@@ -271,7 +290,7 @@
       },
       "expected": {
         "outcome": "narrowed-out",
-        "reason": "an unresolved context narrows the entry out"
+        "reason": "an unresolved approved entry narrows the entry out"
       },
       "refs": [
         "#1258 item 8"
@@ -279,62 +298,169 @@
     },
     {
       "id": "dg-inherit-04",
-      "description": "A proposal list where the ceiling has none, under the reference's deny-all policy",
+      "description": "The approved entry carries a list a proposal added over a ceiling entry without one",
+      "role": "authorization-server",
+      "requires": [
+        "delegation.policy",
+        "delegation.inherited-eligibility"
+      ],
+      "check": "delegate-eligibility",
+      "input": {
+        "ceiling_entry_delegation": {
+          "max_depth": 2
+        },
+        "approved_entry_delegation": {
+          "max_depth": 2,
+          "allowed_delegates": [
+            {
+              "sub": "carol"
+            }
+          ]
+        },
+        "policy": {
+          "permit": [
+            "bob"
+          ],
+          "deny": [
+            "carol"
+          ]
+        },
+        "delegate": {
+          "sub": "carol"
+        },
+        "depth": 1
+      },
+      "expected": {
+        "outcome": "not-eligible",
+        "reason": "the retained provenance keeps the policy obligation the approved list no longer shows"
+      },
+      "refs": [
+        "#1258 item 8",
+        "#1277 review finding 2"
+      ]
+    },
+    {
+      "id": "dg-inherit-05",
+      "description": "Policy permits Bob and the derived entry's list names him",
+      "role": "authorization-server",
+      "requires": [
+        "delegation.policy",
+        "delegation.inherited-eligibility"
+      ],
+      "check": "delegate-eligibility",
+      "input": {
+        "ceiling_entry_delegation": {
+          "max_depth": 2
+        },
+        "approved_entry_delegation": {
+          "max_depth": 2
+        },
+        "policy": {
+          "permit": [
+            "bob"
+          ],
+          "deny": [
+            "carol"
+          ]
+        },
+        "entry_delegation": {
+          "max_depth": 2,
+          "allowed_delegates": [
+            {
+              "sub": "bob"
+            }
+          ]
+        },
+        "delegate": {
+          "sub": "bob"
+        },
+        "depth": 2
+      },
+      "expected": {
+        "outcome": "eligible",
+        "reason": "both the inherited policy and the list permit Bob within the depth bound"
+      },
+      "refs": [
+        "#1258 item 8",
+        "#1277 review finding 4"
+      ]
+    },
+    {
+      "id": "dg-inherit-06",
+      "description": "The approved entry's provenance cannot be resolved",
       "role": "authorization-server",
       "requires": [
         "delegation.inherited-eligibility"
       ],
-      "check": "derive",
+      "check": "delegate-eligibility",
       "input": {
-        "ceiling": [
-          {
-            "type": "mission_resource_access",
-            "resource": "https://api.example/orders",
-            "actions": [
-              "invoices.read"
-            ],
-            "delegation": {
-              "max_depth": 2
+        "ceiling_entry_delegation": null,
+        "context": "provenance-unresolvable",
+        "approved_entry_delegation": {
+          "max_depth": 2,
+          "allowed_delegates": [
+            {
+              "sub": "carol"
             }
-          }
-        ],
-        "proposal": [
-          {
-            "type": "mission_resource_access",
-            "resource": "https://api.example/orders",
-            "actions": [
-              "invoices.read"
-            ],
-            "delegation": {
-              "max_depth": 1,
-              "allowed_delegates": [
-                {
-                  "sub": "carol"
-                }
-              ]
-            }
-          }
-        ]
+          ]
+        },
+        "policy": {
+          "permit": [
+            "carol"
+          ]
+        },
+        "delegate": {
+          "sub": "carol"
+        },
+        "depth": 1
       },
       "expected": {
-        "outcome": "derived",
-        "reason": "the derived entry gains no list, so Carol is not made eligible",
-        "entries": [
-          {
-            "type": "mission_resource_access",
-            "resource": "https://api.example/orders",
-            "actions": [
-              "invoices.read"
-            ],
-            "delegation": {
-              "max_depth": 1
-            }
-          }
-        ]
+        "outcome": "narrowed-out",
+        "reason": "unresolved provenance fails closed even where the list and policy would permit"
       },
       "refs": [
         "#1258 item 8",
-        "#1275"
+        "#1277 review finding 2"
+      ]
+    },
+    {
+      "id": "dg-inherit-07",
+      "description": "The approved list over a ceiling entry without one names Carol, and policy permits her",
+      "role": "authorization-server",
+      "requires": [
+        "delegation.policy",
+        "delegation.inherited-eligibility"
+      ],
+      "check": "delegate-eligibility",
+      "input": {
+        "ceiling_entry_delegation": {
+          "max_depth": 2
+        },
+        "approved_entry_delegation": {
+          "max_depth": 2,
+          "allowed_delegates": [
+            {
+              "sub": "carol"
+            }
+          ]
+        },
+        "policy": {
+          "permit": [
+            "carol"
+          ]
+        },
+        "delegate": {
+          "sub": "carol"
+        },
+        "depth": 1
+      },
+      "expected": {
+        "outcome": "eligible",
+        "reason": "retained provenance adds the policy check; it does not deny what both permit"
+      },
+      "refs": [
+        "#1258 item 8",
+        "#1277 review finding 2"
       ]
     }
   ]
