@@ -2652,12 +2652,19 @@ async function handleChildJwtBearerGrant(
  * regardless of the underlying oidc-provider Grant's existence — an
  * `invalidate()` call never touches the Grant store) from an ordinary
  * approval-grant id (liveness is the oidc-provider Grant's own existence).
+ *
+ * A family is live only while BOTH hold (#1279 review): its row is live, and
+ * its oidc-provider Grant still exists. RFC 7009 revocation of the family's
+ * refresh token destroys that Grant but leaves the row, so the row alone
+ * would keep the family's tokens, and the delegations derived from them,
+ * active after revocation.
  */
 export async function isGrantLive(opts: AdapterOptions, provider: Provider, grantId: string): Promise<boolean> {
+  const grantExists = !!(await provider.Grant.find(grantId).catch(() => undefined));
   if (opts.familyStore?.wasEverFamily(grantId)) {
-    return opts.familyStore.resolve(grantId) !== undefined;
+    return opts.familyStore.resolve(grantId) !== undefined && grantExists;
   }
-  return !!(await provider.Grant.find(grantId).catch(() => undefined));
+  return grantExists;
 }
 
 /**

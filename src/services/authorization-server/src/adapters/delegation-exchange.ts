@@ -97,10 +97,33 @@ function fixTokenId(at: { jti?: string }): void {
   at.jti = (at as unknown as { generateTokenId(): string }).generateTokenId();
 }
 
-/** Seconds until an ISO instant or an epoch-seconds value, floored at 1. */
-function secondsUntil(at: string | number): number {
-  const ms = typeof at === "number" ? at * 1000 : Date.parse(at);
-  return Math.max(1, Math.floor((ms - Date.now()) / 1000));
+/** The current time in epoch seconds, as oidc-provider stamps `iat`. */
+const nowSeconds = (): number => Math.floor(Date.now() / 1000);
+
+/** An ISO instant in epoch seconds, rounded down so a bound never moves later. */
+const epochOf = (iso: string): number => Math.floor(Date.parse(iso) / 1000);
+
+/**
+ * Pin a token's absolute expiry (#1279 review). The bound is computed after
+ * every awaited check, from absolute instants, and set on the token itself,
+ * so time spent in the request can never carry it past its source; a bound
+ * already reached refuses before settlement. Returns the seconds remaining,
+ * or undefined after setting the refusal.
+ */
+function pinExpiry(
+  ctx: KoaContextWithOIDC,
+  at: { exp?: number | undefined },
+  bounds: readonly number[],
+  exhausted: string,
+): number | undefined {
+  const now = nowSeconds();
+  const exp = Math.min(...bounds);
+  if (exp <= now) {
+    txError(ctx, 400, "invalid_request", exhausted);
+    return undefined;
+  }
+  at.exp = exp;
+  return exp - now;
 }
 
 /** The Mission's current state, refusing a Mission that is not active (D369: `invalid_request` on Token Exchange). */
@@ -285,13 +308,12 @@ export async function handleDesignationExchange(
     return;
   }
 
-  // 7. Settle and return the designation.
-  const lifetime = Math.min(
-    DESIGNATION_MAX_LIFETIME_S,
-    typeof claims.exp === "number" ? secondsUntil(claims.exp) : DESIGNATION_MAX_LIFETIME_S,
-    secondsUntil(active.expires_at),
-  );
-  const info = resourceServerInfoFor(designee, lifetime);
+  // 7. Settle and return the designation, its expiry pinned within 300 s,
+  // the presented token and the Mission.
+  if (typeof claims.exp !== "number") {
+    txError(ctx, 400, "invalid_request", "subject_token carries no exp");
+    return;
+  }
   const at = new provider.AccessToken({
     accountId: active.subject.sub,
     client,
@@ -300,7 +322,14 @@ export async function handleDesignationExchange(
     rar: authority,
     scope: SCOPE_DECIDED_AT_SAVE,
   });
-  at.resourceServer = newResourceServer(provider, designee, info);
+  const lifetime = pinExpiry(
+    ctx,
+    at,
+    [nowSeconds() + DESIGNATION_MAX_LIFETIME_S, claims.exp, epochOf(active.expires_at)],
+    "the presented token has no lifetime left to designate",
+  );
+  if (lifetime === undefined) return;
+  at.resourceServer = newResourceServer(provider, designee, resourceServerInfoFor(designee, lifetime));
   fixTokenId(at);
   // A client audience: scope projection omits `scope`, as for a handle.
   markDelegationHandle(at);
@@ -324,7 +353,7 @@ export async function handleDesignationExchange(
     issued_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     // RFC 8693 Section 2.2.1: usable only at this AS's delegated exchange, never as an access token.
     token_type: "N_A",
-    expires_in: at.expiration,
+    expires_in: lifetime,
     authorization_details: authority,
   };
   ctx.set("cache-control", "no-store");
@@ -461,10 +490,14 @@ export async function handleDelegatedExchange(
     return;
   }
 
-  // 7. Settle and return the delegated token.
+  // 7. Settle and return the delegated token. The designation is still
+  // unexpired after every awaited check, and the token's expiry is pinned
+  // within the access-token lifetime and the Mission.
   const chain = [...issuance.chain, actor];
-  const info = resourceServerInfoFor(resource, opts.accessTokenTTL ?? 300);
-  info.accessTokenTTL = Math.min(info.accessTokenTTL, secondsUntil(active.expires_at));
+  if (typeof claims.exp !== "number" || claims.exp <= nowSeconds()) {
+    txError(ctx, 400, "invalid_request", "the designation has expired");
+    return;
+  }
   const at = new provider.AccessToken({
     accountId: active.subject.sub,
     client,
@@ -473,7 +506,14 @@ export async function handleDelegatedExchange(
     rar: authority,
     scope: SCOPE_DECIDED_AT_SAVE,
   });
-  at.resourceServer = newResourceServer(provider, resource, info);
+  const lifetime = pinExpiry(
+    ctx,
+    at,
+    [nowSeconds() + (opts.accessTokenTTL ?? 300), epochOf(active.expires_at)],
+    "the Mission has no lifetime left to delegate",
+  );
+  if (lifetime === undefined) return;
+  at.resourceServer = newResourceServer(provider, resource, resourceServerInfoFor(resource, lifetime));
   at.jkt = jkt; // the delegate's own key
   fixTokenId(at);
   markDelegationMint(at, { act: renderAct(chain) });
@@ -493,7 +533,7 @@ export async function handleDelegatedExchange(
     access_token: jwt,
     issued_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     token_type: "DPoP",
-    expires_in: at.expiration,
+    expires_in: lifetime,
     ...((at as { scope?: string }).scope ? { scope: (at as { scope?: string }).scope } : {}),
     authorization_details: authority,
   };

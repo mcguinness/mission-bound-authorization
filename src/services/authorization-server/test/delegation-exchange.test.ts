@@ -254,7 +254,7 @@ async function delegatedToSubagent(h: Harness, authority?: unknown[]) {
 }
 
 /** The agent's async-family access token (handle, then family) for a fresh Mission. */
-async function familyToken(h: Harness): Promise<{ missionId: string; familyToken: string; familyGrant: string }> {
+async function familyToken(h: Harness): Promise<{ missionId: string; familyToken: string; familyGrant: string; refreshToken: string }> {
   const { missionId, accessToken } = await baseMission(h);
   const agent = dpop.get("ap-agent") as Keys;
   const handle = await token(h, "ap-agent", agent, {
@@ -276,7 +276,44 @@ async function familyToken(h: Harness): Promise<{ missionId: string; familyToken
   expect(family.status, JSON.stringify(family.body)).toBe(200);
   const tokenValue = family.body.access_token as string;
   const familyGrant = h.as.tokenIssuanceStore.resolve(h.issuer, jtiOf(tokenValue))?.grantId as string;
-  return { missionId, familyToken: tokenValue, familyGrant };
+  return { missionId, familyToken: tokenValue, familyGrant, refreshToken: family.body.refresh_token as string };
+}
+
+/** RFC 7009: ap-agent revokes `tokenValue` (a refresh token) at the revocation endpoint. */
+async function revokeRefreshToken(h: Harness, tokenValue: string): Promise<number> {
+  const res = await fetch(`${h.issuer}/token/revocation`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      token: tokenValue,
+      token_type_hint: "refresh_token",
+      client_assertion: await assertion(h, "ap-agent"),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    }).toString(),
+  });
+  return res.status;
+}
+
+/**
+ * Run `request` with the clock `startMs` from now, jumping it to `afterMs`
+ * during the request's first grant lookup: an expiry boundary crossed while
+ * the exchange awaits its checks (#1279 review).
+ */
+async function acrossTheBoundary<T>(h: Harness, startMs: number, afterMs: number, request: () => Promise<T>): Promise<T> {
+  const find = h.as.provider.Grant.find.bind(h.as.provider.Grant);
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(startMs);
+  const spy = vi.spyOn(h.as.provider.Grant, "find").mockImplementationOnce(async (...args: Parameters<typeof find>) => {
+    const grant = await find(...args);
+    vi.setSystemTime(afterMs);
+    return grant;
+  });
+  try {
+    return await request();
+  } finally {
+    spy.mockRestore();
+    vi.useRealTimers();
+  }
 }
 
 let on: Harness;
@@ -389,6 +426,30 @@ describe("delegation by designation: the agent designates, the sub-agent redeems
     expect(fresh.status).toBe(400);
     expect(fresh.body.error).toBe("invalid_request");
     expect(derivations(on, missionId)).toBe(before + 2);
+  });
+
+  it("RFC 7009 revocation of the family's refresh token refuses new designations and pending redemptions and inactivates the delegated token", async () => {
+    const { missionId, familyToken: subject, familyGrant, refreshToken } = await familyToken(on);
+    const redeemed = (await designate(on, subject, SUBAGENT)).body.access_token as string;
+    const delegated = await redeem(on, redeemed);
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    const pending = (await designate(on, subject, SUBAGENT)).body.access_token as string;
+    expect(await introspect(on, delegated.body.access_token as string)).toMatchObject({ active: true });
+
+    expect(await revokeRefreshToken(on, refreshToken)).toBe(200);
+    expect(await on.as.provider.Grant.find(familyGrant)).toBeUndefined();
+    expect(on.as.delegationFamilyStore.resolve(familyGrant)).toBeDefined();
+    expect(on.as.kernel.get(missionId)?.state).toBe("active");
+    const before = derivations(on, missionId);
+
+    expect(await introspect(on, delegated.body.access_token as string)).toEqual({ active: false });
+    const again = await redeem(on, pending);
+    expect(again.status).toBe(400);
+    expect(again.body.error).toBe("invalid_request");
+    const fresh = await designate(on, subject, SUBAGENT);
+    expect(fresh.status).toBe(400);
+    expect(fresh.body.error).toBe("invalid_request");
+    expect(derivations(on, missionId)).toBe(before);
   });
 
   it("revoking the approval grant while the Mission stays active refuses both exchanges and inactivates the delegated token", async () => {
@@ -601,6 +662,31 @@ describe("delegation depth from the AS's accounting (@spec mission#delegation-co
     const res = await designate(on, delegated, SECOND, SUBAGENT);
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_target");
+    expect(derivations(on, missionId)).toBe(before);
+  });
+});
+
+describe("lifetimes are absolute across the request (@spec mission#designation, #1279 review)", () => {
+  it("a designation whose source expires while the exchange awaits its checks is refused invalid_request, counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const exp = decodeJwt(accessToken).exp as number;
+    const before = derivations(on, missionId);
+    const res = await acrossTheBoundary(on, exp * 1000 - 100, exp * 1000 + 10, () => designate(on, accessToken, SUBAGENT));
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("invalid_request");
+    expect(res.body.error_description).toMatch(/no lifetime left/);
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
+  it("a redemption whose designation expires while the exchange awaits its checks is refused invalid_request, counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = (await designate(on, accessToken, SUBAGENT)).body.access_token as string;
+    const exp = decodeJwt(designation).exp as number;
+    const before = derivations(on, missionId);
+    const res = await acrossTheBoundary(on, exp * 1000 - 100, exp * 1000 + 10, () => redeem(on, designation));
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("invalid_request");
+    expect(res.body.error_description).toMatch(/designation has expired/);
     expect(derivations(on, missionId)).toBe(before);
   });
 });

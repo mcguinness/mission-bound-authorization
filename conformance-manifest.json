@@ -8078,9 +8078,21 @@
      "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > a retried redemption is a new counted derivation, not an idempotent replay",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > RFC 7009 revocation of the family's refresh token refuses new designations and pending redemptions and inactivates the delegated token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "lifetimes are absolute across the request (@spec mission#designation, #1279 review) > a redemption whose designation expires while the exchange awaits its checks is refused invalid_request, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers. Witnessed: the source grant or family's validity (skipping the liveness check fails two witnesses), the Mission's state, and a separate count per redemption. Partial: the delegation policy and the Mission's current authority are evaluated at every redemption, but no witness changes either between a designation and its redemption."
+   "notes": "#869 (D449): proven by disabling the code it covers. Witnessed: the source grant or family's validity (skipping the liveness check fails two witnesses), the Mission's state, and a separate count per redemption. Partial: the delegation policy and the Mission's current authority are evaluated at every redemption, but no witness changes either between a designation and its redemption. #1279 review: an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses the exchanges (requiring the row alone fails that witness); the designation's own expiry is rechecked after every awaited check."
   },
   {
    "id": "core.delegation-constraints.designation-adds-no-delegate",
@@ -8292,9 +8304,15 @@
      "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > a designation's subset authority, Mission claim and life: within 300 s, the presented token and the Mission",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "lifetimes are absolute across the request (@spec mission#designation, #1279 review) > a designation whose source expires while the exchange awaits its checks is refused invalid_request, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers: a designation living to the Mission's expiry fails the witness."
+   "notes": "#869 (D449): proven by disabling the code it covers: a designation living to the Mission's expiry fails the witness. #1279 review: the expiry is pinned as an absolute instant after every awaited check, and an exhausted lifetime refuses before settlement; dropping the source bound, or the refusal, fails the boundary witness."
   },
   {
    "id": "core.designation.audience-separation",
