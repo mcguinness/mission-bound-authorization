@@ -519,13 +519,22 @@ Mission entry B when all of the following hold:
      `invoices.*`); and
    - a family is never within a literal action.
 3. **Constraints.** For every key K in **B**.`constraints`:
-   - K MUST also be present in A.`constraints`. A key present in B but
-     absent from A is treated as the broadest possible value and
+   - K MUST also be present in A.`constraints`, unless B's value is one
+     K's definition makes equivalent to omitting the member
+     (`requires_action_approval: false`). Otherwise a key present in B
+     but absent from A is treated as the broadest possible value and
      therefore fails this test.
    - A's value MUST be no broader than B's under K's subset rule: the
      specification-defined rule when K is a Common Constraint
      ({{common-constraints}}), the deployment-defined comparison
      otherwise.
+
+The equivalence in step 3 holds for comparison only: recorded entries
+and their integrity commitments are unchanged. A key present only in A
+narrows A only when it has defined semantics and the resource server
+serving A.`resource` can enforce it; an unknown key in A is never
+treated as narrowing ({{common-constraints}}). A grant-enabling member
+such as `delegation` follows the delegation rules below, not this one.
 
 The authorization server MUST make this resource comparison with the
 same matcher, over the same URI forms, that resource servers use to
@@ -957,7 +966,12 @@ this document in full declares:
 `narrowing`: `true`
 : The subset rule of {{subset}}, over every member this document
   specifies, and the Common Constraint intersection rules of
-  {{common-constraints}} are fully defined.
+  {{common-constraints}} are fully defined. An authorization server MUST
+  NOT declare `narrowing` as `true` unless it implements these rules for
+  every Common Constraint of {{initial-common-constraints}}. A Common
+  Constraint registered later is not required by the declaration, but an
+  authorization server that meets one it does not support fails closed
+  ({{common-constraints}}).
 
 `delegation`: `true`
 : The delegation policy of {{delegate-eligibility}} is fully defined; an
@@ -975,7 +989,16 @@ example, `mission_resource_access` entries without ever emitting `scope`
 for them) leaves `projection` undeclared rather than declaring it
 `true`. {{I-D.draft-mcguinness-oauth-mission}}'s carried-as-approved
 fallback then applies to `scope` projection for this type at that
-deployment, as it would for an unsupported type.
+deployment, as it would for an unsupported type. Omitting `projection`
+from one carrier leaves it undeclared by that carrier only, so a
+lower-priority carrier can still declare it
+({{I-D.draft-mcguinness-oauth-mission}}). Where no carrier declares it,
+the authorization server emits no projected resource `scope` for this
+type: it carries `authorization_details` where the target consumes them,
+refuses issuance to a `scope`-only target only when no other applicable
+carried entry supplies a safe projection, and answers an explicitly
+requested `scope` it cannot grant as
+{{I-D.draft-mcguinness-oauth-mission}} specifies.
 
 ## Modeling Tools and Function Calls {#tools}
 
