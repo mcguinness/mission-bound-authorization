@@ -303,6 +303,11 @@ A `resource` value under `prefix` MUST NOT carry a query or fragment
 component; the authorization server refuses such an entry with the
 `invalid_authorization_details` error code ({{Section 5 of RFC9396}}).
 
+This type does not use the {{RFC9396}} common `locations` field:
+`resource` identifies where an entry applies. The authorization server
+refuses an entry carrying `locations` with the
+`invalid_authorization_details` error code.
+
 ### Decimal Values {#decimal-values}
 
 A decimal-string value in a Common Constraint (`max_amount`'s `amount`
@@ -584,16 +589,20 @@ it narrows:
 - an Authority Set entry to a derived or delegated token
   ({{delegate-eligibility}}).
 
-In either case, a registered Common Constraint key present in the
-ceiling entry that the authorization server does not implement narrowing
-for MUST NOT be dropped while the entry survives. The authorization
-server MUST instead fail closed: refuse the whole derivation, or omit
-the entry from the result, as it may for an unrecognized
-`target_resources` value; the granted `authorization_details` echo
-reflects any such omission ({{I-D.draft-mcguinness-oauth-mission}}).
-Carrying the entry forward with the key dropped would widen effective
-authority past the ceiling, as an unenforced key would at the resource
-server ({{I-D.draft-mcguinness-oauth-mission}}).
+In either case, a `constraints` key that the authorization server does
+not implement narrowing for, whether a registered Common Constraint or a
+deployment-defined key, and whether it appears in the ceiling entry or
+in the candidate, MUST NOT be dropped while the entry survives. The
+authorization server MUST instead refuse the derivation: an unsupported
+constraint is unsupported input, so the entry is never omitted to repair
+it ({{I-D.draft-mcguinness-oauth-mission}}). An entry whose constraints
+the authorization server can compare but that policy declines to grant
+is different: it is narrowed or omitted, and the granted
+`authorization_details` echo reflects that
+({{I-D.draft-mcguinness-oauth-mission}}). Carrying the entry forward
+with the key dropped would widen effective authority past the ceiling,
+as an unenforced key would at the resource server
+({{I-D.draft-mcguinness-oauth-mission}}).
 
 This type defines no interoperable cumulative use counter. A deployment
 that adopts Mission Metering ({{I-D.draft-mcguinness-mission-metering}})
@@ -748,14 +757,44 @@ server:
   containment, before the prefix comparison rather than after
   ({{resource-boundary-canonicalization}}).
 - MUST fail closed on any `constraints` key it does not understand, or
-  understands but cannot enforce, in an applicable entry: refuse the
-  request (for example, with HTTP status code 403 and the
-  `insufficient_scope` error code ({{Section 3.1 of RFC6750}}), or the
-  deployment's usual insufficient-authority error) rather than grant
-  access while ignoring the key.
+  understands but cannot enforce, in an applicable entry, rather than
+  grant access while ignoring the key.
 - MUST NOT reduce a `constraints` key to disclosure-only: an unenforced
   key that narrows authority silently widens the grant if treated as
   absent or advisory.
+
+**Failing closed.** An entry the resource server cannot fully enforce
+provides no authority: one with an unrecognized `resource_match` value,
+an unknown member, or a `constraints` key the resource server does not
+understand or cannot enforce. The resource server then authorizes the
+request only through another applicable entry that it can fully enforce
+and that covers the whole request on its own: the entry's `resource`
+matches the target, the action is among its `actions`, and every key in
+its `constraints` is satisfied. The resource server:
+
+- MUST NOT combine parts of several entries to authorize one request, or
+  borrow authority from an entry it cannot fully enforce; and
+- MUST refuse the request when no such entry exists, for example with
+  HTTP status code 403 and the `insufficient_scope` error code
+  ({{Section 3.1 of RFC6750}}), or with the deployment's usual
+  insufficient-authority error.
+
+A failure of token-wide validation, such as of the token's signature,
+audience, or sender constraint ({{I-D.draft-mcguinness-oauth-mission}}),
+rejects the token whatever its entries carry.
+
+**Entry members.** This document gives each member of an entry a
+resource-server role or none:
+
+- `type`, `resource`, `resource_match`, `actions`, and `constraints` are
+  enforced as above;
+- `delegation` has no resource-server enforcement role: the
+  authorization server applies it at issuance
+  ({{delegate-eligibility}}), so a resource server MAY disregard it,
+  together with any member a companion profile adds to it; and
+- any other member, including the {{RFC9396}} common `locations` field,
+  which this type does not use ({{entry-validation}}), makes the entry
+  one the resource server cannot fully enforce.
 
 ## Protected Resource Metadata {#protected-resource-metadata}
 

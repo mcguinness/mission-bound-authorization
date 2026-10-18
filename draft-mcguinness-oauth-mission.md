@@ -3367,12 +3367,17 @@ A resource server:
    more than one carried entry applies, entries are alternative
    grants of authority, not conjunctive filters, unless the entry's
    type states otherwise.
-2. MUST fail closed (refuse the request, for example, a `403` with
-   the `insufficient_scope` error code {{RFC6750}}, or the
-   deployment's usual insufficient-authority error) on any applicable
-   entry whose type it does not implement, or whose type-defined
-   enforcement it cannot complete (an unrecognized member, an
-   unenforceable constraint, or an unrecognized matching mode).
+2. MUST treat as providing no authority any applicable entry whose
+   type it does not implement, or whose type-defined enforcement it
+   cannot complete (an unrecognized member, an unenforceable
+   constraint, or an unrecognized matching mode). It MUST refuse the
+   request (for example, a `403` with the `insufficient_scope` error
+   code {{RFC6750}}, or the deployment's usual insufficient-authority
+   error) unless another applicable entry that it can fully enforce
+   authorizes the whole request on its own, and MUST NOT combine parts
+   of several entries to authorize one request. A failure of the
+   token's own validation (above) rejects the token whatever its
+   entries carry.
 3. MUST NOT, when a token also carries `scope`, grant on the basis of
    a scope value any access broader than the corresponding
    `authorization_details` entry permits, including access that
@@ -6371,6 +6376,12 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Resource Server Enforcement (#1258): an applicable entry the resource
+  server cannot fully enforce provides no authority. Another entry
+  authorizes the request only when it covers the whole request on its
+  own; parts of entries are never combined, and a token-wide validation
+  failure still rejects the token.
 
 - Editorial: a readability pass shortens paragraphs, turns
   enumerations into lists, cuts restatement, and follows OAuth
