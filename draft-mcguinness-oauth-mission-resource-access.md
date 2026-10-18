@@ -559,8 +559,9 @@ this comparison ({{delegate-eligibility}}). A derived entry's
 
 - its `max_depth` MUST be no greater than the parent entry's;
 - its `allowed_delegates` MUST be no wider than the parent entry's, and
-  where the parent entry has none, a derived list only restricts the
-  inherited policy decision ({{delegate-eligibility}}); and
+  where the parent entry's eligibility inherits the authorization
+  server's policy decision ({{delegate-eligibility}}), a derived list
+  only restricts that decision; and
 - a derived entry MUST NOT introduce `delegation` where the parent entry
   has none.
 
@@ -865,18 +866,24 @@ evaluated the same way.
 
 **Inherited eligibility.** A derived entry's `allowed_delegates`
 restricts eligibility; it never replaces an obligation the derivation
-inherits. Where the approved Authority Set entry has no
-`allowed_delegates`, its eligibility is the authorization server's
-policy decision, and that decision continues to bind every entry derived
-from it: a delegate is permitted only when the policy permits it and,
-where a derived entry adds a list, the list permits it too. When policy
-permits Bob and denies Carol, a derived entry whose list names Carol
-still cannot admit Carol. The authorization server evaluates this
-obligation against the approved entry in the Mission Record
-({{I-D.draft-mcguinness-oauth-mission}}), the authoritative context for
-every later exchange, never against a presented token alone. Where it
-cannot resolve that context, the entry narrows out of the delegated
-token.
+inherits. An entry derived from a reference entry that has no
+`allowed_delegates` inherits the authorization server's policy
+decision, and so does every entry derived from it: a delegate is
+permitted only when the policy permits it and, where the entry carries
+a list, the list permits it too. When policy permits Bob and denies
+Carol, an entry whose list names Carol still cannot admit Carol.
+
+The obligation holds from the initial derivation. An approved entry
+derived from a ceiling entry without `allowed_delegates` inherits the
+policy decision even when the approved proposal added a list, so the
+approved entry's own members do not reveal the obligation. The
+authorization server therefore records, when it derives the Authority
+Set, which approved entries inherit the policy decision, and retains
+that provenance with the Mission. It evaluates every later exchange
+against the approved entry in the Mission Record
+({{I-D.draft-mcguinness-oauth-mission}}) and that provenance, never
+against a presented token alone. Where it cannot resolve either, the
+entry narrows out of the delegated token.
 
 ### Matching `allowed_delegates` {#matching-allowed-delegates}
 
