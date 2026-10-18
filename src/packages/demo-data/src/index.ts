@@ -878,8 +878,29 @@ interface LoadedPolicy {
   audit_horizon_s: number;
 }
 
+/**
+ * @spec resource-access#resource-matching (#1264, D446): this deployment
+ * implements `exact` resource matching only. An entry naming any other
+ * `resource_match` (`prefix`, or an unknown value) is refused at load rather
+ * than rebuilt without the member, which would silently change its matching
+ * semantics: narrower for a ceiling entry, wider for a containment removal.
+ */
+function rejectUnsupportedResourceMatch(
+  file: string,
+  e: Record<string, unknown>,
+  ctx: string,
+): void {
+  if (e.resource_match !== undefined && e.resource_match !== "exact") {
+    throw new ConfigError(
+      file,
+      `${ctx} has resource_match ${JSON.stringify(e.resource_match)}; this deployment implements exact resource matching only`,
+    );
+  }
+}
+
 export function parseCeilingEntry(file: string, raw: unknown, ctx: string): AuthorityEntry {
   const e = asObject(file, raw, ctx);
+  rejectUnsupportedResourceMatch(file, e, ctx);
   const type = reqString(file, e, "type", ctx);
   if (type !== "mission_resource_access")
     throw new ConfigError(file, `${ctx} has unsupported authority type`);
@@ -1151,6 +1172,7 @@ function loadContainmentPolicy(): ContainmentPolicy {
     const r = asObject(file, raw, `containment.rules[${i}]`);
     const remove = asArray(file, r.remove, `containment.rules[${i}].remove`).map((rawEntry, j) => {
       const e = asObject(file, rawEntry, `containment.rules[${i}].remove[${j}]`);
+      rejectUnsupportedResourceMatch(file, e, `containment.rules[${i}].remove[${j}]`);
       const entry: ContainmentRemoveEntry = {
         resource: reqString(file, e, "resource", `containment.rules[${i}].remove[${j}]`),
       };
@@ -1629,6 +1651,7 @@ export interface GovernedPolicy {
 function loadCeilingEntries(file: string, raw: unknown, ctx: string): CeilingEntry[] {
   return asArray(file, raw, ctx).map((item, i) => {
     const e = asObject(file, item, `${ctx}[${i}]`);
+    rejectUnsupportedResourceMatch(file, e, `${ctx}[${i}]`);
     const type = reqString(file, e, "type", `${ctx}[${i}]`);
     if (type !== "mission_resource_access")
       throw new ConfigError(file, `${ctx}[${i}] has unsupported authority type`);
