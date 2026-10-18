@@ -346,8 +346,26 @@ for (const row of rows) {
     } else if (Array.isArray(model.capabilities) && !model.capabilities.includes(app.capability)) {
       fail("schema", `${id}: capability "${app.capability}" not declared in model.capabilities`);
     }
+  } else if (app.kind === "capabilities") {
+    // All of several independently optional capabilities: the row applies
+    // only where the deployment claims every one of them.
+    const all = app.all_of;
+    const extra = Object.keys(app).filter((k) => k !== "kind" && k !== "all_of");
+    if (
+      extra.length ||
+      !Array.isArray(all) ||
+      all.length < 2 ||
+      !all.every(nonEmptyString) ||
+      new Set(all).size !== all.length
+    ) {
+      fail("schema", `${id}: capabilities applicability is {kind, all_of}, naming at least two distinct capabilities`);
+    } else if (Array.isArray(model.capabilities)) {
+      for (const c of all) {
+        if (!model.capabilities.includes(c)) fail("schema", `${id}: capability "${c}" not declared in model.capabilities`);
+      }
+    }
   } else {
-    fail("schema", `${id}: applicability.kind must be "unconditional" or "capability"`);
+    fail("schema", `${id}: applicability.kind must be "unconditional", "capability" or "capabilities"`);
   }
 
   // observation: exact members, normative required

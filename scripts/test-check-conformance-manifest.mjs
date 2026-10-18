@@ -123,3 +123,44 @@ test('the real CLI exits nonzero for a fabricated punctuation mapping', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('the real CLI accepts applicability on all of several capabilities and refuses malformed lists', () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mission-conformance-applicability-'));
+  try {
+    fs.mkdirSync(path.join(dir, 'scripts'));
+    for (const file of ['check-conformance-manifest.mjs', 'test-title-paths.mjs']) {
+      fs.copyFileSync(path.join(root, 'scripts', file), path.join(dir, 'scripts', file));
+    }
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'conformance-manifest.json'), 'utf8'));
+    const row = manifest.requirements.find((r) => r.coverage === 'todo' && r.applicability.kind === 'capability');
+    manifest.requirements = [row];
+    manifest.source.specs = { [row.spec]: manifest.source.specs[row.spec] };
+    fs.copyFileSync(path.join(root, row.spec), path.join(dir, row.spec));
+    const [a, b] = manifest.model.capabilities;
+    const run = (applicability) => {
+      row.applicability = applicability;
+      fs.writeFileSync(path.join(dir, 'conformance-manifest.json'), JSON.stringify(manifest));
+      const r = spawnSync(process.execPath, [path.join(dir, 'scripts/check-conformance-manifest.mjs')], {
+        cwd: dir, encoding: 'utf8', env: { ...process.env, CI: '' },
+      });
+      return { status: r.status, out: r.stdout + r.stderr };
+    };
+    const good = run({ kind: 'capabilities', all_of: [a, b] });
+    assert.equal(good.status, 0, good.out);
+    for (const [applicability, message] of [
+      [{ kind: 'capabilities', all_of: [a] }, /at least two distinct capabilities/],
+      [{ kind: 'capabilities', all_of: [a, a] }, /at least two distinct capabilities/],
+      [{ kind: 'capabilities', all_of: [a, b], capability: a }, /at least two distinct capabilities/],
+      [{ kind: 'capabilities', all_of: [a, 'not.declared'] }, /"not\.declared" not declared in model\.capabilities/],
+      [{ kind: 'any', all_of: [a, b] }, /must be "unconditional", "capability" or "capabilities"/],
+    ]) {
+      const bad = run(applicability);
+      assert.equal(bad.status, 1, JSON.stringify(applicability));
+      assert.match(bad.out, message, JSON.stringify(applicability));
+    }
+  } finally {
+    // Only the freshly allocated fixture directory owned by this test.
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
