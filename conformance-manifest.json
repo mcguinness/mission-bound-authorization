@@ -8331,7 +8331,7 @@
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
      "name": "a designation authorizes no resource access (@spec mission#designation, mission#composite-active) > a resource server validating a JWT access token's audience rejects a designation (RFC 9068 Section 4)",
-     "level": "endpoint",
+     "level": "unit",
      "surface": "token-endpoint"
     }
    ],
