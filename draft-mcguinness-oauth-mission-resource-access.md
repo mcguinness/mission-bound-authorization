@@ -198,11 +198,11 @@ with these members:
 
 `actions`:
 : REQUIRED. An array of strings. Each value is an action identifier
-  matching `[A-Za-z0-9_.:-]+`, or an action family: an identifier
-  followed by `.*`. A family authorizes every action whose dot-separated
-  identifier extends the family name at a segment boundary: `invoices.*`
-  authorizes `invoices.read` and `invoices.q3.export`, not
-  `invoicesx.read`.
+  whose whole value matches `[A-Za-z0-9_.:-]+`, or an action family: an
+  identifier followed by `.*`. A family authorizes every action whose
+  dot-separated identifier extends the family name at a segment
+  boundary: `invoices.*` authorizes `invoices.read` and
+  `invoices.q3.export`, not `invoicesx.read`.
 
   - Like an OAuth scope, an action value carries meaning only at the
     `resource` that defines it: a consumer enforces only the actions it
@@ -643,7 +643,9 @@ This document defines the following Common Constraints.
     there is no intersection and the combination fails.
 
 `recipient_domain`:
-: The action applies only to recipients within the named domain.
+: The action applies only to recipients within the named domain. An
+  action addressed to several recipients is within the bound only when
+  every recipient is.
 
   - Value: a string containing a DNS name.
   - Subset: no broader when equal to the reference or a DNS subdomain of
@@ -712,7 +714,10 @@ Common Constraint comparisons are in value space, not lexical:
 - `resource_issued_after` and `resource_issued_before` values are
   compared as the instants they denote after normalization to UTC, so
   two RFC 3339 representations of the same instant that differ only in
-  timezone offset or trailing subsecond zeros are equal; and
+  timezone offset or trailing subsecond zeros are equal;
+- `time_window` `not_before` and `not_after` values are compared as the
+  instants they denote after normalization to UTC, as
+  `resource_issued_after` and `resource_issued_before` values are; and
 - `recipient_domain` values are compared as DNS names,
   case-insensitively and on whole labels, so `mail.example.com` is
   within `example.com` and `example.net` is not.
@@ -810,9 +815,10 @@ actor-type classes:
   carry multiple space-separated values; a `{ "sub_profile": ... }`
   matcher is satisfied when its value is among the actor's values.
 
-A delegate is permitted if it matches any of the entry's delegate
-matchers, so a deployment can permit a specific client, a class of
-actors, or both.
+A delegate matcher that carries both `sub` and `sub_profile` is
+satisfied only when the delegate satisfies both. A delegate is permitted
+if it satisfies any of the entry's delegate matchers, so a deployment
+can permit a specific client, a class of actors, or both.
 
 The authorization server MUST authenticate the delegate at the Token
 Exchange and assert the actor's `sub` and `sub_profile` itself. A
@@ -851,10 +857,11 @@ safe only when all of the following hold:
 
 1. **The mapping covers the same resource set.** The mapping's `scope`
    value is defined over the entry's `resource` and `resource_match`. A
-   `prefix` entry projects safely only when the mapping itself scopes
-   the value to that same prefix; a `scope` value the target's own
-   interpretation extends to a broader ancestor resource is not a safe
-   projection of a narrower `prefix` entry.
+   `prefix` entry projects safely only when the mapping scopes the value
+   to that same prefix, or to a narrower resource within it whose
+   complete effective rights remain a subset of the entry's; a `scope`
+   value the target's own interpretation extends to a broader ancestor
+   resource is not a safe projection of a narrower `prefix` entry.
 2. **The actions match without aggregation.** Every action granted by
    the mapped `scope` value MUST be included in the applicable entry's
    `actions`; the value MAY grant a proper subset of them. A `scope`
