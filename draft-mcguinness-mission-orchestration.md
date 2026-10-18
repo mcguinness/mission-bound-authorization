@@ -640,17 +640,25 @@ For in-flight requests, the orchestrator MUST distinguish:
   plan says `cancel_if_possible`.
 
 `committed`:
-: The action's effect occurred or the deployment cannot prove it did
-  not occur. The orchestrator MUST apply post-completion behavior.
+: Evidence establishes that the action's effect occurred, such as
+  Execution Evidence with `outcome` `completed`
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}). The orchestrator
+  MUST apply post-completion behavior.
 
 `unknown`:
-: The orchestrator cannot determine whether the action committed. The
-  orchestrator MUST treat the outcome as requiring human review unless
-  deployment policy defines a stricter default.
+: No evidence yet establishes whether the action's effect occurred.
+  The orchestrator MUST treat the outcome as requiring human review
+  unless deployment policy defines a stricter default, and MUST NOT
+  apply post-completion behavior to it. This is the runtime profile's
+  undetermined outcome ({{I-D.draft-mcguinness-mission-runtime}}): it
+  leaves this class only when evidence, such as that profile's outcome
+  reconciliation, establishes the outcome.
 
 For irreversible actions, external commitments, and privileged
 administration, an `unknown` outcome MUST NOT be treated as success or
-as harmless suppression.
+as harmless suppression. Handling an `unknown` outcome conservatively,
+for example by keeping it charged against a consumption bound, does
+not make it `committed`.
 
 ## Cancellation Attempt {#cancellation}
 
@@ -659,8 +667,8 @@ When the unwind plan requires cancellation, the orchestrator MUST:
 1. invoke the deployment-defined cancellation mechanism, if any;
 2. record whether cancellation was accepted, rejected, unavailable, or
    unknown;
-3. continue to classify the outcome as `unknown` until it has evidence
-   that the action did not commit; and
+3. continue to classify the outcome as `unknown` until evidence
+   establishes whether the action committed; and
 4. emit Orchestration Evidence.
 
 Cancellation acceptance by an upstream queue is not proof that an
@@ -1011,7 +1019,8 @@ A conforming Mission-aware orchestrator MUST:
   ({{unwind-plan-integrity}});
 - stop new governed work when Mission state is non-active or stale;
 - classify in-flight steps under {{in-flight}};
-- apply post-completion behavior for committed or unknown outcomes;
+- apply post-completion behavior for committed outcomes, and route
+  unknown outcomes to human review;
 - emit Orchestration Evidence; and
 - document the policy basis for compensation after Mission termination.
 
@@ -1072,6 +1081,12 @@ This document makes no IANA request.
 
 \[\[ To be removed from the final specification ]]
 
+- In-Flight Requests ({{in-flight}}): `committed` requires evidence
+  that the effect occurred, and an outcome the deployment cannot
+  establish is `unknown`, the runtime profile's undetermined outcome.
+  Post-completion behavior, including `compensate`, applies to
+  `committed` outcomes only; an `unknown` outcome goes to human review
+  (#1269).
 - The non-active states are `terminated`, with its termination
   reason, and `suspended`. Orchestration Evidence carries
   `mission_termination` beside a `terminated` `mission_state`, and
