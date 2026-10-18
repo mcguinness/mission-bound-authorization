@@ -8151,7 +8151,29 @@
    "id": "core.designation.audience-separation",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "designation",
-   "text": "The identifiers of the clients the AS designates and the audiences of the access tokens it issues for resource access MUST be disjoint, and the AS MUST refuse a designation request that would violate this with `invalid_target`",
+   "text": "A designated client's identifier MUST NOT be an audience that any resource server accepts for this AS's access tokens, throughout the designation's lifetime",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "no designation is issued whose aud names a client identifier that a resource server accepts as an audience for this AS's access tokens: neither an audience the AS issues nor an alias a resource server accepts but the AS never issues (the AS issues tokens for https://api.example, the resource server also accepts https://worker.example, and no designation names https://worker.example), so a signed designation presented to that resource server fails its RFC 9068 audience check"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange. The #1274 review added the accepted-alias case: RFC 9068 Section 4 validates against identifiers the resource server accepts, which can include aliases the AS never issues."
+  },
+  {
+   "id": "core.designation.audience-separation-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "designation",
+   "text": "The AS MUST refuse, with `invalid_target` ({{Section 2.2.2 of RFC8693}}), a designation request naming a client for which it cannot establish that separation",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -8162,12 +8184,12 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a designation request naming a client whose identifier is also an audience of access tokens the AS issues for resource access is refused with invalid_target, with no designation issued, so a resource server validating a JWT access token's audience never accepts a designation"
+    "normative": "a designation request is refused with invalid_target and no designation issued when the named client's identifier is an audience the AS issues, when it is an alias a resource server accepts but the AS never issues (the accepted-but-not-issued collision), and when the AS has no established separation for that identifier"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange. The #1274 review added the accepted-alias case: RFC 9068 Section 4 validates against identifiers the resource server accepts, which can include aliases the AS never issues."
   },
   {
    "id": "core.self-exchange.designation-not-self-exchange",
