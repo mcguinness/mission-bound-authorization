@@ -781,7 +781,8 @@ server:
 
 **Failing closed.** An entry the resource server cannot fully enforce
 provides no authority: one with an unrecognized `resource_match` value,
-an unknown member, or a `constraints` key the resource server does not
+a member the resource server does not recognize or whose obligations it
+cannot fulfill, or a `constraints` key the resource server does not
 understand or cannot enforce. The resource server then authorizes the
 request only through another applicable entry that it can fully enforce
 and that covers the whole request on its own: the entry's `resource`
@@ -799,18 +800,27 @@ A failure of token-wide validation, such as of the token's signature,
 audience, or sender constraint ({{I-D.draft-mcguinness-oauth-mission}}),
 rejects the token whatever its entries carry.
 
-**Entry members.** This document gives each member of an entry a
-resource-server role or none:
+**Entry members.** Each member of an entry has a resource-server role
+or none:
 
 - `type`, `resource`, `resource_match`, `actions`, and `constraints` are
   enforced as above;
 - `delegation` has no resource-server enforcement role: the
   authorization server applies it at issuance
   ({{delegate-eligibility}}), so a resource server MAY disregard it,
-  together with any member a companion profile adds to it; and
-- any other member, including the {{RFC9396}} common `locations` field,
-  which this type does not use ({{entry-validation}}), makes the entry
-  one the resource server cannot fully enforce.
+  together with any member a companion profile adds to it;
+- a member that another specification defines for this type is
+  enforced as that specification requires, and leaves the entry fully
+  enforceable when the resource server, or a runtime layer acting for
+  it, implements that specification and fulfills every obligation it
+  places on enforcement; and
+- any other member, including one the resource server does not
+  recognize, makes the entry one the resource server cannot fully
+  enforce.
+
+An entry carrying the {{RFC9396}} common `locations` field, which this
+type does not use ({{entry-validation}}), is likewise one the resource
+server cannot fully enforce.
 
 ## Protected Resource Metadata {#protected-resource-metadata}
 
