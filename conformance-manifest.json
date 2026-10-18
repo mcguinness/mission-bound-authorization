@@ -67,12 +67,12 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "23a619e183f422e65239531b7ccafa902ad7c5fb",
-    "content_sha256": "c2d7d81603807159e16200e38c8d5fa6d3a72db6a2367ffa2053d9f31815d4de"
+    "revision": "99cdf43890121852e8bf5ff62d6affe63d5e9c71",
+    "content_sha256": "dd6cce30b14a54eec0d2eb5f2fd75c070843e9980d853ed467b319bcc11e38fd"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "ac1e52accd394155c50d5b6d080260fbc4ccc933",
-    "content_sha256": "17b6f588add5327ef2c5eb78e6dcd81dfb1975c3ffe16537df1295d2a92449e3"
+    "revision": "99cdf43890121852e8bf5ff62d6affe63d5e9c71",
+    "content_sha256": "6be5baa7379aef6463001cc0f062eab8b36ff8d1e6775b191e71d4f65174a40f"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
