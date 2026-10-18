@@ -336,6 +336,37 @@ export async function handleTokenExchangeGrant(
     }
   };
 
+  // SPIKE (#869 Sketch step 1, never merged): mint for the authenticated
+  // client under the grant recorded for the presented subject token, bound to
+  // the request's own DPoP key, with none of the delegated exchange's checks.
+  if (params.requested_token_type === "urn:spike:delegated-mint") {
+    const { payload } = await jwtVerify(params.subject_token as string, createLocalJWKSet(opts.publicJwks as never), {
+      issuer: opts.issuer,
+    });
+    const claims = payload as Record<string, unknown>;
+    const issuance = opts.tokenIssuanceStore?.resolve(opts.issuer, claims.jti as string);
+    if (!issuance) throw new errors.InvalidRequest("spike: no issuance record for the subject token");
+    const verified = await verifyTokenEndpointDpop(opts, ctx.get("DPoP"));
+    if (!verified.ok) throw new errors.InvalidRequest("spike: DPoP proof invalid");
+    const mission = opts.kernel.get((claims.mission as { id: string }).id) as MissionRecord;
+    const resource = typeof params.resource === "string" ? params.resource : (claims.aud as string);
+    const at = new provider.AccessToken({
+      accountId: mission.subject.sub,
+      client: ctx.oidc.client as NonNullable<typeof ctx.oidc.client>,
+      grantId: issuance.grantId,
+      gty: TOKEN_EXCHANGE_GRANT_TYPE,
+      rar: claims.authorization_details as AuthorityEntry[],
+      scope: SCOPE_DECIDED_AT_SAVE,
+    });
+    at.resourceServer = newResourceServer(provider, resource, resourceServerInfoFor(resource, 300));
+    at.jkt = verified.proof.jkt;
+    ctx.oidc.entity("AccessToken", at);
+    const jwt = await at.save();
+    ctx.status = 200;
+    ctx.body = { access_token: jwt, token_type: "DPoP", spike_grant_id: issuance.grantId };
+    return;
+  }
+
   // @spec async-delegation — dispatch. `request_refresh_token` selects the
   // async-delegation transport (a base mission access token in; a per-delegation
   // grant with a rotated, sender-constrained refresh token out). Checked BEFORE the
