@@ -163,10 +163,9 @@ with these members:
 : REQUIRED. A string. `mission_resource_access`.
 
 `resource`:
-: REQUIRED. A string. The single protected resource the entry applies
-  to: an absolute URI identifying an OAuth protected resource
-  ({{RFC9728}}), the same kind of identifier as the {{RFC8707}}
-  `resource` value.
+: REQUIRED. A string. The resource the entry applies to: an absolute URI
+  compared with the target of an operation ({{resource-matching}}), the
+  same kind of identifier as the {{RFC8707}} `resource` value.
 
   - Carrying `resource` per entry, which {{RFC9396}} permits, lets one
     token scope distinct authority to distinct resources. A
@@ -182,13 +181,13 @@ with these members:
 : OPTIONAL. A string: `exact` (the default, and the behavior when the
   member is absent) or `prefix`.
 
-  - Under `exact`, the entry applies to the `resource` URI alone.
-  - Under `prefix`, the entry authorizes the `resource` itself and any
-    URI beneath it at a path-segment boundary (the `resource` followed
-    by `/` and further path). {{entry-validation}} limits the `resource`
-    value a `prefix` entry may carry.
-  - {{resource-matching}} defines how a `prefix` entry's `resource` is
-    compared, including the treatment of an empty path.
+  - Under `exact`, the entry applies to an operation target equal to
+    `resource`.
+  - Under `prefix`, the entry applies to the `resource` itself and to
+    targets beneath it at a path-segment boundary. {{entry-validation}}
+    limits the `resource` value a `prefix` entry may carry.
+  - {{resource-matching}} defines the operation target and both
+    comparisons.
   - These two values are the only ones defined; a consumer MUST treat an
     entry whose `resource_match` value it does not recognize as
     unenforceable and fail closed
@@ -339,16 +338,89 @@ shape rather than a JSON number.
 
 ## Resource Matching {#resource-matching}
 
-This section defines how a `prefix` entry's `resource` is compared: with
-another entry's `resource` when the authorization server tests
-containment ({{subset}}), and with a concrete request URI when the
-resource server enforces the entry ({{rs-enforcement}}). A `prefix`
-entry draws an authority boundary in URI space, and both parties draw it
-the same way.
+This section defines how an entry's `resource` is compared: with the
+target of an operation when the resource server enforces the entry
+({{rs-enforcement}}), and with another entry's `resource` when the
+authorization server tests containment ({{subset}}).
 
-For prefix purposes, a `resource` with an empty path and one whose path
-is `/` denote the same base: `https://a.example` and
-`https://a.example/` authorize the same set.
+**Operation target.** Before matching authority, the resource server
+establishes the operation's target: an absolute URI identifying the
+resource the operation acts on. The resource server:
+
+- establishes the target from its documented, trusted operation
+  contract: for an HTTP resource operation the target can be the
+  effective request URI, and for an RPC or tool call the resource server
+  derives it from the operation and its validated arguments;
+- MUST establish the target independently of the entries the request
+  presents, and MUST NOT choose a target because an entry would then
+  match;
+- MUST refuse the operation when it cannot establish one unambiguous
+  target; and
+- MUST execute the operation on the target it matched: matching a
+  different target never authorizes the execution.
+
+An operation contract preserves every resource distinction the
+deployment's authorization constrains; it cannot collapse `/orders/123`
+and `/admin` to the server's root identifier to obtain a match. There is
+no fallback to the protected resource's metadata identifier: an
+operation contract MAY define service-level authority and use that
+identifier as its target, but an absent or ambiguous contract is not
+such a definition. Validating the metadata identifier
+({{Section 3.3 of RFC9728}}) and the token's audience remain separate
+checks, and matching never rewrites a recorded entry or its integrity
+commitments.
+
+The following tables show one RPC operation and how entries match its
+target:
+
+| Role | Value |
+| --- | --- |
+| Protected resource metadata identifier | `https://api.example` |
+| Transport endpoint | `https://api.example/rpc` |
+| Validated operation | `orders.read` for order `123` |
+| Operation target | `https://api.example/orders/123` |
+{: title="An RPC operation and its target"}
+
+| Entry `resource` | `resource_match` | Matches the target |
+| --- | --- | --- |
+| `https://api.example/orders/123` | `exact` | Yes |
+| `https://api.example` | `exact` | No |
+| `https://api.example/rpc` | `exact` | No |
+| `https://api.example/orders` | `prefix` | Yes |
+| `https://api.example/orders/` | `prefix` | Yes |
+| `https://API.EXAMPLE:443/orders/123` | `exact` | No |
+| `https://API.EXAMPLE:443/orders` | `prefix` | Yes |
+{: title="Resource matches for the RPC operation"}
+
+These are resource matches only; actions and constraints are checked
+separately.
+
+**Exact matching.** Under `exact`, the entry's `resource`, after JSON
+decoding, and the operation target are compared character for character,
+including any query component. The comparison applies no case folding,
+default-port removal, percent-decoding, query removal, or trailing-slash
+equivalence, and a matcher MUST NOT normalize either operand by parsing
+and reserializing it. Equivalent URI spellings therefore do not match,
+so an issuer SHOULD emit an `exact` `resource` in the resource server's
+documented target spelling.
+
+| `exact` entry `resource` | Operation target | Result |
+| --- | --- | --- |
+| `https://api.example/orders/123` | `https://api.example/orders/123` | Match |
+| `https:\/\/api.example\/orders\/123` (JSON escapes) | `https://api.example/orders/123` | Match |
+| `https://api.example/orders/123` | `https://API.EXAMPLE/orders/123` | No match |
+| `https://api.example/orders/123` | `https://api.example:443/orders/123` | No match |
+| `https://api.example/orders/123` | `https://api.example/orders/%31%32%33` | No match |
+| `https://api.example/orders/123` | `https://api.example/orders/123/` | No match |
+| `https://api.example/orders?id=1&view=full` | `https://api.example/orders?id=1&view=full` | Match |
+| `https://api.example/orders?id=1&view=full` | `https://api.example/orders?view=full&id=1` | No match |
+| `https://api.example/orders?` | `https://api.example/orders` | No match |
+| `https://api.example` | `https://api.example/` | No match |
+{: title="Exact matching"}
+
+**Prefix matching.** For prefix purposes, a `resource` with an empty
+path and one whose path is `/` denote the same base: `https://a.example`
+and `https://a.example/` authorize the same set.
 
 Resource containment under a `prefix` reference is compared after
 normalizing both URIs with these steps from {{Section 6.2.2 of RFC3986}}
@@ -360,6 +432,17 @@ normalizing both URIs with these steps from {{Section 6.2.2 of RFC3986}}
    ({{Section 2.1 of RFC3986}}), so `%2f` and `%2F` are equivalent;
 4. decode percent-encoded octets of unreserved characters; and
 5. remove dot-segments.
+
+After normalization, a target is within a `prefix` entry when it has the
+entry's scheme and authority and its path equals the base path or
+extends it at a path-segment boundary. If the base path ends in `/`, a
+descendant's path begins with the complete base path; otherwise it
+begins with the base path followed by `/`. A `/orders/` base therefore
+admits itself and `/orders/123`, but neither `/orders` nor `/ordersx`.
+The target's query is excluded from this path comparison only: it still
+participates in establishing the target and in action and constraint
+enforcement, and a query that selects another resource is resolved to
+that resource before matching.
 
 This normalization applies to comparison only, never to hashing:
 {{I-D.draft-mcguinness-oauth-mission}}'s anchor computation remains
@@ -382,10 +465,10 @@ The normalization lowercases the host but does not define Unicode to
 A-label (IDNA) conversion, so a deployment that accepts non-ASCII hosts
 MUST ensure both sides compare the same form.
 
-The following table shows how request URIs match a `prefix` entry whose
-`resource` is `https://api.example/orders`:
+The following table shows how operation targets match a `prefix` entry
+whose `resource` is `https://api.example/orders`:
 
-| Request URI | Result | Why |
+| Operation target | Result | Why |
 | --- | --- | --- |
 | `https://api.example/orders` | ALLOW | The base itself |
 | `https://api.example/orders/123` | ALLOW | An extension at a path-segment boundary |
@@ -411,15 +494,16 @@ When the authorization server narrows the Authority Set for a derived
 token, a derived `mission_resource_access` entry A is a subset of a
 Mission entry B when all of the following hold:
 
-1. **Resource.** A's effective resource set is contained in B's
-   (`resource_match`, {{resource-access-type}}); under a `prefix` B, the
-   `resource` values are compared as {{resource-matching}} defines:
-   - when neither entry sets `resource_match: "prefix"`, A.`resource`
-     equals B.`resource`;
-   - when B is a `prefix` entry, A (whether `exact` or `prefix`) is
-     contained when A.`resource` equals B.`resource` or extends its path
-     at a path-segment boundary; and
-   - a `prefix` A is never contained in an `exact` B.
+1. **Resource.** A's resource set is contained in B's (`resource_match`,
+   {{resource-access-type}}), under the matcher of
+   {{resource-matching}}:
+   - an `exact` A under an `exact` B: A.`resource` equals B.`resource`
+     literally;
+   - an `exact` A under a `prefix` B: B's prefix matcher admits
+     A.`resource` as a target;
+   - a `prefix` A under a `prefix` B: B's prefix matcher admits A's
+     normalized base; and
+   - a `prefix` A under an `exact` B: never contained.
 2. **Actions.** Every A.`actions` value is within some B.`actions`
    value:
    - a value is within an equal value;
@@ -438,10 +522,17 @@ Mission entry B when all of the following hold:
      ({{common-constraints}}), the deployment-defined comparison
      otherwise.
 
+The authorization server MUST make this resource comparison with the
+same matcher, over the same URI forms, that resource servers use to
+enforce the entries ({{resource-matching}}), so that whenever A's
+resource set is contained in B's, every target A admits is also admitted
+by B. Resource containment alone never establishes authority
+containment: actions, constraints, and delegation are checked as above.
+
 Hierarchy is opt-in and closed to two forms: `resource_match: "prefix"`
 for resource containment and `.*` action families for action containment
 ({{resource-access-type}}). Without them, comparison is flat: `resource`
-matches by exact equality and a literal action by array membership.
+matches by literal equality and a literal action by array membership.
 
 The `delegation` member is policy, not authority, and is not part of
 this comparison ({{delegate-eligibility}}). A derived entry's
@@ -640,14 +731,14 @@ type it does not implement or cannot fully evaluate. This section is
 that specification for a `mission_resource_access` entry. A resource
 server:
 
-- MUST enforce an entry whose `resource` (under `resource_match`,
-  {{resource-access-type}}) matches the request, permitting only the
-  listed `actions` subject to `constraints`. Where more than one
-  applicable entry matches, entries are alternative grants of authority,
-  not conjunctive filters.
+- MUST enforce an entry whose `resource` matches the operation target
+  under the entry's `resource_match` ({{resource-matching}}), permitting
+  only the listed `actions` subject to `constraints`. Where more than
+  one applicable entry matches, entries are alternative grants of
+  authority, not conjunctive filters.
 - MUST treat an entry's `resource_match` value it does not recognize as
   unenforceable and fail closed ({{resource-access-type}}).
-- MUST, when it matches a concrete request URI against a `prefix` entry,
+- MUST, when it matches an operation target against a `prefix` entry,
   apply the URI normalization {{resource-matching}} defines for
   containment, before the prefix comparison rather than after
   ({{resource-boundary-canonicalization}}).
@@ -967,7 +1058,9 @@ in URI space, and {{resource-matching}} requires the authorization
 server and the resource server to draw it with one normalization. A URI
 matcher that normalizes differently from the party that derived the
 entry can admit a request the Approver never authorized, or deny one the
-Approver did. Each of the following vectors turns on such a difference:
+Approver did. An `exact` entry is compared literally, without
+normalization, so these vectors concern `prefix` entries. Each of the
+following vectors turns on such a difference:
 
 - **Encoded slash (`%2F`).** A reserved octet, left encoded by the
   normalization (which decodes only unreserved octets) and never a
