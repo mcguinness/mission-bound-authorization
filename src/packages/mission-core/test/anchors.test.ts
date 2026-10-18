@@ -11,6 +11,7 @@ import {
   DuplicateMemberError,
   GOVERNED_POLICY_TYP,
   intentHash,
+  isActivationPolicyRef,
   parseStrictJson,
   verifyAnchor,
 } from "../src/index.js";
@@ -92,6 +93,15 @@ describe("integrity anchors (core § test-vectors)", () => {
     expect(() => verifyAnchor("sha3-256:abc", "mission-intent", ISS, INTENT_V1)).toThrow(
       /unrecognized anchor algorithm prefix/,
     );
+  });
+
+  it("an activation policy reference whose digest has an unrecognized algorithm prefix is refused", () => {
+    const digest = activationPolicyDigest(ISS, { content_type: "application/json", content: "{}" });
+    const ref = { id: "dispatch-policy", version: "1", digest };
+    expect(isActivationPolicyRef(ref)).toBe(true);
+    const body = digest.slice("sha-256:".length);
+    expect(isActivationPolicyRef({ ...ref, digest: `sha-512:${body}` })).toBe(false);
+    expect(isActivationPolicyRef({ ...ref, digest: `sha3-256:${body}` })).toBe(false);
   });
 
   it("domain separation: same value under different typ yields different anchors", () => {

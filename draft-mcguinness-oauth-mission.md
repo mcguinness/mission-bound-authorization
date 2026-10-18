@@ -2779,10 +2779,10 @@ negotiation.
 
 A verifier MUST reject a digest whose algorithm prefix it does not
 recognize, so an algorithm added later cannot be exploited as a
-downgrade. These rules bind a prefixed digest of any
-species when its defining specification classifies it under this
-taxonomy and imports this section normatively; this document so
-classifies its three anchors.
+downgrade. These rules bind a prefixed digest of any species when its
+defining specification classifies it under this taxonomy and imports
+this section normatively; this document so classifies every anchor it
+defines.
 
 This document defines no transition mechanism: every commitment a
 current carrier defines is a single prefixed string, and no carrier
@@ -6386,6 +6386,11 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Commitment Mechanisms classifies every anchor this document
+  defines, so the algorithm-prefix rules bind the activation policy
+  `digest` as well as `intent_hash`, `proposal_hash` and
+  `authority_hash` (#1261).
 
 - Derivation Policy (#1258): where a ceiling's delegate eligibility
   defers to the issuer's policy, a proposed `allowed_delegates` list
