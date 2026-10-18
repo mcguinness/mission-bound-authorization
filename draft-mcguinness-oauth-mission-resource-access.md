@@ -1016,12 +1016,12 @@ subset and delegation rules apply unchanged, and derivation,
 
 The mapping is:
 
-- `resource` is the operation target the tool provider's operation
-  contract establishes for a call ({{resource-matching}}). The MCP
-  authorization model ({{MCP}}) makes an MCP server an OAuth 2.0
-  resource server, and a token is audience-bound to its URL; the
-  server's contract can identify that URL or a finer target, such as
-  a record a tool acts on.
+- `resource` names the operation target that the tool provider's
+  operation contract establishes for a call ({{resource-matching}}).
+  The MCP authorization model ({{MCP}}) makes an MCP server an
+  OAuth 2.0 resource server, and a token is audience-bound to its
+  URL; the server's contract can identify that URL or a finer target,
+  such as a record a tool acts on.
 - `actions` are the tool names the task needs at that provider.
   Authorizing a tool is authorizing its name as an action, which lines
   up with MCP filtering its tool list by the caller's granted authority

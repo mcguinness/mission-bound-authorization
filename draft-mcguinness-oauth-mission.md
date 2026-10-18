@@ -593,6 +593,12 @@ concrete messages.
 
 ### One Mission from Approval to Revocation {#first-mission}
 
+In the examples in this document, each service's operation contract
+identifies the service's own identifier, such as
+`https://erp.example.com`, as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+
 The following example shows a registered client reading invoices
 from one ERP resource for Alice, who is both the Subject and the
 Approver; the authority source is user-delegated. The AS and ERP
@@ -601,12 +607,6 @@ support the `mission_resource_access` type defined by
 uses a direct approval, a JWT access token, no delegated token, and
 no submission evidence (the AS's admission policy requires none).
 All times are UTC on the same day.
-
-In the examples in this document, each service's operation contract
-identifies the service's own identifier, such as
-`https://erp.example.com`, as the operation target
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
-constraints determine the permitted operations within that service.
 
 1. **Submit.** The client pushes a Mission Intent naming
    `https://erp.example.com` and requesting expiry at 13:00, with a
