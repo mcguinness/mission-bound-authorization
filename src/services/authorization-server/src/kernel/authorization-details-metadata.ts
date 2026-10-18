@@ -193,6 +193,12 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   }
   const e = entry as Record<string, unknown>;
   if (typeof e.resource !== "string") return "resource must be a string";
+  // @spec resource-access#resource-matching (#1264, D446): this authorization
+  // server implements `exact` resource matching only. Any other value is
+  // refused at intake, never admitted and then rebuilt as an exact entry.
+  if (e.resource_match !== undefined && e.resource_match !== "exact") {
+    return `resource_match ${JSON.stringify(e.resource_match)} is not supported; this authorization server implements exact resource matching only`;
+  }
   if (!Array.isArray(e.actions) || e.actions.length === 0 || !e.actions.every((a) => typeof a === "string")) {
     return "actions must be a non-empty array of strings";
   }

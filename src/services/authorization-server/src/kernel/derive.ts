@@ -46,6 +46,26 @@ import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } fr
  * builds or supplies a `DerivationPolicy`/proposal programmatically, bypassing
  * the config loader and PAR intake gates entirely.
  */
+/**
+ * @spec resource-access#resource-matching (#1264, D446): derivation
+ * implements `exact` resource matching only, and `intersect` rebuilds each
+ * entry without `resource_match`. An entry naming any other value is refused
+ * here, over the full ceiling and proposal, so a programmatic caller that
+ * bypasses intake and the config loader cannot have a `prefix` entry
+ * silently derived as an exact one.
+ */
+function assertExactResourceMatch(entries: readonly AuthorityEntry[]): void {
+  for (const entry of entries) {
+    const match = (entry as { resource_match?: unknown }).resource_match;
+    if (match !== undefined && match !== "exact") {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `resource_match ${JSON.stringify(match)} is not supported; this authorization server implements exact resource matching only`,
+      );
+    }
+  }
+}
+
 function assertSupportedConstraints(entries: readonly AuthorityEntry[]): void {
   for (const entry of entries) {
     if (!entry.constraints) continue;
@@ -233,6 +253,8 @@ export function deriveAuthoritySet(
   // with any proposal element would otherwise never reach `intersect` below).
   assertSupportedConstraints(policy.ceiling);
   if (proposal) assertSupportedConstraints(proposal);
+  assertExactResourceMatch(policy.ceiling);
+  if (proposal) assertExactResourceMatch(proposal);
 
   // @spec mission#error-mapping — captured BEFORE the template-mode fallback
   // below reassigns `proposals`: whether the client actually submitted an
