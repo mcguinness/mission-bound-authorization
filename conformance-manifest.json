@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "1eee11b78b15f3e72a0c83badba5b4a5fc6d7c3f",
-    "content_sha256": "915ce9e168b188bc3a34d94309750d8204b02a558b92b9ffcceafe165b7e2d1e"
+    "revision": "3b2dcb49ad1dc1ba677a4cf4598d5a4859027ba5",
+    "content_sha256": "4b37c6abaa2c43926309379bf1fe8b270083049a7820664d9edf5ffedd796aa4"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "42f688e624b7e0dcff0a06c12fa2890c99945e81",
@@ -8034,7 +8034,7 @@
    "id": "core.introspection.opaque-rs-resolve-before-service",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "introspected-consumption",
-   "text": "A resource server consuming an opaque Mission-bound token MUST resolve it through introspection or issuer-local resolution (below) before service",
+   "text": "MUST resolve it through introspection or issuer-local resolution (below) before service",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -8122,7 +8122,7 @@
    "id": "core.introspection.local-resolution-not-mission-lookup",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "introspected-consumption",
-   "text": "Mission state alone, or a lookup by Mission identifier, never establishes a token's validity or authority",
+   "text": "Mission state alone, or a lookup by Mission Identifier, never establishes a token's validity or authority",
    "role": "AS",
    "strength": "stated",
    "applicability": {
