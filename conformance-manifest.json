@@ -4815,8 +4815,15 @@
      "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > async-delegation creating exchange: a failure after the cap check, inside the commit, rolls the count back",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "one counting and settlement path (@spec mission#delegation, derivation-limits#counted-operations) > an accounting record that cannot be written refuses, with nothing counted and no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "#869: a delegated exchange whose accounting cannot be recorded counts nothing; a save refused after the count still spends it (the uncoupled counter)."
   },
   {
    "id": "derivation-limits.counting.async-family-refreshes-uncounted",
@@ -6892,7 +6899,7 @@
     "normative": "a derived token's `client_id` is the client that requested that token, on the code exchange, refresh, and Token Exchange; it is never the Subject"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
@@ -6911,9 +6918,15 @@
      "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 6 (the agent's own exchange): a no-actor Token Exchange by the agent succeeds while the Mission is active, keeping the workload principal as sub",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1194. Partial: in every witnessed issuance the requesting client is also the Mission's approved agent, so the tests do not distinguish the requesting client from the record's client_id. That case is the delegated token of Delegation Within a Mission, which the reference AS does not implement (#869). Proved by overwriting client_id with the Subject in the JWT customizer (provider.ts): steps 3 and 4 fail, and step 6 is refused."
+   "notes": "#1194, #869: the delegated token's `client_id` is the requesting delegate, not the Mission's approved agent; minting it under the approved agent's client fails the witness."
   },
   {
    "id": "core.tokens.refresh-confidential-client-binding",
@@ -7552,6 +7565,12 @@
      "name": "the JWT customizer backstop, invoked directly (@spec mission#scope-projection, mission#rs-enforcement) > refuses invalid_target an act-bearing Mission-bound payload to an audience not classified Mission-aware or not mapped, and passes it to a Mission-aware audience",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the exchange selector (@spec mission#delegation) > a delegated token reaches only a Mission-aware target: otherwise invalid_target, counting nothing (D166)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
    "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role), at the token endpoint on the cross-org exchange and on the JWT customizer backstop by direct invocation (unit: no oidc-provider mint carries act today; the endpoint witness follows a same-Mission delegation mint, #869). It does not establish every deployment route: the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. The transaction endpoint applies the same gate before admitting a workflow (txn-endpoint.test.ts, delegated routing of transaction tokens); that coverage is reviewed separately."
@@ -7879,7 +7898,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "D63: the reference AS has no live in-Mission delegation exchange; the OAuth binding's per-entry delegation gate is implemented and unit-tested but unreached by any HTTP path."
+   "notes": "#869 (D449) implements the delegated exchange, but no `authorization_details` type that declares delegation without narrowing is configured, so this row has no witness."
   },
   {
    "id": "core.other-types.no-narrowing-original-audience",
@@ -7923,9 +7942,22 @@
     "normative": "the delegation depth checked against max_depth comes from the AS's own issuance accounting associated with the validated subject token, never from the nesting of a presented act claim; act renders the accounted chain"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D63: the reference AS has no live in-Mission delegation exchange; the OAuth binding's per-entry delegation gate is implemented and unit-tested but unreached by any HTTP path."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation depth from the AS's accounting (@spec mission#delegation-constraints) > a current delegate designates the next: depth 2 is served within max_depth 2, act naming both delegates, newest outermost",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation.test.ts",
+     "name": "constructDelegatedIssuance — authority narrowing + empty-result refusal (@spec per-entry-enforcement, empty-result) > gates on the accounted depth, not the nesting of the presented act (@spec mission#delegation-constraints, D198)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: a fixed redemption depth fails the depth-2 witness; the helper gates on the accounted depth, not the presented `act` (unit)."
   },
   {
    "id": "core.delegation-constraints.unestablished-depth-refused",
@@ -7945,9 +7977,28 @@
     "normative": "a delegated exchange whose depth the AS cannot establish from its accounting is refused with invalid_target as an empty result, with no token issued"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D63: the reference AS has no live in-Mission delegation exchange; the OAuth binding's per-entry delegation gate is implemented and unit-tested but unreached by any HTTP path."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation depth from the AS's accounting (@spec mission#delegation-constraints) > a token whose accounting record is lost, as after a restart, is refused invalid_target though it carries no act",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation depth from the AS's accounting (@spec mission#delegation-constraints) > a record whose chain does not match the token's act is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation.test.ts",
+     "name": "constructDelegatedIssuance — authority narrowing + empty-result refusal (@spec per-entry-enforcement, empty-result) > refuses with invalid_target when the depth cannot be established (@spec mission#delegation-constraints)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: treating a lost record as depth 0, or skipping the chain-to-`act` match, each fails its witness."
   },
   {
    "id": "core.delegation.designation-only-subject-token",
@@ -7967,9 +8018,22 @@
     "normative": "a delegated exchange whose subject_token is not a designation this AS issued naming the authenticated requesting client (the delegating party's own access token, an access token issued for resource access, or a designation naming another client) is refused with invalid_request, with no token issued"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > an access token issued for resource access is not a designation, even presented by an eligible delegate",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a client the designation does not name cannot redeem it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: accepting any accounted token as a designation fails both witnesses."
   },
   {
    "id": "core.delegation.redemption-evaluated-afresh",
@@ -7989,9 +8053,34 @@
     "normative": "each redemption re-checks the validity of the credential the designation was derived from and of its grant, the Mission's state, the delegation policy and the Mission's current authority, and is counted as a derivation; a revoked source grant or family, or a Mission that is not active, refuses a redemption even after an earlier redemption of the same designation succeeded"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > under an async family: each exchange counts exactly one derivation, and invalidating the family refuses both and inactivates the delegated token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > revoking the approval grant while the Mission stays active refuses both exchanges and inactivates the delegated token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > a Mission that is not active refuses designation and redemption invalid_request, counting nothing (D369)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > a retried redemption is a new counted derivation, not an idempotent replay",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers. Witnessed: the source grant or family's validity (skipping the liveness check fails two witnesses), the Mission's state, and a separate count per redemption. Partial: the delegation policy and the Mission's current authority are evaluated at every redemption, but no witness changes either between a designation and its redemption."
   },
   {
    "id": "core.delegation-constraints.designation-adds-no-delegate",
@@ -8011,9 +8100,16 @@
     "normative": "the AS's accounting records a designation at its holder's depth and chain, and a delegated token issued from it at one more depth with the redeeming delegate appended; a self-exchange adds no delegate"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation depth from the AS's accounting (@spec mission#delegation-constraints) > a current delegate designates the next: depth 2 is served within max_depth 2, act naming both delegates, newest outermost",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: recording a designation one level deeper fails the depth-2 witness."
   },
   {
    "id": "core.designation.holder-proves-possession",
@@ -8033,9 +8129,22 @@
     "normative": "a designation request that does not prove possession of the presented token's confirmation key, including one presenting a token with no confirmation key such as a designation, is refused, with no designation issued"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a designation proven under a key other than the presented token's is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a designation cannot itself be designated: it carries no key its holder could prove",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: skipping the key equality, or the refusal of a token with no confirmation key, each fails its witness."
   },
   {
    "id": "core.designation.holder-is-current-actor",
@@ -8057,7 +8166,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "notes": "#869 (D449) implements the check, but no reachable flow separates it from the `client_id` check: a token's `client_id` is always its current actor, so removing it fails no witness."
   },
   {
    "id": "core.designation.subset-and-mission",
@@ -8077,9 +8186,22 @@
     "normative": "a designation's authorization_details are a subset of the presented token's, and its mission claim equals the presented token's"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > a designation's subset authority, Mission claim and life: within 300 s, the presented token and the Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a designation carries only entries the named client may be delegated: a client no entry admits is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: carrying the presented authority unfiltered fails the eligibility witness. Partial: the presented token's authority equals the Mission's here, so substituting the Mission's set for the presented token's would not be caught."
   },
   {
    "id": "core.designation.audience-names-client",
@@ -8099,9 +8221,16 @@
     "normative": "a designation's aud is the designated client's identifier, and its may_act.sub names that client"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: omitting `may_act` fails ten witnesses, the redemption among them."
   },
   {
    "id": "core.designation.no-cnf-no-act",
@@ -8121,9 +8250,22 @@
     "normative": "a designation carries neither cnf nor act; the delegated token's act renders the AS's accounting"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation depth from the AS's accounting (@spec mission#delegation-constraints) > a current delegate designates the next: depth 2 is served within max_depth 2, act naming both delegates, newest outermost",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: binding the designation to the designator's key fails the first witness; rendering the chain as `act` fails the depth-2 witness."
   },
   {
    "id": "core.designation.expiry",
@@ -8143,9 +8285,16 @@
     "normative": "a designation's exp does not exceed the AS's short designation lifetime, the presented token's exp, or the Mission's expires_at"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > a designation's subset authority, Mission claim and life: within 300 s, the presented token and the Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: a designation living to the Mission's expiry fails the witness."
   },
   {
    "id": "core.designation.audience-separation",
@@ -8165,9 +8314,28 @@
     "normative": "no designation is issued whose aud names a client identifier that a resource server accepts as an audience for this AS's access tokens: neither an audience the AS issues nor an alias a resource server accepts but the AS never issues (the AS issues tokens for https://api.example, the resource server also accepts https://worker.example, and no designation names https://worker.example), so a signed designation presented to that resource server fails its RFC 9068 audience check"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange. The #1274 review added the accepted-alias case: RFC 9068 Section 4 validates against identifiers the resource server accepts, which can include aliases the AS never issues."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation authorizes no resource access (@spec mission#designation, mission#composite-active) > a designation naming a client whose identifier is an audience the AS issues is refused invalid_target, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation authorizes no resource access (@spec mission#designation, mission#composite-active) > a designation naming a client a resource server accepts as an alias the AS never issues is refused invalid_target, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation authorizes no resource access (@spec mission#designation, mission#composite-active) > a resource server validating a JWT access token's audience rejects a designation (RFC 9068 Section 4)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: dropping the issued audiences, or the registered aliases, from the accepted set issues a designation the witness forbids. The #1274 review added the accepted-alias case: RFC 9068 Section 4 validates against identifiers the resource server accepts, which can include aliases the AS never issues. The reference establishes separation with config/delegation.json's designable clients and refuses one whose identifier is an issued audience, a registered resource server's accepted audience or alias, or a Mission resource."
   },
   {
    "id": "core.designation.audience-separation-refusal",
@@ -8187,9 +8355,28 @@
     "normative": "a designation request is refused with invalid_target and no designation issued when the named client's identifier is an audience the AS issues, when it is an alias a resource server accepts but the AS never issues (the accepted-but-not-issued collision), and when the AS has no established separation for that identifier"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange. The #1274 review added the accepted-alias case: RFC 9068 Section 4 validates against identifiers the resource server accepts, which can include aliases the AS never issues."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation authorizes no resource access (@spec mission#designation, mission#composite-active) > a designation naming a client whose identifier is an audience the AS issues is refused invalid_target, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation authorizes no resource access (@spec mission#designation, mission#composite-active) > a designation naming a client a resource server accepts as an alias the AS never issues is refused invalid_target, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation authorizes no resource access (@spec mission#designation, mission#composite-active) > a designation naming an eligible client for which separation is not established is refused invalid_target, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: each case's check, disabled alone, fails its own witness. The #1274 review added the accepted-alias case: RFC 9068 Section 4 validates against identifiers the resource server accepts, which can include aliases the AS never issues. The reference establishes separation with config/delegation.json's designable clients and refuses one whose identifier is an issued audience, a registered resource server's accepted audience or alias, or a Mission resource."
   },
   {
    "id": "core.self-exchange.designation-not-self-exchange",
@@ -8209,9 +8396,16 @@
     "normative": "a current delegate's designation request is not refused under the no-actor rule, which applies to self-exchanges only"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation depth from the AS's accounting (@spec mission#delegation-constraints) > a current delegate designates the next: depth 2 is served within max_depth 2, act naming both delegates, newest outermost",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: applying the no-actor rule to a designation fails the depth-2 witness."
   },
   {
    "id": "core.introspection.designation-inactive",
@@ -8234,9 +8428,16 @@
     "normative": "introspecting a designation returns active: false with no mission member, to every caller"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation authorizes no resource access (@spec mission#designation, mission#composite-active) > introspection reports a designation inactive with no Mission data, even to a resource server that starts accepting the designated client's identifier during its life",
+     "level": "endpoint",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "#869 (D449): proven by disabling the code it covers: without the check, a resource server that starts accepting the designated client's identifier during the designation's life is told it is active."
   },
   {
    "id": "core.introspection.opaque-requires-introspection",
@@ -34009,15 +34210,56 @@
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "delegate-eligibility",
    "text": "The authorization server MUST authenticate the delegate at the Token Exchange",
+   "facet": "same-mission-delegation",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.delegation"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS authenticates the delegate at Token Exchange and asserts sub/sub_profile itself, rather than accepting a self-asserted sub_profile."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a designation carries only entries the named client may be delegated: a client no entry admits is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > the delegated exchange identifies the delegate by its client authentication: an actor_token is refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
    ],
+   "notes": "#869 (D449): proven by disabling the code it covers: the AS authenticates the delegate as its own client and asserts its `sub_profile` from its own registry; substituting a fixed profile for the registry's fails the witnesses. D415 scopes this facet to same-Mission delegation."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.as-authenticates-delegate-cross-org",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "The authorization server MUST authenticate the delegate at the Token Exchange",
+   "facet": "cross-org-delegation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
@@ -34025,7 +34267,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "D415: the same obligation where the cross-organization chain exchange evaluates delegate matchers; not yet witnessed against this clause."
   },
   {
    "id": "resource-access.scope-projection.prefix-resource-match-exact",
