@@ -1,0 +1,313 @@
+{
+  "format": "mission-resource-access-cases/1",
+  "group": "fail-closed",
+  "description": "Items 2 and 4: fail-closed enforcement and entry member roles",
+  "spec": "draft-mcguinness-oauth-mission-resource-access",
+  "cases": [
+    {
+      "id": "fc-01",
+      "description": "Entry X carries an unenforceable key; entry Y alone covers the request",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.alternative-grants"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "x_unknown": true
+            }
+          },
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "allow",
+        "reason": "X provides no authority; Y independently covers the whole request"
+      },
+      "refs": [
+        "#1258 item 2"
+      ]
+    },
+    {
+      "id": "fc-02",
+      "description": "Entry X carries an unenforceable key; Y covers only part of the request",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.alternative-grants"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.write",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.write"
+            ],
+            "constraints": {
+              "x_unknown": true
+            }
+          },
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "no fully enforceable entry covers the action; fragments never combine"
+      },
+      "refs": [
+        "#1258 item 2"
+      ]
+    },
+    {
+      "id": "fc-03",
+      "description": "Two entries each cover part of a request bounded by max_amount",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.alternative-grants"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "payments:payment.execute",
+        "amount": {
+          "amount": "700.00",
+          "currency": "USD"
+        },
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "payments:payment.execute"
+            ],
+            "constraints": {
+              "max_amount": {
+                "amount": "500.00",
+                "currency": "USD"
+              }
+            }
+          },
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "payments:payment.execute"
+            ],
+            "constraints": {
+              "max_amount": {
+                "amount": "300.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "no single entry covers 700.00; caps are never summed"
+      },
+      "refs": [
+        "#1258 item 2"
+      ]
+    },
+    {
+      "id": "fc-04",
+      "description": "The token's signature fails validation; an entry would otherwise authorize",
+      "role": "resource-server",
+      "requires": [
+        "rs.enforcement"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "token_validation": "signature-invalid",
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "reject-token",
+        "reason": "a token-wide validation failure rejects the token"
+      },
+      "refs": [
+        "#1258 item 2"
+      ]
+    },
+    {
+      "id": "fc-05",
+      "description": "An entry carries an unknown member",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.alternative-grants"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "x_member": true
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "an unknown member makes the entry unenforceable"
+      },
+      "refs": [
+        "#1258 item 4"
+      ]
+    },
+    {
+      "id": "fc-06",
+      "description": "An entry carries delegation",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.member-roles"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "delegation": {
+              "max_depth": 1,
+              "allowed_delegates": [
+                {
+                  "sub_profile": "ai_agent"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "allow",
+        "reason": "delegation has no resource-server role and may be disregarded"
+      },
+      "refs": [
+        "#1258 item 4"
+      ]
+    },
+    {
+      "id": "fc-07",
+      "description": "An entry carries RFC 9396 locations",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.alternative-grants"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "locations": [
+              "https://erp.example.com"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "this type does not use locations; the entry is unenforceable"
+      },
+      "refs": [
+        "#1258 item 4"
+      ]
+    },
+    {
+      "id": "fc-08",
+      "description": "A proposal entry carries RFC 9396 locations",
+      "role": "authorization-server",
+      "requires": [
+        "refusal.locations"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "locations": [
+              "https://api.example/orders"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the authorization server refuses an entry carrying locations",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1258 item 4"
+      ]
+    }
+  ]
+}

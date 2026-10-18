@@ -1,0 +1,341 @@
+{
+  "format": "mission-resource-access-cases/1",
+  "group": "delegation",
+  "description": "Items 8 and 11: inherited eligibility and delegate matchers",
+  "spec": "draft-mcguinness-oauth-mission-resource-access",
+  "cases": [
+    {
+      "id": "dg-match-01",
+      "description": "A matcher with sub and sub_profile; the delegate satisfies both",
+      "role": "authorization-server",
+      "requires": [
+        "delegate-matcher"
+      ],
+      "check": "delegate-matcher",
+      "input": {
+        "delegate": {
+          "sub": "agent-b",
+          "sub_profile": "ai_agent"
+        },
+        "allowed_delegates": [
+          {
+            "sub": "agent-b",
+            "sub_profile": "ai_agent"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "permitted",
+        "reason": "conjunction within a matcher"
+      },
+      "refs": [
+        "#1258 item 11"
+      ]
+    },
+    {
+      "id": "dg-match-02",
+      "description": "A matcher with sub and sub_profile; the delegate lacks the profile",
+      "role": "authorization-server",
+      "requires": [
+        "delegate-matcher"
+      ],
+      "check": "delegate-matcher",
+      "input": {
+        "delegate": {
+          "sub": "agent-b"
+        },
+        "allowed_delegates": [
+          {
+            "sub": "agent-b",
+            "sub_profile": "ai_agent"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "not-permitted",
+        "reason": "conjunction within a matcher"
+      },
+      "refs": [
+        "#1258 item 11"
+      ]
+    },
+    {
+      "id": "dg-match-03",
+      "description": "A matcher with sub and sub_profile; another client with the profile",
+      "role": "authorization-server",
+      "requires": [
+        "delegate-matcher"
+      ],
+      "check": "delegate-matcher",
+      "input": {
+        "delegate": {
+          "sub": "agent-c",
+          "sub_profile": "ai_agent"
+        },
+        "allowed_delegates": [
+          {
+            "sub": "agent-b",
+            "sub_profile": "ai_agent"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "not-permitted",
+        "reason": "conjunction within a matcher"
+      },
+      "refs": [
+        "#1258 item 11"
+      ]
+    },
+    {
+      "id": "dg-match-04",
+      "description": "Two matchers; the delegate satisfies the second",
+      "role": "authorization-server",
+      "requires": [
+        "delegate-matcher"
+      ],
+      "check": "delegate-matcher",
+      "input": {
+        "delegate": {
+          "sub": "agent-c",
+          "sub_profile": "ai_agent"
+        },
+        "allowed_delegates": [
+          {
+            "sub": "agent-b"
+          },
+          {
+            "sub_profile": "ai_agent"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "permitted",
+        "reason": "disjunction across matchers"
+      },
+      "refs": [
+        "#1258 item 11"
+      ]
+    },
+    {
+      "id": "dg-match-05",
+      "description": "A self-asserted profile is not an asserted one",
+      "role": "authorization-server",
+      "requires": [
+        "delegate-matcher"
+      ],
+      "check": "delegate-matcher",
+      "input": {
+        "delegate": {
+          "sub": "agent-c",
+          "self_asserted_profile": "ai_agent"
+        },
+        "allowed_delegates": [
+          {
+            "sub_profile": "ai_agent"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "not-permitted",
+        "reason": "only the authorization server's asserted profile satisfies a matcher"
+      },
+      "refs": [
+        "#1258 item 11"
+      ]
+    },
+    {
+      "id": "dg-policy-01",
+      "description": "No allowed_delegates; the deployment policy denies",
+      "role": "authorization-server",
+      "requires": [
+        "delegate-matcher"
+      ],
+      "check": "delegate-matcher",
+      "input": {
+        "delegate": {
+          "sub": "agent-c",
+          "sub_profile": "ai_agent"
+        },
+        "allowed_delegates": null,
+        "policy": "deny-all"
+      },
+      "expected": {
+        "outcome": "not-permitted",
+        "reason": "absence defers to policy, never a blanket grant"
+      },
+      "refs": [
+        "#1258 item 8"
+      ]
+    },
+    {
+      "id": "dg-inherit-01",
+      "description": "Policy permits Bob and denies Carol; a child entry adds a list naming Carol",
+      "role": "authorization-server",
+      "requires": [
+        "delegation.policy",
+        "delegation.inherited-eligibility"
+      ],
+      "check": "delegate-eligibility",
+      "input": {
+        "approved_entry_delegation": {
+          "max_depth": 2
+        },
+        "policy": {
+          "permit": [
+            "bob"
+          ],
+          "deny": [
+            "carol"
+          ]
+        },
+        "derived_entry_delegation": {
+          "max_depth": 1,
+          "allowed_delegates": [
+            {
+              "sub": "carol"
+            }
+          ]
+        },
+        "delegate": {
+          "sub": "carol"
+        },
+        "depth": 2
+      },
+      "expected": {
+        "outcome": "not-eligible",
+        "reason": "a derived list restricts the inherited policy decision and never replaces it"
+      },
+      "refs": [
+        "#1258 item 8",
+        "#1275"
+      ]
+    },
+    {
+      "id": "dg-inherit-02",
+      "description": "The same derivation; Bob at the next hop",
+      "role": "authorization-server",
+      "requires": [
+        "delegation.policy",
+        "delegation.inherited-eligibility"
+      ],
+      "check": "delegate-eligibility",
+      "input": {
+        "approved_entry_delegation": {
+          "max_depth": 2
+        },
+        "policy": {
+          "permit": [
+            "bob"
+          ],
+          "deny": [
+            "carol"
+          ]
+        },
+        "derived_entry_delegation": {
+          "max_depth": 1,
+          "allowed_delegates": [
+            {
+              "sub": "carol"
+            }
+          ]
+        },
+        "delegate": {
+          "sub": "bob"
+        },
+        "depth": 2
+      },
+      "expected": {
+        "outcome": "not-eligible",
+        "reason": "Bob is permitted by policy but not by the derived list"
+      },
+      "refs": [
+        "#1258 item 8"
+      ]
+    },
+    {
+      "id": "dg-inherit-03",
+      "description": "The authoritative context (the approved entry) cannot be resolved",
+      "role": "authorization-server",
+      "requires": [
+        "delegation.inherited-eligibility"
+      ],
+      "check": "delegate-eligibility",
+      "input": {
+        "approved_entry_delegation": null,
+        "context": "unresolvable",
+        "delegate": {
+          "sub": "bob"
+        },
+        "depth": 1
+      },
+      "expected": {
+        "outcome": "narrowed-out",
+        "reason": "an unresolved context narrows the entry out"
+      },
+      "refs": [
+        "#1258 item 8"
+      ]
+    },
+    {
+      "id": "dg-inherit-04",
+      "description": "A proposal list where the ceiling has none, under the reference's deny-all policy",
+      "role": "authorization-server",
+      "requires": [
+        "delegation.inherited-eligibility"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "delegation": {
+              "max_depth": 2
+            }
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "delegation": {
+              "max_depth": 1,
+              "allowed_delegates": [
+                {
+                  "sub": "carol"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "derived",
+        "reason": "the derived entry gains no list, so Carol is not made eligible",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "delegation": {
+              "max_depth": 1
+            }
+          }
+        ]
+      },
+      "refs": [
+        "#1258 item 8",
+        "#1275"
+      ]
+    }
+  ]
+}

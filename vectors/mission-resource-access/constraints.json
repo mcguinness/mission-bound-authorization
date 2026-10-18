@@ -1,0 +1,1244 @@
+{
+  "format": "mission-resource-access-cases/1",
+  "group": "constraints",
+  "description": "Item 3: the nine Common Constraints, positive, negative and boundary, and extension refusal",
+  "spec": "draft-mcguinness-oauth-mission-resource-access",
+  "cases": [
+    {
+      "id": "cc-max_amount-positive",
+      "description": "max_amount: positive",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "USD"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "smaller amount, same currency"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-max_amount-negative",
+      "description": "max_amount: negative",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "600.00",
+              "currency": "USD"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "larger amount"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-max_amount-boundary",
+      "description": "max_amount: boundary",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500",
+              "currency": "USD"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "equal in decimal value space"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-max_amount-currency",
+      "description": "max_amount: currency",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "EUR"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "differing currencies fail the comparison"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-resource_issued_after-positive",
+      "description": "resource_issued_after: positive",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.resource_issued_after"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_after": "2026-08-01T00:00:00Z"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_after": "2026-07-01T00:00:00Z"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "later instant"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-resource_issued_after-negative",
+      "description": "resource_issued_after: negative",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.resource_issued_after"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_after": "2026-06-01T00:00:00Z"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_after": "2026-07-01T00:00:00Z"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "earlier instant"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-resource_issued_after-boundary",
+      "description": "resource_issued_after: boundary",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.resource_issued_after"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_after": "2026-07-01T02:00:00+02:00"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_after": "2026-07-01T00:00:00Z"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "the same instant in another offset"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-resource_issued_before-positive",
+      "description": "resource_issued_before: positive",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.resource_issued_before"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_before": "2026-09-01T00:00:00Z"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_before": "2026-09-30T23:59:59Z"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "earlier instant"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-resource_issued_before-negative",
+      "description": "resource_issued_before: negative",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.resource_issued_before"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_before": "2026-10-15T00:00:00Z"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_before": "2026-09-30T23:59:59Z"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "later instant"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-resource_issued_before-boundary",
+      "description": "resource_issued_before: boundary",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.resource_issued_before"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_before": "2026-09-30T23:59:59.000Z"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_before": "2026-09-30T23:59:59Z"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "trailing subsecond zeros denote the same instant"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-tenant-positive",
+      "description": "tenant: positive",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.tenant"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "tenant": "acme"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "tenant": "acme"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "equal"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-tenant-negative",
+      "description": "tenant: negative",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.tenant"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "tenant": "globex"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "tenant": "acme"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "different tenant"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-tenant-boundary",
+      "description": "tenant: boundary",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.tenant"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "tenant": "Acme"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "tenant": "acme"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "tenant compares as an exact string"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-recipient_domain-positive",
+      "description": "recipient_domain: positive",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.recipient_domain"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "mail.example.com"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "example.com"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "a subdomain on whole labels"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-recipient_domain-negative",
+      "description": "recipient_domain: negative",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.recipient_domain"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "example.net"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "example.com"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "another domain"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-recipient_domain-boundary",
+      "description": "recipient_domain: boundary",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.recipient_domain"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "notexample.com"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "example.com"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "not a whole-label subdomain"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-recipient_domain-case",
+      "description": "recipient_domain: case",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.recipient_domain"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "EXAMPLE.COM"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "example.com"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "DNS names compare case-insensitively"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-time_window-positive",
+      "description": "time_window: positive",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.time_window"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-07-01T00:00:00Z",
+              "not_after": "2026-07-31T00:00:00Z"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-06-01T00:00:00Z",
+              "not_after": "2026-08-31T00:00:00Z"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "within the window"
+      },
+      "refs": [
+        "#1258 item 3",
+        "#1258 item 11"
+      ]
+    },
+    {
+      "id": "cc-time_window-negative",
+      "description": "time_window: negative",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.time_window"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-07-01T00:00:00Z",
+              "not_after": "2026-09-30T00:00:00Z"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-06-01T00:00:00Z",
+              "not_after": "2026-08-31T00:00:00Z"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "extends past the reference"
+      },
+      "refs": [
+        "#1258 item 3",
+        "#1258 item 11"
+      ]
+    },
+    {
+      "id": "cc-time_window-boundary",
+      "description": "time_window: boundary",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.time_window"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-07-01T00:00:00Z"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-06-01T00:00:00Z",
+              "not_after": "2026-08-31T00:00:00Z"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "an absent candidate bound is unbounded, so broader"
+      },
+      "refs": [
+        "#1258 item 3",
+        "#1258 item 11"
+      ]
+    },
+    {
+      "id": "cc-data_classification-positive",
+      "description": "data_classification: positive",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.data_classification"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "data_classification": [
+              "internal"
+            ]
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "data_classification": [
+              "internal",
+              "public"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "subset of labels"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-data_classification-negative",
+      "description": "data_classification: negative",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.data_classification"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "data_classification": [
+              "secret"
+            ]
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "data_classification": [
+              "internal"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "a label outside the reference"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-data_classification-boundary",
+      "description": "data_classification: boundary",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.data_classification"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "data_classification": [
+              "Internal"
+            ]
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "data_classification": [
+              "internal"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "labels compare as exact strings"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-allowed_tools-positive",
+      "description": "allowed_tools: positive",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.allowed_tools"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "allowed_tools": [
+              "query_invoices"
+            ]
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "allowed_tools": [
+              "query_invoices",
+              "post_adjustment"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "fewer tools"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-allowed_tools-negative",
+      "description": "allowed_tools: negative",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.allowed_tools"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "allowed_tools": [
+              "delete_invoice"
+            ]
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "allowed_tools": [
+              "query_invoices"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "a tool outside the reference"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-allowed_tools-boundary",
+      "description": "allowed_tools: boundary",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.allowed_tools"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "allowed_tools": []
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "allowed_tools": [
+              "query_invoices"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "an empty list permits no tool, the narrowest"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-requires_action_approval-positive",
+      "description": "requires_action_approval: positive",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.requires_action_approval"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": true
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": false
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "narrowing may add the requirement"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-requires_action_approval-negative",
+      "description": "requires_action_approval: negative",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.requires_action_approval"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": false
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": true
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "narrowing never removes the requirement"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-unsupported-extension",
+      "description": "An extension constraint the authorization server does not support",
+      "role": "authorization-server",
+      "requires": [
+        "refusal.unsupported-input"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "x_registered_later": "v"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "unsupported semantics fail closed",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "cc-recipients-every",
+      "description": "An action addressed to two recipients, one outside recipient_domain",
+      "role": "resource-server",
+      "requires": [
+        "constraint.recipient_domain",
+        "rs.enforcement"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "messages.send"
+            ],
+            "constraints": {
+              "recipient_domain": "example.com"
+            }
+          }
+        ],
+        "action": "messages.send",
+        "recipients": [
+          "a@example.com",
+          "b@example.net"
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "every recipient must be within the domain"
+      },
+      "refs": [
+        "#1258 item 11"
+      ]
+    }
+  ]
+}
