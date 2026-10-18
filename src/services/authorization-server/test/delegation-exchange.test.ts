@@ -433,6 +433,32 @@ describe("who presents which proof (@spec mission#designation, mission#delegatio
     expect(derivations(on, missionId)).toBe(before);
   });
 
+  it("a designation cannot itself be designated: it carries no key its holder could prove", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = (await designate(on, accessToken, SUBAGENT)).body.access_token as string;
+    const before = derivations(on, missionId);
+    const res = await designate(on, designation, SECOND, SUBAGENT);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_request");
+    expect(res.body.error_description).toMatch(/sender-constrained/);
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
+  it("a designation carries only entries the named client may be delegated: a client no entry admits is refused invalid_target", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const presented = (decodeJwt(accessToken) as { authorization_details: Body[] }).authorization_details;
+    const designation = await designate(on, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const carried = (decodeJwt(designation.body.access_token as string) as { authorization_details: Body[] }).authorization_details;
+    for (const entry of carried) expect(presented).toContainEqual(entry);
+    // ledger-reconciler has no AS-asserted actor profile, so no `ai_agent` matcher admits it.
+    const before = derivations(on, missionId);
+    const refused = await designate(on, accessToken, "ledger-reconciler");
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toBe("invalid_target");
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
   it("a designation naming no registered client is refused invalid_target", async () => {
     const { accessToken } = await baseMission(on);
     const res = await designate(on, accessToken, "no-such-client");
@@ -534,12 +560,10 @@ describe("delegation depth from the AS's accounting (@spec mission#delegation-co
     expect(on.as.tokenIssuanceStore.resolve(on.issuer, jtiOf(second.body.access_token as string))?.depth).toBe(2);
   });
 
-  it("past max_depth the entry narrows out: a depth-2 redemption under max_depth 1 is refused invalid_target, counting nothing", async () => {
+  it("past max_depth the entry narrows out: designating a depth-2 delegate under max_depth 1 is refused invalid_target, counting nothing", async () => {
     const { missionId, delegated } = await delegatedToSubagent(on, [delegable(1)]);
-    const designation = await designate(on, delegated, SECOND, SUBAGENT);
-    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
     const before = derivations(on, missionId);
-    const res = await redeem(on, designation.body.access_token as string, SECOND);
+    const res = await designate(on, delegated, SECOND, SUBAGENT);
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_target");
     expect(derivations(on, missionId)).toBe(before);

@@ -248,7 +248,9 @@ export async function handleDesignationExchange(
   const active = activeMission(opts, record);
 
   // 6. Authority: the presented authority within the Mission's current
-  // effective authority, keeping only entries that carry a delegation policy.
+  // effective authority, keeping only the entries whose delegation policy
+  // admits the designated client at the next depth. A `delegation` member
+  // holding only other policy (such as `children`) delegates nothing here.
   const presented = presentedTokenAuthority(claims);
   if (!presented) {
     txError(ctx, 400, "invalid_request", "subject_token carries no readable authorization_details");
@@ -256,9 +258,13 @@ export async function handleDesignationExchange(
   }
   const effective = effectiveAuthority(opts, ctx, active);
   if (!effective) return;
-  const authority = projectThroughEffective(presented, effective).filter((e) => e.delegation !== undefined);
+  const authority = gateDelegableAuthority(
+    projectThroughEffective(presented, effective),
+    { sub: designee, assertedProfile: opts.kernel.actorProfile(designee) },
+    issuance.depth + 1,
+  );
   if (authority.length === 0) {
-    txError(ctx, 400, "invalid_target", "the presented authority carries no delegable entry");
+    txError(ctx, 400, "invalid_target", "the presented authority carries no entry the designated client may be delegated");
     return;
   }
   // Audience separation, at the request: the designee shares no identifier
