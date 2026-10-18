@@ -2104,8 +2104,9 @@ this comparison (<a href="#delegate-eligibility" class="auto internal xref">Sect
 </li>
           <li class="normal" id="section-3.3-8.2">
             <p id="section-3.3-8.2.1">its <code>allowed_delegates</code> <span class="bcp14">MUST</span> be no wider than the parent entry's, and
-where the parent entry has none, a derived list only restricts the
-inherited policy decision (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>); and<a href="#section-3.3-8.2.1" class="pilcrow">¶</a></p>
+where the parent entry's eligibility inherits the authorization
+server's policy decision (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>), a derived list
+only restricts that decision; and<a href="#section-3.3-8.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.3-8.3">
             <p id="section-3.3-8.3.1">a derived entry <span class="bcp14">MUST NOT</span> introduce <code>delegation</code> where the parent entry
@@ -2462,7 +2463,8 @@ absent or advisory.<a href="#section-3.5-2.5.1" class="pilcrow">¶</a></p>
         </ul>
 <p id="section-3.5-3"><strong>Failing closed.</strong> An entry the resource server cannot fully enforce
 provides no authority: one with an unrecognized <code>resource_match</code> value,
-an unknown member, or a <code>constraints</code> key the resource server does not
+a member the resource server does not recognize or whose obligations it
+cannot fulfill, or a <code>constraints</code> key the resource server does not
 understand or cannot enforce. The resource server then authorizes the
 request only through another applicable entry that it can fully enforce
 and that covers the whole request on its own: the entry's <code>resource</code>
@@ -2483,8 +2485,8 @@ insufficient-authority error.<a href="#section-3.5-4.2.1" class="pilcrow">¶</a>
 <p id="section-3.5-5">A failure of token-wide validation, such as of the token's signature,
 audience, or sender constraint (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
 rejects the token whatever its entries carry.<a href="#section-3.5-5" class="pilcrow">¶</a></p>
-<p id="section-3.5-6"><strong>Entry members.</strong> This document gives each member of an entry a
-resource-server role or none:<a href="#section-3.5-6" class="pilcrow">¶</a></p>
+<p id="section-3.5-6"><strong>Entry members.</strong> Each member of an entry has a resource-server role
+or none:<a href="#section-3.5-6" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-3.5-7.1">
             <p id="section-3.5-7.1.1"><code>type</code>, <code>resource</code>, <code>resource_match</code>, <code>actions</code>, and <code>constraints</code> are
@@ -2494,14 +2496,24 @@ enforced as above;<a href="#section-3.5-7.1.1" class="pilcrow">¶</a></p>
             <p id="section-3.5-7.2.1"><code>delegation</code> has no resource-server enforcement role: the
 authorization server applies it at issuance
 (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>), so a resource server <span class="bcp14">MAY</span> disregard it,
-together with any member a companion profile adds to it; and<a href="#section-3.5-7.2.1" class="pilcrow">¶</a></p>
+together with any member a companion profile adds to it;<a href="#section-3.5-7.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.5-7.3">
-            <p id="section-3.5-7.3.1">any other member, including the <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> common <code>locations</code> field,
-which this type does not use (<a href="#entry-validation" class="auto internal xref">Section 3.1</a>), makes the entry
-one the resource server cannot fully enforce.<a href="#section-3.5-7.3.1" class="pilcrow">¶</a></p>
+            <p id="section-3.5-7.3.1">a member that another specification defines for this type is
+enforced as that specification requires, and leaves the entry fully
+enforceable when the resource server, or a runtime layer acting for
+it, implements that specification and fulfills every obligation it
+places on enforcement; and<a href="#section-3.5-7.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.5-7.4">
+            <p id="section-3.5-7.4.1">any other member, including one the resource server does not
+recognize, makes the entry one the resource server cannot fully
+enforce.<a href="#section-3.5-7.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
+<p id="section-3.5-8">An entry carrying the <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> common <code>locations</code> field, which this
+type does not use (<a href="#entry-validation" class="auto internal xref">Section 3.1</a>), is likewise one the resource
+server cannot fully enforce.<a href="#section-3.5-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="protected-resource-metadata">
@@ -2564,18 +2576,23 @@ carried with their <code>delegation</code> member intact, so the next hop is
 evaluated the same way.<a href="#section-3.7-3" class="pilcrow">¶</a></p>
 <p id="section-3.7-4"><strong>Inherited eligibility.</strong> A derived entry's <code>allowed_delegates</code>
 restricts eligibility; it never replaces an obligation the derivation
-inherits. Where the approved Authority Set entry has no
-<code>allowed_delegates</code>, its eligibility is the authorization server's
-policy decision, and that decision continues to bind every entry derived
-from it: a delegate is permitted only when the policy permits it and,
-where a derived entry adds a list, the list permits it too. When policy
-permits Bob and denies Carol, a derived entry whose list names Carol
-still cannot admit Carol. The authorization server evaluates this
-obligation against the approved entry in the Mission Record
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the authoritative context for
-every later exchange, never against a presented token alone. Where it
-cannot resolve that context, the entry narrows out of the delegated
-token.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
+inherits. An entry derived from a reference entry that has no
+<code>allowed_delegates</code> inherits the authorization server's policy
+decision, and so does every entry derived from it: a delegate is
+permitted only when the policy permits it and, where the entry carries
+a list, the list permits it too. When policy permits Bob and denies
+Carol, an entry whose list names Carol still cannot admit Carol.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
+<p id="section-3.7-5">The obligation holds from the initial derivation. An approved entry
+derived from a ceiling entry without <code>allowed_delegates</code> inherits the
+policy decision even when the approved proposal added a list, so the
+approved entry's own members do not reveal the obligation. The
+authorization server therefore records, when it derives the Authority
+Set, which approved entries inherit the policy decision, and retains
+that provenance with the Mission. It evaluates every later exchange
+against the approved entry in the Mission Record
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and that provenance, never
+against a presented token alone. Where it cannot resolve either, the
+entry narrows out of the delegated token.<a href="#section-3.7-5" class="pilcrow">¶</a></p>
 <div id="matching-allowed-delegates">
 <section id="section-3.7.1">
           <h4 id="name-matching-allowed_delegates">

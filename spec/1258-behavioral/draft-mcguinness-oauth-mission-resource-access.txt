@@ -669,8 +669,9 @@ Table of Contents
    *  its max_depth MUST be no greater than the parent entry's;
 
    *  its allowed_delegates MUST be no wider than the parent entry's,
-      and where the parent entry has none, a derived list only restricts
-      the inherited policy decision (Section 3.7); and
+      and where the parent entry's eligibility inherits the
+      authorization server's policy decision (Section 3.7), a derived
+      list only restricts that decision; and
 
    *  a derived entry MUST NOT introduce delegation where the parent
       entry has none.
@@ -917,7 +918,8 @@ Table of Contents
 
    *Failing closed.* An entry the resource server cannot fully enforce
    provides no authority: one with an unrecognized resource_match value,
-   an unknown member, or a constraints key the resource server does not
+   a member the resource server does not recognize or whose obligations
+   it cannot fulfill, or a constraints key the resource server does not
    understand or cannot enforce.  The resource server then authorizes
    the request only through another applicable entry that it can fully
    enforce and that covers the whole request on its own: the entry's
@@ -938,8 +940,8 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission]), rejects the token whatever
    its entries carry.
 
-   *Entry members.* This document gives each member of an entry a
-   resource-server role or none:
+   *Entry members.* Each member of an entry has a resource-server role
+   or none:
 
    *  type, resource, resource_match, actions, and constraints are
       enforced as above;
@@ -947,11 +949,21 @@ Table of Contents
    *  delegation has no resource-server enforcement role: the
       authorization server applies it at issuance (Section 3.7), so a
       resource server MAY disregard it, together with any member a
-      companion profile adds to it; and
+      companion profile adds to it;
 
-   *  any other member, including the [RFC9396] common locations field,
-      which this type does not use (Section 3.1), makes the entry one
-      the resource server cannot fully enforce.
+   *  a member that another specification defines for this type is
+      enforced as that specification requires, and leaves the entry
+      fully enforceable when the resource server, or a runtime layer
+      acting for it, implements that specification and fulfills every
+      obligation it places on enforcement; and
+
+   *  any other member, including one the resource server does not
+      recognize, makes the entry one the resource server cannot fully
+      enforce.
+
+   An entry carrying the [RFC9396] common locations field, which this
+   type does not use (Section 3.1), is likewise one the resource server
+   cannot fully enforce.
 
 3.6.  Protected Resource Metadata
 
@@ -997,18 +1009,25 @@ Table of Contents
 
    *Inherited eligibility.* A derived entry's allowed_delegates
    restricts eligibility; it never replaces an obligation the derivation
-   inherits.  Where the approved Authority Set entry has no
-   allowed_delegates, its eligibility is the authorization server's
-   policy decision, and that decision continues to bind every entry
-   derived from it: a delegate is permitted only when the policy permits
-   it and, where a derived entry adds a list, the list permits it too.
-   When policy permits Bob and denies Carol, a derived entry whose list
-   names Carol still cannot admit Carol.  The authorization server
-   evaluates this obligation against the approved entry in the Mission
-   Record ([I-D.draft-mcguinness-oauth-mission]), the authoritative
-   context for every later exchange, never against a presented token
-   alone.  Where it cannot resolve that context, the entry narrows out
-   of the delegated token.
+   inherits.  An entry derived from a reference entry that has no
+   allowed_delegates inherits the authorization server's policy
+   decision, and so does every entry derived from it: a delegate is
+   permitted only when the policy permits it and, where the entry
+   carries a list, the list permits it too.  When policy permits Bob and
+   denies Carol, an entry whose list names Carol still cannot admit
+   Carol.
+
+   The obligation holds from the initial derivation.  An approved entry
+   derived from a ceiling entry without allowed_delegates inherits the
+   policy decision even when the approved proposal added a list, so the
+   approved entry's own members do not reveal the obligation.  The
+   authorization server therefore records, when it derives the Authority
+   Set, which approved entries inherit the policy decision, and retains
+   that provenance with the Mission.  It evaluates every later exchange
+   against the approved entry in the Mission Record
+   ([I-D.draft-mcguinness-oauth-mission]) and that provenance, never
+   against a presented token alone.  Where it cannot resolve either, the
+   entry narrows out of the delegated token.
 
 3.7.1.  Matching allowed_delegates
 
