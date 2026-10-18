@@ -179,9 +179,9 @@ Table of Contents
 
    type:  REQUIRED.  A string. mission_resource_access.
 
-   resource:  REQUIRED.  A string.  The single protected resource the
-      entry applies to: an absolute URI identifying an OAuth protected
-      resource ([RFC9728]), the same kind of identifier as the [RFC8707]
+   resource:  REQUIRED.  A string.  The resource the entry applies to:
+      an absolute URI compared with the target of an operation
+      (Section 3.2), the same kind of identifier as the [RFC8707]
       resource value.
 
       *  Carrying resource per entry, which [RFC9396] permits, lets one
@@ -198,15 +198,14 @@ Table of Contents
    resource_match:  OPTIONAL.  A string: exact (the default, and the
       behavior when the member is absent) or prefix.
 
-      *  Under exact, the entry applies to the resource URI alone.
+      *  Under exact, the entry applies to an operation target equal to
+         resource.
 
-      *  Under prefix, the entry authorizes the resource itself and any
-         URI beneath it at a path-segment boundary (the resource
-         followed by / and further path).  Section 3.1 limits the
-         resource value a prefix entry may carry.
+      *  Under prefix, the entry applies to the resource itself and to
+         targets beneath it at a path-segment boundary.  Section 3.1
+         limits the resource value a prefix entry may carry.
 
-      *  Section 3.2 defines how a prefix entry's resource is compared,
-         including the treatment of an empty path.
+      *  Section 3.2 defines the operation target and both comparisons.
 
       *  These two values are the only ones defined; a consumer MUST
          treat an entry whose resource_match value it does not recognize
@@ -217,11 +216,11 @@ Table of Contents
       in Section 3.3.
 
    actions:  REQUIRED.  An array of strings.  Each value is an action
-      identifier matching [A-Za-z0-9_.:-]+, or an action family: an
-      identifier followed by .*. A family authorizes every action whose
-      dot-separated identifier extends the family name at a segment
-      boundary: invoices.* authorizes invoices.read and
-      invoices.q3.export, not invoicesx.read.
+      identifier whose whole value matches [A-Za-z0-9_.:-]+, or an
+      action family: an identifier followed by .*. A family authorizes
+      every action whose dot-separated identifier extends the family
+      name at a segment boundary: invoices.* authorizes invoices.read
+      and invoices.q3.export, not invoicesx.read.
 
       *  Like an OAuth scope, an action value carries meaning only at
          the resource that defines it: a consumer enforces only the
@@ -310,6 +309,11 @@ Table of Contents
    entry carries no delegation, so it is non-delegable: delegation is
    per entry.
 
+   In the ERP example above, the operation contract identifies
+   https://erp.example.com as the operation target (Section 3.2).
+   Actions and constraints determine the permitted operations within
+   that service.
+
 3.1.  Entry Validation
 
    This section gathers the validity rules for an entry beyond each
@@ -321,6 +325,11 @@ Table of Contents
    A resource value under prefix MUST NOT carry a query or fragment
    component; the authorization server refuses such an entry with the
    invalid_authorization_details error code (Section 5 of [RFC9396]).
+
+   This type does not use the [RFC9396] common locations field: resource
+   identifies where an entry applies.  The authorization server refuses
+   an entry carrying locations with the invalid_authorization_details
+   error code.
 
 3.1.1.  Decimal Values
 
@@ -358,16 +367,136 @@ Table of Contents
 
 3.2.  Resource Matching
 
-   This section defines how a prefix entry's resource is compared: with
-   another entry's resource when the authorization server tests
-   containment (Section 3.3), and with a concrete request URI when the
-   resource server enforces the entry (Section 3.5).  A prefix entry
-   draws an authority boundary in URI space, and both parties draw it
-   the same way.
+   This section defines how an entry's resource is compared: with the
+   target of an operation when the resource server enforces the entry
+   (Section 3.5), and with another entry's resource when the
+   authorization server tests containment (Section 3.3).
 
-   For prefix purposes, a resource with an empty path and one whose path
-   is / denote the same base: https://a.example and https://a.example/
-   authorize the same set.
+   *Operation target.* Before matching authority, the resource server
+   establishes the operation's target: an absolute URI identifying the
+   resource the operation acts on.  The resource server:
+
+   *  establishes the target from its documented, trusted operation
+      contract: for an HTTP resource operation the target can be the
+      effective request URI, and for an RPC or tool call the resource
+      server derives it from the operation and its validated arguments;
+
+   *  MUST establish the target independently of the entries the request
+      presents, and MUST NOT choose a target because an entry would then
+      match;
+
+   *  MUST refuse the operation when it cannot establish one unambiguous
+      target; and
+
+   *  MUST execute the operation on the target it matched: matching a
+      different target never authorizes the execution.
+
+   An operation contract preserves every resource distinction the
+   deployment's authorization constrains; it cannot collapse /orders/123
+   and /admin to the server's root identifier to obtain a match.  There
+   is no fallback to the protected resource's metadata identifier: an
+   operation contract MAY define service-level authority and use that
+   identifier as its target, but an absent or ambiguous contract is not
+   such a definition.  Validating the metadata identifier (Section 3.3
+   of [RFC9728]) and the token's audience remain separate checks, and
+   matching never rewrites a recorded entry or its integrity
+   commitments.
+
+   The following tables show one RPC operation and how entries match its
+   target:
+
+   +========================================+=========================+
+   | Role                                   | Value                   |
+   +========================================+=========================+
+   | Protected resource metadata identifier | https://api.example     |
+   +----------------------------------------+-------------------------+
+   | Transport endpoint                     | https://api.example/rpc |
+   +----------------------------------------+-------------------------+
+   | Validated operation                    | orders.read for order   |
+   |                                        | 123                     |
+   +----------------------------------------+-------------------------+
+   | Operation target                       | https://api.example/    |
+   |                                        | orders/123              |
+   +----------------------------------------+-------------------------+
+
+                 Table 1: An RPC operation and its target
+
+    +==========================+================+====================+
+    | Entry resource           | resource_match | Matches the target |
+    +==========================+================+====================+
+    | https://api.example/     | exact          | Yes                |
+    | orders/123               |                |                    |
+    +--------------------------+----------------+--------------------+
+    | https://api.example      | exact          | No                 |
+    +--------------------------+----------------+--------------------+
+    | https://api.example/rpc  | exact          | No                 |
+    +--------------------------+----------------+--------------------+
+    | https://api.example/     | prefix         | Yes                |
+    | orders                   |                |                    |
+    +--------------------------+----------------+--------------------+
+    | https://api.example/     | prefix         | Yes                |
+    | orders/                  |                |                    |
+    +--------------------------+----------------+--------------------+
+    | https://API.EXAMPLE:443/ | exact          | No                 |
+    | orders/123               |                |                    |
+    +--------------------------+----------------+--------------------+
+    | https://API.EXAMPLE:443/ | prefix         | Yes                |
+    | orders                   |                |                    |
+    +--------------------------+----------------+--------------------+
+
+             Table 2: Resource matches for the RPC operation
+
+   These are resource matches only; actions and constraints are checked
+   separately.
+
+   *Exact matching.* Under exact, the entry's resource, after JSON
+   decoding, and the operation target are compared character for
+   character, including any query component.  The comparison applies no
+   case folding, default-port removal, percent-decoding, query removal,
+   or trailing-slash equivalence, and a matcher MUST NOT normalize
+   either operand by parsing and reserializing it.  Equivalent URI
+   spellings therefore do not match, so an issuer SHOULD emit an exact
+   resource in the resource server's documented target spelling.
+
+   +==================================+========================+======+
+   |exact entry resource              |Operation target        |Result|
+   +==================================+========================+======+
+   |https://api.example/orders/123    |https://api.example/    |Match |
+   |                                  |orders/123              |      |
+   +----------------------------------+------------------------+------+
+   |https:\/\/api.example\/orders\/123|https://api.example/    |Match |
+   |(JSON escapes)                    |orders/123              |      |
+   +----------------------------------+------------------------+------+
+   |https://api.example/orders/123    |https://API.EXAMPLE/    |No    |
+   |                                  |orders/123              |match |
+   +----------------------------------+------------------------+------+
+   |https://api.example/orders/123    |https://api.example:443/|No    |
+   |                                  |orders/123              |match |
+   +----------------------------------+------------------------+------+
+   |https://api.example/orders/123    |https://api.example/    |No    |
+   |                                  |orders/%31%32%33        |match |
+   +----------------------------------+------------------------+------+
+   |https://api.example/orders/123    |https://api.example/    |No    |
+   |                                  |orders/123/             |match |
+   +----------------------------------+------------------------+------+
+   |https://api.example/              |https://api.example/    |Match |
+   |orders?id=1&view=full             |orders?id=1&view=full   |      |
+   +----------------------------------+------------------------+------+
+   |https://api.example/              |https://api.example/    |No    |
+   |orders?id=1&view=full             |orders?view=full&id=1   |match |
+   +----------------------------------+------------------------+------+
+   |https://api.example/orders?       |https://api.example/    |No    |
+   |                                  |orders                  |match |
+   +----------------------------------+------------------------+------+
+   |https://api.example               |https://api.example/    |No    |
+   |                                  |                        |match |
+   +----------------------------------+------------------------+------+
+
+                         Table 3: Exact matching
+
+   *Prefix matching.* For prefix purposes, a resource with an empty path
+   and one whose path is / denote the same base: https://a.example and
+   https://a.example/ authorize the same set.
 
    Resource containment under a prefix reference is compared after
    normalizing both URIs with these steps from Section 6.2.2 of
@@ -384,6 +513,17 @@ Table of Contents
    4.  decode percent-encoded octets of unreserved characters; and
 
    5.  remove dot-segments.
+
+   After normalization, a target is within a prefix entry when it has
+   the entry's scheme and authority and its path equals the base path or
+   extends it at a path-segment boundary.  If the base path ends in /, a
+   descendant's path begins with the complete base path; otherwise it
+   begins with the base path followed by /. A /orders/ base therefore
+   admits itself and /orders/123, but neither /orders nor /ordersx.  The
+   target's query is excluded from this path comparison only: it still
+   participates in establishing the target and in action and constraint
+   enforcement, and a query that selects another resource is resolved to
+   that resource before matching.
 
    This normalization applies to comparison only, never to hashing:
    [I-D.draft-mcguinness-oauth-mission]'s anchor computation remains
@@ -406,11 +546,11 @@ Table of Contents
    A-label (IDNA) conversion, so a deployment that accepts non-ASCII
    hosts MUST ensure both sides compare the same form.
 
-   The following table shows how request URIs match a prefix entry whose
-   resource is https://api.example/orders:
+   The following table shows how operation targets match a prefix entry
+   whose resource is https://api.example/orders:
 
    +====================================+======+======================+
-   | Request URI                        |Result| Why                  |
+   | Operation target                   |Result| Why                  |
    +====================================+======+======================+
    | https://api.example/orders         |ALLOW | The base itself      |
    +------------------------------------+------+----------------------+
@@ -449,7 +589,7 @@ Table of Contents
    |                                    |      | prefix               |
    +------------------------------------+------+----------------------+
 
-         Table 1: Prefix matching for https://api.example/orders
+         Table 4: Prefix matching for https://api.example/orders
 
    Section 5.1 analyzes why each of these rules matters.
 
@@ -464,18 +604,19 @@ Table of Contents
    token, a derived mission_resource_access entry A is a subset of a
    Mission entry B when all of the following hold:
 
-   1.  *Resource.* A's effective resource set is contained in B's
-       (resource_match, Section 3); under a prefix B, the resource
-       values are compared as Section 3.2 defines:
+   1.  *Resource.* A's resource set is contained in B's (resource_match,
+       Section 3), under the matcher of Section 3.2:
 
-       *  when neither entry sets resource_match: "prefix", A.resource
-          equals B.resource;
+       *  an exact A under an exact B: A.resource equals B.resource
+          literally;
 
-       *  when B is a prefix entry, A (whether exact or prefix) is
-          contained when A.resource equals B.resource or extends its
-          path at a path-segment boundary; and
+       *  an exact A under a prefix B: B's prefix matcher admits
+          A.resource as a target;
 
-       *  a prefix A is never contained in an exact B.
+       *  a prefix A under a prefix B: B's prefix matcher admits A's
+          normalized base; and
+
+       *  a prefix A under an exact B: never contained.
 
    2.  *Actions.* Every A.actions value is within some B.actions value:
 
@@ -492,18 +633,34 @@ Table of Contents
 
    3.  *Constraints.* For every key K in *B*.constraints:
 
-       *  K MUST also be present in A.constraints.  A key present in B
-          but absent from A is treated as the broadest possible value
+       *  K MUST also be present in A.constraints, unless B's value is
+          one K's definition makes equivalent to omitting the member
+          (requires_action_approval: false).  Otherwise a key present in
+          B but absent from A is treated as the broadest possible value
           and therefore fails this test.
 
        *  A's value MUST be no broader than B's under K's subset rule:
           the specification-defined rule when K is a Common Constraint
           (Section 3.4), the deployment-defined comparison otherwise.
 
+   The equivalence in step 3 holds for comparison only: recorded entries
+   and their integrity commitments are unchanged.  A key present only in
+   A narrows A only when it has defined semantics and the resource
+   server serving A.resource can enforce it; an unknown key in A is
+   never treated as narrowing (Section 3.4).  A grant-enabling member
+   such as delegation follows the delegation rules below, not this one.
+
+   The authorization server MUST make this resource comparison with the
+   same matcher, over the same URI forms, that resource servers use to
+   enforce the entries (Section 3.2), so that whenever A's resource set
+   is contained in B's, every target A admits is also admitted by B.
+   Resource containment alone never establishes authority containment:
+   actions, constraints, and delegation are checked as above.
+
    Hierarchy is opt-in and closed to two forms: resource_match: "prefix"
    for resource containment and .* action families for action
    containment (Section 3).  Without them, comparison is flat: resource
-   matches by exact equality and a literal action by array membership.
+   matches by literal equality and a literal action by array membership.
 
    The delegation member is policy, not authority, and is not part of
    this comparison (Section 3.7).  A derived entry's delegation, when
@@ -511,8 +668,10 @@ Table of Contents
 
    *  its max_depth MUST be no greater than the parent entry's;
 
-   *  its allowed_delegates MUST be no wider than the parent entry's;
-      and
+   *  its allowed_delegates MUST be no wider than the parent entry's,
+      and where the parent entry's eligibility inherits the
+      authorization server's policy decision (Section 3.7), a derived
+      list only restricts that decision; and
 
    *  a derived entry MUST NOT introduce delegation where the parent
       entry has none.
@@ -561,13 +720,17 @@ Table of Contents
    *  an Authority Set entry to a derived or delegated token
       (Section 3.7).
 
-   In either case, a registered Common Constraint key present in the
-   ceiling entry that the authorization server does not implement
-   narrowing for MUST NOT be dropped while the entry survives.  The
-   authorization server MUST instead fail closed: refuse the whole
-   derivation, or omit the entry from the result, as it may for an
-   unrecognized target_resources value; the granted
-   authorization_details echo reflects any such omission
+   In either case, a constraints key that the authorization server does
+   not implement narrowing for, whether a registered Common Constraint
+   or a deployment-defined key, and whether it appears in the ceiling
+   entry or in the candidate, MUST NOT be dropped while the entry
+   survives.  The authorization server MUST instead refuse the
+   derivation: an unsupported constraint is unsupported input, so the
+   entry is never omitted to repair it
+   ([I-D.draft-mcguinness-oauth-mission]).  An entry whose constraints
+   the authorization server can compare but that policy declines to
+   grant is different: it is narrowed or omitted, and the granted
+   authorization_details echo reflects that
    ([I-D.draft-mcguinness-oauth-mission]).  Carrying the entry forward
    with the key dropped would widen effective authority past the
    ceiling, as an unenforced key would at the resource server
@@ -628,7 +791,8 @@ Table of Contents
          otherwise there is no intersection and the combination fails.
 
    recipient_domain:  The action applies only to recipients within the
-      named domain.
+      named domain.  An action addressed to several recipients is within
+      the bound only when every recipient is.
 
       *  Value: a string containing a DNS name.
 
@@ -707,7 +871,11 @@ Table of Contents
    *  resource_issued_after and resource_issued_before values are
       compared as the instants they denote after normalization to UTC,
       so two RFC 3339 representations of the same instant that differ
-      only in timezone offset or trailing subsecond zeros are equal; and
+      only in timezone offset or trailing subsecond zeros are equal;
+
+   *  time_window not_before and not_after values are compared as the
+      instants they denote after normalization to UTC, as
+      resource_issued_after and resource_issued_before values are; and
 
    *  recipient_domain values are compared as DNS names, case-
       insensitively and on whole labels, so mail.example.com is within
@@ -727,30 +895,75 @@ Table of Contents
    that specification for a mission_resource_access entry.  A resource
    server:
 
-   *  MUST enforce an entry whose resource (under resource_match,
-      Section 3) matches the request, permitting only the listed actions
-      subject to constraints.  Where more than one applicable entry
-      matches, entries are alternative grants of authority, not
-      conjunctive filters.
+   *  MUST enforce an entry whose resource matches the operation target
+      under the entry's resource_match (Section 3.2), permitting only
+      the listed actions subject to constraints.  Where more than one
+      applicable entry matches, entries are alternative grants of
+      authority, not conjunctive filters.
 
    *  MUST treat an entry's resource_match value it does not recognize
       as unenforceable and fail closed (Section 3).
 
-   *  MUST, when it matches a concrete request URI against a prefix
-      entry, apply the URI normalization Section 3.2 defines for
-      containment, before the prefix comparison rather than after
-      (Section 5.1).
+   *  MUST, when it matches an operation target against a prefix entry,
+      apply the URI normalization Section 3.2 defines for containment,
+      before the prefix comparison rather than after (Section 5.1).
 
    *  MUST fail closed on any constraints key it does not understand, or
-      understands but cannot enforce, in an applicable entry: refuse the
-      request (for example, with HTTP status code 403 and the
-      insufficient_scope error code (Section 3.1 of [RFC6750]), or the
-      deployment's usual insufficient-authority error) rather than grant
-      access while ignoring the key.
+      understands but cannot enforce, in an applicable entry, rather
+      than grant access while ignoring the key.
 
    *  MUST NOT reduce a constraints key to disclosure-only: an
       unenforced key that narrows authority silently widens the grant if
       treated as absent or advisory.
+
+   *Failing closed.* An entry the resource server cannot fully enforce
+   provides no authority: one with an unrecognized resource_match value,
+   a member the resource server does not recognize or whose obligations
+   it cannot fulfill, or a constraints key the resource server does not
+   understand or cannot enforce.  The resource server then authorizes
+   the request only through another applicable entry that it can fully
+   enforce and that covers the whole request on its own: the entry's
+   resource matches the target, the action is among its actions, and
+   every key in its constraints is satisfied.  The resource server:
+
+   *  MUST NOT combine parts of several entries to authorize one
+      request, or borrow authority from an entry it cannot fully
+      enforce; and
+
+   *  MUST refuse the request when no such entry exists, for example
+      with HTTP status code 403 and the insufficient_scope error code
+      (Section 3.1 of [RFC6750]), or with the deployment's usual
+      insufficient-authority error.
+
+   A failure of token-wide validation, such as of the token's signature,
+   audience, or sender constraint
+   ([I-D.draft-mcguinness-oauth-mission]), rejects the token whatever
+   its entries carry.
+
+   *Entry members.* Each member of an entry has a resource-server role
+   or none:
+
+   *  type, resource, resource_match, actions, and constraints are
+      enforced as above;
+
+   *  delegation has no resource-server enforcement role: the
+      authorization server applies it at issuance (Section 3.7), so a
+      resource server MAY disregard it, together with any member a
+      companion profile adds to it;
+
+   *  a member that another specification defines for this type is
+      enforced as that specification requires, and leaves the entry
+      fully enforceable when the resource server, or a runtime layer
+      acting for it, implements that specification and fulfills every
+      obligation it places on enforcement; and
+
+   *  any other member, including one the resource server does not
+      recognize, makes the entry one the resource server cannot fully
+      enforce.
+
+   An entry carrying the [RFC9396] common locations field, which this
+   type does not use (Section 3.1), is likewise one the resource server
+   cannot fully enforce.
 
 3.6.  Protected Resource Metadata
 
@@ -769,11 +982,13 @@ Table of Contents
 
    [I-D.draft-mcguinness-oauth-mission] gates a delegated token's
    carried entries on the entry type's own delegation policy, evaluated
-   at the delegate's delegation depth d: the nesting depth of the
-   token's act claim, as that document's Delegation Constraints section
-   defines.  For a mission_resource_access entry, the authorization
-   server includes it in a delegated token issued at delegation depth d
-   only if all of the following hold:
+   at the delegation depth d of the token being issued.  That document's
+   Delegation Constraints section defines d and how the authorization
+   server establishes it from its own accounting, including the self-
+   exchange and cross-domain rules; the act claim attributes the chain
+   and is not the authoritative count.  For a mission_resource_access
+   entry, the authorization server includes it in a delegated token
+   issued at delegation depth d only if all of the following hold:
 
    1.  the entry carries a delegation member (otherwise it is non-
        delegable, which is the default);
@@ -791,6 +1006,28 @@ Table of Contents
    consistent with the subset rule (Section 3.3).  Surviving entries are
    carried with their delegation member intact, so the next hop is
    evaluated the same way.
+
+   *Inherited eligibility.* A derived entry's allowed_delegates
+   restricts eligibility; it never replaces an obligation the derivation
+   inherits.  An entry derived from a reference entry that has no
+   allowed_delegates inherits the authorization server's policy
+   decision, and so does every entry derived from it: a delegate is
+   permitted only when the policy permits it and, where the entry
+   carries a list, the list permits it too.  When policy permits Bob and
+   denies Carol, an entry whose list names Carol still cannot admit
+   Carol.
+
+   The obligation holds from the initial derivation.  An approved entry
+   derived from a ceiling entry without allowed_delegates inherits the
+   policy decision even when the approved proposal added a list, so the
+   approved entry's own members do not reveal the obligation.  The
+   authorization server therefore records, when it derives the Authority
+   Set, which approved entries inherit the policy decision, and retains
+   that provenance with the Mission.  It evaluates every later exchange
+   against the approved entry in the Mission Record
+   ([I-D.draft-mcguinness-oauth-mission]) and that provenance, never
+   against a presented token alone.  Where it cannot resolve either, the
+   entry narrows out of the delegated token.
 
 3.7.1.  Matching allowed_delegates
 
@@ -810,9 +1047,10 @@ Table of Contents
       MAY carry multiple space-separated values; a { "sub_profile": ...
       } matcher is satisfied when its value is among the actor's values.
 
-   A delegate is permitted if it matches any of the entry's delegate
-   matchers, so a deployment can permit a specific client, a class of
-   actors, or both.
+   A delegate matcher that carries both sub and sub_profile is satisfied
+   only when the delegate satisfies both.  A delegate is permitted if it
+   satisfies any of the entry's delegate matchers, so a deployment can
+   permit a specific client, a class of actors, or both.
 
    The authorization server MUST authenticate the delegate at the Token
    Exchange and assert the actor's sub and sub_profile itself.  A self-
@@ -854,10 +1092,12 @@ Table of Contents
 
    1.  *The mapping covers the same resource set.* The mapping's scope
        value is defined over the entry's resource and resource_match.  A
-       prefix entry projects safely only when the mapping itself scopes
-       the value to that same prefix; a scope value the target's own
-       interpretation extends to a broader ancestor resource is not a
-       safe projection of a narrower prefix entry.
+       prefix entry projects safely only when the mapping scopes the
+       value to that same prefix, or to a narrower resource within it
+       whose complete effective rights remain a subset of the entry's; a
+       scope value the target's own interpretation extends to a broader
+       ancestor resource is not a safe projection of a narrower prefix
+       entry.
 
    2.  *The actions match without aggregation.* Every action granted by
        the mapped scope value MUST be included in the applicable entry's
@@ -899,7 +1139,12 @@ Table of Contents
 
    narrowing: true  The subset rule of Section 3.3, over every member
       this document specifies, and the Common Constraint intersection
-      rules of Section 3.4 are fully defined.
+      rules of Section 3.4 are fully defined.  An authorization server
+      MUST NOT declare narrowing as true unless it implements these
+      rules for every Common Constraint of Section 3.4.1.  A Common
+      Constraint registered later is not required by the declaration,
+      but an authorization server that meets one it does not support
+      fails closed (Section 3.4).
 
    delegation: true  The delegation policy of Section 3.7 is fully
       defined; an entry's delegation member states its own depth and
@@ -915,7 +1160,16 @@ Table of Contents
    scope for them) leaves projection undeclared rather than declaring it
    true.  [I-D.draft-mcguinness-oauth-mission]'s carried-as-approved
    fallback then applies to scope projection for this type at that
-   deployment, as it would for an unsupported type.
+   deployment, as it would for an unsupported type.  Omitting projection
+   from one carrier leaves it undeclared by that carrier only, so a
+   lower-priority carrier can still declare it
+   ([I-D.draft-mcguinness-oauth-mission]).  Where no carrier declares
+   it, the authorization server emits no projected resource scope for
+   this type: it carries authorization_details where the target consumes
+   them, refuses issuance to a scope-only target only when no other
+   applicable carried entry supplies a safe projection, and answers an
+   explicitly requested scope it cannot grant as
+   [I-D.draft-mcguinness-oauth-mission] specifies.
 
 3.10.  Modeling Tools and Function Calls
 
@@ -928,10 +1182,12 @@ Table of Contents
 
    The mapping is:
 
-   *  resource is the tool provider.  For an MCP tool it is the MCP
-      server's URL.  The MCP authorization model ([MCP]) makes the
-      server an OAuth 2.0 resource server, so this is the resource
-      identifier a token is audience-bound to.
+   *  resource names the operation target that the tool provider's
+      operation contract establishes for a call (Section 3.2).  The MCP
+      authorization model ([MCP]) makes an MCP server an OAuth 2.0
+      resource server, and a token is audience-bound to its URL; the
+      server's contract can identify that URL or a finer target, such as
+      a record a tool acts on.
 
    *  actions are the tool names the task needs at that provider.
       Authorizing a tool is authorizing its name as an action, which
@@ -946,6 +1202,11 @@ Table of Contents
       enforcement layer acting for it, evaluates them against the
       concrete call arguments; the authorization server does not
       evaluate them at issuance ([I-D.draft-mcguinness-oauth-mission]).
+
+   In the examples in this section, each MCP server's operation contract
+   identifies the server's URL as the operation target.  Tool names as
+   actions, and constraints on their arguments, determine the permitted
+   calls.
 
    The following example shows the Authority Set of a Mission authorized
    to read invoices and post small adjustments through a finance MCP
@@ -1063,8 +1324,9 @@ Table of Contents
    server to draw it with one normalization.  A URI matcher that
    normalizes differently from the party that derived the entry can
    admit a request the Approver never authorized, or deny one the
-   Approver did.  Each of the following vectors turns on such a
-   difference:
+   Approver did.  An exact entry is compared literally, without
+   normalization, so these vectors concern prefix entries.  Each of the
+   following vectors turns on such a difference:
 
    *  *Encoded slash (%2F).* A reserved octet, left encoded by the
       normalization (which decodes only unreserved octets) and never a
@@ -1232,7 +1494,7 @@ Table of Contents
    |                          |            | reference |              |
    +--------------------------+------------+-----------+--------------+
 
-           Table 2: Initial Mission Common Constraints registry
+           Table 5: Initial Mission Common Constraints registry
 
 8.  References
 
