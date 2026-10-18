@@ -141,6 +141,18 @@ function run(c: Case): void {
 
 const EXECUTABLE_CHECKS = new Set(["subset", "derive", "delegate-matcher"]);
 
+/**
+ * Cases the conformance ledger cites as witnesses. Each runs once, in the static
+ * block below, under a literal test name the ledger can resolve; the loop skips it.
+ */
+const CITED = new Set(["sub-res-01", "sub-res-02", "sub-res-03", "sub-ra-01", "sub-ra-02"]);
+const byId = new Map(files.flatMap(({ doc }) => doc.cases.map((c) => [c.id, c] as const)));
+function runCited(id: string): void {
+  const c = byId.get(id);
+  if (!c) throw new Error(`no case ${id}`);
+  run(c);
+}
+
 describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
   it("validates every case file: format, group, unique ids, roles, checks, outcomes and capabilities", () => {
     expect(files.length).toBeGreaterThan(0);
@@ -163,9 +175,28 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
     }
   });
 
+  describe("witnesses the conformance ledger cites", () => {
+    it("sub-res-01: an exact candidate is within an exact reference with the identical resource", () => {
+      runCited("sub-res-01");
+    });
+    it("sub-res-02: an exact candidate differing only in host case is not within an exact reference", () => {
+      runCited("sub-res-02");
+    });
+    it("sub-res-03: an exact candidate carrying a query its exact reference lacks is not within it", () => {
+      runCited("sub-res-03");
+    });
+    it("sub-ra-01: a candidate omitting requires_action_approval is within a reference carrying false", () => {
+      runCited("sub-ra-01");
+    });
+    it("sub-ra-02: a candidate omitting requires_action_approval is not within a reference carrying true", () => {
+      runCited("sub-ra-02");
+    });
+  });
+
   for (const { name, doc } of files) {
     describe(`${doc.group} (${name})`, () => {
       for (const c of doc.cases) {
+        if (CITED.has(c.id)) continue;
         const missing = c.requires.filter((cap) => !IMPLEMENTED.has(cap));
         if (!EXECUTABLE_CHECKS.has(c.check) && missing.length === 0) missing.push(`executor:${c.check}`);
         if (missing.length > 0) {
