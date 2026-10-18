@@ -34,6 +34,7 @@ const SECOND = "test-second-delegate";
 const ISSUED_AUDIENCE = TOPOLOGY.resources.hrFiles;
 const ALIAS_CLIENT = "test-alias-client";
 const UNDECLARED = "test-undeclared-delegate";
+const INELIGIBLE = "test-ineligible-delegate";
 const RS_PAYMENTS = ["rs-payments", "dev-introspection-rs-payments"] as const;
 const RS_ALIAS = ["rs-alias", "dev-introspection-rs-alias"] as const;
 const RS_LATE = ["rs-late", "dev-introspection-rs-late"] as const;
@@ -85,9 +86,9 @@ async function harness(port: number, options: Record<string, unknown>): Promise<
     // A second ai_agent delegate; a client whose identifier is an audience
     // the AS issues; one a registered resource server accepts as an alias;
     // and an eligible client the deployment does not list as designable.
-    testClients: await Promise.all([SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, UNDECLARED].map(testClient)),
+    testClients: await Promise.all([SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, UNDECLARED, INELIGIBLE].map(testClient)),
     actorProfiles: { [SECOND]: "ai_agent", [ISSUED_AUDIENCE]: "ai_agent", [ALIAS_CLIENT]: "ai_agent", [UNDECLARED]: "ai_agent" },
-    designableClients: [SUBAGENT, SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT],
+    designableClients: [SUBAGENT, SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, INELIGIBLE],
     ...options,
   } as never);
   const server = as.provider.listen(port);
@@ -460,11 +461,12 @@ describe("who presents which proof (@spec mission#designation, mission#delegatio
     expect(designation.status, JSON.stringify(designation.body)).toBe(200);
     const carried = (decodeJwt(designation.body.access_token as string) as { authorization_details: Body[] }).authorization_details;
     for (const entry of carried) expect(presented).toContainEqual(entry);
-    // ledger-reconciler has no AS-asserted actor profile, so no `ai_agent` matcher admits it.
+    // A designable client with no AS-asserted actor profile: no `ai_agent` matcher admits it.
     const before = derivations(on, missionId);
-    const refused = await designate(on, accessToken, "ledger-reconciler");
+    const refused = await designate(on, accessToken, INELIGIBLE);
     expect(refused.status).toBe(400);
     expect(refused.body.error).toBe("invalid_target");
+    expect(refused.body.error_description).toMatch(/no entry the designated client may be delegated/);
     expect(derivations(on, missionId)).toBe(before);
   });
 
