@@ -544,7 +544,9 @@ this comparison ({{delegate-eligibility}}). A derived entry's
 `delegation`, when present, MUST NOT be broader than the parent entry's:
 
 - its `max_depth` MUST be no greater than the parent entry's;
-- its `allowed_delegates` MUST be no wider than the parent entry's; and
+- its `allowed_delegates` MUST be no wider than the parent entry's, and
+  where the parent entry has none, a derived list only restricts the
+  inherited policy decision ({{delegate-eligibility}}); and
 - a derived entry MUST NOT introduce `delegation` where the parent entry
   has none.
 
@@ -836,6 +838,21 @@ An entry failing any of these narrows out of the delegated token,
 consistent with the subset rule ({{subset}}). Surviving entries are
 carried with their `delegation` member intact, so the next hop is
 evaluated the same way.
+
+**Inherited eligibility.** A derived entry's `allowed_delegates`
+restricts eligibility; it never replaces an obligation the derivation
+inherits. Where the approved Authority Set entry has no
+`allowed_delegates`, its eligibility is the authorization server's
+policy decision, and that decision continues to bind every entry derived
+from it: a delegate is permitted only when the policy permits it and,
+where a derived entry adds a list, the list permits it too. When policy
+permits Bob and denies Carol, a derived entry whose list names Carol
+still cannot admit Carol. The authorization server evaluates this
+obligation against the approved entry in the Mission Record
+({{I-D.draft-mcguinness-oauth-mission}}), the authoritative context for
+every later exchange, never against a presented token alone. Where it
+cannot resolve that context, the entry narrows out of the delegated
+token.
 
 ### Matching `allowed_delegates` {#matching-allowed-delegates}
 

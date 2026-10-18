@@ -5936,7 +5936,10 @@ The five properties below restate, for a policy author, what
   absent from the derived entry, so a proposal cannot introduce a
   capability the policy did not confer. A restriction nested inside an
   already-granted delegation, such as `allowed_delegates`, narrows in
-  the ordinary direction.
+  the ordinary direction. Where the ceiling's eligibility defers to the
+  issuer's delegation policy (no `allowed_delegates`), a proposed list
+  only restricts that policy's decision and never replaces it
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 ## A Worked Rule
 
@@ -6376,6 +6379,10 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Derivation Policy (#1258): where a ceiling's delegate eligibility
+  defers to the issuer's policy, a proposed `allowed_delegates` list
+  restricts that policy's decision and never replaces it.
 
 - Resource Server Enforcement (#1258): an applicable entry the resource
   server cannot fully enforce provides no authority. Another entry
