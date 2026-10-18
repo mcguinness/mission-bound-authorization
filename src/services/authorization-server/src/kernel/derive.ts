@@ -364,16 +364,20 @@ function minAmount(
 ): { amount: string; currency: string } | undefined {
   if (!a) return b;
   if (!b) return a;
-  // Different currencies are incomparable, so return the ceiling side (`b`)
-  // outright rather than dropping the constraint: the caller here is deriving
-  // AGAINST a ceiling, and the ceiling bound is already the intended cap, so
-  // it stays exact rather than being replaced by a refusal. This is a
-  // deliberately DIFFERENT rule from intersectForProjection's currency-mismatch
-  // handling below (issue #784): a projection intersects two already-derived,
-  // already-ceiling-bound entries with no ceiling side to fall back on, so it
-  // drops the whole fragment instead. Both narrow (neither ever widens past
-  // its inputs); do not converge them into one rule.
-  if (a.currency !== b.currency) return b; // ceiling wins on currency mismatch
+  // @spec resource-access#initial-common-constraints (#1263, D446): two
+  // `max_amount` values naming different currencies have no intersection, and
+  // the combination fails; there is no conversion and no "ceiling wins"
+  // exception (the OAuth binding's Derivation Policy appendix). The submitted
+  // proposal is refused, never answered with the ceiling's cap or silently
+  // omitted. intersectForProjection below drops the fragment instead: a
+  // projection intersects two already-derived entries, where no submitted
+  // proposal exists to refuse.
+  if (a.currency !== b.currency) {
+    throw new IntentError(
+      "invalid_authorization_details",
+      `max_amount currencies differ (${JSON.stringify(a.currency)} proposed, ${JSON.stringify(b.currency)} in the ceiling): no intersection`,
+    );
+  }
   // @spec mission#max-amount — exact decimal-value comparison (never
   // IEEE-754 float): a malformed amount on either side refuses the
   // derivation rather than comparing as a silently-coerced NaN.

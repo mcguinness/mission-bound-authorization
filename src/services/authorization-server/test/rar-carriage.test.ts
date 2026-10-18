@@ -624,6 +624,25 @@ describe("derivation refusal at the authorization decision (@spec mission#error-
     expect(redirect.searchParams.get("error")).toBe("invalid_authorization_details");
   });
 
+  // @spec resource-access#initial-common-constraints (#1263, D446): differing
+  // `max_amount` currencies have no intersection and the combination fails;
+  // the derivation never answers with the ceiling's cap.
+  it("refuses a proposal whose max_amount currency differs from the ceiling's, creating no Mission", async () => {
+    const before = as.kernel.allMissions().length;
+    const eurProposal: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:payment.schedule"],
+        constraints: { max_amount: { amount: "100.00", currency: "EUR" }, vendors: ["acme"] },
+      },
+    ];
+    const redirect = await decideAndGetErrorRedirect({ intent: TASK_INTENT }, eurProposal);
+    expect(redirect.searchParams.get("error")).toBe("invalid_authorization_details");
+    expect(redirect.searchParams.get("error_description")).toMatch(/currencies differ/);
+    expect(as.kernel.allMissions().length).toBe(before);
+  });
+
   it("configured-mapping mode (no proposal) that derives nothing is access_denied", async () => {
     const unmappedIntent = { ...TASK_INTENT, target_resources: ["https://unmapped.example.com"] };
     const redirect = await decideAndGetErrorRedirect({ intent: unmappedIntent });
