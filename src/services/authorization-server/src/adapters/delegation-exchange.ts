@@ -20,7 +20,7 @@
  * delegated token therefore lives and dies with that grant or family.
  */
 
-import { delegatedRoutingRefusal } from "@mission/core";
+import { canonicalize, delegatedRoutingRefusal, type JsonValue } from "@mission/core";
 import { createLocalJWKSet, jwtVerify } from "jose";
 import type { KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
@@ -83,7 +83,8 @@ export function renderAct(chain: readonly AccountedActor[]): Record<string, unkn
 function actMatchesChain(act: unknown, chain: readonly AccountedActor[]): boolean {
   const rendered = renderAct(chain);
   if (rendered === undefined) return act === undefined;
-  return JSON.stringify(act) === JSON.stringify(rendered);
+  if (act === null || typeof act !== "object") return false;
+  return canonicalize(act as JsonValue) === canonicalize(rendered as JsonValue);
 }
 
 /**

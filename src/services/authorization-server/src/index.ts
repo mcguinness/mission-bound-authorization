@@ -2,6 +2,7 @@
 
 import {
   INTROSPECTION_PRINCIPALS,
+  type IntrospectionPrincipal,
   ACTOR_PROFILES,
   AUTHORITY_SOURCES,
   CANONICAL_RESOURCE,
@@ -43,6 +44,7 @@ import type { CarryoverConfig } from "./kernel/carryover.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import { ContinuationStore, DEFAULT_CONTINUATION_HOP_LIMIT } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
+import { TokenIssuanceStore } from "./kernel/token-issuance-store.js";
 import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import {
   CreationIdempotencyStore,
@@ -733,6 +735,12 @@ export interface BuiltAs {
    */
   delegationFamilyStore: DelegationFamilyStore;
   /**
+   * @spec mission#introspection, mission#delegation-constraints (#869): the
+   * token issuance index, which is also the delegation accounting, exposed so
+   * a test can model a restart (a lost record) or a truncated chain.
+   */
+  tokenIssuanceStore: TokenIssuanceStore;
+  /**
    * @spec mission-template — the Mission Template store, seeded with one demo
    * read-only reconciliation template. Exposed so the wire PR can dispatch
    * instances (dispatchFromTemplate) and a test/exhibit can inspect templates
@@ -891,6 +899,14 @@ export async function buildAuthorizationServer(opts: {
    * callers MUST omit this.
    */
   testClients?: Record<string, unknown>[];
+  /**
+   * TEST-ONLY: introspection principals registered beside the shipped ones
+   * (config/introspection.json), so a test can stand up a resource server
+   * the demo does not ship, such as a misconfigured one whose audience
+   * collides with a client identifier (@spec mission#designation, #869).
+   * Production callers MUST omit this.
+   */
+  testIntrospectionPrincipals?: IntrospectionPrincipal[];
   /**
    * @spec cross-org-delegation#projection-exchange — destination Resource AS
    * configuration for Chain acceptance (federation trust, principal mapping,
@@ -1115,6 +1131,7 @@ export async function buildAuthorizationServer(opts: {
   // fan-out below (a terminal Mission terminates every delegation family rooted in
   // it, and the provider-capturing terminal subscriber revokes each family's grant).
   const delegationFamilyStore = new DelegationFamilyStore();
+  const tokenIssuanceStore = new TokenIssuanceStore();
   // @spec mission-template — the Mission Template store, seeded with one demo
   // read-only reconciliation template. Independent of the kernel (dispatch is a
   // pure function over both); the wire PR calls dispatchFromTemplate.
@@ -1347,8 +1364,13 @@ export async function buildAuthorizationServer(opts: {
     clients: [
       agent.metadata,
       // The child actor is also the demo templates' selected Agent, which
-      // redeems a Dispatch Handoff (@spec mission-template#dispatch-handoff).
-      ...(capabilityEnabled(opts, "child-delegation") || capabilityEnabled(opts, "templates") ? [child.metadata] : []),
+      // redeems a Dispatch Handoff (@spec mission-template#dispatch-handoff),
+      // and the shipped same-Mission delegate (@spec mission#delegation, #869).
+      ...(capabilityEnabled(opts, "child-delegation") ||
+      capabilityEnabled(opts, "templates") ||
+      capabilityEnabled(opts, "delegation")
+        ? [child.metadata]
+        : []),
       governed.metadata,
       ledgerReconciler.metadata,
       ...(opts.testClients ?? []),
@@ -1368,7 +1390,10 @@ export async function buildAuthorizationServer(opts: {
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
     // @spec mission#caller-authorization-and-minimization — the registered
     // RFC 7662 introspection principals (config/introspection.json).
-    introspectionPrincipals: INTROSPECTION_PRINCIPALS,
+    introspectionPrincipals: [...INTROSPECTION_PRINCIPALS, ...(opts.testIntrospectionPrincipals ?? [])],
+    // @spec mission#delegation-constraints (#869): the issuance index, which
+    // is also the delegation accounting, exposed on BuiltAs.
+    tokenIssuanceStore,
     // @spec discharge#discharge-authority — service-token principals and their
     // scopes; merged over the default (the dev token holds both grants).
     ...(opts.serviceTokenPrincipals
@@ -1476,6 +1501,7 @@ export async function buildAuthorizationServer(opts: {
     canonicalResource: CANONICAL_RESOURCE,
     continuationStore,
     delegationFamilyStore,
+    tokenIssuanceStore,
     templateStore,
     issuerEvidence,
     protectedEventSources: seededSources,
