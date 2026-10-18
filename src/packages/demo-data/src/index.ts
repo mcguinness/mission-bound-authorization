@@ -1093,16 +1093,22 @@ function loadDesignableClients(): readonly string[] {
   const file = "delegation.json";
   const root = asObject(file, readJson(file), "delegation");
   for (const key of Object.keys(root)) {
-    if (key !== "designable_clients") throw new ConfigError(file, `delegation has unknown member ${key}`);
+    if (key !== "designable_clients")
+      throw new ConfigError(file, `delegation has unknown member ${key}`);
   }
   const list = root.designable_clients;
-  if (!Array.isArray(list)) throw new ConfigError(file, "delegation.designable_clients must be an array");
+  if (!Array.isArray(list))
+    throw new ConfigError(file, "delegation.designable_clients must be an array");
   const seen = new Set<string>();
   for (const id of list) {
     if (typeof id !== "string" || id.length === 0) {
-      throw new ConfigError(file, "delegation.designable_clients entries must be non-empty strings");
+      throw new ConfigError(
+        file,
+        "delegation.designable_clients entries must be non-empty strings",
+      );
     }
-    if (seen.has(id)) throw new ConfigError(file, `delegation.designable_clients names ${id} twice`);
+    if (seen.has(id))
+      throw new ConfigError(file, `delegation.designable_clients names ${id} twice`);
     seen.add(id);
   }
   return [...seen];
