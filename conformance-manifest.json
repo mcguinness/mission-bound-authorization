@@ -71,8 +71,8 @@
     "content_sha256": "dd6cce30b14a54eec0d2eb5f2fd75c070843e9980d853ed467b319bcc11e38fd"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "99cdf43890121852e8bf5ff62d6affe63d5e9c71",
-    "content_sha256": "6be5baa7379aef6463001cc0f062eab8b36ff8d1e6775b191e71d4f65174a40f"
+    "revision": "4e2f0ea1118418979179798fa3fa2deffd4f883a",
+    "content_sha256": "2f4991ce177d9c6ce42a9632ec6077183ab6b1b27e5ed6e7407c76e6a6d36565"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
@@ -34332,7 +34332,7 @@
    "id": "resource-access.subset.inherited-allowed-delegates",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "subset",
-   "text": "where the parent entry has none, a derived list only restricts the inherited policy decision",
+   "text": "its `allowed_delegates` MUST be no wider than the parent entry's, and where the parent entry's eligibility inherits the authorization server's policy decision",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -34345,12 +34345,12 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a derived allowed_delegates list where the parent entry has none never admits a delegate the inherited policy decision denies"
+    "normative": "a derived list never admits a delegate the inherited policy decision denies, whether the parent entry has no list or carries one over a policy-deferring ceiling"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 8. Not met by the reference: derivation (narrowMatchers) and subset comparison (matchersSubset) adopt a candidate list where the reference has none (#1275). Cases dg-inherit-01..04 skipped."
+   "notes": "#1258 item 8, #1277 review finding 2 (D454). Not met by the reference: derivation (narrowMatchers) and subset comparison (matchersSubset) adopt a candidate list where the reference has none and then evaluate only the list (#1275). Cases dg-inherit-01, 02, 04, 05 and 07 skipped."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
@@ -34369,18 +34369,18 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "when policy permits Bob and denies Carol, a derived entry whose list names Carol cannot admit Carol, and the obligation is evaluated against the approved entry in the Mission Record"
+    "normative": "with depth within bounds, a delegate the list permits but the inherited policy denies is not eligible, one the policy permits but the list omits is not eligible, and one both permit is eligible"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 8 (D444 multi-hop case). Case dg-inherit-01, dg-inherit-02 skipped (delegation.policy; #1275)."
+   "notes": "#1258 item 8 (D444 multi-hop case), #1277 review finding 4. Cases dg-inherit-01 (policy denial alone), dg-inherit-02 (list denial alone) and dg-inherit-05 (both permit) skipped (delegation.policy; #1275)."
   },
   {
    "id": "resource-access.delegate-eligibility.unresolved-context-narrows-out",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "delegate-eligibility",
-   "text": "Where it cannot resolve that context, the entry narrows out of the delegated token.",
+   "text": "Where it cannot resolve either, the entry narrows out of the delegated token.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -34393,12 +34393,60 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an entry whose approved delegation context cannot be resolved narrows out of the delegated token"
+    "normative": "an entry whose approved entry or inherited-policy provenance cannot be resolved narrows out of the delegated token, even where the list and policy would permit"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 8. Case dg-inherit-03 skipped (delegation.inherited-eligibility)."
+   "notes": "#1258 item 8, #1277 review finding 2 (D454). Cases dg-inherit-03 (approved entry) and dg-inherit-06 (provenance) skipped (delegation.inherited-eligibility)."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.provenance-from-initial-derivation",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "An approved entry derived from a ceiling entry without `allowed_delegates` inherits the policy decision even when the approved proposal added a list",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegate named by a list the proposal added over a policy-deferring ceiling entry is not eligible when the policy denies it, and is eligible when both permit"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1277 review finding 2 (D454). Not met by the reference, which adopts the proposal list and evaluates only it (#1275). Cases dg-inherit-04 and dg-inherit-07 skipped."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.provenance-retained",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "records, when it derives the Authority Set, which approved entries inherit the policy decision, and retains that provenance with the Mission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every later exchange evaluates eligibility against the approved entry and its retained inherited-policy provenance, never against a presented token alone"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1277 review finding 2 (D454). Authorization-server-held state; its witness is the eligibility decision at a later exchange (dg-inherit-04, 06, 07). The reference retains no such provenance (#1275)."
   },
   {
    "id": "resource-access.delegate-eligibility.matcher-conjunction",
@@ -34646,12 +34694,60 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "an entry carrying a member this document gives no resource-server role, including locations, contributes no authority"
+    "normative": "an entry carrying a member the resource server does not recognize, or one whose obligations it cannot fulfill, contributes no authority"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 4. The reference credential bound refuses any unknown member, locations included, for the whole token (credential-authority tests), which is stricter than this per-entry rule. Cases fc-05, fc-07 skipped."
+   "notes": "#1258 item 4, #1277 review finding 1 (D454). The reference credential bound refuses any unknown member for the whole token (credential-authority tests), which is stricter than this per-entry rule, and sets aside `delegation` and `capability_sources`. Cases fc-05 and fc-10 in vectors/mission-resource-access/fail-closed.json are skipped (rs.alternative-grants, rs.extension-members)."
+  },
+  {
+   "id": "resource-access.rs-enforcement.defined-extension-enforceable",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "leaves the entry fully enforceable when the resource server, or a runtime layer acting for it, implements that specification and fulfills every obligation it places on enforcement",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry carrying a member another specification defines for this type is enforced, not refused, when that specification's enforcement obligations are fulfilled"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1277 review finding 1 (D454). The reference carries `capability_sources` (Capability Binding's recorded source binding) through derivation and its PDP verifies the binding, but no reference resource server establishes an operation target. Case fc-09 skipped (rs.extension-members)."
+  },
+  {
+   "id": "resource-access.rs-enforcement.locations-unenforceable",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "An entry carrying the {{RFC9396}} common `locations` field, which this type does not use ({{entry-validation}}), is likewise one the resource server cannot fully enforce.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry carrying locations contributes no authority at the resource server"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 4, kept separate from the member rule (D454). Case fc-07 skipped (rs.alternative-grants)."
   },
   {
    "id": "resource-access.entry-validation.locations-refused",
@@ -34675,7 +34771,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 4 (disposition proposed in this PR). Not met by the reference: PAR admits locations and derivation drops it. Case fc-08 skipped (refusal.locations)."
+   "notes": "#1258 item 4; refusal approved in the #1277 review (D454). Not met by the reference: PAR admits locations and derivation drops it (#1278). Case fc-08 skipped (refusal.locations)."
   },
   {
    "id": "resource-access.common-constraints.no-drop-any-key",
