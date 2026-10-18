@@ -3452,9 +3452,9 @@ the codes):
    conveys the authentication of the token's Subject, through the
    claims of {{mission-bound-tokens}} or introspection
    ({{Section 6 of RFC9470}}), and that authentication does not meet
-   the resource's requirement, the resource server responds with the
-   `insufficient_user_authentication` error code and the `acr_values`
-   or `max_age` parameters ({{Section 3 of RFC9470}}).
+   the resource's requirement, the resource server challenges with
+   `insufficient_user_authentication` and the `acr_values` or
+   `max_age` parameters ({{Section 3 of RFC9470}}).
 
    Where no Subject authentication applies, the token carries no such
    claims and the challenge offers no remediation, so the resource
@@ -3463,17 +3463,17 @@ the codes):
    on the Approver is an approval floor ({{approval-authentication}}),
    not a resource server challenge.
 2. **Sender-constraint or key-binding failure.** The token's proof of
-   possession is missing or invalid: the resource server responds with
-   the `invalid_token` error code, in the `DPoP` scheme for a
-   DPoP-bound token ({{Section 7.1 of RFC9449}}, with `use_dpop_nonce`
-   per {{Section 9 of RFC9449}}) and in the `Bearer` scheme for a
+   possession is missing or invalid: the resource server challenges
+   with `invalid_token`, in the `DPoP` scheme for a DPoP-bound token
+   ({{Section 7.1 of RFC9449}}, with `use_dpop_nonce` per
+   {{Section 9 of RFC9449}}) and in the `Bearer` scheme for a
    certificate-bound token ({{Section 3 of RFC8705}}). This is not a
    step-up: no fresh user authentication repairs a missing or wrong
    key.
 3. **Insufficient carried authority.** The action is outside the
-   token's carried authority: the resource server responds with the
-   `insufficient_scope` error code ({{RFC6750}}), or with the
-   RAR-remediation challenge where
+   token's carried authority: the resource server challenges with
+   `insufficient_scope` ({{RFC6750}}), or with the RAR-remediation
+   challenge where
    {{I-D.draft-ietf-oauth-rar-metadata-remediation}} is deployed
    ({{remediation-grains}}). More authority requires a new approval,
    or an expansion where that companion is deployed.
