@@ -4741,8 +4741,8 @@ any of the following, which issuance-time bounds alone do not provide:
 - approval bound to a single action; or
 - a bound the receiving resource server cannot enforce.
 
-Where the resource server or a composing runtime layer matches a
-concrete request URI against a `prefix` entry, the Resource Boundary
+Where the resource server or a composing runtime layer matches an
+operation target against a `prefix` entry, the Resource Boundary
 Canonicalization analysis of the Mission Resource Access Profile
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) gives the
 single-normalization rule for that match, for a deployment that
