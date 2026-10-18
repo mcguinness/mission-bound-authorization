@@ -602,6 +602,12 @@ uses a direct approval, a JWT access token, no delegated token, and
 no submission evidence (the AS's admission policy requires none).
 All times are UTC on the same day.
 
+In the examples in this document, each service's operation contract
+identifies the service's own identifier, such as
+`https://erp.example.com`, as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+
 1. **Submit.** The client pushes a Mission Intent naming
    `https://erp.example.com` and requesting expiry at 13:00, with a
    proposed `authorization_details` entry of type
@@ -5566,7 +5572,8 @@ token. The resource server:
 
 - validates the JWT and verifies the request's DPoP proof against the
   key identified by the token's `cnf` claim;
-- enforces the `authorization_details` whose `resource` it serves,
+- enforces the `authorization_details` entries whose `resource`
+  matches the operation target, `https://erp.example.com`,
   permitting `invoices.read` within the Q3 issuance window and
   `journal-entries.write` up to the `max_amount` ceiling of 500.00
   USD ({{rs-enforcement}}); and
@@ -6389,6 +6396,9 @@ Cross-Domain:
   authorizes the request only when it covers the whole request on its
   own; parts of entries are never combined, and a token-wide validation
   failure still rejects the token.
+
+- Examples (#1258): the examples declare their operation contract,
+  which identifies each example service as the operation target.
 
 - Editorial: a readability pass shortens paragraphs, turns
   enumerations into lists, cuts restatement, and follows OAuth

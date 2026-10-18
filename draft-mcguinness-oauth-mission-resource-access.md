@@ -291,6 +291,11 @@ issuance window by the `resource_issued_after` and
 The write entry carries no `delegation`, so it is non-delegable:
 `delegation` is per entry.
 
+In the ERP example above, the operation contract identifies
+`https://erp.example.com` as the operation target
+({{resource-matching}}). Actions and constraints determine the
+permitted operations within that service.
+
 ## Entry Validation {#entry-validation}
 
 This section gathers the validity rules for an entry beyond each
@@ -1011,10 +1016,12 @@ subset and delegation rules apply unchanged, and derivation,
 
 The mapping is:
 
-- `resource` is the tool provider. For an MCP tool it is the MCP
-  server's URL. The MCP authorization model ({{MCP}}) makes the server
-  an OAuth 2.0 resource server, so this is the resource identifier a
-  token is audience-bound to.
+- `resource` is the operation target the tool provider's operation
+  contract establishes for a call ({{resource-matching}}). The MCP
+  authorization model ({{MCP}}) makes an MCP server an OAuth 2.0
+  resource server, and a token is audience-bound to its URL; the
+  server's contract can identify that URL or a finer target, such as
+  a record a tool acts on.
 - `actions` are the tool names the task needs at that provider.
   Authorizing a tool is authorizing its name as an action, which lines
   up with MCP filtering its tool list by the caller's granted authority
@@ -1027,6 +1034,11 @@ The mapping is:
   enforcement layer acting for it, evaluates them against the concrete
   call arguments; the authorization server does not evaluate them at
   issuance ({{I-D.draft-mcguinness-oauth-mission}}).
+
+In the examples in this section, each MCP server's operation contract
+identifies the server's URL as the operation target. Tool names as
+actions, and constraints on their arguments, determine the permitted
+calls.
 
 The following example shows the Authority Set of a Mission authorized to
 read invoices and post small adjustments through a finance MCP server,
