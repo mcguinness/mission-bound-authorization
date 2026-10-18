@@ -385,6 +385,36 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
   });
+
+  // @spec resource-access#resource-matching (#1264, D446): this authorization
+  // server implements exact matching only, so a `prefix` entry is refused at
+  // intake, before any interaction or Mission, never rebuilt as an exact one.
+  it("refuses a proposal entry naming resource_match prefix before any interaction, creating no Mission", async () => {
+    const before = as.kernel.allMissions().length;
+    const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
+      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
+      authorization_details: JSON.stringify([
+        { type: "mission_resource_access", resource: RESOURCE, resource_match: "prefix", actions: ["payments:invoice.read"] },
+      ]),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string; error_description?: string };
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(body.error_description).toMatch(/resource_match "prefix"/);
+    expect(as.kernel.allMissions().length).toBe(before);
+  });
+
+  it("accepts an explicit resource_match exact, the default (positive control for the prefix refusal)", async () => {
+    const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
+      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
+      authorization_details: JSON.stringify([
+        { type: "mission_resource_access", resource: RESOURCE, resource_match: "exact", actions: ["payments:invoice.read"] },
+      ]),
+    });
+    expect(res.status).toBe(201);
+  });
 });
 
 describe("Submission envelope carriage (@spec mission#submission-via-par, issue #506)", () => {
@@ -622,6 +652,25 @@ describe("derivation refusal at the authorization decision (@spec mission#error-
     ];
     const redirect = await decideAndGetErrorRedirect({ intent: TASK_INTENT }, badProposal);
     expect(redirect.searchParams.get("error")).toBe("invalid_authorization_details");
+  });
+
+  // @spec resource-access#initial-common-constraints (#1263, D446): differing
+  // `max_amount` currencies have no intersection and the combination fails;
+  // the derivation never answers with the ceiling's cap.
+  it("refuses a proposal whose max_amount currency differs from the ceiling's, creating no Mission", async () => {
+    const before = as.kernel.allMissions().length;
+    const eurProposal: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:payment.schedule"],
+        constraints: { max_amount: { amount: "100.00", currency: "EUR" }, vendors: ["acme"] },
+      },
+    ];
+    const redirect = await decideAndGetErrorRedirect({ intent: TASK_INTENT }, eurProposal);
+    expect(redirect.searchParams.get("error")).toBe("invalid_authorization_details");
+    expect(redirect.searchParams.get("error_description")).toMatch(/currencies differ/);
+    expect(as.kernel.allMissions().length).toBe(before);
   });
 
   it("configured-mapping mode (no proposal) that derives nothing is access_denied", async () => {

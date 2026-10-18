@@ -71,8 +71,8 @@
     "content_sha256": "9c5f5ab0307e14d8cd05cccd23de5fc5504721073277b8514d29b527a95c25f7"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "42f688e624b7e0dcff0a06c12fa2890c99945e81",
-    "content_sha256": "2b0c27f76338635ebcdf822f9363edda9ff336cf4683c6997896c4d0ee533164"
+    "revision": "df1d75d02215348437fadf08bd038e7e5cf991d1",
+    "content_sha256": "fc7b29135eb6262142a2b95f66278efd13ed3b93bae686f2a1f2a4af4b8a3768"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
@@ -33939,6 +33939,38 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-currency-no-intersection",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "differing currencies have no intersection and the combination fails",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submitted proposal whose max_amount names a different currency than the ceiling entry it narrows against is refused; it is never derived with the ceiling's cap or silently omitted",
+    "local": "the reference AS refuses invalid_authorization_details at the authorization decision, with no Mission created"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "derivation refusal at the authorization decision (@spec mission#error-mapping) > refuses a proposal whose max_amount currency differs from the ceiling's, creating no Mission",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1263 (D446). Proved by restoring the former 'ceiling wins' return in minAmount: the test fails. The projection path (intersectForProjection) drops the fragment instead, since no submitted proposal exists there to refuse."
   },
   {
    "id": "resource-access.delegate-eligibility.as-authenticates-delegate",

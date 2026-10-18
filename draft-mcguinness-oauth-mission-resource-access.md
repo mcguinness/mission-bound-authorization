@@ -679,8 +679,11 @@ resource metadata ({{RFC9728}}):
 
 {{I-D.draft-mcguinness-oauth-mission}} gates a delegated token's carried
 entries on the entry type's own delegation policy, evaluated at the
-delegate's delegation depth `d`: the nesting depth of the token's `act`
-claim, as that document's Delegation Constraints section defines. For a
+delegation depth `d` of the token being issued. That document's
+Delegation Constraints section defines `d` and how the authorization
+server establishes it from its own accounting, including the
+self-exchange and cross-domain rules; the `act` claim attributes the
+chain and is not the authoritative count. For a
 `mission_resource_access` entry, the authorization server includes it in
 a delegated token issued at delegation depth `d` only if all of the
 following hold:

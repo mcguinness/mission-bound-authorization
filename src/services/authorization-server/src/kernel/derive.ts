@@ -46,6 +46,26 @@ import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } fr
  * builds or supplies a `DerivationPolicy`/proposal programmatically, bypassing
  * the config loader and PAR intake gates entirely.
  */
+/**
+ * @spec resource-access#resource-matching (#1264, D446): derivation
+ * implements `exact` resource matching only, and `intersect` rebuilds each
+ * entry without `resource_match`. An entry naming any other value is refused
+ * here, over the full ceiling and proposal, so a programmatic caller that
+ * bypasses intake and the config loader cannot have a `prefix` entry
+ * silently derived as an exact one.
+ */
+function assertExactResourceMatch(entries: readonly AuthorityEntry[]): void {
+  for (const entry of entries) {
+    const match = (entry as { resource_match?: unknown }).resource_match;
+    if (match !== undefined && match !== "exact") {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `resource_match ${JSON.stringify(match)} is not supported; this authorization server implements exact resource matching only`,
+      );
+    }
+  }
+}
+
 function assertSupportedConstraints(entries: readonly AuthorityEntry[]): void {
   for (const entry of entries) {
     if (!entry.constraints) continue;
@@ -233,6 +253,8 @@ export function deriveAuthoritySet(
   // with any proposal element would otherwise never reach `intersect` below).
   assertSupportedConstraints(policy.ceiling);
   if (proposal) assertSupportedConstraints(proposal);
+  assertExactResourceMatch(policy.ceiling);
+  if (proposal) assertExactResourceMatch(proposal);
 
   // @spec mission#error-mapping — captured BEFORE the template-mode fallback
   // below reassigns `proposals`: whether the client actually submitted an
@@ -364,16 +386,20 @@ function minAmount(
 ): { amount: string; currency: string } | undefined {
   if (!a) return b;
   if (!b) return a;
-  // Different currencies are incomparable, so return the ceiling side (`b`)
-  // outright rather than dropping the constraint: the caller here is deriving
-  // AGAINST a ceiling, and the ceiling bound is already the intended cap, so
-  // it stays exact rather than being replaced by a refusal. This is a
-  // deliberately DIFFERENT rule from intersectForProjection's currency-mismatch
-  // handling below (issue #784): a projection intersects two already-derived,
-  // already-ceiling-bound entries with no ceiling side to fall back on, so it
-  // drops the whole fragment instead. Both narrow (neither ever widens past
-  // its inputs); do not converge them into one rule.
-  if (a.currency !== b.currency) return b; // ceiling wins on currency mismatch
+  // @spec resource-access#initial-common-constraints (#1263, D446): two
+  // `max_amount` values naming different currencies have no intersection, and
+  // the combination fails; there is no conversion and no "ceiling wins"
+  // exception (the OAuth binding's Derivation Policy appendix). The submitted
+  // proposal is refused, never answered with the ceiling's cap or silently
+  // omitted. intersectForProjection below drops the fragment instead: a
+  // projection intersects two already-derived entries, where no submitted
+  // proposal exists to refuse.
+  if (a.currency !== b.currency) {
+    throw new IntentError(
+      "invalid_authorization_details",
+      `max_amount currencies differ (${JSON.stringify(a.currency)} proposed, ${JSON.stringify(b.currency)} in the ceiling): no intersection`,
+    );
+  }
   // @spec mission#max-amount — exact decimal-value comparison (never
   // IEEE-754 float): a malformed amount on either side refuses the
   // derivation rather than comparing as a silently-coerced NaN.
