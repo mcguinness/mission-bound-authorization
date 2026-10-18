@@ -2773,10 +2773,10 @@ negotiation.
 
 A verifier MUST reject a digest whose algorithm prefix it does not
 recognize, so an algorithm added later cannot be exploited as a
-downgrade. These rules bind a prefixed digest of any
-species when its defining specification classifies it under this
-taxonomy and imports this section normatively; this document so
-classifies its three anchors.
+downgrade. These rules bind a prefixed digest of any species when its
+defining specification classifies it under this taxonomy and imports
+this section normatively; this document so classifies every anchor it
+defines.
 
 This document defines no transition mechanism: every commitment a
 current carrier defines is a single prefixed string, and no carrier
@@ -3001,10 +3001,10 @@ derived token:
   that requested this particular token;
 - MUST set `aud` to identify the resource server(s) authorized to
   consume the carried `authorization_details`, and MUST NOT include an
-  audience unrelated to that carried authority ({{token-audience}}), except
-  that a token the AS issues only for presentation back to itself at
-  a Token Exchange, such as a designation ({{designation}}), names in
-  `aud` the client that presents it;
+  audience unrelated to that carried authority ({{token-audience}}),
+  except that a token the AS issues only for presentation back to
+  itself at a Token Exchange, such as a designation ({{designation}}),
+  names in `aud` the client that presents it;
 - MAY carry an `act` claim when the agent has delegated execution
   ({{delegation}});
 - MAY carry a `scope` claim, subject to {{scope-projection}}; and
@@ -3594,7 +3594,7 @@ codes ({{submission-via-par}}, {{authority-proposal}},
 | Token exchange: a `subject_token` or `actor_token` that is invalid, whose sender constraint is not proven, or that is unacceptable for the exchange | `invalid_request` ({{Section 2.2.2 of RFC8693}}), unless a Token Exchange profile assigns the failure its own code; a required DPoP proof that is missing, or a DPoP proof that fails its own validation, is `invalid_dpop_proof` ({{Section 5 of RFC9449}}), not an unproven sender constraint; an authorization server that requires a DPoP nonce answers a proof lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof` | safe `error_description` |
 | Token exchange with no actor ({{self-exchange}}): the authenticated client is not the Mission's approved agent | `invalid_request` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
 | Delegated token exchange ({{delegation}}): the `subject_token` is not a designation this AS issued naming the requesting client | `invalid_request` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
-| Designation ({{designation}}): the named client's identifier is also an audience of access tokens the AS issues for resource access | `invalid_target` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
+| Designation ({{designation}}): the AS cannot establish that no resource server accepts the named client's identifier as an audience for its access tokens, including an alias it never issues | `invalid_target` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
 | Delegated token exchange ({{delegation-constraints}}): narrowing leaves no entries for the delegate | `invalid_target` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
 | Token exchange using {{delegated-instance-context}}: required Client Attestation fails validation | `invalid_client_attestation` ({{Section 5.2 of I-D.draft-mcguinness-oauth-client-instance-id}}) | no instance-identity disclosure |
 | Token exchange using {{delegated-instance-context}}: required instance-to-delegate or output-key association cannot be established | `invalid_request` ({{Section 2.2.2 of RFC8693}}) | no instance-identity disclosure |
@@ -4004,13 +4004,15 @@ A designation names a delegate and adds none. Whether one may be
 redeemed more than once within its lifetime is the AS's policy; each
 redemption is a delegated exchange of its own ({{delegation}}).
 
-A designation authorizes no resource access. The identifiers of the
-clients the AS designates and the audiences of the access tokens it
-issues for resource access MUST be disjoint, and the AS MUST refuse a
-designation request that would violate this with `invalid_target`
-({{Section 2.2.2 of RFC8693}}). A resource server that validates a
-JWT access token's audience ({{Section 4 of RFC9068}}) therefore
-rejects a designation, and the AS reports one inactive at
+A designation authorizes no resource access. A designated client's
+identifier MUST NOT be an audience that any resource server accepts
+for this AS's access tokens, throughout the designation's lifetime.
+That includes an alias a resource server accepts but the AS never
+issues as an audience. The AS MUST refuse, with `invalid_target`
+({{Section 2.2.2 of RFC8693}}), a designation request naming a client
+for which it cannot establish that separation. A resource server that
+validates a JWT access token's audience ({{Section 4 of RFC9068}})
+therefore rejects a designation, and the AS reports one inactive at
 introspection ({{composite-active}}).
 
 ## Instance Context in Delegated Tokens {#delegated-instance-context}
@@ -4849,9 +4851,9 @@ Derived tokens are sender-constrained (DPoP {{RFC9449}} or mTLS
 {{RFC8705}}) where {{mission-bound-tokens}} and {{delegation}} require
 it. A designation ({{designation}}) carries no confirmation key: like
 an authorization code, it is bound to the client that redeems it, and
-it authorizes no resource access. A stolen token is bounded by the Authority Set and the
-Mission lifetime regardless, but sender-constraint prevents replay by a
-different party.
+it authorizes no resource access. A stolen token is bounded by the
+Authority Set and the Mission lifetime regardless, but sender-constraint
+prevents replay by a different party.
 
 ### Delegation and Chain Compromise {#delegation-and-chain-compromise}
 
@@ -6448,13 +6450,19 @@ Cross-Domain:
   sender-constrained Mission-bound token obtains by Token Exchange,
   proving its key and naming the delegate as `audience`. A designation
   is not a self-exchange, adds no delegate, expires shortly and within
-  its source, and authorizes no resource access: designated client
-  identifiers and resource audiences are disjoint, and introspection
-  reports a designation inactive. Every redemption is gated afresh.
+  its source, and authorizes no resource access: a designated client's
+  identifier is never an audience a resource server accepts for the
+  AS's tokens, aliases included, and introspection reports a
+  designation inactive. Every redemption is gated afresh.
   Security Considerations names designation, not a presentation proof
   the delegated exchange cannot carry, as what closes audience replay
   into the exchange. Delegation therefore requires sender-constrained
   primary tokens.
+
+- Commitment Mechanisms classifies every anchor this document
+  defines, so the algorithm-prefix rules bind the activation policy
+  `digest` as well as `intent_hash`, `proposal_hash` and
+  `authority_hash` (#1261).
 
 - Editorial: a readability pass shortens paragraphs, turns
   enumerations into lists, cuts restatement, and follows OAuth
