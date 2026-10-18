@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "3b2dcb49ad1dc1ba677a4cf4598d5a4859027ba5",
-    "content_sha256": "4b37c6abaa2c43926309379bf1fe8b270083049a7820664d9edf5ffedd796aa4"
+    "revision": "104a35712ffa7b79c25bb3f8a798afd046da92f4",
+    "content_sha256": "ea8160cc64ac4f18c307185350bf341224127dce524053c58bde5a6089de3607"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "df1d75d02215348437fadf08bd038e7e5cf991d1",
@@ -3035,8 +3035,15 @@
      "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/anchors.test.ts",
+     "name": "integrity anchors (core § test-vectors) > an activation policy reference whose digest has an unrecognized algorithm prefix is refused",
+     "level": "unit",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "Commitment Mechanisms classifies every anchor the OAuth binding defines (#1261). The activation policy digest is not verified through verifyAnchor; its witness is the shared reference guard isActivationPolicyRef, which the authorization server applies to child_creation_policy and governed-policy evaluator references, proved by loosening the guard's prefix check."
   },
   {
    "id": "derivation-limits.requested.max-derivations-floor",
