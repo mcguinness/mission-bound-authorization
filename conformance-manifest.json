@@ -7943,6 +7943,270 @@
    "notes": "D63: the reference AS has no live in-Mission delegation exchange; the OAuth binding's per-entry delegation gate is implemented and unit-tested but unreached by any HTTP path."
   },
   {
+   "id": "core.delegation.designation-only-subject-token",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation",
+   "text": "The AS MUST refuse any other `subject_token` with `invalid_request` ({{Section 2.2.2 of RFC8693}}); an access token issued for resource access is never sufficient",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange whose subject_token is not a designation this AS issued naming the authenticated requesting client (the delegating party's own access token, an access token issued for resource access, or a designation naming another client) is refused with invalid_request, with no token issued"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+  },
+  {
+   "id": "core.delegation.redemption-evaluated-afresh",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation",
+   "text": "The AS MUST evaluate every redemption of a designation afresh, as a derivation of its own",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "each redemption re-checks the validity of the credential the designation was derived from and of its grant, the Mission's state, the delegation policy and the Mission's current authority, and is counted as a derivation; a revoked source grant or family, or a Mission that is not active, refuses a redemption even after an earlier redemption of the same designation succeeded"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+  },
+  {
+   "id": "core.delegation-constraints.designation-adds-no-delegate",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation-constraints",
+   "text": "a designation ({{designation}}) and a self-exchange ({{self-exchange}}) add none",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS's accounting records a designation at its holder's depth and chain, and a delegated token issued from it at one more depth with the redeeming delegate appended; a self-exchange adds no delegate"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+  },
+  {
+   "id": "core.designation.holder-proves-possession",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "designation",
+   "text": "presents that token as the `subject_token`, proves possession of the token's confirmation key, and names another client's identifier as `audience`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a designation request that does not prove possession of the presented token's confirmation key, including one presenting a token with no confirmation key such as a designation, is refused, with no designation issued"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+  },
+  {
+   "id": "core.designation.holder-is-current-actor",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "designation",
+   "text": "The holder is the Mission's approved agent for a token that carries no `act` claim, and otherwise the delegate that the AS's accounting records as the token's outermost actor",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a designation request from a client other than the presented token's current actor (the approved agent for a token with no act, otherwise the accounted outermost delegate) is refused, with no designation issued"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+  },
+  {
+   "id": "core.designation.subset-and-mission",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "designation",
+   "text": "carries a subset ({{subset}}) of the presented token's authority, and the same `mission` claim ({{mission-claim}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a designation's authorization_details are a subset of the presented token's, and its mission claim equals the presented token's"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+  },
+  {
+   "id": "core.designation.audience-names-client",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "designation",
+   "text": "has `aud` equal to the designated client's identifier, and a `may_act` claim ({{Section 4.4 of RFC8693}}) whose `sub` is that identifier",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a designation's aud is the designated client's identifier, and its may_act.sub names that client"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+  },
+  {
+   "id": "core.designation.no-cnf-no-act",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "designation",
+   "text": "carries no `cnf` and no `act` claim",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a designation carries neither cnf nor act; the delegated token's act renders the AS's accounting"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+  },
+  {
+   "id": "core.designation.expiry",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "designation",
+   "text": "MUST expire shortly after it is issued, and no later than the presented token or the Mission's `expires_at`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a designation's exp does not exceed the AS's short designation lifetime, the presented token's exp, or the Mission's expires_at"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+  },
+  {
+   "id": "core.designation.audience-separation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "designation",
+   "text": "The identifiers of the clients the AS designates and the audiences of the access tokens it issues for resource access MUST be disjoint, and the AS MUST refuse a designation request that would violate this with `invalid_target`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a designation request naming a client whose identifier is also an audience of access tokens the AS issues for resource access is refused with invalid_target, with no designation issued, so a resource server validating a JWT access token's audience never accepts a designation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+  },
+  {
+   "id": "core.self-exchange.designation-not-self-exchange",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "self-exchange",
+   "text": "A designation ({{designation}}) names a delegate, so it is not a self-exchange, and these rules do not apply to it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a current delegate's designation request is not refused under the no-actor rule, which applies to self-exchanges only"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange."
+  },
+  {
+   "id": "core.introspection.designation-inactive",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "composite-active",
+   "text": "A designation ({{designation}}) authorizes no resource access: the AS MUST return `active: false` for one, with no `mission` member",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "introspecting a designation returns active: false with no mission member, to every caller"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1268 (D449): the binding's delegation by designation. #869 implements and witnesses it; until then the reference AS has no delegated exchange. Applies where the AS also supports introspection (core.introspection)."
+  },
+  {
    "id": "core.introspection.opaque-requires-introspection",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "introspected-consumption",

@@ -3001,7 +3001,10 @@ derived token:
   that requested this particular token;
 - MUST set `aud` to identify the resource server(s) authorized to
   consume the carried `authorization_details`, and MUST NOT include an
-  audience unrelated to that carried authority ({{token-audience}});
+  audience unrelated to that carried authority ({{token-audience}}), except
+  that a token the AS issues only for presentation back to itself at
+  a Token Exchange, such as a designation ({{designation}}), names in
+  `aud` the client that presents it;
 - MAY carry an `act` claim when the agent has delegated execution
   ({{delegation}});
 - MAY carry a `scope` claim, subject to {{scope-projection}}; and
@@ -3590,6 +3593,8 @@ codes ({{submission-via-par}}, {{authority-proposal}},
 | Token endpoint: the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}) | safe detail |
 | Token exchange: a `subject_token` or `actor_token` that is invalid, whose sender constraint is not proven, or that is unacceptable for the exchange | `invalid_request` ({{Section 2.2.2 of RFC8693}}), unless a Token Exchange profile assigns the failure its own code; a required DPoP proof that is missing, or a DPoP proof that fails its own validation, is `invalid_dpop_proof` ({{Section 5 of RFC9449}}), not an unproven sender constraint; an authorization server that requires a DPoP nonce answers a proof lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof` | safe `error_description` |
 | Token exchange with no actor ({{self-exchange}}): the authenticated client is not the Mission's approved agent | `invalid_request` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
+| Delegated token exchange ({{delegation}}): the `subject_token` is not a designation this AS issued naming the requesting client | `invalid_request` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
+| Designation ({{designation}}): the named client's identifier is also an audience of access tokens the AS issues for resource access | `invalid_target` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
 | Delegated token exchange ({{delegation-constraints}}): narrowing leaves no entries for the delegate | `invalid_target` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
 | Token exchange using {{delegated-instance-context}}: required Client Attestation fails validation | `invalid_client_attestation` ({{Section 5.2 of I-D.draft-mcguinness-oauth-client-instance-id}}) | no instance-identity disclosure |
 | Token exchange using {{delegated-instance-context}}: required instance-to-delegate or output-key association cannot be established | `invalid_request` ({{Section 2.2.2 of RFC8693}}) | no instance-identity disclosure |
@@ -3701,7 +3706,9 @@ authorization, not the token in isolation. Strengthening
 {{Section 4 of RFC7662}}, the AS MUST return `active: true` only when
 the access token passes that section's checks (valid signature,
 unexpired, and not individually revoked) and the Mission is
-`active`.
+`active`. A designation ({{designation}}) authorizes no resource
+access: the AS MUST return `active: false` for one, with no `mission`
+member.
 
 The AS does not verify the token's sender-constraint (`cnf`) at
 introspection; the resource server checks proof of possession when
@@ -3893,14 +3900,19 @@ which does not delegate. An intermediary authenticated as a distinct
 actor that obtains a delegated token by Token Exchange is a delegate.
 
 A delegate obtains a delegated token by Token Exchange
-({{RFC8693}}). The AS issues the delegated token subject to all of
-the following:
+({{RFC8693}}), presenting a designation that the delegating party
+obtained for it ({{designation}}). The AS issues the delegated token
+subject to all of the following:
 
-- **The exchange is explicit.** The delegating Mission-bound access
-  token is the `subject_token`, with `subject_token_type`
+- **The exchange is explicit.** The `subject_token` is a designation
+  this AS issued naming the authenticated requesting client
+  ({{designation}}), with `subject_token_type`
   `urn:ietf:params:oauth:token-type:access_token`, and the
   `requested_token_type` is
-  `urn:ietf:params:oauth:token-type:access_token`. The delegate is
+  `urn:ietf:params:oauth:token-type:access_token`. The AS MUST refuse
+  any other `subject_token` with `invalid_request`
+  ({{Section 2.2.2 of RFC8693}}); an access token issued for resource
+  access is never sufficient. The delegate is
   identified by an `actor_token` or by its own client authentication,
   and the AS asserts the actor itself ({{delegation-constraints}}).
 - **Subject is stable.** `sub` remains the Mission's Subject. The
@@ -3919,7 +3931,8 @@ the following:
   `sub_profile` actor-type classification, such as `ai_agent`).
 - **Authority only narrows.** The delegated token's
   `authorization_details` MUST be a subset ({{subset}}) of the
-  delegating token's authority, hence of the Mission Authority Set.
+  designation's authority, hence of the delegating token's and of the
+  Mission Authority Set.
 - **The `mission` claim is unchanged.** The delegated token carries
   the delegating token's `mission` claim ({{mission-claim}})
   unchanged, so every actor in the chain operates under the one
@@ -3931,9 +3944,14 @@ the following:
   in the Token Exchange. Compromise of a delegate's key therefore does
   not enable use of tokens bound to the agent's or another delegate's
   key.
-- **Each delegation is gated.** Issuing a delegated token is a
+- **Each redemption is gated.** Issuing a delegated token is a
   derivation, refused unless the Mission is `active`
-  ({{issuance-gating}}).
+  ({{issuance-gating}}). The AS MUST evaluate every redemption of a
+  designation afresh, as a derivation of its own: the credential the
+  designation was derived from, and that credential's grant, are
+  still valid; the Mission is `active`; and the delegation policy
+  ({{delegation-constraints}}) and the Mission's current authority
+  admit the result. An earlier redemption establishes none of these.
 
 The `act` chain nests (`act.act`) for as long as, and only while,
 authority continues under the same approved Mission. A new approval
@@ -3953,6 +3971,47 @@ The chain is attribution, not authority:
 - An asserted actor identity grants nothing.
 - The `authorization_details` subset relations ({{subset}}), not the
   chain, show that authority narrowed.
+
+## Designation {#designation}
+
+A designation is the delegating party's authorization for one
+delegate to obtain delegated tokens. The holder of a Mission-bound
+access token obtains it by Token Exchange ({{RFC8693}}): it presents
+that token as the `subject_token`, proves possession of the token's
+confirmation key, and names another client's identifier as
+`audience`, with `requested_token_type`
+`urn:ietf:params:oauth:token-type:access_token`. Only a
+sender-constrained token can therefore be designated. The holder is
+the Mission's approved agent for a token that carries no `act` claim,
+and otherwise the delegate that the AS's accounting records as the
+token's outermost actor ({{delegation-constraints}}).
+
+A designation the AS issues:
+
+- carries a subset ({{subset}}) of the presented token's authority,
+  and the same `mission` claim ({{mission-claim}});
+- has `aud` equal to the designated client's identifier, and a
+  `may_act` claim ({{Section 4.4 of RFC8693}}) whose `sub` is that
+  identifier;
+- carries no `cnf` and no `act` claim: like an authorization code, it
+  is bound to the client that redeems it, which proves its own key in
+  the delegated exchange ({{delegation}}), and the delegated token's
+  `act` renders the AS's accounting ({{delegation-constraints}}); and
+- MUST expire shortly after it is issued, and no later than the
+  presented token or the Mission's `expires_at`.
+
+A designation names a delegate and adds none. Whether one may be
+redeemed more than once within its lifetime is the AS's policy; each
+redemption is a delegated exchange of its own ({{delegation}}).
+
+A designation authorizes no resource access. The identifiers of the
+clients the AS designates and the audiences of the access tokens it
+issues for resource access MUST be disjoint, and the AS MUST refuse a
+designation request that would violate this with `invalid_target`
+({{Section 2.2.2 of RFC8693}}). A resource server that validates a
+JWT access token's audience ({{Section 4 of RFC9068}}) therefore
+rejects a designation, and the AS reports one inactive at
+introspection ({{composite-active}}).
 
 ## Instance Context in Delegated Tokens {#delegated-instance-context}
 
@@ -4026,8 +4085,9 @@ An agent MAY present its own Mission-bound access token as the
 `subject_token` of a Token Exchange ({{RFC8693}}) with no actor, to
 obtain a narrowed token (for example, a single-audience one). Because
 it names no actor, such an exchange does not delegate: it re-scopes
-the agent's own authority downward. A no-actor exchange is subject to
-the following:
+the agent's own authority downward. A designation ({{designation}})
+names a delegate, so it is not a self-exchange, and these rules do not
+apply to it. A no-actor exchange is subject to the following:
 
 1. The AS MUST refuse a no-actor exchange with the `invalid_request`
    error code ({{Section 2.2.2 of RFC8693}}) unless the authenticated
@@ -4074,7 +4134,8 @@ renders the accounted chain and is not the source of the count.
 Over the exchanges this document defines, the accounting is complete:
 
 - each delegated exchange adds exactly one delegate;
-- a self-exchange ({{self-exchange}}) adds none; and
+- a designation ({{designation}}) and a self-exchange
+  ({{self-exchange}}) add none; and
 - a cross-domain projection is the one defined reset.
 
 A profile that issues Mission-bound tokens by another path specifies
@@ -4122,8 +4183,9 @@ already-narrowed `authorization_details` and enforces those as usual
 In this example, the Mission's Authority Set has two entries on the ERP:
 `invoices.read`, delegable to `ai_agent` actors through depth 2; and
 `journal-entries.write`, which carries no `delegation` member and is
-therefore non-delegable. The approved agent `s6BhdRkqt3` delegates to
-sub-agent `tool-runner-7`, an `ai_agent`, at depth 1. The read entry
+therefore non-delegable. The approved agent `s6BhdRkqt3` designates
+sub-agent `tool-runner-7`, an `ai_agent`, which redeems the
+designation at depth 1. The read entry
 is permitted (depth 1 <= 2, `ai_agent` allowed) and the write entry
 narrows out. The following is an example of the decoded delegated
 access token:
@@ -4466,8 +4528,11 @@ Beyond these mandatory roles, an implementation can additionally claim
 three OPTIONAL capabilities. Each is independent, and an implementation
 that supports none of them is still conformant:
 
-- **Delegation** ({{delegation}}): issuing and consuming derived tokens
-  that carry the `act` delegation chain.
+- **Delegation** ({{delegation}}): issuing designations
+  ({{designation}}) and the derived tokens that carry the `act`
+  delegation chain, and consuming those tokens. Only a
+  sender-constrained token can be designated, so Delegation requires
+  sender-constrained primary tokens.
 - **Introspection** ({{introspection}}): reporting Mission state through
   the `mission` token introspection response member. Required where
   the AS issues opaque Mission-bound tokens to a resource server that
@@ -4782,7 +4847,9 @@ reveals nothing.
 
 Derived tokens are sender-constrained (DPoP {{RFC9449}} or mTLS
 {{RFC8705}}) where {{mission-bound-tokens}} and {{delegation}} require
-it. A stolen token is bounded by the Authority Set and the
+it. A designation ({{designation}}) carries no confirmation key: like
+an authorization code, it is bound to the client that redeems it, and
+it authorizes no resource access. A stolen token is bounded by the Authority Set and the
 Mission lifetime regardless, but sender-constraint prevents replay by a
 different party.
 
@@ -4818,9 +4885,13 @@ bound to the presenter. The following gates bound it:
 - a no-actor exchange is accepted only from the Mission's approved
   agent ({{self-exchange}}).
 
-Sender-constraining the primary token ({{mission-bound-tokens}}) closes
-the remaining gap, since a token stolen from an audience then fails
-presentation at the token endpoint.
+Designation ({{designation}}) closes the remaining gap: a delegated
+exchange accepts only a designation naming the requesting client,
+which only the token's holder obtains, by proving possession of the
+token's key, so a token obtained from an audience is refused there.
+Sender-constraining the primary token ({{mission-bound-tokens}})
+likewise keeps a stolen token from being designated or
+self-exchanged.
 
 ### client_id Conformance and the Approved-Agent Residual {#client-id-misattribution}
 
@@ -6371,6 +6442,19 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Delegation by designation (#1268): a delegated exchange accepts only
+  a designation naming the requesting client, which the holder of a
+  sender-constrained Mission-bound token obtains by Token Exchange,
+  proving its key and naming the delegate as `audience`. A designation
+  is not a self-exchange, adds no delegate, expires shortly and within
+  its source, and authorizes no resource access: designated client
+  identifiers and resource audiences are disjoint, and introspection
+  reports a designation inactive. Every redemption is gated afresh.
+  Security Considerations names designation, not a presentation proof
+  the delegated exchange cannot carry, as what closes audience replay
+  into the exchange. Delegation therefore requires sender-constrained
+  primary tokens.
 
 - Editorial: a readability pass shortens paragraphs, turns
   enumerations into lists, cuts restatement, and follows OAuth
