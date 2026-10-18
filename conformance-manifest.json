@@ -3035,8 +3035,15 @@
      "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/anchors.test.ts",
+     "name": "integrity anchors (core § test-vectors) > an activation policy reference whose digest has an unrecognized algorithm prefix is refused",
+     "level": "unit",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "Commitment Mechanisms classifies every anchor the core defines (#1261). The activation policy digest is not verified through verifyAnchor; its witness is the shared reference guard isActivationPolicyRef, which the authorization server applies to child_creation_policy and governed-policy evaluator references, proved by loosening the guard's prefix check."
   },
   {
    "id": "derivation-limits.requested.max-derivations-floor",
