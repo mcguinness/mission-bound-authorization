@@ -56,7 +56,12 @@ const request = (
   credentialAuthority?: unknown[],
 ): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme", ...properties } },
+  // The PEP-established operation target (#1276): the payments contract is service-level.
+  resource: {
+    type: "invoice",
+    id: "inv-1",
+    properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme", ...properties },
+  },
   action: { name: ACTION },
   context: {
     mission: { id: "msn_1266", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
