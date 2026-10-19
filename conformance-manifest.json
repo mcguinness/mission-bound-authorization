@@ -5103,7 +5103,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "lifecycle refusals carry mission_error with one of revoked, expired, superseded, derivations_exhausted, or a value a companion defines (Mission Status's suspended and completed, Child Delegation's parent_terminated)",
-    "local": "oidc-provider 9.10's err_out.js copies only error, error_description, scope and state from a thrown error, so MissionGrantError and MissionExchangeError plus a grant.error listener splice mission_error into the body wherever the Mission gate (the refresh pre-check, gateDerivation or gateActive) refuses a still-valid grant. The Token Exchange handlers that write their own refusal body (the async-delegation exchange, its family rollback and recovery, carryover retrieval, child-creation recovery, and the expansion predecessor and recovery checks) add it from the refused Mission's observed record, after client authentication and possession (#1179). The rollback stores the member with the refusal, so a replay to the same client and key repeats it. Possession of a Mission's token does not authorize the presenter, so the expansion predecessor check, expansion recovery and child-creation recovery name the Mission's state only to the predecessor's or parent's own client, the acting agent this deployment authorizes; an unrelated client holding the token and its key gets the refusal without it (witnessed at the predecessor check; the recovery gates are not witnessed, since reaching them needs an unrelated client's own creation). Child-creation recovery also requires the presented token's authority, actor and depth to admit the recorded child; a narrower token from the same client and key gets the same invalid_request without the state. These disclosure tests are local choices. Endpoint witnesses cited here: suspended on a refresh (tracer); derivations_exhausted on a capped Mission's second derivation (tracer) and on the async-delegation family rollback; superseded on a refresh of a predecessor's own refresh token after a deferred expansion activated its successor, with nothing issued, saved or counted (refresh-precheck, #1065), and on a new expansion of that superseded predecessor; expired on a Token Exchange, whose lifecycle refusal is invalid_request (#1154); suspended and revoked on the async-delegation exchange, its recovery, carryover retrieval, child-creation recovery, the expansion predecessor check and expansion recovery, and revoked on the family rollback and its replay; and parent_terminated on child-creation recovery after the parent's revocation (#1179). The shared mapper gateErrorToMissionError, which passes each termination reason through (superseded, parent_terminated, expired) and gives no value for an unrecognized one, is cited as a unit witness, not as an endpoint refusal. Partial: completed is not cited here as an endpoint refusal. This demo's own /lifecycle route destroys the underlying OAuth Grant on a terminal transition (provider.ts), so a refresh after it fails at oidc-provider's grant lookup with no mission_error; a raw kernel transition, natural expiry or supersession leaves the grant for the Mission gate."
+    "local": "oidc-provider 9.10's err_out.js copies only error, error_description, scope and state from a thrown error, so MissionGrantError and MissionExchangeError plus a grant.error listener splice mission_error into the body wherever the Mission gate (the refresh pre-check, gateDerivation or gateActive) refuses a still-valid grant. The Token Exchange handlers that write their own refusal body (the async-delegation exchange, its family rollback and recovery, carryover retrieval, child-creation recovery, and the expansion predecessor and recovery checks) add it from the refused Mission's observed record, after client authentication and possession (#1179). The rollback stores the member with the refusal, so a replay to the same client and key repeats it. Possession of a Mission's token does not authorize the presenter, so the expansion predecessor check, expansion recovery and child-creation recovery name the Mission's state only to the predecessor's or parent's own client, the acting agent this deployment authorizes; an unrelated client holding the token and its key gets the refusal without it. Since #1326 the step-4 acting-client check refuses such a client earlier, before the creation lookup on both exchanges and before redeem at the deferred poll, so these three client gates are unreachable at the endpoint and stay as defense in depth; the cross-client expansion test now witnesses that the earlier refusal carries no mission_error. Child-creation recovery also requires the presented token's authority, actor and depth to admit the recorded child; a narrower token from the same client and key gets the same invalid_request without the state. These disclosure tests are local choices. Endpoint witnesses cited here: suspended on a refresh (tracer); derivations_exhausted on a capped Mission's second derivation (tracer) and on the async-delegation family rollback; superseded on a refresh of a predecessor's own refresh token after a deferred expansion activated its successor, with nothing issued, saved or counted (refresh-precheck, #1065), and on a new expansion of that superseded predecessor; expired on a Token Exchange, whose lifecycle refusal is invalid_request (#1154); suspended and revoked on the async-delegation exchange, its recovery, carryover retrieval, child-creation recovery, the expansion predecessor check and expansion recovery, and revoked on the family rollback and its replay; and parent_terminated on child-creation recovery after the parent's revocation (#1179). The shared mapper gateErrorToMissionError, which passes each termination reason through (superseded, parent_terminated, expired) and gives no value for an unrecognized one, is cited as a unit witness, not as an endpoint refusal. Partial: completed is not cited here as an endpoint refusal. This demo's own /lifecycle route destroys the underlying OAuth Grant on a terminal transition (provider.ts), so a refresh after it fails at oidc-provider's grant lookup with no mission_error; a raw kernel transition, natural expiry or supersession leaves the grant for the Mission gate."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -42169,6 +42169,40 @@
    "notes": "#1210 (D398). The possession arm is partial: see observation.local. The lead-in carries the MUST."
   },
   {
+   "id": "child-delegation.request-processing.acting-agent-step",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "request-processing",
+   "text": "Verify the acting agent (`actor_token`, or the request's client authentication) is authorized to create a child under this parent",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a client not authorized for the parent is refused before the creation_request_id lookup, even when it holds the parent token and its key: no child, reservation or child grant is created",
+    "local": "the reference AS authorizes only the parent's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. The check precedes the lookup, so another client's retained completed operation is refused rather than recovered, and a child grant issued before the check expires within its 300 s lifetime (MAX_CHILD_GRANT_LIFETIME_S); the child record names no creating client, so redemption does not re-check it (#1326). Partial: the actor_token arm is not exercised."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "child creation acting-agent authorization (@spec child-delegation#request-processing step 4, #1326) > an unrelated client holding the parent token and key is refused invalid_request, creating no child, reservation or child grant; the parent's own client creates the same child",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "child creation acting-agent authorization (@spec child-delegation#request-processing step 4, #1326) > a retained child-creation operation another client recorded is refused before recovery, minting no fresh child grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
    "id": "child-delegation.request-processing.failure-refusal",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "request-processing",
@@ -45102,6 +45136,41 @@
     }
    ],
    "notes": "#1210 (D398). The possession arm is partial: see observation.local. The lead-in carries the MUST."
+  },
+  {
+   "id": "expansion.verification-order.acting-agent-step",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "verification-order",
+   "text": "Verify the acting agent (`actor_token`, or the request's client authentication) is authorized to request expansion of this predecessor.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a client not authorized for the predecessor is refused before the creation_request_id lookup, even when it holds the predecessor's token and its key: no deferral or reservation is opened, and no successor is created or predecessor superseded",
+    "local": "the reference AS authorizes only the predecessor's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. Deferrals persist and the deferred poll runs no initiation check, so the poll also refuses, invalid_grant and before redeem, a deferral whose recorded client is not the predecessor's client, decided from the recorded predecessor and not the subject_token; the predecessor's own poll still completes without one (#1326). Partial: the actor_token arm, authorizing a delegated acting agent through actor_token, is not implemented, so it is not exercised."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion acting-agent authorization (@spec expansion#verification-order step 4, #1326) > an unrelated client holding the predecessor's token and key is refused invalid_request at initiation, opening no deferral or reservation and leaving the predecessor active; the predecessor's own client's request defers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion acting-agent authorization (@spec expansion#verification-order step 4, #1326) > a retained deferral another client opened is refused invalid_grant at the poll before redeem, creating no successor and leaving the predecessor active; the predecessor's own deferral still completes on a poll that carries no subject_token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "expansion.verification-order.failure-refusal",
