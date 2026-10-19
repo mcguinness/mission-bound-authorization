@@ -81,6 +81,12 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
       ? decideAs(options.requester, options.consumptionStatus)(request, options)
       : point.decide(request, options),
     ...(claimsFor ? { claimsFor } : {}),
+    // #1276, D457 (consistency check 11): the channel's out-of-scope target
+    // refusal is recorded on the decision point's own Refusal Record path,
+    // through its fixed-reason seam.
+    ...(point.recordTargetRefusal
+      ? { refusals: (refusal: { evaluation_request: unknown }) => point.recordTargetRefusal?.(refusal.evaluation_request) }
+      : {}),
     ...(config.redeemingExecution
       ? { redeemingExecution: (pepId: string) => (pepId === config.pepId ? config.redeemingExecution : undefined) }
       : {}),

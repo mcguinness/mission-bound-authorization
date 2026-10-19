@@ -97,4 +97,15 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
       expect(isRefusalDenialReason("pdp", value), value).toBe(false);
     }
   });
+
+  it("operation_target_invalid is the PDP's alone, and a PEP-side store never signs it (#1276)", async () => {
+    expect(REFUSAL_DENIAL_REASONS.pdp).toEqual(["mission_context_missing", "operation_target_invalid"]);
+    expect(isRefusalDenialReason("pdp", "operation_target_invalid")).toBe(true);
+    expect(isRefusalDenialReason("pep", "operation_target_invalid")).toBe(false);
+    const keys = createEphemeralEvidenceKeys();
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    await expect(evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput("operation_target_invalid"))).rejects.toThrow(/not in the closed set/);
+    await expect(evidence.recordRefusal(CANONICAL_RESOURCE, "pdp", refusalInput("operation_target_invalid"))).rejects.toThrow(/no signer configured for emitter role "pdp"/);
+    expect(evidence.all()).toHaveLength(0);
+  });
 });

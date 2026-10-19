@@ -33,7 +33,16 @@ import { macEqualHex, macHex, REQUEST_MAC_DOMAIN, RESPONSE_MAC_DOMAIN, sha256Hex
 import { requestMacParts } from "./client.js";
 import type { DecisionEvidenceEmitter } from "./decision-evidence.js";
 import { type ClaimChannel, claimChannelFor } from "./decision-point.js";
-import { evaluate, type Decision, type DecisionOptions, type EvaluateOptions, type EvaluationRequest } from "./evaluate.js";
+import {
+  type Decision,
+  type DecisionOptions,
+  DecisionRequestRefused,
+  type EvaluateOptions,
+  type EvaluationRequest,
+  evaluate,
+  type PdpRefusalRecorder,
+  recordPdpRefusal,
+} from "./evaluate.js";
 import {
   type ClaimRequester,
   type ClaimResolution,
@@ -54,14 +63,14 @@ export interface AuthorizedPep {
   secret: string;
   scopes: readonly string[];
   /**
-   * @spec resource-access#resource-matching, authzen#pdp-request (#1276,
-   * D457): the operation targets this PEP's registered operation contracts
-   * establish, compared exactly. A decision request naming any other target
-   * is refused before any decision work: a target the PEP is not authorized
-   * to establish is never evaluated. Absent, the PEP may name only a target
-   * equal to one of its `scopes`, the service-level contract over its own
-   * enforcement scope; this is a channel restriction, never an entry-match
-   * fallback, and it narrows rather than widens.
+   * @spec authzen#pdp-request consistency check 11, resource-access#resource-matching
+   * (#1276, D457): the operation targets within this PEP's declared
+   * enforcement scope, as its registered operation contracts establish them,
+   * compared exactly. A decision request naming any other target is refused
+   * before evaluation as `operation_target_invalid`. Absent, the PEP may name
+   * only a target equal to one of its `scopes`, the service-level contract
+   * over its own enforcement scope; this is a channel restriction, never an
+   * entry-match fallback, and it narrows rather than widens.
    */
   operationTargets?: readonly string[];
 }
@@ -112,6 +121,14 @@ export interface PdpRemoteServerConfig {
    */
   resourcePolicy?: ResourcePolicy;
   /**
+   * @spec authzen#pdp-request consistency check 11 (#1276, D457): this PDP's
+   * Refusal Record path for a request refused before evaluation, bound on
+   * this side of the network hop exactly as `evidence` is: a request option
+   * naming another is stripped. It records the channel's own out-of-scope
+   * target refusal and is handed to the decision function.
+   */
+  refusals?: PdpRefusalRecorder;
+  /**
    * The settlement and reconciliation channel for one authenticated
    * requester. Defaults to one over {@link PdpRemoteServerConfig.claims}.
    */
@@ -155,7 +172,7 @@ type ChannelRefusalReason =
   | "replayed_request"
   | "malformed_body"
   | "pep_not_authorized_for_scope"
-  | "pep_not_authorized_for_target"
+  | "operation_target_invalid"
   | "request_body_too_large";
 
 function headerString(v: string | string[] | undefined): string | undefined {
@@ -287,14 +304,16 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
       sendRefusal(res, 403, "pep_not_authorized_for_scope");
       return undefined;
     }
-    // @spec resource-access#resource-matching, authzen#pdp-request (#1276,
-    // D457): the operation target is checked on its own, never inferred from
-    // the scope check above. A string target outside what this PEP may
-    // establish gets zero decision work. A missing or non-string target is
-    // left to the decision, which refuses it on the record.
+    // @spec authzen#pdp-request consistency check 11 (#1276, D457): the
+    // operation target is checked on its own, never inferred from the scope
+    // check above. A string target outside the requesting PEP's enforcement
+    // scope is refused before evaluation and recorded as a Refusal Record
+    // `operation_target_invalid`, with zero decision work. A missing or
+    // non-string target reaches `evaluate`, which refuses it the same way.
     const target = targetOf?.(body as Record<string, unknown>);
     if (typeof target === "string" && !(pep.operationTargets ?? pep.scopes).includes(target)) {
-      sendRefusal(res, 403, "pep_not_authorized_for_target");
+      await recordPdpRefusal(config.refusals, "operation_target_invalid", (body as Record<string, unknown>).request);
+      sendRefusal(res, 403, "operation_target_invalid");
       return undefined;
     }
     return {
@@ -352,7 +371,9 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     delete (opts as Partial<EvaluateOptions>).resourcePolicy;
     delete opts.requester;
     delete opts.consumptionStatus;
+    delete opts.refusals;
     if (config.evidence) opts.evidence = config.evidence;
+    if (config.refusals) opts.refusals = config.refusals;
     if (config.claims) opts.claims = config.claims;
     if (config.resourcePolicy) opts.resourcePolicy = config.resourcePolicy;
     opts.requester = authed.requester;
@@ -362,6 +383,14 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     try {
       decision = await evaluateImpl(evalRequest, opts);
     } catch (e) {
+      // @spec authzen#pdp-request consistency check 11 (#1276, D457): a
+      // request refused before evaluation (already recorded) gets a refusal,
+      // never a signed decision.
+      if (e instanceof DecisionRequestRefused) {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "decision_request_refused", reason: e.denial_reason }));
+        return;
+      }
       // @spec runtime#idempotency (#917): an unreachable claim domain is no
       // decision at all, never a permit without the claim. 503 is what the
       // PEP's client turns into `pdp_unreachable`.

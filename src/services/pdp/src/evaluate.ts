@@ -376,6 +376,97 @@ export interface Decision {
   context: Record<string, unknown>;
 }
 
+/**
+ * @spec authzen#pdp-request consistency check 11, authzen#context-operation-target
+ * (#1276, D457): the Refusal Record `denial_reason` values a PDP refuses a
+ * decision request with before evaluating it. A refusal is not a decision: it
+ * carries no `evaluation_id` and no Decision Evidence, and never a PDP denial
+ * reason such as `out_of_authority`.
+ */
+export type PdpRefusalReason = "operation_target_invalid";
+
+/**
+ * Thrown by {@link evaluate} for a decision request the PDP refuses before
+ * evaluation, after the refusal was handed to the bound
+ * {@link PdpRefusalRecorder}. Like an unanswerable Resource policy, it yields
+ * no decision at all; the remote decision channel answers it with a refusal,
+ * never a signed decision.
+ */
+export class DecisionRequestRefused extends Error {
+  constructor(readonly denial_reason: PdpRefusalReason) {
+    super(`decision request refused before evaluation: ${denial_reason}`);
+    this.name = "DecisionRequestRefused";
+  }
+}
+
+/**
+ * @spec runtime-evidence#pre-decision-refusal: what the PDP can attest about a
+ * request it refused before evaluation, for its Refusal Record. Members the
+ * request did not carry in a well-formed shape are absent, never invented; no
+ * Mission is established, so `missionId` is store correlation only (the
+ * claimed identifier, or `unknown`).
+ */
+export interface PdpRefusal {
+  denial_reason: PdpRefusalReason;
+  /** The request exactly as submitted (@spec runtime-evidence#request-digest-worked). */
+  evaluation_request: unknown;
+  missionId: string;
+  audience?: string;
+  action?: { name: string };
+  subject?: { id: string; properties?: { iss: string } };
+  resource?: { type: string; id: string };
+}
+
+/**
+ * The PDP's Refusal Record emission path, bound PDP-side at decision-point or
+ * server construction exactly as the Decision Evidence emitter is, and never
+ * supplied by an enforcement component.
+ */
+export type PdpRefusalRecorder = (refusal: PdpRefusal) => unknown;
+
+const objectOf = (v: unknown): Record<string, unknown> =>
+  v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+
+/** The attestable members of a refused request (see {@link PdpRefusal}). */
+export function pdpRefusalOf(denial_reason: PdpRefusalReason, request: unknown): PdpRefusal {
+  const r = objectOf(request);
+  const resource = objectOf(r.resource);
+  const properties = objectOf(resource.properties);
+  const subject = objectOf(r.subject);
+  const iss = objectOf(subject.properties).iss;
+  const action = objectOf(r.action);
+  const mission = objectOf(objectOf(r.context).mission);
+  return {
+    denial_reason,
+    evaluation_request: request,
+    missionId: typeof mission.id === "string" ? mission.id : "unknown",
+    ...(typeof properties.audience === "string" ? { audience: properties.audience } : {}),
+    ...(typeof action.name === "string" ? { action: { name: action.name } } : {}),
+    ...(typeof subject.id === "string"
+      ? { subject: { id: subject.id, ...(typeof iss === "string" ? { properties: { iss } } : {}) } }
+      : {}),
+    ...(typeof resource.type === "string" && typeof resource.id === "string"
+      ? { resource: { type: resource.type, id: resource.id } }
+      : {}),
+  };
+}
+
+/**
+ * Hand one refusal to the bound recorder. A recorder that fails does not turn
+ * the refusal into a decision: the request stays refused either way.
+ */
+export async function recordPdpRefusal(
+  recorder: PdpRefusalRecorder | undefined,
+  denial_reason: PdpRefusalReason,
+  request: unknown,
+): Promise<void> {
+  try {
+    await recorder?.(pdpRefusalOf(denial_reason, request));
+  } catch {
+    /* the refusal stands; the missing record is the recorder's failure */
+  }
+}
+
 export interface EvaluateOptions {
   view: MissionView;
   fga: Fga;
@@ -527,6 +618,13 @@ export interface EvaluateOptions {
    * is `unknown`, which suppresses.
    */
   consumptionStatus?: ConsumptionStatusFn;
+  /**
+   * @spec authzen#pdp-request consistency check 11 (#1276, D457): this PDP's
+   * Refusal Record emission path for a request it refuses before evaluation,
+   * bound at decision-point or server construction exactly as `evidence` is.
+   * Absent, the request is still refused; nothing records it.
+   */
+  refusals?: PdpRefusalRecorder;
 }
 
 /**
@@ -548,8 +646,14 @@ export interface EvaluateOptions {
  * @spec runtime#input-resource-policy (#828): the Resource policy is a
  * PDP-side binding too. An enforcement component that could supply it could
  * hand the PDP a policy that permits everything.
+ *
+ * @spec authzen#pdp-request consistency check 11 (#1276): so is the Refusal
+ * Record path, for the reason the emitter is.
  */
-export type DecisionOptions = Omit<EvaluateOptions, "evidence" | "claims" | "requester" | "consumptionStatus" | "resourcePolicy">;
+export type DecisionOptions = Omit<
+  EvaluateOptions,
+  "evidence" | "claims" | "requester" | "consumptionStatus" | "resourcePolicy" | "refusals"
+>;
 
 /** What the claim step left for {@link evaluate} to finish. */
 interface ClaimContext {
@@ -612,6 +716,21 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   if (!isResourcePolicy(opts.resourcePolicy)) {
     throw new ResourcePolicyConfigError("no Resource policy is bound to this decision");
   }
+  // @spec authzen#pdp-request consistency check 11, authzen#context-operation-target,
+  // resource-access#resource-matching (#1276, D457): every action this PDP
+  // evaluates is evaluated against `mission_resource_access` authority, so the
+  // PEP-established operation target is REQUIRED: one string holding one
+  // absolute URI. Absent, malformed or ambiguous (an array of targets
+  // included), the request is refused BEFORE evaluation and recorded as a
+  // Refusal Record `operation_target_invalid`: no decision, no evaluation_id,
+  // no Decision Evidence, and no fallback to `audience`, `type` or `id`. The
+  // string is otherwise passed to the matcher unchanged.
+  const operationTarget = (req as { resource?: { properties?: { operation_target?: unknown } } } | undefined)?.resource
+    ?.properties?.operation_target;
+  if (!isOperationTarget(operationTarget)) {
+    await recordPdpRefusal(opts.refusals, "operation_target_invalid", req);
+    throw new DecisionRequestRefused("operation_target_invalid");
+  }
   // @spec authzen#evaluation-request-digest-input: digest the request as
   // submitted, on receipt, before evaluation applies any default or enrichment.
   const requestDigest = evaluationRequestDigest(req);
@@ -623,7 +742,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       const claim: ClaimContext = {};
       const join: JoinTrace = {};
       const bound: BoundTrace = {};
-      const decision = await evaluateInner(req, opts, contributions, claim, join, bound);
+      const decision = await evaluateInner(req, opts, operationTarget, contributions, claim, join, bound);
       span.setAttribute("mission.action", req.action.name);
       span.setAttribute("mission.decision", decision.decision);
       if (decision.context.denial_reason) {
@@ -774,6 +893,12 @@ function resourcePolicyTargets(req: EvaluationRequest): ResourcePolicyTarget[] {
 async function evaluateInner(
   req: EvaluationRequest,
   opts: EvaluateOptions,
+  /**
+   * @spec resource-access#resource-matching (#1276, D457): the operation
+   * target {@link evaluate} validated, exactly as the request carried it; the
+   * one operand of every Mission Resource Access entry match below.
+   */
+  operationTarget: string,
   contributions: Set<string>,
   claim: ClaimContext,
   join: JoinTrace,
@@ -786,10 +911,6 @@ async function evaluateInner(
   // token-validation and permit-boundary input. Read once and validated
   // below; never the entry-match operand (#1276, D457).
   const audience = req.resource.properties?.audience;
-  // @spec resource-access#resource-matching, authzen#pdp-request (#1276,
-  // D457): the PEP-established operation target, the one operand of every
-  // Mission Resource Access entry match below.
-  const operationTarget: unknown = req.resource.properties?.operation_target;
   const decisionId = newDecisionId();
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping
   // — set once step 4a below validates the mapping (before entitlement lookup,
@@ -864,17 +985,15 @@ async function evaluateInner(
     return deny("out_of_authority");
   }
 
-  // @spec resource-access#resource-matching, authzen#pdp-request (#1276,
-  // D457): "MUST refuse the operation when it cannot establish one
-  // unambiguous target". A missing target, a value that is not one
-  // well-formed absolute URI (an array of targets included), and a missing or
-  // malformed `audience` are request faults the PDP cannot place under any
-  // entry. Neither member stands in for the other, and `type`/`id` stands in
-  // for neither: each refuses here, before any state work, with the
-  // request-fault classification an undeclared phase or class takes ("or the
-  // request would broaden it", @spec authzen#failure-condition-coverage).
+  // @spec authzen#context-audience-freshness (#1276, D457): `audience` is
+  // REQUIRED and stays its own check. The operation target was validated
+  // before evaluation (consistency check 11, in `evaluate`); a missing or
+  // malformed audience is a request fault the PDP cannot place under the
+  // PEP's declared scope, and the target never stands in for it, nor it for
+  // the target. It takes the request-fault classification an undeclared phase
+  // or class takes ("or the request would broaden it",
+  // @spec authzen#failure-condition-coverage); check 11 does not cover it.
   if (typeof audience !== "string" || audience.length === 0) return deny("out_of_authority");
-  if (!isOperationTarget(operationTarget)) return deny("out_of_authority");
 
   // 1. View consistency (@spec: view_inconsistent). `id`/`issuer` are the
   // mandatory identity check; `authority_hash` and `policy_view_id` (#702:

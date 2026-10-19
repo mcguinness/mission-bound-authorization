@@ -11,10 +11,20 @@
  * steps and the decision channel decide, and this file never skips.
  */
 
+import { generateKeyPairSync } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { evaluateRemote } from "../src/client.js";
-import { evaluate as evaluateRequest, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
+import { type DecisionEvidenceEmitter, evaluationRequestDigest } from "../src/decision-evidence.js";
+import {
+  DecisionRequestRefused,
+  evaluate as evaluateRequest,
+  type EvaluateOptions,
+  type EvaluationRequest,
+  type PdpRefusal,
+} from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
+import { createPdpRefusalRecorder, type PdpRefusalRecord } from "../src/refusal-record.js";
+import { type EvidenceKeyResolver, REFUSAL_RECORD_MEDIA_TYPE, verifyEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { authorizationBinding, decisionCacheKey, operationIdentity } from "../src/projections.js";
@@ -150,7 +160,7 @@ describe("the PDP matches entries against the PEP-established operation target (
     expect(stated.decision, JSON.stringify(stated.context)).toBe(true);
   });
 
-  it("a missing, malformed or ambiguous target is refused, with no fallback to the audience or to type and id", async () => {
+  it("a missing, malformed or ambiguous target is refused before evaluation as operation_target_invalid, with no decision, no Decision Evidence and no fallback to the audience or to type and id", async () => {
     const cases: Array<[string, Record<string, unknown>]> = [
       ["relative", { audience: AUDIENCE, operation_target: "/mcp" }],
       ["fragment", { audience: AUDIENCE, operation_target: `${SERVICE}#x` }],
@@ -170,10 +180,54 @@ describe("the PDP matches entries against the PEP-established operation target (
       const req = read(properties, covering);
       req.resource.type = SERVICE;
       req.resource.id = SERVICE;
-      const dec = await evaluate(req, opts);
-      expect(dec.decision, label).toBe(false);
-      expect(dec.context.denial_reason, label).toBe("out_of_authority");
+      const refusals: PdpRefusal[] = [];
+      const emitted: unknown[] = [];
+      const evidence = { emit: async (record: unknown) => emitted.push(record) } as unknown as DecisionEvidenceEmitter;
+      const outcome = await evaluateRequest(req, { ...opts, evidence, refusals: (r) => refusals.push(r) }).then(
+        (decision) => ({ decision }),
+        (error: unknown) => ({ error }),
+      );
+      expect(outcome, label).toEqual({ error: expect.any(DecisionRequestRefused) });
+      expect((outcome as { error: DecisionRequestRefused }).error.denial_reason, label).toBe("operation_target_invalid");
+      expect(refusals, label).toHaveLength(1);
+      expect(refusals[0], label).toMatchObject({ denial_reason: "operation_target_invalid", missionId: "msn_1276", audience: AUDIENCE });
+      expect(refusals[0]?.evaluation_request, label).toBe(req);
+      expect(refusals[0], label).not.toHaveProperty("mission");
+      expect(emitted, label).toHaveLength(0);
     }
+  });
+
+  it("records the refusal as a PDP-signed Refusal Record over the request as submitted, naming no Mission", async () => {
+    const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    const retained: PdpRefusalRecord[] = [];
+    const refusals = createPdpRefusalRecorder({
+      signer: { kid: "pdp-1276", key: privateKey },
+      emitterId: "pdp.example",
+      scope: AUDIENCE,
+      retain: (record) => retained.push(record),
+      now: () => NOW,
+    });
+    const req = read({ audience: AUDIENCE, operation_target: "/mcp" });
+    await expect(evaluateRequest(req, options({ refusals }))).rejects.toBeInstanceOf(DecisionRequestRefused);
+    expect(retained).toHaveLength(1);
+    const record = retained[0] as PdpRefusalRecord;
+    expect(record).toMatchObject({
+      audience: AUDIENCE,
+      action: { name: "payments:invoice.read" },
+      resource: { type: "invoice", id: "inv-1" },
+      decision: "deny",
+      denial_reason: "operation_target_invalid",
+      evaluated_at: NOW.toISOString(),
+      evaluation_request_digest: evaluationRequestDigest(req),
+      request_digest_input: "decision_request",
+      subject: { id: "alice", properties: { iss: "https://as.test" } },
+      emitter: { id: "pdp.example", role: "pdp" },
+    });
+    expect(record).not.toHaveProperty("mission");
+    expect(record).not.toHaveProperty("evaluation_id");
+    const resolve: EvidenceKeyResolver = ({ kid, emitter }) =>
+      kid === "pdp-1276" && emitter.id === "pdp.example" && emitter.role === "pdp" ? { key: publicKey } : undefined;
+    expect(await verifyEvidenceEnvelope(record, REFUSAL_RECORD_MEDIA_TYPE, resolve)).toEqual({ valid: true });
   });
 
   it("validates the audience independently of the target: a missing or array audience refuses though the target matches, and a logical audience no entry names permits on the target", async () => {
@@ -223,8 +277,9 @@ describe("the PDP matches entries against the PEP-established operation target (
     expect(decisionCacheKey(a2, view(), "m")).toBe(decisionCacheKey(a, view(), "m"));
   });
 
-  it("the remote PDP refuses a target the authenticated PEP may not establish before evaluation, independently of its audience scope", async () => {
+  it("the remote PDP refuses a target outside the authenticated PEP's enforcement scope before evaluation as operation_target_invalid, independently of its audience scope", async () => {
     const evaluations = { n: 0 };
+    const refusals: PdpRefusal[] = [];
     const start = async (operationTargets?: readonly string[]) => {
       await handle?.close();
       handle = await createPdpHttpServer({
@@ -235,26 +290,38 @@ describe("the PDP matches entries against the PEP-established operation target (
           return evaluateRequest(r, o);
         },
         resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+        refusals: (r) => refusals.push(r),
       });
       return handle;
     };
-    const ask = (server: PdpHttpServerHandle, target: string) =>
-      evaluateRemote(withCredential(read({ audience: AUDIENCE, operation_target: target })), { url: server.url, pepId: PEP_ID, secret: SECRET });
+    const ask = (server: PdpHttpServerHandle, properties: Record<string, unknown>) =>
+      evaluateRemote(withCredential(read({ audience: AUDIENCE, ...properties })), { url: server.url, pepId: PEP_ID, secret: SECRET });
 
     // Registered for its audience alone: only the service-level target.
     let server = await start();
-    const refused = await ask(server, ADMIN);
+    const refused = await ask(server, { operation_target: ADMIN });
     expect(refused.decision).toBe(false);
-    expect(refused.context.denial_reason).toBe("decision_channel_refused");
+    expect(refused.context).toMatchObject({ denial_reason: "decision_channel_refused", channel_status: 403 });
     expect(evaluations.n).toBe(0);
-    const served = await ask(server, SERVICE);
+    expect(refusals).toHaveLength(1);
+    expect(refusals[0]).toMatchObject({ denial_reason: "operation_target_invalid", audience: AUDIENCE, missionId: "msn_1276" });
+    const served = await ask(server, { operation_target: SERVICE });
     expect(served.decision, JSON.stringify(served.context)).toBe(true);
     expect(evaluations.n).toBe(1);
+    expect(refusals).toHaveLength(1);
+
+    // A missing target reaches the decision function, which refuses it before
+    // any evaluation step and records it: still no decision.
+    const missing = await ask(server, {});
+    expect(missing.decision).toBe(false);
+    expect(missing.context).toMatchObject({ denial_reason: "decision_channel_refused", channel_status: 400 });
+    expect(refusals).toHaveLength(2);
+    expect(refusals[1]).toMatchObject({ denial_reason: "operation_target_invalid" });
 
     // Registered for the finer target too: it is evaluated.
     server = await start([SERVICE, ADMIN]);
-    const registered = await ask(server, ADMIN);
+    const registered = await ask(server, { operation_target: ADMIN });
     expect(registered.decision, JSON.stringify(registered.context)).toBe(true);
-    expect(evaluations.n).toBe(2);
+    expect(refusals).toHaveLength(2);
   });
 });

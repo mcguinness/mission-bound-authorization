@@ -23,7 +23,13 @@
 
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "./decision-evidence.js";
-import { type DecisionFn, type EvaluateOptions, evaluate } from "./evaluate.js";
+import {
+  type DecisionFn,
+  type EvaluateOptions,
+  evaluate,
+  type PdpRefusalRecorder,
+  recordPdpRefusal,
+} from "./evaluate.js";
 import { isResourcePolicy, type ResourcePolicy, ResourcePolicyConfigError } from "./resource-policy.js";
 import type {
   ClaimRequester,
@@ -125,6 +131,14 @@ export interface DecisionPointConfig {
    * ephemeral decision point without one throws at each decision instead.
    */
   resourcePolicy?: ResourcePolicy;
+  /**
+   * @spec authzen#pdp-request consistency check 11 (#1276, D457): this
+   * decision point's Refusal Record emission path for a request it refuses
+   * before evaluation (`operation_target_invalid`), bound here for the reason
+   * the evidence path is. Absent, such a request is still refused; nothing
+   * records it.
+   */
+  refusals?: PdpRefusalRecorder;
 }
 
 export interface DecisionPoint {
@@ -141,6 +155,15 @@ export interface DecisionPoint {
   decideAs?: (requester: ClaimRequester, consumptionStatus?: ConsumptionStatusFn) => DecisionFn;
   /** @spec runtime#idempotency (#917): settlement and reconciliation for one authenticated requester. */
   claimsFor?: (requester: ClaimRequester, redeemingExecution?: RedeemingExecutionFn) => ClaimChannel;
+  /**
+   * @spec authzen#pdp-request consistency check 11 (#1276, D457): the decision
+   * channel's seam for a target it refuses before evaluation (outside the
+   * authenticated PEP's enforcement scope): records `operation_target_invalid`
+   * for `request` on this point's bound Refusal Record path. A fixed-reason
+   * closure, never the recorder itself, so trusted assembly cannot sign another
+   * reason through it.
+   */
+  recordTargetRefusal?: (request: unknown) => Promise<void>;
 }
 
 /** The PDP-side bindings one decision point applies to every decision. */
@@ -148,6 +171,7 @@ interface PointBindings {
   emitter: DecisionEvidenceEmitter | undefined;
   claims: IdempotencyClaimDomain | undefined;
   resourcePolicy: ResourcePolicy | undefined;
+  refusals: PdpRefusalRecorder | undefined;
 }
 
 /**
@@ -166,7 +190,7 @@ function bindDecide(
   requester: ClaimRequester,
   consumptionStatus?: ConsumptionStatusFn,
 ): DecisionFn {
-  const { emitter, claims, resourcePolicy } = bindings;
+  const { emitter, claims, resourcePolicy, refusals } = bindings;
   return async (req, opts) => {
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
     delete forwarded.evidence;
@@ -174,9 +198,11 @@ function bindDecide(
     delete forwarded.resourcePolicy;
     delete forwarded.requester;
     delete forwarded.consumptionStatus;
+    delete forwarded.refusals;
     if (emitter) forwarded.evidence = emitter;
     if (claims) forwarded.claims = claims;
     if (resourcePolicy) forwarded.resourcePolicy = resourcePolicy;
+    if (refusals) forwarded.refusals = refusals;
     forwarded.requester = requester;
     if (consumptionStatus) forwarded.consumptionStatus = consumptionStatus;
     return evaluate(req, forwarded as EvaluateOptions);
@@ -216,11 +242,17 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
         audience: config.evidence.audience,
       })
     : undefined;
-  const bindings: PointBindings = { emitter, claims: config.claims, resourcePolicy: config.resourcePolicy };
+  const bindings: PointBindings = {
+    emitter,
+    claims: config.claims,
+    resourcePolicy: config.resourcePolicy,
+    refusals: config.refusals,
+  };
   return {
     decide: bindDecide(bindings, unboundRequester()),
     decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),
     claimsFor: (requester, redeemingExecution) => claimChannelFor(config.claims, requester, redeemingExecution),
+    recordTargetRefusal: (request) => recordPdpRefusal(config.refusals, "operation_target_invalid", request),
     ...(config.evidence
       ? {
           evidenceVerification: {
@@ -267,15 +299,18 @@ export function createEphemeralDecisionPoint(options: {
    * the bound.
    */
   resourcePolicy?: ResourcePolicy;
+  /** @spec authzen#pdp-request consistency check 11 (#1276): bound exactly as in {@link createDecisionPoint}. */
+  refusals?: PdpRefusalRecorder;
 }): EphemeralDecisionPoint {
-  const { emitterId, audience, kid = "ephemeral-pdp", claims, resourcePolicy } = options;
+  const { emitterId, audience, kid = "ephemeral-pdp", claims, resourcePolicy, refusals } = options;
   const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
   const emitter = createDecisionEvidenceEmitter({ signer: { kid, key: privateKey }, emitterId, audience });
-  const bindings: PointBindings = { emitter, claims, resourcePolicy };
+  const bindings: PointBindings = { emitter, claims, resourcePolicy, refusals };
   return {
     decide: bindDecide(bindings, unboundRequester()),
     decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),
     claimsFor: (requester, redeemingExecution) => claimChannelFor(claims, requester, redeemingExecution),
+    recordTargetRefusal: (request) => recordPdpRefusal(refusals, "operation_target_invalid", request),
     evidenceVerification: { kid, publicKey, emitterId, audience },
     emitter,
   };
