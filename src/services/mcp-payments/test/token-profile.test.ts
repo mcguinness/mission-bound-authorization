@@ -26,9 +26,12 @@ import {
   openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
+  REFUSAL_RECORD_MEDIA_TYPE,
+  type RefusalRecord,
   type TokenFacts,
+  verifyEvidenceEnvelope,
 } from "../src/index.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, resourcePolicyFixture } from "@mission/pdp/test-support";
 
 const ISSUER = "https://as.test";
 const HTU = CANONICAL_RESOURCE;
@@ -487,5 +490,82 @@ describe("on the same broad Mission and allowing policy, the credential alone de
     expect(permitted.permitted, JSON.stringify(permitted)).toBe(true);
     expect(broad.decided).toHaveLength(1);
     expect(broad.evidence.all().filter((e) => e.kind === "decision")).toHaveLength(1);
+  });
+});
+
+describe("lookup_vendor refuses a vendor the store does not hold at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484)", () => {
+  /** Vendor reads scoped to acme and initech, on the Mission and the credential alike; the store holds acme and globex, never initech. */
+  const VENDOR_READ = entry(["payments:vendor.read"], { vendors: ["acme", "initech"] });
+  const vendorView: MissionView = { ...VIEW, authority_set: [VENDOR_READ as MissionView["authority_set"][number]] };
+
+  /** The resource's HTTP MCP endpoint under DPoP, deciding through the embedded signing PDP under a recording Resource policy. */
+  async function endpoint() {
+    const policy = resourcePolicyFixture();
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: policy });
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    const store = payments();
+    const decided: unknown[] = [];
+    const loadView = (ref: { id: string; issuer: string }) =>
+      ref.id === vendorView.id && ref.issuer === vendorView.issuer
+        ? { view: vendorView, observation: { state: vendorView.state, version: vendorView.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+        : undefined;
+    const pep = new Pep({
+      decide: (req, opts) => {
+        decided.push(req);
+        return keys.decide(req, opts);
+      },
+      payments: store,
+      evidence,
+      fga: allowingFga,
+      modelId: "m",
+      loadView,
+      instanceEpoch: "epoch-1251",
+    });
+    const routed = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
+      pep,
+      payments: store,
+      loadView,
+      jwks: { keys: [asJwk as never] },
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
+      issuer: ISSUER,
+    });
+    const channel = await createHttpMcpChannel(routed);
+    return { policy, resolver: keys.resolver, evidence, decided, channel };
+  }
+
+  it("refuses a vendor the store does not hold, named by the Mission and the presented credential, unknown_vendor over HTTP with DPoP: no PDP request, no policy query, no Decision Evidence, no result and a verifiable signed target_unresolvable refusal; a stored vendor under the same credential reaches the PDP and the policy as vendor:<id> and permits", async () => {
+    const x = await endpoint();
+    try {
+      const { client, close } = await createHttpMediatedClient(x.channel.url, await mint({ authorization_details: [VENDOR_READ] }), holder);
+      try {
+        const refused = await client.callTool("lookup_vendor", { vendor_id: "initech" });
+        expect(refused).toEqual({ ok: false, refusal_reason: "unknown_vendor" });
+        expect(x.decided).toHaveLength(0);
+        expect(x.policy.queries).toEqual([]);
+        expect(x.evidence.all().map((e) => e.kind)).toEqual(["refusal"]);
+        const refusal = x.evidence.all()[0] as RefusalRecord;
+        expect(refusal.content).toMatchObject({
+          denial_reason: "target_unresolvable",
+          emitter: { role: "pep" },
+          action: { name: "payments:vendor.read" },
+          mission: { id: vendorView.id, issuer: vendorView.issuer },
+        });
+        expect(refusal.content).not.toHaveProperty("resource");
+        expect(await verifyEvidenceEnvelope(refusal.content, REFUSAL_RECORD_MEDIA_TYPE, x.resolver)).toEqual({ valid: true });
+
+        const permitted = await client.callTool("lookup_vendor", { vendor_id: "acme" });
+        expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+        expect(permitted.result).toMatchObject({ id: "acme" });
+        expect(x.decided).toHaveLength(1);
+        expect((x.decided[0] as { resource: unknown }).resource).toMatchObject({ type: "vendor", id: "acme" });
+        expect(x.policy.queries.map((q) => q.targets)).toEqual([[{ type: "vendor", id: "acme" }]]);
+        expect(x.evidence.all().filter((e) => e.kind === "decision").map((e) => (e.content as { decision: string }).decision)).toEqual(["permit"]);
+      } finally {
+        await close();
+      }
+    } finally {
+      await x.channel.close();
+    }
   });
 });
