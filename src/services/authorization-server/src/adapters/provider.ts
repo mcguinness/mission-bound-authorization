@@ -757,6 +757,15 @@ export interface AdapterOptions {
    */
   capabilities?: ReadonlySet<ProviderCapability>;
   /**
+   * @spec #831: the second this AS process started (its clock, floored). A
+   * single-use artifact this AS signed, whose consumption it records only in
+   * memory, is refused when it was issued before this second: with signing
+   * keys that survive a restart (a key ring) it would otherwise verify again
+   * after the restart, its consumption forgotten. Today that is the Dispatch
+   * Handoff grant. Absent, no floor applies.
+   */
+  processStartS?: number;
+  /**
    * @spec progressive#in-ceiling-expansion: the policy-adjudicated drawdown
    * path, default off. Absent, an approval decision's ceiling members are
    * ignored and an expansion of a Mission that carries a ceiling takes the

@@ -116,6 +116,8 @@ export interface DispatchHandoffClaims {
   authority: AuthorityEntry[];
   jti: string;
   expMs: number;
+  /** The grant's `iat`, in seconds; undefined when it carries none. */
+  iatS: number | undefined;
 }
 
 /**
@@ -159,6 +161,7 @@ export async function verifyDispatchHandoffGrant(
     authority: authority as AuthorityEntry[],
     jti: payload.jti,
     expMs: payload.exp * 1000,
+    iatS: typeof payload.iat === "number" ? payload.iat : undefined,
   };
 }
 
@@ -304,6 +307,18 @@ export async function handleDispatchHandoffRedemption(
   const grant = await verifyDispatchHandoffGrant(assertion, opts.publicJwks as JSONWebKeySet, opts.issuer);
   if (!grant) {
     refuse(ctx, "invalid_grant", "invalid dispatch handoff grant");
+    return;
+  }
+  // @spec mission-template#dispatch-handoff single use, #831: the record of a
+  // consumed grant is in memory and does not survive a restart, so a grant
+  // issued before this process started is refused. With a key ring its
+  // signature would otherwise verify again after the restart.
+  if (opts.processStartS !== undefined && (grant.iatS === undefined || grant.iatS < opts.processStartS)) {
+    refuse(
+      ctx,
+      "invalid_grant",
+      "dispatch handoff grant was issued before this process started; single-use state is not retained across restarts",
+    );
     return;
   }
 

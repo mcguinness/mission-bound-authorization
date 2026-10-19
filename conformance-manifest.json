@@ -31715,9 +31715,15 @@
      "name": "Dispatch Handoff: a redemption that issues no token leaves the grant redeemable (#1163 review) > an issuance failure after the derivation is reserved releases the grant; the retry redeems and counts it once",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff-restart.test.ts",
+     "name": "Dispatch Handoff single use across a restart with durable signing keys (@spec mission-template#dispatch-handoff, #831) > refuses, after a restart, both a grant redeemed before it and one never redeemed: the consumption record does not survive, so nothing issued before the process started redeems",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "D361: its own store (kernel/dispatch-handoff-store.ts), not the DPoP replay cache: one INSERT on the jti primary key, no eviction of a consumed jti before exp plus skew. The store is in memory and built per boot like every AS store (D25/D27); the AS signing keys are per boot too, so no grant minted before a restart verifies after it, which is how a restart cannot revive a consumed grant here. A deployment with persistent signing keys requires persistent consumption records (#1163 review). Taking is two-phase (#1163 review P2): the jti is reserved, confirmed once the token exists, and released when none is issued; the authority source is resolved before the jti is taken. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "D361: its own store (kernel/dispatch-handoff-store.ts), not the DPoP replay cache: one INSERT on the jti primary key, no eviction of a consumed jti before exp plus skew. The store is in memory and built per boot like every AS store (D25/D27). The AS's signing keys can outlive a restart (a key ring, #831), so a restart cannot revive a consumed grant because the AS refuses every handoff grant issued before its process started (AdapterOptions.processStartS): an unredeemed grant minted before the restart is refused too, a deliberate invalidation. Persistent consumption records (#1163 review) would keep unredeemed grants redeemable across a restart and are #250's durable-store work. Witnessed with a key ring and a file-backed kernel, and proved by disabling the floor (the redeemed grant then redeems again). Taking is two-phase (#1163 review P2): the jti is reserved, confirmed once the token exists, and released when none is issued; the authority source is resolved before the jti is taken. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
   },
   {
    "id": "template.handoff.redemption-issue",
