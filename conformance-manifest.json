@@ -21403,9 +21403,21 @@
      "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool with no contract, an unsupported contract or ambiguous contracts as target_unresolvable, though the token's entry names the service root",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > refuses a contract naming a target that breaks RFC 3986 syntax before any decision request, though the Mission and the credential name the identical string",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool whose contract names a target that breaks RFC 3986 syntax as target_unresolvable, though the token's entry names the identical string",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). No contract, an unsupported finer contract or ambiguous declarations refuse target_unresolvable before any decision request, at the payments and SaaS resources. Mutations M11, M12 and M16 fail T2, T3 and S2."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). No contract, an unsupported finer contract or ambiguous declarations refuse target_unresolvable before any decision request, at the payments and SaaS resources. Mutations M11, M12 and M16 fail T2, T3 and S2. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. A contract naming such a target establishes none: the payments resource refuses target_unresolvable before any decision request in both modes, and the SaaS resource refuses with no journal entry, though the entries name the identical string. The same mutations fail both witnesses."
   },
   {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
@@ -22533,9 +22545,15 @@
      "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > records the refusal as a PDP-signed Refusal Record over the request as submitted, naming no Mission",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > refuses a target that breaks RFC 3986 absolute-URI syntax before evaluation as operation_target_invalid, in process and over the remote channel, though the Mission, the credential and the PEP's registered targets name the identical string",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The remote PDP refuses a target outside the authenticated PEP's enforcement scope before evaluation (P10, endpoint). Absent, malformed and ambiguous targets are refused before evaluation at evaluate() only (P5, unit). Mutations M3b, M9 and M19 fail P5, P10 and P6."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The remote PDP refuses a target outside the authenticated PEP's enforcement scope before evaluation (P10, endpoint). Absent, malformed and ambiguous targets are refused before evaluation at evaluate() only (P5, unit). Mutations M3b, M9 and M19 fail P5, P10 and P6. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. The remote PDP refuses %zz, a trailing %, %4, a raw space, a non-ASCII character and an empty http host before evaluation (no FGA check, no Resource policy query) though the PEP is registered for each string and the Mission and credential name it (endpoint). Mutations (new URL() only; pct-encoded loosened to {0,2}, {1,2} or a trailing %; the host rule removed) fail that witness. Partial stays: the non-string, array and no-fallback clauses are witnessed at evaluate() only (P5)."
   },
   {
    "id": "authzen.parameter-digest.parameters-must-be-normalized-object",
@@ -27251,9 +27269,15 @@
      "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > the remote PDP refuses a target outside the authenticated PEP's enforcement scope before evaluation as operation_target_invalid, independently of its audience scope",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > refuses a target that breaks RFC 3986 absolute-URI syntax before evaluation as operation_target_invalid, in process and over the remote channel, though the Mission, the credential and the PEP's registered targets name the identical string",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. The reference evidence store's PDP closed set holds only mission_context_missing. #1276 implementation (D457, payments-runtime-profile-v6). The PDP signs a pdp-role Refusal Record operation_target_invalid over the request as submitted (P6); the PEP-side store refuses to sign that value (R1). Mutation M19 fails P5 and P6."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. The reference evidence store's PDP closed set holds only mission_context_missing. #1276 implementation (D457, payments-runtime-profile-v6). The PDP signs a pdp-role Refusal Record operation_target_invalid over the request as submitted (P6); the PEP-side store refuses to sign that value (R1). Mutation M19 fails P5 and P6. #1296 review: a syntactically malformed target (RFC 3986 absolute-URI) is recorded operation_target_invalid in process and over the remote channel."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
@@ -35258,9 +35282,21 @@
      "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool with no contract, an unsupported contract or ambiguous contracts as target_unresolvable, though the token's entry names the service root",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > refuses a contract naming a target that breaks RFC 3986 syntax before any decision request, though the Mission and the credential name the identical string",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool whose contract names a target that breaks RFC 3986 syntax as target_unresolvable, though the token's entry names the identical string",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). Ambiguity is reachable only through declarations naming different targets; finer contracts refuse as unsupported."
+   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). Ambiguity is reachable only through declarations naming different targets; finer contracts refuse as unsupported. #1296 review: a contract naming a value that is not an RFC 3986 absolute-URI (%zz, a trailing %, %4, an empty http host) establishes no target and refuses, though an entry names the identical string."
   },
   {
    "id": "resource-access.resource-matching.execute-matched-target",
@@ -35371,7 +35407,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 dispositions 2 and 3). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The SaaS witness carries an entry spelled with JSON escapes in the token's JSON text. Cases rm-exact-01..12 also run at helper level."
+   "notes": "#1258 item 1 (D447 dispositions 2 and 3). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The SaaS witness carries an entry spelled with JSON escapes in the token's JSON text. Cases rm-exact-01..12 also run at helper level. #1296 review: the target's syntax check (RFC 3986 absolute-URI) is a match over the string as given and never produces another spelling; a helper test keeps %2F and %41 literal (mission-core operation-target.test.ts)."
   },
   {
    "id": "resource-access.resource-matching.exact-documented-spelling",
