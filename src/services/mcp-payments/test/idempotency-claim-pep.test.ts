@@ -787,3 +787,91 @@ describe("evidence emission failures: a refusal before any effect, or a reported
     }
   });
 });
+
+/**
+ * Hold the first call to one of the PEP's awaited seams until released; later
+ * calls pass through. A request held there is still in flight, as a worker
+ * that stalled and then resumes is.
+ */
+function holdFirstCall(pep: Pep, name: "reverify" | "verifyPermitAtUse") {
+  const original = (pep[name] as (...args: unknown[]) => Promise<unknown>).bind(pep);
+  let entered: () => void = () => undefined;
+  const reached = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  let release: () => void = () => undefined;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let held = false;
+  const spy = vi.spyOn(pep, name).mockImplementation((async (...args: unknown[]) => {
+    if (!held) {
+      held = true;
+      entered();
+      await released;
+    }
+    return original(...args);
+  }) as never);
+  return { reached, release: () => release(), restore: () => spy.mockRestore() };
+}
+
+/**
+ * @spec runtime#idempotency (#1176 item 16): a replacement worker presents the
+ * request of an original worker that stalled, and the original then resumes.
+ * Both present one key for one invoice, so at most one wire can commit.
+ */
+describe("a replacement worker while the original's request is in flight (@spec runtime#idempotency, #1176)", () => {
+  it("the original holds the redeemed permit: the replacement is refused as unresolved and retryable, the original resumes and commits once, and the replacement's retry is refused as completed", async () => {
+    const h = await harness();
+    try {
+      const k = key();
+      const hold = holdFirstCall(h.pep, "reverify");
+      // The original redeems its permit and stops before the commit point.
+      const original = wire(h, k);
+      await hold.reached;
+      const evaluationId = h.lastDecision()?.evaluation_id;
+      const replacement = await wire(h, k);
+      expect(replacement).toMatchObject({ ok: false, denial_reason: "duplicate_suppressed" });
+      expect(h.lastDecision()?.next_action).toBe("retry");
+      expect(h.connectors.ledgerEntries()).toHaveLength(0);
+      // The original resumes and commits once.
+      hold.release();
+      expect(await original).toMatchObject({ ok: true, deduped: false });
+      hold.restore();
+      const retried = await wire(h, k);
+      expect(retried).toMatchObject({ ok: false, denial_reason: "duplicate_suppressed" });
+      expect(h.lastDecision()?.next_action).toBe("none");
+      expect(h.connectors.ledgerEntries().map((e) => e.permit_id)).toEqual([evaluationId]);
+      expect(executions(h).map((e) => [e.evaluation_id, e.outcome])).toEqual([[evaluationId, "completed"]]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("the original holds an unredeemed permit: the replacement receives that permit again and executes once, and the original, resuming with it, is refused permit_consumed with no second effect", async () => {
+    const h = await harness();
+    try {
+      const k = key();
+      const hold = holdFirstCall(h.pep, "verifyPermitAtUse");
+      // The original holds its permit and stops before redeeming it.
+      const original = wire(h, k);
+      await hold.reached;
+      const evaluationId = h.lastDecision()?.evaluation_id;
+      // The PDP returns the same permit to the replacement, which executes under it.
+      const replacement = await wire(h, k);
+      expect(replacement).toMatchObject({ ok: true, deduped: false });
+      expect(h.lastDecision()?.evaluation_id).toBe(evaluationId);
+      // The original resumes with the permit the replacement consumed.
+      hold.release();
+      expect(await original).toEqual({ ok: false, refusal_reason: "permit_consumed" });
+      hold.restore();
+      expect(h.connectors.ledgerEntries().map((e) => e.permit_id)).toEqual([evaluationId]);
+      expect(executions(h).map((e) => [e.evaluation_id, e.outcome, e.error])).toEqual([
+        [evaluationId, "completed", undefined],
+        [evaluationId, "suppressed", "permit_consumed"],
+      ]);
+    } finally {
+      await h.close();
+    }
+  });
+});
