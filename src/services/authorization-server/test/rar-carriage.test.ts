@@ -415,6 +415,55 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
     });
     expect(res.status).toBe(201);
   });
+
+  // @spec resource-access#entry-validation (#1278, D457): this type does not
+  // use the RFC 9396 `locations` field, so an entry carrying it is refused at
+  // intake by presence, before any interaction or Mission, never admitted and
+  // then dropped by derivation's rebuild. The provider's own common-field
+  // check already refuses a `locations` that is not an array of strings; an
+  // empty or populated array reaches this implementation's guard.
+  it("refuses a proposal entry carrying locations, whatever its value, before any interaction, creating no Mission", async () => {
+    for (const locations of [[], [RESOURCE], null, "", { uri: RESOURCE }]) {
+      const before = as.kernel.allMissions().length;
+      const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+        login_hint: "alice",
+        mission_intent: JSON.stringify({ intent: TASK_INTENT }),
+        authorization_details: JSON.stringify([
+          { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], locations },
+        ]),
+      });
+      const body = (await res.json()) as { error: string; error_description?: string; request_uri?: string };
+      expect(res.status, JSON.stringify(locations)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toMatch(/locations/);
+      expect(body.request_uri).toBeUndefined();
+      expect(as.kernel.allMissions().length).toBe(before);
+    }
+  });
+
+  it("admits a proposal entry carrying capability_sources, a member another specification defines for this type (positive control for the locations refusal)", async () => {
+    const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
+      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
+      authorization_details: JSON.stringify([
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read"],
+          capability_sources: [
+            {
+              action: "payments:invoice.read",
+              tool_id: "mcp://payments.test/tools/get_invoice",
+              source_uri: "https://payments.test/.well-known/mcp",
+              source_digest: "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              operation_ref: "get_invoice",
+            },
+          ],
+        },
+      ]),
+    });
+    expect(res.status).toBe(201);
+  });
 });
 
 describe("Submission envelope carriage (@spec mission#submission-via-par, issue #506)", () => {

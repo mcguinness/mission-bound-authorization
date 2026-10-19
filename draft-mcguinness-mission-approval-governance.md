@@ -804,6 +804,13 @@ an approval event when any of the following holds:
 - validating any assertion requires authority standing outside the
   Mission record.
 
+The Approver is always `approval_basis.consent_principal`
+({{I-D.draft-mcguinness-oauth-mission}}), so a Mission whose Approver
+differs from its Subject holds the first trigger, and the Enterprise
+Mission Authority Profile
+({{I-D.draft-mcguinness-mission-authority-server}}) always records an
+Approval Governance Record for it.
+
 Direct self-approval by one authenticated human is the degenerate
 case: the Mission record already carries it completely, and no
 record is required.
@@ -1501,6 +1508,11 @@ version before treating the evaluation as re-checked
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Recording Triggers states that a Mission whose Approver differs
+  from its Subject holds the first trigger, so the Enterprise Mission
+  Authority Profile always records the record for it; the triggers
+  are unchanged (#1196).
 
 - Governed Policy Approval defines the `governed_policy`
   standing-consent basis: a human-approved `approval_policy` snapshot

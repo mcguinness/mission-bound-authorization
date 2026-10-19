@@ -31,6 +31,7 @@ import {
   type TxnApprovalBinding,
 } from "@mission/core";
 import {
+  ALL_PROVIDER_CAPABILITIES,
   buildAuthorizationServer,
   MISSION_TXN_TOKEN_TYP,
   TXN_CHALLENGE_TYP,
@@ -365,15 +366,20 @@ async function callTransactionEndpoint(
   deps: TxnAuthorizationDeps,
   workflows: TxnWorkflowStore,
   params: Record<string, string>,
+  as_: { clientId: string; assertion: () => Promise<string>; keys: DpopKeys } = {
+    clientId: "ap-agent",
+    assertion: clientAssertion,
+    keys: dpopKeys,
+  },
 ): Promise<{ status: number; body: unknown }> {
   const htu = `${ISSUER}/transaction`;
   const encoded = new URLSearchParams({
-    client_id: "ap-agent",
-    client_assertion: await clientAssertion(),
+    client_id: as_.clientId,
+    client_assertion: await as_.assertion(),
     client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     ...params,
   }).toString();
-  const proof = await dpopProof(htu, "POST");
+  const proof = await dpopProof(htu, "POST", as_.keys);
   const ctx = {
     method: "POST",
     path: "/transaction",
@@ -482,6 +488,9 @@ beforeAll(async () => {
     // @spec #1173 (D375): switchable to full for the cache-bound cases.
     dpopProofReplay: replay,
     issuer: ISSUER,
+    // The full provider plus the opt-in same-Mission delegation, so a real
+    // delegated token can be presented here (@spec mission#rs-enforcement).
+    capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
     allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     approvalSessions: FLOOR_SESSIONS,
     transactionAuthorization: {
@@ -2404,6 +2413,124 @@ describe("delegated routing of transaction tokens (@spec mission#rs-enforcement)
     const aware = await submitVia(true, await challengeFor("txn_routing_aware", act));
     expect(aware.status, JSON.stringify(aware.body)).toBe(200);
     expect(ars.getTask(taskFor("txn_routing_aware"))).toBeDefined();
+  });
+
+  it("refuses invalid_target, opening no approval, when the actor context comes only from the subject token, a same-Mission delegated token, for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is", async () => {
+    const TE = "urn:ietf:params:oauth:grant-type:token-exchange";
+    const AT = "urn:ietf:params:oauth:token-type:access_token";
+    const SUBAGENT = "subagent-invoice-extractor";
+    const subagentKey = (await importJWK(as.childClientJwk as never, "ES256")) as CryptoKey;
+    const subagentDpop = await generateKeyPair("ES256", { extractable: true });
+    const subagentJkt = await calculateJwkThumbprint(await exportJWK(subagentDpop.publicKey));
+    const subagentAssertion = () =>
+      new SignJWT({})
+        .setProtectedHeader({ alg: "ES256", kid: `${SUBAGENT}-auth` })
+        .setIssuer(SUBAGENT)
+        .setSubject(SUBAGENT)
+        .setAudience(ISSUER)
+        .setIssuedAt()
+        .setExpirationTime("2m")
+        .setJti(crypto.randomUUID())
+        .sign(subagentKey);
+    const { d: _private, ...subagentPublic } = as.childClientJwk as Record<string, unknown>;
+
+    // A real delegated token: the agent designates the sub-agent, which redeems it with its own key.
+    const mission = await freshMission();
+    const designated = await tokenRequest({
+      grant_type: TE,
+      subject_token: mission.token,
+      subject_token_type: AT,
+      requested_token_type: AT,
+      audience: SUBAGENT,
+    });
+    const designation = ((await designated.json()) as { access_token?: string }).access_token as string;
+    expect(designated.status).toBe(200);
+    const redeem = async (extra: Record<string, unknown> = {}) =>
+      fetch(`${ISSUER}/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(`${ISSUER}/token`, "POST", subagentDpop, extra) },
+        body: new URLSearchParams({
+          grant_type: TE,
+          subject_token: designation,
+          subject_token_type: AT,
+          requested_token_type: AT,
+          resource: RESOURCE,
+          client_assertion: await subagentAssertion(),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        }).toString(),
+      });
+    let redeemed = await redeem();
+    const nonce = redeemed.headers.get("dpop-nonce");
+    if (redeemed.status === 400 && nonce) redeemed = await redeem({ nonce });
+    const redeemedBody = (await redeemed.json()) as { access_token?: string };
+    expect(redeemed.status, JSON.stringify(redeemedBody)).toBe(200);
+    const delegated = redeemedBody.access_token as string;
+    expect(decodeJwt(delegated).act).toEqual(expect.objectContaining({ sub: SUBAGENT }));
+
+    const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: JWK[] };
+    const rsPub = { ...(await exportJWK(rsTxnKeys.publicKey)), kid: "rs-txn", alg: "ES256" } as JWK;
+    const txnTokenKey = (await generateKeyPair("ES256", { extractable: true })).privateKey;
+    const depsFor = (missionAware: boolean): TxnAuthorizationDeps => ({
+      issuer: ISSUER,
+      kernel: as.kernel,
+      clients: [
+        { client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } },
+        { client_id: SUBAGENT, jwks: { keys: [subagentPublic as JWK] } },
+      ],
+      publicJwks: asJwks,
+      dpopProofReplay: newDpopProofReplay(),
+      subjectTokenLive: async () => true,
+      now: () => new Date(),
+      scopeProjection: {
+        audiences: {
+          ...SCOPE_PROJECTION.audiences,
+          [RESOURCE]: { version: "txn-1", mission_aware: missionAware, mode: "authorization_details" as const },
+        },
+      },
+      txn: {
+        challengeIssuers: new Map([[RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }]]) as ChallengeIssuers,
+        ars,
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        tokenKey: txnTokenKey,
+        tokenKid: "routing-subject-actor-txn",
+        workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
+        maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
+        freshDecision: async () => ({ decision: "permit" as const }),
+      },
+    }) as TxnAuthorizationDeps;
+    // The challenge carries no `act`: only the subject token supplies actor context.
+    const challengeFor = (txn: string) =>
+      signChallenge(
+        {
+          txn,
+          authorization_details: remittanceEntry(mission.missionId),
+          iss: RESOURCE,
+          aud: ISSUER,
+          reason: "action_approval_required",
+          parameter_digest: `sha-256:${txn}`,
+          mission: mission.mission,
+          cnf: { jkt: subagentJkt },
+        },
+        rsTxnKeys.privateKey,
+        "rs-txn",
+      );
+    const submitAsDelegate = async (missionAware: boolean, txn: string) =>
+      callTransactionEndpoint(
+        depsFor(missionAware),
+        newTxnWorkflows(),
+        { transaction_challenge: await challengeFor(txn), subject_token: delegated, subject_token_type: AT },
+        { clientId: SUBAGENT, assertion: subagentAssertion, keys: subagentDpop },
+      );
+
+    const refused = await submitAsDelegate(false, "txn_routing_subject_actor_unaware");
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect((refused.body as { error: string }).error).toBe("invalid_target");
+    expect((refused.body as { error_description: string }).error_description).toMatch(/routed only to a Mission-aware Resource Server/);
+    expect(ars.getTask(taskFor("txn_routing_subject_actor_unaware"))).toBeUndefined();
+
+    const aware = await submitAsDelegate(true, "txn_routing_subject_actor_aware");
+    expect(aware.status, JSON.stringify(aware.body)).toBe(200);
+    expect(ars.getTask(taskFor("txn_routing_subject_actor_aware"))).toBeDefined();
   });
 });
 

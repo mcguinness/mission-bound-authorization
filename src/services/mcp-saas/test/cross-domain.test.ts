@@ -386,4 +386,40 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     expect(write.ok).toBe(false);
     expect(write.error).toBe("out_of_authority");
   });
+
+  /**
+   * @spec resource-access#entry-validation (#1278): trusted issuers are
+   * configurable, so the RAS does not rely on the originating AS having
+   * refused the RFC 9396 locations field. A trusted issuer's signed grant
+   * whose entry carries it is refused at redemption, no local token is
+   * minted, and the SaaS server never receives the entry.
+   */
+  it("a trusted issuer's signed grant whose entry carries locations is refused at the RAS, so the SaaS server never receives the entry", async () => {
+    const mission = approve(10);
+    for (const locations of [[SAAS_RESOURCE], []]) {
+      const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+        missionId: mission.id,
+        targetAs: RAS_ISS,
+        clientId: "ap-agent",
+        cnfJkt: agentJkt,
+        resourceToAs: RESOURCE_TO_AS,
+      });
+      const [header, body] = grant.split(".") as [string, string];
+      const claims = JSON.parse(Buffer.from(body, "base64url").toString());
+      const foreign = await new SignJWT({
+        ...claims,
+        authorization_details: (claims.authorization_details as Array<Record<string, unknown>>).map((e) => ({ ...e, locations })),
+      })
+        .setProtectedHeader(JSON.parse(Buffer.from(header, "base64url").toString()))
+        .sign(asKeys.privateKey);
+      const posted = saas.journalEntries().length;
+      const outcome = await ras.redeem(foreign, agentJkt).then(
+        async ({ access_token }) =>
+          saas.callTool("post_journal_entry", { vendor_id: "acme", amount: "1" }, access_token, await dpopProof(SAAS_RESOURCE)),
+        (e: unknown) => e,
+      );
+      expect(outcome).toMatchObject({ code: "invalid_grant", message: "local policy check failed" });
+      expect(saas.journalEntries()).toHaveLength(posted);
+    }
+  });
 });
