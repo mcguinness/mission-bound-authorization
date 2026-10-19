@@ -881,13 +881,11 @@ export class McpPaymentsServer {
     } catch {
       return { ok: false, refusal_reason: "txn_invalid" };
     }
-    // `aud` is a SINGLETON naming this resource's enforcement boundary; a list
-    // is not this profile, which stays stricter than the access token's
-    // membership rule (@spec runtime-oauth#token-validation, #853, D487).
-    if (
-      typeof payload.aud !== "string" ||
-      !this.validateAudience(payload.aud, { issuer: this.deps.asIssuer, tokenProfile: MISSION_TXN_TOKEN_TYP }).ok
-    ) {
+    // `aud` names this resource's enforcement boundary (@spec
+    // runtime-oauth#boundary-audience, #853, D487), and is a SINGLETON: a
+    // list is not this profile, which keeps its rule, stricter than the
+    // access token's membership rule.
+    if (!this.validateAudience(payload.aud, { issuer: this.deps.asIssuer, tokenProfile: MISSION_TXN_TOKEN_TYP }).ok) {
       return { ok: false, refusal_reason: "txn_invalid" };
     }
     const cnf = payload.cnf as { jkt?: string } | undefined;

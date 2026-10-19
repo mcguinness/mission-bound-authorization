@@ -561,6 +561,9 @@ describe("a declared change of boundary identifier (@spec runtime#boundary-ident
     const oldBytes = canonicalize(oldDecision as unknown as JsonValue);
     const oldRequest = x.decided[0] as EvaluationRequest;
     expect(oldDecision?.audience).toBe(LEGACY);
+    // A pre-decision refusal names the boundary in force, without a permit.
+    expect(await x.pep.enforce("get_invoice", { invoice_id: "inv-missing" }, facts)).toMatchObject({ permitted: false });
+    expect(refusals(x).map((r) => r.audience)).toEqual([LEGACY]);
 
     nowMs = CUTOVER_MS + 60_000;
 
@@ -651,7 +654,9 @@ describe("a declared change of boundary identifier (@spec runtime#boundary-ident
       expect(isDecisionChannelRefusal(before), JSON.stringify(before.context)).toBe(false);
       nowMs = CUTOVER_MS + 60_000;
       const refused = await channel.decide(request, {} as DecisionOptions);
+      // Refused by the scope check, before any decision work: the existing decision-channel refusal.
       expect(isDecisionChannelRefusal(refused)).toBe(true);
+      expect(refused.context).toMatchObject({ denial_reason: "decision_channel_refused", channel_status: 403 });
       const moved = { ...request, resource: { ...request.resource, properties: { ...request.resource.properties, audience: CANONICAL_RESOURCE } } };
       expect(isDecisionChannelRefusal(await channel.decide(moved, {} as DecisionOptions))).toBe(false);
     } finally {
