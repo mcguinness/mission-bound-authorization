@@ -67,8 +67,11 @@ const req = (
   resource: {
     type: over.vendors ? "vendor" : "invoice",
     id: over.vendors ? (over.vendors[0] as string) : "inv-1",
+    // #1276 (D457): the entries are matched against the operation target. The
+    // audience is a logical identifier no entry names, so a match on it could
+    // never permit.
     properties: {
-      audience: RESOURCE,
+      audience: "urn:example:payments-pep",
       operation_target: RESOURCE,
       vendor_id: over.vendor ?? "acme",
       ...(over.vendors ? { vendor_ids: over.vendors } : {}),

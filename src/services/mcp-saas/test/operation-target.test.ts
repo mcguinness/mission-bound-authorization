@@ -6,7 +6,7 @@
  * back to its own identifier for a tool that declares no contract.
  */
 
-import { calculateJwkThumbprint, exportJWK, generateKeyPair, type JWK, SignJWT } from "jose";
+import { CompactSign, calculateJwkThumbprint, exportJWK, generateKeyPair, type JWK, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { SAAS_RESOURCE, SaasMcpServer, type SaasOperationContracts, serviceLevelContracts } from "../src/index.js";
 
@@ -33,6 +33,13 @@ const entry = (resource: string, over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+/** A DPoP proof for one SaaS request. */
+async function proofNow(now: number): Promise<string> {
+  return new SignJWT({ htu: SAAS_RESOURCE, htm: "POST", jti: crypto.randomUUID(), iat: now })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: holderJwk })
+    .sign(holder.privateKey);
+}
+
 /** A RAS-issued local token and its DPoP proof, as the SaaS resource validates them. */
 async function present(authorization_details: unknown[]): Promise<[string, string]> {
   const now = Math.floor(Date.now() / 1000);
@@ -48,10 +55,18 @@ async function present(authorization_details: unknown[]): Promise<[string, strin
     .setIssuedAt(now)
     .setExpirationTime(now + 300)
     .sign(rasKey);
-  const proof = await new SignJWT({ htu: SAAS_RESOURCE, htm: "POST", jti: crypto.randomUUID(), iat: now })
-    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: holderJwk })
-    .sign(holder.privateKey);
-  return [token, proof];
+  return [token, await proofNow(now)];
+}
+
+/** The same token signed over exact JSON text, so an entry's `resource` can be spelled with JSON escapes. */
+async function presentJsonText(detailsJson: string): Promise<[string, string]> {
+  const now = Math.floor(Date.now() / 1000);
+  const payload =
+    `{"iss":${JSON.stringify(RAS_ISS)},"aud":${JSON.stringify(SAAS_RESOURCE)},"sub":"alice@ledgercloud",` +
+    `"mission":{"id":"msn_1276_saas","issuer":"https://as.test"},"authorization_details":${detailsJson},` +
+    `"cnf":{"jkt":${JSON.stringify(holderJkt)}},"iat":${now},"exp":${now + 300}}`;
+  const token = await new CompactSign(new TextEncoder().encode(payload)).setProtectedHeader({ alg: "ES256", kid: "ras-1" }).sign(rasKey);
+  return [token, await proofNow(now)];
 }
 
 const saas = (operationContracts?: SaasOperationContracts) =>
@@ -61,6 +76,11 @@ describe("the SaaS resource matches the token's entries against the operation ta
   it("under its service-level contract, only an exact entry spelled as the target authorizes; another spelling, a prefix entry or an unrecognized resource_match does not", async () => {
     const [ok, okProof] = await present([entry(SAAS_RESOURCE)]);
     expect(await saas().callTool("get_vendor_bank_details", { vendor_id: "acme" }, ok, okProof)).toMatchObject({ ok: true });
+    // Compared after JSON decoding: the token's JSON text spells the resource with `\/` escapes.
+    const escaped = JSON.stringify(SAAS_RESOURCE).replaceAll("/", "\\/");
+    expect(escaped).toContain("\\/");
+    const [esc, escProof] = await presentJsonText(`[{"type":"mission_resource_access","resource":${escaped},"actions":["ledger:vendor.read"]}]`);
+    expect(await saas().callTool("get_vendor_bank_details", { vendor_id: "acme" }, esc, escProof)).toMatchObject({ ok: true });
     const u = new URL(SAAS_RESOURCE);
     for (const details of [
       [entry(`${u.protocol.toUpperCase()}//${u.host.toUpperCase()}${u.pathname}`)],
