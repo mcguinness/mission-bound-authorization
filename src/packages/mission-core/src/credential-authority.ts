@@ -41,6 +41,7 @@ export interface CredentialAuthorityEntry {
     resource_issued_before?: string;
     tenant?: string;
     time_window?: { not_before?: string; not_after?: string };
+    recipient_domain?: string;
   };
 }
 

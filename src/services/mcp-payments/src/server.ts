@@ -55,6 +55,7 @@ import {
   type MissionReference,
   type OrdinaryTokenFacts,
   type Pep,
+  recipientParams,
   type RequestSignals,
   type TokenFacts,
   TOOL_ACTIONS,
@@ -70,7 +71,7 @@ import {
   type TxnConsumptionStore,
   type TxnPendingStore,
 } from "./txn-store.js";
-import type { PaymentsStore } from "./payments-store.js";
+import { defaultRemittanceAddress, type PaymentsStore } from "./payments-store.js";
 import type { CommitResult, Connectors } from "./connectors.js";
 import type { EvidenceStore, ExecutionEvidence, ExecutionEvidenceInput } from "./evidence.js";
 import { operationKey, type TransactionEngine } from "./transaction.js";
@@ -210,7 +211,10 @@ const CONNECTOR_OPERATIONS: Record<
     connectors.sendEmail({
       opKey,
       invoiceId: effective.invoice_id,
-      to: `${effective.vendor_id}@vendor.example`,
+      // @spec resource-access#initial-common-constraints (#1266): exactly the
+      // recipients the decision evaluated: the routed set the digest binds,
+      // or the vendor's default address.
+      to: (effective.recipients ?? [defaultRemittanceAddress(effective.vendor_id)]).join(", "),
       permitId,
       missionId,
     }),
@@ -542,6 +546,7 @@ export class McpPaymentsServer {
         "resource_issued_before",
         "tenant",
         "time_window",
+        "recipient_domain",
       ],
       // Deployment-local publication, not a new protocol baseline member.
       enforcement_scope_statement: this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
@@ -1928,8 +1933,10 @@ export class McpPaymentsServer {
     const invoice = this.deps.payments.getInvoice(String(args.invoice_id ?? ""));
     const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
     if (!invoice || !vendor) return undefined;
+    const bound = recipientParams(mapping.reachesRecipients === true, this.deps.payments, vendor.id);
+    if (!bound) return undefined;
     return parameterDigest(
-      buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE }),
+      buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE, ...bound }),
     );
   }
 

@@ -13,8 +13,11 @@ The file name is the document's stable name and does not carry the version.
   Constraints" below against facts it reads from its own records, carries
   those facts on the decision request, and advertises exactly the enforced
   keys in `mission_constraints_supported`. Decision requests gain the
-  `resource.properties` facts the table lists, where the store's record
-  carries them; `parameter_digest` bytes are unchanged.
+  facts the table lists, where the store's records carry them.
+  `send_remittance_email` resolves its recipients from the vendor's
+  remittance routing; for a vendor whose record names its own routing the
+  effective parameters gain `recipients`, so that operation's
+  `parameter_digest` binds them. Every other digest is unchanged.
 
 - **v4** (#828, D429): the Resource policy also evaluates the
   authenticated client, which must hold `authorized_client` on every
@@ -114,6 +117,7 @@ and derivation, and the PDP refuses a matched entry that carries one.
 | `resource_issued_after`, `resource_issued_before` | the invoice record's `issued_at` (RFC 3339), compared as a UTC instant, both bounds inclusive | `resource.properties.issued_at` | `list_invoices` and `lookup_vendor` (no single invoice), and an invoice with no `issued_at`: refused |
 | `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string | `resource.properties.tenant` | `list_invoices` (no single owner), and a vendor record naming no tenant: refused |
 | `time_window` | the evaluating component's own clock at the point of use (the PEP's credential check and the PDP's decision), both bounds inclusive | none: the PDP reads its own clock | none: every operation has a time |
+| `recipient_domain` | every final recipient `send_remittance_email` reaches: the vendor's remittance addresses with each distribution list expanded to its members, or the vendor's default address; each must be within the domain (case-insensitive, whole labels) | `action.properties.recipients` | every operation that addresses no recipient: refused |
 
 `time_window` is also enforced after the decision: the PDP caps the
 permit's `valid_until` at the matched entry's `not_after` (and, for the
@@ -128,6 +132,11 @@ write's execution changes its version, which `parameter_digest` binds, so
 the write refuses `parameter_mismatch`. Refusals are `parameter_violation`
 on the Mission bound and `out_of_authority` at the PEP's credential
 bound.
+
+Recipients the routing cannot resolve (a list that contains itself,
+nesting past eight levels, no final recipient) refuse
+`unresolvable_recipients` before any decision, and the email connector
+sends to exactly the recipients the decision evaluated.
 
 ## Parameter schemas and normalization
 
@@ -161,7 +170,9 @@ Caller-supplied: `invoice_id`, `vendor_id` (the `lookup_vendor` target and
 the `list_invoices` filter) and `idempotency_key`. Authoritative (loaded by
 the PEP from the payments store, never from the caller): invoice `amount`,
 `currency`, `payee_account`, `vendor_id`-of-invoice, invoice `status`,
-vendor `status`, and the record versions. No served schema declares an
+vendor `status`, the record versions, and the facts the Common
+Constraints read (invoice `issued_at`, vendor `tenant`, and the
+remittance recipients). No served schema declares an
 authoritative field, so its presence in a request is a schema violation,
 refused at the tool boundary.
 
@@ -189,7 +200,10 @@ JCS canonicalization of that object (the anchor encoding family; computed
 with `@mission/core`). The digest binds decision to execution: the PEP
 recomputes it immediately before commit after conditionally re-reading the
 same record versions; any mismatch (record changed, parameter mutated) is
-a refusal with reason `parameter_mismatch`.
+a refusal with reason `parameter_mismatch`. For `send_remittance_email` to
+a vendor whose record names its own remittance routing, the object also
+carries `recipients`: the sorted final recipients, so a routing or list
+change between decision and commit is a mismatch.
 
 ## Targets
 

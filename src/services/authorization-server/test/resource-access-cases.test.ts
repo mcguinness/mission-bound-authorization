@@ -35,6 +35,7 @@ const IMPLEMENTED = new Set([
   "constraint.resource_issued_before",
   "constraint.tenant",
   "constraint.time_window",
+  "constraint.recipient_domain",
   "refusal.unsupported-input",
   "delegate-matcher",
 ]);

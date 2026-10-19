@@ -534,3 +534,83 @@ describe("time_window (@spec resource-access#initial-common-constraints)", () =>
     expect(timeWindowEndMs({ tenant: "acme" })).toBeUndefined();
   });
 });
+
+describe("recipient_domain (@spec resource-access#initial-common-constraints)", () => {
+  const rd = (v: string) => ({ recipient_domain: v });
+
+  it("subset: equal or a subdomain on whole labels, case-insensitively", () => {
+    expect(commonConstraintsNoBroader(rd("example.com"), rd("example.com"))).toBe(true);
+    expect(commonConstraintsNoBroader(rd("mail.example.com"), rd("example.com"))).toBe(true);
+    expect(commonConstraintsNoBroader(rd("MAIL.Example.COM"), rd("example.com"))).toBe(true);
+    expect(commonConstraintsNoBroader(rd("notexample.com"), rd("example.com"))).toBe(false);
+    expect(commonConstraintsNoBroader(rd("example.com"), rd("mail.example.com"))).toBe(false);
+    expect(commonConstraintsNoBroader(rd("example.net"), rd("example.com"))).toBe(false);
+    expect(commonConstraintsNoBroader({}, rd("example.com"))).toBe(false);
+  });
+
+  it("intersection: the narrower value when one is within the other, otherwise none", () => {
+    expect(intersectCommonConstraints(rd("example.com"), rd("mail.example.com"))).toEqual({
+      ok: true,
+      values: rd("mail.example.com"),
+    });
+    expect(intersectCommonConstraints(rd("Mail.Example.com"), rd("example.COM"))).toEqual({
+      ok: true,
+      values: rd("Mail.Example.com"),
+    });
+    expect(intersectCommonConstraints(rd("example.com"), rd("example.net")).ok).toBe(false);
+    expect(intersectCommonConstraints(rd("a.example.com"), rd("b.example.com")).ok).toBe(false);
+  });
+
+  it("enforcement: every resolved recipient must be within the domain", () => {
+    const gate = (recipients?: string[]) =>
+      commonConstraintGates(rd("example.com"), recipients === undefined ? {} : { recipients });
+    expect(gate(["a@example.com", "b@mail.EXAMPLE.com"])).toEqual({
+      satisfied: true,
+      evaluated: ["recipient_domain"],
+    });
+    expect(gate(["a@example.com", "b@example.net"]).satisfied).toBe(false);
+    expect(gate(["a@notexample.com"]).satisfied).toBe(false);
+  });
+
+  it("enforcement: no recipient, or one that is not a bare address, refuses", () => {
+    const gate = (recipients?: string[]) =>
+      commonConstraintGates(rd("example.com"), recipients === undefined ? {} : { recipients });
+    expect(gate().satisfied).toBe(false);
+    expect(gate([]).satisfied).toBe(false);
+    for (const bad of [
+      "example.com",
+      "@example.com",
+      "a@b@example.com",
+      "a@example.com.",
+      "a@exa mple.com",
+    ]) {
+      expect(gate(["ok@example.com", bad]).satisfied, bad).toBe(false);
+    }
+  });
+
+  it("value syntax: a DNS name; the validators and the credential reader agree", () => {
+    expect(SUPPORTED_CONSTRAINT_KEYS).toContain("recipient_domain");
+    for (const good of ["example.com", "Mail.Example.com", "localhost", "xn--bcher-kva.example"]) {
+      expect(isAuthorityEntry(entry(rd(good))), good).toBe(true);
+    }
+    for (const bad of [
+      "",
+      "-a.com",
+      "a..com",
+      "example.com.",
+      "ex ample.com",
+      "a_b.com",
+      7,
+      null,
+    ]) {
+      expect(isAuthorityEntry(entry({ recipient_domain: bad })), JSON.stringify(bad)).toBe(false);
+      expect(
+        () => parseCredentialAuthority([entry({ recipient_domain: bad })]),
+        JSON.stringify(bad),
+      ).toThrow(CredentialAuthorityError);
+    }
+    expect(parseCredentialAuthority([entry(rd("example.com"))])[0]?.constraints).toEqual(
+      rd("example.com"),
+    );
+  });
+});

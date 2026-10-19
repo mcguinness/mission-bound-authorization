@@ -262,6 +262,55 @@ describe("derivation, projection and intake over time_window (@spec resource-acc
   });
 });
 
+describe("derivation, projection and intake over recipient_domain (@spec resource-access#initial-common-constraints)", () => {
+  const rd = (v: string) => ({ recipient_domain: v });
+
+  it("a proposal omitting the ceiling's domain inherits it; a subdomain proposal derives the subdomain", () => {
+    expect(deriveAuthoritySet(intent, policy([entry(rd("example.com"))]), [entry()])).toEqual([
+      entry(rd("example.com")),
+    ]);
+    expect(
+      deriveAuthoritySet(intent, policy([entry(rd("example.com"))]), [entry(rd("mail.example.com"))]),
+    ).toEqual([entry(rd("mail.example.com"))]);
+  });
+
+  it("refuses a proposal naming a domain outside the ceiling's, never omitting it", () => {
+    for (const other of ["example.net", "notexample.com"]) {
+      const e = refusal(() => deriveAuthoritySet(intent, policy([entry(rd("example.com"))]), [entry(rd(other))]));
+      expect(e.code, other).toBe("invalid_authorization_details");
+      expect(e.message, other).toMatch(/recipient_domain values have no intersection/);
+    }
+  });
+
+  it("projection keeps the narrower domain and drops a fragment whose domains do not nest", () => {
+    expect(projectThroughEffective([entry(rd("mail.example.com"))], [entry(rd("example.com"))])).toEqual([
+      entry(rd("mail.example.com")),
+    ]);
+    expect(projectThroughEffective([entry(rd("example.net"))], [entry(rd("example.com"))])).toEqual([]);
+  });
+
+  it("intake refuses a value that is not a DNS name", () => {
+    for (const bad of ["", "a..com", "example.com.", "ex ample.com"]) {
+      const e = refusal(() =>
+        validateAuthorityProposal(
+          JSON.stringify([{ type: "mission_resource_access", resource: R, actions: ["invoices.read"], constraints: rd(bad) }]),
+          [R],
+        ),
+      );
+      expect(e.code, bad).toBe("invalid_authorization_details");
+    }
+  });
+
+  it("scope projection and the attenuation root mapping refuse a recipient-bound entry", () => {
+    const mapping = {
+      rights: { type: "mission_resource_access" as const, resource: R, match: "exact" as const, actions: ["invoices.read"] },
+      mandatory_controls: {},
+    };
+    expect(scopeValueSafeForEntry(mapping, entry(rd("example.com")))).toBe(false);
+    expect(() => mapAuthorityToTools([entry(rd("example.com"))])).toThrow(/unknown constraint 'recipient_domain'/);
+  });
+});
+
 describe("the typed config loader validates the implemented Common Constraints at load (@spec mission#derivation-policy)", () => {
   const REAL_CONFIG_DIR = fileURLToPath(new URL("../../../config", import.meta.url));
   let previous: string | undefined;

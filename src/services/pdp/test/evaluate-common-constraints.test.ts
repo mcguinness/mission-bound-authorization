@@ -233,6 +233,50 @@ describe("PDP enforces time_window at the decision and bounds the permit by it (
   });
 });
 
+describe("PDP enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints)", () => {
+  const DOMAIN = { recipient_domain: "example.com" };
+  const send = async (recipients: unknown, v: MissionView, credential?: unknown[]) => {
+    const base = request({}, credential);
+    const req = {
+      ...base,
+      action: { name: ACTION, ...(recipients === undefined ? {} : { properties: { recipients } }) },
+    } as EvaluationRequest;
+    const d = await evaluate(req, opts(v));
+    return { permit: d.decision, reason: d.context.denial_reason };
+  };
+
+  it("permits when every recipient is within the domain, subdomains and case included", async () => {
+    expect((await send(["a@example.com", "b@Mail.EXAMPLE.com"], view(DOMAIN))).permit).toBe(true);
+  });
+
+  it("refuses when any one recipient is outside the domain", async () => {
+    expect(await send(["a@example.com", "b@example.net"], view(DOMAIN))).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+  });
+
+  it("refuses when no recipient was established, or the list cannot be read", async () => {
+    for (const recipients of [undefined, [], ["a@example.com", 7], ["not-an-address"]]) {
+      expect(await send(recipients, view(DOMAIN)), JSON.stringify(recipients)).toMatchObject({
+        permit: false,
+        reason: "parameter_violation",
+      });
+    }
+  });
+
+  it("a credential bound to a domain is enforced at its own domain under an unbounded Mission", async () => {
+    const credential = [
+      { type: "mission_resource_access", resource: RESOURCE, actions: [ACTION], constraints: DOMAIN },
+    ];
+    expect((await send(["a@example.com"], view(), credential)).permit).toBe(true);
+    expect(await send(["a@example.com", "b@example.org"], view(), credential)).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+  });
+});
+
 describe("PDP fails closed on a Mission entry constraint it does not evaluate (@spec resource-access#rs-enforcement)", () => {
   it("refuses an entry carrying an unrecognized constraints key rather than ignoring it", async () => {
     expect(await decide(view({ x_region: "eu" }), { issued_at: "2026-08-15T00:00:00Z" })).toMatchObject({

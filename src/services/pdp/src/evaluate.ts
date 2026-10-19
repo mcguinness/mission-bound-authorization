@@ -188,7 +188,17 @@ export interface EvaluationRequest {
      * Typed `string` deliberately: a malformed value is refused at the claim
      * step, never admitted by the type system.
      */
-    properties?: { idempotency_key?: string };
+    properties?: {
+      idempotency_key?: string;
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): every final
+       * recipient the action reaches, routing and list expansion applied,
+       * resolved by the PEP from the resource's own records and never from
+       * tool arguments. The `recipient_domain` bound reads it; an absent or
+       * empty list satisfies no such bound.
+       */
+      recipients?: string[];
+    };
   };
   context: {
     mission: {
@@ -1326,6 +1336,16 @@ async function evaluateInner(
     // request member; the permit's `valid_until` carries the window's end to
     // every later use (step 8a's ceiling).
     now: now().getTime(),
+    // A list with any member that is not a string is unreadable as a whole:
+    // it is carried as empty, which satisfies no recipient bound, rather than
+    // filtered to the members that happen to read.
+    ...(Array.isArray(req.action.properties?.recipients)
+      ? {
+          recipients: req.action.properties.recipients.every((r) => typeof r === "string")
+            ? [...req.action.properties.recipients]
+            : [],
+        }
+      : {}),
   };
   let viewHoldsFullSet: boolean | undefined;
   const credentialDischarge = (

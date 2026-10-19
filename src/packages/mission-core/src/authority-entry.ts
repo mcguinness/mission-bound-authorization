@@ -131,6 +131,11 @@ export interface AuthorityEntry {
      * absent bound is unbounded on its side.
      */
     time_window?: { not_before?: string; not_after?: string };
+    /**
+     * @spec resource-access#initial-common-constraints — every recipient the
+     * action reaches is within this DNS domain (whole labels, any case).
+     */
+    recipient_domain?: string;
   };
   /**
    * @spec attenuation#delegation, child-delegation#fanout — per-entry delegation

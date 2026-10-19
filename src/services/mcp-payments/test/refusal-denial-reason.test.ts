@@ -34,6 +34,8 @@ const REFUSAL_RECORD_DIAGNOSTICS = [
   "decision_evidence_unverifiable",
   "channel_failure",
   "pdp_unreachable",
+  // #1266: the recipients a recipient-addressing operation reaches do not resolve.
+  "unresolvable_recipients",
 ];
 
 const refusalInput = (denial_reason: string) => ({

@@ -42,6 +42,12 @@ export interface ConstraintFacts {
    * milliseconds, read at the point of use. Never a time the request states.
    */
   now?: number;
+  /**
+   * Every final recipient the operation reaches (each an `local@domain`
+   * address), routing and list expansion applied, from the resource's own
+   * records. An empty list is no recipients established.
+   */
+  recipients?: readonly string[];
 }
 
 /** One Common Constraint's definition. */
@@ -168,11 +174,66 @@ const TIME_WINDOW: Semantics = {
   },
 };
 
+/** One DNS label: letters, digits and hyphens, not starting or ending with a hyphen. */
+const DNS_LABEL = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/;
+
+/** True for a DNS name of one or more letter-digit-hyphen labels (no trailing dot). */
+function isDnsName(v: unknown): v is string {
+  return typeof v === "string" && v.length <= 253 && v.split(".").every((l) => DNS_LABEL.test(l));
+}
+
+/**
+ * Whether `name` equals `domain` or is a subdomain of it, compared
+ * case-insensitively on whole labels: `mail.example.com` is within
+ * `example.com`, and `notexample.com` is not.
+ */
+function withinDomain(name: string, domain: string): boolean {
+  const n = name.toLowerCase();
+  const d = domain.toLowerCase();
+  return n === d || n.endsWith(`.${d}`);
+}
+
+/** The domain of a bare `local@domain` address, or `undefined` for anything else. */
+function addressDomain(address: unknown): string | undefined {
+  if (typeof address !== "string") return undefined;
+  const at = address.indexOf("@");
+  if (at <= 0 || at !== address.lastIndexOf("@")) return undefined;
+  const domain = address.slice(at + 1);
+  return isDnsName(domain) ? domain : undefined;
+}
+
+/**
+ * `recipient_domain`: every recipient the action reaches is within the named
+ * domain. Comparison is case-insensitive on whole DNS labels. An action with
+ * no established recipient, or with any recipient that is not a bare address
+ * or falls outside the domain, is refused.
+ */
+const RECIPIENT_DOMAIN: Semantics = {
+  valid: isDnsName,
+  noBroader: (c, r) => withinDomain(c as string, r as string),
+  // The narrower value when one is within the other; otherwise none.
+  intersect: (a, b) =>
+    withinDomain(a as string, b as string)
+      ? a
+      : withinDomain(b as string, a as string)
+        ? b
+        : undefined,
+  satisfied: (v, facts) => {
+    const recipients = facts.recipients;
+    if (!Array.isArray(recipients) || recipients.length === 0) return false;
+    return recipients.every((r) => {
+      const domain = addressDomain(r);
+      return domain !== undefined && withinDomain(domain, v as string);
+    });
+  },
+};
+
 const SEMANTICS = {
   resource_issued_after: RESOURCE_ISSUED_AFTER,
   resource_issued_before: RESOURCE_ISSUED_BEFORE,
   tenant: TENANT,
   time_window: TIME_WINDOW,
+  recipient_domain: RECIPIENT_DOMAIN,
 } as const satisfies Record<string, Semantics>;
 
 /** A Common Constraint key whose semantics this module defines. */

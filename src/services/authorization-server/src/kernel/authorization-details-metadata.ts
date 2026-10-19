@@ -102,6 +102,8 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
           minProperties: 1,
           additionalProperties: false,
         },
+        // A DNS name; compared case-insensitively on whole labels.
+        recipient_domain: { type: "string", format: "hostname" },
       },
       // @spec mission#derivation-policy (issue #784) — CLOSED to
       // SUPPORTED_CONSTRAINT_KEYS: an unsupported key is refused at intake,

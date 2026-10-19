@@ -25,6 +25,7 @@ const hoisted = await vi.hoisted(async () => {
     resource_issued_before: "2026-09-30T23:59:59Z",
     tenant: "payments-demo",
     time_window: { not_before: "2026-01-01T00:00:00Z", not_after: "2027-12-31T23:59:59Z" },
+    recipient_domain: "vendor.example",
   };
   const dir = mkdtempSync(join(tmpdir(), "mission-config-1266-"));
   cpSync(fileURLToPath(new URL("../../../config", import.meta.url)), dir, { recursive: true });
@@ -433,5 +434,48 @@ describe("time_window at the endpoints (@spec resource-access#initial-common-con
     const refused = await exchange(issued.at, issued.keys, read(later));
     expect(refused.status).toBe(400);
     expect(refused.body.error).toBe("invalid_authorization_details");
+  });
+});
+
+describe("recipient_domain at the endpoints (@spec resource-access#initial-common-constraints)", () => {
+  const DOMAIN = hoisted.CEILING_CONSTRAINTS.recipient_domain;
+
+  it("a proposal naming a subdomain derives it, and refresh and introspection carry it", async () => {
+    const issued = await issue(read({ recipient_domain: `billing.${DOMAIN}` }));
+    const derived = { vendors: ["acme"], ...hoisted.CEILING_CONSTRAINTS, recipient_domain: `billing.${DOMAIN}` };
+    expect(constraintsOf(claims(issued.at).authorization_details)).toEqual([derived]);
+    const refreshed = await token(
+      { grant_type: "refresh_token", refresh_token: issued.rt, resource: RESOURCE },
+      issued.keys,
+    );
+    expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+    expect(constraintsOf(claims(refreshed.body.access_token as string).authorization_details)).toEqual([derived]);
+    expect(constraintsOf((await introspect(issued.at)).authorization_details)).toEqual([derived]);
+  });
+
+  it("a proposal naming a domain outside the ceiling's is refused at the approval decision, creating no Mission", async () => {
+    const before = as.kernel.allMissions().length;
+    for (const other of ["example.net", `not${DOMAIN}`]) {
+      const redirect = await approve(read({ recipient_domain: other }));
+      expect(redirect.searchParams.get("error"), other).toBe("invalid_authorization_details");
+      expect(redirect.searchParams.get("error_description"), other).toMatch(
+        /recipient_domain values have no intersection/,
+      );
+    }
+    expect(as.kernel.allMissions().length).toBe(before);
+  });
+
+  it("a Token Exchange compares domains on whole labels, case-insensitively: a parent or sibling is refused", async () => {
+    const issued = await issue(read());
+    const derived = { vendors: ["acme"], ...hoisted.CEILING_CONSTRAINTS };
+    const sameInOtherCase = { ...derived, recipient_domain: DOMAIN.toUpperCase() };
+    const ok = await exchange(issued.at, issued.keys, read(sameInOtherCase));
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    const { recipient_domain: _dropped, ...dropped } = derived;
+    for (const requested of [dropped, { ...derived, recipient_domain: "example" }, { ...derived, recipient_domain: "other.example" }]) {
+      const res = await exchange(issued.at, issued.keys, read(requested));
+      expect(res.status, JSON.stringify(requested)).toBe(400);
+      expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");
+    }
   });
 });

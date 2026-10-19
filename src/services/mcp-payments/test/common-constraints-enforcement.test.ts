@@ -48,6 +48,8 @@ interface Harness {
   token: TokenFacts;
   /** The resource members of the last decision request the PEP built. */
   lastResource: () => Record<string, unknown> | undefined;
+  /** The action members of the last decision request the PEP built. */
+  lastAction: () => Record<string, unknown> | undefined;
   /** Whether the PEP asked the PDP for a decision at all on the last call. */
   decisions: () => number;
   connectors: Connectors;
@@ -113,6 +115,7 @@ function harness(opts: {
       ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: clock().toISOString() } }
       : undefined;
   let resource: Record<string, unknown> | undefined;
+  let action: Record<string, unknown> | undefined;
   let conditions: Record<string, unknown> | undefined;
   let decisions = 0;
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
@@ -121,6 +124,7 @@ function harness(opts: {
     decide: async (req, options) => {
       decisions++;
       resource = req.resource as unknown as Record<string, unknown>;
+      action = req.action as unknown as Record<string, unknown>;
       const decision = await EVIDENCE_KEYS.decide(req, options);
       conditions = decision.context.conditions as Record<string, unknown> | undefined;
       return decision;
@@ -164,6 +168,7 @@ function harness(opts: {
     token,
     connectors,
     lastResource: () => resource,
+    lastAction: () => action,
     lastConditions: () => conditions,
     decisions: () => decisions,
     advance: (ms) => {
@@ -411,6 +416,107 @@ describe("the payments resource enforces time_window at the point of use (@spec 
   });
 });
 
+describe("the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints)", () => {
+  const remit = (h: Harness, beforeCommit?: () => void) =>
+    h.server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-q3", idempotency_key: `idem_${randomUUID()}` },
+      h.token,
+      beforeCommit,
+    );
+  const sent = (h: Harness) =>
+    (h.connectors.db.prepare("SELECT to_addr FROM outbox").all() as { to_addr: string }[]).map((r) => r.to_addr);
+  /** acme's remittance goes to its AP inbox and a distribution list. */
+  const route = (h: Harness, listMembers: string[]) => {
+    h.payments.seedRemittance("acme", ["ap@acme.example", "remit-list@acme.example"]);
+    h.payments.setMailList("remit-list@acme.example", listMembers);
+  };
+
+  it("sends to the vendor's default address under a domain that contains it, carrying the resolved recipients", async () => {
+    const h = harness({ mission: { recipient_domain: "vendor.example" } });
+    const res = await remit(h);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect((h.lastAction()?.properties as Record<string, unknown>).recipients).toEqual(["acme@vendor.example"]);
+    expect(sent(h)).toEqual(["acme@vendor.example"]);
+  });
+
+  it("checks every recipient a distribution list expands to: one outside the domain refuses, with no email", async () => {
+    const h = harness({ mission: { recipient_domain: "acme.example" } });
+    route(h, ["treasury@acme.example", "controller@partner.example"]);
+    const res = await remit(h);
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("parameter_violation");
+    expect((h.lastAction()?.properties as Record<string, unknown>).recipients).toEqual([
+      "ap@acme.example",
+      "controller@partner.example",
+      "treasury@acme.example",
+    ]);
+    expect(sent(h)).toEqual([]);
+  });
+
+  it("sends to exactly the expanded recipients when every one is within the domain", async () => {
+    const h = harness({ mission: { recipient_domain: "acme.example" } });
+    route(h, ["treasury@acme.example", "controller@EU.ACME.example"]);
+    const res = await remit(h);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect(sent(h)).toEqual(["ap@acme.example, controller@EU.ACME.example, treasury@acme.example"]);
+  });
+
+  it("refuses before any decision when the routing cannot be resolved", async () => {
+    const h = harness({ mission: { recipient_domain: "acme.example" } });
+    route(h, ["loop@acme.example"]);
+    h.payments.setMailList("loop@acme.example", ["remit-list@acme.example"]);
+    const res = await remit(h);
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("unresolvable_recipients");
+    expect(h.decisions()).toBe(0);
+    expect(sent(h)).toEqual([]);
+  });
+
+  it("refuses a send whose list membership changed between decision and commit, with no email", async () => {
+    const h = harness({ mission: { recipient_domain: "acme.example" } });
+    route(h, ["treasury@acme.example"]);
+    const res = await remit(h, () =>
+      h.payments.setMailList("remit-list@acme.example", ["treasury@acme.example", "drop@elsewhere.example"]),
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("parameter_mismatch");
+    expect(sent(h)).toEqual([]);
+  });
+
+  it("refuses an operation that addresses no recipient under a recipient bound", async () => {
+    const h = harness({ mission: { recipient_domain: "acme.example" } });
+    const res = await read(h, "inv-q3");
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("parameter_violation");
+  });
+
+  it("a recipient named in the arguments cannot establish the fact: it is refused at intake", async () => {
+    const h = harness({ mission: { recipient_domain: "vendor.example" } });
+    const res = await h.server.callTransactionTool(
+      "send_remittance_email",
+      { invoice_id: "inv-q3", idempotency_key: `idem_${randomUUID()}`, to: "acme@vendor.example" },
+      h.token,
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("invalid_request");
+    expect(h.decisions()).toBe(0);
+  });
+
+  it("a credential bound to a domain is refused at the PEP, before any decision, for an expanded recipient outside it", async () => {
+    const h = harness({ credential: { recipient_domain: "acme.example" } });
+    route(h, ["controller@partner.example"]);
+    const res = await remit(h);
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("out_of_authority");
+    expect(h.decisions()).toBe(0);
+    // The same credential reaches a send whose every recipient is inside.
+    const inside = harness({ credential: { recipient_domain: "acme.example" } });
+    route(inside, ["treasury@acme.example"]);
+    expect((await remit(inside)).ok).toBe(true);
+  });
+});
+
 describe("the payments resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement)", () => {
   it("refuses an operation whose matched Mission entry carries a constraints key the resource does not understand", async () => {
     const h = harness({ mission: { x_region: "eu" } });
@@ -426,7 +532,7 @@ describe("protected resource metadata names only enforced constraint keys (@spec
     const h = harness({});
     const supported = h.server.protectedResourceMetadata().mission_constraints_supported as string[];
     expect([...supported].sort()).toEqual(
-      ["max_amount", "vendors", "resource_issued_after", "resource_issued_before", "tenant", "time_window"].sort(),
+      ["max_amount", "vendors", "resource_issued_after", "resource_issued_before", "tenant", "time_window", "recipient_domain"].sort(),
     );
     // The supported set the Authorization Server admits is the one this resource enforces.
     expect([...supported].sort()).toEqual(

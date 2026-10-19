@@ -35322,9 +35322,153 @@
     "normative": "an action addressed to recipients both inside and outside recipient_domain is refused"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 11. recipient_domain is not implemented (#1266); case cc-recipients-every skipped."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > checks every recipient a distribution list expands to: one outside the domain refuses, with no email",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a credential bound to a domain is refused at the PEP, before any decision, for an expanded recipient outside it",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1266 slice 4. Every final recipient, list expansion applied, is checked on the Mission bound (PDP) and the credential bound (PEP). Case cc-recipients-every stays skipped: it requires the reader's rs.enforcement capability, which this reference does not claim. Proved by mutation: accepting any one recipient, and not expanding lists, each fail these tests."
+  },
+  {
+   "id": "resource-access.common-constraints.recipient-domain-enforced",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "The action applies only to recipients within the named domain.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action is permitted only when its resolved recipients are established and within the domain; missing or unresolved recipients refuse, and recipients are never taken from the request",
+    "local": "the payments resource resolves recipients from the vendor's remittance routing; unresolvable routing refuses unresolvable_recipients before any decision, a recipient argument is refused at intake, an operation addressing no one refuses under the bound, and a routing change between decision and commit refuses parameter_mismatch"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > sends to the vendor's default address under a domain that contains it, carrying the resolved recipients",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > refuses before any decision when the routing cannot be resolved",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > refuses a send whose list membership changed between decision and commit, with no email",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > refuses an operation that addresses no recipient under a recipient bound",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a recipient named in the arguments cannot establish the fact: it is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > sends to exactly the expanded recipients when every one is within the domain",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1266 slice 4. Proved by mutation: letting no recipient satisfy, the PEP omitting recipients from the decision request, sending on unresolvable routing, not binding routed recipients into the digest, and the connector ignoring the resolved recipients each fail these tests."
+  },
+  {
+   "id": "resource-access.common-constraints.recipient-domain-subset",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Subset: no broader when equal to the reference or a DNS subdomain of it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derived recipient_domain that drops the reference's, names a parent, or names a sibling is broader and is refused; the same domain in another case is no broader"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "recipient_domain at the endpoints (@spec resource-access#initial-common-constraints) > a Token Exchange compares domains on whole labels, case-insensitively: a parent or sibling is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1266 slice 4. Cases cc-recipient_domain-* run through the reader. Proved by mutation: a subset rule admitting any domain, and a case-sensitive comparison, each fail the test."
+  },
+  {
+   "id": "resource-access.common-constraints.recipient-domain-intersection",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Intersection: the narrower value when one is equal to or a subdomain of the other; otherwise there is no intersection and the combination fails.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "derivation keeps the narrower of two nested domains and refuses a proposal whose domain does not nest with the ceiling's",
+    "local": "refused invalid_authorization_details at the approval decision, creating no Mission; refresh and introspection carry the derived subdomain"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "recipient_domain at the endpoints (@spec resource-access#initial-common-constraints) > a proposal naming a subdomain derives it, and refresh and introspection carry it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "recipient_domain at the endpoints (@spec resource-access#initial-common-constraints) > a proposal naming a domain outside the ceiling's is refused at the approval decision, creating no Mission",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1266 slice 4. Proved by mutation: an intersection that keeps one side, and a comparison ignoring the label boundary, each fail the refusal test."
   },
   {
    "id": "resource-access.value-space.time-window-instants",
@@ -35399,6 +35543,43 @@
     }
    ],
    "notes": "#1266 slice 1. Case cc-resource_issued_after-boundary and cc-resource_issued_before-boundary run through the reader. Proved by mutation: reversing the after-bound comparison and ignoring subsecond digits each fail these tests."
+  },
+  {
+   "id": "resource-access.value-space.recipient-domain-labels",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "value-space-comparison",
+   "text": "`recipient_domain` values are compared as DNS names, case-insensitively and on whole labels",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "recipient_domain values compare as DNS names: case never changes the result, and a name sharing only a suffix that is not a whole label is not within the domain"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "recipient_domain at the endpoints (@spec resource-access#initial-common-constraints) > a Token Exchange compares domains on whole labels, case-insensitively: a parent or sibling is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "recipient_domain at the endpoints (@spec resource-access#initial-common-constraints) > a proposal naming a domain outside the ceiling's is refused at the approval decision, creating no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1266 slice 4. Cases cc-recipient_domain-case and cc-recipient_domain-boundary run through the reader. Proved by mutation: a case-sensitive comparison fails the exchange test, and a comparison without the label boundary fails the approval test."
   },
   {
    "id": "resource-access.type.action-whole-value",
