@@ -32,6 +32,7 @@ import { missionInteractionPolicy } from "./interaction-policy.js";
 import {
   delegatedRoutingRefusal,
   earlyScopeRefusal,
+  isSubsetSetIgnoringCapabilitySources,
   type MissionAccessProfile,
   projectScope,
   readMissionAccessProfile,
@@ -318,6 +319,7 @@ import { ceilingConsentOf, type ProgressiveDrawdownOptions } from "../kernel/pro
 import { ID_JAG_TOKEN_TYPE } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
+  refusedMemberInRequest,
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
 import { withTransaction } from "@mission/store";
@@ -344,6 +346,7 @@ import {
   isSubsetSet,
   type OriginProjection,
   projectRarThroughMission,
+  projectThroughEffective,
   SourceUnavailableError,
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
@@ -1361,10 +1364,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * (lib/actions/grants/refresh_token.js 9.10.0 L60-133 then L137). The
    * projection is decided here with the same inputs the access token's save
    * will use, so a refusal caused solely by the projection leaves the
-   * refresh token and its grant valid. A failure to resolve the refreshed
-   * authority itself is left to the ordinary path.
+   * refresh token and its grant valid. `rar` is the set the access token
+   * will carry, as {@link preCheckRefreshRar} decided it; where the refreshed
+   * authority does not resolve, that failure is left to the ordinary path
+   * and this is not called.
    */
-  function preCheckRefreshProjection(ctx: unknown): void {
+  function preCheckRefreshProjection(ctx: unknown, rar: unknown): void {
     const c = ctx as {
       oidc: {
         params: Record<string, unknown>;
@@ -1379,16 +1384,119 @@ export function buildProvider(opts: AdapterOptions): Provider {
       opts.familyStore?.resolve(rt.grantId) !== undefined ||
       kernel.missionBoundGrants.resolve(rt.grantId) !== undefined;
     if (!bound) return; // an ordinary OAuth grant: no projection applies
-    let rar: unknown;
-    try {
-      rar = rarThroughEffectiveSet(grant);
-    } catch {
-      return;
-    }
     const resource =
       typeof c.oidc.params.resource === "string" ? c.oidc.params.resource : rt.resource;
     if (typeof resource !== "string") return;
     decideMissionScope(ctx, [resource], Array.isArray(rar) ? rar : []);
+  }
+
+  /**
+   * @spec mission#subset, mission#remediation-grains, mission#error-mapping
+   * (#1303) — a token request's `authorization_details` (Section 6 of
+   * RFC 9396) narrows the issued token. `ceiling` is what the grant carries
+   * as the effective set narrows it ({@link rarThroughEffectiveSet}); with no
+   * request the token carries the ceiling. A requested entry that is not a
+   * subset of the ceiling under its type's relation is refused
+   * `invalid_authorization_details`, never silently re-narrowed. An admitted
+   * request issues the requested entries projected through the ceiling, which
+   * keeps the ceiling's capability-source provenance. The refresh token keeps
+   * the grant, so a later refresh may ask for the whole ceiling again. An
+   * empty array names nothing, as in oidc-provider's checkRar.
+   */
+  function narrowToRequestedRar(ctx: unknown, ceiling: unknown): unknown {
+    const raw = (ctx as { oidc: { params: Record<string, unknown> } }).oidc.params.authorization_details;
+    if (typeof raw !== "string") return ceiling;
+    const requested = JSON.parse(raw) as AuthorityEntry[];
+    if (!Array.isArray(requested) || requested.length === 0) return ceiling;
+    const granted = Array.isArray(ceiling) ? (ceiling as AuthorityEntry[]) : [];
+    const narrowed = isSubsetSetIgnoringCapabilitySources(requested, granted)
+      ? projectThroughEffective(requested, granted)
+      : [];
+    if (narrowed.length === 0) {
+      throw new InvalidAuthorizationDetails("requested authorization_details are not within the authority of the grant");
+    }
+    return narrowed;
+  }
+
+  /**
+   * @spec mission#subset, mission#error-mapping (#1303) — the refresh
+   * pre-check for a requested `authorization_details`. oidc-provider's refresh
+   * grant validates the parameter (checkRar, lib/actions/grants/refresh_token.js
+   * 9.10.0 L190) and calls rarForRefreshTokenResponse (L212) only after it has
+   * consumed the presented token and saved its successor (L136-167). A refusal
+   * there spends a rotating lineage: the successor never reaches the client,
+   * and a retry with the presented token is reuse, which revokes the grant.
+   * This runs checkRar's checks (lib/shared/check_rar.js 9.10.0, same order,
+   * same errors, then the type's own `validate`) and the subset decision
+   * before consumption. It returns the grant's `ceiling` and the set the
+   * access token will carry (`issued`), which the projection pre-check
+   * decides over; undefined where the grant's authority does not resolve,
+   * a failure left to the ordinary path.
+   */
+  function preCheckRefreshRar(ctx: unknown): { ceiling: unknown; issued: unknown } | undefined {
+    const c = ctx as {
+      oidc: {
+        params: Record<string, unknown>;
+        client?: { authorizationDetailsTypes?: string[] };
+        entities: { Grant?: { jti?: string; rar?: unknown } };
+      };
+    };
+    const raw = c.oidc.params.authorization_details;
+    if (raw !== undefined) checkRequestedRar(ctx, raw, c.oidc.client);
+    let ceiling: unknown;
+    try {
+      ceiling = rarThroughEffectiveSet(c.oidc.entities.Grant);
+    } catch {
+      return undefined;
+    }
+    return { ceiling, issued: narrowToRequestedRar(ctx, ceiling) };
+  }
+
+  /** checkRar's own checks of a token request's `authorization_details` (lib/shared/check_rar.js 9.10.0). */
+  function checkRequestedRar(ctx: unknown, raw: unknown, client: { authorizationDetailsTypes?: string[] } | undefined): void {
+    let details: unknown;
+    try {
+      details = JSON.parse(String(raw));
+    } catch {
+      throw new errors.InvalidRequest("could not parse the authorization_details parameter JSON");
+    }
+    if (!Array.isArray(details)) {
+      throw new errors.InvalidRequest("authorization_details parameter should be a JSON array");
+    }
+    // The configured types, read at call time (the configuration below).
+    const types = (configuration.features as unknown as {
+      richAuthorizationRequests: {
+        types: Record<string, { validate(ctx: unknown, detail: unknown, client: unknown): void }>;
+      };
+    }).richAuthorizationRequests.types;
+    details.forEach((detail: unknown, i) => {
+      if (!detail || typeof detail !== "object" || Array.isArray(detail)) {
+        throw new errors.InvalidRequest("authorization_details parameter members should be a JSON object");
+      }
+      const d = detail as Record<string, unknown>;
+      if (typeof d.type !== "string" || !d.type.length) {
+        throw new InvalidAuthorizationDetails(
+          `authorization_details parameter members' type attribute must be a non-empty string (authorization details index ${i})`,
+        );
+      }
+      const config = types[d.type];
+      if (!config) {
+        throw new InvalidAuthorizationDetails(`unsupported authorization details type value (authorization details index ${i})`);
+      }
+      if (client?.authorizationDetailsTypes?.includes(d.type) === false) {
+        throw new InvalidAuthorizationDetails(`authorization details type '${d.type}' is not allowed for this client`);
+      }
+      for (const field of ["locations", "actions", "datatypes", "privileges"]) {
+        const v = d[field];
+        if (field in d && (!Array.isArray(v) || v.some((x) => typeof x !== "string" || !x.length))) {
+          throw new InvalidAuthorizationDetails(`'${field}' must be an array of non-empty strings (authorization details index ${i})`);
+        }
+      }
+      if ("identifier" in d && (typeof d.identifier !== "string" || !d.identifier.length)) {
+        throw new InvalidAuthorizationDetails(`'identifier' must be a non-empty string (authorization details index ${i})`);
+      }
+      config.validate(ctx, detail, client);
+    });
   }
 
   const configuration: Configuration = {
@@ -1452,13 +1560,14 @@ export function buildProvider(opts: AdapterOptions): Provider {
         ack: "experimental-01",
         // Issuer-derived RAR (@spec mission#authorization-derivation): the
         // grant's rar IS the Mission's Authority Set; every surface projects it.
-        // Token responses re-project through the effective set (containment).
+        // Token responses re-project through the effective set (containment),
+        // then narrow to a requested `authorization_details` (#1303).
         rarForAuthorizationCode: (ctx: { oidc: { grant?: { rar?: unknown } } }) =>
           ctx.oidc.grant?.rar as never,
         rarForCodeResponse: (ctx: { oidc: { grant?: { jti?: string; rar?: unknown } } }) =>
-          rarThroughEffectiveSet(ctx.oidc.grant) as never,
+          narrowToRequestedRar(ctx, rarThroughEffectiveSet(ctx.oidc.grant)) as never,
         rarForRefreshTokenResponse: (ctx: { oidc: { grant?: { jti?: string; rar?: unknown } } }) =>
-          rarThroughEffectiveSet(ctx.oidc.grant) as never,
+          narrowToRequestedRar(ctx, rarThroughEffectiveSet(ctx.oidc.grant)) as never,
         types: {
           mission_resource_access: {
             // @spec mission#authority-proposal — a client MAY submit entries of
@@ -1795,8 +1904,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // refresh token" the profile forbids. Resolving here makes the 503 land
       // at L135 instead, leaving the client's refresh token usable for a retry.
       probeAuthoritySource(rt?.grantId);
-      // @spec mission#scope-projection — refusal before consumption.
-      preCheckRefreshProjection(ctx);
+      // @spec mission#subset, mission#error-mapping (#1303) — a requested
+      // authorization_details is validated and decided before consumption.
+      const decided = preCheckRefreshRar(ctx);
+      // @spec mission#scope-projection — refusal before consumption, over the
+      // set the access token will carry.
+      if (decided) preCheckRefreshProjection(ctx, decided.issued);
       // @spec mission#issuance-gating (#914) — the Mission state, lineage,
       // effective-set and cap refusals, before consumption too. Partial: see
       // preCheckRefreshMissionState.
@@ -2376,6 +2489,12 @@ async function handleDeferredGrant(
     if (typeof intent.mission_id !== "string" || !Array.isArray(intent.requested)) {
       throw new errors.InvalidRequest("deferred_authorization requires mission_id and requested[]");
     }
+    // @spec resource-access#entry-validation (#1278, D457): the requested
+    // entries are minted onto the deferred token as submitted, and the subset
+    // check below reads no `locations`, so an entry of this type carrying it
+    // is refused here, before any deferral opens.
+    const refusedMember = refusedMemberInRequest(intent.requested);
+    if (refusedMember) throw new InvalidAuthorizationDetails(refusedMember);
     let pending;
     try {
       pending = deferrals.open({

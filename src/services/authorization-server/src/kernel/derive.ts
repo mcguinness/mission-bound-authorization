@@ -14,6 +14,7 @@ import {
   isValidAmount,
   isSubsetEntry,
   isSubsetSet,
+  refusedEntryMember,
   SUPPORTED_CONSTRAINT_KEYS,
 } from "@mission/core";
 export { isSubsetEntry, isSubsetSet } from "@mission/core";
@@ -62,6 +63,26 @@ function assertExactResourceMatch(entries: readonly AuthorityEntry[]): void {
       throw new IntentError(
         "invalid_authorization_details",
         `resource_match ${JSON.stringify(match)} is not supported; this authorization server implements exact resource matching only`,
+      );
+    }
+  }
+}
+
+/**
+ * @spec resource-access#entry-validation (#1278, D457): this type does not
+ * use the RFC 9396 common `locations` field, and `intersect` rebuilds each
+ * entry member by member, so an admitted `locations` would vanish from the
+ * derived entry. An entry carrying it, whatever its value, is refused here,
+ * over the full ceiling and proposal, so a programmatic caller that bypasses
+ * intake and the config loader cannot have it silently dropped.
+ */
+function assertNoRefusedMembers(entries: readonly AuthorityEntry[]): void {
+  for (const entry of entries) {
+    const member = refusedEntryMember(entry);
+    if (member !== undefined) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry carries ${member}, which the mission_resource_access type does not use; refusing rather than silently dropping it`,
       );
     }
   }
@@ -288,6 +309,8 @@ export function deriveAuthoritySetWithProvenance(
   if (proposal) assertSupportedConstraints(proposal);
   assertExactResourceMatch(policy.ceiling);
   if (proposal) assertExactResourceMatch(proposal);
+  assertNoRefusedMembers(policy.ceiling);
+  if (proposal) assertNoRefusedMembers(proposal);
 
   // @spec mission#error-mapping — captured BEFORE the template-mode fallback
   // below reassigns `proposals`: whether the client actually submitted an
