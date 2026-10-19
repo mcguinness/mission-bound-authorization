@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "2a8a1253dcd8f2f32eeeda927f38c616f668405a",
-    "content_sha256": "fdbe56fb50bfe9fc7632cc1cb387aa72550c3ed6793b16cb76072a78ad976720"
+    "revision": "eefa661963a4374d0bcbcc31a7d24939e18ce269",
+    "content_sha256": "2773eae85660e9dba220add4b27f87ec5cc335693b4f7c79415c8ec390696211"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "4e2f0ea1118418979179798fa3fa2deffd4f883a",
@@ -6028,7 +6028,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a Mission submission reaches its own approval event even when the client's user agent already holds a session and grant from an earlier approval: no authorization code, Mission or grant results from a submission without its own approval, a submission that cannot interact is refused, and the approved submission yields its own Mission, never an earlier one",
-    "local": "oidc-provider's consent prompt carries a mission_approval_required check (adapters/interaction-policy.ts): a request with mission_intent requests the interaction until it has finished for it, and prompt=none refuses consent_required; ordinary requests without mission_intent keep the provider's consent reuse"
+    "local": "oidc-provider's consent prompt carries a mission_approval_required check (adapters/interaction-policy.ts): a request with mission_intent requests the interaction until it has finished for it, and prompt=none refuses consent_required. A request without mission_intent never reuses a Mission-bound grant (core.grant-binding.no-binding-by-consent-reuse, #1259)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -6056,15 +6056,9 @@
      "name": "a new Mission submission reaches its own approval despite prior browser consent (@spec mission#approval-event, #1247) > the newly reached interaction applies the approval floor (#1234): a high-risk Intent-only submission in the same user agent is refused at its approval by a password-authenticated Approver, with no code and no Mission",
      "level": "endpoint",
      "surface": "approval-ceremony"
-    },
-    {
-     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
-     "name": "a new Mission submission reaches its own approval despite prior browser consent (@spec mission#approval-event, #1247) > an ordinary request carrying no mission_intent keeps consent reuse: the session's Grant answers it with a code and no interaction",
-     "level": "endpoint",
-     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1247. Before the check, a second Intent-only PAR from the same client under an existing browser session was answered with a code under the first Mission's grant, so its redemption minted a token for the first Mission. Proved by three mutations: removing the policy fails the four Mission witnesses; dropping the finished-approval guard re-prompts every resume and fails all five; firing the check on every request fails the ordinary consent-reuse witness."
+   "notes": "#1247. Before the check, a second Intent-only PAR from the same client under an existing browser session was answered with a code under the first Mission's grant, so its redemption minted a token for the first Mission. Proved by two mutations: removing the policy fails the four witnesses; dropping the finished-approval guard re-prompts every resume and fails all four. The ordinary consent-reuse witness this row cited endorsed the #1259 defect and was replaced by core.grant-binding.no-binding-by-consent-reuse's witnesses; firing the check on every request now fails that row's independently-ordinary-grant witness."
   },
   {
    "id": "core.response.mission-expires-at-on-creation",
@@ -6723,6 +6717,80 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "core.grant-binding.no-binding-by-consent-reuse",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding-resolution",
+   "text": "An AS that answers such a request through consent reuse, such as with a grant an authentication session holds for the client, MUST NOT select a grant bound to a Mission",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorization request carrying no mission_intent, whose reusable candidate grant (the session's grant for the client, or a finished interaction's consent grant) is bound to a Mission, is never answered under that grant: no authorization code results under it, no derivation is counted against its Mission, and the grant, its binding and the session's reference to it stay intact. A grant is bound whatever record makes it so (a Mission's own grant, a delegation family, terminal or not, or a bound-grant index entry whose Mission no longer resolves). The rule excludes only bound grants: an independently ordinary grant still answers, its code carrying no Mission binding, and derivations against the existing binding (refresh, Token Exchange) still resolve to and count against its Mission",
+    "local": "oidc-provider's loadExistingGrant is loadReusableGrant (adapters/interaction-policy.ts): the provider default's candidate is classified by kernel.findByGrant, the delegation-family store's wasEverFamily and the bound-grant index, and a request carrying mission_intent keeps the default selection. With no eligible grant the reference AS refuses access_denied interactively (its only interaction is the Mission approval, whose render and decision finish an ordinary request's interaction refused) and consent_required under prompt=none (oidc-provider's consent checks); its descriptions name no Mission. Neither code is a protocol requirement: an AS may serve ordinary consent instead"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > with only the earlier Mission's grant in the user agent, an otherwise valid interactive request is refused access_denied: no code, no Grant, no Mission, no derivation and no disclosure, and the Mission's grant stays bound and held",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > under prompt=none the same request is refused consent_required, with the same absence of effects",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > a Mission's own grant is excluded even where the bound-grant index lacks it (the record's grant_id alone)",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > a delegation-family grant is excluded, its family terminal and the bound-grant index silent: the family record alone suffices",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > a grant the bound-grant index lists whose Mission no longer resolves is excluded and refused cleanly, never a server error",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > an explicit consent-result candidate naming the Mission's grant is excluded too: the resume issues no code under it (the result is seeded: no reference surface finishes an ordinary interaction with consent)",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > an independently ordinary grant still answers an ordinary request: its code redeems to ordinary authority with no Mission binding, and the earlier Mission's accounting is unchanged",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > the earlier Mission's own lineage still continues after a refused ordinary request: its refresh and a Token Exchange of its token stay bound to it, each counting one derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1259 (D476). Before the fix, an ordinary request in a user agent holding an approved Mission's session grant received a code under that grant, and its redemption carried the earlier Mission's mission_id and spent one of its derivations. Mutation proofs: removing the exclusion fails all eight witnesses (the bound-grant witnesses receive codes, and the unresolvable index entry instead refuses at code mint with a description naming the Mission); classifying by findByGrant alone fails the family and unresolvable-index witnesses; reading the family by live resolution fails the terminal-family witness; dropping findByGrant fails the index-gap witness; leaving the consent-result candidate unclassified fails its witness; excluding every grant fails the ordinary-grant witness; destroying the excluded grant fails the intact-grant assertions and the refresh. The family, index-gap, unresolvable-index and consent-result candidates are store-seeded: no reference flow produces them for an ordinary request. The local outcome (access_denied with no server error from the approval surface's render or decision, and login_required keeping its precedence under prompt=none) has its own witnesses in the same describe block, outside this row."
   },
   {
    "id": "core.tokens.exp-clamp",
