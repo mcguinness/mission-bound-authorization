@@ -238,6 +238,11 @@ describe("the payments resource establishes the operation target from its truste
       const credential = credentialFor(CANONICAL_RESOURCE, ADMIN);
       const denied = await build(mode, SERVICE_VIEW, { profile, operationTargets: [CANONICAL_RESOURCE, ADMIN] });
       try {
+        // A credential naming only the audience's identifier does not cover the target: refused before the PDP.
+        const audienceOnly = await denied.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(SERVICE_VIEW));
+        expect(audienceOnly, mode).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+        expect(denied.decided, mode).toHaveLength(0);
+        // A credential covering the target reaches the PDP, which decides on the target: the Mission names only the audience's identifier.
         const res = await denied.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(SERVICE_VIEW, credential));
         expect(res, mode).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
         expect(denied.decided[0]?.resource.properties, mode).toMatchObject({ audience: CANONICAL_RESOURCE, operation_target: ADMIN });

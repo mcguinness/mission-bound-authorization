@@ -152,20 +152,25 @@ describe("the PDP matches entries against the PEP-established operation target (
 
   it("a missing, malformed or ambiguous target is refused, with no fallback to the audience or to type and id", async () => {
     const cases: Array<[string, Record<string, unknown>]> = [
-      ["missing", { audience: AUDIENCE }],
-      ["empty", { audience: AUDIENCE, operation_target: "" }],
       ["relative", { audience: AUDIENCE, operation_target: "/mcp" }],
       ["fragment", { audience: AUDIENCE, operation_target: `${SERVICE}#x` }],
+      ["missing", { audience: AUDIENCE }],
+      ["empty", { audience: AUDIENCE, operation_target: "" }],
       ["one-element array", { audience: AUDIENCE, operation_target: [SERVICE] }],
       ["two targets", { audience: AUDIENCE, operation_target: [SERVICE, ADMIN] }],
       ["number", { audience: AUDIENCE, operation_target: 1 }],
     ];
+    // The Mission also names each malformed string verbatim, so only the
+    // target's own shape check can refuse it.
+    const opts = options({ view: view([entry(SERVICE), entry("/mcp"), entry(`${SERVICE}#x`)]) });
+    // So does the credential: no other bound refuses in the target check's place.
+    const covering = credential(credentialEntry(SERVICE), credentialEntry("/mcp"), credentialEntry(`${SERVICE}#x`));
     for (const [label, properties] of cases) {
       // The audience, the type and the id each name the entry's resource.
-      const req = read(properties);
+      const req = read(properties, covering);
       req.resource.type = SERVICE;
       req.resource.id = SERVICE;
-      const dec = await evaluate(req, options());
+      const dec = await evaluate(req, opts);
       expect(dec.decision, label).toBe(false);
       expect(dec.context.denial_reason, label).toBe("out_of_authority");
     }
