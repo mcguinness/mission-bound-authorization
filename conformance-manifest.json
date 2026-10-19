@@ -2288,9 +2288,21 @@
      "name": "control-plane lifecycle expiry under a refused operation > commits the expiry it discovered even when the operation it was asked for is refused",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > an expiry materialized under a guarded transition makes the caller's earlier version stale (@spec status#idempotency, #250)",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle expiry under a refused operation > compares expected_version with the version the expiry left: the caller's older version is stale, the expiry stays committed and published once (@spec status#idempotency, #250)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. The counter now carries a durable operation and artifact identity: the increment and its reservation commit together, a recorded operation identity replays its artifact instead of counting again, an unreleased reservation is never refunded because a missing local acknowledgement is not evidence that no artifact was accepted, and only an authoritative non-acceptance returns a count. A refunded operation identity is terminal and refuses a retry, so nothing issues against a count that was returned; and a pending reservation is exclusive on this instance, so two overlapping callers under one operation identity receive one artifact rather than two against one count. The lifecycle nonce claim and its committed outcome now commit with the transition, with the exact response finalized and recovered outside that transaction, and finalization is guarded on the request digest the claim was made under so a divergent retry can neither overwrite a committed success nor be retained in its place. The expiry clock commits in its own transaction ahead of the requested transition, so refusing that transition never rolls back the expiry it discovered or the expiry's publication. That claim store's additive schema migration is exercised on a file-backed database carrying the pre-migration shape: every retained outcome keeps its replay identity, and a reopen is a no-op. This does not reach tested in this slice: the artifact itself is still issued outside the kernel transaction (the provider access-token hook is synchronous and has no acceptance boundary), so authoritative issuance state and artifact material are not recorded transactionally before delivery. No multi-process claim."
+   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. The counter now carries a durable operation and artifact identity: the increment and its reservation commit together, a recorded operation identity replays its artifact instead of counting again, an unreleased reservation is never refunded because a missing local acknowledgement is not evidence that no artifact was accepted, and only an authoritative non-acceptance returns a count. A refunded operation identity is terminal and refuses a retry, so nothing issues against a count that was returned; and a pending reservation is exclusive on this instance, so two overlapping callers under one operation identity receive one artifact rather than two against one count. The lifecycle nonce claim and its committed outcome now commit with the transition, with the exact response finalized and recovered outside that transaction, and finalization is guarded on the request digest the claim was made under so a divergent retry can neither overwrite a committed success nor be retained in its place. The expiry clock commits in its own transaction ahead of the requested transition, so refusing that transition never rolls back the expiry it discovered or the expiry's publication. A request's `expected_version` is compared with the version that expiry left, so a caller's earlier version is refused `stale_version` while the expiry stays committed and published once (#250). That claim store's additive schema migration is exercised on a file-backed database carrying the pre-migration shape: every retained outcome keeps its replay identity, and a reopen is a no-op. This does not reach tested in this slice: the artifact itself is still issued outside the kernel transaction (the provider access-token hook is synchronous and has no acceptance boundary), so authoritative issuance state and artifact material are not recorded transactionally before delivery. No multi-process claim."
   },
   {
    "id": "control-plane.consistency.fresh-observation",
@@ -2387,9 +2399,16 @@
     "normative": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol. A binding-native realization can map those semantics without adopting another binding's endpoint or claim. Push delivery supplies invalidation and ordered-transition information; it is not the sole evidence of active state after freshness confidence is lost. Conflicting observations are reconciled under the version and freshness rules, never by selecting the more permissive surface."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane state surfaces (#250) > reports one committed transition at one version on Status, introspection, the Status List and the lifecycle commit, and a refused stale request moves none of them",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. Not witnessed: that no parallel snapshot surface exists (a negative over the deployment), and the consumer-side clauses, that push delivery is not the sole evidence of active state after freshness confidence is lost and that conflicting observations are reconciled by version and freshness, never by the more permissive surface. The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.rollback",
