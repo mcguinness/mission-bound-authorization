@@ -471,7 +471,8 @@ with `pnpm install --frozen-lockfile`.
   `buildAuthorizationServer` assembly restricted to the capability set of §8
   (`ISSUANCE_ONLY_CAPABILITIES`). `src/server.ts` runs the same assembly with
   no capability set: every default-on capability, with the opt-in
-  `device-authorization` off. It is the issuer, and its JWKS is at `/jwks`.
+  `device-authorization` and `delegation` off. It is the issuer, and its
+  JWKS is at `/jwks`.
 - **`plain-rs`**, at `http://localhost:4410`, audience
   `http://localhost:4410/api`.
 
@@ -568,8 +569,8 @@ profile is always on. Of the optional capabilities, only the lifecycle
 endpoint's `revoke` is enabled. Every other one is off, and a request for it
 gets the standard refusal its path already uses. With no `capabilities` set,
 the assembly is the full reference provider: every capability except the
-opt-in ones (`OPT_IN_PROVIDER_CAPABILITIES`, today `device-authorization`),
-which are on only where a capability set names them.
+opt-in ones (`OPT_IN_PROVIDER_CAPABILITIES`, today `device-authorization`
+and `delegation`), which are on only where a capability set names them.
 
 How a capability is turned off:
 
@@ -597,7 +598,7 @@ launcher refuses every excluded path (#873)` unless the row says otherwise.
 | Lifecycle `revoke` | On | | the same two walkthrough tests, step 6 |
 | Lifecycle `suspend`, `resume`, `complete` | Off | 400 `invalid_request`; the Mission stays `active` | `the lifecycle suspend, resume and complete operations are refused invalid_request and the Mission stays active` |
 | Async-delegation exchange (`request_refresh_token`) | Off | 400 `unsupported_grant_type` | `async-delegation token exchange (request_refresh_token) is refused unsupported_grant_type` |
-| In-Mission delegation (`act` from an `actor_token`) | Off | Not implemented in the provider; it rides the async exchange, which is off | the same |
+| Same-Mission delegation (`delegation`: a designation and its redemption) | Off (opt-in) | 400 `unsupported_grant_type` | `same-Mission delegation (a designation and its redemption) is refused unsupported_grant_type (@spec mission#delegation, D449)` |
 | Child Missions: creation exchange | Off | 400 `unsupported_grant_type` | `child creation token exchange (requested_token_type jwt) is refused unsupported_grant_type` |
 | Child Missions: jwt-bearer redemption | Off | 400 `unsupported_grant_type`; the child client is not registered (401 `invalid_client`) | `the child jwt-bearer grant is refused unsupported_grant_type, and the child client is not registered` |
 | Cross-domain projection (ICA to an ID-JAG) | Off | 400 `unsupported_grant_type` | `cross-domain continuation (ICA subject token to an ID-JAG) is refused unsupported_grant_type` |
