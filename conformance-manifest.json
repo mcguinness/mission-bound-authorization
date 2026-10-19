@@ -34512,7 +34512,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The narrower-prefix-entry clause is unit-level only, because no issuance path here can carry a resource_match prefix entry: the kernel derivation builds each derived entry member by member (type, resource, actions, constraints, delegation) and never carries resource_match, so every Mission entry is exact, and the cross-org exchange's tool mapping emits none either. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
+   "notes": "The narrower-prefix-entry clause is unit-level only, because this deployment implements exact matching only and no issuance path can carry a prefix entry: since #1267 (#1264, D446), a resource_match other than exact is refused before approval or issuance, at PAR intake and in direct derivation (invalid_authorization_details) and by the policy.json, governed-policy.json and containment.json loaders (ConfigError), and the cross-org exchange's tool mapping emits none. Prefix matching itself is #1258's and #1266's. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
   },
   {
    "id": "resource-access.scope-projection.actions-no-aggregation",
