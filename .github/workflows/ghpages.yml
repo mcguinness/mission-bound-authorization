@@ -7,12 +7,23 @@ on:
     - CONTRIBUTING.md
     - LICENSE.md
     - .gitignore
+    # The drafts never build from these; a decision-log row or an
+    # implementation change needs no draft rebuild or publish.
+    - 'src/**'
+    - 'notes/**'
   pull_request:
     paths-ignore:
     - README.md
     - CONTRIBUTING.md
     - LICENSE.md
     - .gitignore
+    - 'src/**'
+    - 'notes/**'
+
+# A newer push to the same ref supersedes an older build or publish.
+concurrency:
+  group: editors-copy-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -65,8 +76,24 @@ jobs:
         token: ${{ github.token }}
 
     - name: "Update GitHub Pages"
+      id: ghpages
       uses: martinthomson/i-d-template@v1
       if: ${{ github.event_name == 'push' }}
+      continue-on-error: true
+      with:
+        make: gh-pages
+        token: ${{ github.token }}
+
+    # Another branch's publish can win the race to push gh-pages. Wait,
+    # then publish again from a fresh copy of the branch; a second
+    # failure fails the job.
+    - name: "Wait Before Retrying GitHub Pages"
+      if: ${{ github.event_name == 'push' && steps.ghpages.outcome == 'failure' }}
+      run: sleep 30
+
+    - name: "Retry GitHub Pages"
+      uses: martinthomson/i-d-template@v1
+      if: ${{ github.event_name == 'push' && steps.ghpages.outcome == 'failure' }}
       with:
         make: gh-pages
         token: ${{ github.token }}
