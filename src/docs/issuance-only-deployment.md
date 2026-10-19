@@ -327,27 +327,31 @@ Mission kernel only, never the provider.
 | Approval evidence and Mission Records (anchors, authority-source roots, `derivation_count`, `grant_id`), lifecycle events, tombstones | Lost | Retained (port §4.5); kernel-level test only: `restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart` (`control-plane-fanout.test.ts`) |
 | Provider interactions, grants, authorization codes, refresh tokens | Lost | Lost: an outstanding refresh token is unknown, and oidc-provider refuses it `invalid_grant` |
 | The issuance index (`TokenIssuanceStore`), `MissionBoundGrantStore`, `DelegationFamilyStore` | Lost | Empty |
-| Signing identity | Regenerated under the same `kid` (D25) | Regenerated |
+| Signing identity | Regenerated under the same `kid` with `MISSION_EPHEMERAL_KEYS=1` (D25); kept with `MISSION_KEY_RING` (#831) | The same |
 | A Mission after the restart | None exists | Stranded: an `active` Mission whose grant is gone stays `active` until `expires_at` or a revocation, and nothing can derive from it |
 
 Consequences, in both configurations:
 
-- A pre-restart access token fails introspection: the AS holds neither its
-  key nor its index row. An introspecting Resource Server refuses it.
-- A JWT-only consumer that cached the old key keeps accepting it until `exp`
-  plus tolerance, and `plain-rs` rejects post-restart tokens until its JWKS
-  cache refreshes (§2). A restart is not revocation.
+- A pre-restart access token fails introspection: the AS holds no index row
+  for it, and with ephemeral keys not its key either. An introspecting
+  Resource Server refuses it.
+- With ephemeral keys, a JWT-only consumer that cached the old key keeps
+  accepting it until `exp` plus tolerance, and `plain-rs` rejects
+  post-restart tokens until its JWKS cache refreshes (§2). With a key ring
+  the key does not change, so neither happens. A restart is not revocation
+  either way.
 - The OAuth binding keeps a retired key resolvable while tokens signed under
-  it remain valid (`{#mission-bound-tokens}`). A restart drops it from the
-  JWKS while pre-restart tokens are still unexpired, so that requirement is
-  not met across a restart (#831).
+  it remain valid (`{#mission-bound-tokens}`). With ephemeral keys a restart
+  drops it from the JWKS while pre-restart tokens are still unexpired, so
+  that requirement is not met across a restart; a key ring keeps it (#831).
 - Every outstanding refresh token is refused; the client starts a new
   authorization.
 
 No test boots the assembled AS across a restart, so the file-backed outcomes
 come from the code (port §4.5). Recovery this deployment does not support is
 unsupported, not partially durable: cross-store recovery and fencing are
-#250's, and durable signing identities are #831's.
+#250's. A key ring keeps the AS's signing keys across a restart; key
+rotation and resource-side JWKS refresh are #831's next slice.
 
 ## 5. Deployment Profile instance
 
@@ -460,8 +464,8 @@ with `pnpm install --frozen-lockfile`.
 
 | Configuration | Start | Walkthrough (second shell) |
 |---|---|---|
-| JWT validation alone | `pnpm issuance-only` | `pnpm issuance-only:walkthrough` |
-| JWT plus per-request introspection | `pnpm issuance-only --introspection` | `pnpm issuance-only:walkthrough` |
+| JWT validation alone | `MISSION_EPHEMERAL_KEYS=1 pnpm issuance-only` | `pnpm issuance-only:walkthrough` |
+| JWT plus per-request introspection | `MISSION_EPHEMERAL_KEYS=1 pnpm issuance-only --introspection` | `pnpm issuance-only:walkthrough` |
 
 **What the launcher starts.** `pnpm issuance-only` (`scripts/issuance-only.mjs`
 → `demo/src/issuance-only-serve.ts` → `startIssuanceOnly` in
@@ -488,7 +492,12 @@ It reads the shipped config:
   `--introspection`.
 
 The environment can override the ports with `AS_PORT` and `PLAIN_RS_PORT`.
-The audience stays the mapped one. The launcher adds one input that
+The audience stays the mapped one. It also chooses the AS's signing keys
+(#831): `MISSION_EPHEMERAL_KEYS=1` generates them at each boot, and
+`MISSION_KEY_RING=<absolute path>` signs with a key ring created once by
+`pnpm keys init --ring <path>`, kept across restarts. Neither, both, a
+relative path or an unusable ring refuses startup with one `issuance-only:`
+line. `src/server.ts` reads the same two variables. The launcher adds one input that
 `src/server.ts` lacks: the demo's trusted approval input (below).
 
 It writes the per-boot dev credentials, mode 0600, to
