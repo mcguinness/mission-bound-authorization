@@ -246,9 +246,14 @@ cross-issuer services, quotas or replication authority.
 ## Restart inventory
 
 What a process restart keeps, for the AS's state and the state it depends on.
-"File-backed" means the kernel opened with `kernelStore: { file }`; no shipped
-launcher sets it (`server.ts`, `pnpm as-native` and `pnpm issuance-only` run the
-kernel in memory), so on every shipped launcher the kernel rows are lost too.
+"File-backed" means the kernel opened with `kernelStore: { file }`. The shipped
+launchers (`server.ts`, `pnpm as-native` and `pnpm issuance-only`) run the
+kernel in memory unless `MISSION_KERNEL_STORE=<absolute path>` names its file,
+which requires a key ring (`MISSION_KEY_RING`), so that what the kept kernel
+issued or signed still verifies after a restart. That is restart recovery for
+one process on one host: the file takes no lock, so a second process on the same
+file is not refused, and a restore from an older backup is not detected, which
+remain #250's restore and fencing step.
 
 | State | Where it lives | Across a restart |
 |---|---|---|
@@ -262,7 +267,7 @@ kernel in memory), so on every shipped launcher the kernel rows are lost too.
 | AS signing keys | Generated per boot | Deliberately invalidated: no earlier token or record verifies. PR #1299 adds a durable key ring |
 | Access tokens | Self-contained JWTs | Verify only while their signing key survives |
 | Durable grant revocations still pending | Kernel database | Attempted at boot; a revocation whose grant was lost with the provider is acknowledged with nothing left to revoke |
-| Signals receiver high-water | Receiver memory (no shipped service constructs a receiver) | Lost |
+| Signals receiver state: the version high-water, the cached observation, the gap and rematerialization markers, the retained SET and the seen `jti` values | The receiver's store (`ReceiverOptions.store`): in memory by default, or a file the consumer gives it. No shipped service constructs a receiver | Durable when the consumer gives the receiver a file |
 
 oidc-provider's memory adapter is process-global, so an AS rebuilt in the
 same process still holds the previous provider's grants. A restart test that
