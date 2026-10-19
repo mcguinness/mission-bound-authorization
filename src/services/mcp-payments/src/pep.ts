@@ -1384,6 +1384,7 @@ export class Pep {
     let listVendorScope: string[] | undefined;
     let targetVendorId: string | undefined;
     let recipients: string[] | undefined;
+    let recipientsRouted = false;
     if (mapping.targetsVendor && args.vendor_id !== undefined) {
       const targetVendor = this.deps.payments.getVendor(String(args.vendor_id));
       targetVendorId = targetVendor?.id;
@@ -1426,8 +1427,11 @@ export class Pep {
           });
         }
         recipients = resolved.recipients;
+        recipientsRouted = resolved.routed;
       }
-      const bound = recipientParams(mapping.reachesRecipients === true, this.deps.payments, vendor.id) ?? {};
+      // The routed set binds into the digest; a vendor's default address is
+      // a function of `vendor_id`, which the digest already binds.
+      const bound = recipients && recipientsRouted ? { recipients } : {};
       effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE, ...bound });
       amount = effective.amount;
       // @spec resource-access#initial-common-constraints (#1266): the

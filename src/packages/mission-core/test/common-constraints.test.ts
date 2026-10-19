@@ -737,3 +737,29 @@ describe("allowed_tools (@spec resource-access#initial-common-constraints)", () 
     }
   });
 });
+
+describe("a combination that admits nothing has no intersection, even from one operand (@spec resource-access#common-constraints)", () => {
+  it("an empty window, label list or tool list carried from one operand fails the combination", () => {
+    for (const constraints of [
+      { time_window: { not_before: "2026-09-01T00:00:00Z", not_after: "2026-08-01T00:00:00Z" } },
+      { data_classification: [] },
+      { allowed_tools: [] },
+    ]) {
+      expect(
+        intersectCommonConstraints(constraints, undefined).ok,
+        JSON.stringify(constraints),
+      ).toBe(false);
+      expect(
+        intersectCommonConstraints(undefined, constraints).ok,
+        JSON.stringify(constraints),
+      ).toBe(false);
+    }
+  });
+
+  it("a single-instant window is not empty", () => {
+    const instantWindow = {
+      time_window: { not_before: "2026-08-01T00:00:00Z", not_after: "2026-08-01T02:00:00+02:00" },
+    };
+    expect(intersectCommonConstraints(instantWindow, undefined).ok).toBe(true);
+  });
+});

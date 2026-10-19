@@ -71,6 +71,12 @@ interface Semantics {
   intersect(a: JsonValue, b: JsonValue): JsonValue | undefined;
   /** Whether the authoritative facts satisfy the bound; an absent fact never does. */
   satisfied(value: JsonValue, facts: ConstraintFacts): boolean;
+  /**
+   * Whether a (valid) value admits nothing: a window with no instant, a list
+   * with no member. A combination whose result is empty has no
+   * intersection, whether it came from two operands or was carried from one.
+   */
+  empty?(value: JsonValue): boolean;
 }
 
 const instant = (v: JsonValue): Instant => parseRfc3339Instant(v) as Instant;
@@ -175,6 +181,14 @@ const TIME_WINDOW: Semantics = {
       ...(notAfter !== undefined ? { not_after: notAfter } : {}),
     };
   },
+  empty: (v) => {
+    const w = v as Window;
+    return (
+      w.not_before !== undefined &&
+      w.not_after !== undefined &&
+      compareInstants(instant(w.not_before), instant(w.not_after)) > 0
+    );
+  },
   satisfied: (v, facts) => {
     if (typeof facts.now !== "number" || !Number.isFinite(facts.now)) return false;
     const now = instantFromMs(facts.now);
@@ -268,6 +282,7 @@ const DATA_CLASSIFICATION: Semantics = {
   noBroader: membersWithin,
   // The common members; an empty result has no intersection.
   intersect: commonMembers,
+  empty: (v) => (v as string[]).length === 0,
   satisfied: (v, facts) => {
     const labels = facts.dataClassification;
     if (!Array.isArray(labels) || labels.length === 0) return false;
@@ -287,6 +302,7 @@ const ALLOWED_TOOLS: Semantics = {
   noBroader: membersWithin,
   // The common members; an empty result has no intersection.
   intersect: commonMembers,
+  empty: (v) => (v as string[]).length === 0,
   satisfied: (v, facts) => typeof facts.tool === "string" && (v as string[]).includes(facts.tool),
 };
 
@@ -378,12 +394,15 @@ export function intersectCommonConstraints(
     if ((av !== undefined && !s.valid(av)) || (bv !== undefined && !s.valid(bv))) {
       return { ok: false, key, reason: `malformed ${key} value` };
     }
-    if (av === undefined || bv === undefined) {
-      values[key] = structuredClone((av ?? bv) as JsonValue);
-      continue;
+    // A key on one operand only meets an unbounded other side: the result is
+    // that operand's value, which may itself admit nothing.
+    const v =
+      av === undefined || bv === undefined
+        ? ((av ?? bv) as JsonValue)
+        : s.intersect(av as JsonValue, bv as JsonValue);
+    if (v === undefined || ("empty" in s && s.empty?.(v))) {
+      return { ok: false, key, reason: `${key} values have no intersection` };
     }
-    const v = s.intersect(av as JsonValue, bv as JsonValue);
-    if (v === undefined) return { ok: false, key, reason: `${key} values have no intersection` };
     values[key] = structuredClone(v);
   }
   const after = values.resource_issued_after;

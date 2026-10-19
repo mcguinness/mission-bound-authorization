@@ -407,6 +407,19 @@ describe("derivation, projection and intake over allowed_tools (@spec resource-a
   });
 });
 
+describe("derivation refuses a proposal whose own bound admits nothing (@spec resource-access#common-constraints)", () => {
+  it("refuses an empty window, label list or tool list the ceiling does not carry, never deriving an empty entry", () => {
+    for (const constraints of [
+      { time_window: { not_before: "2026-09-01T00:00:00Z", not_after: "2026-08-01T00:00:00Z" } },
+      { data_classification: [] },
+      { allowed_tools: [] },
+    ]) {
+      const e = refusal(() => deriveAuthoritySet(intent, policy([entry()]), [entry(constraints)]));
+      expect(e.code, JSON.stringify(constraints)).toBe("invalid_authorization_details");
+    }
+  });
+});
+
 describe("the typed config loader validates the implemented Common Constraints at load (@spec mission#derivation-policy)", () => {
   const REAL_CONFIG_DIR = fileURLToPath(new URL("../../../config", import.meta.url));
   let previous: string | undefined;
