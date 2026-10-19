@@ -131,8 +131,12 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
   // fact about that action with it rather than emitting the action unbound.
   // Actions the successor's own approval ADDS are not inherited: a binding
   // originates only in a trusted resolution at the approval that records it.
+  // @spec resource-access#delegate-eligibility: a fresh derivation, so the
+  // successor's origins are its own derivation's, index-aligned through the
+  // per-entry capability transforms.
+  const derived = kernel.deriveWithProvenance(input.intent, proposal);
   const authoritySet = kernel.resolveFreshCapabilities(inheritCapabilitySources(
-    kernel.derive(input.intent, proposal),
+    derived.entries,
     predecessor.authority_set,
   ));
   // @spec mission#approval-event (step 3), mission#authority-sources —
@@ -193,6 +197,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     intent: input.intent,
     ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: authoritySet,
+    eligibility_provenance: derived.provenance,
     intent_hash: intentHash(predecessor.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(predecessor.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
