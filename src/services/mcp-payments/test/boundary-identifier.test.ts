@@ -175,8 +175,8 @@ beforeAll(async () => {
   txnJwk = { ...(await exportJWK(txn.publicKey)), kid: "as-txn", alg: "ES256" };
 });
 
-/** A Mission access token; `aud: undefined` removes the claim. */
-async function mint(aud: unknown, credentialResource = CANONICAL_RESOURCE): Promise<string> {
+/** A Mission access token; `aud: undefined` removes the claim, and `extra` adds claims. */
+async function mint(aud: unknown, credentialResource = CANONICAL_RESOURCE, extra: Record<string, unknown> = {}): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const payload: Record<string, unknown> = {
     iss: ISSUER,
@@ -189,6 +189,7 @@ async function mint(aud: unknown, credentialResource = CANONICAL_RESOURCE): Prom
     cnf: { jkt: "jkt-853" },
     mission: { id: "msn_853", issuer: ISSUER },
     authorization_details: [{ type: "mission_resource_access", resource: credentialResource, actions: ALL_ACTIONS }],
+    ...extra,
   };
   if (aud === undefined) delete payload.aud;
   return new SignJWT(payload).setProtectedHeader({ alg: "ES256", kid: "as-token", typ: "at+jwt" }).sign(asKey);
@@ -378,6 +379,11 @@ describe("each PEP establishes its boundary from configuration, and every consum
         denial_reason: "invalid_credential",
       });
     }
+    // An alias mapping the token itself supplies is never read.
+    const selfMapped = await mint("token-alias", CANONICAL_RESOURCE, {
+      audience_aliases: [{ issuer: ISSUER, token_profile: "at+jwt", alias: "token-alias", boundary: CANONICAL_RESOURCE }],
+    });
+    await expect(x.server.validateMissionToken(selfMapped)).rejects.toThrow(new TokenAudienceError("audience_mismatch"));
     expect(x.decided).toHaveLength(0);
     expect(x.evidence.all()).toHaveLength(0);
   });
