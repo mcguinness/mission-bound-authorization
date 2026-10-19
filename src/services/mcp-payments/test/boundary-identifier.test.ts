@@ -21,6 +21,8 @@ import {
   createDecisionChannel,
   createEphemeralDecisionPoint,
   DECISION_EVIDENCE_MEDIA_TYPE,
+  type Decision,
+  type DecisionFn,
   type DecisionOptions,
   decisionCacheKey,
   EnforcementBoundaryContext,
@@ -247,8 +249,19 @@ const factsFor = (credentialResource = CANONICAL_RESOURCE): TokenFacts => ({
   credentialAuthority: credentialAuthorityFrom([{ type: "mission_resource_access", resource: credentialResource, actions: ALL_ACTIONS }]),
 });
 
-/** One decision point and key bundle over `statement`, shared by every PEP a test builds on it. */
-function deployment(statement: RuntimePosture, clock: () => Date = () => new Date(), opts: { claims?: boolean } = {}) {
+/**
+ * One decision point and key bundle over `statement`, shared by every PEP a
+ * test builds on it. `retransmits` binds the decision function and claim
+ * channel to a requester whose redemption store answers `unconsumed` (these
+ * cases redeem nothing), so the PDP may return a permit it holds as a
+ * retransmission (#917 condition 6). Absent, the bundle's own requester,
+ * which no retransmission ever reaches.
+ */
+function deployment(
+  statement: RuntimePosture,
+  clock: () => Date = () => new Date(),
+  opts: { claims?: boolean; retransmits?: boolean } = {},
+) {
   const authority = new EnforcementBoundaryContext(statement, "mcp-payments-pep", clock);
   let settlementKeys: EvidenceKeyResolver | undefined;
   // The PDP's Exact claim domain over the same statement, when a test needs one (#917, #853 review).
@@ -269,13 +282,16 @@ function deployment(statement: RuntimePosture, clock: () => Date = () => new Dat
       authority.authorizesEvidence({ audience, kid: "ephemeral-pdp", emitter: EMITTER, role: "pdp" }, "current", clock()),
   });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
+  const requester = { pep_id: "mcp-payments-pep", pep_epoch: `epoch-retransmits:${randomUUID()}` };
+  const decide: DecisionFn = opts.retransmits ? point.decideAs(requester, () => "unconsumed") : keys.decide;
+  const claimChannel = opts.retransmits ? point.claimsFor(requester) : keys.claims;
   const published: BoundaryEvidenceKey[] = keys.verification.flatMap((k) =>
     k.role === "receipt_issuer" ? [] : [{ kid: k.kid, publicKey: k.publicKey, emitterId: k.emitterId, role: k.role }],
   );
   const declaration = statement.enforcement_boundaries as EnforcementBoundaries;
   const resolver = buildBoundaryEvidenceKeyResolver(declaration, published);
   settlementKeys = resolver;
-  return { statement, clock, point, keys, resolver, declaration, claims };
+  return { statement, clock, point, keys, resolver, declaration, claims, decide, claimChannel };
 }
 
 interface Built {
@@ -288,10 +304,11 @@ interface Built {
   fgaCalls: () => number;
 }
 
+/** `decide`, when given, stands in for the deployment's decision function; every call is still recorded. */
 function buildPep(
   d: ReturnType<typeof deployment>,
   pepLocation: string,
-  opts: { view?: MissionView; profile?: Record<string, ActionMapping> } = {},
+  opts: { view?: MissionView; profile?: Record<string, ActionMapping>; decide?: DecisionFn } = {},
 ): Built {
   const view = opts.view ?? viewOf();
   const boundary = new EnforcementBoundaryContext(d.statement, pepLocation, d.clock);
@@ -327,9 +344,9 @@ function buildPep(
     decide: (req, o) => {
       decided.push(req);
       options.push(o);
-      return d.keys.decide(req, o);
+      return (opts.decide ?? d.decide)(req, o);
     },
-    claims: d.keys.claims,
+    claims: d.claimChannel,
   });
   const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep", now: d.clock });
   const server = new McpPaymentsServer({
@@ -928,6 +945,91 @@ describe("a declared change of identifier keeps duplicate-effect protection (@sp
     expect(fresh.permitted, JSON.stringify(fresh)).toBe(true);
     expect(fresh.attempt?.audience).toBe(CANONICAL_RESOURCE);
     d.claims?.close();
+  });
+});
+
+/**
+ * #1327 re-review: the reference invalidates every permit at a new statement
+ * version, including a version that keeps the identifier (here {@link
+ * NARROWED}, which withdraws an alias). The identifier, and with it the
+ * PDP's cache key, is unchanged, so only the statement version tells a
+ * permit decided before the cutover from one decided after it.
+ */
+describe("a permit held for retransmission never takes a later statement version (@spec runtime#boundary-identifier-change, runtime#idempotency, #853)", () => {
+  it("the PDP answers a retry with the permit's key after the cutover duplicate_suppressed under the original claim, never with the earlier permit", async () => {
+    let nowMs = CUTOVER_MS - 1000;
+    const d = deployment(statementWith(NARROWED), () => new Date(nowMs), { claims: true, retransmits: true });
+    const x = buildPep(d, "mcp-payments-pep");
+    try {
+      const token = await mint(CANONICAL_RESOURCE);
+      const args = { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` };
+      // Before the cutover: a permit the client never used (its response was lost, say).
+      const first = await x.pep.enforce("execute_wire_transfer", args, await x.server.validateMissionToken(token));
+      expect(first.permitted, JSON.stringify(first)).toBe(true);
+      const held = first.attempt as NonNullable<typeof first.attempt>;
+      expect(held.boundaryVersion).toBe("payments-alias-v1");
+      // Control: under the version it was decided in, the retry is that permit's retransmission.
+      const again = await x.pep.enforce("execute_wire_transfer", args, await x.server.validateMissionToken(token));
+      expect(again.attempt?.evaluationId).toBe(held.evaluationId);
+      expect(again.attempt?.boundaryVersion).toBe("payments-alias-v1");
+      const recorded = decisions(x).length;
+
+      nowMs = CUTOVER_MS + 1000;
+      const retried = await x.pep.enforce("execute_wire_transfer", args, await x.server.validateMissionToken(token));
+      expect(retried, JSON.stringify(retried)).toMatchObject({ permitted: false, denial_reason: "duplicate_suppressed" });
+      expect(retried.attempt).toBeUndefined();
+      expect(retried.decision?.context).toMatchObject({ next_action: "retry" });
+      // One new record, a denial under the version in force; the earlier permit is not re-presented.
+      expect(decisions(x).slice(recorded).map((r) => [r.decision, r.evaluation_id === held.evaluationId])).toEqual([["deny", false]]);
+      // The permit the client still holds is refused at use, at its own boundary.
+      expect(await x.pep.verifyPermitAtUse(held)).toMatchObject({ ok: false, error: BOUNDARY_CUTOVER_ERROR });
+      // A new key is a new operation, decided and usable under the version in force.
+      const fresh = await x.pep.enforce(
+        "execute_wire_transfer",
+        { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+        await x.server.validateMissionToken(token),
+      );
+      expect(fresh.permitted, JSON.stringify(fresh)).toBe(true);
+      expect(fresh.attempt?.boundaryVersion).toBe("payments-alias-v2");
+      expect(await x.pep.verifyPermitAtUse(fresh.attempt as NonNullable<typeof fresh.attempt>)).toEqual({ ok: true });
+    } finally {
+      d.claims?.close();
+      x.writeReservations.close();
+    }
+  });
+
+  it("the PEP keeps a re-presented permit's own version: an earlier permit returned after the cutover is suppressed kill_switch at use, at its original boundary", async () => {
+    let nowMs = CUTOVER_MS - 1000;
+    const d = deployment(statementWith(NARROWED), () => new Date(nowMs), { claims: true });
+    // Stands in for a decision point that returns the permit it holds whatever
+    // version is now in force (a lagging clock, say), as the wire would.
+    let held: Decision | undefined;
+    const replaying: DecisionFn = async (req, o) => {
+      held ??= await d.decide(req, o);
+      return JSON.parse(JSON.stringify(held)) as Decision;
+    };
+    const x = buildPep(d, "mcp-payments-pep", { decide: replaying });
+    try {
+      const token = await mint(CANONICAL_RESOURCE);
+      const args = { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` };
+      const first = await x.pep.enforce("execute_wire_transfer", args, await x.server.validateMissionToken(token));
+      expect(first.permitted, JSON.stringify(first)).toBe(true);
+      expect(first.attempt?.boundaryVersion).toBe("payments-alias-v1");
+
+      nowMs = CUTOVER_MS + 1000;
+      const replayed = await x.pep.enforce("execute_wire_transfer", args, await x.server.validateMissionToken(token));
+      expect(replayed.permitted, JSON.stringify(replayed)).toBe(true);
+      const attempt = replayed.attempt as NonNullable<typeof replayed.attempt>;
+      expect(attempt.evaluationId).toBe(first.attempt?.evaluationId);
+      // The re-presented record is the one retained before the cutover, with its version; never a second copy.
+      expect(attempt.boundaryVersion).toBe("payments-alias-v1");
+      expect(decisions(x)).toHaveLength(1);
+      expect(await x.pep.verifyPermitAtUse(attempt)).toMatchObject({ ok: false, error: BOUNDARY_CUTOVER_ERROR });
+      expect(executions(x).map((r) => [r.audience, r.outcome, r.error])).toEqual([[CANONICAL_RESOURCE, "suppressed", BOUNDARY_CUTOVER_ERROR]]);
+    } finally {
+      d.claims?.close();
+      x.writeReservations.close();
+    }
   });
 });
 

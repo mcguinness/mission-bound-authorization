@@ -66,6 +66,23 @@ function changeTo(keys: readonly BoundaryEvidenceKeyAuthorization[]): RuntimePos
   });
 }
 
+const REISSUED = "payments-boundary-v1-reissued";
+
+/**
+ * The shipped statement with a later version that keeps the payments
+ * boundary, its PEP location and its keys (#1327 re-review): only the
+ * statement version changes, and the PDP's cache key, which names the
+ * boundary, does not.
+ */
+function sameIdentifierVersion(): RuntimePosture {
+  return loadRuntimePosture({
+    ...RUNTIME_POSTURE,
+    enforcement_boundaries: {
+      versions: [shipped, { version: REISSUED, effective_at: new Date(CUTOVER_MS).toISOString(), boundaries: shipped.boundaries }],
+    },
+  });
+}
+
 /** One key the statement authorizes in `role` replaced by a rotated key this stack does not hold. */
 const rotating = (role: "pdp" | "pep"): BoundaryEvidenceKeyAuthorization[] =>
   shippedKeys.map((k) => (k.role === role ? { ...k, kid: `${role}-rotated` } : { ...k }));
@@ -174,6 +191,52 @@ async function completeCutover(mode: "co-resident" | "remote"): Promise<void> {
   }
 }
 
+/**
+ * #1327 re-review: a permit decided before a same-identifier version change
+ * and never used, then the operation retried with its key after the cutover,
+ * over `mode`. The retry reaches the payments server, so the witness is that
+ * no connector effect runs, not only that a comparison fails.
+ */
+async function retryAcrossVersion(mode: "co-resident" | "remote"): Promise<void> {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(CUTOVER_MS - 10_000);
+  const stack = await compose(mode, sameIdentifierVersion());
+  try {
+    const { token, missionId } = demoCredential(stack);
+    const args = { invoice_id: "inv-seed", idempotency_key: `idem_${randomUUID()}` };
+    const before: TokenFacts = { ...token, validatedBoundary: { boundary: CANONICAL_RESOURCE, version: shipped.version } };
+    const first = await stack.pep.enforce("execute_wire_transfer", args, before);
+    expect(first.permitted, JSON.stringify(first)).toBe(true);
+    const held = first.attempt as NonNullable<typeof first.attempt>;
+    expect(held.boundaryVersion).toBe(shipped.version);
+    // Control: under its own version the retry is that permit's retransmission, over this channel.
+    const again = await stack.pep.enforce("execute_wire_transfer", args, before);
+    expect(again.attempt?.evaluationId, JSON.stringify(again)).toBe(held.evaluationId);
+    const effects = stack.connectors.committedEffects(missionId).length;
+
+    vi.setSystemTime(CUTOVER_MS + 10_000);
+    expect(stack.pep.boundary()).toEqual({ ok: true, boundary: CANONICAL_RESOURCE, version: REISSUED });
+    const after: TokenFacts = { ...token, validatedBoundary: { boundary: CANONICAL_RESOURCE, version: REISSUED } };
+    // The same key after the cutover meets its original claim: no permit, no effect.
+    const retried = await stack.server.callTransactionTool("execute_wire_transfer", args, after);
+    expect(retried).toMatchObject({ ok: false, denial_reason: "duplicate_suppressed" });
+    expect(stack.connectors.committedEffects(missionId)).toHaveLength(effects);
+    // The permit the client still holds is refused at use.
+    expect(await stack.pep.verifyPermitAtUse(held)).toMatchObject({ ok: false, error: "kill_switch" });
+    // A new key is a new operation under the version in force, and runs once.
+    const fresh = await stack.server.callTransactionTool(
+      "execute_wire_transfer",
+      { invoice_id: "inv-seed", idempotency_key: `idem_${randomUUID()}` },
+      after,
+    );
+    expect(fresh.ok, JSON.stringify(fresh)).toBe(true);
+    expect(stack.connectors.committedEffects(missionId)).toHaveLength(effects + 1);
+  } finally {
+    vi.useRealTimers();
+    await close(stack);
+  }
+}
+
 describe("a declared change of boundary identifier through the composed stack (@spec runtime#boundary-identifier-change, #853)", () => {
   let fgaBootstrap: MockInstance;
   beforeAll(() => {
@@ -191,6 +254,14 @@ describe("a declared change of boundary identifier through the composed stack (@
 
   it("moves every assembled consumer to the new identifier together over the remote channel, keeps old records verifiable and keyed writes deduplicated", async () => {
     await completeCutover("remote");
+  });
+
+  it("never returns a permit held for retransmission after a same-identifier version change over the co-resident channel: the retry is suppressed with no effect", async () => {
+    await retryAcrossVersion("co-resident");
+  });
+
+  it("never returns a permit held for retransmission after a same-identifier version change over the remote channel: the retry is suppressed with no effect", async () => {
+    await retryAcrossVersion("remote");
   });
 
   it("holds the cutover while the settlement verifier lacks a key the new version authorizes, even with that key published", async () => {
