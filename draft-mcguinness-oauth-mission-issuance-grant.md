@@ -901,7 +901,7 @@ client authentication with `invalid_client`. The other refusals are:
 | The requested `authorization_details` does not intersect the surviving authority | `invalid_authorization_details` |
 | The state source fails ({{transient-failure}}) | `temporarily_unavailable`, HTTP 503 |
 
-A client tells three cases apart:
+A client tells four cases apart:
 
 - **Retry.** `temporarily_unavailable` with HTTP 503 means the
   authorization is intact and the same credential can be presented
@@ -913,14 +913,24 @@ A client tells three cases apart:
   validation failures (an untrusted issuer, a wrong audience, an
   unmappable subject or authority) are configuration faults that a
   fresh grant does not cure.
-- **Stop.** While the Mission stays out of the `active` state,
-  neither a retry nor a fresh grant cures the refusal. The AS SHOULD
-  include the issuance profile's `mission_error` member
-  (`revoked`, `expired`, or `superseded`;
-  {{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating").
-  A client that requests a fresh grant is refused at the MAS with
-  `mission_not_active` ({{minting-errors}}), the authoritative signal
-  to stop.
+- **Wait.** A `suspended` Mission refuses until a `resume` returns it
+  to `active` ({{I-D.draft-mcguinness-oauth-mission-status}}); a fresh
+  grant ({{minting}}) then cures the refusal.
+- **Stop.** A `terminated` Mission refuses for good: neither a retry
+  nor a fresh grant cures the refusal.
+
+The AS SHOULD include the issuance profile's `mission_error` member
+when it refuses because the Mission is not `active`, so the client can
+tell the last two cases apart: `suspended` for Wait, and for Stop
+`revoked`, `expired`, or `superseded`
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating")
+or `completed` ({{I-D.draft-mcguinness-oauth-mission-status}}). At the
+MAS, a grant request for a Mission that is not `active` is refused
+with `mission_not_active` ({{minting-errors}}) during a suspension as
+well as after termination; the Mission's state, which is visible to
+the recorded client, tells the two apart. A grant request refused
+with `derivations_exhausted` has reached the Mission's
+`derivation_limit`, and no fresh grant under that Mission cures it.
 
 # Authorization Code Flow Carriage {#par-carriage}
 
@@ -1255,6 +1265,17 @@ Server Metadata" registry {{RFC8414}}:
 - Specification Document(s): {{metadata}} of this document
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Redemption Errors separates a `suspended` Mission, which a `resume`
+  restores and a fresh grant then cures, from a `terminated` one,
+  which neither a retry nor a fresh grant cures. The `mission_error`
+  values follow the lifecycle migration and include `suspended` and
+  `completed`, and `mission_not_active` at the MAS is no longer called
+  an unconditional signal to stop. No requirement changes.
 
 # Acknowledgments
 {:numbered="false"}
