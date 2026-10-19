@@ -973,7 +973,8 @@
     "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-consent-evidence"
+    "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-resource-access"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-runtime",

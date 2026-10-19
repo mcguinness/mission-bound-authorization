@@ -27,6 +27,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC3339:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
@@ -78,14 +86,6 @@ normative:
     date: 2026
 
 informative:
-  I-D.draft-mcguinness-oauth-mission-resource-access:
-    title: "Mission Resource Access Profile for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   RFC7942:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
@@ -1112,9 +1112,9 @@ re-evaluation request that carries the prior permit's `evaluation_id`
 in `context.prior_evaluation_id`, so the PDP continues the same metered
 activity rather than opening a new reservation.
 
-The PDP MUST verify that the renewal's Mission, subject, action,
-operation target and audience match the evaluation named by
-`prior_evaluation_id`. A deployment sizes lease
+The PDP MUST verify that the renewal's Mission, subject, action, and
+audience match the evaluation named by `prior_evaluation_id`. A
+deployment sizes lease
 intervals to amortize renewals: an interval materially shorter than
 the action class's staleness bound adds decision load without
 tightening the revocation cutoff. This exchange requires
@@ -1306,9 +1306,7 @@ this registry.
 
 \[\[ To be removed from the final specification ]]
 
-- Duration-Lease Renewal: a renewal continues the lease only when its
-  operation target, as well as its Mission, subject, action and
-  audience, matches the renewed evaluation's; the example carries
+- Duration-Lease Renewal: the renewal example carries
   `resource.properties.operation_target` (#1276).
 
 - The `exclusive` selector matches a consequential action whose
