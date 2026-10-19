@@ -887,6 +887,12 @@
      "name": "compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the fresh commit decision mission_inactive when the Mission is revoked after a permitted preflight and prepare, and no wire exists (#253)",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ]
   },
@@ -3753,6 +3759,12 @@
      "file": "src/services/authorization-server/test/authority-source.test.ts",
      "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > admits an activator holding none of the ceiling's operational permissions (activation is not possession)",
      "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > names the Subject in the token and the Approver in the Mission record: Bob approves for Alice without openid (#253)",
+     "level": "cross-component",
      "surface": "derivation"
     }
    ]
@@ -7595,9 +7607,15 @@
      "name": "the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870) > refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, when the actor context comes only from the subject token, a same-Mission delegated token, for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
     }
    ],
-   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role); it does not establish every deployment route, and the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. Witnessed at the token endpoint on the cross-org exchange and on same-Mission delegation (#869), whose exchange refuses a target not classified Mission-aware before counting; the JWT customizer backstop is witnessed directly (unit) and at the endpoint on a real delegated mint, where a target reclassified after the exchange's own check is refused at the save (disabling the customizer's act branch issues the token). Transaction tokens (#870 review): the transaction endpoint refuses before admitting a workflow whenever either upstream carrier supplies actor context, the condition under which the issued token carries act, for the challenge issuer that becomes its audience (txn-endpoint.test.ts, delegated routing of transaction tokens, which discriminates on the challenge's act). The subject-token carrier, a delegated token presented at the transaction endpoint and reachable since #869, takes the same disjunctive gate but has no discriminating witness."
+   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role); it does not establish every deployment route, and the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. Witnessed at the token endpoint on the cross-org exchange and on same-Mission delegation (#869), whose exchange refuses a target not classified Mission-aware before counting; the JWT customizer backstop is witnessed directly (unit) and at the endpoint on a real delegated mint, where a target reclassified after the exchange's own check is refused at the save (disabling the customizer's act branch issues the token). Transaction tokens (#870 review): the transaction endpoint refuses before admitting a workflow whenever either upstream carrier supplies actor context, the condition under which the issued token carries act, for the challenge issuer that becomes its audience (txn-endpoint.test.ts, delegated routing of transaction tokens). Both carriers are witnessed as direct handler tests ending at admission: the challenge's act, and the subject token's, a real same-Mission delegated token presented by the delegate with its own key against a challenge carrying no act; restricting the gate to the challenge carrier fails the latter."
   },
   {
    "id": "core.rs-enforcement.unenforceable-entry-no-authority",
@@ -15401,6 +15419,12 @@
      "name": "transaction endpoint redemption (@spec txn-authorization#challenge-redemption) > admits a workflow, pends on poll, then on approval issues a conforming transaction token",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses an unconsumed transaction token for any other tool, a read or a wire, as txn_action_mismatch, before a decision and with no effect (#253)",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ]
   },
@@ -21238,6 +21262,12 @@
      "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own revoked view against a PEP-supplied active state denies mission_inactive: the PDP's view wins",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the next read mission_inactive once the Mission is revoked at the advertised lifecycle endpoint, with the PDP's deny Decision Evidence and no effect (#253)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
    "notes": "Both disagreement directions under the PDP role (#1004): the PDP's active view against a PEP-supplied revoked state, and the PDP's revoked view against a PEP-supplied active state, each deny mission_inactive; an unrecognized PEP-supplied value (case, whitespace, an unknown state) is non-active. This PDP always holds its own view (the loaded view's state)."
@@ -26834,6 +26864,12 @@
      "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
      "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > over the %s channel, refuses vendor lookup under an invoice-only credential before the PDP and permits it under a broad one, on the same broad Mission",
      "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses an undeclared argument member and an authoritative member over the endpoint as invalid_request, with no PDP call, one Refusal Record each and no effect (#253)",
+     "level": "cross-component",
      "surface": "evidence-emission"
     }
    ],
