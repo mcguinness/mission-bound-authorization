@@ -861,8 +861,9 @@ export class IdempotencyClaimDomain {
    * ({@link lineageScopeDigests}). A declared change of identifier therefore
    * never makes a claimed key fresh: a retry after it meets the original
    * claim, which suppresses or conflicts exactly as it would have, and never
-   * retransmits (its cache key names the old audience). The row stays under
-   * the scope it was claimed in.
+   * retransmits (its cache key names the old audience, and the statement
+   * version it was claimed under is no longer in force). The row stays
+   * under the scope it was claimed in.
    */
   private heldRow(input: ClaimInput, nowMs: number): ClaimRow | undefined {
     const lineage = lineageScopeDigests(this.options.statement.enforcement_boundaries, input.scope);
