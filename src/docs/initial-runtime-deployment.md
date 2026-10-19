@@ -622,8 +622,8 @@ and the PDP mode, and needs only `pnpm setup` and `docker compose up -d`
 (OpenFGA).
 
 Its configuration is the OpenFGA connection, the Resource-policy store, the
-PDP mode and the signing-key source from the environment, and nothing else
-(`asNativeLaunchOptions`, `demo/src/as-native.ts:22`).
+PDP mode, the signing-key source and the kernel's file from the environment,
+and nothing else (`asNativeLaunchOptions`, `demo/src/as-native.ts`).
 
 The deployment chooses where the AS's signing keys come from (#831).
 `MISSION_KEY_RING=<absolute path>` signs with a key ring created once by
@@ -636,7 +636,14 @@ to others or created for another issuer refuses startup before anything
 connects:
 `the as-native launcher in process, OpenFGA client stubbed (D332) > signs with a configured key ring and says so; a ring for another issuer refuses before anything connects (#831)`.
 The ring holds one generation per role; rotation and resource-side JWKS
-refresh are #831's next slice. With `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID`
+refresh are #831's next slice. `MISSION_KERNEL_STORE=<absolute path>` keeps
+the Mission kernel in that file across restarts, and requires
+`MISSION_KEY_RING`; absent, the kernel is in memory. The launcher creates the
+file's directory, prints which it runs, and releases the file on close:
+`the as-native launcher in process, OpenFGA client stubbed (D332) > keeps the kernel in the file MISSION_KERNEL_STORE names, with a key ring: a Mission issued before a restart is the same record after it (#250)`.
+It restores the kernel only, never the provider's grants, and it is restart
+recovery for one process: the file takes no lock and a restore from an older
+backup is not detected (#250's restore and fencing step). With `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID`
 set it attaches to that store and model, verifying the model and creating
 nothing; with neither it bootstraps a development store seeded from
 `config/seed/resource-policy.json` and prints its ids (#828):

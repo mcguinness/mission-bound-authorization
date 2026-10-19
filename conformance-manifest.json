@@ -59,8 +59,8 @@
     "content_sha256": "7eca5ad85eb5212f6589d792f41a66503302228fb612edaebe98fb4c54f525f8"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "43511ae3d0159f95b6567ffe5b7302a03acafa38",
-    "content_sha256": "98c55e776efa33fc4b5be8d02b2b00ab286d79b1cab164b867158546158f90c0"
+    "revision": "8965a2cf509a35a8e1a834d1d9ef5804ec6f62c7",
+    "content_sha256": "bca84c61fe28b3a2fd5632b92acb80a24bf646961a896adb42ff9198574cb8b4"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
@@ -32053,6 +32053,35 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1118 (D326) specification slice. No test is mapped or mutation-proved under this row; the expiry facet needs a dispatch intent whose requested expires_at has already passed."
+  },
+  {
+   "id": "template.dispatch.activation-actor-authenticated-dispatcher",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "`activation_actor`: the Dispatcher, as an object whose `iss` is the Mission Issuer's identifier, the template's `issuer`, and whose `sub` is the `client_id` the Dispatch request's client authentication established, never a value taken from the request's parameters or its dispatch intent",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a dispatched instance's approval_basis.activation_actor is { iss: the Mission Issuer's identifier, sub: the client_id that authenticated the Dispatch request }, for whichever permitted Dispatcher dispatched it, and differs from consent_principal"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "activation_actor is the authenticated Dispatcher (@spec mission-template#dispatch, #1325) > records each instance's activation_actor as the Mission Issuer and the client_id its Dispatch authenticated, for two permitted Dispatchers, never the consenting human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1325 (D495). Two permitted Dispatchers, ap-agent and a test-registered erp-scheduler, each dispatch from one template. Proved by mutation: recording the template approver's sub, a constant client_id, the template's first listed Dispatcher, or the client_id as iss each fails the witness."
   },
   {
    "id": "template.handoff.selector-refusal",

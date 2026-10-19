@@ -914,7 +914,11 @@ The Mission Issuer adjudicates a Dispatch in this order:
        `template_version`, and `template_hash` (the `template` lineage
        member's fields, {{template-member}}), plus this Dispatch's
        `dispatch_event_id`;
-     - `activation_actor`: the Dispatcher, distinct from
+     - `activation_actor`: the Dispatcher, as an object whose `iss` is
+       the Mission Issuer's identifier, the template's `issuer`, and
+       whose `sub` is the `client_id` the Dispatch request's client
+       authentication established, never a value taken from the
+       request's parameters or its dispatch intent; distinct from
        `consent_principal` and never the instance's adjudicator
        ({{I-D.draft-mcguinness-oauth-mission}}, Section "Role
        Mapping");
@@ -1612,7 +1616,8 @@ conforming issuance-profile Mission Issuer
 - record every dispatched Mission's `approval_basis` with `type:
   "template"`: `consent_principal` the template's human approver,
   `activation` the template lineage and this Dispatch's
-  `dispatch_event_id`, `activation_actor` the Dispatcher, and
+  `dispatch_event_id`, `activation_actor` the authenticated Dispatcher
+  (`iss` the Mission Issuer, `sub` its authenticated `client_id`), and
   `root_commitment` the `template_hash` ({{dispatch}});
 - record on every dispatched Mission the authority source retained at
   template consent for its `template_version`, checking at the
@@ -1735,6 +1740,12 @@ IANA action. Following the restraint of the sibling profiles:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Dispatch and Conformance: a dispatched instance's
+  `activation_actor` has the Mission Issuer's identifier as `iss` and,
+  as `sub`, the Dispatcher's `client_id` that client authentication
+  established, never a value from the Dispatch request's parameters
+  or dispatch intent (#1325).
 
 - Editorial: a non-normative Template Overview (roles, the flow from
   consent to work, how an agent uses a template) and examples that
