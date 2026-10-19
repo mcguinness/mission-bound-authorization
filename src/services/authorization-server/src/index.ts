@@ -114,6 +114,7 @@ export {
   AS_SIGNING_ROLES,
   type AsSigningRole,
   initSigningKeyRing,
+  kernelStoreFromEnv,
   loadSigningKeyRing,
   SIGNING_KEY_RING_FORMAT,
   SigningKeyRingError,

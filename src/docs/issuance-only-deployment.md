@@ -315,19 +315,22 @@ refusal of every issuance completed after an acknowledged revocation.
 
 ### Restart and recovery
 
-The shipped launcher (`pnpm issuance-only`, `startIssuanceOnly` in
-`demo/src/issuance-only.ts`) builds the AS with the default in-memory stores,
-so a restart loses every store. The Mission kernel also accepts a file-backed
-single-writer store as an opt-in (`kernelStore`,
-[control-plane-deployment.md](control-plane-deployment.md)); it restores the
-Mission kernel only, never the provider.
+By default the shipped launcher (`pnpm issuance-only`, `startIssuanceOnly` in
+`demo/src/issuance-only.ts`) builds the AS with in-memory stores, so a restart
+loses every store. `MISSION_KERNEL_STORE=<absolute path>` keeps the Mission
+kernel in that file instead, and requires `MISSION_KEY_RING` (#250; the
+inventory is in [control-plane-deployment.md](control-plane-deployment.md)).
+It restores the Mission kernel only, never the provider, and it is restart
+recovery for one process: the file takes no lock and a restore from an older
+backup is not detected.
 
-| State | Shipped launcher (in memory) | File-backed Mission kernel |
+| State | In memory (the default) | File-backed Mission kernel (`MISSION_KERNEL_STORE`) |
 |---|---|---|
 | Approval evidence and Mission Records (anchors, authority-source roots, `derivation_count`, `grant_id`), lifecycle events, tombstones | Lost | Retained (port §4.5); kernel-level test only: `restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart` (`control-plane-fanout.test.ts`) |
 | Provider interactions, grants, authorization codes, refresh tokens | Lost | Lost: an outstanding refresh token is unknown, and oidc-provider refuses it `invalid_grant` |
-| The issuance index (`TokenIssuanceStore`), `MissionBoundGrantStore`, `DelegationFamilyStore` | Lost | Empty |
-| Signing identity | Regenerated under the same `kid` with `MISSION_EPHEMERAL_KEYS=1` (D25); kept with `MISSION_KEY_RING` (#831) | The same |
+| The issuance index (`TokenIssuanceStore`), `MissionBoundGrantStore` | Lost | Empty |
+| Continuation anchors and handles, `DelegationFamilyStore` | Lost | Retained, as kernel tables (#1307); a family whose provider grant is gone is refused `invalid_grant` |
+| Signing identity | Regenerated under the same `kid` with `MISSION_EPHEMERAL_KEYS=1` (D25); kept with `MISSION_KEY_RING` (#831) | Kept: a key ring is required |
 | A Mission after the restart | None exists | Stranded: an `active` Mission whose grant is gone stays `active` until `expires_at` or a revocation, and nothing can derive from it |
 
 Consequences, in both configurations:
@@ -367,10 +370,10 @@ deployment's values: the reference AS and `plain-rs`.
   anchors reproduce from the retained record. It is not independent proof
   against an issuer that substitutes both the record and its hashes.
 - The retained records are the Mission Record with its approval evidence and
-  anchors, its lifecycle events, and the per-token issuance index. At the
-  shipped launcher all are in memory and a restart loses them (§4, Restart and
-  recovery); durability is not inferred from the optional file-backed kernel,
-  which never restores the provider.
+  anchors, its lifecycle events, and the per-token issuance index. By default
+  all are in memory and a restart loses them (§4, Restart and recovery). With
+  `MISSION_KERNEL_STORE` the Mission Record, its evidence, anchors and events
+  are kept; the issuance index is not, and the provider never is.
 
 ~~~ json
 {
@@ -410,7 +413,7 @@ deployment's values: the reference AS and `plain-rs`.
     "a failure after the derivation is counted is never refunded (#250)",
     "a token indexed but never delivered introspects active while unexpired with its Mission active and its grant live; nothing reconciles or revokes it (#250)",
     "no artifact is replayed: a retry after a lost code-exchange response is code reuse, refused invalid_grant with nothing counted, and revokes the grant, leaving the Mission active with no grant; a retry after a lost refresh response is a fresh, counted derivation until the refresh token rotates (#250)",
-    "the shipped launcher keeps every store in memory: a restart loses Missions, grants, refresh tokens and the indexes; a file-backed Mission kernel restores the kernel only, never the provider (#250)",
+    "by default the launcher keeps every store in memory: a restart loses Missions, grants, refresh tokens and the indexes; with MISSION_KERNEL_STORE and a key ring the Mission kernel is kept, never the provider (#250)",
     "the scope-projection mapping's integrity is repository review; it is not fetched or signed",
     "Intent-only requests depend on an oidc-provider workaround (a marked, AS-written authorization_details)",
     "the decision-time scope check projects the derived set without capability_sources, so a catalog-sourced scope_only entry can pass at the decision and refuse at the token endpoint",
@@ -496,7 +499,9 @@ The audience stays the mapped one. It also chooses the AS's signing keys
 `MISSION_KEY_RING=<absolute path>` signs with a key ring created once by
 `pnpm keys init --ring <path>`, kept across restarts. Neither, both, a
 relative path or an unusable ring refuses startup with one `issuance-only:`
-line. `src/server.ts` reads the same two variables. The launcher adds one input that
+line. `MISSION_KERNEL_STORE=<absolute path>` keeps the Mission kernel in that
+file (Restart and recovery, above), and requires `MISSION_KEY_RING`.
+`src/server.ts` reads the same three variables. The launcher adds one input that
 `src/server.ts` lacks: the demo's trusted approval input (below).
 
 It writes the per-boot dev credentials, mode 0600, to
