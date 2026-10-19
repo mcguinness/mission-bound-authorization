@@ -1843,7 +1843,7 @@ dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a 
  */
 const RESTART_AS_PORT = 14113;
 dLive("the as-native target restarted on the same store files against a live OpenFGA (@spec runtime#idempotency, #253)", () => {
-  const BASE_ENV = { OPENFGA_HTTP_URL: API_URL, OPENFGA_PRESHARED_KEY: KEY, ...(CA ? { OPENFGA_CA_CERT: CA } : {}) };
+  const BASE_ENV = { OPENFGA_HTTP_URL: API_URL, OPENFGA_PRESHARED_KEY: KEY, MISSION_EPHEMERAL_KEYS: "1", ...(CA ? { OPENFGA_CA_CERT: CA } : {}) };
 
   /** One boot of the launcher on this block's AS port and the given store files. */
   const launch = (files: { claimsFile: string; writeReservationsFile: string }) =>
