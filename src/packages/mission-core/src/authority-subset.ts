@@ -54,6 +54,32 @@ export const SUPPORTED_CONSTRAINT_KEYS = [
   "terminal_when",
 ] as const;
 
+/**
+ * @spec resource-access#entry-validation (#1278, D454, D457): the RFC 9396
+ * common fields a `mission_resource_access` entry does not use: `resource`
+ * identifies where an entry applies, so an entry carrying `locations` is
+ * refused. This is the SINGLE declaration every boundary that admits an
+ * entry of this type consults (PAR and the other proposal intakes, the typed
+ * config loaders, and derivation), so none admits the member and then drops
+ * it in a member-by-member rebuild. Refused by name only: the entry's top
+ * level stays open to a member another specification defines for this type,
+ * such as `capability_sources`.
+ */
+export const REFUSED_ENTRY_MEMBERS = ["locations"] as const;
+
+/**
+ * The first {@link REFUSED_ENTRY_MEMBERS} member `entry` carries, or
+ * undefined. Decided by property presence, never by value: `locations: []`,
+ * `null`, `""` or any malformed value is refused exactly as a populated array
+ * is. The caller applies it to an entry of this type and maps a hit to its
+ * boundary's own error (`invalid_authorization_details` on a protocol
+ * surface, the loader's configuration error at load).
+ */
+export function refusedEntryMember(entry: unknown): string | undefined {
+  if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return undefined;
+  return REFUSED_ENTRY_MEMBERS.find((member) => Object.hasOwn(entry, member));
+}
+
 /** Validate the subset engine's supported input before a foreign grant can use it. */
 export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
