@@ -31983,6 +31983,140 @@
    "notes": "#1163 review P1 (RFC 9449 Section 4.3); the same verifyTokenEndpointDpop as the exchange. Every proof failure at redemption is invalid_dpop_proof (the child redemption, whose block this was copied from, answers invalid_request for an invalid proof). A private `d` is also refused by jose itself; the symmetric case (an HS256 proof under an oct key, which jose would verify) is the check's own witness. Proved by disabling the check (dispatch-handoff mutation harnesses, #1158 and the #1163 review)."
   },
   {
+   "id": "template.handoff.self-dispatch-skips",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "A Dispatcher that is itself the selected Agent (the same authenticated client) already holds the instance's access token, bound to its own key, and skips the handoff.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.dispatch",
+     "continuation.async-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an instance dispatched from a template whose Dispatcher is its selected Agent records that client as its client_id, and the Dispatch's token carries that client_id and the Dispatcher's key; that client obtains its handle and opens a family with no handoff; another client presenting that instance's token, or the selected Agent of an instance it did not dispatch presenting the Dispatcher's token, is refused even with the token's key, with no handle and no count",
+    "local": "the reference AS answers invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > obtains its handle through the ordinary handle exchange under the instance token's key, counted once, and opens and refreshes a family with it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > wrong client: another client presenting the self-dispatched instance's token, even with its key, is refused and counts nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > wrong client: a selected Agent that is not the Dispatcher cannot skip the handoff by presenting the Dispatcher's instance token, even with its key",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1195 (D387, D390). The reference AS needed no code change: the handle exchange already requires the subject token's client_id and the Mission's recorded client_id to be the requesting client, which a self-dispatching Dispatcher satisfies and no other client does. Mutation proofs: disabling the token client_id check fails the selected-Agent witness on status (self-exchange rule 1 holds for that Agent) and the self-dispatched witness on its description (rule 1 is the second guard there); disabling both fails both on status."
+  },
+  {
+   "id": "template.handoff.self-dispatch-exchange",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "It obtains its delegation handle through the continuation profile's handle exchange ({{I-D.draft-mcguinness-oauth-mission-continuation}}): a no-actor self-exchange that presents the instance's access token, proves possession of that token's key, and names its own `client_id` as `audience`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.dispatch",
+     "continuation.async-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the self-dispatching Dispatcher's Token Exchange presenting the instance's access token, with no actor, a DPoP proof under that token's key and audience equal to its own client_id, yields a handle whose aud is that client_id, whose cnf is the instance token's key, and whose authority is the instance's, which opens and refreshes an async delegation family; a proof under another key is refused with no handle and no count",
+    "local": "the reference AS answers invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > obtains its handle through the ordinary handle exchange under the instance token's key, counted once, and opens and refreshes a family with it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > wrong key: a DPoP proof under any key but the instance token's is refused and counts nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1195 (D387, D390). Mutation proof: disabling the subject token possession check (verifySubjectPossession's cnf comparison) fails the wrong-key witness on status."
+  },
+  {
+   "id": "template.handoff.self-dispatch-counted",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "That exchange is a derivation from the instance, gated and counted as the issuance profile requires.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.dispatch",
+     "continuation.async-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the self-dispatching Dispatcher's handle exchange increments the instance's derivation_count by exactly one, the family it opens by one more, and the family's refresh by none; a suspended, revoked or completed instance is refused invalid_request with its mission_error, issuing no handle and counting nothing (the OAuth binding's Token Exchange gating, D369); a refused wrong-client or wrong-key request counts nothing"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > obtains its handle through the ordinary handle exchange under the instance token's key, counted once, and opens and refreshes a family with it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > inactive Mission: an instance %s is refused invalid_request with its mission_error, and no handle is issued or counted (D369)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > wrong client: another client presenting the self-dispatched instance's token, even with its key, is refused and counts nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > wrong key: a DPoP proof under any key but the instance token's is refused and counts nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1195 (D390): skipping the handoff skips neither the handle nor its count. Mutation proofs: removing the handle exchange's gateDerivation call fails the success witness on the count; disabling the exchange's explicit active check alone fails the revoked and completed cases on their description while the suspended case is still refused identically by the kernel's lineage gate inside gateDerivation (defense in depth); disabling that check and the lineage gate's state checks together fails all three cases on status."
+  },
+  {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
@@ -34060,9 +34194,15 @@
      "name": "invalid or unacceptable subject tokens at the async exchange and the delegation-handle request (@spec continuation#transport-async, RFC 8693 Section 2.2.2, #1178) > the async exchange refuses %s with invalid_request, no Mission diagnostic, and no family, reservation or count",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > direct async exchange: the resource-audience instance token opens no family, though the Dispatcher is the approved agent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body)."
+   "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body). #1195: on a self-dispatched instance the presenter is both the token's client and the Mission's approved agent, so this check alone refuses the instance token; disabling it opens a family (the self-dispatch direct-async witness)."
   },
   {
    "id": "continuation.async-transport.handle-possession",
@@ -34212,6 +34352,51 @@
     }
    ],
    "notes": "#1157 (D358). Each cited check was disabled in turn and its test failed (mutation proof in the PR body)."
+  },
+  {
+   "id": "continuation.async-transport.self-dispatch-handle",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-async",
+   "text": "unless it is also the Dispatcher (the same authenticated client), which obtains its handle through this exchange from the instance's access token.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.dispatch",
+     "continuation.async-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a dispatched Mission whose Dispatcher is its selected Agent is continued with no Dispatch Handoff: that client's self-exchange of the instance's access token yields a client-audience handle that opens the async family; a selected Agent that is not the Dispatcher cannot use the Dispatcher's instance token for the exchange; the resource-audience instance token presented directly to the async exchange opens no family and counts nothing",
+    "local": "the reference AS answers invalid_request (RFC 8693 Section 2.2.2, #1178, D415), with error and error_description only"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > obtains its handle through the ordinary handle exchange under the instance token's key, counted once, and opens and refreshes a family with it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > wrong client: a selected Agent that is not the Dispatcher cannot skip the handoff by presenting the Dispatcher's instance token, even with its key",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390) > direct async exchange: the resource-audience instance token opens no family, though the Dispatcher is the approved agent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1195 (D387, D390). On a self-dispatched instance the async exchange's handle-audience check is the only guard against the instance token: self-exchange rule 1 and possession both hold. Mutation proof: disabling that check opens a family from the instance token, failing the direct-async witness on status."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",
