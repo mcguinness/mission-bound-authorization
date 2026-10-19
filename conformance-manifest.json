@@ -75,8 +75,8 @@
     "content_sha256": "2f4991ce177d9c6ce42a9632ec6077183ab6b1b27e5ed6e7407c76e6a6d36565"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
-    "content_sha256": "732c556335d33b8fc13d6d9b45d49897431699354ae91e81054c9dada49ebf8c"
+    "revision": "600914f9d4ff080f5fb1801931e3b47fad7f086c",
+    "content_sha256": "6ea434ad800a96d790d8ca39358688649050f14744c65fe3176cd31b11de3b9a"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
@@ -39374,9 +39374,21 @@
      "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
      "level": "endpoint",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-consent-restart.test.ts",
+     "name": "a governed-policy consent across a restart (@spec approval-governance#governed-policy-activation, #831) > still verifies and activates after a restart from the same key ring and kernel file",
+     "level": "unit",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-consent-restart.test.ts",
+     "name": "a governed-policy consent across a restart (@spec approval-governance#governed-policy-activation, #831) > no longer verifies after a restart with keys generated at each boot: activation refuses consent_unauthenticated",
+     "level": "unit",
+     "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation. Across a restart (#831): with a key ring and a file-backed kernel, a consent recorded before it still authenticates and activates after it; with keys generated at each boot the same retained consent no longer authenticates and activation refuses consent_unauthenticated, proved by detaching the status key from the ring."
   },
   {
    "id": "approval-governance.governed-policy.digest-domains",
