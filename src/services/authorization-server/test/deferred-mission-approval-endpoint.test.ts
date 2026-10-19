@@ -120,14 +120,20 @@ afterAll(() => {
 
 let rootSeq = 0;
 /**
- * Make `doc` the one root this deployment holds, approvable by `approvers`,
- * and record `dana`'s consent to it unless told not to. Clears the queue
- * left by earlier tests (their pending approvals lapse) first.
+ * Make `doc` the one root this deployment holds, approvable by `approver`
+ * (`dana` by default), and record that human's consent to it unless told
+ * not to. Clears the queue left by earlier tests (their pending approvals
+ * lapse) first.
  */
 function useRoot(doc: GovernedPolicyRoot, opts: { approver?: string; consent?: boolean; version?: string } = {}) {
   clockMs += (LIFETIME_S + 1) * 1000;
   for (const k of Object.keys(governance.roots)) delete governance.roots[k];
   for (const k of Object.keys(governance.approvers)) delete governance.approvers[k];
+  return addRoot(doc, opts);
+}
+
+/** Hold one more root beside the ones this deployment already holds. */
+function addRoot(doc: GovernedPolicyRoot, opts: { approver?: string; consent?: boolean; version?: string } = {}) {
   const id = `urn:root:ledger-${++rootSeq}`;
   const version = opts.version ?? "1";
   const approver = opts.approver ?? "dana";
@@ -434,6 +440,26 @@ describe("deferred Mission approval wire path (@spec deferred-approval#deferred-
     expect(refused.body.error).toBe("access_denied");
     expect(missionCount()).toBe(before);
     expect(as.missionApprovalDeferrals?.resolutionReason(outside)).toBe("out_of_root_ceiling");
+
+    // An Intent that asks for less than the root's lifetime gets its own expiry.
+    const soon = new Date(clockMs + 900_000).toISOString();
+    const short = await openDeferral(keys, { intent: { expires_at: soon } });
+    const shortMission = await poll(short, keys);
+    expect(shortMission.status, JSON.stringify(shortMission.body)).toBe(200);
+    expect((as.kernel.get(shortMission.body.mission_id as string) as MissionRecord).expires_at).toBe(soon);
+
+    // A root ceiling wider than the source's: the source ceiling still binds,
+    // and a set beyond it activates nothing.
+    useRoot(rootDoc({ authority_ceiling: [readEntry([...READ, "payments:payment.schedule"])] as never }));
+    const wide = await openDeferral(keys, {
+      authorizationDetails: [readEntry(["payments:invoice.read", "payments:payment.schedule"])],
+    });
+    const beyondSource = await poll(wide, keys);
+    expect(beyondSource.body.error).toBe("access_denied");
+    expect(beyondSource.body).not.toHaveProperty("access_token");
+    // The source-ceiling gate's refusal.
+    expect(as.missionApprovalDeferrals?.resolutionReason(wide)).toBe("access_denied");
+    expect(missionCount()).toBe(before + 1);
   });
 
   it("denies, with no Mission and no token, an approval whose requested expiry passed while it pended", async () => {
@@ -528,7 +554,7 @@ describe("deferred Mission approval front channel (@spec deferred-approval#front
     expect((as.kernel.get(r.body.mission_id as string) as MissionRecord).subject).toEqual({ iss: ISSUER, sub: WORKLOAD });
   });
 
-  it("refuses openid on a deferred request, and never decides one on its interaction", async () => {
+  it("refuses openid on a deferred request: no End-User authenticates on its front channel", async () => {
     useRoot(rootDoc());
     const withOpenid = await frontChannel({ extra: { scope: "openid" } });
     expect(withOpenid.code).toBeUndefined();
@@ -717,48 +743,84 @@ describe("governed policy completion over the wire (@spec deferred-approval#poli
 
   const nothing = { status: 400, missions: 0, records: 0 };
 
-  it("never lets the client select the approval basis, the policy, the consent or the human", async () => {
-    // A consent exists for a root that does not admit this client; the
-    // client names it, the basis, and a consenting human on every request.
-    const foreign = useRoot(rootDoc({ admits: { clients: ["ap-agent"], subjects: [WORKLOAD], authority_sources: ["service_owned"] } }));
-    const selectors = {
-      approval_basis: "governed_policy",
-      consent_id: foreign.consent?.consent_id as string,
-      governed_policy: foreign.id,
-      consent_principal: "dana",
-      approved_at: new Date(clockMs).toISOString(),
-      policy: foreign.id,
-    };
+  /** What a client might send to steer the approval: a basis, a policy, a consent, a human, an instant. */
+  const selectorsNaming = (named: { id: string; consent?: { consent_id: string } | undefined }, basis = "governed_policy") => ({
+    approval_basis: basis,
+    consent_id: named.consent?.consent_id ?? "gpc_named_by_client",
+    governed_policy: named.id,
+    policy: named.id,
+    consent_principal: "bob",
+    approved_at: new Date(clockMs).toISOString(),
+  });
+
+  /** Open and poll with `selectors` on the PAR, the redemption and the poll. */
+  async function attemptNaming(selectors: Record<string, string>) {
     const keys = await newKeys();
     const before = missionCount();
     const fc = await frontChannel({ extra: selectors });
     const opened = await redeem(fc.code as string, keys, { params: selectors });
-    const r = await poll(opened.body.deferral_code as string, keys, AGENT, selectors);
-    expect(r.body.error).toBe("access_denied");
-    expect(missionCount()).toBe(before);
-    expect(as.missionApprovalDeferrals?.resolutionReason(opened.body.deferral_code as string)).toBe("no_eligible_policy");
+    const deferralCode = opened.body.deferral_code as string;
+    const r = await poll(deferralCode, keys, AGENT, selectors);
+    return {
+      status: r.status,
+      body: r.body,
+      reason: as.missionApprovalDeferrals?.resolutionReason(deferralCode),
+      missions: missionCount() - before,
+    };
+  }
 
-    // With an admitting root, the issuer selects it, whatever the client names.
-    const admitting = useRoot(rootDoc());
-    const chosen = await attempt({ extra: selectors });
-    expect(chosen.status).toBe(200);
+  it("never lets the client select the approval basis, the policy, the consent or the human", async () => {
+    // Two roots admit the agent; the issuer selects the latest standing
+    // consent. The client names the other one, a basis and a human on the
+    // PAR, the redemption and every poll.
+    const older = useRoot(rootDoc());
+    clockMs += 1_000;
+    const newer = addRoot(rootDoc({ rules: { max_entries: 2 } }));
+    const chosen = await attemptNaming(selectorsNaming(older, "direct"));
+    expect(chosen.status, JSON.stringify(chosen.body)).toBe(200);
     const mission = as.kernel.get(chosen.body.mission_id as string) as MissionRecord;
-    expect(mission.approval_basis.type === "governed_policy" && mission.approval_basis.root_commitment).toBe(
-      admitting.consent?.root.digest,
+    if (mission.approval_basis.type !== "governed_policy") throw new Error(mission.approval_basis.type);
+    expect(mission.approval_basis.root_commitment).toBe(newer.consent?.root.digest);
+    expect(mission.approval_basis.root_commitment).not.toBe(older.consent?.root.digest);
+    expect(mission.approval_basis.consent_principal).toEqual({ iss: ISSUER, sub: "dana" });
+    expect(mission.approval_basis.approved_at).toBe(newer.consent?.approved_at);
+
+    // A consent whose root does not admit this client never completes its
+    // request, though the client names it.
+    const foreign = useRoot(
+      rootDoc({ admits: { clients: ["ap-agent"], subjects: [WORKLOAD], authority_sources: ["service_owned"] } }),
     );
+    expect(await attemptNaming(selectorsNaming(foreign))).toMatchObject({
+      status: 400,
+      body: { error: "access_denied" },
+      missions: 0,
+      reason: "no_eligible_policy",
+    });
   });
 
   it("refuses a missing, unauthorized or withdrawn standing consent and creates no Mission or token", async () => {
-    useRoot(rootDoc(), { consent: false });
-    expect(await attempt()).toMatchObject({ ...nothing, reason: "no_eligible_policy" });
+    // No retained consent: a request naming a consent, a human and an
+    // instant establishes none.
+    const none = useRoot(rootDoc(), { consent: false });
+    expect(await attemptNaming(selectorsNaming(none))).toMatchObject({
+      status: 400,
+      missions: 0,
+      reason: "no_eligible_policy",
+    });
 
     const revoked = useRoot(rootDoc());
     governance.approvers[revoked.id] = ["bob"];
     expect(await attempt()).toMatchObject({ ...nothing, reason: "approver_not_authorized" });
 
+    // Withdrawal stops later activations and leaves an earlier one active.
     const withdrawn = useRoot(rootDoc());
+    const earlier = await attempt();
+    expect(earlier.status).toBe(200);
     withdrawGovernedPolicyConsent(as.kernel, withdrawn.consent?.consent_id as string);
-    expect(await attempt()).toMatchObject({ ...nothing, reason: "no_eligible_policy" });
+    const later = await attempt();
+    expect(later).toMatchObject({ ...nothing, reason: "no_eligible_policy" });
+    expect(later.body).not.toHaveProperty("access_token");
+    expect(as.kernel.get(earlier.body.mission_id as string)?.state).toBe("active");
   });
 
   it("refuses a changed root version or bytes, a changed separate evaluator, and a digest from the wrong domain", async () => {
