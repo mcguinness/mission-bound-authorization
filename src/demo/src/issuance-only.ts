@@ -21,6 +21,7 @@ import {
   MISSION_APPROVAL_SCOPE,
   type ProviderCapability,
   type ServiceTokenPrincipal,
+  type SigningKeySource,
 } from "@mission/authorization-server";
 import { DEV_SERVICE_TOKEN, INTROSPECTION_PRINCIPALS, TOPOLOGY } from "@mission/demo-data";
 import { startPlainResourceServer } from "@mission/plain-rs";
@@ -64,6 +65,11 @@ export interface IssuanceOnlyOptions {
   asPort?: number;
   /** plain-rs listen port. Default: the audience URL's port (4410). */
   rsPort?: number;
+  /**
+   * @spec #831: the AS's signing keys. Absent: generated at this boot.
+   * `pnpm issuance-only` sets it from its environment (`signingKeysFromEnv`).
+   */
+  signingKeys?: SigningKeySource;
 }
 
 /**
@@ -122,6 +128,7 @@ export async function startIssuanceOnly(opts: IssuanceOnlyOptions): Promise<Issu
     serviceTokenPrincipals: { [approverServiceToken]: approver },
     capabilities: ISSUANCE_ONLY_CAPABILITIES,
     lifecycleClients: [lifecycleConsole.registration],
+    ...(opts.signingKeys ? { signingKeys: opts.signingKeys } : {}),
   });
   const asServer = as.provider.listen(asPort);
   await new Promise<void>((r) => asServer.once("listening", () => r()));

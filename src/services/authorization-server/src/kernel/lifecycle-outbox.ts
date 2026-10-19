@@ -16,11 +16,9 @@
  *    `signal_outbox` INSERT with `UNIQUE(event_id, audience)`; that insert IS
  *    the durable acceptance, and a redelivery of the same event is a no-op.
  *  - Unacknowledged projections. The Status List republisher rebuilds from the
- *    authoritative record set. The continuation store and the delegation-family
- *    store are in-memory projections that start EMPTY at each boot: recovery
- *    replays only committed-but-unpublished events, so an activation already
- *    published does not repopulate them. Both are idempotent per Mission, both
- *    fail closed on an unknown row, and neither is acknowledged.
+ *    authoritative record set. (The continuation and delegation-family tables
+ *    are not subscribers: the kernel writes them in its committing
+ *    transactions, so no publication, replayed or not, maintains them.)
  *  Both classes ride {@link LifecycleOutbox.publishPending}, which is
  *  synchronous, so nothing launches a floating promise from a commit chain.
  *  - Durable retryable. A subscriber whose effect reaches outside this process

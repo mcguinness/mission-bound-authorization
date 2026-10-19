@@ -2123,6 +2123,51 @@ describe("async-delegation creation idempotency (@spec continuation#transport-as
     expect(postBody.error_description).toContain("already delivered");
   });
 
+  it("a recorded family that outlives its provider grant, as across a restart, is refused at both recovery points and never re-issued (#250)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const handle = await delegationHandle(baseAccessToken);
+    const creationRequestId = crypto.randomUUID();
+    const first = (await (
+      await asyncDelegate(handle, { rawSubject: true, authorizationDetails: confinedAuthority(), creationRequestId })
+    ).json()) as ExchangeBody;
+    const after = as.kernel.get(missionId)?.derivation_count as number;
+    const grantId = as.delegationFamilyStore.familiesForMission(missionId)[0] as string;
+
+    // What a process restart does to these records: the family and the
+    // creation operation are on the kernel's database and survive; the
+    // provider's grant and refresh token are in its memory and do not.
+    const models = as.provider as unknown as {
+      RefreshToken: { find: (v: string) => Promise<{ destroy: () => Promise<void> } | undefined> };
+      Grant: { find: (id: string) => Promise<{ destroy: () => Promise<void> } | undefined> };
+    };
+    await (await models.RefreshToken.find(first.refresh_token as string))?.destroy();
+    await (await models.Grant.find(grantId))?.destroy();
+    expect(as.delegationFamilyStore.resolve(grantId)).toEqual({ missionId, state: "active" });
+
+    // Completed: the stored response's refresh token is gone, so it is not replayed.
+    const completed = await asyncDelegate(handle, { rawSubject: true, authorizationDetails: confinedAuthority(), creationRequestId });
+    const completedBody = (await completed.json()) as ExchangeBody;
+    expect(completed.status, JSON.stringify(completedBody)).toBe(400);
+    expect(completedBody.error).toBe("invalid_grant");
+    expect(completedBody.refresh_token).toBeUndefined();
+
+    // Family created but never delivered: the grant is gone, so delivery is not resumed.
+    as.kernel.db
+      .prepare(
+        "UPDATE creation_idempotency SET state = 'reserved', mission_id = NULL, completed_at = NULL, delivery_json = ? WHERE creation_request_id = ?",
+      )
+      .run(JSON.stringify({ grant_id: grantId, target: RESOURCE }), creationRequestId);
+    const resumed = await asyncDelegate(handle, { rawSubject: true, authorizationDetails: confinedAuthority(), creationRequestId });
+    const resumedBody = (await resumed.json()) as ExchangeBody;
+    expect(resumed.status, JSON.stringify(resumedBody)).toBe(400);
+    expect(resumedBody.error).toBe("invalid_grant");
+    expect(resumedBody.error_description).toContain("no longer exists");
+
+    // Nothing was issued or counted, and no second family appeared.
+    expect(as.delegationFamilyStore.familiesForMission(missionId)).toEqual([grantId]);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(after);
+  });
+
   it("same creation_request_id + different fingerprint -> invalid_request (identifier reuse, not a retry)", async () => {
     const { baseAccessToken } = await issueBaseMission();
     const creationRequestId = crypto.randomUUID();

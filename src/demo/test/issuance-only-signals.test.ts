@@ -44,7 +44,8 @@ function credentialsPath(): string {
 function wrapper(script: string, env: Record<string, string>): ChildProcess {
   const child = spawn(process.execPath, [script], {
     cwd: SRC,
-    env: { ...process.env, ...env },
+    // @spec #831: the launcher says where its signing keys come from.
+    env: { ...process.env, MISSION_EPHEMERAL_KEYS: "1", ...env },
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],
   });

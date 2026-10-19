@@ -15,25 +15,27 @@
  * and DPoP key. The presented handle is NOT single-use: a hop record persists
  * across continuations, so `resolve` never consumes it.
  *
- * Terminal propagation: a Mission reaching a terminal lifecycle state
- * (`onLifecycleCommit`) marks all of its anchors and handles terminal; a
- * session ending (`terminateSession`) marks only its session-anchored anchors
+ * Terminal propagation: a Mission reaching a terminal lifecycle state marks
+ * all of its anchors and handles terminal ({@link terminateMissionInCallerTx});
+ * a session ending (`terminateSession`) marks only its session-anchored anchors
  * and their handles terminal (grant anchors survive). A terminal handle OR
  * anchor makes `lookup` report `terminal` and `resolve` return undefined.
  *
- * Structure mirrors `DeferralStore` (SQLite via `openStore`), but holds no
- * kernel reference: every operation is self-contained local state and
- * `onLifecycleCommit` receives its event by value. That method is composed into
- * the AS lifecycle-commit fan-out by a LATER PR; it is not wired here.
+ * @spec control-plane#serialization (#250) — the tables live on the KERNEL's
+ * database, which owns them and closes them with itself
+ * ({@link MissionKernel.close}). The approval-time root and the terminal
+ * propagation are kernel-owned writes in the committing transaction, beside
+ * the tombstone: an activated Mission is rooted with its record, and a
+ * terminal one leaves no active root, whether or not the commit is ever
+ * published. A file-backed kernel therefore keeps every anchor and handle
+ * across a restart, and nothing is rebuilt from the outbox.
  */
 
 import { randomBytes } from "node:crypto";
-import { type Database, openStore } from "@mission/store";
-import { TERMINAL_STATES } from "./types.js";
-import type { LifecycleCommit } from "./types.js";
+import type { Database } from "@mission/store";
 
 const SCHEMA = `
-CREATE TABLE continuation_anchors (
+CREATE TABLE IF NOT EXISTS continuation_anchors (
   anchor_id TEXT PRIMARY KEY,
   anchor_type TEXT NOT NULL,
   mission_id TEXT NOT NULL,
@@ -44,7 +46,7 @@ CREATE TABLE continuation_anchors (
   state TEXT NOT NULL,
   created_at INTEGER NOT NULL
 ) STRICT;
-CREATE TABLE continuation_handles (
+CREATE TABLE IF NOT EXISTS continuation_handles (
   handle TEXT PRIMARY KEY,
   anchor_id TEXT NOT NULL,
   mission_id TEXT NOT NULL,
@@ -56,6 +58,8 @@ CREATE TABLE continuation_handles (
   state TEXT NOT NULL,
   created_at INTEGER NOT NULL
 ) STRICT;
+CREATE INDEX IF NOT EXISTS continuation_anchors_mission ON continuation_anchors (mission_id);
+CREATE INDEX IF NOT EXISTS continuation_handles_mission ON continuation_handles (mission_id);
 `;
 
 /**
@@ -135,9 +139,58 @@ interface HandleRow {
 }
 
 export class ContinuationStore {
-  readonly db: Database;
-  constructor(private readonly now: () => Date = () => new Date()) {
-    this.db = openStore(SCHEMA);
+  /** @param db the kernel's database, which owns these tables. */
+  constructor(
+    readonly db: Database,
+    private readonly now: () => Date = () => new Date(),
+  ) {
+    this.db.exec(SCHEMA);
+  }
+
+  /**
+   * @spec id-continuation-assertion — approval-time grant-anchor rooting: the
+   * durable grant-anchored root of a newly activated Mission and its INITIAL
+   * handle. NO OWN TRANSACTION: the kernel calls this inside the activating
+   * commit, so the Mission, its anchor and its handle commit as one unit. A
+   * Mission that already has an anchor or a handle is never rooted again.
+   *
+   * Auth envelope: this is the DEMO's ROOTING-EVENT envelope. `auth_time` is
+   * the approval timestamp (from `created_at`); `acr` and `amr` are omitted.
+   * The Approver's achieved authentication context is approval-time
+   * provenance, never a Mission Intent or Mission Record member
+   * (@spec mission#approval-authentication): a real deployment that records
+   * Mission Consent Evidence sources it from that profile's
+   * `authentication_context` member instead of synthesising it from the
+   * approval here.
+   *
+   * The initial handle binds the Mission's actor: the agent CLIENT
+   * (iss = AS issuer, sub = client_id), matching the /token current-actor
+   * check's `currentActor`. No cnf is bound (no DPoP key exists at approval);
+   * that check validates the PRESENTED key at /token, never this stored
+   * handle's cnf. No root ID-JAG carries this hop, so its RAS audience is the
+   * AS issuer, where the Mission's grant is issued (ICA -02 5.1.2).
+   */
+  rootGrantInCallerTx(input: { missionId: string; issuer: string; clientId: string; createdAt: string }): void {
+    if (!this.db.inTransaction) {
+      throw new Error("a continuation root must be written inside the activating commit's transaction");
+    }
+    const rooted = this.db
+      .prepare(
+        `SELECT 1 FROM continuation_anchors WHERE mission_id = ?
+         UNION ALL SELECT 1 FROM continuation_handles WHERE mission_id = ? LIMIT 1`,
+      )
+      .get(input.missionId, input.missionId);
+    if (rooted !== undefined) return;
+    const anchorId = this.rootGrantAnchor({
+      missionId: input.missionId,
+      authEnvelope: { authTime: Math.floor(Date.parse(input.createdAt) / 1000) },
+    });
+    this.mint({
+      anchorId,
+      missionId: input.missionId,
+      actor: { iss: input.issuer, sub: input.clientId },
+      audience: input.issuer,
+    });
   }
 
   /** A durable, grant-anchored root anchor (session_id null). */
@@ -363,18 +416,17 @@ export class ContinuationStore {
   }
 
   /**
-   * Lifecycle fan-out target (wired by a later PR): when the committed Mission
-   * transition is terminal, mark ALL anchors and handles for that Mission
-   * terminal, so every continuation lineage rooted in it stops resolving.
+   * Terminal propagation: mark ALL anchors and handles for a Mission terminal,
+   * so every continuation lineage rooted in it stops resolving. NO OWN
+   * TRANSACTION: the kernel calls this inside the terminal commit, beside the
+   * tombstone, so the Mission and its lineages change together.
    */
-  onLifecycleCommit(commit: LifecycleCommit): void {
-    if (!TERMINAL_STATES.has(commit.state)) return;
-    this.db
-      .prepare("UPDATE continuation_anchors SET state = 'terminal' WHERE mission_id = ?")
-      .run(commit.id);
-    this.db
-      .prepare("UPDATE continuation_handles SET state = 'terminal' WHERE mission_id = ?")
-      .run(commit.id);
+  terminateMissionInCallerTx(missionId: string): void {
+    if (!this.db.inTransaction) {
+      throw new Error("continuation termination must be written inside the terminal commit's transaction");
+    }
+    this.db.prepare("UPDATE continuation_anchors SET state = 'terminal' WHERE mission_id = ?").run(missionId);
+    this.db.prepare("UPDATE continuation_handles SET state = 'terminal' WHERE mission_id = ?").run(missionId);
   }
 
   /**

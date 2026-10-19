@@ -778,6 +778,16 @@ export interface AdapterOptions {
    */
   capabilities?: ReadonlySet<ProviderCapability>;
   /**
+   * @spec #831: this AS process's boot identity, random per build. A
+   * single-use artifact this AS signed, whose consumption it records only in
+   * memory, names the process that issued it and is refused by any other:
+   * with signing keys that survive a restart (a key ring) it would otherwise
+   * verify again after the restart, its consumption forgotten. An identity,
+   * not a start time, so a restart within the second of issuance is still
+   * caught. Today that is the Dispatch Handoff grant. Absent, no check applies.
+   */
+  processBootId?: string;
+  /**
    * @spec progressive#in-ceiling-expansion: the policy-adjudicated drawdown
    * path, default off. Absent, an approval decision's ceiling members are
    * ignored and an expansion of a Mission that carries a ceiling takes the

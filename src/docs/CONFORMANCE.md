@@ -11,8 +11,9 @@
 >   adoption bundles, not conformance classes.
 > - For current recovery and atomicity limits, see
 >   [control-plane-deployment.md](control-plane-deployment.md).
->   Continuation and delegation-family projections are not rebuilt
->   after a restart, and external delivery is at least once.
+>   Continuation and delegation-family projections survive a restart
+>   only on a file-backed kernel, which no shipped launcher uses; the
+>   provider's grants never do. External delivery is at least once.
 > - For current coverage, see the DRAFTS.md index and the conformance
 >   ledger (`conformance-manifest.json`). Ledger statuses are not a
 >   measure of production readiness.
