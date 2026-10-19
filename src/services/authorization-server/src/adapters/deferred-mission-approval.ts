@@ -400,24 +400,40 @@ export async function pollMissionApprovalDeferral(
         throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
     }
   }
-  await deliverMission(opts, provider, ctx, r.mission, verified.proof.jkt);
+  // The approval is redeemed only once the credential exists: a failure
+  // before then (a token store fault, say) releases the claim, so a later
+  // poll delivers; a claim another poll settled first sends nothing.
+  let body: Record<string, unknown>;
+  try {
+    body = await mintMissionToken(opts, provider, ctx, r.mission, verified.proof.jkt);
+  } catch (e) {
+    store.releaseDelivery(code, r.delivery);
+    throw e;
+  }
+  const settled = store.confirmDelivery(code, r.delivery);
+  if (settled === "cancelled") throw new errors.AccessDenied();
+  if (settled === "superseded") throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+  ctx.status = 200;
+  ctx.body = body;
+  ctx.set("cache-control", "no-store");
 }
 
 /**
- * @spec deferred-approval#deferred-sequencing (step 5): the Mission-bound
- * token response the resolving poll returns. The Mission's provider grant is
+ * @spec deferred-approval#deferred-sequencing (step 5): mint the Mission-bound
+ * token the resolving poll returns, and the response body; the caller sends
+ * it only once its delivery claim confirms. The Mission's provider grant is
  * bound on first delivery (compare-and-set, so one grant however many polls
  * race). The token carries the Mission's effective Authority Set, is bound to
  * the poll's DPoP key, and never outlives the Mission; the response carries
  * `mission_id` and `mission_expires_at` from the committed record.
  */
-async function deliverMission(
+async function mintMissionToken(
   opts: AdapterOptions,
   provider: Provider,
   ctx: KoaContextWithOIDC,
   mission: MissionRecord,
   jkt: string,
-): Promise<void> {
+): Promise<Record<string, unknown>> {
   const { kernel } = opts;
   const record = kernel.get(mission.id) as MissionRecord;
   const effective = kernel.effectiveAuthoritySet(record);
@@ -447,8 +463,7 @@ async function deliverMission(
   at.jkt = jkt;
   ctx.oidc.entity("AccessToken", at);
   const jwt = await at.save();
-  ctx.status = 200;
-  ctx.body = {
+  return {
     access_token: jwt,
     token_type: "DPoP",
     expires_in: at.expiration,
@@ -457,7 +472,6 @@ async function deliverMission(
     mission_id: record.id,
     mission_expires_at: record.expires_at,
   };
-  ctx.set("cache-control", "no-store");
 }
 
 /**

@@ -477,6 +477,33 @@ describe("deferred Mission approval wire path (@spec deferred-approval#deferred-
     expect(as.missionApprovalDeferrals?.state(deferralCode)).toBe("denied");
   });
 
+  it("keeps an approval deliverable when saving its token fails, then delivers exactly one token", async () => {
+    useRoot(rootDoc());
+    const keys = await newKeys();
+    const deferralCode = await openDeferral(keys);
+    const save = vi
+      .spyOn(as.provider.AccessToken.prototype, "save")
+      .mockRejectedValueOnce(new Error("token store unavailable"));
+    const failed = await poll(deferralCode, keys);
+    save.mockRestore();
+    expect(failed.status).toBe(500);
+    expect(failed.body).not.toHaveProperty("access_token");
+    // The decision stands and the approval is still deliverable.
+    expect(as.missionApprovalDeferrals?.state(deferralCode)).toBe("approved");
+    const delivered = await poll(deferralCode, keys);
+    expect(delivered.status, JSON.stringify(delivered.body)).toBe(200);
+    expect(typeof delivered.body.access_token).toBe("string");
+    // Exactly one token: the next poll is invalid_grant.
+    expect((await poll(deferralCode, keys)).body.error).toBe("invalid_grant");
+
+    // Concurrent polls of a deliverable approval still deliver once.
+    const raced = await openDeferral(keys);
+    expect(await as.missionApprovalDeferrals?.completeByPolicy(raced)).toMatchObject({ outcome: "approved" });
+    const results = await Promise.all([poll(raced, keys), poll(raced, keys), poll(raced, keys)]);
+    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
+    expect((await poll(raced, keys)).body.error).toBe("invalid_grant");
+  });
+
   it("yields no token for a Mission revoked between the approval decision and the resolving poll", async () => {
     useRoot(rootDoc());
     const keys = await newKeys();
@@ -998,9 +1025,12 @@ describe("governed policy completion over the wire (@spec deferred-approval#poli
     const [a, b] = await Promise.all([poll(deferralCode, keys), poll(deferralCode, keys)]);
     advise = async () => [];
     expect([a.status, b.status].sort()).toEqual([200, 400]);
-    expect([a, b].find((r) => r.status === 400)?.body.error).toBe("invalid_grant");
+    // The other poll found the delivery in flight (still pending) or done.
+    expect(["authorization_pending", "invalid_grant"]).toContain([a, b].find((r) => r.status === 400)?.body.error);
     expect(missionCount()).toBe(before + 1);
     expect(as.kernel.governanceRecords.count()).toBe(records + 1);
+    // Single use: nothing more is delivered.
+    expect((await resolve(deferralCode, keys)).body.error).toBe("invalid_grant");
 
     const second = await attempt();
     const firstMission = as.kernel.get(([a, b].find((r) => r.status === 200)?.body.mission_id as string)) as MissionRecord;

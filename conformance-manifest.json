@@ -37605,7 +37605,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a policy-completed pending approval is polled, cancelled, client-bound and delivered exactly as a human-completed one",
-    "local": "Over the wire, for a policy-completed approval: every poll is bound to the client and the DPoP key of the redeeming request and paced (slow_down), the pending lifetime ends in expired_token, cancellation is a revocation at the RFC 7009 endpoint, and the Mission-bound token is delivered once. This assembly serves no human review surface, so the comparison with a human-completed deferred approval has no wire surface to run on, and the row stays partial."
+    "local": "Over the wire, for a policy-completed approval: every poll is bound to the client and the DPoP key of the redeeming request and paced (slow_down), the pending lifetime ends in expired_token, cancellation is a revocation at the RFC 7009 endpoint, and the Mission-bound token is delivered once, a delivery that fails before its response leaving the approval deliverable. This assembly serves no human review surface, so the comparison with a human-completed deferred approval has no wire surface to run on, and the row stays partial."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -37633,9 +37633,15 @@
      "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > defers a PAR-submitted Mission to a deferral code, creates no Mission while pending, and delivers the Mission-bound token on the resolving poll",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > keeps an approval deliverable when saving its token fails, then delivers exactly one token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation. #1300 review (D474)."
   },
   {
    "id": "deferred-approval.policy-completion.refusal-no-mission",
@@ -37731,7 +37737,7 @@
    "assertion": "concurrency",
    "observation": {
     "normative": "retried and concurrent completions of one pending approval produce one Mission and one Approval Governance Record",
-    "local": "Over the wire, two concurrent polls of one pending approval run two policy completions and yield one Mission, one record and one delivery (the other poll is invalid_grant), and two concurrent redemptions of one code open one pending approval. A human approval racing a policy completion is witnessed only at the kernel, since no review surface is served, so the row stays partial (D441)."
+    "local": "Over the wire, two concurrent polls of one pending approval run two policy completions and yield one Mission, one record and one delivery (the other poll answers authorization_pending while the delivery is in flight, or invalid_grant after it), and two concurrent redemptions of one code open one pending approval. A human approval racing a policy completion is witnessed only at the kernel, since no review surface is served, so the row stays partial (D441)."
    },
    "level": "concurrency",
    "coverage": "partial",
@@ -37761,7 +37767,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). Completion is issuer-side: two concurrent completions, and a human approval racing a policy completion, resolve to one Mission and at most one record. #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). Completion is issuer-side: two concurrent completions, and a human approval racing a policy completion, resolve to one Mission and at most one record. #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation. #1300 review (D474)."
   },
   {
    "id": "deferred-approval.policy-completion.no-client-basis-selector",
@@ -37995,6 +38001,48 @@
     }
    ],
    "notes": "#1185 wire path (capability deferred-approval, default off)."
+  },
+  {
+   "id": "deferred-approval.deferral.single-delivery",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-sequencing",
+   "text": "Issuance then completes per the deferred substrate: the next poll resolves to a Mission-bound token response.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "an approved deferral resolves to exactly one Mission-bound token response: concurrent polls deliver one token, and a delivery that fails before its response is sent leaves the approval deliverable on a later poll",
+    "local": "A poll claims the delivery, mints the token, and confirms the claim before sending it; the approval is redeemed only by that confirmation. A failed save releases the claim. While one poll's delivery is in flight another poll answers authorization_pending, a local choice (the substrate defines no in-delivery outcome). A claim older than 30 seconds (a crashed delivery) can be taken again, and only one claim ever confirms; a token minted under a claim that does not confirm is never sent."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > keeps an approval deliverable when saving its token fails, then delivers exactly one token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > resolves concurrent completions to one Mission, one record and one delivery; distinct activations get distinct approval events",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
+     "name": "deferred approval store bounds and cancellation (@spec deferred-approval#queue-pressure, deferred-approval#state-machine) > redeems an approval only when its delivery confirms: a failed delivery stays deliverable, and one claim delivers at a time",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1300 review (D474)."
   },
   {
    "id": "deferred-approval.deferral.code-binding",

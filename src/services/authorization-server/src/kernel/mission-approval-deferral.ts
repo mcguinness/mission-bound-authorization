@@ -112,7 +112,38 @@ export type MissionApprovalPoll =
   | { error: "expired_token" }
   | { error: "access_denied" }
   | { error: "invalid_grant" }
-  | { mission: MissionRecord };
+  /**
+   * An approved approval's Mission, claimed for delivery under `delivery`.
+   * The caller delivers the credential, then settles the claim with
+   * {@link MissionApprovalDeferralStore.confirmDelivery} (the credential is
+   * sent only when that confirms) or, on a failure before the response,
+   * {@link MissionApprovalDeferralStore.releaseDelivery}.
+   */
+  | { mission: MissionRecord; delivery: string };
+
+/** What settling a delivery claim found. */
+export type DeliveryConfirmation = "confirmed" | "cancelled" | "superseded";
+
+/**
+ * How long a delivery claim holds before another poll may claim the same
+ * approval: a delivery that crashed after claiming becomes deliverable again.
+ */
+export const DELIVERY_CLAIM_STALE_S = 30;
+
+/** Columns added after the table first shipped (#1185): added in place, so a database created earlier opens. */
+const ADDED_COLUMNS: ReadonlyArray<[string, string]> = [
+  ["delivery_claim", "TEXT"],
+  ["delivery_claimed_at", "INTEGER"],
+];
+
+function migrate(db: Database): void {
+  const columns = new Set(
+    (db.prepare("PRAGMA table_info(mission_approval_deferrals)").all() as Array<{ name: string }>).map((c) => c.name),
+  );
+  for (const [column, type] of ADDED_COLUMNS) {
+    if (!columns.has(column)) db.exec(`ALTER TABLE mission_approval_deferrals ADD COLUMN ${column} ${type}`);
+  }
+}
 
 /** A completion the pending approval's state no longer admits. LOCAL code. */
 export class MissionApprovalDeferralError extends Error {
@@ -138,6 +169,8 @@ interface Row {
   redeemed: number;
   created_at: number;
   last_polled_at: number | null;
+  delivery_claim: string | null;
+  delivery_claimed_at: number | null;
 }
 
 /** A refusal the activation checks raise (as opposed to a fault of the issuer). */
@@ -155,6 +188,7 @@ export class MissionApprovalDeferralStore {
     // Completion and the Mission's creation commit share the kernel database.
     this.db = kernel.db;
     this.db.exec(SCHEMA);
+    migrate(this.db);
     this.now = opts.now ?? (() => kernel.nowDate());
   }
 
@@ -496,13 +530,59 @@ export class MissionApprovalDeferralStore {
         if (row.resolution_reason === "cancelled") return { error: "access_denied" };
         const mission = row.mission_id ? this.kernel.get(row.mission_id) : undefined;
         if (!mission || this.kernel.applyExpiry(mission).state !== "active") return { error: "access_denied" };
-        const redeemed = this.db
-          .prepare("UPDATE mission_approval_deferrals SET redeemed = 1 WHERE deferral_code = ? AND redeemed = 0")
-          .run(code).changes;
-        if (redeemed === 1) return { mission };
+        if (row.redeemed === 1) return { error: "invalid_grant" };
+        // Claim the delivery: one live claim at a time, so concurrent polls
+        // never deliver twice. The approval is redeemed only when the
+        // claimant confirms after its credential exists; a delivery that
+        // fails first releases the claim, and one that crashed lapses.
+        const delivery = `dlv_${randomBytes(12).toString("base64url")}`;
+        const claimed = this.db
+          .prepare(
+            `UPDATE mission_approval_deferrals SET delivery_claim = ?, delivery_claimed_at = ?
+             WHERE deferral_code = ? AND state = 'approved' AND redeemed = 0
+               AND (delivery_claim IS NULL OR delivery_claimed_at <= ?)`,
+          )
+          .run(delivery, nowMs, code, nowMs - DELIVERY_CLAIM_STALE_S * 1000).changes;
+        if (claimed === 1) return { mission, delivery };
+        const current = this.row(code) as Row;
         // A cancellation that won the race delivers nothing either.
-        return this.row(code)?.resolution_reason === "cancelled" ? { error: "access_denied" } : { error: "invalid_grant" };
+        if (current.resolution_reason === "cancelled") return { error: "access_denied" };
+        if (current.redeemed === 1) return { error: "invalid_grant" };
+        // Another poll is delivering: not delivered yet, so still pending.
+        return {
+          error: "authorization_pending",
+          deferral_code: code,
+          expires_in: Math.max(0, Math.ceil((row.created_at + this.lifetimeMs() - nowMs) / 1000)),
+          interval: DEFERRAL_INTERVAL,
+        };
       }
     }
+  }
+
+  /**
+   * @spec deferred-approval#deferred-sequencing (step 5): settle a delivery
+   * claim once the credential exists. `confirmed` redeems the approval, and
+   * only then may the credential be sent. `cancelled` means the client
+   * cancelled before delivery, and `superseded` that another claim delivered;
+   * in either case the credential is not sent.
+   */
+  confirmDelivery(code: string, delivery: string): DeliveryConfirmation {
+    const confirmed = this.db
+      .prepare(
+        `UPDATE mission_approval_deferrals SET redeemed = 1, delivery_claim = NULL
+         WHERE deferral_code = ? AND delivery_claim = ? AND redeemed = 0`,
+      )
+      .run(code, delivery).changes;
+    if (confirmed === 1) return "confirmed";
+    return this.row(code)?.resolution_reason === "cancelled" ? "cancelled" : "superseded";
+  }
+
+  /** Release a delivery claim whose credential could not be produced: the approval stays deliverable. */
+  releaseDelivery(code: string, delivery: string): void {
+    this.db
+      .prepare(
+        "UPDATE mission_approval_deferrals SET delivery_claim = NULL, delivery_claimed_at = NULL WHERE deferral_code = ? AND delivery_claim = ?",
+      )
+      .run(code, delivery);
   }
 }

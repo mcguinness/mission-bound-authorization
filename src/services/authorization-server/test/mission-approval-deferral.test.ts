@@ -5,6 +5,7 @@ import {
   type AuthorityEntry,
   type AuthoritySourceCatalog,
   type GovernedPolicyRoot,
+  DELIVERY_CLAIM_STALE_S,
   MissionApprovalDeferralError,
   MissionApprovalDeferralStore,
   type MissionApprovalDeferralOptions,
@@ -234,7 +235,10 @@ describe("deferred approval policy completion (@spec deferred-approval#policy-co
     if (done.outcome !== "approved") throw new Error(done.outcome);
     // Delivered once, to the bound client and key only.
     expect(store.poll(code, { ...presenter, clientId: "svc-other" })).toEqual({ error: "invalid_grant" });
-    expect(store.poll(code, presenter)).toEqual({ mission: kernel.get(done.mission.id) });
+    const claim = store.poll(code, presenter);
+    expect(claim).toEqual({ mission: kernel.get(done.mission.id), delivery: expect.stringMatching(/^dlv_/) });
+    if (!("delivery" in claim)) throw new Error("no claim");
+    expect(store.confirmDelivery(code, claim.delivery)).toBe("confirmed");
     expect(store.poll(code, presenter)).toEqual({ error: "invalid_grant" });
 
     // Cancellation by the bound client only; a cancelled approval completes nothing.
@@ -313,9 +317,54 @@ describe("deferred approval store bounds and cancellation (@spec deferred-approv
     // After delivery, a cancellation changes nothing.
     const delivered = open(store);
     await store.completeByPolicy(delivered);
-    expect(store.poll(delivered, presenter)).toHaveProperty("mission");
+    const claim = store.poll(delivered, presenter);
+    if (!("delivery" in claim)) throw new Error("no claim");
+    expect(store.confirmDelivery(delivered, claim.delivery)).toBe("confirmed");
     expect(store.cancel(delivered, "svc-agent")).toBe(false);
     expect(store.poll(delivered, presenter)).toEqual({ error: "invalid_grant" });
+
+    // A cancellation while a delivery is in flight: the claim cannot
+    // confirm, so the credential is never sent.
+    const racing = open(store);
+    await store.completeByPolicy(racing);
+    const inFlight = store.poll(racing, presenter);
+    if (!("delivery" in inFlight)) throw new Error("no claim");
+    expect(store.cancel(racing, "svc-agent")).toBe(true);
+    expect(store.confirmDelivery(racing, inFlight.delivery)).toBe("cancelled");
+    expect(store.poll(racing, presenter)).toEqual({ error: "access_denied" });
+  });
+
+  it("redeems an approval only when its delivery confirms: a failed delivery stays deliverable, and one claim delivers at a time", async () => {
+    const { kernel, store } = setup();
+    const code = open(store);
+    const done = await store.completeByPolicy(code);
+    if (done.outcome !== "approved") throw new Error(done.outcome);
+    // A delivery that fails before the response releases its claim.
+    const failed = store.poll(code, presenter);
+    if (!("delivery" in failed)) throw new Error("no claim");
+    // While it is claimed, another poll is told the request is still pending.
+    expect(store.poll(code, presenter)).toMatchObject({ error: "authorization_pending" });
+    store.releaseDelivery(code, failed.delivery);
+    const retried = store.poll(code, presenter);
+    expect(retried).toMatchObject({ mission: kernel.get(done.mission.id) });
+    if (!("delivery" in retried)) throw new Error("no claim");
+    // The released claim cannot settle anything; the live one delivers once.
+    expect(store.confirmDelivery(code, failed.delivery)).toBe("superseded");
+    expect(store.confirmDelivery(code, retried.delivery)).toBe("confirmed");
+    expect(store.confirmDelivery(code, retried.delivery)).toBe("superseded");
+    expect(store.poll(code, presenter)).toEqual({ error: "invalid_grant" });
+
+    // A claim that lapses (its delivery crashed) can be taken again, and only
+    // one of the two claims ever confirms.
+    const stale = open(store);
+    await store.completeByPolicy(stale);
+    const first = store.poll(stale, presenter);
+    if (!("delivery" in first)) throw new Error("no claim");
+    clockMs += (DELIVERY_CLAIM_STALE_S + 1) * 1000;
+    const second = store.poll(stale, presenter);
+    if (!("delivery" in second)) throw new Error("no second claim");
+    expect(store.confirmDelivery(stale, first.delivery)).toBe("superseded");
+    expect(store.confirmDelivery(stale, second.delivery)).toBe("confirmed");
   });
 
   it("runs policy completion from the bound presenter's poll only, at most once per interval, and once per evaluation", async () => {
@@ -342,7 +391,9 @@ describe("deferred approval store bounds and cancellation (@spec deferred-approv
     const { kernel, store } = setup();
     const approving = open(store);
     const r = await store.pollAndComplete(approving, presenter);
-    expect(r).toEqual({ mission: kernel.allMissions()[0] });
+    expect(r).toEqual({ mission: kernel.allMissions()[0], delivery: expect.stringMatching(/^dlv_/) });
+    if (!("delivery" in r)) throw new Error("no claim");
+    expect(store.confirmDelivery(approving, r.delivery)).toBe("confirmed");
     expect(await store.pollAndComplete(approving, presenter)).toEqual({ error: "invalid_grant" });
   });
 });

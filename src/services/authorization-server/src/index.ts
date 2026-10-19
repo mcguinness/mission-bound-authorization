@@ -500,6 +500,8 @@ export {
 } from "./kernel/governed-policy-approval.js";
 export {
   DEFAULT_MAX_PENDING_PER_CLIENT,
+  DELIVERY_CLAIM_STALE_S,
+  type DeliveryConfirmation,
   type MissionApprovalDeferralOptions,
   MissionApprovalDeferralError,
   MissionApprovalDeferralStore,
