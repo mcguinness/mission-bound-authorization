@@ -947,29 +947,39 @@ describe("governed policy completion over the wire (@spec deferred-approval#poli
     advise = async () => [];
   });
 
-  it("leaves no Mission and no credential when the record cannot be signed, and completes on a later poll", async () => {
+  it("leaves no Mission and no credential when the record cannot be signed or persisted, and completes on a later poll", async () => {
     useRoot(rootDoc());
-    const keys = await newKeys();
-    const before = missionCount();
-    const records = as.kernel.governanceRecords.count();
-    const deferralCode = await openDeferral(keys);
-    const sign = vi.spyOn(as.kernel, "statusSigner").mockImplementation(() => {
-      throw new Error("signing key unavailable");
-    });
-    const failed = await poll(deferralCode, keys);
-    sign.mockRestore();
-    expect(failed.status).toBe(500);
-    expect(failed.body).not.toHaveProperty("access_token");
-    expect(missionCount()).toBe(before);
-    expect(as.kernel.governanceRecords.count()).toBe(records);
-    expect(as.missionApprovalDeferrals?.state(deferralCode)).toBe("pending");
-    // Too soon to retry; then the retry completes under the same event.
-    expect((await poll(deferralCode, keys)).body.error).toBe("slow_down");
-    const retried = await resolve(deferralCode, keys);
-    expect(retried.status).toBe(200);
-    expect((as.kernel.get(retried.body.mission_id as string) as MissionRecord).approval_event_id).toBe(
-      as.missionApprovalDeferrals?.approvalEventId(deferralCode),
-    );
+    const faults = [
+      () =>
+        vi.spyOn(as.kernel, "statusSigner").mockImplementation(() => {
+          throw new Error("signing key unavailable");
+        }),
+      () =>
+        vi.spyOn(as.kernel.governanceRecords, "retainInCallerTx").mockImplementation(() => {
+          throw new Error("record store unavailable");
+        }),
+    ];
+    for (const inject of faults) {
+      const keys = await newKeys();
+      const before = missionCount();
+      const records = as.kernel.governanceRecords.count();
+      const deferralCode = await openDeferral(keys);
+      const fault = inject();
+      const failed = await poll(deferralCode, keys);
+      fault.mockRestore();
+      expect(failed.status).toBe(500);
+      expect(failed.body).not.toHaveProperty("access_token");
+      expect(missionCount()).toBe(before);
+      expect(as.kernel.governanceRecords.count()).toBe(records);
+      expect(as.missionApprovalDeferrals?.state(deferralCode)).toBe("pending");
+      // Too soon to retry; then the retry completes under the same event.
+      expect((await poll(deferralCode, keys)).body.error).toBe("slow_down");
+      const retried = await resolve(deferralCode, keys);
+      expect(retried.status).toBe(200);
+      expect((as.kernel.get(retried.body.mission_id as string) as MissionRecord).approval_event_id).toBe(
+        as.missionApprovalDeferrals?.approvalEventId(deferralCode),
+      );
+    }
   });
 
   it("resolves concurrent completions to one Mission, one record and one delivery; distinct activations get distinct approval events", async () => {
