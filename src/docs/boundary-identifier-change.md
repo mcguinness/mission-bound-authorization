@@ -36,6 +36,16 @@ unordered or duplicate version, a PEP location under two boundaries, a
 last-version boundary that is not a mediated resource, or a PEP location
 whose boundary changes with no `replaces` record.
 
+`MCP_PAYMENTS_RESOURCE` templates the payments resource into the
+statement only where that is configuration (`templatePaymentsResource` in
+`packages/demo-data`): the mediated-scope resource, and a one-version
+declaration with no `replaces` record, which is initial configuration.
+A declaration that retains history is loaded byte for byte, earlier
+versions, `replaces` records, aliases and emitter identities included,
+since evidence produced under it verifies against those bytes; an
+override the last version does not declare as a boundary is refused at
+load rather than rewriting a retained version.
+
 ## At each request
 
 - The PEP establishes its boundary from its location and the version in
