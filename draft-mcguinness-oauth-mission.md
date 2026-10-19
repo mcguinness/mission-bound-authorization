@@ -769,7 +769,7 @@ This document maps principals onto native OAuth constructs:
 
 On a derived token, the `iss` claim is the AS and the `sub` claim is
 the AS-local `sub` to which the AS maps the Subject under the
-injective mapping of {{approval-event}}; adopting the external `sub`
+injective mapping of {{subject-establishment}}; adopting the external `sub`
 verbatim is the common case. Within the issuing AS's namespace, this
 (`iss`, `sub`) pair is the AS-local subject principal, authoritative
 for the Subject, and resource servers authorize against it.
@@ -1610,21 +1610,8 @@ At a direct approval event the AS MUST, in order:
    mapped the same way.
    - **Self-approval.** When the Approver is the Subject, the Subject
      is the authenticated Approver.
-   - **Approval for another principal.** When the Approver is a
-     different principal (for example, an administrator approving on
-     a user's behalf), the AS MUST NOT take the Subject from
-     unauthenticated client input, and MUST authorize the Approver to
-     approve for that Subject under local policy. This document
-     defines no wire parameter for the Subject; how the AS establishes
-     it (administrative selection, a directory, an authenticated
-     reference) is a deployment matter.
-   - **External Subject.** When the Subject's home issuer
-     (`subject.iss`) differs from the AS, the AS MUST map the external
-     (`subject.iss`, `subject.sub`) pair to an AS-local `sub` under an
-     injective mapping (no two distinct external Subjects map to the
-     same local `sub`). A derived token's (`iss`, `sub`) pair then
-     denotes exactly one Subject. Adopting the external `sub` verbatim
-     is valid only where it collides with no other principal's `sub`.
+   - **Another principal or an external Subject.** The rules of
+     {{subject-establishment}} apply at this step.
 3. **Establish the authority source**: whose authority the approval
    draws on, recorded as the Mission's `authority_source`
    ({{authority-sources}}, {{mission-record}}). The AS MUST establish
@@ -1691,6 +1678,27 @@ Refusals follow {{error-mapping}}. A token-endpoint `resource` value
 outside the Authority Set is an invalid `resource` value in the sense
 of {{RFC8707}}.
 
+## Subject Establishment {#subject-establishment}
+
+These rules apply at step 2 of the direct approval steps
+({{direct-approval-steps}}).
+
+- **Approval for another principal.** When the Approver is a
+  different principal (for example, an administrator approving on
+  a user's behalf), the AS MUST NOT take the Subject from
+  unauthenticated client input, and MUST authorize the Approver to
+  approve for that Subject under local policy. This document
+  defines no wire parameter for the Subject; how the AS establishes
+  it (administrative selection, a directory, an authenticated
+  reference) is a deployment matter.
+- **External Subject.** When the Subject's home issuer
+  (`subject.iss`) differs from the AS, the AS MUST map the external
+  (`subject.iss`, `subject.sub`) pair to an AS-local `sub` under an
+  injective mapping (no two distinct external Subjects map to the
+  same local `sub`). A derived token's (`iss`, `sub`) pair then
+  denotes exactly one Subject. Adopting the external `sub` verbatim
+  is valid only where it collides with no other principal's `sub`.
+
 ## Standing-Consent Instances {#standing-consent-instances}
 
 Under a standing-consent basis ({{standing-consent-bases}}), the
@@ -1701,7 +1709,7 @@ authorization for the Subject and the authority source (steps 2 and
 still bind the instance's approval event wherever they apply:
 
 - the Subject is never taken from unauthenticated client input and
-  is mapped injectively (step 2);
+  is mapped injectively (step 2, {{subject-establishment}});
 - the authority source and its ceiling ({{authority-sources}});
 - the effective expiry and its creation-commit check (steps 4 and 7);
 - the integrity anchors (step 6); and
@@ -1841,7 +1849,7 @@ the `acr_values` and `max_age` parameters defined in Section 3.1.2.1
 of {{OpenID.Core}}. In a Mission approval interaction these
 parameters describe the requested authentication of the
 **Approver**, not of the token's Subject, who can be a different
-principal ({{approval-event}}, step 2).
+principal ({{subject-establishment}}).
 
 Requesting these parameters implies nothing about the authentication
 claims of an issued token, which describe the token's Subject, not
@@ -6478,6 +6486,12 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Editorial (#910): the approval rules for another principal and for
+  an external Subject sit in a Subject Establishment subsection that
+  applies at step 2 of the direct approval steps, which points to it;
+  the references to the injective mapping and to approval for another
+  principal cite it. No requirement changes.
 
 - Editorial (#910): Mission Record and Integrity and Commitments
   follow Delegation Within a Mission, so the body runs from submission,
