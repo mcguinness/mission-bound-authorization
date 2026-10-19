@@ -84,6 +84,27 @@ jobs:
       with:
         token: ${{ github.token }}
 
+    # Prune stale previews just before publishing. The publish below clones
+    # gh-pages and force-pushes that clone, so a prune pushed while a slower
+    # publish is in flight is undone; pruning first means every publish
+    # clones, indexes and pushes the pruned branch.
+    - name: "Checkout gh-pages for Pruning"
+      if: ${{ github.event_name == 'push' }}
+      uses: actions/checkout@v6
+      with:
+        ref: gh-pages
+        path: .ghpages-prune
+        fetch-depth: 1
+
+    - name: "Prune Previews of Deleted or Merged Branches"
+      if: ${{ github.event_name == 'push' }}
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        bash scripts/prune-ghpages-previews.sh .ghpages-prune
+        rm -rf .ghpages-prune
+
     - name: "Update GitHub Pages"
       id: ghpages
       uses: martinthomson/i-d-template@v1
