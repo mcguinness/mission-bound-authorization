@@ -258,7 +258,8 @@ export interface PresentedTokenRefusal {
  * restricts. Where the token entry carries none, it defers to the
  * child-creation policy only when the parent entry justifying that child
  * entry (in `parent`, first-in-order) retains a `policy` child-actor origin;
- * the policy itself is asked by the parent gate ({@link childActorRefusal}).
+ * the policy itself is asked by the parent gate ({@link childActorRefusal})
+ * at creation, never on recovery of a committed one.
  * Otherwise, an unresolved origin included, an absent list denies as before.
  */
 export function presentedTokenChildRefusal(
@@ -330,35 +331,6 @@ export function presentedTokenFanoutRefusal(
     }
   }
   return undefined;
-}
-
-/**
- * @spec child-delegation#fanout, child-delegation#creation-idempotency (#1304,
- * D486): the parent side of child-actor eligibility for a RECORDED child, as
- * recovery re-establishes it: each child entry attributed to its parent entry
- * (first-in-order), each such entry's retained child-actor origin resolved,
- * its list applied, and, where it defers to the child-creation policy, the
- * policy asked now. A child entry no parent entry justifies is unresolved.
- */
-export function recordedChildActorRefusal(
-  kernel: MissionKernel,
-  parent: MissionRecord,
-  child: MissionRecord,
-): PresentedTokenRefusal | undefined {
-  const justifying = child.authority_set.map((ce) => justifyingIndex(ce, parent.authority_set));
-  if (justifying.some((pi) => pi < 0)) {
-    return { reason: "child_actor_not_allowed", message: "a recorded child entry resolves to no parent entry" };
-  }
-  const actor: DelegateCandidate = { sub: child.client_id, assertedProfile: kernel.actorProfile(child.client_id) };
-  const refusal = childActorRefusal(
-    kernel.childActorParent(parent),
-    [...new Set(justifying)],
-    actor,
-    child.parent?.depth ?? 1,
-    "creation",
-    kernel.childCreationPolicy(),
-  );
-  return refusal ? { reason: "child_actor_not_allowed", message: refusal.message } : undefined;
 }
 
 /** @spec child-delegation#child-evidence-canonical — the record's JCS bytes. */

@@ -89,7 +89,7 @@ export type ChildCreationAuthorizationPolicy = (request: ChildCreationPolicyRequ
 
 /** What the child-creation policy is asked. */
 export interface ChildCreationPolicyRequest {
-  /** `creation`: a child-creation exchange (and its recovery); `carryover`: a carryover replacement. */
+  /** `creation`: a child-creation exchange (never its recovery); `carryover`: a carryover replacement. */
   operation: "creation" | "carryover";
   /** The Parent Mission (for carryover, the prospective parent, possibly not yet committed). */
   parent: { id: string; issuer: string; client_id: string; subject: { iss: string; sub: string } };
@@ -184,8 +184,9 @@ export function childActorRefusal(
  * origin `origin`. A list the token entry carries restricts and must permit;
  * an empty one admits nobody. An absent list defers to the parent's
  * child-creation policy only where that parent entry's eligibility does
- * (`policy`, decided by {@link childActorRefusal}); otherwise it denies, as
- * before.
+ * (`policy`, decided by {@link childActorRefusal} at creation; recovery of a
+ * committed creation keeps the decision its commit made); otherwise it
+ * denies, as before.
  */
 export function presentedChildActorPermitted(
   tokenEntry: AuthorityEntry,

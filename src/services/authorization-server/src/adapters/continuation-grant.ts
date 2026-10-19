@@ -78,7 +78,6 @@ import {
   createChildMission,
   presentedTokenChildRefusal,
   presentedTokenFanoutRefusal,
-  recordedChildActorRefusal,
 } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
@@ -2429,10 +2428,13 @@ async function recoverChildCreation(
     return;
   }
   const recordedParent = child.parent ? opts.kernel.get(child.parent.id) : undefined;
-  // @spec child-delegation#fanout (#1304, D486): recovery applies the same
-  // child-actor rule as creation: the token's lists, deferring only under a
-  // parent entry whose retained origin is `policy`, and the parent's retained
-  // origins, lists and current child-creation policy.
+  // @spec child-delegation#fanout, child-delegation#creation-idempotency
+  // (#1304, D486): the presented token's lists still restrict the recorded
+  // child, an absent one deferring only under a parent entry whose retained
+  // origin is `policy`. The child-creation policy is not asked again: it
+  // gates the creation and carryover commits, and recovery delivers a
+  // committed creation, so a later policy change refuses new creations
+  // without retroactively denying this one.
   const refusal =
     presentedTokenChildRefusal(
       opts.kernel,
@@ -2442,7 +2444,6 @@ async function recoverChildCreation(
       presentedAuthority,
       recordedParent,
     ) ??
-    (recordedParent ? recordedChildActorRefusal(opts.kernel, recordedParent, child) : undefined) ??
     (recordedParent
       ? presentedTokenFanoutRefusal(opts.kernel, recordedParent, child.authority_set, presentedAuthority, true)
       : undefined);

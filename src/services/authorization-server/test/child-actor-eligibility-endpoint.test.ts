@@ -13,9 +13,10 @@
  * policy is never asked. Two overlapping reports entries, one of each origin,
  * cover multiple retained origins.
  *
- * Covered through the child-creation token exchange (and its recovery) and
- * through Child Mission Carryover, which the expansion exchange renders and
- * its deferred completion commits. Every case keeps authority, depth and
+ * Covered through the child-creation token exchange and through Child Mission
+ * Carryover, which the expansion exchange renders and its deferred completion
+ * commits. Recovery of a committed creation delivers it without asking the
+ * policy again. Every case keeps authority, depth and
  * fan-out valid, so the child-actor gate is the only refusal in play. The
  * policy hook is installed by this test on one authorization server; a
  * second one installs none and so runs the reference default, which denies
@@ -693,19 +694,64 @@ describe("child-actor eligibility with retained provenance at the child-creation
     });
   });
 
-  it("recovery re-establishes the rule: a completed creation is redelivered only while the policy still permits the actor", async () => {
-    const parent = approve(hooked, [pEntry({ allowed_child_actors: [{ sub: "child-a" }] })]);
+  it("a policy withdrawal refuses a new creation but not the replay of a committed one: no second child, and recovery does not ask the policy", async () => {
+    // The reports entry admits five children, so only the policy can refuse
+    // a second creation here; its child entry is attributed to that
+    // policy-origin entry, whose list the proposal adds.
+    const parent = approve(
+      hooked,
+      [
+        {
+          type: MRA,
+          resource: REPORTS,
+          actions: ["reports:report.read", "reports:report.write"],
+          delegation: { max_depth: 2, children: { allowed_child_actors: [{ sub: "child-a" }] } } as AuthorityEntry["delegation"],
+        },
+      ],
+      [REPORTS],
+    );
+    expect(parent.child_actor_provenance?.[0]).toBe("policy");
+    const proposal: AuthorityEntry[] = [
+      {
+        type: MRA,
+        resource: REPORTS,
+        actions: ["reports:report.read"],
+        delegation: { max_depth: 1, children: { max_children: 1, max_child_depth: 1, allowed_child_actors: [] } } as AuthorityEntry["delegation"],
+      },
+    ];
     permits.creation.add("child-a");
     const token = await accessToken(hooked, parent, hooked.agent);
     const creationRequestId = crypto.randomUUID();
-    const first = await created(hooked, await createChild(hooked, parent, "child-a", { token, creationRequestId }));
+    const firstRes = await createChild(hooked, parent, "child-a", { token, proposal, creationRequestId });
+    const firstBody = (await firstRes.clone().json()) as { access_token?: string };
+    const first = await created(hooked, firstRes);
+    const committed = sideEffects(hooked, parent.id);
+
     permits.creation.delete("child-a");
-    const reason = await refused(await createChild(hooked, parent, "child-a", { token, creationRequestId }));
-    expect(reason).toMatch(/does not authorize the recorded child/);
-    expect(hooked.as.kernel.findChildren(parent.id)).toHaveLength(1);
-    permits.creation.add("child-a");
-    const again = await created(hooked, await createChild(hooked, parent, "child-a", { token, creationRequestId }));
+    const asks = creationAsks().length;
+    // A new creation for the same actor is refused: the permit the first
+    // creation was given does not admit it. The policy is asked and denies.
+    await refused(await createChild(hooked, parent, "child-a", { token, proposal }));
+    expect(creationAsks()).toHaveLength(asks + 1);
+    expect(creationAsks().at(-1)).toMatchObject({ parent: { id: parent.id }, child_actor: { sub: "child-a" } });
+    expect(sideEffects(hooked, parent.id)).toEqual(committed);
+
+    // The replay of the committed creation still delivers the same child and
+    // grant, creating nothing and without asking the policy.
+    const againRes = await createChild(hooked, parent, "child-a", { token, proposal, creationRequestId });
+    const againBody = (await againRes.clone().json()) as { access_token?: string; mission_id?: string };
+    const again = await created(hooked, againRes);
     expect(again.id).toBe(first.id);
+    expect(againBody.access_token).toBe(firstBody.access_token);
+    expect(creationAsks()).toHaveLength(asks + 1);
+    expect(sideEffects(hooked, parent.id)).toEqual(committed);
+    expect(hooked.as.kernel.findChildren(parent.id).map((c) => c.id)).toEqual([first.id]);
+
+    // Only the policy refused the new creation: once it permits the actor
+    // again, a new request creates a second, distinct child.
+    permits.creation.add("child-a");
+    const second = await created(hooked, await createChild(hooked, parent, "child-a", { token, proposal }));
+    expect(second.id).not.toBe(first.id);
   });
 });
 
