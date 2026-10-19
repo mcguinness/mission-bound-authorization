@@ -16309,9 +16309,28 @@
     "normative": "two PEPs at one enforcement boundary produce the same boundary identifier for a request whether the credential names the boundary directly or through an alias, in any audience order, and whatever entries it presents; the audience check validates against that boundary and never selects it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > two PEPs at one boundary produce byte-identical boundary values for direct, aliased, permuted and multi-recipient audiences",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > a token naming several recipients is evaluated at each PEP's own boundary, never at whichever member comes first",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the PEP establishes its boundary from configuration alone (@spec runtime#boundary-identifier, #853) > names each PEP location's own boundary, and none for an undeclared location or before any version is in force",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier.pdp-accepts-from-authorized-pep",
@@ -16332,9 +16351,16 @@
     "normative": "a decision request naming a boundary the authenticated requesting PEP is not authorized for is refused before evaluation"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > has the PDP accept a boundary identifier only from a PEP authorized for it under the version in force",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier.same-identifier-everywhere",
@@ -16355,9 +16381,22 @@
     "normative": "for one request, the decision request's audience, the permit binding and cache key, the Decision Evidence, Execution Evidence and Refusal Record audience, and the boundary the evidence key is authorized for are the same byte string; a denial carries it without any permit"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > two PEPs at one boundary produce byte-identical boundary values for direct, aliased, permuted and multi-recipient audiences",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > carries the boundary, never the aud value or alias, in all three evidence forms, and signs each only under a key authorized for it",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier.unestablished-refused",
@@ -16378,9 +16417,22 @@
     "normative": "a request for which no enforcement boundary is established is refused, and no boundary identifier derived from the credential's audience, a default, or a guess reaches a decision request"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses a request whose boundary cannot be established, supplying none from the credential or a default, and emits no record of any form",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the PEP establishes its boundary from configuration alone (@spec runtime#boundary-identifier, #853) > names each PEP location's own boundary, and none for an undeclared location or before any version is in force",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier.unestablished-no-evidence-record",
@@ -16401,9 +16453,16 @@
     "normative": "a refusal with no established boundary produces no Decision Evidence, Execution Evidence, or Refusal Record, and no record carries an invented audience"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The runtime core's evidence section and the runtime evidence companion's Refusal Record `audience` definition restate this rule; treated as duplicates of this row."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses a request whose boundary cannot be established, supplying none from the credential or a default, and emits no record of any form",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The runtime core's evidence section and the runtime evidence companion's Refusal Record `audience` definition restate this rule; treated as duplicates of this row. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.versioned-statement",
@@ -16424,9 +16483,28 @@
     "normative": "a boundary identifier change is published as a new Enforcement Scope Statement version naming the old and new identifiers, the audience aliases per credential-profile scope, the evidence keys authorized for each identifier, and the effective cutover; no new record member, credential claim, or credential type carries it"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the boundary declaration is refused at load unless it resolves (@spec runtime#boundary-identifier-change, #853) > accepts the shipped statement and a declared change of identifier",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the boundary declaration is refused at load unless it resolves (@spec runtime#boundary-identifier-change, #853) > refuses a change of a PEP location's boundary that names no replaces record, and a boundary that is not a mediated resource",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the boundary declaration is refused at load unless it resolves (@spec runtime#boundary-identifier-change, #853) > refuses versions out of order, a replaces record naming a later version, and a PEP location under two boundaries",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). The reference keeps the statement versions as config/enforcement-scope.json `enforcement_boundaries`, a reference member, not a wire member. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.trusted-source",
@@ -16449,7 +16527,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). No witness: the reference reads its statement and resource identifier from local trusted configuration and performs no retrieval."
   },
   {
    "id": "runtime.boundary-identifier-change.retain-earlier-versions",
@@ -16470,9 +16548,22 @@
     "normative": "a superseded statement version and its key authorizations remain available to verifiers for the evidence retention window of the evidence produced under it"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the boundary declaration is refused at load unless it resolves (@spec runtime#boundary-identifier-change, #853) > accepts the shipped statement and a declared change of identifier",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > verifies a record from before the change, bytes unchanged, under the version its audience and kid select, and never by its time",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed: an earlier version stays loaded and verifies its records. Not witnessed: retention for the evidence retention window. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.ordered-cutover",
@@ -16493,9 +16584,22 @@
     "normative": "consumers (PDPs, permit caches, evidence verifiers) accept the new version before any producer uses the new identifier; admission under the old identifier stops and each in-flight operation is drained, or refused or restarted under the new identifier; old permits and cache entries are invalidated; then every producer for the boundary switches together"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the PEP establishes its boundary from configuration alone (@spec runtime#boundary-identifier, #853) > switches at the declared cutover instant, for every reader of the same declaration",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed: permits from before the cutover are suppressed (kill_switch) and every producer switches at the declared instant. Not witnessed: consumers accepting the new version before producers switch, and draining; the reference refuses in-flight operations. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.old-permits-invalidated",
@@ -16516,9 +16620,16 @@
     "normative": "after the cutover a permit or cached permit bound to the old identifier, including a cacheable read and a later phase of a compound action, releases no effect"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed for a permit decided before the cutover. Not separately witnessed: a cached read permit and a later phase of a compound action. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.producers-switch-together",
@@ -16539,9 +16650,22 @@
     "normative": "after the cutover every new decision request, permit, and record for the boundary carries the new identifier, and a permit comparison never matches the old identifier for a current request"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the PEP establishes its boundary from configuration alone (@spec runtime#boundary-identifier, #853) > switches at the declared cutover instant, for every reader of the same declaration",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.late-evidence-historical",
@@ -16562,9 +16686,22 @@
     "normative": "a late record for an operation admitted before the cutover carries the old identifier and the original facts, verifies under the earlier statement version, and never authorizes an effect"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The Execution Evidence `audience` definition restates this rule; treated as a duplicate of this row."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > verifies a record from before the change, bytes unchanged, under the version its audience and kid select, and never by its time",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The Execution Evidence `audience` definition restates this rule; treated as a duplicate of this row. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.correlation-rewrites-nothing",
@@ -16585,9 +16722,22 @@
     "normative": "cross-version correlation runs only on verified records, leaves every signed payload byte-identical, and never lets a key verify records for a boundary its version does not authorize it for"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > verifies a record from before the change, bytes unchanged, under the version its audience and kid select, and never by its time",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > never lets a key authorized for the old boundary sign for the new one",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed: records verify with unchanged bytes and a key never verifies for a boundary its version does not authorize. The reference performs no cross-version correlation of its own. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.alias-never-rewrites-entries",
@@ -16608,9 +16758,22 @@
     "normative": "an approved entry's resource and its commitments are byte-identical before and after the cutover, and an alias never makes an entry match a different operation target"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > never rewrites an approved entry through the alias: an entry naming the old identifier is refused after the change",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > keeps two operation targets under one boundary independently matched, and never lets an alias make an entry match",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.incompatible-entry-refused",
@@ -16631,9 +16794,16 @@
     "normative": "an action under an entry whose original operation-target authority the new identifier does not preserve is refused unless a new approval or derivation authorizes it; no existing approval or integrity preimage changes"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > never rewrites an approved entry through the alias: an entry naming the old identifier is refused after the change",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed: an entry naming the old identifier is refused and no approval or preimage changes. Not witnessed: authorization through a new approval or derivation. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.classification.high-consequence-must-be-gated",
@@ -17824,9 +17994,16 @@
     "normative": "the boundary identifier a PEP carries is the exact spelling of the guarded protected resource's RFC 9728 resource value, whether supplied by trusted static configuration or by metadata"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > ships a boundary identifier that is the protected resource's RFC 9728 resource string and a mediated scope entry",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed for trusted static configuration. The reference does no metadata retrieval. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.metadata-validated",
@@ -17849,7 +18026,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. Conditional on retrieving metadata; a PEP supplied by trusted static configuration fetches none."
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. Conditional on retrieving metadata; a PEP supplied by trusted static configuration fetches none. #853 implementation (D487). No witness: the reference reads its statement and resource identifier from local trusted configuration and performs no retrieval."
   },
   {
    "id": "runtime.oauth.boundary-audience.alias-from-trusted-config-only",
@@ -17870,9 +18047,22 @@
     "normative": "an aud value is accepted as an alias only through deployment configuration scoped to the validated issuer and token profile; a mapping asserted by the request or the token, or configured for another issuer, names no boundary"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses an absent, malformed, nonmatching, issuer-confused or profile-confused aud at token validation, before any PDP decision and with no record",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "aud is validated by membership against the established boundary (@spec runtime-oauth#boundary-audience, #853) > accepts an alias only from the issuer and token profile it is declared for",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed: an alias configured for another issuer or profile names no boundary. The reference has no surface through which a request or token could assert a mapping. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.refusals",
@@ -17893,9 +18083,34 @@
     "normative": "a token with absent, malformed, or nonmatching aud, an aud that names the boundary only through another issuer's alias, or an issuer and token profile with an ambiguous alias is refused as a token-validation failure, with no PDP decision"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The direct nonmatching arm is already witnessed under runtime.token-validation.audience-and-pop (a token whose audience does not name this resource is refused); the alias, malformed, issuer-confusion, and ambiguity arms are not."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses an absent, malformed, nonmatching, issuer-confused or profile-confused aud at token validation, before any PDP decision and with no record",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses every token of an issuer and profile whose aliases map one value to two boundaries, the directly named one included",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "aud is validated by membership against the established boundary (@spec runtime-oauth#boundary-audience, #853) > refuses an absent, malformed or nonmatching aud",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "aud is validated by membership against the established boundary (@spec runtime-oauth#boundary-audience, #853) > refuses every token of an issuer and profile whose aliases map one value to two boundaries, and no other issuer's",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The direct nonmatching arm is already witnessed under runtime.token-validation.audience-and-pop (a token whose audience does not name this resource is refused); the alias, malformed, issuer-confusion, and ambiguity arms are not. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.no-selection-from-aud",
@@ -17916,9 +18131,28 @@
     "normative": "for an aud array the PEP checks membership of the established boundary; permutations and duplicate aliases for the same boundary yield the same boundary identifier, permit binding, and evidence"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > two PEPs at one boundary produce byte-identical boundary values for direct, aliased, permuted and multi-recipient audiences",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > a token naming several recipients is evaluated at each PEP's own boundary, never at whichever member comes first",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "aud is validated by membership against the established boundary (@spec runtime-oauth#boundary-audience, #853) > accepts a direct or aliased string, and every permutation, duplicate and extra recipient of an array, always binding the established boundary",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.other-recipients",
@@ -17939,9 +18173,16 @@
     "normative": "an otherwise valid token whose aud array also names other recipients is accepted at a boundary it names, and is refused at a boundary only another member names"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > a token naming several recipients is evaluated at each PEP's own boundary, never at whichever member comes first",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.stricter-profile-kept",
@@ -17962,9 +18203,16 @@
     "normative": "a token profile that requires a single audience still refuses a multi-audience token although the membership rule would accept it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > keeps the transaction token's stricter single-audience rule, and its aliases scoped to its own profile",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.carries-boundary-not-aud",
@@ -17985,9 +18233,16 @@
     "normative": "a token naming the boundary through a logical alias yields the same decision-request audience, permit binding, and evidence audience as one naming the resource identifier directly"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > carries the boundary, never the aud value or alias, in all three evidence forms, and signs each only under a key authorized for it",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.alias-across-change",
@@ -18008,9 +18263,28 @@
     "normative": "after a boundary identifier change, a token naming the old identifier is accepted only through an alias the new statement version declares, under its original validation and lifetime, and its entries are matched against their original resource values"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > never rewrites an approved entry through the alias: an entry naming the old identifier is refused after the change",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "aud is validated by membership against the established boundary (@spec runtime-oauth#boundary-audience, #853) > keeps a declared alias for the old identifier usable across a change",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.authority-operation-target-match",
@@ -28492,9 +28766,16 @@
     "normative": "a record from before a boundary identifier change verifies with its signed bytes unchanged under the statement version that authorizes its kid for its audience, and is rejected under a version that does not"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > verifies a record from before the change, bytes unchanged, under the version its audience and kid select, and never by its time",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "evidence.integrity.version-not-guessed",
@@ -28515,9 +28796,16 @@
     "normative": "when the declared versions admit the audience and kid pair under more than one boundary or key authorization, or under none, the record is not verified, whatever its evaluated_at or the verifier's clock"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > fails when the declared versions do not determine one key authorization, or one key, for the pair",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "evidence.integrity.compromise-boundary-gates-signature-step",
