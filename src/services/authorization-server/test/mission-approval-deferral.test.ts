@@ -5,6 +5,7 @@ import {
   type AuthorityEntry,
   type AuthoritySourceCatalog,
   type GovernedPolicyRoot,
+  DELIVERY_CLAIM_STALE_S,
   MissionApprovalDeferralError,
   MissionApprovalDeferralStore,
   type MissionApprovalDeferralOptions,
@@ -234,7 +235,10 @@ describe("deferred approval policy completion (@spec deferred-approval#policy-co
     if (done.outcome !== "approved") throw new Error(done.outcome);
     // Delivered once, to the bound client and key only.
     expect(store.poll(code, { ...presenter, clientId: "svc-other" })).toEqual({ error: "invalid_grant" });
-    expect(store.poll(code, presenter)).toEqual({ mission: kernel.get(done.mission.id) });
+    const claim = store.poll(code, presenter);
+    expect(claim).toEqual({ mission: kernel.get(done.mission.id), delivery: expect.stringMatching(/^dlv_/) });
+    if (!("delivery" in claim)) throw new Error("no claim");
+    expect(store.confirmDelivery(code, claim.delivery)).toBe("confirmed");
     expect(store.poll(code, presenter)).toEqual({ error: "invalid_grant" });
 
     // Cancellation by the bound client only; a cancelled approval completes nothing.
@@ -242,7 +246,8 @@ describe("deferred approval policy completion (@spec deferred-approval#policy-co
     expect(store.cancel(cancelled, "svc-other")).toBe(false);
     expect(store.cancel(cancelled, "svc-agent")).toBe(true);
     expect(await store.completeByPolicy(cancelled)).toEqual({ outcome: "not_pending", state: "cancelled" });
-    expect(store.poll(cancelled, presenter)).toEqual({ error: "invalid_grant" });
+    // The deferred substrate's polling rule: a cancelled request is access_denied.
+    expect(store.poll(cancelled, presenter)).toEqual({ error: "access_denied" });
 
     // The pending lifetime still bounds it.
     const lapsed = open(store);
@@ -277,5 +282,142 @@ describe("deferred approval policy completion (@spec deferred-approval#policy-co
     expect(() => store.approveDirect(code, { approver: DANA, subject: SUBJECT })).toThrow(MissionApprovalDeferralError);
     expect(kernel.allMissions()).toHaveLength(0);
     expect(store.poll(code, presenter)).toEqual({ error: "access_denied" });
+  });
+});
+
+describe("deferred approval store bounds and cancellation (@spec deferred-approval#queue-pressure, deferred-approval#state-machine)", () => {
+  it("refuses a client's further submissions at its pending bound until the queue drains, other clients unaffected", () => {
+    const { store } = setup(undefined, { maxPendingPerClient: 2 });
+    const first = open(store);
+    open(store);
+    expect(() => open(store)).toThrow(expect.objectContaining({ code: "queue_full" }));
+    // Another client has its own bound.
+    expect(open(store, { clientId: "svc-other" })).toMatch(/^mdfr_/);
+    // A cancellation drains one place; a lapsed approval no longer counts.
+    expect(store.cancel(first, "svc-agent")).toBe(true);
+    const third = open(store);
+    expect(() => open(store)).toThrow(expect.objectContaining({ code: "queue_full" }));
+    clockMs += 601_000;
+    expect(open(store)).toMatch(/^mdfr_/);
+    expect(store.state(third)).toBe("expired");
+  });
+
+  it("treats a cancellation after approval but before delivery as redeemed and then cancelled", async () => {
+    const { kernel, store } = setup();
+    const code = open(store);
+    const done = await store.completeByPolicy(code);
+    if (done.outcome !== "approved") throw new Error(done.outcome);
+    expect(store.cancel(code, "svc-other")).toBe(false);
+    expect(store.cancel(code, "svc-agent")).toBe(true);
+    expect(store.poll(code, presenter)).toEqual({ error: "access_denied" });
+    expect(store.poll(code, presenter)).toEqual({ error: "access_denied" });
+    // The Mission exists, but nothing was delivered for it.
+    expect(kernel.get(done.mission.id)?.grant_id).toBeNull();
+
+    // After delivery, a cancellation changes nothing.
+    const delivered = open(store);
+    await store.completeByPolicy(delivered);
+    const claim = store.poll(delivered, presenter);
+    if (!("delivery" in claim)) throw new Error("no claim");
+    expect(store.confirmDelivery(delivered, claim.delivery)).toBe("confirmed");
+    expect(store.cancel(delivered, "svc-agent")).toBe(false);
+    expect(store.poll(delivered, presenter)).toEqual({ error: "invalid_grant" });
+
+    // A cancellation while a delivery is in flight: the claim cannot
+    // confirm, so the credential is never sent.
+    const racing = open(store);
+    await store.completeByPolicy(racing);
+    const inFlight = store.poll(racing, presenter);
+    if (!("delivery" in inFlight)) throw new Error("no claim");
+    expect(store.cancel(racing, "svc-agent")).toBe(true);
+    expect(store.confirmDelivery(racing, inFlight.delivery)).toBe("cancelled");
+    expect(store.poll(racing, presenter)).toEqual({ error: "access_denied" });
+  });
+
+  it("refuses a human direct approval of evidence-bearing submissions without verified facts, and records the facts it is given", async () => {
+    const { kernel, store } = setup();
+    const evidence = [{ type: "urn:test:unregistered-evidence", assertion: "artifact" }];
+    // Policy completion verifies the presented evidence again; a type this
+    // issuer does not support refuses, with no Mission.
+    const byPolicy = open(store, { evidence });
+    expect(await store.completeByPolicy(byPolicy)).toMatchObject({
+      outcome: "not_authorized",
+      reason: "invalid_mission_intent_evidence",
+    });
+    expect(kernel.allMissions()).toHaveLength(0);
+    // The human path takes the facts its review surface verified, and is
+    // refused without them.
+    const byHuman = open(store, { evidence });
+    expect(() => store.approveDirect(byHuman, { approver: DANA, subject: SUBJECT })).toThrow(
+      expect.objectContaining({ code: "evidence_unverified" }),
+    );
+    expect(kernel.allMissions()).toHaveLength(0);
+    const facts = [{ type: "urn:test:unregistered-evidence", artifact_hash: "sha-256:x", verified_at: now().toISOString(), facts: { ok: true } }];
+    const mission = store.approveDirect(byHuman, { approver: DANA, subject: SUBJECT, submissionEvidence: facts });
+    expect(mission.submission_evidence).toEqual(facts);
+    expect(kernel.get(mission.id)?.submission_evidence).toEqual(facts);
+  });
+
+  it("redeems an approval only when its delivery confirms: a failed delivery stays deliverable, and one claim delivers at a time", async () => {
+    const { kernel, store } = setup();
+    const code = open(store);
+    const done = await store.completeByPolicy(code);
+    if (done.outcome !== "approved") throw new Error(done.outcome);
+    // A delivery that fails before the response releases its claim.
+    const failed = store.poll(code, presenter);
+    if (!("delivery" in failed)) throw new Error("no claim");
+    // While it is claimed, another poll is told the request is still pending.
+    expect(store.poll(code, presenter)).toMatchObject({ error: "authorization_pending" });
+    store.releaseDelivery(code, failed.delivery);
+    const retried = store.poll(code, presenter);
+    expect(retried).toMatchObject({ mission: kernel.get(done.mission.id) });
+    if (!("delivery" in retried)) throw new Error("no claim");
+    // The released claim cannot settle anything; the live one delivers once.
+    expect(store.confirmDelivery(code, failed.delivery)).toBe("superseded");
+    expect(store.confirmDelivery(code, retried.delivery)).toBe("confirmed");
+    expect(store.confirmDelivery(code, retried.delivery)).toBe("superseded");
+    expect(store.poll(code, presenter)).toEqual({ error: "invalid_grant" });
+
+    // A claim that lapses (its delivery crashed) can be taken again, and only
+    // one of the two claims ever confirms.
+    const stale = open(store);
+    await store.completeByPolicy(stale);
+    const first = store.poll(stale, presenter);
+    if (!("delivery" in first)) throw new Error("no claim");
+    clockMs += (DELIVERY_CLAIM_STALE_S + 1) * 1000;
+    const second = store.poll(stale, presenter);
+    if (!("delivery" in second)) throw new Error("no second claim");
+    expect(store.confirmDelivery(stale, first.delivery)).toBe("superseded");
+    expect(store.confirmDelivery(stale, second.delivery)).toBe("confirmed");
+  });
+
+  it("runs policy completion from the bound presenter's poll only, at most once per interval, and once per evaluation", async () => {
+    const advisor = vi.fn(async (_r: ModelAdvisorRequest) => []);
+    const refusing = setup({ "urn:root:reconciler": rootDoc({ rules: { max_entries: 3, require_purpose: true } }) }, { modelAdvisor: advisor });
+    const code = open(refusing.store);
+    // Another client or key: invalid_grant, and no evaluation runs.
+    expect(await refusing.store.pollAndComplete(code, { ...presenter, clientId: "svc-other" })).toEqual({ error: "invalid_grant" });
+    expect(await refusing.store.pollAndComplete(code, { ...presenter, jkt: "another-key" })).toEqual({ error: "invalid_grant" });
+    expect(advisor).not.toHaveBeenCalled();
+    expect(refusing.store.resolutionReason(code)).toBeUndefined();
+    // The bound presenter's poll evaluates; a refusal is recorded and never re-evaluated.
+    expect(await refusing.store.pollAndComplete(code, presenter)).toMatchObject({ error: "authorization_pending" });
+    expect(refusing.store.resolutionReason(code)).toBe("purpose_required");
+    expect(advisor).toHaveBeenCalledTimes(1);
+    // Too soon: slow_down, with no evaluation.
+    expect(await refusing.store.pollAndComplete(code, presenter)).toMatchObject({ error: "slow_down" });
+    clockMs += 6_000;
+    expect(await refusing.store.pollAndComplete(code, presenter)).toMatchObject({ error: "authorization_pending" });
+    expect(advisor).toHaveBeenCalledTimes(1);
+    expect(refusing.kernel.allMissions()).toHaveLength(0);
+
+    // An approving evaluation delivers on the same poll.
+    const { kernel, store } = setup();
+    const approving = open(store);
+    const r = await store.pollAndComplete(approving, presenter);
+    expect(r).toEqual({ mission: kernel.allMissions()[0], delivery: expect.stringMatching(/^dlv_/) });
+    if (!("delivery" in r)) throw new Error("no claim");
+    expect(store.confirmDelivery(approving, r.delivery)).toBe("confirmed");
+    expect(await store.pollAndComplete(approving, presenter)).toEqual({ error: "invalid_grant" });
   });
 });
