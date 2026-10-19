@@ -60,8 +60,9 @@ export interface AsNativeLaunch {
   summary: string[];
   /**
    * Stop the outcome reconciler, close every listener the target opened (the
-   * resource endpoint, the AS, the txn-challenge discovery listener and, in
-   * remote mode, the PDP hop) and release both single-writer store files.
+   * resource endpoint, the AS, the txn-challenge discovery listener, the
+   * upstream Approver login provider and, in remote mode, the PDP hop) and
+   * release both single-writer store files.
    * Resolves once every port is free. Idempotent.
    */
   close: () => Promise<void>;
@@ -123,6 +124,8 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
       `  resource audience  ${resourceChannel.url}  (HTTP MCP, DPoP verified on every request)`,
       `  PDP mode           ${stack.pdpMode}`,
       `  MAS join route     ${stack.masGovernedChannel ? "mounted" : "not mounted"}`,
+      // @spec mission#approval-authentication (#1320, D496)
+      `  approver login     ${authServer.approverProvider?.issuer ?? "none"}  (upstream OpenID Provider: password, then a one-time code for mfa)`,
       `  reconciliation     every ${stack.reconciler.intervalMs / 1000} s (window ${stack.reconciler.windowMs / 1000} s), operator alerts on stderr`,
       "  ready. Ctrl-C to stop.",
     ],
