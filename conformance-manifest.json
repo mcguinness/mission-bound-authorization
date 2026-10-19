@@ -2281,9 +2281,33 @@
      "name": "control-plane lifecycle expiry under a refused operation > commits the expiry it discovered even when the operation it was asked for is refused",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-durability.test.ts",
+     "name": "continuation and delegation-family projections in the committing transaction (#250) > roots an activated Mission in its activating commit: a refused root refuses the Mission with it",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-durability.test.ts",
+     "name": "continuation and delegation-family projections in the committing transaction (#250) > terminates every lineage in the terminal commit, so a failed publication still leaves none live; a suspension terminates nothing",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-durability.test.ts",
+     "name": "continuation and delegation-family projections in the committing transaction (#250) > roots nothing when an activation whose publication failed is replayed after the Mission terminated",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-durability.test.ts",
+     "name": "continuation and delegation-family projections across a restart (#250) > keeps anchors, handles and families across a restart, roots nothing again at boot, and keeps a terminated lineage terminal",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. The counter now carries a durable operation and artifact identity: the increment and its reservation commit together, a recorded operation identity replays its artifact instead of counting again, an unreleased reservation is never refunded because a missing local acknowledgement is not evidence that no artifact was accepted, and only an authoritative non-acceptance returns a count. A refunded operation identity is terminal and refuses a retry, so nothing issues against a count that was returned; and a pending reservation is exclusive on this instance, so two overlapping callers under one operation identity receive one artifact rather than two against one count. The lifecycle nonce claim and its committed outcome now commit with the transition, with the exact response finalized and recovered outside that transaction, and finalization is guarded on the request digest the claim was made under so a divergent retry can neither overwrite a committed success nor be retained in its place. The expiry clock commits in its own transaction ahead of the requested transition, so refusing that transition never rolls back the expiry it discovered or the expiry's publication. That claim store's additive schema migration is exercised on a file-backed database carrying the pre-migration shape: every retained outcome keeps its replay identity, and a reopen is a no-op. This does not reach tested in this slice: the artifact itself is still issued outside the kernel transaction (the provider access-token hook is synchronous and has no acceptance boundary), so authoritative issuance state and artifact material are not recorded transactionally before delivery. No multi-process claim."
+   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. The counter now carries a durable operation and artifact identity: the increment and its reservation commit together, a recorded operation identity replays its artifact instead of counting again, an unreleased reservation is never refunded because a missing local acknowledgement is not evidence that no artifact was accepted, and only an authoritative non-acceptance returns a count. A refunded operation identity is terminal and refuses a retry, so nothing issues against a count that was returned; and a pending reservation is exclusive on this instance, so two overlapping callers under one operation identity receive one artifact rather than two against one count. The lifecycle nonce claim and its committed outcome now commit with the transition, with the exact response finalized and recovered outside that transaction, and finalization is guarded on the request digest the claim was made under so a divergent retry can neither overwrite a committed success nor be retained in its place. The expiry clock commits in its own transaction ahead of the requested transition, so refusing that transition never rolls back the expiry it discovered or the expiry's publication. That claim store's additive schema migration is exercised on a file-backed database carrying the pre-migration shape: every retained outcome keeps its replay identity, and a reopen is a no-op. The continuation anchors and handles and the delegation families are kernel tables written in the committing transaction: the activating commit roots a Mission's lineage with its record, the terminal commit terminates its lineages beside the tombstone, an activation replayed after the Mission terminated roots nothing, and on the file-backed kernel they survive a restart (#250). This does not reach tested in this slice: the artifact itself is still issued outside the kernel transaction (the provider access-token hook is synchronous and has no acceptance boundary), so authoritative issuance state and artifact material are not recorded transactionally before delivery. No multi-process claim."
   },
   {
    "id": "control-plane.consistency.fresh-observation",
