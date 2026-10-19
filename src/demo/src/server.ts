@@ -462,8 +462,8 @@ async function main() {
   // console-bff method returns; the console-bff itself is untouched.
   app.get("/bff/approver/queue", (c) => c.json(enrichedQueue()));
   // @spec mission#approval-authentication (#826, D425) — the approver logs in
-  // again: a new recorded login for the console (simulated; the demo has no
-  // Approver identity provider). Adjudication never logs in, so a high-risk
+  // again: a new recorded login for the console (simulated; the shared demo
+  // has no Approver identity provider). Adjudication never logs in, so a high-risk
   // approval more than the floor's age bound after the last login refuses
   // until this is called.
   app.post("/bff/approver/login", (c) => {

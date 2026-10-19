@@ -7,6 +7,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
+import { APPROVER_LOGIN_CALLBACK_PATH, ApproverLoginError, type ApproverLoginRelyingParty } from "./approver-login.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   DERIVATION_POLICY,
@@ -570,6 +571,12 @@ export interface AdapterOptions {
   /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;
+  /**
+   * @spec mission#approval-authentication (#1320, D496): the approval
+   * surface's login as an OpenID Connect relying party to an upstream
+   * provider. Its validated ID Token records the login in `approvalSessions`.
+   */
+  approverLogin?: ApproverLoginRelyingParty;
   approverApprovesFor: Map<string, Set<string>>;
   knownSubjects: Set<string>;
   /**
@@ -3228,6 +3235,51 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             }
           : undefined,
       );
+      return;
+    }
+    // @spec mission#approval-authentication (#1320, D496): the Approver's
+    // login for one approval interaction, through the upstream provider. The
+    // Approver's user agent starts it, naming the Subject it selects for an
+    // approval on another principal's behalf; the selection takes effect only
+    // with the login the provider authenticates, and `decide()` still checks
+    // that this Approver approves for that Subject.
+    const loginStartMatch = ctx.path.match(/^\/interaction\/([^/]+)\/approver-login$/);
+    if (loginStartMatch && ctx.method === "GET" && opts.approverLogin && opts.approvalSessions) {
+      const uid = loginStartMatch[1] as string;
+      const subject = ctx.query.subject;
+      if (!(await provider.Interaction.find(uid)) || (subject !== undefined && (typeof subject !== "string" || subject.length === 0))) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: "no approval interaction to log in for" };
+        return;
+      }
+      const started = await opts.approverLogin.start(uid, subject);
+      ctx.res.setHeader("set-cookie", started.cookie);
+      ctx.set("cache-control", "no-store");
+      ctx.set("location", started.location);
+      ctx.status = 303;
+      ctx.body = "";
+      return;
+    }
+    // The provider's authorization response. A refused login records nothing,
+    // so the interaction stays pending and no decision can rest on it.
+    if (ctx.path === APPROVER_LOGIN_CALLBACK_PATH && ctx.method === "GET" && opts.approverLogin && opts.approvalSessions) {
+      let completed: Awaited<ReturnType<ApproverLoginRelyingParty["complete"]>>;
+      try {
+        completed = await opts.approverLogin.complete(ctx.query, ctx.get("cookie"));
+      } catch (e) {
+        if (!(e instanceof ApproverLoginError)) throw e;
+        ctx.status = 401;
+        ctx.set("cache-control", "no-store");
+        ctx.body = { error: "access_denied", error_description: e.message };
+        return;
+      }
+      const { uid, principal } = completed;
+      const session = opts.approvalSessions.establish(uid, principal);
+      ctx.res.setHeader("set-cookie", `${session.cookie}; Path=/interaction/${uid}; HttpOnly; SameSite=Lax`);
+      ctx.set("cache-control", "no-store");
+      ctx.set("content-type", "text/html; charset=utf-8");
+      ctx.status = 200;
+      ctx.body = `<!doctype html><html><head><meta charset="utf-8"><meta name="mission-approval-csrf" content="${session.csrf}"><title>Signed in</title></head><body><p>Signed in. <a href="/interaction/${encodeURIComponent(uid)}">Continue to the approval</a>.</p></body></html>`;
       return;
     }
     const decideMatch = ctx.path.match(/^\/interaction\/([^/]+)\/decide$/);

@@ -37,6 +37,16 @@ import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
+import { ApproverLoginRelyingParty, type ApproverLoginOptions } from "./adapters/approver-login.js";
+export {
+  APPROVER_LOGIN_CALLBACK_PATH,
+  APPROVER_LOGIN_COOKIE,
+  ApproverLoginError,
+  loginCookieName,
+  ApproverLoginRelyingParty,
+  type ApproverIdentityMapping,
+  type ApproverLoginOptions,
+} from "./adapters/approver-login.js";
 import type { DpopProofReplay } from "./adapters/dpop-replay.js";
 import {
   buildProvider,
@@ -851,6 +861,14 @@ export async function buildAuthorizationServer(opts: {
   /** Independent approver login integration; OAuth interaction cookies never establish this login. */
   approvalSessions?: ApprovalSessionStore;
   /**
+   * @spec mission#approval-authentication (#1320, D496): the approval
+   * surface logs its Approver in as an OpenID Connect relying party to this
+   * upstream provider, recording each validated login in `approvalSessions`
+   * (required with it). Absent: no login route is served, and only the
+   * trusted in-process integration records a login.
+   */
+  approverLogin?: ApproverLoginOptions;
+  /**
    * @spec mission#approval-authentication (#826, D425) — override the
    * published approval-authentication floor. Defaults to the config-shipped
    * {@link APPROVAL_FLOOR}.
@@ -1491,6 +1509,9 @@ export async function buildAuthorizationServer(opts: {
     throw new Error("continuationHopLimit must be a finite positive integer (ICA -02 6.3)");
   }
 
+  if (opts.approverLogin && !opts.approvalSessions) {
+    throw new Error("the approver login records its logins in approvalSessions, which is not configured");
+  }
   const provider = buildProvider({
     issuer: opts.issuer,
     kernel,
@@ -1504,6 +1525,7 @@ export async function buildAuthorizationServer(opts: {
     publicJwks,
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),
+    ...(opts.approverLogin ? { approverLogin: new ApproverLoginRelyingParty(opts.approverLogin, opts.issuer) } : {}),
     approverApprovesFor: new Map(USERS.map(u => [u.sub, new Set(u.approves_for)])),
     knownSubjects: new Set([...USERS.map(u => u.sub), ...AUTHORITY_SOURCES.entries.flatMap(e => e.principals ?? [])]),
     ...(opts.requiredIntentEvidenceTypes
