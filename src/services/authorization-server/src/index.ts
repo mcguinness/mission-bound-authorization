@@ -47,6 +47,8 @@ import { ContinuationStore, DEFAULT_CONTINUATION_HOP_LIMIT } from "./kernel/cont
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
 import { TokenIssuanceStore } from "./kernel/token-issuance-store.js";
 import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
+import type { GovernedPolicyApprovalConfig } from "./kernel/governed-policy-approval.js";
+import { type ModelAdvisor, MissionApprovalDeferralStore } from "./kernel/mission-approval-deferral.js";
 import {
   CreationIdempotencyStore,
   DEFAULT_CREATION_TOMBSTONE_TTL_S,
@@ -497,6 +499,9 @@ export {
   withdrawGovernedPolicyConsent,
 } from "./kernel/governed-policy-approval.js";
 export {
+  DEFAULT_MAX_PENDING_PER_CLIENT,
+  DELIVERY_CLAIM_STALE_S,
+  type DeliveryConfirmation,
   type MissionApprovalDeferralOptions,
   MissionApprovalDeferralError,
   MissionApprovalDeferralStore,
@@ -506,6 +511,12 @@ export {
   type ModelAdvisorRequest,
   type PolicyCompletionResult,
 } from "./kernel/mission-approval-deferral.js";
+export {
+  DEFERRAL_CODE_TOKEN_TYPE,
+  DEFERRED_CODE_TTL_S,
+  MISSION_APPROVAL_DEFERRAL_PREFIX,
+  QUEUE_FULL_RETRY_AFTER_S,
+} from "./adapters/deferred-mission-approval.js";
 export {
   createTemplate,
   dispatchFromTemplate,
@@ -655,6 +666,13 @@ export interface BuiltAs {
    * (drive open/approve/deny headlessly, mirroring `deferrals`).
    */
   expansionDeferrals: ExpansionDeferralStore;
+  /**
+   * @spec deferred-approval#deferred-approval: the Deferred Mission Approval
+   * store, present exactly where the `deferred-approval` capability is on.
+   * Exposed so a test can drive the issuer side (a policy completion, a
+   * denial) and observe pending approvals.
+   */
+  missionApprovalDeferrals?: MissionApprovalDeferralStore;
   /**
    * @spec expansion#creation-request-id — the creation-idempotency store
    * (observe recorded operations; perturb delivery artifacts in tests).
@@ -976,6 +994,30 @@ export async function buildAuthorizationServer(opts: {
    * Absent (the default), no drawdown is adjudicated by policy.
    */
   progressive?: ProgressiveDrawdownOptions;
+  /**
+   * @spec approval-governance#governed-policy: the `governed_policy`
+   * standing-consent basis: the consented roots this issuer holds and the
+   * humans authorized to approve each. Trusted deployment configuration.
+   * Absent (the default), no consent is recorded and nothing activates under
+   * that basis.
+   */
+  governedPolicyApproval?: GovernedPolicyApprovalConfig;
+  /**
+   * @spec deferred-approval#pending-staleness, deferred-approval#queue-pressure,
+   * deferred-approval#policy-completion: Deferred Mission Approval's settings,
+   * read where the `deferred-approval` capability is on: the pending lifetime
+   * (seconds), the per-client queue bound, the model hook a governed policy
+   * consults, and what a policy evaluation that does not authorize
+   * activation leaves. This assembly serves no review surface for a human
+   * `direct` approval, so that outcome defaults to `deny`; `await_human`
+   * leaves the approval pending until its lifetime ends.
+   */
+  deferredApproval?: {
+    pendingLifetimeS?: number;
+    maxPendingPerClient?: number;
+    onPolicyRefusal?: "await_human" | "deny";
+    modelAdvisor?: ModelAdvisor;
+  };
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
@@ -1159,6 +1201,7 @@ export async function buildAuthorizationServer(opts: {
     // actor-type registry, config-shipped and optionally extended by the caller.
     actorProfiles: { ...ACTOR_PROFILES, ...(opts.actorProfiles ?? {}) },
     ...(opts.activationPolicies ? { activationPolicies: opts.activationPolicies } : {}),
+    ...(opts.governedPolicyApproval ? { governedPolicyApproval: opts.governedPolicyApproval } : {}),
     // @spec mission#authority-sources, mission#approval-event — the deployment's
     // TRUSTED authority-source catalog (config/authority-sources.json plus the
     // governed policies it references). The approval event establishes
@@ -1273,6 +1316,47 @@ export async function buildAuthorizationServer(opts: {
   // the kernel database (instances over the same kernel share the table; this
   // one is exposed for tests/exhibit to observe or perturb recorded operations).
   const creationIdempotency = new CreationIdempotencyStore(kernel);
+  // @spec deferred-approval#deferred-approval: the Deferred Mission Approval
+  // store, on the kernel database, only where the opt-in capability is on.
+  // The client registrations this assembly serves (the provider's, below).
+  const clientRegistrations: Record<string, unknown>[] = [
+    agent.metadata,
+    // The child actor is also the demo templates' selected Agent, which
+    // redeems a Dispatch Handoff (@spec mission-template#dispatch-handoff),
+    // and the shipped same-Mission delegate (@spec mission#delegation, #869).
+    ...(capabilityEnabled(opts, "child-delegation") ||
+    capabilityEnabled(opts, "templates") ||
+    capabilityEnabled(opts, "delegation")
+      ? [child.metadata]
+      : []),
+    governed.metadata,
+    ledgerReconciler.metadata,
+    ...(opts.testClients ?? []),
+    ...lifecycleClientMetadata,
+  ];
+  // @spec mission#intent-submission-evidence: the deployment-global required
+  // evidence types, unioned with the client's registered ones, as the
+  // synchronous decision applies them (requiredEvidenceTypesFor).
+  const requiredEvidenceTypes = (clientId: string): string[] => {
+    const required = new Set(opts.requiredIntentEvidenceTypes ?? []);
+    const registration = clientRegistrations.find((c) => c.client_id === clientId);
+    const perClient = registration?.required_intent_evidence_types;
+    if (Array.isArray(perClient)) for (const t of perClient) if (typeof t === "string") required.add(t);
+    return [...required];
+  };
+  const missionApprovalDeferrals = capabilityEnabled(opts, "deferred-approval")
+    ? new MissionApprovalDeferralStore(kernel, {
+        requiredEvidenceTypes,
+        onPolicyRefusal: opts.deferredApproval?.onPolicyRefusal ?? "deny",
+        ...(opts.deferredApproval?.pendingLifetimeS !== undefined
+          ? { pendingLifetimeS: opts.deferredApproval.pendingLifetimeS }
+          : {}),
+        ...(opts.deferredApproval?.maxPendingPerClient !== undefined
+          ? { maxPendingPerClient: opts.deferredApproval.maxPendingPerClient }
+          : {}),
+        ...(opts.deferredApproval?.modelAdvisor ? { modelAdvisor: opts.deferredApproval.modelAdvisor } : {}),
+      })
+    : undefined;
 
   // @spec id-continuation-assertion — continuation-grant defaults. The AS is its
   // OWN Continuation Assertion Issuer in the demo, trusted only under its
@@ -1300,23 +1384,10 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     deferrals,
     expansionDeferrals,
+    ...(missionApprovalDeferrals ? { missionApprovalDeferrals } : {}),
     creationIdempotency,
     statusListPublisher,
-    clients: [
-      agent.metadata,
-      // The child actor is also the demo templates' selected Agent, which
-      // redeems a Dispatch Handoff (@spec mission-template#dispatch-handoff),
-      // and the shipped same-Mission delegate (@spec mission#delegation, #869).
-      ...(capabilityEnabled(opts, "child-delegation") ||
-      capabilityEnabled(opts, "templates") ||
-      capabilityEnabled(opts, "delegation")
-        ? [child.metadata]
-        : []),
-      governed.metadata,
-      ledgerReconciler.metadata,
-      ...(opts.testClients ?? []),
-      ...lifecycleClientMetadata,
-    ],
+    clients: clientRegistrations,
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
@@ -1435,6 +1506,7 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     deferrals,
     expansionDeferrals,
+    ...(missionApprovalDeferrals ? { missionApprovalDeferrals } : {}),
     creationIdempotency,
     issuer: opts.issuer,
     agentClientJwk: agent.privateJwk,
