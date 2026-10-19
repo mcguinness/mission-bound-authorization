@@ -308,6 +308,43 @@ describe("PDP enforces data_classification against the resource's label (@spec r
   });
 });
 
+describe("PDP enforces allowed_tools against the dispatched tool (@spec resource-access#initial-common-constraints)", () => {
+  const TOOLS = { allowed_tools: ["get_invoice"] };
+  const via = async (tool: unknown, v: MissionView, credential?: unknown[]) => {
+    const base = request({}, credential);
+    const req = {
+      ...base,
+      action: { name: ACTION, ...(tool === undefined ? {} : { properties: { tool } }) },
+    } as EvaluationRequest;
+    const d = await evaluate(req, opts(v));
+    return { permit: d.decision, reason: d.context.denial_reason };
+  };
+
+  it("permits a named tool and refuses another, compared as exact strings", async () => {
+    expect((await via("get_invoice", view(TOOLS))).permit).toBe(true);
+    for (const other of ["list_invoices", "Get_Invoice"]) {
+      expect(await via(other, view(TOOLS)), other).toMatchObject({ permit: false, reason: "parameter_violation" });
+    }
+  });
+
+  it("refuses when the PEP established no tool identity, and under an empty bound", async () => {
+    expect(await via(undefined, view(TOOLS))).toMatchObject({ permit: false, reason: "parameter_violation" });
+    expect(await via("get_invoice", view({ allowed_tools: [] }))).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+  });
+
+  it("a credential bound to tools is enforced at its own tools under an unbounded Mission", async () => {
+    const credential = [{ type: "mission_resource_access", resource: RESOURCE, actions: [ACTION], constraints: TOOLS }];
+    expect((await via("get_invoice", view(), credential)).permit).toBe(true);
+    expect(await via("list_invoices", view(), credential)).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+  });
+});
+
 describe("PDP fails closed on a Mission entry constraint it does not evaluate (@spec resource-access#rs-enforcement)", () => {
   it("refuses an entry carrying an unrecognized constraints key rather than ignoring it", async () => {
     expect(await decide(view({ x_region: "eu" }), { issued_at: "2026-08-15T00:00:00Z" })).toMatchObject({

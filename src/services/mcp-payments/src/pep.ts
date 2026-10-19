@@ -1557,6 +1557,7 @@ export class Pep {
         // at the window's end (PERMIT_USE_CHECKS).
         now: this.now().getTime(),
         ...(recipients ? { recipients } : {}),
+        tool,
       },
     };
     if (token.mission !== undefined) {
@@ -1607,9 +1608,12 @@ export class Pep {
       // mints one nor repairs one.
       action: {
         name: mapping.action,
-        ...((mapping.idempotencyKey && typeof args.idempotency_key === "string") || recipients
-          ? {
+        ...({
               properties: {
+                // @spec resource-access#initial-common-constraints (#1266): the
+                // tool this PEP dispatched the operation to, from its
+                // Operation Profile, never an argument.
+                tool,
                 ...(mapping.idempotencyKey && typeof args.idempotency_key === "string"
                   ? { idempotency_key: args.idempotency_key }
                   : {}),
@@ -1617,8 +1621,7 @@ export class Pep {
                 // resolved recipients, from this resource's records only.
                 ...(recipients ? { recipients } : {}),
               },
-            }
-          : {}),
+            }),
       },
       context: {
         mission: {

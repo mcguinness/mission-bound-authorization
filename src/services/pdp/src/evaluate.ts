@@ -205,6 +205,13 @@ export interface EvaluationRequest {
        * empty list satisfies no such bound.
        */
       recipients?: string[];
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the tool
+       * the PEP dispatched this operation to, from its trusted operation
+       * contract, never a name the caller supplies. The `allowed_tools` bound
+       * reads it; an absent identity satisfies no such bound.
+       */
+      tool?: string;
     };
   };
   context: {
@@ -1342,6 +1349,7 @@ async function evaluateInner(
     ...(typeof req.resource.properties?.data_classification === "string"
       ? { dataClassification: [req.resource.properties.data_classification] }
       : {}),
+    ...(typeof req.action.properties?.tool === "string" ? { tool: req.action.properties.tool } : {}),
     // `time_window` reads this PDP's own clock at the decision, never a
     // request member; the permit's `valid_until` carries the window's end to
     // every later use (step 8a's ceiling).

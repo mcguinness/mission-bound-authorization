@@ -39,13 +39,14 @@ export interface AuthorizationDetailsTypeMetadata {
  * machine-readable form). `constraints` covers the Common Constraints
  * structure (@spec mission#common-constraints), its member set CLOSED
  * (`additionalProperties: false`) to exactly {@link SUPPORTED_CONSTRAINT_KEYS}
- * (issue #784): `max_amount`, `requires_action_approval` and `terminal_when`
- * are the Common Constraints this derivation engine narrows (see derive.ts),
- * and `vendors` is a deployment-defined key this engine also narrows though
- * the common registry does not carry it. A `constraints` member outside that
- * set is refused here rather than admitted and then silently dropped by
- * derivation's fixed four-key rebuild: this schema describes exactly what the
- * engine supports, not a superset of registered-but-unimplemented keys.
+ * (issue #784): every initial Mission Resource Access Common Constraint
+ * (`max_amount`, `requires_action_approval`, and the seven of #1266, whose
+ * shared semantics are in `@mission/core`'s common-constraints.ts),
+ * `terminal_when`, and `vendors`, a deployment-defined key this engine also
+ * narrows though the common registry does not carry it. A `constraints`
+ * member outside that set (a Common Constraint registered later, or any other
+ * key) is refused here rather than admitted and then silently dropped by
+ * derivation: this schema describes exactly what the engine supports.
  * draft-zehavi §5: the schema "MUST restrict the `type` attribute" — done via
  * `const` below.
  */
@@ -106,6 +107,8 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
         recipient_domain: { type: "string", format: "hostname" },
         // Exact-string labels; an empty list admits no data.
         data_classification: { type: "array", items: { type: "string", minLength: 1 } },
+        // Exact-string tool identities; an empty list admits no tool.
+        allowed_tools: { type: "array", items: { type: "string", minLength: 1 } },
       },
       // @spec mission#derivation-policy (issue #784) — CLOSED to
       // SUPPORTED_CONSTRAINT_KEYS: an unsupported key is refused at intake,

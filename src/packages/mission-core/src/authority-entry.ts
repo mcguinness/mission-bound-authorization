@@ -141,6 +141,11 @@ export interface AuthorityEntry {
      * only to data whose classification label is among these (exact strings).
      */
     data_classification?: string[];
+    /**
+     * @spec resource-access#initial-common-constraints — the action may be
+     * exercised only through one of these tool identities (exact strings).
+     */
+    allowed_tools?: string[];
   };
   /**
    * @spec attenuation#delegation, child-delegation#fanout — per-entry delegation

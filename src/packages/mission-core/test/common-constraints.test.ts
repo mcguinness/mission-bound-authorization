@@ -672,3 +672,68 @@ describe("data_classification (@spec resource-access#initial-common-constraints)
     );
   });
 });
+
+describe("allowed_tools (@spec resource-access#initial-common-constraints)", () => {
+  const at = (v: unknown) => ({ allowed_tools: v });
+
+  it("subset: the candidate's tools are all among the reference's, as exact strings", () => {
+    expect(
+      commonConstraintsNoBroader(at(["query_invoices"]), at(["query_invoices", "post_adjustment"])),
+    ).toBe(true);
+    expect(commonConstraintsNoBroader(at([]), at(["query_invoices"]))).toBe(true);
+    expect(commonConstraintsNoBroader(at(["delete_invoice"]), at(["query_invoices"]))).toBe(false);
+    expect(commonConstraintsNoBroader(at(["Query_Invoices"]), at(["query_invoices"]))).toBe(false);
+    expect(commonConstraintsNoBroader({}, at(["query_invoices"]))).toBe(false);
+  });
+
+  it("intersection: the common tools; none in common has no intersection", () => {
+    expect(intersectCommonConstraints(at(["a", "b"]), at(["b", "c"]))).toEqual({
+      ok: true,
+      values: at(["b"]),
+    });
+    expect(intersectCommonConstraints(at(["a"]), at(["c"])).ok).toBe(false);
+    expect(intersectCommonConstraints(at([]), at(["c"])).ok).toBe(false);
+  });
+
+  it("enforcement: the dispatched tool must be named; no tool, or an empty bound, refuses", () => {
+    const gate = (bound: string[], tool?: string) =>
+      commonConstraintGates(at(bound), tool === undefined ? {} : { tool }).satisfied;
+    expect(gate(["check_transfer", "get_invoice"], "check_transfer")).toBe(true);
+    expect(gate(["check_transfer"], "execute_wire_transfer")).toBe(false);
+    expect(gate(["check_transfer"], "Check_Transfer")).toBe(false);
+    expect(gate(["check_transfer"])).toBe(false);
+    expect(gate([], "check_transfer")).toBe(false);
+  });
+
+  it("value syntax: an array of non-empty strings; the validators and the credential reader agree", () => {
+    expect(SUPPORTED_CONSTRAINT_KEYS).toContain("allowed_tools");
+    for (const good of [["check_transfer"], []]) {
+      expect(isAuthorityEntry(entry(at(good))), JSON.stringify(good)).toBe(true);
+    }
+    for (const bad of ["check_transfer", [""], [7], null]) {
+      expect(isAuthorityEntry(entry(at(bad))), JSON.stringify(bad)).toBe(false);
+      expect(() => parseCredentialAuthority([entry(at(bad))]), JSON.stringify(bad)).toThrow(
+        CredentialAuthorityError,
+      );
+    }
+    expect(parseCredentialAuthority([entry(at(["check_transfer"]))])[0]?.constraints).toEqual(
+      at(["check_transfer"]),
+    );
+  });
+
+  it("every initial Common Constraint is implemented", () => {
+    for (const key of [
+      "max_amount",
+      "resource_issued_after",
+      "resource_issued_before",
+      "tenant",
+      "recipient_domain",
+      "time_window",
+      "data_classification",
+      "allowed_tools",
+      "requires_action_approval",
+    ]) {
+      expect(SUPPORTED_CONSTRAINT_KEYS, key).toContain(key);
+    }
+  });
+});

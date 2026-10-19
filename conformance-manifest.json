@@ -34012,7 +34012,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1266. Proved by mutation: dropping the issuance bounds or tenant from the metadata fails the test."
+   "notes": "#1266. Proved by mutation: dropping any one of the seven implemented Common Constraints from the metadata fails the test."
   },
   {
    "id": "resource-access.rs-enforcement.no-disclosure-only-constraint",
@@ -34066,13 +34066,25 @@
      "surface": "derivation"
     },
     {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "time_window at the endpoints (@spec resource-access#initial-common-constraints) > a proposal narrowing the window derives the overlap, and refresh and introspection carry it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "allowed_tools at the endpoints (@spec resource-access#initial-common-constraints) > a proposal naming some of the ceiling's tools derives the common tools, and refresh and introspection carry them",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
      "file": "src/packages/mission-core/test/common-constraints.test.ts",
      "name": "resource_issued_after and resource_issued_before: intersection rule (@spec resource-access#initial-common-constraints) > is no broader than either operand",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "#1266. Witnessed at the approval decision for the implemented Common Constraints (common-constraints.ts) and at helper level; partial until every Common Constraint's intersection is witnessed."
+   "notes": "#1266. Each of the seven Common Constraints #1266 implements has an endpoint intersection witness (the per-key intersection rows); max_amount and requires_action_approval are witnessed at helper level only (cases der-02, der-08), so the row stays partial."
   },
   {
    "id": "resource-access.common-constraints.max-amount-currency-no-intersection",
@@ -34704,6 +34716,125 @@
     }
    ],
    "notes": "#1266 slice 5. The quoted clause is shared with allowed_tools; this row is witnessed for data_classification. Proved by mutation: an intersection that keeps one side fails these tests."
+  },
+  {
+   "id": "resource-access.common-constraints.allowed-tools-enforced",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "a tool or function identity, asserted at the point of use by the resource server or a component that enforces on its behalf",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action exercised through a tool whose trusted identity is not among allowed_tools is refused; a tool identity the caller names cannot establish it",
+    "local": "the payments PEP carries the tool it dispatched from its Operation Profile as action.properties.tool; under allowed_tools [check_transfer] the preflight crossing of payments:payment.execute is permitted and its prepare and commit crossings are refused with no effect"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces allowed_tools against the tool it dispatches (@spec resource-access#initial-common-constraints) > permits the named crossing of a compound action, carrying the dispatched tool",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces allowed_tools against the tool it dispatches (@spec resource-access#initial-common-constraints) > refuses the other crossings of the same action, whose tools the bound does not name, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces allowed_tools against the tool it dispatches (@spec resource-access#initial-common-constraints) > a tool named in the arguments cannot establish the identity: it is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces allowed_tools against the tool it dispatches (@spec resource-access#initial-common-constraints) > a credential bound to tools is refused at the PEP, before any decision, for another tool",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1266 slice 6. Proved by mutation: letting any tool satisfy, the PDP or PEP dropping the dispatched tool, and the credential gate losing it each fail these tests."
+  },
+  {
+   "id": "resource-access.common-constraints.allowed-tools-subset",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "the candidate array's members are a subset of the reference array's, compared as exact strings",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derived allowed_tools naming a tool the reference lacks, or dropping the bound, is broader and is refused; fewer tools are issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "allowed_tools at the endpoints (@spec resource-access#initial-common-constraints) > a Token Exchange that adds a tool or drops the bound is refused; one naming fewer tools is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1266 slice 6. The quoted clause is shared with data_classification; this row is witnessed for allowed_tools. Cases cc-allowed_tools-* run through the reader. Proved by mutation: a subset rule admitting any tools fails the test."
+  },
+  {
+   "id": "resource-access.common-constraints.allowed-tools-intersection",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Intersection: the common members; an empty result has no intersection and the combination fails.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "derivation keeps the tools the proposal and the ceiling share and refuses a proposal sharing none",
+    "local": "refused invalid_authorization_details at the approval decision, creating no Mission; refresh and introspection carry the common tools"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "allowed_tools at the endpoints (@spec resource-access#initial-common-constraints) > a proposal naming some of the ceiling's tools derives the common tools, and refresh and introspection carry them",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "allowed_tools at the endpoints (@spec resource-access#initial-common-constraints) > a proposal sharing no tool with the ceiling is refused at the approval decision, creating no Mission",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1266 slice 6. The quoted clause is shared with data_classification; this row is witnessed for allowed_tools. Proved by mutation: an intersection that keeps one side fails these tests."
   },
   {
    "id": "resource-access.delegate-eligibility.as-authenticates-delegate",
@@ -35976,7 +36107,7 @@
     },
     {
      "file": "src/services/authorization-server/test/unsupported-constraint-keys.test.ts",
-     "name": "direct derivation (deriveAuthoritySet) refuses an unsupported constraint key with no config loader or PAR intake in the call path (#784, review on PR #803) > configured-mapping mode refuses a registered-but-unimplemented Common Constraint key on a directly-supplied ceiling entry",
+     "name": "direct derivation (deriveAuthoritySet) refuses an unsupported constraint key with no config loader or PAR intake in the call path (#784, review on PR #803) > configured-mapping mode refuses a Common Constraint registered after this implementation on a directly-supplied ceiling entry",
      "level": "unit",
      "surface": "derivation"
     }
@@ -36036,7 +36167,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 3 (D444, D446). The reference declares no transformation capabilities and implements two of the nine (#1266). Case pj-07 skipped."
+   "notes": "#1258 item 3 (D444, D446). The reference declares no transformation capabilities. It implements and witnesses all nine initial Common Constraints (#1266), but declaring narrowing is outside #1266, so no declaration exists for this row to check. Case pj-07 skipped."
   },
   {
    "id": "resource-access.transformation-capabilities.undeclared-per-carrier",

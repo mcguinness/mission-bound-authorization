@@ -568,6 +568,53 @@ describe("the payments resource enforces data_classification against its own lab
   });
 });
 
+describe("the payments resource enforces allowed_tools against the tool it dispatches (@spec resource-access#initial-common-constraints)", () => {
+  const PREFLIGHT_ONLY = { allowed_tools: ["check_transfer"] };
+
+  it("permits the named crossing of a compound action, carrying the dispatched tool", async () => {
+    const h = harness({ mission: PREFLIGHT_ONLY });
+    const res = await h.server.callReadTool("check_transfer", { invoice_id: "inv-q3" }, h.token);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect((h.lastAction()?.properties as Record<string, unknown>).tool).toBe("check_transfer");
+  });
+
+  it("refuses the other crossings of the same action, whose tools the bound does not name, with no effect", async () => {
+    const h = harness({ mission: PREFLIGHT_ONLY });
+    const hold = await h.server.callWriteTool("hold_transfer", { invoice_id: "inv-q3" }, h.token);
+    expect(hold.ok).toBe(false);
+    expect(hold.denial_reason).toBe("parameter_violation");
+    const commit = await h.server.callTransactionTool(
+      "execute_wire_transfer",
+      { invoice_id: "inv-q3", idempotency_key: `idem_${randomUUID()}` },
+      h.token,
+    );
+    expect(commit.ok).toBe(false);
+    expect(commit.denial_reason).toBe("parameter_violation");
+    expect(h.connectors.ledgerEntries(MISSION)).toHaveLength(0);
+  });
+
+  it("a tool named in the arguments cannot establish the identity: it is refused at intake", async () => {
+    const h = harness({ mission: PREFLIGHT_ONLY });
+    const res = await h.server.callTransactionTool(
+      "execute_wire_transfer",
+      { invoice_id: "inv-q3", idempotency_key: `idem_${randomUUID()}`, tool: "check_transfer" },
+      h.token,
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("invalid_request");
+    expect(h.decisions()).toBe(0);
+  });
+
+  it("a credential bound to tools is refused at the PEP, before any decision, for another tool", async () => {
+    const h = harness({ credential: PREFLIGHT_ONLY });
+    const res = await h.server.callWriteTool("hold_transfer", { invoice_id: "inv-q3" }, h.token);
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("out_of_authority");
+    expect(h.decisions()).toBe(0);
+    expect((await h.server.callReadTool("check_transfer", { invoice_id: "inv-q3" }, h.token)).ok).toBe(true);
+  });
+});
+
 describe("the payments resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement)", () => {
   it("refuses an operation whose matched Mission entry carries a constraints key the resource does not understand", async () => {
     const h = harness({ mission: { x_region: "eu" } });
@@ -583,7 +630,7 @@ describe("protected resource metadata names only enforced constraint keys (@spec
     const h = harness({});
     const supported = h.server.protectedResourceMetadata().mission_constraints_supported as string[];
     expect([...supported].sort()).toEqual(
-      ["max_amount", "vendors", "resource_issued_after", "resource_issued_before", "tenant", "time_window", "recipient_domain", "data_classification"].sort(),
+      ["max_amount", "vendors", "resource_issued_after", "resource_issued_before", "tenant", "time_window", "recipient_domain", "data_classification", "allowed_tools"].sort(),
     );
     // The supported set the Authorization Server admits is the one this resource enforces.
     expect([...supported].sort()).toEqual(

@@ -571,8 +571,8 @@ function bindingKey(binding: CapabilitySourceBinding): string | null {
 
 /**
  * The `constraints` keys this PROJECTION can intersect. Everything else (a
- * registered-but-unimplemented Common Constraint, or a deployment-defined key
- * this code does not model) makes a pairing unprojectable: see
+ * Common Constraint registered after this implementation, or a
+ * deployment-defined key this code does not model) makes a pairing unprojectable: see
  * {@link projectThroughEffective}, which drops such a fragment rather than
  * guessing at, or silently discarding, a narrowing it cannot evaluate.
  */

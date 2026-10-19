@@ -362,6 +362,51 @@ describe("derivation, projection and intake over data_classification (@spec reso
   });
 });
 
+describe("derivation, projection and intake over allowed_tools (@spec resource-access#initial-common-constraints)", () => {
+  const at = (v: string[]) => ({ allowed_tools: v });
+
+  it("a proposal omitting the ceiling's tools inherits them; one naming some derives the common tools", () => {
+    expect(deriveAuthoritySet(intent, policy([entry(at(["a", "b"]))]), [entry()])).toEqual([entry(at(["a", "b"]))]);
+    expect(deriveAuthoritySet(intent, policy([entry(at(["a", "b"]))]), [entry(at(["b", "z"]))])).toEqual([
+      entry(at(["b"])),
+    ]);
+  });
+
+  it("refuses a proposal sharing no tool with the ceiling, or proposing none, never omitting it", () => {
+    for (const proposed of [["z"], []]) {
+      const e = refusal(() => deriveAuthoritySet(intent, policy([entry(at(["a"]))]), [entry(at(proposed))]));
+      expect(e.code, JSON.stringify(proposed)).toBe("invalid_authorization_details");
+      expect(e.message, JSON.stringify(proposed)).toMatch(/allowed_tools values have no intersection/);
+    }
+  });
+
+  it("projection keeps the common tools and drops a fragment sharing none", () => {
+    expect(projectThroughEffective([entry(at(["a", "z"]))], [entry(at(["a"]))])).toEqual([entry(at(["a"]))]);
+    expect(projectThroughEffective([entry(at(["z"]))], [entry(at(["a"]))])).toEqual([]);
+  });
+
+  it("intake refuses a value that is not an array of non-empty strings", () => {
+    for (const bad of ["a", [""], [3]]) {
+      const e = refusal(() =>
+        validateAuthorityProposal(
+          JSON.stringify([{ type: "mission_resource_access", resource: R, actions: ["invoices.read"], constraints: { allowed_tools: bad } }]),
+          [R],
+        ),
+      );
+      expect(e.code, JSON.stringify(bad)).toBe("invalid_authorization_details");
+    }
+  });
+
+  it("scope projection and the attenuation root mapping refuse a tool-bound entry", () => {
+    const mapping = {
+      rights: { type: "mission_resource_access" as const, resource: R, match: "exact" as const, actions: ["invoices.read"] },
+      mandatory_controls: {},
+    };
+    expect(scopeValueSafeForEntry(mapping, entry(at(["a"])))).toBe(false);
+    expect(() => mapAuthorityToTools([entry(at(["a"]))])).toThrow(/unknown constraint 'allowed_tools'/);
+  });
+});
+
 describe("the typed config loader validates the implemented Common Constraints at load (@spec mission#derivation-policy)", () => {
   const REAL_CONFIG_DIR = fileURLToPath(new URL("../../../config", import.meta.url));
   let previous: string | undefined;

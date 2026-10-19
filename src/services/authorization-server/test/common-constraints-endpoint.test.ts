@@ -27,6 +27,7 @@ const hoisted = await vi.hoisted(async () => {
     time_window: { not_before: "2026-01-01T00:00:00Z", not_after: "2027-12-31T23:59:59Z" },
     recipient_domain: "vendor.example",
     data_classification: ["internal", "confidential"],
+    allowed_tools: ["get_invoice", "list_invoices", "lookup_vendor"],
   };
   const dir = mkdtempSync(join(tmpdir(), "mission-config-1266-"));
   cpSync(fileURLToPath(new URL("../../../config", import.meta.url)), dir, { recursive: true });
@@ -517,6 +518,44 @@ describe("data_classification at the endpoints (@spec resource-access#initial-co
       expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");
     }
     const fewer = { ...derived, data_classification: ["confidential"] };
+    const ok = await exchange(issued.at, issued.keys, read(fewer));
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    expect(constraintsOf(claims(ok.body.access_token as string).authorization_details)).toEqual([fewer]);
+  });
+});
+
+describe("allowed_tools at the endpoints (@spec resource-access#initial-common-constraints)", () => {
+  it("a proposal naming some of the ceiling's tools derives the common tools, and refresh and introspection carry them", async () => {
+    const issued = await issue(read({ allowed_tools: ["get_invoice", "delete_invoice"] }));
+    const derived = { vendors: ["acme"], ...hoisted.CEILING_CONSTRAINTS, allowed_tools: ["get_invoice"] };
+    expect(constraintsOf(claims(issued.at).authorization_details)).toEqual([derived]);
+    const refreshed = await token(
+      { grant_type: "refresh_token", refresh_token: issued.rt, resource: RESOURCE },
+      issued.keys,
+    );
+    expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+    expect(constraintsOf(claims(refreshed.body.access_token as string).authorization_details)).toEqual([derived]);
+    expect(constraintsOf((await introspect(issued.at)).authorization_details)).toEqual([derived]);
+  });
+
+  it("a proposal sharing no tool with the ceiling is refused at the approval decision, creating no Mission", async () => {
+    const before = as.kernel.allMissions().length;
+    const redirect = await approve(read({ allowed_tools: ["delete_invoice"] }));
+    expect(redirect.searchParams.get("error")).toBe("invalid_authorization_details");
+    expect(redirect.searchParams.get("error_description")).toMatch(/allowed_tools values have no intersection/);
+    expect(as.kernel.allMissions().length).toBe(before);
+  });
+
+  it("a Token Exchange that adds a tool or drops the bound is refused; one naming fewer tools is issued", async () => {
+    const issued = await issue(read());
+    const derived = { vendors: ["acme"], ...hoisted.CEILING_CONSTRAINTS };
+    const { allowed_tools: _dropped, ...dropped } = derived;
+    for (const requested of [dropped, { ...derived, allowed_tools: ["get_invoice", "delete_invoice"] }]) {
+      const res = await exchange(issued.at, issued.keys, read(requested));
+      expect(res.status, JSON.stringify(requested)).toBe(400);
+      expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");
+    }
+    const fewer = { ...derived, allowed_tools: ["get_invoice"] };
     const ok = await exchange(issued.at, issued.keys, read(fewer));
     expect(ok.status, JSON.stringify(ok.body)).toBe(200);
     expect(constraintsOf(claims(ok.body.access_token as string).authorization_details)).toEqual([fewer]);

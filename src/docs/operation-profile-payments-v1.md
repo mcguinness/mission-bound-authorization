@@ -119,6 +119,7 @@ and derivation, and the PDP refuses a matched entry that carries one.
 | `time_window` | the evaluating component's own clock at the point of use (the PEP's credential check and the PDP's decision), both bounds inclusive | none: the PDP reads its own clock | none: every operation has a time |
 | `recipient_domain` | every final recipient `send_remittance_email` reaches: the vendor's remittance addresses with each distribution list expanded to its members, or the vendor's default address; each must be within the domain (case-insensitive, whole labels) | `action.properties.recipients` | every operation that addresses no recipient: refused |
 | `data_classification` | the invoice record's `classification` label, compared as an exact string; every label the operation touches must be named | `resource.properties.data_classification` | `list_invoices` and `lookup_vendor` (no single labeled record), and an invoice with no label: refused |
+| `allowed_tools` | the tool this PEP dispatched the operation to, from its Operation Profile (`TOOL_ACTIONS`), compared as an exact string; the phases of `payments:payment.execute` are distinct tools | `action.properties.tool` (on every decision request) | none: every operation has a dispatched tool |
 
 `time_window` is also enforced after the decision: the PDP caps the
 permit's `valid_until` at the matched entry's `not_after` (and, for the

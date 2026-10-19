@@ -53,6 +53,12 @@ export interface ConstraintFacts {
    * from the resource's own labels. An empty list is no label established.
    */
   dataClassification?: readonly string[];
+  /**
+   * The identity of the tool or function the operation is exercised through,
+   * as the enforcing component dispatched it from its trusted operation
+   * contract, never a name the caller claims.
+   */
+  tool?: string;
 }
 
 /** One Common Constraint's definition. */
@@ -270,6 +276,20 @@ const DATA_CLASSIFICATION: Semantics = {
   },
 };
 
+/**
+ * `allowed_tools`: the action may be exercised only through a tool whose
+ * identity is among the named values, compared as exact strings. An empty
+ * list admits no tool; an operation with no established tool identity is
+ * refused.
+ */
+const ALLOWED_TOOLS: Semantics = {
+  valid: isLabelList,
+  noBroader: membersWithin,
+  // The common members; an empty result has no intersection.
+  intersect: commonMembers,
+  satisfied: (v, facts) => typeof facts.tool === "string" && (v as string[]).includes(facts.tool),
+};
+
 const SEMANTICS = {
   resource_issued_after: RESOURCE_ISSUED_AFTER,
   resource_issued_before: RESOURCE_ISSUED_BEFORE,
@@ -277,6 +297,7 @@ const SEMANTICS = {
   time_window: TIME_WINDOW,
   recipient_domain: RECIPIENT_DOMAIN,
   data_classification: DATA_CLASSIFICATION,
+  allowed_tools: ALLOWED_TOOLS,
 } as const satisfies Record<string, Semantics>;
 
 /** A Common Constraint key whose semantics this module defines. */
