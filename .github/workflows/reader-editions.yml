@@ -5,12 +5,20 @@ on:
     paths-ignore:
     - 'src/**'
     - 'notes/**'
+    - conformance-manifest.json
+    - family-manifest.json
+    - candidate-gate.json
+    - DRAFTS.md
   push:
     branches:
     - main
     paths-ignore:
     - 'src/**'
     - 'notes/**'
+    - conformance-manifest.json
+    - family-manifest.json
+    - candidate-gate.json
+    - DRAFTS.md
 
 concurrency:
   group: reader-editions-${{ github.event_name }}-${{ github.ref }}

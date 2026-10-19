@@ -7,10 +7,15 @@ on:
     - CONTRIBUTING.md
     - LICENSE.md
     - .gitignore
-    # The drafts never build from these; a decision-log row or an
-    # implementation change needs no draft rebuild or publish.
+    # The drafts never build from these; a decision-log row, an
+    # implementation change or a ledger re-pin needs no draft rebuild
+    # or publish.
     - 'src/**'
     - 'notes/**'
+    - conformance-manifest.json
+    - family-manifest.json
+    - candidate-gate.json
+    - DRAFTS.md
   pull_request:
     paths-ignore:
     - README.md
@@ -19,6 +24,10 @@ on:
     - .gitignore
     - 'src/**'
     - 'notes/**'
+    - conformance-manifest.json
+    - family-manifest.json
+    - candidate-gate.json
+    - DRAFTS.md
 
 # A newer push to the same ref supersedes an older build or publish.
 concurrency:
