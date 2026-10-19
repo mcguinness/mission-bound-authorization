@@ -85,11 +85,10 @@ beforeAll(async () => {
 
 describe("estate route: ordinary credentials only (@spec authority-server#limitations, #818)", () => {
   it("admits an RFC 9068 estate token as ordinary facts qualified by the estate issuer", async () => {
-    const facts = await present(server(true), await mint());
+    const admitted = present(server(true), await mint());
+    await expect(admitted).resolves.toMatchObject({ sub: "u-1001", clientId: "estate-bot", iss: ESTATE });
+    const facts = await admitted;
     expect(facts.mission).toBeUndefined();
-    expect(facts.sub).toBe("u-1001");
-    expect(facts.clientId).toBe("estate-bot");
-    expect(facts.iss).toBe(ESTATE);
     expect(facts.credential?.issuer).toBe(ESTATE);
   });
 

@@ -55,10 +55,13 @@ const ask = (sub: string, clientId = "estate-bot", iss = ESTATE, now = new Date(
 });
 
 describe("mapping contract loader (@spec authority-server#mapping-contract, #818)", () => {
-  it("accepts the shipped pilot contract", () => {
-    const parsed = parseMappingContract(loadMasPilotConfig().mapping_contract);
+  it("accepts the shipped pilot contract, whose subject rows include a many-to-one mapping", () => {
+    const shipped = loadMasPilotConfig().mapping_contract;
+    expect(() => parseMappingContract(shipped)).not.toThrow();
+    const parsed = parseMappingContract(shipped);
     expect(parsed.version).toBe(1);
     expect(parsed.failure).toBe("mission_binding_failed");
+    expect(parsed.subjects.filter((r) => r.to.sub === "alice").length).toBeGreaterThan(1);
   });
 
   it("refuses a second row for one issuer-qualified estate subject as an ambiguous mapping", () => {
@@ -88,6 +91,7 @@ describe("mapping contract loader (@spec authority-server#mapping-contract, #818
         { from: { iss: "https://other-estate.test", sub: "u-1001" }, to: { iss: MAS, sub: "bob" }, status: "active" },
       ],
     });
+    expect(() => parseMappingContract(twoIssuers)).not.toThrow();
     expect(parseMappingContract(twoIssuers).subjects).toHaveLength(2);
   });
 
