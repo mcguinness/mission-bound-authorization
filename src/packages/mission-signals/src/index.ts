@@ -255,7 +255,80 @@ export interface ReceiverOptions {
   issuer: string;
   /** This receiver's own registered audience; SET `aud` MUST equal it. */
   audience: string;
+  /**
+   * @spec signals#consumer-behavior, control-plane#isolation (#250) — where
+   * the receiver keeps its state: absent, an in-memory database that lasts
+   * as long as the receiver; with a `file`, the consumer's own store, so the
+   * version high-water, the cached observation, the gap and
+   * rematerialization markers and the retained SET survive a restart. Rows
+   * are keyed by (issuer, audience, Mission), so receivers for different
+   * issuers or audiences can share one file.
+   */
+  store?: StoreOptions;
+  /**
+   * The number of recently seen `jti` values kept for duplicate suppression
+   * (default {@link DEFAULT_SEEN_CAPACITY}); the oldest are evicted first.
+   * Eviction never weakens anti-revival: an evicted SET presented again is
+   * refused by the version high-water, which is never evicted, and reported
+   * `stale` instead of `duplicate`.
+   */
+  seenCapacity?: number;
 }
+
+/** The default {@link ReceiverOptions.seenCapacity}. */
+export const DEFAULT_SEEN_CAPACITY = 65_536;
+
+/**
+ * @spec signals#consumer-behavior (#250) — the receiver's durable state. One
+ * row per (issuer, audience, Mission): the cached observation and version
+ * high-water, the gap flag, the rematerialization latch with its marker, and
+ * the SET that established the row, byte for byte. The seen-`jti` table is
+ * bounded and is the only thing ever evicted.
+ */
+const RECEIVER_SCHEMA = `
+CREATE TABLE IF NOT EXISTS signal_receiver_missions (
+  issuer TEXT NOT NULL,
+  audience TEXT NOT NULL,
+  mission_id TEXT NOT NULL,
+  state TEXT NOT NULL,
+  termination_json TEXT,
+  version INTEGER NOT NULL,
+  expires_at TEXT NOT NULL,
+  containment_version INTEGER,
+  gapped INTEGER NOT NULL,
+  remat_needed INTEGER NOT NULL,
+  remat_version INTEGER,
+  remat_containment_version INTEGER,
+  retained_set TEXT NOT NULL,
+  PRIMARY KEY (issuer, audience, mission_id)
+) STRICT;
+CREATE TABLE IF NOT EXISTS signal_receiver_seen (
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  issuer TEXT NOT NULL,
+  audience TEXT NOT NULL,
+  jti TEXT NOT NULL,
+  UNIQUE (issuer, audience, jti)
+) STRICT;
+`;
+
+interface ReceiverMissionRow {
+  state: string;
+  termination_json: string | null;
+  version: number;
+  expires_at: string;
+  containment_version: number | null;
+  gapped: number;
+  remat_needed: number;
+  remat_version: number | null;
+  remat_containment_version: number | null;
+  retained_set: string;
+}
+
+/**
+ * A storage failure while applying a SET: nothing was recorded, so the SET is
+ * not acknowledged and its redelivery is processed afresh.
+ */
+export class SignalReceiverStorageError extends Error {}
 
 /**
  * @spec signals#set-protection @spec signals#consumer-behavior
@@ -276,45 +349,32 @@ export interface ReceiverOptions {
  * performed it, clears the latch.
  */
 export class MissionSignalReceiver {
-  /** @spec status/harness, control-plane#isolation — state, gap, narrowing and
-   * replay keys use unambiguous [registered issuer, local identifier] tuples. */
-  private readonly cache = new Map<string, CachedState>();
-  /** Recently seen `jti` values for duplicate suppression (unbounded in-process;
-   *  a bounded iat-relative window is deferred). */
-  private readonly seen = new Set<string>();
-  /** Missions with a detected `version` gap: not safe to honor until refetched
-   *  (detect only this increment; automatic Status refetch is deferred). */
-  private readonly gapped = new Set<string>();
   /**
-   * @spec signals#consumer-behavior — Missions whose effective authority view
-   * needs rematerializing through Mission Status before further consequential
-   * reliance (detect only; the refetch itself is the consumer's job): set by
-   * an applied or gapped event carrying `authority_changed` true, or by a
-   * containment-aware `containment_version` advance past the value this
-   * receiver last observed for the Mission (@spec containment#propagation).
-   * The map value is the {@link RematerializationBaseline} of the LATEST
-   * event that (re-)raised the need: the version state a consumer's Status
-   * refresh must reach or exceed before {@link markRematerialized} will
-   * clear it. UNLIKE `gapped`, this does not auto-clear on a later event
-   * that does not itself require rematerialization, because such an event
-   * proves nothing about whether the consumer actually rematerialized after
-   * the EARLIER narrowing (a gap's continuity is re-established by the next
-   * in-order event; a stale authority view is not). It clears only through
-   * {@link markRematerialized}, and only when the acknowledged baseline
-   * covers the tracked marker; a narrowing that arrives after a successful
-   * acknowledgement moves the marker forward and re-raises the latch.
+   * @spec status/harness, control-plane#isolation — every row is keyed by
+   * (registered issuer, this receiver's audience, Mission). Per Mission it
+   * holds:
+   *  - the cached observation and its version high-water (anti-revival);
+   *  - the gap flag: a detected `version` gap, not safe to honor until
+   *    refetched (detect only; automatic Status refetch is deferred), cleared
+   *    by the next in-order event;
+   *  - @spec signals#consumer-behavior — the rematerialization latch: set by
+   *    an applied or gapped event carrying `authority_changed` true, or by a
+   *    containment-aware `containment_version` advance past the value this
+   *    receiver last observed (@spec containment#propagation). Its marker is
+   *    the {@link RematerializationBaseline} of the LATEST event that
+   *    (re-)raised it, the version state a consumer's Status refresh must
+   *    reach before {@link markRematerialized} clears it. Unlike the gap flag
+   *    it does not auto-clear on a later event that does not itself require
+   *    rematerialization: such an event proves nothing about whether the
+   *    consumer rematerialized after the EARLIER narrowing;
+   *  - @spec mission#termination — the original compact SET, byte for byte,
+   *    whose verified payload established the cached state: the signed
+   *    artifact behind a normalized reading stays verifiable as received.
+   *    Replaced only when a later event replaces the cached state; a refused,
+   *    duplicate or stale SET never touches it.
    */
-  private readonly rematerializeNeeded = new Map<string, RematerializationBaseline>();
-  /**
-   * @spec mission#termination — the original compact SET, byte for byte,
-   * whose verified payload established each Mission's cached state: the
-   * signed artifact behind a normalized reading (a legacy terminal `state`
-   * read as `terminated`) stays verifiable as received, never re-serialized
-   * or re-signed. Replaced only when a later event replaces the cached state;
-   * a refused, duplicate or stale SET never touches it. Unbounded in-process,
-   * like {@link cache}, whose lifetime it shares.
-   */
-  private readonly retained = new Map<string, string>();
+  private readonly db: Database;
+  private readonly seenCapacity: number;
   private readonly jwkSet: ReturnType<typeof createLocalJWKSet>;
   /** This receiver's registered audience (the emitter delivers by audience). */
   readonly audience: string;
@@ -322,6 +382,34 @@ export class MissionSignalReceiver {
   constructor(private readonly opts: ReceiverOptions) {
     this.jwkSet = createLocalJWKSet({ keys: opts.jwks.keys } as never);
     this.audience = opts.audience;
+    this.seenCapacity = opts.seenCapacity ?? DEFAULT_SEEN_CAPACITY;
+    if (!Number.isSafeInteger(this.seenCapacity) || this.seenCapacity < 1) {
+      throw new Error("seenCapacity must be a positive integer");
+    }
+    this.db = openStore(RECEIVER_SCHEMA, opts.store);
+  }
+
+  /** Close the receiver's store. The receiver owns it. */
+  close(): void {
+    this.db.close();
+  }
+
+  private row(missionId: string): ReceiverMissionRow | undefined {
+    return this.db
+      .prepare(
+        `SELECT state, termination_json, version, expires_at, containment_version, gapped,
+                remat_needed, remat_version, remat_containment_version, retained_set
+         FROM signal_receiver_missions WHERE issuer = ? AND audience = ? AND mission_id = ?`,
+      )
+      .get(this.opts.issuer, this.audience, missionId) as ReceiverMissionRow | undefined;
+  }
+
+  private seenJti(jti: string): boolean {
+    return (
+      this.db
+        .prepare("SELECT 1 FROM signal_receiver_seen WHERE issuer = ? AND audience = ? AND jti = ?")
+        .get(this.opts.issuer, this.audience, jti) !== undefined
+    );
   }
 
   /**
@@ -356,12 +444,38 @@ export class MissionSignalReceiver {
     // 4. Redelivery (step 4): a duplicate `jti` is not an error and is not reprocessed.
     const jti = payload.jti;
     if (typeof jti !== "string") return { status: "refused", reason: "malformed" };
-    if (this.seen.has(JSON.stringify([this.opts.issuer, jti]))) return { status: "duplicate" };
+    if (this.seenJti(jti)) return { status: "duplicate" };
 
     const parsed = parseEvent(payload);
     if (!parsed) return { status: "refused", reason: "malformed" };
     if (parsed.missionIssuer !== this.opts.issuer) return { status: "refused", reason: "issuer" };
-    this.seen.add(JSON.stringify([this.opts.issuer, jti]));
+    try {
+      return withTransaction(this.db, () => this.applyInTx(jti, parsed, setJwt));
+    } catch (e) {
+      throw new SignalReceiverStorageError(
+        `the receiver could not record the SET: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
+  /**
+   * Record the `jti`, then apply the event to the Mission's row, in one
+   * transaction: a failure records neither, so the SET is not acknowledged
+   * and its redelivery is processed afresh.
+   */
+  private applyInTx(jti: string, parsed: ParsedEvent, setJwt: string): ApplyResult {
+    this.db
+      .prepare("INSERT INTO signal_receiver_seen (issuer, audience, jti) VALUES (?, ?, ?)")
+      .run(this.opts.issuer, this.audience, jti);
+    // Bounded duplicate suppression: keep the newest `seenCapacity` values for
+    // this receiver. The version high-water below is never evicted.
+    this.db
+      .prepare(
+        `DELETE FROM signal_receiver_seen WHERE issuer = ? AND audience = ? AND seq <= (
+           SELECT seq FROM signal_receiver_seen WHERE issuer = ? AND audience = ?
+           ORDER BY seq DESC LIMIT 1 OFFSET ?)`,
+      )
+      .run(this.opts.issuer, this.audience, this.opts.issuer, this.audience, this.seenCapacity);
 
     const {
       missionId,
@@ -373,7 +487,11 @@ export class MissionSignalReceiver {
       containment_version,
     } = parsed;
     const terminationMember = termination !== undefined ? { termination } : {};
-    const current = this.cache.get(JSON.stringify([this.opts.issuer, missionId]));
+    const stored = this.row(missionId);
+    const current =
+      stored === undefined
+        ? undefined
+        : { version: stored.version, containment_version: stored.containment_version ?? undefined };
     // Anti-revive: a version at or below the last applied never regresses state.
     if (current !== undefined && version <= current.version) {
       return { status: "stale", version: current.version };
@@ -420,32 +538,47 @@ export class MissionSignalReceiver {
     // rides every commit once ever present, but the cache must not forget it
     // on an event that happens not to carry it).
     const nextContainmentVersion = containment_version ?? priorContainmentVersion;
-    this.retained.set(JSON.stringify([this.opts.issuer, missionId]), setJwt);
-    this.cache.set(JSON.stringify([this.opts.issuer, missionId]), {
-      state,
-      ...terminationMember,
-      version,
-      expires_at,
-      ...(nextContainmentVersion !== undefined
-        ? { containment_version: nextContainmentVersion }
-        : {}),
-    });
     // Latch: an event that does not itself require rematerialization says
     // nothing about whether the consumer already rematerialized after an
-    // EARLIER narrowing (see the field doc comment), so it never clears the
+    // EARLIER narrowing (see the class doc comment), so it never clears the
     // marker on its own. An event that DOES require it (re-)raises the
     // marker to THIS event's own version/containment_version: the new
     // high-water mark a markRematerialized baseline must cover to clear it.
-    if (rematerialize) {
-      this.rematerializeNeeded.set(JSON.stringify([this.opts.issuer, missionId]), {
+    const remat = rematerialize
+      ? { needed: 1, version, containment: nextContainmentVersion ?? null }
+      : {
+          needed: stored?.remat_needed ?? 0,
+          version: stored?.remat_version ?? null,
+          containment: stored?.remat_containment_version ?? null,
+        };
+    this.db
+      .prepare(
+        `INSERT INTO signal_receiver_missions
+           (issuer, audience, mission_id, state, termination_json, version, expires_at, containment_version,
+            gapped, remat_needed, remat_version, remat_containment_version, retained_set)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (issuer, audience, mission_id) DO UPDATE SET
+           state = excluded.state, termination_json = excluded.termination_json, version = excluded.version,
+           expires_at = excluded.expires_at, containment_version = excluded.containment_version,
+           gapped = excluded.gapped, remat_needed = excluded.remat_needed, remat_version = excluded.remat_version,
+           remat_containment_version = excluded.remat_containment_version, retained_set = excluded.retained_set`,
+      )
+      .run(
+        this.opts.issuer,
+        this.audience,
+        missionId,
+        state,
+        termination !== undefined ? JSON.stringify(termination) : null,
         version,
-        ...(nextContainmentVersion !== undefined
-          ? { containment_version: nextContainmentVersion }
-          : {}),
-      });
-    }
+        expires_at,
+        nextContainmentVersion ?? null,
+        isGap ? 1 : 0,
+        remat.needed,
+        remat.version,
+        remat.containment,
+        setJwt,
+      );
     if (isGap) {
-      this.gapped.add(JSON.stringify([this.opts.issuer, missionId]));
       return {
         status: "gap",
         expected,
@@ -456,13 +589,22 @@ export class MissionSignalReceiver {
         rematerialize,
       };
     }
-    this.gapped.delete(JSON.stringify([this.opts.issuer, missionId]));
     return { status: "applied", state, ...terminationMember, version, rematerialize };
   }
 
   /** The last state established for a Mission, for a consumer's `loadView`. */
   viewState(missionId: string): CachedState | undefined {
-    return this.cache.get(JSON.stringify([this.opts.issuer, missionId]));
+    const r = this.row(missionId);
+    if (!r) return undefined;
+    return {
+      state: r.state,
+      ...(r.termination_json !== null
+        ? { termination: JSON.parse(r.termination_json) as MissionTermination }
+        : {}),
+      version: r.version,
+      expires_at: r.expires_at,
+      ...(r.containment_version !== null ? { containment_version: r.containment_version } : {}),
+    };
   }
 
   /**
@@ -473,7 +615,7 @@ export class MissionSignalReceiver {
    * holds this receiver's normalized reading of it.
    */
   retainedSet(missionId: string): string | undefined {
-    return this.retained.get(JSON.stringify([this.opts.issuer, missionId]));
+    return this.row(missionId)?.retained_set;
   }
 
   /**
@@ -483,7 +625,7 @@ export class MissionSignalReceiver {
    * for the Mission. `status_checked_at` is the instant the consumer read it.
    */
   lease(missionId: string, checkedAt: string): MissionStatusLease | undefined {
-    const s = this.cache.get(JSON.stringify([this.opts.issuer, missionId]));
+    const s = this.viewState(missionId);
     if (!s) return undefined;
     return {
       state: s.state,
@@ -497,7 +639,7 @@ export class MissionSignalReceiver {
 
   /** Whether a Mission has an unresolved `version` gap (refetch before reliance). */
   hasGap(missionId: string): boolean {
-    return this.gapped.has(JSON.stringify([this.opts.issuer, missionId]));
+    return this.row(missionId)?.gapped === 1;
   }
 
   /**
@@ -509,7 +651,7 @@ export class MissionSignalReceiver {
    * `hasGap`); clears only via {@link markRematerialized}.
    */
   needsRematerialization(missionId: string): boolean {
-    return this.rematerializeNeeded.has(JSON.stringify([this.opts.issuer, missionId]));
+    return this.row(missionId)?.remat_needed === 1;
   }
 
   /**
@@ -535,15 +677,20 @@ export class MissionSignalReceiver {
    * stale baseline left it latched.
    */
   markRematerialized(missionId: string, observedBaseline: RematerializationBaseline): boolean {
-    const marker = this.rematerializeNeeded.get(JSON.stringify([this.opts.issuer, missionId]));
-    if (!marker) return true; // nothing outstanding
-    const coversVersion = observedBaseline.version >= marker.version;
+    const r = this.row(missionId);
+    if (r?.remat_needed !== 1) return true; // nothing outstanding
+    const coversVersion = observedBaseline.version >= (r.remat_version as number);
     const coversContainment =
-      marker.containment_version === undefined ||
+      r.remat_containment_version === null ||
       (observedBaseline.containment_version !== undefined &&
-        observedBaseline.containment_version >= marker.containment_version);
+        observedBaseline.containment_version >= r.remat_containment_version);
     if (coversVersion && coversContainment) {
-      this.rematerializeNeeded.delete(JSON.stringify([this.opts.issuer, missionId]));
+      this.db
+        .prepare(
+          `UPDATE signal_receiver_missions SET remat_needed = 0, remat_version = NULL, remat_containment_version = NULL
+           WHERE issuer = ? AND audience = ? AND mission_id = ?`,
+        )
+        .run(this.opts.issuer, this.audience, missionId);
       return true;
     }
     return false;
