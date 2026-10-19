@@ -799,18 +799,19 @@ order, refusing on the first failure:
    lineage chain is non-active.
 7. Verify the applicable parent Authority Set entry's `delegation`
    carries a `children` object permitting child creation, and that
-   `child_actor` satisfies its constraints ({{fanout}}); verify the same
-   of the presented `subject_token`'s applicable entry
-   ({{attenuation}}).
+   `child_actor` satisfies its constraints ({{fanout}},
+   {{child-actor-eligibility}}); verify the same of the presented
+   `subject_token`'s applicable entry ({{attenuation}}).
 8. Derive the child Authority Set, verify strict subset
    ({{strict-subset}}) and that it is within the authority the
    `subject_token` carries ({{attenuation}}), and apply the fan-out
    controls of both.
 9. Determine subset derivation versus fresh approval and complete per
    {{completion}}: synchronous, deferred, or interactive.
-10. At the creation commit, re-verify parent state ({{creation-race}})
-    and the inherited authority source ({{record-requirements}}),
-    create the Child Mission record with `parent` and the completed
+10. At the creation commit, re-verify parent state ({{creation-race}}),
+    the inherited authority source ({{record-requirements}}), and
+    child-actor eligibility ({{child-actor-eligibility}}), create the
+    Child Mission record with `parent` and the completed
     `(client, creation_request_id)` reservation atomically
     ({{creation-idempotency}}), and record Child Evidence.
 
@@ -984,7 +985,9 @@ This profile defines these symbolic denial reasons:
 `child_actor_not_allowed`:
 : The child actor does not satisfy the parent entry's or the presented
   `subject_token`'s `allowed_child_actors` ({{fanout}},
-  {{attenuation}}), or equivalent policy.
+  {{attenuation}}) or the child-creation policy, or the parent entry's
+  child-actor provenance cannot be resolved
+  ({{child-actor-eligibility}}).
 
 `not_strict_subset`:
 : The proposed child authority is not a strict subset of parent
@@ -1233,6 +1236,11 @@ A Child Mission MUST be bounded by the Parent Mission:
   same count; a token without that delegation right authorizes no child,
   and carrying the token's restrictions into the child does not satisfy
   this;
+- an `allowed_child_actors` on that attributed token entry MUST permit
+  the child actor; where the entry carries none, it defers to the
+  child-creation policy only where the justifying parent entry's
+  eligibility does ({{child-actor-eligibility}}), and otherwise the
+  creation is refused;
 - the child MUST NOT include a resource, action, constraint relaxation,
   or delegation right not present in the parent;
 - the child's effective `expires_at` MUST NOT be later than the child
@@ -1397,6 +1405,13 @@ profile's `children` member is such a member.
     `{ "sub_profile": ... }` matcher is satisfied when its value is
     among the actor's space-separated `sub_profile` values.
 
+    When absent, eligibility falls to the authorization server's
+    child-creation policy, applied at every creation: absence defers
+    the decision to that policy and never grants blanket eligibility.
+    An empty array admits no actor. A list never creates the
+    `children` grant, and it only restricts an eligibility the entry
+    inherits ({{child-actor-eligibility}}).
+
   `max_child_depth`:
   : OPTIONAL. A positive integer, default 1. The maximum
     child-generation depth at which this entry may be included. A Child
@@ -1456,6 +1471,56 @@ and the same mapping is what the child evidence records.
 The Mission Issuer MUST serialize child creation against the same
 parent entry and fan-out bucket so concurrent requests cannot exceed
 the limit.
+
+## Child Actor Eligibility {#child-actor-eligibility}
+
+A child actor receives a Child Mission drawing on a justifying parent
+entry ({{fanout-accounting}}) only where that entry carries a
+`children` object. Neither a list nor the authorization server's
+child-creation policy creates that grant or relaxes its other
+controls, and an entry's `child_creation_policy` reference admits no
+actor by itself. Within the grant, the Mission Issuer MUST admit the
+child actor only where:
+
+- every `allowed_child_actors` the justifying entry carries permits
+  it; and
+- where the entry's eligibility falls to the child-creation policy,
+  that policy permits it, evaluated at the creation commit
+  ({{request-processing}}) and never answered from an earlier
+  decision.
+
+**Inherited eligibility.** A derived entry's `allowed_child_actors`
+restricts eligibility; it never replaces an obligation the derivation
+inherits. An entry derived from a reference entry whose `children`
+carries no `allowed_child_actors` inherits the child-creation policy
+decision, and so does every entry derived from it, including a Child
+Mission's and a carryover replacement's: the child actor is eligible
+only where the policy permits it and every list the entry carries
+permits it too. An entry derived from a reference entry that names its
+child actors keeps the list rule. This is the delegate rule of
+{{I-D.draft-mcguinness-oauth-mission-resource-access}} (Section
+"Delegate Eligibility") applied to child actors.
+
+The obligation holds from the initial derivation: an approved entry
+derived from a ceiling entry whose `children` names no actors inherits
+the policy decision even when the approved proposal added a list. The
+Mission Issuer MUST record, when it derives an Authority Set, which
+approved entries inherit that decision, MUST retain this child-actor
+provenance with the Mission apart from delegate eligibility
+provenance, and MUST carry it into every entry derived from those
+entries. Neither provenance establishes the other. The justifying
+entry is the one {{fanout-accounting}} attributes; another parent
+entry the child entry falls within never lends it a less restrictive
+provenance. The presented `subject_token` restricts the same way
+({{attenuation}}).
+
+Where the Mission Issuer cannot resolve a justifying entry's
+child-actor provenance, because it is missing, unreadable, or
+ambiguous, it MUST refuse the creation or carryover with
+`child_actor_not_allowed`. It MUST NOT infer that provenance from the
+entry's list or from delegate eligibility provenance, and it backfills
+provenance for an earlier record only from an authoritative and
+unambiguous source.
 
 # Cascade Revocation {#cascade}
 
@@ -1809,6 +1874,12 @@ subtree.
 The Mission Issuer MUST re-derive and validate each carried child in
 generation order against its prospective parent's Effective Authority Set,
 using all ordinary strict-subset, actor, and children-control checks.
+The actor check is {{child-actor-eligibility}}'s, against the
+prospective parent's retained child-actor provenance, and it is
+repeated at the completion commit: a policy decision rendered into
+the manifest does not admit a replacement. A replacement retains the
+old child's child-actor provenance and that of every new parent entry
+it falls within.
 
 A direct child's parent is the successor; a deeper child's parent is its
 new replacement parent, never the root successor. Justification is recomputed
@@ -2362,6 +2433,14 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Child Actor Eligibility: an absent `allowed_child_actors` defers the
+  child actor to the authorization server's child-creation policy and
+  is never a blanket grant; an empty list admits no actor; a derived
+  list only restricts an inherited decision; child-actor provenance is
+  retained from the initial derivation, apart from delegate
+  provenance, through child creation and carryover, and an unresolved
+  provenance refuses (#1304).
 
 - A failed child-creation exchange uses the code this document assigns
   to the failure; otherwise an invalid, unproven or unacceptable
