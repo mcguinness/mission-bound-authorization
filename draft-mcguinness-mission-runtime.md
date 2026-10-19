@@ -804,8 +804,9 @@ evaluated set the PDP used ({{authzen}}).
 The PEP asserts the capability identity (for example, the tool or
 function name) it will invoke, and the PDP MUST refuse an identity
 outside the entry's approved actions. The OAuth binding's realization
-of an authority entry, including the `mission_resource_access` entry
-type's `resource` and `actions` subset rule, is defined by
+of an authority entry, including how a `mission_resource_access`
+entry's `resource` matches the operation target and its `actions`
+bound the invoked identity, is defined by
 {{I-D.draft-mcguinness-mission-runtime-oauth}}.
 
 For any other authority-entry type, the PDP MUST evaluate the action
@@ -1011,7 +1012,8 @@ Beyond the `parameter_digest`, the permit MUST also bind:
 - the action;
 - the action phase, when the action is a phase of a compound action
   ({{compound-actions}});
-- the resource;
+- the resource, including the operation target an authority-entry
+  match uses ({{input-authority}});
 - the authorizing authority entry, or an entry digest;
 - the PDP's policy-view version; and
 - a permit lifetime control bounded by the Mission state freshness
@@ -3797,6 +3799,10 @@ worked example shows the concrete record
   from an effect the resource attributes to the action through an
   identifier recorded with it, never from resource state alone; the
   Resource Server runtime profile names that identifier (#1271).
+- Permit Binding: the permit binds the operation target an
+  authority-entry match uses, and the OAuth realization of a
+  `mission_resource_access` entry matches its `resource` against that
+  target (#1276).
 - Mission Binding Establishment: names the AAuth realization of a
   credential-carried Mission reference beside the OAuth one, limited
   to the access paths where the AAuth binding supplies

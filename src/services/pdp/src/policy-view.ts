@@ -61,6 +61,18 @@ export interface AuthorityEntry {
      * digest; the credential bound reads the conditions (#825, D312).
      */
     terminal_when?: TerminalWhenCondition[];
+    /**
+     * @spec resource-access#initial-common-constraints (#1266): the
+     * implemented Common Constraints, evaluated through `@mission/core`'s
+     * shared `commonConstraintGates` against the facts the PEP established.
+     */
+    resource_issued_after?: string;
+    resource_issued_before?: string;
+    tenant?: string;
+    time_window?: { not_before?: string; not_after?: string };
+    recipient_domain?: string;
+    data_classification?: string[];
+    allowed_tools?: string[];
   };
   /**
    * @spec authority-server#mission-join rule 5 (#557) — this entry's

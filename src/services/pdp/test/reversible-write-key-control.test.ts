@@ -71,7 +71,7 @@ const view: MissionView = {
 
 const request = (action: string, key?: unknown): EvaluationRequest => ({
   subject: { id: "alice", properties: { iss: "https://as.test" } },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: action, ...(key !== undefined ? { properties: { idempotency_key: key as string } } : {}) },
   context: {
     mission: { id: "msn_918", issuer: "https://as.test", authority_hash: "sha-256:m918" },

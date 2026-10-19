@@ -24,13 +24,14 @@
  *     filtering narrows either array, so an entry the filter would discard
  *     untouched cannot carry an unsupported key past it either.
  *
- * `test/kernel.test.ts`'s "still fails closed on a registered-but-unimplemented
+ * `test/kernel.test.ts`'s "still fails closed on a later-registered
  * Common Constraint" case bypasses config load entirely (an `as never` cast
  * builds the ceiling in memory), so it proves nothing about either loader;
  * the cases below exercise the loaders themselves, and (in the last describe
  * block) `deriveAuthoritySet` directly, with no `as never` cast anywhere in
- * that block. Both a wholly unregistered key and a registered-but-unimplemented
- * one (e.g. `time_window`) are covered at every boundary: registration in the
+ * that block. Both a wholly unregistered key and a Common Constraint registered
+ * after this implementation (every initial one is implemented, #1266) are
+ * covered at every boundary: registration in the
  * Common Constraints registry is not itself support, and an unregistered,
  * deployment-defined key carries the same obligation as a registered one.
  */
@@ -87,14 +88,14 @@ describe("typed config loaders refuse an unsupported constraint key at load (#78
       );
     });
 
-    it("rejects a ceiling entry carrying a registered-but-unimplemented Common Constraint key", async () => {
+    it("rejects a ceiling entry carrying a Common Constraint registered after this implementation", async () => {
       configDirWith("policy.json", (raw) => {
         const policy = raw as { ceiling: { constraints?: Record<string, unknown> }[] };
         const entry = policy.ceiling.find((e) => e.constraints?.vendors);
         if (entry) {
           entry.constraints = {
             ...entry.constraints,
-            time_window: { not_before: "2026-01-01T00:00:00Z" },
+            x_registered_later: "v1",
           };
         }
       });
@@ -116,14 +117,14 @@ describe("typed config loaders refuse an unsupported constraint key at load (#78
       );
     });
 
-    it("rejects a governed ceiling entry carrying a registered-but-unimplemented Common Constraint key", async () => {
+    it("rejects a governed ceiling entry carrying a Common Constraint registered after this implementation", async () => {
       configDirWith("governed-policy.json", (raw) => {
         const policies = raw as { ceiling: { constraints?: Record<string, unknown> }[] }[];
         const entry = policies[0]?.ceiling.find((e) => e.constraints?.vendors);
         if (entry) {
           entry.constraints = {
             ...entry.constraints,
-            time_window: { not_before: "2026-01-01T00:00:00Z" },
+            x_registered_later: "v1",
           };
         }
       });
@@ -162,17 +163,17 @@ describe("PAR intake refuses an unsupported constraint key (#784)", () => {
     }
   });
 
-  it("refuses invalid_authorization_details for a registered-but-unimplemented Common Constraint key", () => {
+  it("refuses invalid_authorization_details for a Common Constraint registered after this implementation", () => {
     try {
       validateAuthorityProposal(
-        proposal(["payments:invoice.list"], { time_window: { not_before: "2026-01-01T00:00:00Z" } }),
+        proposal(["payments:invoice.list"], { x_registered_later: "v1" }),
         [RESOURCE],
       );
-      expect.unreachable("a registered-but-unimplemented key must be refused, not silently dropped");
+      expect.unreachable("a later-registered key must be refused, not silently dropped");
     } catch (e) {
       expect(e).toBeInstanceOf(IntentError);
       expect((e as IntentError).code).toBe("invalid_authorization_details");
-      expect((e as IntentError).message).toMatch(/time_window/);
+      expect((e as IntentError).message).toMatch(/x_registered_later/);
     }
   });
 
@@ -216,18 +217,18 @@ describe("direct derivation (deriveAuthoritySet) refuses an unsupported constrai
     }
   });
 
-  it("configured-mapping mode refuses a registered-but-unimplemented Common Constraint key on a directly-supplied ceiling entry", () => {
-    const constraints = { time_window: { not_before: "2026-01-01T00:00:00Z" } };
+  it("configured-mapping mode refuses a Common Constraint registered after this implementation on a directly-supplied ceiling entry", () => {
+    const constraints = { x_registered_later: "v1" };
     const ceiling: AuthorityEntry[] = [
       { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], constraints },
     ];
     try {
       deriveAuthoritySet(intent, { policy_version: "review", ceiling });
-      expect.unreachable("a registered-but-unimplemented key must be refused, not silently dropped");
+      expect.unreachable("a later-registered key must be refused, not silently dropped");
     } catch (e) {
       expect(e).toBeInstanceOf(IntentError);
       expect((e as IntentError).code).toBe("invalid_authorization_details");
-      expect((e as IntentError).message).toMatch(/time_window/);
+      expect((e as IntentError).message).toMatch(/x_registered_later/);
     }
   });
 
@@ -290,8 +291,8 @@ describe("direct derivation (deriveAuthoritySet) refuses an unsupported constrai
   // pairing return null on the action filter BEFORE any constraint check the
   // prior code ran there, while the FIRST ceiling entry still lets derivation
   // succeed. Only validating the full ceiling array up front catches it.
-  it("submitted-proposal mode refuses a registered-but-unimplemented key on a ceiling entry no submitted action overlaps, even though another same-resource entry derives fine", () => {
-    const timeWindow = { time_window: { not_before: "2026-01-01T00:00:00Z" } };
+  it("submitted-proposal mode refuses a later-registered key on a ceiling entry no submitted action overlaps, even though another same-resource entry derives fine", () => {
+    const laterKey = { x_registered_later: "v1" };
     const ceiling: AuthorityEntry[] = [
       {
         type: "mission_resource_access",
@@ -303,7 +304,7 @@ describe("direct derivation (deriveAuthoritySet) refuses an unsupported constrai
         type: "mission_resource_access",
         resource: RESOURCE,
         actions: ["payments:payment.execute"],
-        constraints: timeWindow,
+        constraints: laterKey,
       },
     ];
     const proposal: AuthorityEntry[] = [
@@ -316,10 +317,10 @@ describe("direct derivation (deriveAuthoritySet) refuses an unsupported constrai
     ];
     try {
       deriveAuthoritySet(intent, { policy_version: "review", ceiling }, proposal);
-      expect.unreachable("a registered-but-unimplemented key must refuse even on an action-filtered-out ceiling entry");
+      expect.unreachable("a later-registered key must refuse even on an action-filtered-out ceiling entry");
     } catch (e) {
       expect(e).toBeInstanceOf(IntentError);
-      expect((e as IntentError).message).toMatch(/time_window/);
+      expect((e as IntentError).message).toMatch(/x_registered_later/);
     }
   });
 });
