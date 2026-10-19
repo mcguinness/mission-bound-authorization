@@ -1058,6 +1058,56 @@ describe("the presented token's authority bounds a Child Mission (@spec child-de
     expect(again.status, JSON.stringify(againBody)).toBe(200);
     expect(againBody.mission_id).toBe(firstBody.mission_id);
   });
+
+  type RecoveryRefusal = { error?: string; error_description?: string; mission_error?: string; access_token?: string };
+
+  it("a retry recovering a recorded child that is no longer active carries the child's mission_error only for a token that admits the child (@spec mission#issuance-gating, #1179)", async () => {
+    const { missionId, broad, narrow } = await tokens();
+    for (const [transition, state, missionError] of [
+      ["suspend", "suspended", "suspended"],
+      ["revoke", "terminated", "revoked"],
+    ] as const) {
+      const crid = crypto.randomUUID();
+      const first = await createChild(broad, missionId, { authorizationDetails: fullAuthority(), creationRequestId: crid });
+      const firstBody = (await first.json()) as { mission_id?: string };
+      expect(first.status, JSON.stringify(firstBody)).toBe(200);
+      as.kernel.transition(firstBody.mission_id as string, transition);
+
+      // The token that created the child admits it: the refusal names its state.
+      const admitted = await createChild(broad, missionId, { authorizationDetails: fullAuthority(), creationRequestId: crid });
+      const admittedBody = (await admitted.json()) as RecoveryRefusal;
+      expect(admitted.status, JSON.stringify(admittedBody)).toBe(400);
+      expect(admittedBody.error).toBe("invalid_request");
+      expect(admittedBody.error_description).toBe(`recorded child mission is ${state}`);
+      expect(admittedBody.mission_error).toBe(missionError);
+      expect(admittedBody.access_token).toBeUndefined();
+
+      // A narrower token from the same client and key gets the same refusal, with no state.
+      const narrower = await createChild(narrow, missionId, { authorizationDetails: fullAuthority(), creationRequestId: crid });
+      const narrowerBody = (await narrower.json()) as RecoveryRefusal;
+      expect(narrower.status, JSON.stringify(narrowerBody)).toBe(400);
+      expect(narrowerBody.error).toBe("invalid_request");
+      expect(narrowerBody.error_description).toBe("recorded child mission is not active");
+      expect(narrowerBody.mission_error).toBeUndefined();
+      expect(narrowerBody.access_token).toBeUndefined();
+    }
+  });
+
+  it("a retry recovering a recorded child after its parent is revoked carries mission_error parent_terminated (@spec mission#issuance-gating, child-delegation#child-state, #1179)", async () => {
+    const { missionId, broad } = await tokens();
+    const crid = crypto.randomUUID();
+    const first = await createChild(broad, missionId, { authorizationDetails: fullAuthority(), creationRequestId: crid });
+    const firstBody = (await first.json()) as { mission_id?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+    as.kernel.transition(missionId, "revoke");
+    const retry = await createChild(broad, missionId, { authorizationDetails: fullAuthority(), creationRequestId: crid });
+    const body = (await retry.json()) as RecoveryRefusal;
+    expect(retry.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toBe("recorded child mission is terminated");
+    expect(body.mission_error).toBe("parent_terminated");
+    expect(body.access_token).toBeUndefined();
+  });
 });
 
 describe("a no-actor exchange is open only to the Mission's approved agent (@spec mission#self-exchange rule 1, #1153 review, D353)", () => {
@@ -2853,5 +2903,120 @@ describe("a fully contained family is refused after rotation, within the owner's
     expect(polled.status, JSON.stringify(pb)).toBe(200);
     expect(pb.mission_id).not.toBe(missionId);
     expect(actionsOf(pb.authorization_details)).toContain("payments:invoice.read");
+  });
+});
+
+describe("mission_error on the async-delegation exchange's explicit lifecycle refusals (@spec mission#issuance-gating, #1179)", () => {
+  type Refusal = { error?: string; error_description?: string; mission_error?: string; access_token?: string; refresh_token?: string };
+
+  for (const [transition, state, missionError] of [
+    ["suspend", "suspended", "suspended"],
+    ["revoke", "terminated", "revoked"],
+  ] as const) {
+    it(`a new exchange on a ${missionError} Mission is refused invalid_request with mission_error ${missionError}, opening no family and counting no derivation; a proof under another key gets none`, async () => {
+      const { missionId, baseAccessToken } = await issueBaseMission();
+      const handle = await delegationHandle(baseAccessToken);
+      as.kernel.transition(missionId, transition);
+      const countBefore = as.kernel.get(missionId)?.derivation_count;
+      const res = await asyncDelegate(handle, { rawSubject: true });
+      const body = (await res.json()) as Refusal;
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toBe(`mission ${missionId} is ${state}`);
+      expect(body.mission_error).toBe(missionError);
+      expect(body.refresh_token).toBeUndefined();
+      expect(as.delegationFamilyStore.familiesForMission(missionId)).toEqual([]);
+      expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+
+      // Possession fails before the lifecycle check: no Mission state is disclosed.
+      const wrongKey = await asyncDelegate(handle, { rawSubject: true, keys: otherDpop });
+      const wrongBody = (await wrongKey.json()) as Refusal;
+      expect(wrongKey.status, JSON.stringify(wrongBody)).toBe(400);
+      expect(wrongBody.error_description).toContain("does not match the subject_token confirmation key");
+      expect(wrongBody.mission_error).toBeUndefined();
+    });
+  }
+
+  it("a refusal at the family's counted derivation rolls the family back and carries mission_error in the response and in its replay: revoked for a lifecycle refusal, derivations_exhausted for the cap", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const handle = await delegationHandle(baseAccessToken);
+    const countBefore = as.kernel.get(missionId)?.derivation_count;
+    const capRequestId = crypto.randomUUID();
+    const revokeRequestId = crypto.randomUUID();
+    const realReserve = as.creationIdempotency.reserve.bind(as.creationIdempotency);
+    const gate = vi.spyOn(as.kernel, "gateDerivation");
+    const reserve = vi.spyOn(as.creationIdempotency, "reserve");
+    let capped: Refusal;
+    let revoked: Refusal;
+    try {
+      gate.mockImplementationOnce(() => {
+        throw new GateError("derivation_cap_exhausted", `mission ${missionId} has no derivations left`);
+      });
+      const capRes = await asyncDelegate(handle, { rawSubject: true, creationRequestId: capRequestId });
+      capped = (await capRes.json()) as Refusal;
+      expect(capRes.status, JSON.stringify(capped)).toBe(400);
+      expect(capped.error).toBe("invalid_grant");
+      expect(capped.mission_error).toBe("derivations_exhausted");
+
+      // The Mission is revoked after the exchange's early check and before its
+      // counted transaction, so the real derivation gate refuses it.
+      reserve.mockImplementationOnce((reservation) => {
+        as.kernel.transition(missionId, "revoke");
+        return realReserve(reservation);
+      });
+      const revokeRes = await asyncDelegate(handle, { rawSubject: true, creationRequestId: revokeRequestId });
+      revoked = (await revokeRes.json()) as Refusal;
+      expect(revokeRes.status, JSON.stringify(revoked)).toBe(400);
+      expect(revoked.error).toBe("invalid_request");
+      expect(revoked.mission_error).toBe("revoked");
+      expect(revoked.refresh_token).toBeUndefined();
+    } finally {
+      gate.mockRestore();
+      reserve.mockRestore();
+    }
+    for (const grantId of as.delegationFamilyStore.familiesForMission(missionId)) {
+      expect(as.delegationFamilyStore.resolve(grantId)).toBeUndefined();
+      expect(await as.provider.Grant.find(grantId)).toBeUndefined();
+    }
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+
+    // A replay to the same client and key repeats each stored refusal, diagnostic included.
+    for (const [creationRequestId, stored] of [
+      [capRequestId, capped],
+      [revokeRequestId, revoked],
+    ] as const) {
+      expect(as.creationIdempotency.find("ap-agent", creationRequestId)?.state).toBe("failed");
+      const replay = await asyncDelegate(handle, { rawSubject: true, creationRequestId });
+      expect(replay.status).toBe(400);
+      expect(await replay.json()).toEqual(stored);
+    }
+    const wrongKey = await asyncDelegate(handle, { rawSubject: true, creationRequestId: revokeRequestId, keys: otherDpop });
+    const wrongBody = (await wrongKey.json()) as Refusal;
+    expect(wrongKey.status, JSON.stringify(wrongBody)).toBe(400);
+    expect(wrongBody.mission_error).toBeUndefined();
+  });
+
+  it("a retry of a completed family is refused invalid_request with mission_error once its Mission is suspended, then revoked, counting nothing", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const handle = await delegationHandle(baseAccessToken);
+    const creationRequestId = crypto.randomUUID();
+    const first = await asyncDelegate(handle, { rawSubject: true, creationRequestId });
+    expect(first.status, JSON.stringify(await first.clone().json())).toBe(200);
+    const count = as.kernel.get(missionId)?.derivation_count;
+    for (const [transition, state, missionError] of [
+      ["suspend", "suspended", "suspended"],
+      ["revoke", "terminated", "revoked"],
+    ] as const) {
+      as.kernel.transition(missionId, transition);
+      const retry = await asyncDelegate(handle, { rawSubject: true, creationRequestId });
+      const body = (await retry.json()) as Refusal;
+      expect(retry.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toBe(`recorded mission is ${state}`);
+      expect(body.mission_error).toBe(missionError);
+      expect(body.access_token).toBeUndefined();
+      expect(body.refresh_token).toBeUndefined();
+    }
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
   });
 });

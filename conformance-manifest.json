@@ -5103,7 +5103,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "lifecycle refusals carry mission_error with one of revoked, expired, superseded, derivations_exhausted, or a value a companion defines (Mission Status's suspended and completed, Child Delegation's parent_terminated)",
-    "local": "oidc-provider 9.10's err_out.js copies only error, error_description, scope and state from a thrown error, so MissionGrantError and MissionExchangeError plus a grant.error listener splice mission_error into the body wherever the Mission gate (the refresh pre-check, gateDerivation or gateActive) refuses a still-valid grant. Endpoint witnesses cited here: suspended on a refresh (tracer); derivations_exhausted on a capped Mission's second derivation (tracer); superseded on a refresh of a predecessor's own refresh token after a deferred expansion activated its successor, with nothing issued, saved or counted (refresh-precheck, #1065); and expired on a Token Exchange, whose lifecycle refusal is invalid_request (#1154). The shared mapper gateErrorToMissionError, which passes each termination reason through (superseded, parent_terminated, expired) and gives no value for an unrecognized one, is cited as a unit witness, not as an endpoint refusal. Partial: revoked, completed and parent_terminated are not cited here as endpoint refusals. This demo's own /lifecycle route destroys the underlying OAuth Grant on a terminal transition (provider.ts), so a refresh after it fails at oidc-provider's grant lookup with no mission_error; a raw kernel transition, natural expiry or supersession leaves the grant for the Mission gate."
+    "local": "oidc-provider 9.10's err_out.js copies only error, error_description, scope and state from a thrown error, so MissionGrantError and MissionExchangeError plus a grant.error listener splice mission_error into the body wherever the Mission gate (the refresh pre-check, gateDerivation or gateActive) refuses a still-valid grant. The Token Exchange handlers that write their own refusal body (the async-delegation exchange, its family rollback and recovery, carryover retrieval, child-creation recovery, and the expansion predecessor and recovery checks) add it from the refused Mission's observed record, after client authentication and possession (#1179). The rollback stores the member with the refusal, so a replay to the same client and key repeats it. Possession of a Mission's token does not authorize the presenter, so the expansion predecessor check, expansion recovery and child-creation recovery name the Mission's state only to the predecessor's or parent's own client, the acting agent this deployment authorizes; an unrelated client holding the token and its key gets the refusal without it (witnessed at the predecessor check; the recovery gates are not witnessed, since reaching them needs an unrelated client's own creation). Child-creation recovery also requires the presented token's authority, actor and depth to admit the recorded child; a narrower token from the same client and key gets the same invalid_request without the state. These disclosure tests are local choices. Endpoint witnesses cited here: suspended on a refresh (tracer); derivations_exhausted on a capped Mission's second derivation (tracer) and on the async-delegation family rollback; superseded on a refresh of a predecessor's own refresh token after a deferred expansion activated its successor, with nothing issued, saved or counted (refresh-precheck, #1065), and on a new expansion of that superseded predecessor; expired on a Token Exchange, whose lifecycle refusal is invalid_request (#1154); suspended and revoked on the async-delegation exchange, its recovery, carryover retrieval, child-creation recovery, the expansion predecessor check and expansion recovery, and revoked on the family rollback and its replay; and parent_terminated on child-creation recovery after the parent's revocation (#1179). The shared mapper gateErrorToMissionError, which passes each termination reason through (superseded, parent_terminated, expired) and gives no value for an unrecognized one, is cited as a unit witness, not as an endpoint refusal. Partial: completed is not cited here as an endpoint refusal. This demo's own /lifecycle route destroys the underlying OAuth Grant on a terminal transition (provider.ts), so a refresh after it fails at oidc-provider's grant lookup with no mission_error; a raw kernel transition, natural expiry or supersession leaves the grant for the Mission gate."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -5135,6 +5135,72 @@
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
      "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused invalid_request with mission_error expired and saves no family refresh token (@spec mission#mission-bound-tokens, mission#issuance-gating)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "mission_error on the async-delegation exchange's explicit lifecycle refusals (@spec mission#issuance-gating, #1179) > a new exchange on a suspended Mission is refused invalid_request with mission_error suspended, opening no family and counting no derivation; a proof under another key gets none",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "mission_error on the async-delegation exchange's explicit lifecycle refusals (@spec mission#issuance-gating, #1179) > a new exchange on a revoked Mission is refused invalid_request with mission_error revoked, opening no family and counting no derivation; a proof under another key gets none",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "mission_error on the async-delegation exchange's explicit lifecycle refusals (@spec mission#issuance-gating, #1179) > a refusal at the family's counted derivation rolls the family back and carries mission_error in the response and in its replay: revoked for a lifecycle refusal, derivations_exhausted for the cap",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "mission_error on the async-delegation exchange's explicit lifecycle refusals (@spec mission#issuance-gating, #1179) > a retry of a completed family is refused invalid_request with mission_error once its Mission is suspended, then revoked, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > a retry recovering a recorded child that is no longer active carries the child's mission_error only for a token that admits the child (@spec mission#issuance-gating, #1179)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "the presented token's authority bounds a Child Mission (@spec child-delegation#attenuation, #825, D353) > a retry recovering a recorded child after its parent is revoked carries mission_error parent_terminated (@spec mission#issuance-gating, child-delegation#child-state, #1179)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor's refusal carries mission_error revoked; a proof under another key carries none (@spec mission#issuance-gating, #1179)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a suspended predecessor's refusal carries mission_error suspended; a proof under another key carries none (@spec mission#issuance-gating, #1179)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > retrieval of a replacement that is no longer active is refused invalid_request with its mission_error, minting nothing; another authenticated client gets none (@spec mission#issuance-gating, #1179)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/creation-idempotency.test.ts",
+     "name": "expansion idempotency (@spec expansion#creation-request-id) > after completion, a fresh request on the superseded predecessor carries mission_error superseded, and a retry once the successor is suspended, then revoked, carries the successor's own value (@spec mission#issuance-gating, #1179)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > an unrelated client holding the predecessor's token and key gets no predecessor state or mission_error on the expansion refusal; the predecessor's own client does (@spec expansion#verification-order, mission#issuance-gating, #1179)",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
