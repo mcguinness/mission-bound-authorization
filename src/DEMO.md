@@ -95,12 +95,14 @@ pnpm -C src exec vitest run services/authorization-server/test/workload-principa
    workload principal, its `client_id` is the agent, and it carries no
    `act`.
 4. Refresh and the agent's own Token Exchange keep that Subject and client.
-5. A caller without the lifecycle grant gets the not-found response. Dana's
+5. The agent designates the sub-agent `subagent-invoice-extractor` for its
+   own token, and the sub-agent redeems the designation as itself. The
+   delegated token keeps `agt_ledger_reconciler` as `sub`, names the
+   sub-agent in `act`, is bound to the sub-agent's own key, and carries the
+   sub-agent as `client_id`; the Mission's Agent stays `ledger-reconciler`.
+6. A caller without the lifecycle grant gets the not-found response. Dana's
    lifecycle credential revokes the Mission; refresh and the exchange are
    then refused.
-
-Delegation to a sub-agent within the same Mission, with `act` naming the
-sub-agent, waits on #869.
 
 Exhibit mode (annotated wire captures, handbook Appendix B) is a follow-on
 (O-28); the scenario runner is the reproducible path today.
