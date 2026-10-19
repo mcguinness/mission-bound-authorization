@@ -48,7 +48,7 @@ const view: MissionView = {
 
 const reqFor = (actionClass: string): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   // Not in the entry's actions, regardless of class: an entry-match failure
   // is the gate a low or unrecognized classification could try to evade.
   action: { name: "payments:payment.execute" },

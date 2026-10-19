@@ -53,6 +53,17 @@ import { type ResourcePolicy, ResourcePolicyUnavailableError } from "./resource-
 export interface AuthorizedPep {
   secret: string;
   scopes: readonly string[];
+  /**
+   * @spec resource-access#resource-matching, authzen#pdp-request (#1276,
+   * D457): the operation targets this PEP's registered operation contracts
+   * establish, compared exactly. A decision request naming any other target
+   * is refused before any decision work: a target the PEP is not authorized
+   * to establish is never evaluated. Absent, the PEP may name only a target
+   * equal to one of its `scopes`, the service-level contract over its own
+   * enforcement scope; this is a channel restriction, never an entry-match
+   * fallback, and it narrows rather than widens.
+   */
+  operationTargets?: readonly string[];
 }
 
 export interface PdpRemoteServerConfig {
@@ -144,6 +155,7 @@ type ChannelRefusalReason =
   | "replayed_request"
   | "malformed_body"
   | "pep_not_authorized_for_scope"
+  | "pep_not_authorized_for_target"
   | "request_body_too_large";
 
 function headerString(v: string | string[] | undefined): string | undefined {
@@ -194,6 +206,7 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     req: IncomingMessage,
     res: ServerResponse,
     audienceOf: (body: Record<string, unknown>) => unknown,
+    targetOf?: (body: Record<string, unknown>) => unknown,
   ): Promise<AuthenticatedRequest | undefined> {
     const chunks: Buffer[] = [];
     let receivedBytes = 0;
@@ -274,6 +287,16 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
       sendRefusal(res, 403, "pep_not_authorized_for_scope");
       return undefined;
     }
+    // @spec resource-access#resource-matching, authzen#pdp-request (#1276,
+    // D457): the operation target is checked on its own, never inferred from
+    // the scope check above. A string target outside what this PEP may
+    // establish gets zero decision work. A missing or non-string target is
+    // left to the decision, which refuses it on the record.
+    const target = targetOf?.(body as Record<string, unknown>);
+    if (typeof target === "string" && !(pep.operationTargets ?? pep.scopes).includes(target)) {
+      sendRefusal(res, 403, "pep_not_authorized_for_target");
+      return undefined;
+    }
     return {
       pepId,
       nonce,
@@ -309,12 +332,18 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
   }
 
   async function handleEvaluate(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const authed = await authenticate(req, res, (body) => {
-      // @spec authzen#pdp-request: the enforcement scope a request names is
-      // its `resource.properties.audience`, the member the entry match reads.
-      const request = body.request as EvaluationRequest | undefined;
-      return request?.resource?.properties?.audience;
-    });
+    const authed = await authenticate(
+      req,
+      res,
+      (body) => {
+        // @spec authzen#pdp-request: the enforcement scope a request names is
+        // its `resource.properties.audience`.
+        const request = body.request as EvaluationRequest | undefined;
+        return request?.resource?.properties?.audience;
+      },
+      // #1276, D457: the operation target the entry match reads.
+      (body) => (body.request as EvaluationRequest | undefined)?.resource?.properties?.operation_target,
+    );
     if (!authed) return;
     const evalRequest = authed.body.request as EvaluationRequest;
     const opts = { ...(await config.getOptions(evalRequest)) } as EvaluateOptions;

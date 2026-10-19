@@ -1,5 +1,7 @@
 /**
- * @spec authzen#pdp-request (envelope binding, resource.properties.audience rule)
+ * @spec authzen#pdp-request (envelope binding; the entry match reads
+ *   resource.properties.operation_target, #1276, D457)
+ * @spec resource-access#resource-matching (the Resource Access matcher)
  * @spec authzen#denial-response, authzen#runtime-denial-classification
  * @spec runtime (abstract decision contract)
  *
@@ -21,6 +23,8 @@ import {
   computeAnchor,
   conditionsNoBroader,
   type CredentialAuthorityEntry,
+  entryMatchesTarget,
+  isOperationTarget,
   credentialConstraintGates,
   entryMatchesAction,
   isSubsetEntry,
@@ -138,7 +142,9 @@ export interface EvaluationRequest {
   };
   /**
    * `type`/`id`: the fine-grained target object (Resource-policy only), NOT
-   * the entry match. `vendor_ids`, when present, names the FULL collection a
+   * the entry match, which reads `properties.operation_target` (#1276,
+   * D457); neither stands in for the other. `vendor_ids`, when present,
+   * names the FULL collection a
    * bound bulk read resolves to (@spec runtime#read-binding): `id`/`vendor_id`
    * still name one REPRESENTATIVE member (so every existing single-object
    * caller is unaffected), but Resource policy is checked against EVERY
@@ -151,11 +157,27 @@ export interface EvaluationRequest {
     properties: {
       /**
        * @spec authzen#context-audience-freshness, authzen#pdp-request:
-       * REQUIRED, the PEP's audience or protected-resource identifier. The
-       * approved entry's `resource` is matched against this member, never
-       * against `type` or `id`.
+       * REQUIRED, the PEP's audience or protected-resource identifier: the
+       * token-validation and permit-boundary input (the decision channel's
+       * scope check, the idempotency scope, the state assertion's audience).
+       * It is never the entry-match operand and never stands in for a
+       * missing `operation_target` (#1276, D457).
        */
       audience: string;
+      /**
+       * @spec resource-access#resource-matching, authzen#pdp-request (#1276,
+       * D457): REQUIRED, the one absolute URI the authenticated PEP
+       * established as the operation's target, from its trusted operation
+       * contract and validated arguments, independently of the presented
+       * entries. The credential's authority and the Mission's current
+       * authority are both matched against it with the Resource Access
+       * matcher. Missing, malformed or ambiguous (any value other than one
+       * well-formed URI string) refuses; there is no fallback to `audience`
+       * or to `type`/`id`. It rides inside the authorization binding and the
+       * cache key with the rest of `resource`, and inside operation identity
+       * (./projections.ts).
+       */
+      operation_target: string;
       vendor_id?: string;
       vendor_ids?: string[];
     };
@@ -760,10 +782,14 @@ async function evaluateInner(
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
-  // @spec authzen#pdp-request: "A PDP MUST perform the entry match against
-  // `resource.properties.audience`". Read once; a request lacking it matches
-  // no entry.
+  // @spec authzen#context-audience-freshness: the PEP's audience, the
+  // token-validation and permit-boundary input. Read once and validated
+  // below; never the entry-match operand (#1276, D457).
   const audience = req.resource.properties?.audience;
+  // @spec resource-access#resource-matching, authzen#pdp-request (#1276,
+  // D457): the PEP-established operation target, the one operand of every
+  // Mission Resource Access entry match below.
+  const operationTarget: unknown = req.resource.properties?.operation_target;
   const decisionId = newDecisionId();
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping
   // — set once step 4a below validates the mapping (before entitlement lookup,
@@ -837,6 +863,18 @@ async function evaluateInner(
   if (req.context.action_phase !== undefined && !isActionPhase(req.context.action_phase)) {
     return deny("out_of_authority");
   }
+
+  // @spec resource-access#resource-matching, authzen#pdp-request (#1276,
+  // D457): "MUST refuse the operation when it cannot establish one
+  // unambiguous target". A missing target, a value that is not one
+  // well-formed absolute URI (an array of targets included), and a missing or
+  // malformed `audience` are request faults the PDP cannot place under any
+  // entry. Neither member stands in for the other, and `type`/`id` stands in
+  // for neither: each refuses here, before any state work, with the
+  // request-fault classification an undeclared phase or class takes ("or the
+  // request would broaden it", @spec authzen#failure-condition-coverage).
+  if (typeof audience !== "string" || audience.length === 0) return deny("out_of_authority");
+  if (!isOperationTarget(operationTarget)) return deny("out_of_authority");
 
   // 1. View consistency (@spec: view_inconsistent). `id`/`issuer` are the
   // mandatory identity check; `authority_hash` and `policy_view_id` (#702:
@@ -1111,10 +1149,12 @@ async function evaluateInner(
     // intersected with this request's own (resource, action) pair, so an
     // entitlement gap on one action denies that action alone and leaves the
     // rest of the delegated set evaluable. The resource matched here is
-    // `resource.properties.audience`, the same member step 5 below matches an authority
-    // entry's `resource` against; the AuthZEN `resource.id` names the
-    // object instance, a different namespace the delegated set is not keyed
-    // by.
+    // `resource.properties.audience`, the audience the entitlement is
+    // observed at; the AuthZEN `resource.id` names the object instance, a
+    // different namespace the delegated set is not keyed by. Entitlement
+    // rows are not `mission_resource_access` entries, so this grain stays on
+    // the audience, while step 5 matches the Authority Set entries, and step
+    // 5c the credential's, against the operation target (#1276, D457).
     const entitlementCurrent =
       entitlementBoundS !== undefined &&
       entitlement !== undefined &&
@@ -1163,10 +1203,13 @@ async function evaluateInner(
   }
 
   // 5. Authority entry match: the approved entry's resource is matched
-  //    against resource.properties.audience, never the AuthZEN resource
-  //    object's type/id (@spec authzen#pdp-request). On the
-  //    baseline-Join path (4b above), matched against the JOINED authority
-  //    set, never the Mission's raw view.authority_set.
+  //    against the PEP-established operation target with the Resource Access
+  //    matcher (@spec resource-access#resource-matching, #1276, D457):
+  //    literal `exact`, and an entry under `prefix` or an unrecognized
+  //    `resource_match` provides no authority. Never the audience, never the
+  //    AuthZEN resource object's type/id. On the baseline-Join path (4b
+  //    above), matched against the JOINED authority set, never the Mission's
+  //    raw view.authority_set.
   // @spec runtime#input-authority — "For any other `authorization_details`
   // type, the PDP MUST evaluate the action under that type's documented
   // runtime semantics and MUST refuse if it does not understand or cannot
@@ -1182,7 +1225,7 @@ async function evaluateInner(
     (e) => {
       contributions.add(e.type);
       return e.type === MISSION_RESOURCE_ACCESS_TYPE &&
-      e.resource === audience &&
+      entryMatchesTarget(e, operationTarget) &&
       e.actions.includes(req.action.name);
     },
   );
@@ -1202,7 +1245,7 @@ async function evaluateInner(
     const unrecognizedTypeMatch = candidateAuthoritySet.some(
       (e) =>
         e.type !== MISSION_RESOURCE_ACCESS_TYPE &&
-        e.resource === audience &&
+        e.resource === operationTarget &&
         e.actions.includes(req.action.name),
     );
     if (unrecognizedTypeMatch) return deny("unsupported_authorization_type");
@@ -1325,8 +1368,11 @@ async function evaluateInner(
     }
     return { state: sources > 0 ? "live" : "unestablished" };
   };
+  // @spec runtime#input-authority, resource-access#resource-matching (#1276,
+  // D457): the credential bound reads the SAME operation target as the
+  // Mission bound, through the same matcher (`entryMatchesAction`).
   const credentialFacts = {
-    resource: audience ?? "",
+    resource: operationTarget,
     action: req.action.name,
     vendorIds: credentialVendorIds,
     ...(req.context.amount ? { amount: req.context.amount } : {}),

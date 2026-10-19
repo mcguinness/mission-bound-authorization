@@ -1916,11 +1916,15 @@ export class McpPaymentsServer {
   private recomputeParameterDigest(tool: string, args: Record<string, unknown>): string | undefined {
     const mapping = TOOL_ACTIONS[tool];
     if (!mapping?.needsInvoice) return undefined;
+    // @spec resource-access#resource-matching (#1276): the operation target
+    // the enforcement path establishes, from the same trusted contract.
+    const target = this.deps.pep.operationTargetFor(tool);
+    if (!target.ok) return undefined;
     const invoice = this.deps.payments.getInvoice(String(args.invoice_id ?? ""));
     const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
     if (!invoice || !vendor) return undefined;
     return parameterDigest(
-      buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE }),
+      buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: target.target }),
     );
   }
 

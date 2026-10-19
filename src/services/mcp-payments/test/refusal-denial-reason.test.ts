@@ -26,6 +26,7 @@ const REFUSAL_RECORD_DIAGNOSTICS = [
   "unknown_mission",
   "unknown_invoice",
   "unknown_vendor",
+  "operation_target_unresolvable",
   "out_of_authority",
   "instance_revoked",
   "mission_reference_conflict",

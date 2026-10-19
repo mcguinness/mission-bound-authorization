@@ -35,7 +35,14 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
   mode: "co-resident" | "remote";
   pepId: string;
   audience: string;
-  getOptions: (request: EvaluationRequest) => DecisionOptions | Promise<DecisionOptions>;
+  /**
+   * #1276, D457: the operation targets this PEP's contracts establish, as
+   * the remote server registers them (`AuthorizedPep.operationTargets`).
+   * Absent, the registration names none, and the server admits only a target
+   * equal to `audience`.
+   */
+  operationTargets?: readonly string[];
+  getOptions:(request: EvaluationRequest) => DecisionOptions | Promise<DecisionOptions>;
   timeoutMs?: number;
   pepEpoch?: string;
   consumptionStatus?: ConsumptionStatusFn;
@@ -63,7 +70,10 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
   if (config.timeoutMs !== undefined && (!Number.isSafeInteger(config.timeoutMs) || config.timeoutMs <= 0)) throw new Error("invalid remote deadline");
   const secret = randomBytes(32).toString("base64url");
   const server = await createPdpHttpServer({
-    peps: new Map([[config.pepId, { secret, scopes: [config.audience] }]]),
+    peps: new Map([[
+      config.pepId,
+      { secret, scopes: [config.audience], ...(config.operationTargets ? { operationTargets: config.operationTargets } : {}) },
+    ]]),
     getOptions: config.getOptions,
     // The server binds the authenticated requester and its consumption-status
     // capability onto the options; the decision point applies them.

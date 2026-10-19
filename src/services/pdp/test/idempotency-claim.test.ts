@@ -145,6 +145,8 @@ interface RequestOptions {
   subIss?: string;
   actor?: NonNullable<EvaluationRequest["context"]["actor"]>;
   audience?: string;
+  /** The PEP-established operation target (#1276); defaults to the audience. */
+  target?: string;
   /** The target object; the request's `resource.properties.audience` comes from `audience`. */
   resource?: { type: string; id: string; properties?: { vendor_id?: string } };
   /** The PEP's Mission state observation; defaults to a `fresh` read at the clock's instant. */
@@ -155,7 +157,10 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
   const target = o.resource ?? { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } };
   return {
     subject: { id: o.sub ?? "alice", properties: { iss: o.subIss ?? "https://as.test" } },
-    resource: { ...target, properties: { ...target.properties, audience: o.audience ?? RESOURCE } },
+    resource: {
+      ...target,
+      properties: { ...target.properties, audience: o.audience ?? RESOURCE, operation_target: o.target ?? o.audience ?? RESOURCE },
+    },
     action: {
       name: o.action ?? "payments:payment.execute",
       ...(o.key === null ? {} : { properties: { idempotency_key: o.key ?? freshKey() } }),

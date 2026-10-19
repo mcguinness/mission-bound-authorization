@@ -95,7 +95,7 @@ const OBSERVED = { state: "active", mode: "fresh", freshness_at: NOW.toISOString
 
 const joinReq = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: SUBJECT.sub, properties: { iss: SUBJECT.iss } },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: READ },
   context: {
     mission: { id: view.id, issuer: view.issuer },

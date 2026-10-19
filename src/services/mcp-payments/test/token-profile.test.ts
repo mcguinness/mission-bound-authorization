@@ -437,7 +437,7 @@ describe("a vendor lookup carries the store-resolved vendor, so both bounds eval
     expect((x.decided[0] as { resource: unknown }).resource).toEqual({
       type: "vendor",
       id: "acme",
-      properties: { vendor_id: "acme", audience: CANONICAL_RESOURCE },
+      properties: { vendor_id: "acme", audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE },
     });
   });
 

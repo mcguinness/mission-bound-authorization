@@ -69,6 +69,7 @@ const req = (
     id: over.vendors ? (over.vendors[0] as string) : "inv-1",
     properties: {
       audience: RESOURCE,
+      operation_target: RESOURCE,
       vendor_id: over.vendor ?? "acme",
       ...(over.vendors ? { vendor_ids: over.vendors } : {}),
     },

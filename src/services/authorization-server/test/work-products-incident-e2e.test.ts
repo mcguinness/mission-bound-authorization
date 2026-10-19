@@ -130,7 +130,7 @@ const evalAction = async (missionId: string, action: string) => {
   return evaluate(
     {
       subject: { id: "alice" },
-      resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+      resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
       action: { name: action },
       context: {
         ...capabilityPresentationFor(action),
