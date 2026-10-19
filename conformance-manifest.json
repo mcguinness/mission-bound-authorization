@@ -17159,7 +17159,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v8, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266) and refuses a lookup of a vendor the store does not hold before any decision (#1251, D484); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v9, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484) and declares its enforcement boundary identifier (#853, D487); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -17361,9 +17361,21 @@
      "name": "the Resource Server's DPoP proof verifier (@spec RFC 9449 Section 4.3, Section 11.1, #1173) > accepts an iat up to 60 s ahead and 240 s behind, and refuses one beyond either bound",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses an absent, malformed, nonmatching, issuer-confused or profile-confused aud at token validation, before any PDP decision and with no record",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses every token of an issuer and profile whose aliases map one value to two boundaries, the directly named one included",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse. #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts)."
+   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse. #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts). #853 (D487): the audience arm is checked against the boundary the PEP establishes from its declared configuration, by membership under issuer- and profile-scoped aliases: absent, malformed, nonmatching, issuer- and profile-confused audiences and an ambiguous alias context are refused through the server's validation and the mediated channel, with no decision and no record."
   },
   {
    "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",
@@ -21097,9 +21109,21 @@
      "name": "a decision bound to one resource is never honored at another (@spec runtime#security-considerations, Confused Deputy Across Resources) > an authority entry scoped to a different resource is never matched at this resource's boundary, and FGA is never consulted for it",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > a token naming several recipients is evaluated at each PEP's own boundary, never at whichever member comes first",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Resource/audience boundary (the two are structurally identical in this single-resource deployment, since context.audience is always CANONICAL_RESOURCE): an authority entry scoped to a different resource string is never matched here (out_of_authority, FGA never consulted). Operation boundary is covered elsewhere by the existing action-mismatch tests (e.g. enforcement.test.ts's insufficient_authorization case, where an entry present for one action never authorizes another). NOT tested: the tenant boundary -- mcp-payments models no tenant concept at all (single CANONICAL_RESOURCE, no tenant field on MissionView or AuthorityEntry), so there is nothing to relax or refuse to relax."
+   "notes": "Resource/audience boundary (the two are structurally identical in this single-resource deployment, since context.audience is always CANONICAL_RESOURCE): an authority entry scoped to a different resource string is never matched here (out_of_authority, FGA never consulted). Operation boundary is covered elsewhere by the existing action-mismatch tests (e.g. enforcement.test.ts's insufficient_authorization case, where an entry present for one action never authorizes another). NOT tested: the tenant boundary -- mcp-payments models no tenant concept at all (single CANONICAL_RESOURCE, no tenant field on MissionView or AuthorityEntry), so there is nothing to relax or refuse to relax. #853 (D487): the audience boundary is now witnessed on its own: one multi-recipient token is decided at each PEP's own declared boundary, and a permit decided under one boundary identifier is refused at use after a declared change rather than crossing to the new one. The tenant boundary stays untested."
   },
   {
    "id": "runtime.security.business-event-resource-deduplicates",
@@ -27849,9 +27873,27 @@
      "name": "configured evidence key-set scope resolution > never treats an absent or empty enforcement-point audience as a wildcard",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > never lets a key authorized for the old boundary sign for the new one",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > fails when the declared versions do not determine one key authorization, or one key, for the pair",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > carries the boundary, never the aud value or alias, in all three evidence forms, and signs each only under a key authorized for it",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "The Decision Evidence, Refusal Record and Execution Evidence `emitter` member definitions each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. #594 W4-5 adds the configured key-set lookup: exact kid, emitter, role and audience for all three producer roles, with an absent or empty audience refused rather than wildcarded. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations."
+   "notes": "The Decision Evidence, Refusal Record and Execution Evidence `emitter` member definitions each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. #594 W4-5 adds the configured key-set lookup: exact kid, emitter, role and audience for all three producer roles, with an absent or empty audience refused rather than wildcarded. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations. #853 (D487): key authorization comes from the declared Enforcement Scope Statement versions (enforcement_boundaries): the verifier resolves a key only when the record's (audience, kid) pair determines one authorization naming its emitter and role and one published key, a key authorized for one boundary never verifies a record for another, and the PEP's evidence store refuses to sign for a boundary its key is not authorized for. Still partial: the keys remain per-boot, in-process key material."
   },
   {
    "id": "evidence.integrity.compromise-boundary-gates-signature-step",
