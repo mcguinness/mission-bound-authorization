@@ -238,6 +238,17 @@ function refuseInactiveMission(ctx: KoaContextWithOIDC, observed: MissionRecord,
 }
 
 /**
+ * @spec expansion#verification-order step 4 (#1179 review): whether the
+ * authenticated client is `mission`'s own client, the acting agent this
+ * deployment authorizes to expand it or to create a child under it.
+ * Possession of a token for the Mission does not authorize the presenter, so
+ * a refusal discloses the Mission's state only to this client.
+ */
+function isMissionClient(ctx: KoaContextWithOIDC, mission: MissionRecord | undefined): boolean {
+  return mission !== undefined && (ctx.oidc.client as NonNullable<typeof ctx.oidc.client>).clientId === mission.client_id;
+}
+
+/**
  * @spec id-continuation-assertion: the continuation grant's authority is the
  * entries this delegate may carry from the audience-scoped Effective Authority
  * Set (the delegation gate, mission#delegation-constraints), narrowed by this
@@ -2391,12 +2402,17 @@ async function recoverChildCreation(
   const observed = opts.kernel.applyExpiry(child);
   if (observed.state !== "active") {
     // @spec mission#issuance-gating (#1179): the lifecycle refusal stays first,
-    // but the child's state is disclosed only when the presented token's
-    // authority, actor and depth admit the recorded child. The fingerprint
-    // does not bind the token, so a narrower token from the same client and
-    // key reaches this check. The fan-out count is not a disclosure test: it
-    // counts live siblings, which no longer describe a terminal child.
-    if (presentedTokenChildRefusal(opts.kernel, child.authority_set, child.client_id, child.parent?.depth ?? 1, presentedAuthority)) {
+    // but the child's state is disclosed only to the parent's own client, and
+    // only when the presented token's authority, actor and depth admit the
+    // recorded child. The fingerprint does not bind the token, so a narrower
+    // token from the same client and key reaches this check. The fan-out count
+    // is not a disclosure test: it counts live siblings, which no longer
+    // describe a terminal child.
+    const parentClient = isMissionClient(ctx, child.parent ? opts.kernel.get(child.parent.id) : undefined);
+    if (
+      !parentClient ||
+      presentedTokenChildRefusal(opts.kernel, child.authority_set, child.client_id, child.parent?.depth ?? 1, presentedAuthority)
+    ) {
       txError(ctx, 400, "invalid_request", "recorded child mission is not active");
     } else {
       refuseInactiveMission(ctx, observed, `recorded child mission is ${observed.state}`);
@@ -2613,8 +2629,14 @@ export async function handleExpansionExchange(
   const active = opts.kernel.applyExpiry(resolved.record);
   if (active.state !== "active") {
     // @spec expansion#predecessor-active (#1154, #1179): invalid_request on the
-    // expansion exchange, with the predecessor's mission_error.
-    refuseInactiveMission(ctx, active, `predecessor mission is ${active.state}`);
+    // expansion exchange. Possession alone does not authorize the presenter
+    // (step 4), so the predecessor's state and mission_error go only to its
+    // own client.
+    if (isMissionClient(ctx, active)) {
+      refuseInactiveMission(ctx, active, `predecessor mission is ${active.state}`);
+    } else {
+      txError(ctx, 400, "invalid_request", "predecessor mission is not active");
+    }
     return;
   }
 
@@ -3030,10 +3052,15 @@ async function recoverExpansion(
     txError(ctx, 400, "invalid_grant", "recorded successor mission not found");
     return;
   }
-  // The successor's own state and mission_error, never the predecessor's.
+  // The successor's own state and mission_error, never the predecessor's, and
+  // only to its own client (the predecessor's, which it inherits).
   const observed = opts.kernel.applyExpiry(successor);
   if (observed.state !== "active") {
-    refuseInactiveMission(ctx, observed, `recorded successor mission is ${observed.state}`);
+    if (isMissionClient(ctx, successor)) {
+      refuseInactiveMission(ctx, observed, `recorded successor mission is ${observed.state}`);
+    } else {
+      txError(ctx, 400, "invalid_request", "recorded successor mission is not active");
+    }
     return;
   }
   const stored = op.delivery as { access_token?: string; exp?: number } | undefined;

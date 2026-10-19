@@ -1327,6 +1327,37 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
       expect(otherBody.mission_error).toBeUndefined();
     }
   });
+
+  it("an unrelated client holding the predecessor's token and key gets no predecessor state or mission_error on the expansion refusal; the predecessor's own client does (@spec expansion#verification-order, mission#issuance-gating, #1179)", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    expect(as.kernel.get(pred.missionId)?.client_id).toBe("ap-agent");
+    as.kernel.transition(pred.missionId, "revoke");
+    const actions = ["payments:invoice.read", "payments:remittance.send"];
+    const params = (goal: string) => ({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: pred.accessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      login_hint: "alice",
+      mission_intent: intentJson(goal, actions),
+      authorization_details: JSON.stringify(authority(actions)),
+      creation_request_id: crypto.randomUUID(),
+    });
+    type Refusal = { error?: string; error_description?: string; mission_error?: string; access_token?: string };
+
+    // Possession of the token's key does not make the presenter the predecessor's acting agent.
+    const unrelated = await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, dpopKeys, params("Unrelated client expansion"));
+    const unrelatedBody = (await unrelated.json()) as Refusal;
+    expect(unrelated.status, JSON.stringify(unrelatedBody)).toBe(400);
+    expect(unrelatedBody.mission_error).toBeUndefined();
+    expect(unrelatedBody.error_description).not.toContain("terminated");
+    expect(unrelatedBody.access_token).toBeUndefined();
+
+    const own = await tokenRequest(params("Own client expansion"));
+    const ownBody = (await own.json()) as Refusal;
+    expect(own.status, JSON.stringify(ownBody)).toBe(400);
+    expect(ownBody.mission_error).toBe("revoked");
+  });
 });
 
 describe("DPoP proof freshness on the deferred expansion poll (@spec RFC 9449 Section 4.3, #1173)", () => {
