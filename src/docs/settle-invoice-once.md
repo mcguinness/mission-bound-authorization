@@ -2,7 +2,7 @@
 
 This walkthrough follows one wire for one invoice through the reference
 payments resource, from admission to settlement, and names the test that
-witnesses each failure case. It describes `payments-runtime-profile-v5`
+witnesses each failure case. It describes `payments-runtime-profile-v7`
 ([operation-profile-payments-v1.md](operation-profile-payments-v1.md)) as
 built and adds no requirement. Paths are relative to `src/`.
 
@@ -27,21 +27,24 @@ runs every step in one request.
    NFC-normalizes the arguments and checks them against the served schema.
    A missing or malformed key is refused `invalid_request` before any
    decision request.
-2. **Parameters.** The PEP loads the invoice and vendor from the payments
-   store and builds the effective parameters, including `invoice_version`
-   and `vendor_version` (`buildEffectiveParams`,
+2. **Parameters.** The PEP establishes the operation target from the
+   Operation Profile (`Pep.operationTargetFor`), loads the invoice and
+   vendor from the payments store, and builds the effective parameters,
+   including `invoice_version`, `vendor_version` and the target as
+   `resource` (`buildEffectiveParams`,
    `services/mcp-payments/src/effective-params.ts`). `parameterDigest`
    commits them.
 3. **Decision.** `Pep.enforce` reads Mission state live and sends one
-   evaluation request with the digest, the phase `commit` and the key. The
+   evaluation request with the digest, the operation target, the phase
+   `commit` and the key. The
    PDP (`evaluate`, `services/pdp/src/evaluate.ts`) checks Mission state,
    both authority bounds, Resource policy and parameters, then claims
    (idempotency scope, key) with the operation identity
    (`IdempotencyClaimDomain.claim`, `services/pdp/src/idempotency-claims.ts`).
    The permit carries `evaluation_id`, `valid_until`, `use_limit: 1`,
    `parameter_digest` and `action_phase`.
-4. **Admission.** `Pep.verifyPermitAtUse` compares the phase and the
-   permit's validity before anything is stored. The execution lease is the
+4. **Admission.** `Pep.verifyPermitAtUse` compares the phase, the
+   operation target and the permit's validity before anything is stored. The execution lease is the
    published 30 s maximum capped by `valid_until` (`executionLeaseMs`,
    `services/pdp/src/permit-deadline.ts`).
 5. **Redemption.** `TransactionEngine.redeemPermit`
@@ -85,7 +88,8 @@ runs every step in one request.
 | Settlement identity | `inv-1` (`invoice_id`) | the payments store | the ledger's `invoice_id`, unique (`ledger_settlement`) | `Connectors.postWire`, `Connectors.settled` |
 | Idempotency scope | mission, subject, actor, audience, action, resource, phase | the PDP, from validated request members | the claim row | `idempotencyScopeOf` (`services/pdp/src/projections.ts`); `idempotency_scope` in `config/enforcement-scope.json` |
 | Idempotency key | the caller's `idempotency_key`: 16 to 128 of `[A-Za-z0-9_-]`, one per intended execution | the caller | `action.properties.idempotency_key` and the claim row; never `parameter_digest` | `IDEMPOTENCY_KEY_PATTERN` (`packages/mission-core/src/idempotency.ts`) |
-| Operation identity | digest over the action, the resource and `parameter_digest` | the PDP | the claim row; another identity under the same key is `idempotency_conflict` | `operationIdentity` (`projections.ts`) |
+| Operation target | `http://localhost:4403/mcp`, the canonical resource URI | the Operation Profile (`TOOL_ACTIONS`) | `resource.properties.operation_target`; the effective parameters' `resource` | `Pep.operationTargetFor` |
+| Operation identity | digest over the action, the resource object, the operation target and `parameter_digest` | the PDP | the claim row; another identity under the same key is `idempotency_conflict` | `operationIdentity` (`projections.ts`) |
 | `parameter_digest` | `sha-256:` and 43 base64url characters over the effective parameters | the PEP | the permit's conditions, Decision and Execution Evidence | `parameterDigest` (`effective-params.ts`) |
 | Operation key | `op:msn_m5:payments:payment.execute:commit:<parameter_digest>` | the PEP | the redemption store, the operation state machine, the ledger's `op_key`, the Execution Evidence join | `operationKey` (`transaction.ts`) |
 | `evaluation_id` | `dec_<uuid>`; `decision_id` carries the same value | the PDP | the permit, the claim row, Decision and Execution Evidence, the ledger's `permit_id` | `newDecisionId` and `base` in `evaluate.ts` |
