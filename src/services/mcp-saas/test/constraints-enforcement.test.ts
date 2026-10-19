@@ -245,6 +245,18 @@ describe("applicable SaaS entries are alternatives, never combined (@spec resour
     expect(res.ok, JSON.stringify(res)).toBe(true);
   });
 
+  it("refuses a request that only parts of two enforceable entries together cover", async () => {
+    // The write's action is in one entry and its vendor in the other.
+    const token = await pipelineToken([entry([WRITE], { vendors: ["acme"] }), entry([READ], { vendors: ["globex"] })]);
+    const before = saas.journalEntries().length;
+    expect(await write(token, "globex")).toEqual({ ok: false, error: "out_of_authority" });
+    expect(saas.journalEntries()).toHaveLength(before);
+    const w = await write(token, "acme");
+    expect(w.ok, JSON.stringify(w)).toBe(true);
+    const r = await read(token, "globex");
+    expect(r.ok, JSON.stringify(r)).toBe(true);
+  });
+
   it("still authorizes both tools through an unconstrained entry", async () => {
     const token = await pipelineToken([entry([READ, WRITE])]);
     const before = saas.journalEntries().length;
