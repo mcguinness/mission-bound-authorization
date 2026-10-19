@@ -198,9 +198,11 @@ export interface DemoStack {
   /**
    * @spec mission#approval-authentication (#826, D425) — the console
    * Approver's recorded login (Bob, `mfa`, recorded when the stack is
-   * composed). The AS's approval console presents it, and the demo's direct
-   * kernel approvals check the floor against it. Simulated (no Approver
-   * identity provider); `logInAgain` records a new one.
+   * composed). The shared composition's approval console presents it, and
+   * the demo's direct kernel approvals check the floor against it. Simulated
+   * (that composition has no Approver identity provider); `logInAgain`
+   * records a new one. The `as-native` target's console does not use it: its
+   * Approver logs in through the upstream provider at each approval (#1320).
    */
   approverLogin: ApproverLogin;
   fga: Fga;
