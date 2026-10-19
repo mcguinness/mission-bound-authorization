@@ -572,7 +572,7 @@ export interface AdapterOptions {
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;
   /**
-   * @spec mission#approval-authentication (#1320, D496) — the approval
+   * @spec mission#approval-authentication (#1320, D496): the approval
    * surface's login as an OpenID Connect relying party to an upstream
    * provider. Its validated ID Token records the login in `approvalSessions`.
    */

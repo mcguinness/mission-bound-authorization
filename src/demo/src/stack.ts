@@ -138,7 +138,7 @@ export interface AuthServerExtras {
    */
   approverConsole: ApprovalConsole | UpstreamApprovalConsole;
   /**
-   * @spec mission#approval-authentication (#1320, D496) — the upstream
+   * @spec mission#approval-authentication (#1320, D496): the upstream
    * OpenID Provider the `as-native` target's approval surface logs its
    * Approver in through: its issuer and every login it completed, with the
    * factors it verified and the `acr` it asserted. Absent on the shared

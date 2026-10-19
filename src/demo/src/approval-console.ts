@@ -44,7 +44,7 @@ export interface ApprovalConsole {
 }
 
 /**
- * @spec mission#approval-authentication (#1320, D496) — the console's
+ * @spec mission#approval-authentication (#1320, D496): the console's
  * Approver logging in, in the Approver's own user agent, through the AS's
  * approval surface to the upstream OpenID Provider (`approver-idp.ts`), at
  * each approval: the account's password, then the one-time code its

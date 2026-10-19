@@ -1,5 +1,5 @@
 /**
- * @spec mission#approval-authentication (#1320, D496) — the reference
+ * @spec mission#approval-authentication (#1320, D496): the reference
  * upstream OpenID Provider the as-native target's approval surface logs its
  * Approver in through. It is a separate party from the authorization server:
  * its own `oidc-provider` instance, issuer, signing key and listener.

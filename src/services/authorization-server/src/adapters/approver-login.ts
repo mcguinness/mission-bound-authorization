@@ -1,5 +1,5 @@
 /**
- * @spec mission#approval-authentication (#1320, D496) — the approval
+ * @spec mission#approval-authentication (#1320, D496): the approval
  * surface's Approver login, as an OpenID Connect relying party to an
  * upstream OpenID Provider.
  *

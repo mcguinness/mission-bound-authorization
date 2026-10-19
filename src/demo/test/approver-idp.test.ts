@@ -1,5 +1,5 @@
 /**
- * @spec mission#approval-authentication (#1320, D496) — the reference
+ * @spec mission#approval-authentication (#1320, D496): the reference
  * upstream OpenID Provider authenticates the Approver for real: a password
  * checked against its stored hash, then a one-time code it delivers to the
  * account's enrolled device. The `acr` in its ID Token is what that

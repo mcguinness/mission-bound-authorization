@@ -1,5 +1,5 @@
 /**
- * @spec mission#approval-authentication (#1320, D496) — the approval
+ * @spec mission#approval-authentication (#1320, D496): the approval
  * surface's Approver login as an OpenID Connect relying party, over HTTP on
  * the real AS assembly. The upstream provider here is a stub the test
  * controls: it answers the authorization request with a code, checks the

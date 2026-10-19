@@ -845,7 +845,7 @@ export async function buildAuthorizationServer(opts: {
   /** Independent approver login integration; OAuth interaction cookies never establish this login. */
   approvalSessions?: ApprovalSessionStore;
   /**
-   * @spec mission#approval-authentication (#1320, D496) — the approval
+   * @spec mission#approval-authentication (#1320, D496): the approval
    * surface logs its Approver in as an OpenID Connect relying party to this
    * upstream provider, recording each validated login in `approvalSessions`
    * (required with it). Absent: no login route is served, and only the
