@@ -319,6 +319,7 @@ import { ceilingConsentOf, type ProgressiveDrawdownOptions } from "../kernel/pro
 import { ID_JAG_TOKEN_TYPE } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
+  refusedMemberInRequest,
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
 import { withTransaction } from "@mission/store";
@@ -2488,6 +2489,12 @@ async function handleDeferredGrant(
     if (typeof intent.mission_id !== "string" || !Array.isArray(intent.requested)) {
       throw new errors.InvalidRequest("deferred_authorization requires mission_id and requested[]");
     }
+    // @spec resource-access#entry-validation (#1278, D457): the requested
+    // entries are minted onto the deferred token as submitted, and the subset
+    // check below reads no `locations`, so an entry of this type carrying it
+    // is refused here, before any deferral opens.
+    const refusedMember = refusedMemberInRequest(intent.requested);
+    if (refusedMember) throw new InvalidAuthorizationDetails(refusedMember);
     let pending;
     try {
       pending = deferrals.open({

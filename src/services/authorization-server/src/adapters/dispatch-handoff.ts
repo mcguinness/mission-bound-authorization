@@ -17,6 +17,7 @@ import { createLocalJWKSet, type CryptoKey, type JSONWebKeySet, jwtVerify, SignJ
 import { errors, type KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import { refusedMemberInRequest } from "../kernel/authorization-details-metadata.js";
 import { projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { GateError } from "../kernel/kernel.js";
@@ -222,6 +223,14 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
       }
     }
     if (!Array.isArray(parsed)) throw new errors.InvalidRequest("authorization_details must be a JSON array");
+    // @spec resource-access#entry-validation (#1278, D457): the projection
+    // below rebuilds each entry and would drop `locations` silently, so an
+    // entry of this type carrying it is refused before any grant is minted.
+    const refusedMember = refusedMemberInRequest(parsed);
+    if (refusedMember) {
+      txError(ctx, 400, "invalid_authorization_details", refusedMember);
+      return;
+    }
     requested = parsed as AuthorityEntry[];
   }
   let effective: AuthorityEntry[];

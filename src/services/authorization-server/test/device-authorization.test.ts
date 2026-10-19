@@ -489,6 +489,24 @@ describe("Mission Device Authorization request (@spec device-authorization#reque
     expect(repeated.body.device_code).toBeUndefined();
   });
 
+  // @spec resource-access#entry-validation (#1278, D457): the provider's RAR
+  // check never runs at this endpoint, so every `locations` value, including
+  // `null`, `""` and a malformed one, reaches the shared proposal validator.
+  it("refuses a proposal entry carrying locations, whatever its value, with invalid_authorization_details, issuing no device_code", async () => {
+    const missionIntent = JSON.stringify({ intent: INTENT });
+    for (const locations of [[], [RESOURCE], null, "", { uri: RESOURCE }]) {
+      const before = as.kernel.allMissions().length;
+      const proposal = JSON.stringify([{ ...READ[0], locations }]);
+      const res = await deviceAuthorize(PUBLIC, { mission_intent: missionIntent, authorization_details: proposal });
+      expect(res.status, `${JSON.stringify(locations)}: ${JSON.stringify(res.body)}`).toBe(400);
+      expect(res.body.error).toBe("invalid_authorization_details");
+      expect(res.body.error_description).toMatch(/locations must be absent/);
+      expect(res.body.device_code).toBeUndefined();
+      expect(res.body.user_code).toBeUndefined();
+      expect(as.kernel.allMissions().length).toBe(before);
+    }
+  });
+
   it("answers a device request without mission_intent with a refusal, never an ordinary device authorization session", async () => {
     for (const omit of [["mission_intent", "authorization_details"], ["mission_intent"]]) {
       const res = await deviceAuthorize(PUBLIC, { scope: "openid" }, { omit });

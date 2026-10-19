@@ -48,6 +48,7 @@ import {
 import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
 import { gateDelegableAuthority } from "../kernel/delegation.js";
 import {
+  refusedMemberInRequest,
   SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
@@ -1109,6 +1110,15 @@ export async function handleAsyncDelegationExchange(
     }
     if (!Array.isArray(requested)) {
       throw new errors.InvalidRequest("authorization_details must be a JSON array");
+    }
+    // @spec resource-access#entry-validation (#1278, D457): the confinement
+    // below projects each requested entry, rebuilding it without `locations`,
+    // so an entry of this type carrying it is refused before the idempotency
+    // lookup and before any family opens.
+    const refusedMember = refusedMemberInRequest(requested);
+    if (refusedMember) {
+      txError(ctx, 400, "invalid_authorization_details", refusedMember);
+      return;
     }
     requestedSubset = requested as AuthorityEntry[];
   }
