@@ -36157,7 +36157,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1266 slice 3. Cases cc-time_window-* run through the reader. Proved by mutation: comparing the window end as text fails the endpoint test."
+   "notes": "#1266 slice 3. The endpoint witness is the derivation-time subset comparison a Token Exchange runs over a requested window, so the row keeps its derivation surface. Cases cc-time_window-* run through the reader. Proved by mutation: comparing the window end as text fails the endpoint test."
   },
   {
    "id": "resource-access.value-space.issuance-instants",

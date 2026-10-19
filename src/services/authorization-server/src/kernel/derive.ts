@@ -377,7 +377,7 @@ function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): Authority
   );
   if (conditions) constraints.terminal_when = conditions;
   // @spec resource-access#common-constraints, resource-access#initial-common-constraints
-  // (#1266) — each implemented Common Constraint by its own intersection rule
+  // (#1266): each implemented Common Constraint by its own intersection rule
   // (common-constraints.ts): a key on one operand is carried, a key on both
   // narrows. An empty intersection fails the combination, as differing
   // `max_amount` currencies do (D446): the submitted proposal is refused,
@@ -583,7 +583,7 @@ const PROJECTABLE_CONSTRAINTS = new Set([
   // @spec discharge#terminal-when — projectable: the fragment carries the UNION of
   // both sides' conditions, which is no broader than either.
   "terminal_when",
-  // @spec resource-access#common-constraints (#1266) — each by its own
+  // @spec resource-access#common-constraints (#1266): each by its own
   // intersection rule; an empty intersection drops the fragment.
   ...IMPLEMENTED_COMMON_CONSTRAINTS,
 ]);
@@ -721,7 +721,7 @@ function intersectForProjection(
     return null;
   }
   if (conditions) constraints.terminal_when = conditions;
-  // @spec resource-access#common-constraints (#1266) — the shared intersection
+  // @spec resource-access#common-constraints (#1266): the shared intersection
   // rule; a pairing with no intersection yields no fragment (nothing to refuse
   // here: both sides are already-derived entries).
   const common = intersectCommonConstraints(candidate.constraints, effective.constraints);

@@ -315,7 +315,7 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
     return false;
   }
   // @spec resource-access#subset step 3, resource-access#value-space-comparison
-  // (#1266) — every implemented Common Constraint the grantor carries, kept
+  // (#1266): every implemented Common Constraint the grantor carries, kept
   // and no broader in value space; a malformed value on either side fails.
   if (!commonConstraintsNoBroader(candidate.constraints, granted.constraints)) return false;
   // @spec discharge#subset-extension — a derived entry carries every parent

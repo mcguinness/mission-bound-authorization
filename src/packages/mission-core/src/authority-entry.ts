@@ -110,39 +110,39 @@ export interface AuthorityEntry {
      */
     requires_action_approval?: boolean;
     /**
-     * @spec resource-access#initial-common-constraints — the action applies
+     * @spec resource-access#initial-common-constraints: the action applies
      * only to resources issued at or after this RFC 3339 instant. Semantics
      * in `common-constraints.ts`.
      */
     resource_issued_after?: string;
     /**
-     * @spec resource-access#initial-common-constraints — the action applies
+     * @spec resource-access#initial-common-constraints: the action applies
      * only to resources issued at or before this RFC 3339 instant.
      */
     resource_issued_before?: string;
     /**
-     * @spec resource-access#initial-common-constraints — the action applies
+     * @spec resource-access#initial-common-constraints: the action applies
      * only to resources of the named tenant (exact string comparison).
      */
     tenant?: string;
     /**
-     * @spec resource-access#initial-common-constraints — the action may be
+     * @spec resource-access#initial-common-constraints: the action may be
      * exercised only within the window, evaluated at the point of use; an
      * absent bound is unbounded on its side.
      */
     time_window?: { not_before?: string; not_after?: string };
     /**
-     * @spec resource-access#initial-common-constraints — every recipient the
+     * @spec resource-access#initial-common-constraints: every recipient the
      * action reaches is within this DNS domain (whole labels, any case).
      */
     recipient_domain?: string;
     /**
-     * @spec resource-access#initial-common-constraints — the action applies
+     * @spec resource-access#initial-common-constraints: the action applies
      * only to data whose classification label is among these (exact strings).
      */
     data_classification?: string[];
     /**
-     * @spec resource-access#initial-common-constraints — the action may be
+     * @spec resource-access#initial-common-constraints: the action may be
      * exercised only through one of these tool identities (exact strings).
      */
     allowed_tools?: string[];

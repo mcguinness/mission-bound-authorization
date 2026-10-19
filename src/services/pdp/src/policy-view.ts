@@ -62,7 +62,7 @@ export interface AuthorityEntry {
      */
     terminal_when?: TerminalWhenCondition[];
     /**
-     * @spec resource-access#initial-common-constraints (#1266) — the
+     * @spec resource-access#initial-common-constraints (#1266): the
      * implemented Common Constraints, evaluated through `@mission/core`'s
      * shared `commonConstraintGates` against the facts the PEP established.
      */
