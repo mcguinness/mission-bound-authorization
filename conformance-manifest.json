@@ -16779,9 +16779,33 @@
      "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a permit held for retransmission never takes a later statement version (@spec runtime#boundary-identifier-change, runtime#idempotency, #853) > the PDP answers a retry with the permit's key after the cutover duplicate_suppressed under the original claim, never with the earlier permit",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a permit held for retransmission never takes a later statement version (@spec runtime#boundary-identifier-change, runtime#idempotency, #853) > the PEP keeps a re-presented permit's own version: an earlier permit returned after the cutover is suppressed kill_switch at use, at its original boundary",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/boundary-cutover-stack.test.ts",
+     "name": "a declared change of boundary identifier through the composed stack (@spec runtime#boundary-identifier-change, #853) > never returns a permit held for retransmission after a same-identifier version change over the co-resident channel: the retry is suppressed with no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/boundary-cutover-stack.test.ts",
+     "name": "a declared change of boundary identifier through the composed stack (@spec runtime#boundary-identifier-change, #853) > never returns a permit held for retransmission after a same-identifier version change over the remote channel: the retry is suppressed with no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed for a permit decided before the cutover. Not separately witnessed: a cached read permit and a later phase of a compound action. Defect-checked in the #853 implementation (23 mutations)."
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed for a permit decided before the cutover. Not separately witnessed: a cached read permit and a later phase of a compound action. Defect-checked in the #853 implementation (23 mutations). #1327 re-review: the permit-cache entry the PDP holds for retransmission is never returned after a new statement version takes effect (the retry with its key is duplicate_suppressed and releases no effect, through the component fixture and composeStack co-resident and remote), and a permit re-presented after it keeps the version it was retained under and is suppressed kill_switch at use. Witnessed for a version that keeps the identifier, under the reference's policy of invalidating held permits at every version; an identifier change is a version change, so the same guards apply. Coverage stays partial: a cached read permit and a later phase of a compound action are not separately witnessed."
   },
   {
    "id": "runtime.boundary-identifier-change.producers-switch-together",
@@ -22233,7 +22257,7 @@
    "assertion": "replay",
    "observation": {
     "normative": "a re-presentation whose decision cache key equals the prior decision's and whose claim matches (same idempotency scope, key and operation identity), while the prior permit is unexpired and its evaluation_id unconsumed, returns the prior decision rather than a fresh evaluation or an error",
-    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim or a PDP restart suppresses with duplicate_suppressed (next_action retry); unexpired is judged on a clock read after that answer arrives, inside the transaction that returns the decision; and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
+    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim, a PDP restart, or a statement version that took effect after the claim was made (the reference invalidates every permit at a new statement version, the identifier and cache key unchanged included) suppresses with duplicate_suppressed (next_action retry); unexpired is judged on a clock read after that answer arrives, inside the transaction that returns the decision; and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
    },
    "level": "concurrency",
    "coverage": "tested",
@@ -22297,8 +22321,21 @@
      "name": "the remote channel binds the claim requester (@spec runtime#idempotency, #917) > returns a prior permit only to the authenticated PEP epoch it was issued to",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it once a later statement version is in force, the boundary and cache key unchanged (@spec runtime#boundary-identifier-change)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it when the cutover falls while the PEP is answering (@spec runtime#boundary-identifier-change)",
+     "level": "unit",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": " #1327 re-review: a claim records the statement version it was made under, and its stored permit is returned only while that version is in force, checked at the claim step and again after the PEP's consumption answer; a deliberate departure from the SHOULD across a version change, where the reference invalidates held permits."
   },
   {
    "id": "runtime.execution-reverification.stop-or-renew-before-lease-expires",
