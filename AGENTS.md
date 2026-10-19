@@ -74,6 +74,10 @@ Rules every agent follows:
   branch-push workflows such as Update Editor's Copy still run.
 - A change under `.github/workflows` needs a token with `workflow`
   scope.
+- Update Editor's Copy and Reader Editions do not run for a push or
+  pull request confined to `src/`, `notes/`, the manifests,
+  `candidate-gate.json` or `DRAFTS.md`; their absence on such a head
+  is expected, not a missing check.
 
 ## Parallel sessions
 
