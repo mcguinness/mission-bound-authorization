@@ -42655,7 +42655,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1304 (D486). The reference asks the policy once the other conditions hold, at the first check and again inside the creation transaction (the insertRecord precondition). Recovery delivers a committed creation and never asks it (#1335 review). Proven by disabling the code it covers (each mutation restored byte for byte): ignoring the policy decision fails the denial witnesses and the withdrawal witness's new creation; dropping the commit re-check fails the changed-decision and asked-twice witnesses; asking the policy on recovery again fails the withdrawal witness at the replay, and asking it there while ignoring the answer fails the witness's unchanged ask count."
+   "notes": "#1304 (D486). The reference asks the policy once the other conditions hold, at the first check and again inside the creation transaction (the insertRecord precondition). Recovery delivers a committed creation and never asks it (the #1335 review (D500)). Proven by disabling the code it covers (each mutation restored byte for byte): ignoring the policy decision fails the denial witnesses and the withdrawal witness's new creation; dropping the commit re-check fails the changed-decision and asked-twice witnesses; asking the policy on recovery again fails the withdrawal witness at the replay, and asking it there while ignoring the answer fails the witness's unchanged ask count."
   },
   {
    "id": "child-delegation.child-actor-eligibility.inherited-eligibility",
