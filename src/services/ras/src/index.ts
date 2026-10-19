@@ -85,7 +85,24 @@ export interface RasConfig {
   entitlement: EntitlementResolver;
   /** Independent freshness bound for the entitlement observation, seconds. */
   entitlementStalenessBoundSeconds: number;
+  /**
+   * @spec resource-access#resource-access-type, #protected-resource-metadata
+   * (#1266): per destination resource, the `constraints` keys its resource
+   * server is known to enforce, for example from that resource's
+   * `mission_constraints_supported` metadata. A minted entry for a listed
+   * resource carrying any other key is dropped whole, never stripped of the
+   * key, which would widen it. A resource not listed here is minted as
+   * narrowed; its resource server fails closed on a key it cannot enforce.
+   */
+  resourceConstraintsSupported?: Readonly<Record<string, readonly string[]>>;
   now?: () => Date;
+}
+
+function isConstraintsSupportedMap(value: unknown): value is Readonly<Record<string, readonly string[]>> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.values(value).every(
+    (keys) => Array.isArray(keys) && keys.every((k) => typeof k === "string" && k.length > 0),
+  );
 }
 
 export class RasError extends Error {
@@ -102,6 +119,9 @@ export class ResourceAuthorizationServer {
     if (!Array.isArray(cfg.localCeiling) || cfg.localCeiling.length === 0 || !cfg.localCeiling.every(isAuthorityEntry) ||
         cfg.localCeiling.some(e => e.capability_sources !== undefined) || typeof cfg.localPolicyVersion !== "string" || !cfg.localPolicyVersion) {
       throw new Error("RAS local policy must have a version and a non-empty, supported, binding-free ceiling");
+    }
+    if (cfg.resourceConstraintsSupported !== undefined && !isConstraintsSupportedMap(cfg.resourceConstraintsSupported)) {
+      throw new Error("RAS resourceConstraintsSupported must map each resource to an array of constraints keys");
     }
     this.db = openStore(redemptionSchema("jag_redemptions"));
     this.now = cfg.now ?? (() => new Date());
@@ -319,6 +339,9 @@ export class ResourceAuthorizationServer {
     // #762: the destination policy is an independent third bound, including
     // continuation grants. Refusal must not burn the grant's one-time jti.
     mintedAuthority = narrowToCeiling(mintedAuthority, this.cfg.localCeiling);
+    // @spec resource-access#resource-access-type (#1266): emit for a resource
+    // only the constraints keys its resource server is known to enforce.
+    mintedAuthority = mintedAuthority.filter((entry) => this.constraintsEnforcedFor(entry));
     if (!mintedAuthority.length) throw new RasError("invalid_grant", "local policy check failed");
 
     // Compute the minted token's clamped expiry BEFORE consuming the
@@ -371,6 +394,18 @@ export class ResourceAuthorizationServer {
       .setExpirationTime(exp)
       .sign(this.cfg.signKey);
     return { access_token: token, expires_in: exp - nowS };
+  }
+
+  /**
+   * Whether every `constraints` key of `entry` is one its resource is known to
+   * enforce; true for a resource {@link RasConfig.resourceConstraintsSupported}
+   * does not list.
+   */
+  private constraintsEnforcedFor(entry: AuthorityEntry): boolean {
+    const supported = this.cfg.resourceConstraintsSupported;
+    if (!supported || !Object.hasOwn(supported, entry.resource)) return true;
+    const keys = supported[entry.resource] ?? [];
+    return Object.keys(entry.constraints ?? {}).every((key) => keys.includes(key));
   }
 
   /** @spec MCP EMA: the RAS declares enterprise-managed auth in its metadata. */

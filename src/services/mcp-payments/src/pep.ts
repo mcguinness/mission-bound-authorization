@@ -308,6 +308,33 @@ export interface ActionMapping {
    * operation reaches; an argument naming no stored vendor resolves to none.
    */
   targetsVendor?: true;
+  /**
+   * @spec resource-access#initial-common-constraints (#1266): the operation
+   * addresses recipients. The PEP resolves every final recipient from the
+   * vendor's own remittance routing (lists expanded), carries them as the
+   * `recipient_domain` fact, binds a routed set into `parameter_digest`, and
+   * the connector sends to exactly that set. Recipients it cannot resolve
+   * refuse the operation before any decision.
+   */
+  reachesRecipients?: true;
+}
+
+/**
+ * The recipient members an invoice-scoped operation's effective parameters
+ * carry: none for an operation that addresses no one or a vendor with no
+ * routing of its own (its default address is a function of `vendor_id`, which
+ * the digest already binds), the routed set otherwise, and `null` when the
+ * routing cannot be resolved.
+ */
+export function recipientParams(
+  reachesRecipients: boolean,
+  payments: PaymentsStore,
+  vendorId: string,
+): { recipients?: string[] } | null {
+  if (!reachesRecipients) return {};
+  const resolved = payments.remittanceRecipients(vendorId);
+  if (!resolved) return null;
+  return resolved.routed ? { recipients: resolved.recipients } : {};
 }
 
 /**
@@ -342,7 +369,7 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
   check_transfer: { action: "payments:payment.execute", phase: "preflight", actionClass: "consequential_read", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true },
   hold_transfer: { action: "payments:payment.execute", phase: "prepare", actionClass: "consequential_write", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true },
   execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true },
-  send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true },
+  send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true, reachesRecipients: true },
 };
 
 /**
@@ -1001,7 +1028,8 @@ export type PepRefusalDiagnostic =
   | "capability_source_unresolvable"
   | "decision_evidence_unverifiable"
   | "channel_failure"
-  | "pdp_unreachable";
+  | "pdp_unreachable"
+  | "unresolvable_recipients";
 
 /**
  * @spec runtime-evidence#pre-decision-refusal (issue #786) — the deployment's
@@ -1054,6 +1082,9 @@ export const PRE_DECISION_DENIAL_REASON: Readonly<Record<PepRefusalDiagnostic, P
   decision_evidence_unverifiable: "decision_evidence_unverifiable",
   channel_failure: "channel_failure",
   pdp_unreachable: "pdp_unreachable",
+  // The recipients the operation addresses cannot be resolved from the
+  // resource's own routing records (#1266): its target does not resolve.
+  unresolvable_recipients: "target_unresolvable",
 });
 
 /** Whether `diagnostic` is one this PEP refuses with on its Refusal Record path. */
@@ -1154,7 +1185,17 @@ interface RefusalEstablished {
  * `resource` identity and its object-scoped members, before the request's
  * `resource.properties.audience` is added.
  */
-type TargetObject = { type: string; id: string; properties?: { vendor_id?: string; vendor_ids?: string[] } };
+type TargetObject = {
+  type: string;
+  id: string;
+  properties?: {
+    vendor_id?: string;
+    vendor_ids?: string[];
+    issued_at?: string;
+    tenant?: string;
+    data_classification?: string;
+  };
+};
 
 export class Pep {
   readonly capabilityCatalog: CapabilityCatalog;
@@ -1176,6 +1217,12 @@ export class Pep {
    */
   toolAction(tool: string): ActionMapping | undefined {
     return (this.deps.operationProfile?.() ?? TOOL_ACTIONS)[tool];
+  }
+
+  /** Whether the current Operation Profile has a tool for `action` that addresses recipients (#1266). */
+  private reachesRecipients(action: string): boolean {
+    const profile = this.deps.operationProfile?.() ?? TOOL_ACTIONS;
+    return Object.values(profile).some((m) => m.action === action && m.reachesRecipients === true);
   }
 
   /**
@@ -1422,16 +1469,28 @@ export class Pep {
     let resourceObj: TargetObject = { type: "server", id: CANONICAL_RESOURCE };
     let listVendorScope: string[] | undefined;
     let targetVendorId: string | undefined;
+    let recipients: string[] | undefined;
+    let recipientsRouted = false;
     if (mapping.targetsVendor && args.vendor_id !== undefined) {
-      targetVendorId = this.deps.payments.getVendor(String(args.vendor_id))?.id;
+      const targetVendor = this.deps.payments.getVendor(String(args.vendor_id));
+      targetVendorId = targetVendor?.id;
       // @spec authzen#context-credential, authzen#runtime-denial-classification
       // (D324): the target is the vendor the store resolved, never the
       // argument, and it rides the request so the credential bound and the
       // Mission's vendor constraint both evaluate the target this PEP
       // established. A vendor read is a read of that vendor object; one the
       // store does not hold keeps the server resource and names no vendor.
+      // @spec resource-access#initial-common-constraints (#1266): the
+      // vendor record's own tenant, the ownership fact a `tenant` bound reads.
       if (targetVendorId !== undefined) {
-        resourceObj = { type: "vendor", id: targetVendorId, properties: { vendor_id: targetVendorId } };
+        resourceObj = {
+          type: "vendor",
+          id: targetVendorId,
+          properties: {
+            vendor_id: targetVendorId,
+            ...(typeof targetVendor?.tenant === "string" ? { tenant: targetVendor.tenant } : {}),
+          },
+        };
       }
     }
     if (mapping.needsInvoice) {
@@ -1444,11 +1503,43 @@ export class Pep {
           resource: { type: "invoice", id: invoice.id },
         });
       }
+      // @spec resource-access#initial-common-constraints (#1266): every
+      // recipient the operation reaches, from the vendor's own routing.
+      if (mapping.reachesRecipients) {
+        const resolved = this.deps.payments.remittanceRecipients(vendor.id);
+        if (!resolved) {
+          return await this.refuse(token, "unresolvable_recipients", mapping.action, view, undefined, {
+            resource: { type: "invoice", id: invoice.id },
+          });
+        }
+        recipients = resolved.recipients;
+        recipientsRouted = resolved.routed;
+      }
       // The operation target is the effective parameters' `resource`, so the
       // parameter digest, the operation key and every recheck bind it too.
-      effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: operationTarget });
+      // The routed set binds into the digest; a vendor's default address is
+      // a function of `vendor_id`, which the digest already binds.
+      const bound = recipients && recipientsRouted ? { recipients } : {};
+      effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: operationTarget, ...bound });
       amount = effective.amount;
-      resourceObj = { type: "invoice", id: invoice.id, properties: { vendor_id: vendor.id } };
+      // @spec resource-access#initial-common-constraints (#1266): the
+      // invoice's issuance instant is this service's own record, never an
+      // argument; an invoice with none carries no fact, which satisfies no
+      // issuance bound. The invoice version the parameter digest binds moves
+      // with any change to it, so a changed fact refuses at reverification.
+      resourceObj = {
+        type: "invoice",
+        id: invoice.id,
+        properties: {
+          vendor_id: vendor.id,
+          ...(typeof invoice.issued_at === "string" ? { issued_at: invoice.issued_at } : {}),
+          // The tenant that owns the invoice is its vendor's, from the vendor
+          // record, whose version the parameter digest also binds.
+          ...(typeof vendor.tenant === "string" ? { tenant: vendor.tenant } : {}),
+          // The invoice's own classification label, from its record.
+          ...(typeof invoice.classification === "string" ? { data_classification: invoice.classification } : {}),
+        },
+      };
     } else if (mapping.bindsVendorScope) {
       // @spec runtime#read-binding — "a consequential read whose parameters
       // ... request a bulk or export-like result ... MUST bind those
@@ -1544,6 +1635,24 @@ export class Pep {
           ? ((resourceObj.properties?.vendor_ids as readonly string[] | undefined) ?? [resourceObj.id])
           : []) as readonly string[],
       ...(amount ? { amount } : {}),
+      // @spec resource-access#rs-enforcement (#1266): the facts the
+      // implemented Common Constraints read, as this PEP established them
+      // above (the same values the decision request carries).
+      constraintFacts: {
+        ...(resourceObj.properties?.issued_at !== undefined
+          ? { resourceIssuedAt: resourceObj.properties.issued_at }
+          : {}),
+        ...(resourceObj.properties?.tenant !== undefined ? { tenant: resourceObj.properties.tenant } : {}),
+        ...(resourceObj.properties?.data_classification !== undefined
+          ? { dataClassification: [resourceObj.properties.data_classification] }
+          : {}),
+        // `time_window` reads this PEP's own clock, at this check; every
+        // later use is held to the permit's `valid_until`, which the PDP caps
+        // at the window's end (PERMIT_USE_CHECKS).
+        now: this.now().getTime(),
+        ...(recipients ? { recipients } : {}),
+        tool,
+      },
     };
     if (token.mission !== undefined) {
       const covered =
@@ -1598,9 +1707,20 @@ export class Pep {
       // mints one nor repairs one.
       action: {
         name: mapping.action,
-        ...(mapping.idempotencyKey && typeof args.idempotency_key === "string"
-          ? { properties: { idempotency_key: args.idempotency_key } }
-          : {}),
+        ...({
+              properties: {
+                // @spec resource-access#initial-common-constraints (#1266): the
+                // tool this PEP dispatched the operation to, from its
+                // Operation Profile, never an argument.
+                tool,
+                ...(mapping.idempotencyKey && typeof args.idempotency_key === "string"
+                  ? { idempotency_key: args.idempotency_key }
+                  : {}),
+                // @spec resource-access#initial-common-constraints (#1266): the
+                // resolved recipients, from this resource's records only.
+                ...(recipients ? { recipients } : {}),
+              },
+            }),
       },
       context: {
         mission: {
@@ -1936,11 +2056,14 @@ export class Pep {
           // The target is gone: no digest over "the parameters actually
           // attempted" exists to observe. Declining is the honest answer.
           if (!invoice || !vendor) return undefined;
+          const bound = recipientParams(effective.recipients !== undefined || this.reachesRecipients(effective.action), this.deps.payments, vendor.id);
+          if (!bound) return undefined;
           const fresh = buildEffectiveParams({
             action: effective.action,
             invoice,
             vendor,
             resource: effective.resource,
+            ...bound,
           });
           return parameterDigest(fresh);
         }
@@ -2225,7 +2348,15 @@ export class Pep {
       const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
       return { ok: false, error: "parameter_mismatch", disposition };
     }
-    const fresh = buildEffectiveParams({ action: effective.action, invoice, vendor, resource: effective.resource });
+    // @spec resource-access#initial-common-constraints (#1266): the routed
+    // recipients re-resolved now; a routing that changed, or no longer
+    // resolves, is a parameter mismatch.
+    const bound = recipientParams(effective.recipients !== undefined || this.reachesRecipients(effective.action), this.deps.payments, vendor.id);
+    if (!bound) {
+      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
+      return { ok: false, error: "parameter_mismatch", disposition };
+    }
+    const fresh = buildEffectiveParams({ action: effective.action, invoice, vendor, resource: effective.resource, ...bound });
     const freshDigest = parameterDigest(fresh);
     if (freshDigest !== expectedDigest) {
       const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
