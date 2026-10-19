@@ -171,7 +171,7 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
 });
 
 describe("runtime decision gates are independently necessary (@spec runtime#decision)", () => {
-  it("a stale freshness failure denies even though authority and the Resource-policy/FGA check both permit", async () => {
+  it("a stale freshness failure denies even though authority, the Mission's contextual check and Resource policy all permit", async () => {
     const dec = await evaluate(
       req({
         action: { name: "payments:invoice.read" },
@@ -210,7 +210,7 @@ describe("runtime decision gates are independently necessary (@spec runtime#deci
  * declares NO vendors constraint at all, so the deny below can only be the
  * genuine relationship result, never a constraint exclusion.
  */
-describe("a genuine Resource-policy/FGA denial on an unconstrained entry still denies out_of_authority, never parameter_violation (@spec authzen#runtime-denial-classification, #801)", () => {
+describe("a genuine denial by the Mission's contextual check on an unconstrained entry still denies out_of_authority, never parameter_violation (@spec authzen#runtime-denial-classification, #801)", () => {
   it("an entry with no vendors constraint whose FGA check fails denies out_of_authority", async () => {
     const denyAll = { checkWithContext: async () => false } as unknown as Fga;
     const dec = await evaluate(
@@ -238,7 +238,7 @@ describe("a genuine Resource-policy/FGA denial on an unconstrained entry still d
  * representative), independent of whether this domain model can produce a
  * real per-member disagreement today.
  */
-describe("a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding)", () => {
+describe("the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding)", () => {
   const LIST_RESOURCE = "http://localhost:4403/mcp";
   const listView: MissionView = {
     id: "msn_test_1",
@@ -273,7 +273,7 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   });
 
-  it("Mission authority includes two vendors; Resource policy denies one: the whole read denies out_of_authority, never a silently narrowed permit", async () => {
+  it("Mission authority includes two vendors; the Mission's contextual check refuses one: the whole read denies out_of_authority, never a silently narrowed permit", async () => {
     const denyGlobex = {
       checkWithContext: async (check: { object: string }) => check.object !== "vendor:globex",
     } as unknown as Fga;
@@ -284,7 +284,7 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
     expect(dec.context.conditions).toBeUndefined();
   });
 
-  it("Mission authority includes two vendors; Resource policy permits both: the read permits", async () => {
+  it("Mission authority includes two vendors; the Mission's contextual check permits both: the read permits", async () => {
     const allow = { checkWithContext: async () => true } as unknown as Fga;
     const dec = await evaluate(listReq(["acme", "globex"]), listOpts(allow));
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);

@@ -340,7 +340,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
  * loop, and server.ts's execute()): it denies the WHOLE read the moment any
  * one named vendor is refused, so a denied vendor's rows never appear.
  */
-describe("finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding)", () => {
+describe("finding 3: a multi-vendor list_invoices names every returned vendor to the Mission's contextual check, not just one representative (@spec read-binding)", () => {
   const missionId = "msn_612_g3";
   const TOKEN: TokenFacts = {
     sub: "alice",
@@ -387,7 +387,7 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
     return { server };
   }
 
-  it("Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result", async () => {
+  it("Mission authority includes two vendors; the Mission's contextual check refuses one: the whole read refuses out_of_authority, never a narrowed result", async () => {
     const denyGlobex = {
       checkWithContext: async (check: { object: string }) => check.object !== "vendor:globex",
     } as unknown as import("@mission/pdp").Fga;
@@ -401,7 +401,7 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
     expect(res.result).toBeUndefined();
   });
 
-  it("Mission authority includes two vendors; Resource policy permits both: the read succeeds with exactly those two vendors' invoices", async () => {
+  it("Mission authority includes two vendors; the Mission's contextual check permits both: the read succeeds with exactly those two vendors' invoices", async () => {
     const allow = { checkWithContext: async () => true } as unknown as import("@mission/pdp").Fga;
     const { server } = build(allow);
     const res = await server.callReadTool("list_invoices", {}, TOKEN);
