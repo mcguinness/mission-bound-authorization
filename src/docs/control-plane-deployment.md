@@ -262,7 +262,7 @@ kernel in memory), so on every shipped launcher the kernel rows are lost too.
 | AS signing keys | Generated per boot | Deliberately invalidated: no earlier token or record verifies. PR #1299 adds a durable key ring |
 | Access tokens | Self-contained JWTs | Verify only while their signing key survives |
 | Durable grant revocations still pending | Kernel database | Attempted at boot; a revocation whose grant was lost with the provider is acknowledged with nothing left to revoke |
-| Signals receiver high-water | Receiver memory (no shipped service constructs a receiver) | Lost |
+| Signals receiver state: the version high-water, the cached observation, the gap and rematerialization markers, the retained SET and the seen `jti` values | The receiver's store (`ReceiverOptions.store`): in memory by default, or a file the consumer gives it. No shipped service constructs a receiver | Durable when the consumer gives the receiver a file |
 
 oidc-provider's memory adapter is process-global, so an AS rebuilt in the
 same process still holds the previous provider's grants. A restart test that
