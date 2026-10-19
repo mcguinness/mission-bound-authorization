@@ -32,6 +32,7 @@ const IMPLEMENTED = new Set([
   "constraint.max_amount",
   "constraint.requires_action_approval",
   "refusal.unsupported-input",
+  "refusal.locations",
   "delegate-matcher",
 ]);
 
@@ -49,7 +50,6 @@ const KNOWN_CAPABILITIES = new Set([
   "constraint.time_window",
   "constraint.data_classification",
   "constraint.allowed_tools",
-  "refusal.locations",
   "rs.enforcement",
   "rs.alternative-grants",
   "rs.member-roles",
