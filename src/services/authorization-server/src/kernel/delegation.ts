@@ -17,9 +17,15 @@ import {
   flattenActChain,
   validateActChain,
 } from "@mission/actor-chain";
-import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
+import type { DelegateCandidate } from "./delegate-matcher.js";
 import { InstanceAssertionError, type ValidatedInstance } from "./instance-assertion.js";
 import type { AuthorityEntry } from "./types.js";
+
+export {
+  type DelegationCandidate,
+  delegateEligibility,
+  gateDelegableAuthority,
+} from "./eligibility-provenance.js";
 
 export interface DelegatedIssuance {
   /** The nested `act` claim for the issued token. */
@@ -31,47 +37,22 @@ export interface DelegatedIssuance {
   /** client_instance_id correlator for context.actor. */
   clientInstanceId: string;
   /**
-   * @spec draft-mcguinness-oauth-mission#per-entry-enforcement — when the caller
-   * supplies the delegating Mission's Authority Set, the entries the delegate may
-   * carry after the `allowed_delegates` gate ({@link gateDelegableAuthority}).
-   * Undefined for act-chain-only construction (no authority set supplied).
+   * @spec draft-mcguinness-oauth-mission#per-entry-enforcement: when the caller
+   * supplies the delegation gate, the entries the delegate may carry.
+   * Undefined for act-chain-only construction (no gate supplied).
    */
   delegatedAuthority?: AuthorityEntry[];
 }
 
 /**
- * @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the core
- * `allowed_delegates` runtime gate (previously spec'd but UNENFORCED). Given the
- * delegating Mission's Authority Set, the `delegate`, and the delegation `depth`
- * of the token being issued (its resulting `act`-chain length, counted after
- * appending the new outermost actor), return ONLY the entries the delegate may
- * carry. An entry is included iff ALL hold:
- *
- *   1. it carries a `delegation` member (otherwise non-delegable — the default);
- *   2. `depth` <= `delegation.max_depth`; and
- *   3. the delegate is permitted by `delegation.allowed_delegates` under the
- *      SHARED matcher ({@link delegatePermitted}) — an absent list DENIES
- *      (fail-closed), never blanket-grants.
- *
- * Entries failing any test narrow out, consistent with the subset rule. The
- * `delegation` member is policy, not authority: it is carried through on the
- * surviving entries so the next hop is evaluated the same way. This mirrors the
- * child path's use of the same helper for `allowed_child_actors`.
+ * @spec mission#delegation-constraints, resource-access#delegate-eligibility
+ * (#1275): the entries a delegate may carry at a delegation depth, as the
+ * authorization server decides them for the delegating Mission
+ * (MissionKernel.delegableEntries: each entry resolved to its approved Mission
+ * Record entries and their retained provenance, every retained list, and the
+ * current delegation-authorization policy).
  */
-export function gateDelegableAuthority(
-  authoritySet: AuthorityEntry[],
-  delegate: DelegateCandidate,
-  depth: number,
-): AuthorityEntry[] {
-  return authoritySet.filter((entry) => {
-    const d = entry.delegation;
-    // (1) non-delegable by default; (2) per-entry max_depth bound (fail-closed on
-    // a missing/invalid max_depth).
-    if (!d || typeof d.max_depth !== "number" || depth > d.max_depth) return false;
-    // (3) the delegate MUST be permitted by the shared matcher.
-    return delegatePermitted(delegate, d.allowed_delegates);
-  });
-}
+export type DelegationGate = (delegate: DelegateCandidate, depth: number) => AuthorityEntry[];
 
 /**
  * Construct a delegated issuance from a validated instance assertion and the
@@ -84,13 +65,13 @@ export function constructDelegatedIssuance(input: {
   inboundAct?: ActObject;
   maxDepth?: number;
   /**
-   * @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the delegating
-   * Mission's Authority Set. When supplied, the issued authority is narrowed by
-   * the `allowed_delegates` gate ({@link gateDelegableAuthority}) at the resulting
-   * delegation depth, and an empty result refuses with `invalid_target`. Omitted
-   * for act-chain-only construction (the current behaviour, unchanged).
+   * @spec draft-mcguinness-oauth-mission#per-entry-enforcement,
+   * resource-access#delegate-eligibility: the delegating Mission's delegation
+   * gate. When supplied, the issued authority is what it returns for this
+   * delegate at the resulting delegation depth, and an empty result refuses
+   * with `invalid_target`. Omitted for act-chain-only construction.
    */
-  authoritySet?: AuthorityEntry[];
+  gate?: DelegationGate;
 }): DelegatedIssuance {
   const maxDepth = input.maxDepth ?? DEFAULT_MAX_DEPTH;
 
@@ -121,11 +102,11 @@ export function constructDelegatedIssuance(input: {
     );
   }
 
-  // @spec draft-mcguinness-oauth-mission#per-entry-enforcement — when the
-  // delegating Authority Set is supplied, apply the core allowed_delegates gate at
-  // the resulting delegation depth (flat.length: the token being issued).
+  // @spec draft-mcguinness-oauth-mission#per-entry-enforcement: when the
+  // delegation gate is supplied, apply it at the resulting delegation depth
+  // (flat.length: the token being issued).
   let delegatedAuthority: AuthorityEntry[] | undefined;
-  if (input.authoritySet) {
+  if (input.gate) {
     const delegate: DelegateCandidate = {
       // The `{ "sub": ... }` matcher is a CLIENT IDENTIFIER in the issuing AS's
       // namespace: the authenticated client, NOT the agent_instance_id act-chain
@@ -134,7 +115,7 @@ export function constructDelegatedIssuance(input: {
       sub: input.instance.clientId,
       assertedProfile: input.instance.subProfile,
     };
-    delegatedAuthority = gateDelegableAuthority(input.authoritySet, delegate, flat.length);
+    delegatedAuthority = input.gate(delegate, flat.length);
     // @spec draft-mcguinness-oauth-mission#empty-result — narrowing to no entries
     // MUST refuse with invalid_target rather than issue a token with empty
     // authority; the subject grant itself remains valid for other exchanges.

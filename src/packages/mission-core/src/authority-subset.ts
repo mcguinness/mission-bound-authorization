@@ -380,7 +380,14 @@ function bindingKey(binding: CapabilitySourceBinding): string | null {
 
 /** A restriction-list subset test mirroring the vendors rule: grantor-absent is
  *  unconstrained (any candidate ⊆); grantor-present + candidate-absent is
- *  broader (fails); both present requires candidate ⊆ granted on identity. */
+ *  broader (fails); both present requires candidate ⊆ granted on identity.
+ *
+ *  @spec resource-access#subset, resource-access#delegate-eligibility (#1275):
+ *  structural only. A grantor without a list defers eligibility to the
+ *  authorization server's policy, and a candidate list only restricts that
+ *  decision. A `true` here is never authorization to delegate: a caller that
+ *  derives a candidate keeps the grantor's inherited origin, and the
+ *  authorization server decides eligibility at each delegated issuance. */
 function matchersSubset(
   candidate: DelegateMatcher[] | undefined,
   granted: DelegateMatcher[] | undefined,

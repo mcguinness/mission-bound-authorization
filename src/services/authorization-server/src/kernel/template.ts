@@ -43,7 +43,8 @@ import {
 import { inheritCapabilitySources, resolveFreshCapabilitySources, type CapabilitySourceResolver } from "./capability-binding.js";
 import { UniqueViolationError } from "@mission/store";
 import { CreationIdempotencyStore, type CreationReservation, creationFingerprint } from "./creation-idempotency.js";
-import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
+import { deriveAuthoritySetWithProvenance, isSubsetSet } from "./derive.js";
+import type { RetainedOrigin } from "./eligibility-provenance.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
@@ -684,22 +685,28 @@ export function dispatchFromTemplate(
   // surface exactly as it would from kernel.approve, not be mislabeled
   // out_of_template_ceiling.
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
-  const derived = kernel.derive(input.intent, proposal);
+  const first = kernel.deriveWithProvenance(input.intent, proposal);
+  const derived = first.entries;
   // SECOND: re-derive that set under a synthetic policy whose ceiling is the
   // template's. Reusing deriveAuthoritySet gives a result that is a subset of
   // both the derived set and the template ceiling. An empty result here IS the
   // template ceiling refusing the intent.
   let final: AuthorityEntry[];
+  // @spec resource-access#delegate-eligibility: each instance entry keeps the
+  // origin its policy derivation recorded and the template ceiling entry's,
+  // index-aligned with `final` through the capability inheritance below.
+  let provenance: RetainedOrigin[];
   try {
     // The policy-derived set plays the PROPOSAL role for the second
     // derivation (the third parameter, @spec mission#authority-proposal
     // carriage: the Intent itself carries no authority members), narrowing it
     // under the template ceiling.
-    final = deriveAuthoritySet(
+    ({ entries: final, provenance } = deriveAuthoritySetWithProvenance(
       input.intent,
       { policy_version: template.template_version, ceiling: template.ceiling },
       derived,
-    );
+      first.provenance,
+    ));
   } catch (e) {
     if (e instanceof IntentError) {
       throw new DispatchError(
@@ -821,6 +828,7 @@ export function dispatchFromTemplate(
     intent: input.intent,
     ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: final,
+    eligibility_provenance: provenance,
     intent_hash: intentHash(template.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(template.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),

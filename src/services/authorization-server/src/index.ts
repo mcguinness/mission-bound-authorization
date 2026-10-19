@@ -52,7 +52,8 @@ import {
   DEFAULT_DISCHARGE_EVENT_TTL_S,
   DEFAULT_LIFECYCLE_NONCE_TTL_S as LIFECYCLE_NONCE_TTL_S,
 } from "./kernel/lifecycle-idempotency.js";
-import type { EffectiveAuthoritySource } from "./kernel/derive.js";
+import type { DerivationPolicy, EffectiveAuthoritySource } from "./kernel/derive.js";
+import type { DelegationAuthorizationPolicy } from "./kernel/eligibility-provenance.js";
 import type { DischargeAuthorityPolicy } from "./kernel/discharge.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
@@ -177,6 +178,9 @@ export {
 } from "./kernel/intent.js";
 export {
   deriveAuthoritySet,
+  deriveAuthoritySetWithProvenance,
+  type DerivationPolicy,
+  type DerivedAuthority,
   type EffectiveAuthoritySource,
   isSubsetEntry,
   isSubsetSet,
@@ -242,6 +246,21 @@ export {
   type ResolvedOperation,
 } from "./kernel/operation-profile.js";
 export { delegatePermitted, type DelegateCandidate } from "./kernel/delegate-matcher.js";
+export {
+  ceilingOrigin,
+  combineOrigins,
+  DENY_ALL_DELEGATION_POLICY,
+  type DelegationAuthorizationPolicy,
+  type DelegationCandidate,
+  type DelegationPolicyRequest,
+  delegateEligibility,
+  type EligibilityOrigin,
+  type EligibilityOutcome,
+  gateDelegableAuthority,
+  inheritOrigins,
+  type PolicyCheck,
+  type RetainedOrigin,
+} from "./kernel/eligibility-provenance.js";
 export {
   authorizationDetailsTypesMetadata,
   AUTHORIZATION_DETAILS_TYPES_METADATA,
@@ -334,6 +353,7 @@ export {
   constructDelegatedIssuance,
   delegatedContextActor,
   type DelegatedIssuance,
+  type DelegationGate,
 } from "./kernel/delegation.js";
 export {
   createExpansion,
@@ -869,6 +889,29 @@ export async function buildAuthorizationServer(opts: {
    */
   actorProfiles?: Record<string, string>;
   /**
+   * @spec resource-access#delegate-eligibility (#1275, D457): the
+   * authorization server's delegation-authorization policy, consulted at every
+   * delegated issuance for an approved entry whose eligibility defers to it
+   * (its ceiling entry carries `delegation` without `allowed_delegates`), and
+   * read at each call. Absent, the reference policy denies every delegate.
+   */
+  delegationPolicy?: DelegationAuthorizationPolicy;
+  /**
+   * @spec mission#authorization-derivation: override the config-shipped
+   * derivation policy ({@link DERIVATION_POLICY}) the kernel derives every
+   * Authority Set under. A deployment (or a test) whose ceiling differs from
+   * the shipped one supplies it here, together with `authoritySources` when
+   * its source ceilings must change to match.
+   */
+  derivationPolicy?: DerivationPolicy;
+  /**
+   * @spec mission#authority-sources: override the config-shipped trusted
+   * authority-source catalog ({@link AUTHORITY_SOURCES}) the kernel
+   * establishes every Mission's source from. Template consent keeps the
+   * shipped catalog.
+   */
+  authoritySources?: typeof AUTHORITY_SOURCES;
+  /**
    * @spec mission#introspection (issue #541 P1-4) — TEST-ONLY: inject the AT
    * signing key (a private JWK matching {@link TOPOLOGY.keys.asToken}'s alg)
    * instead of generating one per boot. Lets a test craft adversarial at+jwt
@@ -1156,7 +1199,7 @@ export async function buildAuthorizationServer(opts: {
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
-    policy: DERIVATION_POLICY as never,
+    policy: (opts.derivationPolicy ?? DERIVATION_POLICY) as never,
     // @spec control-plane#deployment-declaration (D27) — in-memory by default;
     // the file-backed single-writer store is the declared opt-in.
     ...(opts.kernelStore?.file ? { store: { file: opts.kernelStore.file } } : {}),
@@ -1174,7 +1217,7 @@ export async function buildAuthorizationServer(opts: {
         dischargeEventRetentionSeconds,
         LIFECYCLE_NONCE_TTL_S,
       ),
-      child_cascade_seconds: DERIVATION_POLICY.max_mission_lifetime_s ?? 0,
+      child_cascade_seconds: (opts.derivationPolicy ?? DERIVATION_POLICY).max_mission_lifetime_s ?? 0,
     },
     // @spec containment#containment-policy — the issuer-held ContainmentPolicy;
     // only containOnEvent reads it (the manual contain path is unaffected).
@@ -1188,12 +1231,14 @@ export async function buildAuthorizationServer(opts: {
     // @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the AS-asserted
     // actor-type registry, config-shipped and optionally extended by the caller.
     actorProfiles: { ...ACTOR_PROFILES, ...(opts.actorProfiles ?? {}) },
+    // @spec resource-access#delegate-eligibility: deny-all unless supplied.
+    ...(opts.delegationPolicy ? { delegationPolicy: opts.delegationPolicy } : {}),
     ...(opts.activationPolicies ? { activationPolicies: opts.activationPolicies } : {}),
     // @spec mission#authority-sources, mission#approval-event — the deployment's
     // TRUSTED authority-source catalog (config/authority-sources.json plus the
     // governed policies it references). The approval event establishes
     // `authority_source` from this and from nothing a client sends.
-    authoritySourceCatalog: AUTHORITY_SOURCES as never,
+    authoritySourceCatalog: (opts.authoritySources ?? AUTHORITY_SOURCES) as never,
     statusKey: statusKeys.privateKey,
     statusKid: asStatus.kid,
     ...(opts.now ? { now: opts.now } : {}),

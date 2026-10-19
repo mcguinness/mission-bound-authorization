@@ -8,9 +8,11 @@
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { flattenActChain } from "@mission/actor-chain";
-import type { AuthorityEntry } from "../src/index.js";
+import type { AuthorityEntry, PolicyCheck, RetainedOrigin } from "../src/index.js";
 import {
   constructDelegatedIssuance,
+  type DelegationCandidate,
+  type DelegationGate,
   delegatedContextActor,
   gateDelegableAuthority,
 } from "../src/kernel/delegation.js";
@@ -167,36 +169,44 @@ const entry = (over: Partial<AuthorityEntry>): AuthorityEntry => ({
 // The validated instance surfaces sub_profile "ai_agent client_instance", AS-asserted.
 const aiAgentDelegate = { sub: "ap-agent", assertedProfile: "ai_agent client_instance" };
 
-describe("gateDelegableAuthority — core allowed_delegates enforcement (@spec per-entry-enforcement)", () => {
+/** Entries as their own approved entries, with a retained origin (list unless given). */
+const candidates = (entries: AuthorityEntry[], origin: RetainedOrigin = "list"): DelegationCandidate[] =>
+  entries.map((e) => ({ entry: e, approved: [{ entry: e, origin }] }));
+const denyAll: PolicyCheck = () => false;
+const permitAll: PolicyCheck = () => true;
+
+describe("gateDelegableAuthority: per-entry enforcement over retained provenance (@spec per-entry-enforcement, resource-access#delegate-eligibility)", () => {
   it("(1) narrows out an entry that carries NO delegation member (non-delegable default)", () => {
-    expect(gateDelegableAuthority([entry({})], aiAgentDelegate, 1)).toEqual([]);
+    expect(gateDelegableAuthority(candidates([entry({})]), aiAgentDelegate, 1, permitAll)).toEqual([]);
   });
 
   it("(2) narrows out an entry when depth EXCEEDS delegation.max_depth", () => {
     const e = entry({ delegation: { max_depth: 1, allowed_delegates: [{ sub_profile: "ai_agent" }] } });
-    expect(gateDelegableAuthority([e], aiAgentDelegate, 2)).toEqual([]); // depth 2 > max_depth 1
-    expect(gateDelegableAuthority([e], aiAgentDelegate, 1)).toHaveLength(1); // depth 1 <= 1
+    expect(gateDelegableAuthority(candidates([e]), aiAgentDelegate, 2, denyAll)).toEqual([]); // depth 2 > max_depth 1
+    expect(gateDelegableAuthority(candidates([e]), aiAgentDelegate, 1, denyAll)).toHaveLength(1); // depth 1 <= 1
   });
 
   it("(3) includes an entry when the delegate matches allowed_delegates by sub_profile MEMBERSHIP", () => {
     const e = entry({ delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "ai_agent" }] } });
-    expect(gateDelegableAuthority([e], aiAgentDelegate, 1)).toEqual([e]);
+    expect(gateDelegableAuthority(candidates([e]), aiAgentDelegate, 1, denyAll)).toEqual([e]);
   });
 
-  it("(3) an ABSENT allowed_delegates list DENIES the entry (fail-closed, never blanket-grant)", () => {
+  it("(3) an ABSENT allowed_delegates list defers to policy and is never a blanket grant", () => {
     const e = entry({ delegation: { max_depth: 2 } }); // delegation present, no allowed_delegates
-    expect(gateDelegableAuthority([e], aiAgentDelegate, 1)).toEqual([]);
+    expect(gateDelegableAuthority(candidates([e], "policy"), aiAgentDelegate, 1, denyAll)).toEqual([]);
+    expect(gateDelegableAuthority(candidates([e], "list"), aiAgentDelegate, 1, permitAll)).toEqual([]);
+    expect(gateDelegableAuthority(candidates([e], "policy"), aiAgentDelegate, 1, permitAll)).toEqual([e]);
   });
 
   it("a { sub } matcher permits by CLIENT IDENTIFIER (the delegate's sub), and rejects a different sub", () => {
     const e = entry({ delegation: { max_depth: 2, allowed_delegates: [{ sub: "ap-agent" }] } });
-    expect(gateDelegableAuthority([e], aiAgentDelegate, 1)).toEqual([e]);
-    expect(gateDelegableAuthority([e], { sub: "other-client" }, 1)).toEqual([]);
+    expect(gateDelegableAuthority(candidates([e]), aiAgentDelegate, 1, denyAll)).toEqual([e]);
+    expect(gateDelegableAuthority(candidates([e]), { sub: "other-client" }, 1, denyAll)).toEqual([]);
   });
 
   it("a SELF-ASSERTED profile (no asserted class) does NOT satisfy a sub_profile matcher", () => {
     const e = entry({ delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "ai_agent" }] } });
-    expect(gateDelegableAuthority([e], { sub: "ap-agent" }, 1)).toEqual([]);
+    expect(gateDelegableAuthority(candidates([e]), { sub: "ap-agent" }, 1, denyAll)).toEqual([]);
   });
 
   it("filters a mixed set to only the entries this delegate may carry", () => {
@@ -209,11 +219,18 @@ describe("gateDelegableAuthority — core allowed_delegates enforcement (@spec p
       resource: "https://c.example/mcp",
       delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "human" }] },
     });
-    expect(gateDelegableAuthority([ok, nonDelegable, wrongClass], aiAgentDelegate, 1)).toEqual([ok]);
+    expect(gateDelegableAuthority(candidates([ok, nonDelegable, wrongClass]), aiAgentDelegate, 1, denyAll)).toEqual([
+      ok,
+    ]);
   });
 });
 
-describe("constructDelegatedIssuance — authority narrowing + empty-result refusal (@spec per-entry-enforcement, empty-result)", () => {
+describe("constructDelegatedIssuance: authority narrowing and empty-result refusal (@spec per-entry-enforcement, empty-result)", () => {
+  const gateOver =
+    (entries: AuthorityEntry[]): DelegationGate =>
+    (delegate, depth) =>
+      gateDelegableAuthority(candidates(entries), delegate, depth, denyAll);
+
   it("narrows the delegated authority to the entries the delegate may carry", async () => {
     const inst = await validateInstanceAssertion(await mintAssertion(), validateCtx());
     const authoritySet = [
@@ -223,7 +240,7 @@ describe("constructDelegatedIssuance — authority narrowing + empty-result refu
       }),
       entry({ resource: "https://b.example/mcp" }), // non-delegable
     ];
-    const issuance = constructDelegatedIssuance({ instance: inst, subjectSub: "alice", authoritySet });
+    const issuance = constructDelegatedIssuance({ instance: inst, subjectSub: "alice", gate: gateOver(authoritySet) });
     expect(issuance.delegatedAuthority).toHaveLength(1);
     expect(issuance.delegatedAuthority?.[0]?.resource).toBe("https://a.example/mcp");
   });
@@ -231,18 +248,18 @@ describe("constructDelegatedIssuance — authority narrowing + empty-result refu
   it("refuses with invalid_target when narrowing leaves NO authority (empty result)", async () => {
     const inst = await validateInstanceAssertion(await mintAssertion(), validateCtx());
     // Only a non-delegable entry: the delegate can carry nothing.
-    const authoritySet = [entry({ resource: "https://b.example/mcp" })];
-    expect(() => constructDelegatedIssuance({ instance: inst, subjectSub: "alice", authoritySet })).toThrow(
+    const gate = gateOver([entry({ resource: "https://b.example/mcp" })]);
+    expect(() => constructDelegatedIssuance({ instance: inst, subjectSub: "alice", gate })).toThrow(
       /invalid_target|empty authority/,
     );
     try {
-      constructDelegatedIssuance({ instance: inst, subjectSub: "alice", authoritySet });
+      constructDelegatedIssuance({ instance: inst, subjectSub: "alice", gate });
     } catch (e) {
       expect((e as InstanceAssertionError).code).toBe("invalid_target");
     }
   });
 
-  it("omits delegatedAuthority entirely when no authoritySet is supplied (unchanged act-chain path)", async () => {
+  it("omits delegatedAuthority entirely when no gate is supplied (unchanged act-chain path)", async () => {
     const inst = await validateInstanceAssertion(await mintAssertion(), validateCtx());
     const issuance = constructDelegatedIssuance({ instance: inst, subjectSub: "alice" });
     expect(issuance.delegatedAuthority).toBeUndefined();
