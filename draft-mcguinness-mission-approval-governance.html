@@ -2150,13 +2150,19 @@ its <code>subject</code>;<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
 Mission record.<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-10-3">Direct self-approval by one authenticated human is the degenerate
+<p id="section-10-3">The Approver is always <code>approval_basis.consent_principal</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), so a Mission whose Approver
+differs from its Subject holds the first trigger, and the Enterprise
+Mission Authority Profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>) always records an
+Approval Governance Record for it.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">Direct self-approval by one authenticated human is the degenerate
 case: the Mission record already carries it completely, and no
 record is required.
 This presumes the human resolved approval on the approval surface itself;
 where an agent resolves it on its own behalf, there is no human decision
 for this list to be degenerate about
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-10-3" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-10-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="consent-evidence-relationship">
@@ -3286,7 +3292,13 @@ version before treating the evaluation as re-checked
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Governed Policy Approval defines the <code>governed_policy</code>
+          <p id="appendix-A-2.1.1">Recording Triggers states that a Mission whose Approver differs
+from its Subject holds the first trigger, so the Enterprise Mission
+Authority Profile always records the record for it; the triggers
+are unchanged (#1196).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Governed Policy Approval defines the <code>governed_policy</code>
 standing-consent basis: a human-approved <code>approval_policy</code> snapshot
 is the consented root, a <code>policy</code> assertion in that human's name is
 the accountable assertion, and each activation passes nine checks
@@ -3296,40 +3308,40 @@ accountable assertion each basis requires: <code>human</code> for <code>direct</
 the other standing-consent bases. Where the governed Mission
 populates <code>adjudication</code>, the accountable assertion's <code>kind</code> equals
 <code>adjudication.kind</code>; this document, not the OAuth binding, holds
-both rules (#1185).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+both rules (#1185).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">The accountable principal is the Mission record's
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">The accountable principal is the Mission record's
 <code>approval_basis.consent_principal</code>. The Approval Context Manifest
 keeps its <code>approver</code> member, sourced from that value, so
 <code>mission-approval-context-v1</code> and vectors 1 to 6 are unchanged; the
 manifest excludes both mutable record members, <code>state</code> and
-<code>termination</code> (#705).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Assertion Requirements and the <code>authority</code> member name a <code>policy</code>
-assertion's policy as the decision mechanism; the principal it
-matches stays the accountable approver. The policy assertion path,
-provenance and recency checks are unchanged (#1084).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+<code>termination</code> (#705).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">The accountable approver's assertion is <code>human</code> or <code>policy</code>, never
+          <p id="appendix-A-2.4.1">Assertion Requirements and the <code>authority</code> member name a <code>policy</code>
+assertion's policy as the decision mechanism; the principal it
+matches stays the accountable approver. The policy assertion path,
+provenance and recency checks are unchanged (#1084).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">The accountable approver's assertion is <code>human</code> or <code>policy</code>, never
 <code>service</code>, and <code>authority</code> is defined for a <code>service</code> assertion,
 naming the model's identifier and version where a model produced
 the decision. A model-backed judge contributes as a governance input
-and never becomes the accountable approver. This adds a requirement.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+and never becomes the accountable approver. This adds a requirement.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">The Approval Context Manifest copies a recorded <code>ceiling_hash</code>
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">The Approval Context Manifest copies a recorded <code>ceiling_hash</code>
 verbatim, so the Progressive profile is an informative reference,
 meeting the maturity bound of the reference classification
 convention (a Standards-Track draft never lists an Experimental
 draft as normative). The manifest's members and both <code>ceiling_hash</code>
-presence requirements are unchanged.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+presence requirements are unchanged.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Clarified that the direct-human degenerate case presumes resolution by
-that human, not agent-invokable approval on the human's behalf (#759).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">Clarified that the direct-human degenerate case presumes resolution by
+that human, not agent-invokable approval on the human's behalf (#759).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
