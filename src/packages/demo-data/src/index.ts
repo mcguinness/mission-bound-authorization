@@ -368,8 +368,39 @@ function loadTopology(): Topology {
 /** The validated deployment topology; consumers inject these values (no cycles). */
 export const TOPOLOGY: Topology = loadTopology();
 
-/** Deployment-owned ESS bytes; the PDP validates the complete statement at boot. */
-export const RUNTIME_SCOPE_CONFIG: unknown = readJson("enforcement-scope.json");
+/** The default (pre-env-override) payments resource, from topology.json. */
+const DEFAULT_PAYMENTS_RESOURCE = TOPOLOGY.resources.payments;
+
+export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? DEFAULT_PAYMENTS_RESOURCE;
+
+/**
+ * Deployment-owned ESS bytes; the PDP validates the complete statement at
+ * boot. @spec runtime#runtime-conformance (#853, D487): the payments
+ * resource's mediated-scope entry and its declared boundary identifier (and
+ * the emitter ids authorized for it) track CANONICAL_RESOURCE, so the
+ * statement, Protected Resource Metadata and every consumer read one value
+ * under MCP_PAYMENTS_RESOURCE too. Unset, the bytes are the file's.
+ */
+export const RUNTIME_SCOPE_CONFIG: unknown = remapPaymentsResource(readJson("enforcement-scope.json"));
+
+function remapPaymentsResource(statement: unknown): unknown {
+  if (CANONICAL_RESOURCE === DEFAULT_PAYMENTS_RESOURCE) return statement;
+  const remap = (value: unknown): unknown =>
+    value === DEFAULT_PAYMENTS_RESOURCE
+      ? CANONICAL_RESOURCE
+      : Array.isArray(value)
+        ? value.map(remap)
+        : value !== null && typeof value === "object"
+          ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, remap(v)]))
+          : value;
+  const stmt = asObject("enforcement-scope.json", statement, "statement");
+  const scope = asObject("enforcement-scope.json", stmt.mediated_scope, "mediated_scope");
+  return {
+    ...stmt,
+    mediated_scope: { ...scope, resources: remap(scope.resources) },
+    ...(stmt.enforcement_boundaries !== undefined ? { enforcement_boundaries: remap(stmt.enforcement_boundaries) } : {}),
+  };
+}
 const runtimeStateSource = asObject(
   "enforcement-scope.json",
   asObject("enforcement-scope.json", RUNTIME_SCOPE_CONFIG, "statement").state_source,
@@ -387,11 +418,6 @@ if (
     "mission_max_stale_seconds must be a positive integer",
   );
 }
-
-/** The default (pre-env-override) payments resource, from topology.json. */
-const DEFAULT_PAYMENTS_RESOURCE = TOPOLOGY.resources.payments;
-
-export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? DEFAULT_PAYMENTS_RESOURCE;
 
 export interface SeededUser {
   sub: string;
