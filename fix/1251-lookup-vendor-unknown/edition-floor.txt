@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-19T19:07:33Z
-Source repository commit: 8c5f6b89c18bdbf076f7587906cdf19510d043af
+Generated: 2026-10-19T20:26:00Z
+Source repository commit: 1fd295b8794bf8d37b0f7938a59c88edeb061001
 Member count: 7
 
 Reading order:
@@ -9272,6 +9272,15 @@ Table of Contents
    The binding is server-side and is what "the referenced Mission" in
    Section 9 refers to.
 
+   An authorization request that carries no mission_intent proposes no
+   Mission.  An AS that answers such a request through consent reuse,
+   such as with a grant an authentication session holds for the client,
+   MUST NOT select a grant bound to a Mission: the request would
+   otherwise acquire an earlier Mission's binding with no submission or
+   approval of its own.  This rule governs grant selection for a new
+   authorization request.  It neither prohibits ordinary consent nor
+   changes how a derivation resolves an existing binding.
+
    The code itself carries no refresh-token family; only a successful
    redemption produces one.  A refresh-token family so produced inherits
    the code's binding atomically with its issuance, extending the same
@@ -14614,6 +14623,12 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Binding the Mission to the Grant (#1259): an authorization request
+      that carries no mission_intent never acquires an earlier Mission's
+      binding through consent reuse, since the AS does not select a
+      grant bound to a Mission for it.  Ordinary consent and derivations
+      against an existing binding are unchanged.
 
    *  Delegation by designation (#1268): a delegated exchange accepts
       only a designation naming the requesting client, which the holder
