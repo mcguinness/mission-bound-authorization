@@ -16979,6 +16979,29 @@
    "notes": "Both MUSTs are now fully asserted, but at the PEP/RS resource-operation boundary, not inside a PDP unit test (this row's original misfit reasoning stands: evaluate() is never invoked on either path, so there is no decision-request event to observe). runtime-refusal-backlog.test.ts's new test signs a token with no `mission` claim, drives it through the full in-memory mediated channel, and shows the call denies invalid_credential with ZERO evidence recorded -- proving evaluate() (and so the PDP) was never asked, not merely that the caller's return value says false. mcp-channel.test.ts's 3b (CI-only) shows the same for a bad-signature token. Kept partial rather than tested: the checker's endpoint-level coverage rule requires a mapping whose surface matches the row's OWN declared surface (decision-request) for `tested`, and reclassifying this row's surface to resource-operation to reach it is a separate, deliberate manifest-structure decision this slice defers rather than makes as a side effect of adding tests (see the Wave 2 PR description)."
   },
   {
+   "id": "runtime.oauth.authority-operation-target-match",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "authorization-details-mapping",
+   "text": "For an entry of type `mission_resource_access`, the operation target MUST match that entry's `resource` ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section \"Resource Matching\"), and the invoked action or tool identity MUST be within its `actions`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on the OAuth credential profile, a mission_resource_access entry authorizes an action only when the PEP-established operation target matches the entry's resource under Resource Matching and the invoked identity is within its actions; equality of the entry's resource with the token audience is not a match"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+  },
+  {
    "id": "runtime.token-validation.channel-integrity-and-token-forwarding",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "decision-channel",
@@ -20852,6 +20875,75 @@
    "notes": "#1276 (D457). The reference PDP still matches entries on resource.properties.audience, which this row forbids; the earlier type/id test expects an out_of_authority denial for a request that now lacks a required operation_target, so it is not a witness. #1276's implementation step owns the witness."
   },
   {
+   "id": "authzen.context-operation-target.required",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-operation-target",
+   "text": "REQUIRED for an action evaluated against `mission_resource_access` authority.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every decision request for an action evaluated against mission_resource_access authority carries resource.properties.operation_target as a string holding one absolute URI"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+  },
+  {
+   "id": "authzen.context-operation-target.pep-trusted-derivation",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-operation-target",
+   "text": "The PEP MUST NOT derive the target from the credential's entries, the Mission's entries, or a target value the caller asserts.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the operation_target a PEP sends is the one its trusted operation contract derives from the validated operation and arguments; a caller-supplied target argument, a presented token entry or a Mission entry never becomes or changes it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+  },
+  {
+   "id": "authzen.context-operation-target.pep-refuses-unestablishable",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-operation-target",
+   "text": "A PEP that cannot establish one unambiguous target MUST refuse the operation before requesting a decision ({{failure-condition-coverage}}).",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an operation with no contract-established target, or with more than one candidate target, is refused with no decision request, no effect and no fallback to the metadata identifier or audience; the Refusal Record names target_unresolvable"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+  },
+  {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
@@ -21937,6 +22029,29 @@
      "surface": "decision-request"
     }
    ]
+  },
+  {
+   "id": "authzen.pdp-request.operation-target-consistency",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "For an action evaluated against `mission_resource_access` authority, `resource.properties.operation_target` is present, is a string holding one absolute URI, and names a resource within the declared enforcement scope for which the requesting PEP is authorized ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Remote Decision Channel\"). Otherwise the PDP MUST refuse the request before evaluation, with no fallback to `resource.properties.audience`, `resource.type` or `resource.id`, and MUST record the refusal as a Refusal Record with `denial_reason` `operation_target_invalid` ({{I-D.draft-mcguinness-mission-runtime-evidence}}).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose operation_target is absent, not a string, not one absolute URI, or outside the requesting PEP's enforcement scope is refused before evaluation with a Refusal Record naming operation_target_invalid, and is never evaluated against audience, type or id instead; a well-formed exact target reaches the matcher unrewritten"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
   },
   {
    "id": "authzen.parameter-digest.parameters-must-be-normalized-object",
@@ -23119,6 +23234,29 @@
    "notes": "Classified by call site, never by the reason string the two carriers share."
   },
   {
+   "id": "authzen.failure-condition-coverage.target-drift-versus-parameter-mismatch",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "A target-determining argument that changed under a parameter-bound permit is a parameter deviation, `parameter_mismatch`; `target_drift` records an operation target that differs while the bound parameters do not.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a changed target-determining argument under a parameter-bound permit is recorded parameter_mismatch; a target that differs at use while the bound parameters are unchanged, or cannot be established at use, is recorded target_drift"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+  },
+  {
    "id": "authzen.permit-binding-split.same-identity-no-relay",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "permit-binding-split",
@@ -23191,6 +23329,52 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "authzen.permit-binding-split.execute-only-evaluated-target",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "permit-binding-split",
+   "text": "At each use of a permit, cached or not, the executing PEP establishes the operation target again from its operation contract and the arguments it executes with. It MUST NOT release an effect on a target other than the request's `operation_target`, and requests a new decision for the changed operation instead ({{failure-condition-coverage}}).",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a permit, cached or fresh, evaluated for one operation target releases no effect on another, even when audience, action and resource type/id are equal; the changed operation is evaluated anew and the unused permit ends suppressed with target_drift"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+  },
+  {
+   "id": "authzen.projections.operation-target-in-every-projection",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "projections",
+   "text": "Each projection includes the operation target, so two requests that differ only in their target differ in all three, including cacheable reads that carry no `parameter_digest`.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "two requests equal in every member except operation_target have different operation identities, authorization bindings and cache keys, so neither a cached read permit nor an idempotency claim made for one serves the other"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
   },
   {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
@@ -26519,6 +26703,29 @@
    "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet."
   },
   {
+   "id": "evidence.refusal.pdp-operation-target-invalid",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for one whose operation target is absent, malformed, or outside the enforcement scope the requesting PEP is authorized for ({{I-D.draft-mcguinness-mission-authzen}}), `operation_target_invalid`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PDP's pre-evaluation refusal of a request whose operation target is absent, malformed or outside the requesting PEP's enforcement scope is a Refusal Record with denial_reason operation_target_invalid, a value in the PDP's closed set only"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. The reference evidence store's PDP closed set holds only mission_context_missing."
+  },
+  {
    "id": "evidence.refusal.parameter-binding-digest-xor",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
@@ -27269,6 +27476,29 @@
     }
    ],
    "notes": "The transaction-authorization profile mandates duplicate_suppressed as the wire reason for this refusal; the signed record names the operation-identity conflict instead, and the two are different carriers."
+  },
+  {
+   "id": "evidence.execution.error-target-drift-operation-target",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`target_drift` (a declared bound evaluation context, or the operation target the permit was evaluated for, differs or cannot be established at use)",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit not executed because the operation target established at use differs from, or cannot re-establish, the evaluated target is recorded suppressed with error target_drift"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo."
   },
   {
    "id": "evidence.execution.error-condition-unrecognized",
