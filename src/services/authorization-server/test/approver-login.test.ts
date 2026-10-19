@@ -56,7 +56,7 @@ interface SeenRequest {
 /** How a case shapes the ID Token: claims over the defaults, and the key that signs it. */
 type Shape = (base: Record<string, unknown>) => { claims: Record<string, unknown>; key?: CryptoKey };
 
-let op: { issuer: string; server: Server; key: CryptoKey; rogue: CryptoKey; seen: SeenRequest[]; shape: Shape };
+let op: { issuer: string; server: Server; key: CryptoKey; rogue: CryptoKey; seen: SeenRequest[]; shape: Shape; responseIss?: string };
 let as: BuiltAs;
 let server: Server;
 const sessions = new ApprovalSessionStore();
@@ -100,7 +100,7 @@ beforeAll(async () => {
       const back = new URL(url.searchParams.get("redirect_uri") as string);
       back.searchParams.set("code", code);
       back.searchParams.set("state", url.searchParams.get("state") as string);
-      back.searchParams.set("iss", op.issuer);
+      back.searchParams.set("iss", op.responseIss ?? op.issuer);
       res.writeHead(303, { location: back.toString() });
       res.end();
       return;
@@ -402,6 +402,16 @@ describe("the approval surface's upstream Approver login (@spec mission#approval
   it("maps the issuer-qualified identity: a subject the mapping names only under another issuer logs no one in", async () => {
     const r = await approveThroughLogin(REMIT, (b) => ({ claims: { ...b, sub: "idp-carol" } }));
     expectLoginRefused(r, /not mapped to an Approver/);
+  });
+
+  it("refuses an authorization response that names another issuer (RFC 9207), recording no login", async () => {
+    op.responseIss = OTHER_ISSUER;
+    try {
+      const r = await approveThroughLogin(REMIT);
+      expectLoginRefused(r, /login response comes from another issuer/);
+    } finally {
+      op.responseIss = undefined;
+    }
   });
 
   it("completes a login only in the user agent that started it, and only once", async () => {
