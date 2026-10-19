@@ -76,6 +76,25 @@ export interface DispatchHandoffSigner {
 }
 
 /**
+ * @spec mission-template#dispatch-handoff single use, #831 — the grant's `jti`
+ * names the AS process that issued it: `dho_<boot id>.<random>`. The record
+ * of a consumed grant is in memory and does not survive a restart, so the
+ * redemption accepts only a grant this process issued
+ * ({@link issuedByThisProcess}). A boot identity, not a clock: a restart
+ * within the second a grant was issued is still a different process. The
+ * `jti` stays opaque to every other party, and base64url never contains `.`.
+ */
+function handoffJti(bootId: string | undefined): string {
+  const random = randomBytes(16).toString("base64url");
+  return bootId === undefined ? `dho_${random}` : `dho_${bootId}.${random}`;
+}
+
+/** Whether `jti` names a handoff grant issued by the process whose boot identity is `bootId`. */
+export function issuedByThisProcess(jti: string, bootId: string): boolean {
+  return jti.startsWith(`dho_${bootId}.`);
+}
+
+/**
  * Mint the handoff grant: `aud` identifies the redeeming AS's token endpoint,
  * `client_id` the selected Agent (the Mission Record's `client_id`) as the
  * only redeemer. Not a derivation: the redemption is (it mints the token).
@@ -88,11 +107,13 @@ export async function mintDispatchHandoffGrant(
     missionClaim: unknown;
     authority: AuthorityEntry[];
     now: Date;
+    /** This process's boot identity ({@link AdapterOptions.processBootId}). */
+    bootId?: string;
   },
 ): Promise<{ grant: string; jti: string; expiresIn: number }> {
   const nowS = Math.floor(input.now.getTime() / 1000);
   const exp = Math.min(nowS + MAX_DISPATCH_HANDOFF_LIFETIME_S, Math.floor(Date.parse(input.instance.expires_at) / 1000));
-  const jti = `dho_${randomBytes(16).toString("base64url")}`;
+  const jti = handoffJti(input.bootId);
   const grant = await new SignJWT({
     mission: input.missionClaim,
     authorization_details: input.authority,
@@ -271,7 +292,14 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
   }
   const { grant, expiresIn } = await mintDispatchHandoffGrant(
     { key: opts.childGrantKey, kid: opts.childGrantKid, alg: opts.childGrantAlg },
-    { issuer: opts.issuer, instance: active, missionClaim: resolved.claims.mission, authority, now: kernel.nowDate() },
+    {
+      issuer: opts.issuer,
+      instance: active,
+      missionClaim: resolved.claims.mission,
+      authority,
+      now: kernel.nowDate(),
+      ...(opts.processBootId !== undefined ? { bootId: opts.processBootId } : {}),
+    },
   );
   ctx.status = 200;
   ctx.set("cache-control", "no-store");
@@ -313,6 +341,18 @@ export async function handleDispatchHandoffRedemption(
   const grant = await verifyDispatchHandoffGrant(assertion, opts.publicJwks as JSONWebKeySet, opts.issuer);
   if (!grant) {
     refuse(ctx, "invalid_grant", "invalid dispatch handoff grant");
+    return;
+  }
+  // @spec mission-template#dispatch-handoff single use, #831: the record of a
+  // consumed grant is in memory and does not survive a restart, so a grant
+  // another process issued is refused, whenever that process ran. With a key
+  // ring its signature would otherwise verify again after the restart.
+  if (opts.processBootId !== undefined && !issuedByThisProcess(grant.jti, opts.processBootId)) {
+    refuse(
+      ctx,
+      "invalid_grant",
+      "dispatch handoff grant was issued by an earlier process; single-use state is not retained across restarts",
+    );
     return;
   }
 
