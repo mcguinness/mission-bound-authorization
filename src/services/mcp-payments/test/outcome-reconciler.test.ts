@@ -444,6 +444,29 @@ describe("the declared outcome reconciler runs the reconciliation (@spec runtime
     }
   });
 
+  it("resource state alone settles nothing: another operation's wire for the same invoice leaves a redeemed permit's outcome open, with no evidence recorded for it (@spec runtime#evidence, #1271)", async () => {
+    const h = await harness();
+    try {
+      const permit = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN);
+      const evaluationId = String(permit.decision?.context.evaluation_id);
+      const digest = String((permit.decision?.context.conditions as { parameter_digest: string }).parameter_digest);
+      // The permit was redeemed and the process lost what followed.
+      const opKey = operationKey(MISSION, "payments:payment.execute", digest, "commit");
+      expect(h.engine.redeemPermit({ permitId: evaluationId, opKey, missionId: MISSION, action: "payments:payment.execute", leaseExpiresAtMs: BASE_MS + 30_000 }).ok).toBe(true);
+      // Another operation, under another permit and Mission, pays the same
+      // invoice. The resource's state now shows inv-1 paid, but the ledger
+      // records that effect against the other permit, not this one.
+      const other = { opKey: "op:msn_other:payments:payment.execute:other", invoiceId: "inv-1", payeeAccount: "acct-acme", amount: "125.00", currency: "USD", permitId: "evl_other", missionId: "msn_other" };
+      expect(h.connectors.postWire(other).committed).toBe(true);
+      h.clock.advance(PAST_LEASE_MS);
+      const run = await h.reconciler.runOnce();
+      expect(run.claims).toEqual({ settled: [], unredeemed: [], open: [evaluationId], states: {}, errors: [] });
+      expect(h.evidence.all().filter((e) => e.kind === "execution" && e.content.evaluation_id === evaluationId)).toEqual([]);
+    } finally {
+      await h.close();
+    }
+  });
+
   it("missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing", async () => {
     const c = clock();
     const claimsFile = tempClaimsFile();

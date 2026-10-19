@@ -12,17 +12,19 @@
  * authenticated client, and the source comes from configuration. Nothing here
  * derives one of them from another or from the source type.
  *
- * The steps run in order and share one Mission. Same-Mission delegation to a
- * sub-agent (a Token Exchange with the sub-agent's `actor_token`, keeping the
- * agent's `sub` and naming the sub-agent in `act`) is not implemented by this
- * AS (#869), so that step is recorded as a todo rather than stood in for.
+ * The steps run in order and share one Mission. Same-Mission delegation runs
+ * by designation (@spec mission#designation, #869): the agent names a sub-agent
+ * for its own token, and the sub-agent redeems the designation as itself. The
+ * opt-in `delegation` capability is enabled for that step; every other
+ * capability is the default.
  */
 
 import { type Server } from "node:http";
 import { DERIVATION_POLICY } from "@mission/demo-data";
-import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
+import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildAuthorizationServer, type BuiltAs, MISSION_LIFECYCLE_SCOPE } from "../src/index.js";
+import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
+import { ALL_PROVIDER_CAPABILITIES, buildAuthorizationServer, type BuiltAs, MISSION_LIFECYCLE_SCOPE } from "../src/index.js";
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
@@ -36,6 +38,8 @@ const RS_PAYMENTS = ["rs-payments", "dev-introspection-rs-payments"] as const;
 const AGENT = "ledger-reconciler";
 const WORKLOAD = "agt_ledger_reconciler";
 const ADMIN = "dana";
+/** The shipped designable sub-agent (`config/delegation.json`). */
+const SUBAGENT = "subagent-invoice-extractor";
 
 /** The approval service's token: it may approve, and holds no lifecycle grant. */
 const APPROVAL_ONLY_TOKEN = Object.keys(TEST_APPROVAL_PRINCIPALS)[0] as string;
@@ -47,38 +51,40 @@ const SCHEDULE = [{ type: "mission_resource_access", resource: RESOURCE, actions
 
 let as: BuiltAs;
 let server: Server;
-let agentKey: CryptoKey;
+const clientKeys = new Map<string, CryptoKey>();
 
 beforeAll(async () => {
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
+    capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
     serviceTokenPrincipals: {
       ...TEST_APPROVAL_PRINCIPALS,
       [LIFECYCLE_TOKEN]: { principal_id: "svc:lifecycle-admin", scopes: [MISSION_LIFECYCLE_SCOPE] },
     },
   });
   server = as.provider.listen(PORT);
-  agentKey = (await importJWK(as.ledgerReconcilerClientJwk as never, "ES256")) as CryptoKey;
+  clientKeys.set(AGENT, (await importJWK(as.ledgerReconcilerClientJwk as never, "ES256")) as CryptoKey);
+  clientKeys.set(SUBAGENT, (await importJWK(as.childClientJwk as never, "ES256")) as CryptoKey);
 });
 
 afterAll(() => {
   server?.close();
 });
 
-const clientAssertion = () =>
+const clientAssertion = (client: string) =>
   new SignJWT({})
-    .setProtectedHeader({ alg: "ES256", kid: `${AGENT}-auth` })
-    .setIssuer(AGENT)
-    .setSubject(AGENT)
+    .setProtectedHeader({ alg: "ES256", kid: `${client}-auth` })
+    .setIssuer(client)
+    .setSubject(client)
     .setAudience(ISSUER)
     .setIssuedAt()
     .setExpirationTime("2m")
     .setJti(crypto.randomUUID())
-    .sign(agentKey);
+    .sign(clientKeys.get(client) as CryptoKey);
 
-const clientAuth = async () => ({
-  client_assertion: await clientAssertion(),
+const clientAuth = async (client: string = AGENT) => ({
+  client_assertion: await clientAssertion(client),
   client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
 });
 
@@ -157,8 +163,17 @@ async function submitAndApprove(
 
 type Keys = { privateKey: CryptoKey; jwk: JWK };
 
-/** The token endpoint as the agent, with DPoP under `k` (one nonce retry). */
-async function tokenRequest(params: Record<string, string>, k: Keys): Promise<{ status: number; body: Record<string, unknown> }> {
+const newKeys = async (): Promise<Keys> => {
+  const pair = await generateKeyPair("ES256", { extractable: true });
+  return { privateKey: pair.privateKey as CryptoKey, jwk: await exportJWK(pair.publicKey) };
+};
+
+/** The token endpoint as `client` (the agent by default), with DPoP under `k` (one nonce retry). */
+async function tokenRequest(
+  params: Record<string, string>,
+  k: Keys,
+  client: string = AGENT,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const htu = `${ISSUER}/token`;
   const proof = (nonce?: string) =>
     new SignJWT({ htu, htm: "POST", ...(nonce ? { nonce } : {}) })
@@ -170,7 +185,7 @@ async function tokenRequest(params: Record<string, string>, k: Keys): Promise<{ 
     fetch(htu, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(nonce) },
-      body: new URLSearchParams({ ...params, ...(await clientAuth()) }).toString(),
+      body: new URLSearchParams({ ...params, ...(await clientAuth(client)) }).toString(),
     });
   let res = await send();
   const nonce = res.headers.get("dpop-nonce");
@@ -178,11 +193,20 @@ async function tokenRequest(params: Record<string, string>, k: Keys): Promise<{ 
   return { status: res.status, body: (await res.json()) as Record<string, unknown> };
 }
 
-async function token(params: Record<string, string>, k: Keys): Promise<Record<string, unknown>> {
-  const { status, body } = await tokenRequest(params, k);
+async function token(params: Record<string, string>, k: Keys, client: string = AGENT): Promise<Record<string, unknown>> {
+  const { status, body } = await tokenRequest(params, k, client);
   expect(status, JSON.stringify(body)).toBe(200);
   return body;
 }
+
+/** A Token Exchange of `subjectToken` for an access token. */
+const exchange = (subjectToken: string, extra: Record<string, string>): Record<string, string> => ({
+  grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+  subject_token: subjectToken,
+  subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+  requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+  ...extra,
+});
 
 async function introspect(tokenValue: string): Promise<Record<string, unknown>> {
   const res = await fetch(`${ISSUER}/introspect`, {
@@ -218,10 +242,7 @@ describe("an agent acting for its own workload principal (@spec mission#authorit
     // A headless approval establishes no End-User session in the agent's user agent.
     expect(r.cookies.some((line) => line.startsWith("_session="))).toBe(false);
     expect(as.kernel.allMissions()).toHaveLength(before + 1);
-    keys = await (async () => {
-      const pair = await generateKeyPair("ES256", { extractable: true });
-      return { privateKey: pair.privateKey as CryptoKey, jwk: await exportJWK(pair.publicKey) };
-    })();
+    keys = await newKeys();
     issued = await token(
       { grant_type: "authorization_code", code: r.code as string, redirect_uri: REDIRECT_URI, code_verifier: VERIFIER, resource: RESOURCE },
       keys,
@@ -281,9 +302,36 @@ describe("an agent acting for its own workload principal (@spec mission#authorit
     issued = { ...issued, ...refreshed };
   });
 
-  it.todo(
-    "step 5 (same-Mission delegation): a sub-agent's Token Exchange with its actor_token keeps sub agt_ledger_reconciler and names the sub-agent in act (#869: the delegated exchange is not implemented)",
-  );
+  it("step 5 (same-Mission delegation): the agent designates a sub-agent, and the sub-agent's redeemed token keeps the workload principal as sub, names the sub-agent in act, binds the sub-agent's own key and carries the sub-agent as client_id", async () => {
+    // The agent, proving its own token's key, names the sub-agent.
+    const designation = await token(exchange(issued.access_token as string, { audience: SUBAGENT }), keys);
+    const d = decodeJwt(designation.access_token as string);
+    expect(d.aud).toBe(SUBAGENT);
+    expect(d.client_id).toBe(AGENT);
+    expect(d.act).toBeUndefined();
+    expect((d.mission as { id: string }).id).toBe(missionId);
+
+    // The sub-agent redeems the designation as its own client, proving its own key.
+    const subagentKeys = await newKeys();
+    const delegated = await token(exchange(designation.access_token as string, { resource: RESOURCE }), subagentKeys, SUBAGENT);
+    const t = decodeJwt(delegated.access_token as string);
+    // The Subject does not change: still the agent's own workload principal.
+    expect(t.sub).toBe(WORKLOAD);
+    // The requesting client is the sub-agent; the Mission's Agent stays ledger-reconciler.
+    expect(t.client_id).toBe(SUBAGENT);
+    expect(as.kernel.get(missionId)?.client_id).toBe(AGENT);
+    // The delegate is carried in act.
+    expect(t.act).toEqual({ iss: ISSUER, sub: SUBAGENT, sub_profile: "ai_agent client_instance" });
+    // Bound to the sub-agent's own key, not the agent's.
+    const jkt = (t.cnf as { jkt?: string } | undefined)?.jkt;
+    expect(jkt).toBe(await calculateJwkThumbprint(subagentKeys.jwk));
+    expect(jkt).not.toBe(await calculateJwkThumbprint(keys.jwk));
+    expect((t.mission as { id: string }).id).toBe(missionId);
+
+    const introspected = await introspect(delegated.access_token as string);
+    expect(introspected.active).toBe(true);
+    expect(introspected.sub).toBe(WORKLOAD);
+  });
 
   it("step 6 (the agent's own exchange): a no-actor Token Exchange by the agent succeeds while the Mission is active, keeping the workload principal as sub", async () => {
     const handle = await token(delegationHandleParams(issued.access_token as string, AGENT), keys);

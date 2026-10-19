@@ -1085,7 +1085,7 @@ drives an AS-issued Mission-bound token through that assembled path.
   run only where OpenFGA does (CI). A vendor the store does not hold keeps
   `lookup_vendor`'s server target (D324), which a vendor constraint or the
   policy refuses. The payments Operation Profile
-  (`payments-runtime-profile-v4`) declares the policy's owner, principals
+  (`payments-runtime-profile-v5`) declares the policy's owner, principals
   (subject and client), relations, tenant, freshness and failure behavior.
 
 ### 5.3 Protected state and lifecycle
