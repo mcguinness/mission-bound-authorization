@@ -49,6 +49,7 @@ import { bindAuthoritySourceCatalog } from "./kernel/authority-source.js";
 import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { CarryoverConfig } from "./kernel/carryover.js";
+import { revokeChildrenCreatedByAnotherClient } from "./kernel/child-delegation.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import { ContinuationStore, DEFAULT_CONTINUATION_HOP_LIMIT } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
@@ -66,6 +67,7 @@ import {
 } from "./kernel/lifecycle-idempotency.js";
 import type { DerivationPolicy, EffectiveAuthoritySource } from "./kernel/derive.js";
 import type { DelegationAuthorizationPolicy } from "./kernel/eligibility-provenance.js";
+import type { ChildCreationAuthorizationPolicy } from "./kernel/child-actor-eligibility.js";
 import type { DischargeAuthorityPolicy } from "./kernel/discharge.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
@@ -114,6 +116,7 @@ export {
   AS_SIGNING_ROLES,
   type AsSigningRole,
   initSigningKeyRing,
+  kernelStoreFromEnv,
   loadSigningKeyRing,
   SIGNING_KEY_RING_FORMAT,
   SigningKeyRingError,
@@ -284,6 +287,17 @@ export {
   type RetainedOrigin,
 } from "./kernel/eligibility-provenance.js";
 export {
+  type ChildActorParent,
+  type ChildActorRefusal,
+  childActorCeilingOrigin,
+  childActorRefusal,
+  type ChildCreationAuthorizationPolicy,
+  type ChildCreationPolicyRequest,
+  DENY_ALL_CHILD_CREATION_POLICY,
+  inheritChildActorOrigins,
+  presentedChildActorPermitted,
+} from "./kernel/child-actor-eligibility.js";
+export {
   authorizationDetailsTypesMetadata,
   AUTHORIZATION_DETAILS_TYPES_METADATA,
   MISSION_RESOURCE_ACCESS_SCHEMA,
@@ -390,6 +404,7 @@ export {
   createChildMission,
   childMissionClaim,
   childEvidenceBytes,
+  revokeChildrenCreatedByAnotherClient,
   ChildDelegationError,
   CHILD_EVIDENCE_MEDIA_TYPE,
   MAX_CHILD_DEPTH,
@@ -900,6 +915,16 @@ export async function buildAuthorizationServer(opts: {
    */
   delegationPolicy?: DelegationAuthorizationPolicy;
   /**
+   * @spec child-delegation#fanout (#1304, D486): the authorization server's
+   * child-creation policy, consulted for the child actor at every creation
+   * and carryover commit where a justifying parent entry's child-actor
+   * eligibility defers to it (its `children` grant derives from one without
+   * `allowed_child_actors`), and read at each call. Never asked for an entry
+   * whose eligibility is its list. Absent, the reference policy denies every
+   * child actor. Distinct from an entry's `child_creation_policy` reference.
+   */
+  childCreationPolicy?: ChildCreationAuthorizationPolicy;
+  /**
    * @spec mission#authorization-derivation: override the config-shipped
    * derivation policy ({@link DERIVATION_POLICY}) the kernel derives every
    * Authority Set under. A deployment (or a test) whose ceiling differs from
@@ -1285,6 +1310,8 @@ export async function buildAuthorizationServer(opts: {
     actorProfiles: { ...ACTOR_PROFILES, ...(opts.actorProfiles ?? {}) },
     // @spec resource-access#delegate-eligibility: deny-all unless supplied.
     ...(opts.delegationPolicy ? { delegationPolicy: opts.delegationPolicy } : {}),
+    // @spec child-delegation#fanout (#1304): deny-all unless supplied.
+    ...(opts.childCreationPolicy ? { childCreationPolicy: opts.childCreationPolicy } : {}),
     ...(opts.activationPolicies ? { activationPolicies: opts.activationPolicies } : {}),
     ...(opts.governedPolicyApproval ? { governedPolicyApproval: opts.governedPolicyApproval } : {}),
     // @spec mission#authority-sources, mission#approval-event — the deployment's
@@ -1582,6 +1609,13 @@ export async function buildAuthorizationServer(opts: {
   // on the in-memory default; the `store.file` opt-in is what makes it
   // observable across a restart.
   await kernel.recoverAtBoot();
+  // @spec child-delegation#request-processing step 4 (#1326): revoke any child
+  // that a client other than its parent's own created before the step-4 check
+  // existed, while its creation operation is retained, then deliver the
+  // revocations' durable effects (family grants) before serving a request.
+  if (revokeChildrenCreatedByAnotherClient(kernel, creationIdempotency).length > 0) {
+    await kernel.drainLifecycleOutbox();
+  }
   // @spec status#mission-lifecycle-endpoint ("Operations"): re-arm every
   // persisted schedule, delivering any whose deadline passed while the
   // process was down, before this assembly serves a request.

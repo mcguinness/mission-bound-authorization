@@ -13,6 +13,7 @@ import {
   compareAmounts,
   IMPLEMENTED_COMMON_CONSTRAINTS,
   intersectCommonConstraints,
+  isAbsoluteUri,
   isValidAmount,
   isSubsetEntry,
   isSubsetSet,
@@ -22,6 +23,7 @@ import {
 export { isSubsetEntry, isSubsetSet } from "@mission/core";
 import type { CapabilitySourceBinding, JsonValue } from "@mission/core";
 import { unionConditions } from "./discharge.js";
+import { childActorCeilingOrigin } from "./child-actor-eligibility.js";
 import { ceilingOrigin, combineOrigins, type RetainedOrigin } from "./eligibility-provenance.js";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } from "./types.js";
@@ -85,6 +87,23 @@ function assertNoRefusedMembers(entries: readonly AuthorityEntry[]): void {
       throw new IntentError(
         "invalid_authorization_details",
         `authorization_details entry carries ${member}, which the mission_resource_access type does not use; refusing rather than silently dropping it`,
+      );
+    }
+  }
+}
+
+/**
+ * @spec resource-access#entry-validation (#1310, D480): every entry's
+ * `resource` is one RFC 3986 absolute URI under the shared check, over the
+ * full ceiling and proposal, so a programmatic caller that bypasses intake
+ * and the config loader cannot derive from a malformed identifier.
+ */
+function assertWellFormedResources(entries: readonly AuthorityEntry[]): void {
+  for (const entry of entries) {
+    if (!isAbsoluteUri(entry.resource)) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry resource ${JSON.stringify(entry.resource)} is not an RFC 3986 absolute URI`,
       );
     }
   }
@@ -272,11 +291,14 @@ export function deriveAuthoritySet(
 
 /**
  * A derived Authority Set and, index-aligned with it, each entry's delegate
- * eligibility origin (@spec resource-access#delegate-eligibility).
+ * eligibility origin (@spec resource-access#delegate-eligibility) and, kept
+ * separately, its child-actor eligibility origin (@spec
+ * child-delegation#fanout, #1304).
  */
 export interface DerivedAuthority {
   entries: AuthorityEntry[];
   provenance: RetainedOrigin[];
+  childActorProvenance: RetainedOrigin[];
 }
 
 /**
@@ -292,12 +314,19 @@ export interface DerivedAuthority {
  * ceiling (a template's or a governed root's): each derived entry then keeps
  * its proposal entry's origin as well ({@link combineOrigins}), so a second
  * derivation never drops an obligation the first one recorded.
+ *
+ * The child-actor origin is recorded the same way and kept apart (@spec
+ * child-delegation#fanout, #1304, D486): `policy` where the ceiling entry's
+ * `children` grant carries no `allowed_child_actors`, even when the proposal
+ * added one, which the derived entry keeps as a restriction.
+ * `proposalChildActorProvenance` plays `proposalProvenance`'s role for it.
  */
 export function deriveAuthoritySetWithProvenance(
   intent: MissionIntent,
   policy: DerivationPolicy,
   proposal?: readonly AuthorityEntry[],
   proposalProvenance?: readonly RetainedOrigin[],
+  proposalChildActorProvenance?: readonly RetainedOrigin[],
 ): DerivedAuthority {
   // @spec mission#common-constraints (issue #784, review on PR #803) — every
   // ceiling entry and every submitted proposal entry is checked for an
@@ -313,6 +342,8 @@ export function deriveAuthoritySetWithProvenance(
   if (proposal) assertExactResourceMatch(proposal);
   assertNoRefusedMembers(policy.ceiling);
   if (proposal) assertNoRefusedMembers(proposal);
+  assertWellFormedResources(policy.ceiling);
+  if (proposal) assertWellFormedResources(proposal);
 
   // @spec mission#error-mapping — captured BEFORE the template-mode fallback
   // below reassigns `proposals`: whether the client actually submitted an
@@ -355,6 +386,7 @@ export function deriveAuthoritySetWithProvenance(
   // the entry unchanged rather than pairing it with its siblings.
   const derived: AuthorityEntry[] = [];
   const provenance: RetainedOrigin[] = [];
+  const childActorProvenance: RetainedOrigin[] = [];
   proposals.forEach((proposal, p) => {
     const matchingCeilings = hasProposal
       ? policy.ceiling.filter((c) => c.resource === proposal.resource)
@@ -363,6 +395,8 @@ export function deriveAuthoritySetWithProvenance(
     // client proposal contributes none of its own.
     const inherited: RetainedOrigin =
       hasProposal && proposalProvenance ? (proposalProvenance[p] ?? null) : "list";
+    const inheritedChildActor: RetainedOrigin =
+      hasProposal && proposalChildActorProvenance ? (proposalChildActorProvenance[p] ?? null) : "list";
     for (const ceiling of matchingCeilings) {
       const entry = intersect(proposal, ceiling);
       if (!entry) continue;
@@ -371,6 +405,9 @@ export function deriveAuthoritySetWithProvenance(
       // here, from the exact ceiling entry this one was derived from, and
       // retained with the Mission, never inferred later from the entry's list.
       provenance.push(combineOrigins(ceilingOrigin(ceiling), inherited));
+      // @spec child-delegation#fanout (#1304): the child-actor origin, from
+      // the same ceiling entry, retained apart from the delegate origin.
+      childActorProvenance.push(combineOrigins(childActorCeilingOrigin(ceiling), inheritedChildActor));
     }
   });
   if (derived.length === 0) {
@@ -386,7 +423,7 @@ export function deriveAuthoritySetWithProvenance(
         : "Intent yields no valid Authority Set under configured-mapping policy",
     );
   }
-  return { entries: derived, provenance };
+  return { entries: derived, provenance, childActorProvenance };
 }
 
 /**
@@ -589,7 +626,16 @@ function narrowMatchers(
   return proposal.filter((m) => ceilKeys.has(matcherKey(m))).map(cloneMatcher);
 }
 
-/** Narrow the `children` GRANT member-wise (both objects present). */
+/**
+ * Narrow the `children` GRANT member-wise (both objects present).
+ *
+ * Structural only, like {@link narrowMatchers}: an `allowed_child_actors`
+ * taken where the ceiling's `children` carries none restricts the
+ * child-creation policy decision that ceiling defers to and never replaces
+ * it. The caller records the entry's child-actor `policy` origin
+ * ({@link deriveAuthoritySetWithProvenance}), and eligibility is decided at
+ * each creation (@spec child-delegation#fanout, #1304).
+ */
 function narrowChildren(
   proposal: JsonObject | undefined,
   ceiling: JsonObject | undefined,

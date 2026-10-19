@@ -105,6 +105,11 @@ import {
   type RetainedOrigin,
   retainedOrigins,
 } from "./eligibility-provenance.js";
+import {
+  type ChildActorParent,
+  type ChildCreationAuthorizationPolicy,
+  DENY_ALL_CHILD_CREATION_POLICY,
+} from "./child-actor-eligibility.js";
 import { justifyingIndex } from "./child-delegation.js";
 import type { CarryoverEntryPair, CarryoverMap } from "./carryover.js";
 import {
@@ -251,7 +256,8 @@ CREATE TABLE IF NOT EXISTS missions (
   termination_json TEXT,
   ceiling_json TEXT,
   schedule_json TEXT,
-  eligibility_provenance_json TEXT
+  eligibility_provenance_json TEXT,
+  child_actor_provenance_json TEXT
 ) STRICT;
 CREATE TABLE IF NOT EXISTS approval_reservations (
   approval_event_id TEXT PRIMARY KEY,
@@ -314,6 +320,14 @@ function migrateMissions(db: Database): void {
   // narrow out of every delegated token rather than being guessed.
   if (!columns.has("eligibility_provenance_json")) {
     db.exec("ALTER TABLE missions ADD COLUMN eligibility_provenance_json TEXT");
+  }
+  // @spec child-delegation#fanout (#1304, D486): each approved entry's
+  // child-actor eligibility origin, written once at creation, apart from the
+  // delegate origin. Nullable with no default and no backfill: a row that
+  // predates it retains no origin, so no child is created or carried under
+  // its entries rather than one being guessed from the entry's list.
+  if (!columns.has("child_actor_provenance_json")) {
+    db.exec("ALTER TABLE missions ADD COLUMN child_actor_provenance_json TEXT");
   }
 }
 
@@ -423,6 +437,11 @@ export interface PreparedApproval {
    * origin from the derivation, index-aligned with `authoritySet`.
    */
   provenance: RetainedOrigin[];
+  /**
+   * @spec child-delegation#fanout (#1304): each entry's child-actor origin
+   * from the derivation, index-aligned with `authoritySet`.
+   */
+  childActorProvenance: RetainedOrigin[];
   resolvedSource: AuthoritySourceResolution;
 }
 
@@ -563,6 +582,17 @@ export interface KernelOptions {
    * delegate ({@link DENY_ALL_DELEGATION_POLICY}).
    */
   delegationPolicy?: DelegationAuthorizationPolicy;
+  /**
+   * @spec child-delegation#fanout (#1304, D486): the authorization server's
+   * child-creation policy, consulted for the child actor at every creation
+   * and carryover commit where a justifying parent entry's child-actor
+   * eligibility defers to it (its `children` grant derives from one carrying
+   * no `allowed_child_actors`). Read at each call, never cached; never asked
+   * for an entry whose eligibility is its list. Absent, the reference policy
+   * denies every child actor ({@link DENY_ALL_CHILD_CREATION_POLICY}).
+   * Distinct from an entry's `child_creation_policy` digest reference.
+   */
+  childCreationPolicy?: ChildCreationAuthorizationPolicy;
   /**
    * @spec mission#standing-consent-bases — the activation policies this issuer
    * evaluates for a policy-adjudicated child creation, keyed by policy `id`
@@ -930,7 +960,9 @@ export class MissionKernel {
    * (@spec resource-access#delegate-eligibility, #1275), index-aligned with
    * the entries. A creating surface records it on the Mission as
    * `eligibility_provenance`, carried through any order-preserving
-   * per-entry transform it applies before the record commits.
+   * per-entry transform it applies before the record commits, and the
+   * separate child-actor origins as `child_actor_provenance` (@spec
+   * child-delegation#fanout, #1304).
    */
   deriveWithProvenance(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): DerivedAuthority {
     const derived = deriveAuthoritySetWithProvenance(intent, this.opts.policy, proposal);
@@ -1279,7 +1311,13 @@ export class MissionKernel {
       approver: input.approver,
     });
     this.assertAuthorityWithinSource(resolvedSource, authoritySet);
-    return { proposal, authoritySet, provenance: derived.provenance, resolvedSource };
+    return {
+      proposal,
+      authoritySet,
+      provenance: derived.provenance,
+      childActorProvenance: derived.childActorProvenance,
+      resolvedSource,
+    };
   }
 
   /**
@@ -1362,7 +1400,7 @@ export class MissionKernel {
     const prepared = preparedEarlier
       ? { ...preparedEarlier, resolvedSource: this.revalidatePreparedSource(input, preparedEarlier) }
       : this.prepareApproval(input);
-    const { proposal, authoritySet, provenance, resolvedSource } = prepared;
+    const { proposal, authoritySet, provenance, childActorProvenance, resolvedSource } = prepared;
     const authoritySource = resolvedSource.provenance;
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
     // drawn from the single mission-id.ts minting helper.
@@ -1405,6 +1443,8 @@ export class MissionKernel {
       authority_set: authoritySet,
       // @spec resource-access#delegate-eligibility: retained from the derivation.
       eligibility_provenance: provenance,
+      // @spec child-delegation#fanout (#1304): retained apart, from the same derivation.
+      child_actor_provenance: childActorProvenance,
       intent_hash: intentHash(this.opts.issuer, input.intent as never),
       ...(proposal ? { proposal_hash: proposalHash(this.opts.issuer, proposal as never) } : {}),
       // @spec mission#intent-submission-evidence — verified facts land on the
@@ -1513,6 +1553,13 @@ export class MissionKernel {
     ) {
       throw new Error(`mission ${record.id}: eligibility provenance is not aligned with its Authority Set`);
     }
+    // @spec child-delegation#fanout (#1304): the same for the child-actor origins.
+    if (
+      record.child_actor_provenance !== undefined &&
+      record.child_actor_provenance.length !== record.authority_set.length
+    ) {
+      throw new Error(`mission ${record.id}: child-actor provenance is not aligned with its Authority Set`);
+    }
     const inheritedPin = this.inheritedPinResolver(record, options.inheritPinsFrom);
     // @spec discharge#discharge-authority — the LAST point at which a
     // `terminal_when` condition can enter an immutable Mission-record entry: the
@@ -1586,8 +1633,8 @@ export class MissionKernel {
            policy_version, approval_event_id, created_at, expires_at, version, derivation_limit,
            derivation_count, grant_id, predecessor, related_to, parent_id, parent_json, template_id,
            template_json, projected_from, submission_evidence_json, ceiling_json,
-           eligibility_provenance_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           eligibility_provenance_json, child_actor_provenance_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -1653,6 +1700,9 @@ export class MissionKernel {
           // immutable after creation, written only here (null when the
           // creating surface recorded none).
           record.eligibility_provenance ? JSON.stringify(record.eligibility_provenance) : null,
+          // @spec child-delegation#fanout (#1304): the child-actor origins,
+          // immutable after creation, written only here.
+          record.child_actor_provenance ? JSON.stringify(record.child_actor_provenance) : null,
         );
       // @spec mission#authority-sources (#827): the committed root, in the
       // SAME transaction as the record: a Mission never exists without the
@@ -3421,6 +3471,45 @@ export class MissionKernel {
   }
 
   /**
+   * @spec child-delegation#fanout (#1304, D486): each approved entry of
+   * `record`'s effective set with the child-actor origin retained for the
+   * approved entry it was computed from. A surface deriving a new Mission
+   * within this one inherits these origins ({@link inheritChildActorOrigins}).
+   */
+  effectiveEntriesWithRetainedChildActorOrigin(
+    record: MissionRecord,
+  ): Array<{ entry: AuthorityEntry; origin: RetainedOrigin }> {
+    const origins = retainedOrigins(record.authority_set, record.child_actor_provenance);
+    return this.effectiveEntriesWithOrigin(record).map((e) => {
+      const index = record.authority_set.indexOf(e.origin);
+      return { entry: e.entry, origin: index < 0 ? null : (origins[index] ?? null) };
+    });
+  }
+
+  /**
+   * @spec child-delegation#fanout (#1304, D486): `record` as a parent the
+   * child-actor gate evaluates: its approved Authority Set (the
+   * justifying-index basis) with each entry's retained child-actor origin,
+   * read fail-closed (absent, unreadable or misaligned resolves nothing).
+   */
+  childActorParent(record: MissionRecord): ChildActorParent {
+    return {
+      mission: { id: record.id, issuer: record.issuer, client_id: record.client_id, subject: record.subject },
+      approved: record.authority_set,
+      origins: retainedOrigins(record.authority_set, record.child_actor_provenance),
+    };
+  }
+
+  /**
+   * @spec child-delegation#fanout (#1304, D486): the child-creation policy as
+   * installed now, read at each call ({@link KernelOptions.childCreationPolicy}),
+   * deny-all when none is installed.
+   */
+  childCreationPolicy(): ChildCreationAuthorizationPolicy {
+    return this.opts.childCreationPolicy ?? DENY_ALL_CHILD_CREATION_POLICY;
+  }
+
+  /**
    * @spec mission#lifecycle, child-delegation#child-state: the record as
    * every decision sees it, with no write. Its own expiry first: from
    * `expires_at`, an `active` or `suspended` record is `terminated` with
@@ -4595,6 +4684,9 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     // none or what it retains is unreadable; an unrecognized value reads as
     // unresolved. Read fail-closed, never widened.
     ...provenanceMemberOf(row.eligibility_provenance_json),
+    // @spec child-delegation#fanout (#1304): the child-actor origins, read
+    // the same fail-closed way, with no fallback to the delegate origins.
+    ...childActorProvenanceMemberOf(row.child_actor_provenance_json),
     intent_hash: row.intent_hash as string,
     ...(row.proposal_hash ? { proposal_hash: row.proposal_hash as string } : {}),
     ...(row.submission_evidence_json
@@ -4664,6 +4756,22 @@ function provenanceMemberOf(text: unknown): { eligibility_provenance?: RetainedO
     return {};
   }
   return Array.isArray(parsed) ? { eligibility_provenance: parsed.map(readOrigin) } : {};
+}
+
+/**
+ * @spec child-delegation#fanout (#1304): the stored child-actor provenance
+ * column as the record member, or no member where none is stored or it cannot
+ * be read; an unrecognized value reads as unresolved.
+ */
+function childActorProvenanceMemberOf(text: unknown): { child_actor_provenance?: RetainedOrigin[] } {
+  if (typeof text !== "string" || text === "") return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return {};
+  }
+  return Array.isArray(parsed) ? { child_actor_provenance: parsed.map(readOrigin) } : {};
 }
 
 /** `condition_digest`, or undefined for a structurally invalid condition (never throws). */

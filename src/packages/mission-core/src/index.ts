@@ -205,6 +205,7 @@ export {
   ENFORCED_RESOURCE_MATCHES,
   entryMatchesTarget,
   establishOperationTarget,
+  isAbsoluteUri,
   isOperationTarget,
   matchResource,
   type OperationContract,

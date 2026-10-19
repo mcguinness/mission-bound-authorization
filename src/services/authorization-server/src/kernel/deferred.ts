@@ -667,6 +667,14 @@ export class ExpansionDeferralStore {
     return row?.client_id;
   }
 
+  /** The predecessor recorded at request time (the handler re-checks the poller's authority for it, #1326). */
+  recordedPredecessorId(deferralCode: string): string | undefined {
+    const row = this.db
+      .prepare("SELECT predecessor_id FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as { predecessor_id: string } | undefined;
+    return row?.predecessor_id;
+  }
+
   /**
    * Poll/redeem a deferred expansion. Mirrors {@link DeferralStore.redeem}'s
    * poll/interval/expiry states. On approval it runs the deferred-window check (a)

@@ -35,6 +35,7 @@ const FLOOR_SESSIONS = new ApprovalSessionStore();
 import { type Server } from "node:http";
 import { APPROVAL_FLOOR, CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
+  calculateJwkThumbprint,
   compactVerify,
   createRemoteJWKSet,
   decodeJwt,
@@ -1046,52 +1047,132 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
   });
 });
 
-describe("carryover completion and result retrieval (@spec child-delegation#carryover-commit)", () => {
-  /** A private_key_jwt assertion for an arbitrary registered client. */
-  const assertionFor = async (clientId: string, kid: string, k: CryptoKey): Promise<string> =>
-    new SignJWT({})
-      .setProtectedHeader({ alg: "ES256", kid })
-      .setIssuer(clientId)
-      .setSubject(clientId)
-      .setAudience(ISSUER)
+/** A private_key_jwt assertion for an arbitrary registered client. */
+const assertionFor = async (clientId: string, kid: string, k: CryptoKey): Promise<string> =>
+  new SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid })
+    .setIssuer(clientId)
+    .setSubject(clientId)
+    .setAudience(ISSUER)
+    .setIssuedAt()
+    .setExpirationTime("2m")
+    .setJti(crypto.randomUUID())
+    .sign(k);
+
+/** POST /token as an arbitrary client with its OWN DPoP key (nonce retry). */
+const requestAs = async (
+  clientId: string,
+  kid: string,
+  k: CryptoKey,
+  dpop: DpopKeys,
+  params: Record<string, string>,
+  makeProof?: (extra: Record<string, unknown>) => Promise<string>,
+): Promise<Response> => {
+  const htu = `${ISSUER}/token`;
+  const fresh = async (extra: Record<string, unknown>): Promise<string> =>
+    new SignJWT({ htu, htm: "POST", ...extra })
+      .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(dpop.publicKey) })
       .setIssuedAt()
-      .setExpirationTime("2m")
       .setJti(crypto.randomUUID())
-      .sign(k);
+      .sign(dpop.privateKey);
+  const proof = makeProof ?? fresh;
+  const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+    fetch(htu, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
+      body: new URLSearchParams({
+        ...params,
+        client_assertion: await assertionFor(clientId, kid, k),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return res;
+};
 
-  /** POST /token as an arbitrary client with its OWN DPoP key (nonce retry). */
-  const requestAs = async (
-    clientId: string,
-    kid: string,
-    k: CryptoKey,
-    dpop: DpopKeys,
-    params: Record<string, string>,
-    makeProof?: (extra: Record<string, unknown>) => Promise<string>,
-  ): Promise<Response> => {
-    const htu = `${ISSUER}/token`;
-    const fresh = async (extra: Record<string, unknown>): Promise<string> =>
-      new SignJWT({ htu, htm: "POST", ...extra })
-        .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(dpop.publicKey) })
-        .setIssuedAt()
-        .setJti(crypto.randomUUID())
-        .sign(dpop.privateKey);
-    const proof = makeProof ?? fresh;
-    const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
-      fetch(htu, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
-        body: new URLSearchParams({
-          ...params,
-          client_assertion: await assertionFor(clientId, kid, k),
-          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-        }).toString(),
-      });
-    let res = await send();
-    const nonce = res.headers.get("dpop-nonce");
-    if (res.status === 400 && nonce) res = await send({ nonce });
-    return res;
-  };
+describe("expansion acting-agent authorization (@spec expansion#verification-order step 4, #1326)", () => {
+  const widen = ["payments:invoice.read", "payments:remittance.send"];
+  const initiation = (accessToken: string, goal: string, creationRequestId: string) => ({
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    subject_token: accessToken,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    login_hint: "alice",
+    mission_intent: intentJson(goal, widen),
+    authorization_details: JSON.stringify(authority(widen)),
+    creation_request_id: creationRequestId,
+  });
+  type Refusal = { error?: string; error_description?: string; deferral_code?: string; mission_error?: string; access_token?: string };
 
+  it("an unrelated client holding the predecessor's token and key is refused invalid_request at initiation, opening no deferral or reservation and leaving the predecessor active; the predecessor's own client's request defers", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const missionsBefore = as.kernel.allMissions().length;
+    const countBefore = as.kernel.get(pred.missionId)?.derivation_count;
+    const crid = crypto.randomUUID();
+    const res = await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, dpopKeys, initiation(pred.accessToken, "Unrelated client widening", crid));
+    const body = (await res.json()) as Refusal;
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("not authorized to request expansion");
+    expect(body.deferral_code).toBeUndefined();
+    expect(body.mission_error).toBeUndefined();
+    expect(as.creationIdempotency.find(CARRY_ACTOR, crid)).toBeUndefined();
+    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+    expect(as.kernel.get(pred.missionId)?.derivation_count).toBe(countBefore);
+    expect(as.kernel.allMissions().length).toBe(missionsBefore);
+
+    const own = await tokenRequest(initiation(pred.accessToken, "Unrelated client widening", crypto.randomUUID()));
+    const ownBody = (await own.json()) as Refusal;
+    expect(own.status, JSON.stringify(ownBody)).toBe(400);
+    expect(ownBody.error).toBe("authorization_pending");
+    expect(typeof ownBody.deferral_code).toBe("string");
+  });
+
+  it("a retained deferral another client opened is refused invalid_grant at the poll before redeem, creating no successor and leaving the predecessor active; the predecessor's own deferral still completes on a poll that carries no subject_token", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    // Seeded as a deferral an unrelated client opened before the initiation
+    // check existed: deferrals persist, and the poll runs no initiation check.
+    const seeded = as.expansionDeferrals.open({
+      predecessorId: pred.missionId,
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "Retained unrelated widening", target_resources: [RESOURCE], expires_at: FAR_EXP }),
+      ),
+      proposedAuthority: authority(widen) as never,
+      clientId: CARRY_ACTOR,
+      jkt: await calculateJwkThumbprint(await exportJWK(carryDpop.publicKey)),
+      creationRequestId: crypto.randomUUID(),
+    });
+    approveDeferral(seeded.deferral_code);
+    const missionsBefore = as.kernel.allMissions().length;
+    const poll = await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, carryDpop, {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      deferral_code: seeded.deferral_code,
+    });
+    const body = (await poll.json()) as Refusal;
+    expect(poll.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    // Refused before redeem: a late mint refusal would also be invalid_grant,
+    // after the successor existed and the predecessor was superseded.
+    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+    expect(as.kernel.get(pred.missionId)?.termination).toBeUndefined();
+    expect(as.kernel.allMissions().length).toBe(missionsBefore);
+    expect(body.error_description).toContain("predecessor's client");
+    expect(body.access_token).toBeUndefined();
+
+    const opened = await expandViaExchange(pred.accessToken, "Own client widening", widen);
+    const openedBody = (await opened.json()) as Refusal;
+    expect(openedBody.error, JSON.stringify(openedBody)).toBe("authorization_pending");
+    approveDeferral(openedBody.deferral_code as string);
+    const done = await pollExpansion(openedBody.deferral_code as string);
+    expect(done.status, JSON.stringify(await done.clone().json())).toBe(200);
+    expect(as.kernel.get(pred.missionId)?.termination?.reason).toBe("superseded");
+  });
+});
+
+describe("carryover completion and result retrieval (@spec child-delegation#carryover-commit)", () => {
   /** A predecessor with one Child Mission held by the token-exchange-capable actor. */
   const predecessorWithChild = async (): Promise<{
     missionId: string;

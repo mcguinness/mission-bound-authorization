@@ -330,10 +330,10 @@ describe("child mission creation (@spec child-delegation#child-creation, #parent
     // A grandchild (depth 2) under a token whose max_child_depth is 1: the depth control refuses.
     const depthToken = readOnly((c) => { c.max_child_depth = 1; });
     expect(
-      presentedTokenChildRefusal(kernel, depthToken.map(({ capability_sources: _s, ...rest }) => rest as AuthorityEntry), "subagent-extractor", 2, depthToken)?.reason,
+      presentedTokenChildRefusal(kernel, depthToken.map(({ capability_sources: _s, ...rest }) => rest as AuthorityEntry), "subagent-extractor", 2, depthToken, undefined)?.reason,
     ).toBe("fanout_exceeded");
     expect(
-      presentedTokenChildRefusal(kernel, depthToken.map(({ capability_sources: _s, ...rest }) => rest as AuthorityEntry), "subagent-extractor", 1, depthToken),
+      presentedTokenChildRefusal(kernel, depthToken.map(({ capability_sources: _s, ...rest }) => rest as AuthorityEntry), "subagent-extractor", 1, depthToken, undefined),
     ).toBeUndefined();
     // A token whose delegation right carries no `children` object authorizes no
     // child: the child carries its parent entry's `children` object, so the
@@ -748,6 +748,10 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       state: "active",
       intent: { goal: "root", target_resources: [R], expires_at: PARENT_EXP },
       authority_set: [entryOf("100.00", 1), entryOf("500.00", 5)],
+      // @spec child-delegation#fanout (#1304): the child-actor origins a
+      // derivation would have retained: both entries derive from a ceiling
+      // entry whose `children` names its actors, so each list decides.
+      child_actor_provenance: ["list", "list"],
       intent_hash: "sha-256:d-intent",
       authority_hash: "sha-256:d-authority",
       subject: { iss: ISS, sub: "alice" },
