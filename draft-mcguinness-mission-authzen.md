@@ -1222,8 +1222,8 @@ Operation identity:
 Authorization binding:
 : The subject, the actor, the audience
   ({{context-audience-freshness}}), the operation target,
-  credential-derived facts, the Mission reference, the authority and view identity, the
-  approval, and
+  credential-derived facts, the Mission reference, the authority and
+  view identity, the approval, and
   every policy-relevant context input, including `taint`, the
   Mission history reference, the capability source, and any
   extension member a companion profile adds. This is what a permit

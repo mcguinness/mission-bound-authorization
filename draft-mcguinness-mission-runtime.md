@@ -3032,9 +3032,10 @@ failure or PDP unreachability) or after a PDP permit (for example, a
 `parameter_digest` mismatch), MUST likewise produce a runtime
 enforcement evidence record with the available fields and the failure
 condition. A refusal for which no enforcement boundary is established
-produces none ({{boundary-identifier}}). This document fixes the minimum record content and local
-integrity requirements; the concrete record schemas, canonical byte
-representation, and integrity envelope, together with the Mission
+produces none ({{boundary-identifier}}). This document fixes the
+minimum record content and local integrity requirements; the concrete
+record schemas, canonical byte representation, and integrity
+envelope, together with the Mission
 Receipt's portable schema ({{mission-receipt}}), are defined by Mission
 Runtime Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 

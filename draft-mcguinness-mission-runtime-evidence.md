@@ -940,8 +940,9 @@ member, and that this key is bound to the enforcement scope and
 audience the record serves: the boundary identifier in the record's
 own `audience` member ({{I-D.draft-mcguinness-mission-runtime}},
 Section "Enforcement Boundary Identifier"), present directly on
-Decision Evidence, Execution Evidence, and Refusal Records alike (for Decision Evidence, mirroring the
-decision-API request's audience member,
+Decision Evidence, Execution Evidence, and Refusal Records alike
+(for Decision Evidence, mirroring the decision-API request's audience
+member,
 {{I-D.draft-mcguinness-mission-authzen}}). A verifier MUST reject a
 record whose signing key is not published for that scope, so one
 component's key cannot sign evidence for a resource, audience, or
@@ -2282,10 +2283,10 @@ so records signed before a rotation stay verifiable after it. A
 superseded Enforcement Scope Statement version and its key
 authorizations remain available for the same window
 ({{I-D.draft-mcguinness-mission-runtime}}, Section "Changing a
-Boundary Identifier"). The key's compromise status, and the authenticated compromise boundary,
-come from the deployment-defined key-status mechanism. Once the
-signing key is identified as compromised, the compromise-boundary
-rule applies.
+Boundary Identifier"). The key's compromise status, and the
+authenticated compromise boundary, come from the deployment-defined
+key-status mechanism. Once the signing key is identified as
+compromised, the compromise-boundary rule applies.
 
 A verifier MUST NOT use a timestamp asserted by the
 target artifact, or authenticated only by the target artifact's
