@@ -2619,9 +2619,15 @@
      "name": "durable per-consumer delivery (@spec signals#delivery, #641) > refuses a SET whose embedded mission issuer is not the receiver's own",
      "level": "cross-component",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
+     "name": "Signals receiver state in the consumer's store (#250) > keeps receivers for different issuers and audiences apart in one shared file",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The complete cross-issuer seam/resource-isolation inventory remains incomplete."
+   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete."
   },
   {
    "id": "control-plane.consistency.fanout",
@@ -13350,9 +13356,15 @@
      "name": "discharge compatibility: authority_changed emission and the delivery gate > wired end-to-end: a real kernel discharge() commit drives a declared receiver to rematerialize",
      "level": "cross-component",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
+     "name": "Signals receiver state in the consumer's store (#250) > keeps the high-water, the observation, the gap and rematerialization markers, the retained SET and the seen jti values across a restart",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "#562: implemented and tested is the DETECTION half only (the receiver flags the need). Not covered: the actual Mission Status refetch (no consumer in this repo calls it off this signal). See signals.discharge.producer-authority-changed-emit and signals.discharge.producer-gating-undeclared-stream for the producer-side rows this issue left todo (no discharge funnel or mission_capabilities_supported gate exists in src/). #572 (review of #562) fixed two defects and added markRematerialized(missionId, observedBaseline) so the latch this row's tests exercise is no longer permanent; also fixed contain()'s authority_changed to key on an actual EFFECTIVE-set narrowing rather than merely reaching the metadata-only commit path (see containment.test.ts and this file's builder-emission describe block). Coverage stays 'partial': the acknowledgement is still consumer-invoked bookkeeping over the detect-only latch, and the actual Mission Status refetch this row's normative text requires 'before further consequential reliance' remains unwired in this repo. #287 residual (discharge implementation): the producer side is now real, so this row gains an end-to-end mapping in which a KERNEL DISCHARGE commit (not only a contain commit) drives the receiver to latch rematerialization, which is the case the rule was written for. Coverage stays 'partial' for the unchanged reason: the receiver DETECTS the need and no consumer in this repo performs the Mission Status refetch the clause requires before further consequential reliance."
+   "notes": "#562: implemented and tested is the DETECTION half only (the receiver flags the need). Not covered: the actual Mission Status refetch (no consumer in this repo calls it off this signal). See signals.discharge.producer-authority-changed-emit and signals.discharge.producer-gating-undeclared-stream for the producer-side rows this issue left todo (no discharge funnel or mission_capabilities_supported gate exists in src/). #572 (review of #562) fixed two defects and added markRematerialized(missionId, observedBaseline) so the latch this row's tests exercise is no longer permanent; also fixed contain()'s authority_changed to key on an actual EFFECTIVE-set narrowing rather than merely reaching the metadata-only commit path (see containment.test.ts and this file's builder-emission describe block). Coverage stays 'partial': the acknowledgement is still consumer-invoked bookkeeping over the detect-only latch, and the actual Mission Status refetch this row's normative text requires 'before further consequential reliance' remains unwired in this repo. #287 residual (discharge implementation): the producer side is now real, so this row gains an end-to-end mapping in which a KERNEL DISCHARGE commit (not only a contain commit) drives the receiver to latch rematerialization, which is the case the rule was written for. Coverage stays 'partial' for the unchanged reason: the receiver DETECTS the need and no consumer in this repo performs the Mission Status refetch the clause requires before further consequential reliance. With a file-backed receiver store (#250) the latch and its marker survive a restart, and an acknowledgement that covers the marker clears it durably."
   },
   {
    "id": "signals.discharge.producer-authority-changed-emit",
