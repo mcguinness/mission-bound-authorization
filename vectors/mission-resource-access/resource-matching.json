@@ -1,0 +1,1066 @@
+{
+  "format": "mission-resource-access-cases/1",
+  "group": "resource-matching",
+  "description": "Item 1 (D447) and item 10: operation targets, exact and prefix matching",
+  "spec": "draft-mcguinness-oauth-mission-resource-access",
+  "cases": [
+    {
+      "id": "rm-rpc-01",
+      "description": "RPC orders.read for order 123; entry https://api.example/orders/123 (exact)",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "operation": {
+          "metadata_identifier": "https://api.example",
+          "transport_endpoint": "https://api.example/rpc",
+          "validated_operation": "orders.read",
+          "arguments": {
+            "order": "123"
+          }
+        },
+        "target": "https://api.example/orders/123",
+        "entry": {
+          "resource": "https://api.example/orders/123",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "the entry equals the operation target"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 RPC example"
+      ]
+    },
+    {
+      "id": "rm-rpc-02",
+      "description": "RPC orders.read for order 123; entry https://api.example (exact)",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "operation": {
+          "metadata_identifier": "https://api.example",
+          "transport_endpoint": "https://api.example/rpc",
+          "validated_operation": "orders.read",
+          "arguments": {
+            "order": "123"
+          }
+        },
+        "target": "https://api.example/orders/123",
+        "entry": {
+          "resource": "https://api.example",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "the metadata identifier is not the operation target"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 RPC example"
+      ]
+    },
+    {
+      "id": "rm-rpc-03",
+      "description": "RPC orders.read for order 123; entry https://api.example/rpc (exact)",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "operation": {
+          "metadata_identifier": "https://api.example",
+          "transport_endpoint": "https://api.example/rpc",
+          "validated_operation": "orders.read",
+          "arguments": {
+            "order": "123"
+          }
+        },
+        "target": "https://api.example/orders/123",
+        "entry": {
+          "resource": "https://api.example/rpc",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "the transport endpoint is not the operation target"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 RPC example"
+      ]
+    },
+    {
+      "id": "rm-rpc-04",
+      "description": "RPC orders.read for order 123; entry https://api.example/orders (prefix)",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "operation": {
+          "metadata_identifier": "https://api.example",
+          "transport_endpoint": "https://api.example/rpc",
+          "validated_operation": "orders.read",
+          "arguments": {
+            "order": "123"
+          }
+        },
+        "target": "https://api.example/orders/123",
+        "entry": {
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "the target extends the base at a path-segment boundary"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 RPC example"
+      ]
+    },
+    {
+      "id": "rm-rpc-05",
+      "description": "RPC orders.read for order 123; entry https://api.example/orders/ (prefix)",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "operation": {
+          "metadata_identifier": "https://api.example",
+          "transport_endpoint": "https://api.example/rpc",
+          "validated_operation": "orders.read",
+          "arguments": {
+            "order": "123"
+          }
+        },
+        "target": "https://api.example/orders/123",
+        "entry": {
+          "resource": "https://api.example/orders/",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "the target begins with the complete base ending in /"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 RPC example"
+      ]
+    },
+    {
+      "id": "rm-rpc-06",
+      "description": "RPC orders.read for order 123; entry https://API.EXAMPLE:443/orders/123 (exact)",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "operation": {
+          "metadata_identifier": "https://api.example",
+          "transport_endpoint": "https://api.example/rpc",
+          "validated_operation": "orders.read",
+          "arguments": {
+            "order": "123"
+          }
+        },
+        "target": "https://api.example/orders/123",
+        "entry": {
+          "resource": "https://API.EXAMPLE:443/orders/123",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "exact matching applies no normalization"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 RPC example"
+      ]
+    },
+    {
+      "id": "rm-rpc-07",
+      "description": "RPC orders.read for order 123; entry https://API.EXAMPLE:443/orders (prefix)",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "operation": {
+          "metadata_identifier": "https://api.example",
+          "transport_endpoint": "https://api.example/rpc",
+          "validated_operation": "orders.read",
+          "arguments": {
+            "order": "123"
+          }
+        },
+        "target": "https://api.example/orders/123",
+        "entry": {
+          "resource": "https://API.EXAMPLE:443/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "prefix matching normalizes host case and default port"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 RPC example"
+      ]
+    },
+    {
+      "id": "rm-exact-01",
+      "description": "exact https://api.example/orders/123 against https://api.example/orders/123",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders/123",
+        "entry": {
+          "resource": "https://api.example/orders/123",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "identical strings"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-exact-02",
+      "description": "exact https:\\/\\/api.example\\/orders\\/123 against https://api.example/orders/123",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders/123",
+        "entry": {
+          "resource": "https://api.example/orders/123",
+          "resource_match": "exact"
+        },
+        "entry_resource_json_text": "\"https:\\/\\/api.example\\/orders\\/123\""
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "equal after JSON decoding of the entry; the JSON text uses escapes"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-exact-03",
+      "description": "exact https://api.example/orders/123 against https://API.EXAMPLE/orders/123",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://API.EXAMPLE/orders/123",
+        "entry": {
+          "resource": "https://api.example/orders/123",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "host case differs"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-exact-04",
+      "description": "exact https://api.example/orders/123 against https://api.example:443/orders/123",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example:443/orders/123",
+        "entry": {
+          "resource": "https://api.example/orders/123",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "explicit default port"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-exact-05",
+      "description": "exact https://api.example/orders/123 against https://api.example/orders/%31%32%33",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders/%31%32%33",
+        "entry": {
+          "resource": "https://api.example/orders/123",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "percent spelling differs"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-exact-06",
+      "description": "exact https://api.example/orders/123 against https://api.example/orders/123/",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders/123/",
+        "entry": {
+          "resource": "https://api.example/orders/123",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "trailing slash differs"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-exact-07",
+      "description": "exact https://api.example/orders?id=1&view=full against https://api.example/orders?id=1&view=full",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders?id=1&view=full",
+        "entry": {
+          "resource": "https://api.example/orders?id=1&view=full",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "same query"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-exact-08",
+      "description": "exact https://api.example/orders?id=1&view=full against https://api.example/orders?view=full&id=1",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders?view=full&id=1",
+        "entry": {
+          "resource": "https://api.example/orders?id=1&view=full",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "query order"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-exact-09",
+      "description": "exact https://api.example/orders?id=1 against https://api.example/orders?id=2",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders?id=2",
+        "entry": {
+          "resource": "https://api.example/orders?id=1",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "query value"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-exact-10",
+      "description": "exact https://api.example/orders?id=%31 against https://api.example/orders?id=1",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders?id=1",
+        "entry": {
+          "resource": "https://api.example/orders?id=%31",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "query encoding"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-exact-11",
+      "description": "exact https://api.example/orders? against https://api.example/orders",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders",
+        "entry": {
+          "resource": "https://api.example/orders?",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "empty versus absent query"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-exact-12",
+      "description": "exact https://api.example against https://api.example/",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/",
+        "entry": {
+          "resource": "https://api.example",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "exact empty path and / differ"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 2",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "rm-prefix-01",
+      "description": "prefix https://api.example/orders against https://api.example/orders",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders",
+        "entry": {
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "the base itself"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-02",
+      "description": "prefix https://api.example/orders against https://api.example/orders/123",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders/123",
+        "entry": {
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "an extension at a path-segment boundary"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-03",
+      "description": "prefix https://api.example/orders against https://API.EXAMPLE/orders/123",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://API.EXAMPLE/orders/123",
+        "entry": {
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "scheme and host are case-folded"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-04",
+      "description": "prefix https://api.example/orders against https://api.example:443/orders/123",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example:443/orders/123",
+        "entry": {
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "the default port is removed"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-05",
+      "description": "prefix https://api.example/orders against https://api.example/Orders/123",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/Orders/123",
+        "entry": {
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "the path is case-sensitive"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-06",
+      "description": "prefix https://api.example/orders against https://api.example/orders%2F123",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders%2F123",
+        "entry": {
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "%2F stays encoded and is not a separator"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-07",
+      "description": "prefix https://api.example/orders against https://api.example/ordersX",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/ordersX",
+        "entry": {
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "no extension within a segment"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-08",
+      "description": "prefix https://api.example/orders against https://api.example/orders/%2e%2e/admin",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders/%2e%2e/admin",
+        "entry": {
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "the decoded dot-segment is removed first"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-09",
+      "description": "prefix https://api.example/orders/ against https://api.example/orders",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders",
+        "entry": {
+          "resource": "https://api.example/orders/",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "a base ending in / does not admit the bare path"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-10",
+      "description": "prefix https://api.example/orders/ against https://api.example/orders/",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders/",
+        "entry": {
+          "resource": "https://api.example/orders/",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "a base ending in / admits itself"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-11",
+      "description": "prefix https://api.example/orders/ against https://api.example/orders/123",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders/123",
+        "entry": {
+          "resource": "https://api.example/orders/",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "a descendant begins with the complete base"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-12",
+      "description": "prefix https://api.example/orders/ against https://api.example/ordersx",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/ordersx",
+        "entry": {
+          "resource": "https://api.example/orders/",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "not a descendant"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-13",
+      "description": "prefix https://a.example against https://a.example/",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://a.example/",
+        "entry": {
+          "resource": "https://a.example",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "prefix empty path and / are the same base"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-14",
+      "description": "prefix https://a.example/ against https://a.example",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://a.example",
+        "entry": {
+          "resource": "https://a.example/",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "prefix / and empty path are the same base"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-prefix-15",
+      "description": "prefix https://api.example/orders against https://api.example/orders?id=7",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "target": "https://api.example/orders?id=7",
+        "entry": {
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "the query is excluded from the path comparison only"
+      },
+      "refs": [
+        "#1258 item 1",
+        "#1258 item 10",
+        "D447 disposition 4",
+        "D447 disposition 6"
+      ]
+    },
+    {
+      "id": "rm-resolve-01",
+      "description": "The operation contract is missing; an entry naming the metadata root exists",
+      "role": "resource-server",
+      "requires": [
+        "operation-target"
+      ],
+      "check": "target-resolution",
+      "input": {
+        "contract": null,
+        "metadata_identifier": "https://api.example",
+        "entries": [
+          {
+            "resource": "https://api.example",
+            "resource_match": "exact"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse-resolution",
+        "reason": "no contract: no fallback to the metadata identifier"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 1"
+      ]
+    },
+    {
+      "id": "rm-resolve-02",
+      "description": "The operation contract is ambiguous between two targets",
+      "role": "resource-server",
+      "requires": [
+        "operation-target"
+      ],
+      "check": "target-resolution",
+      "input": {
+        "contract": {
+          "candidates": [
+            "https://api.example/orders/123",
+            "https://api.example/orders/124"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse-resolution",
+        "reason": "no unambiguous target"
+      },
+      "refs": [
+        "#1258 item 1"
+      ]
+    },
+    {
+      "id": "rm-resolve-03",
+      "description": "The contract explicitly targets the service; the exact entry equals it",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.exact",
+        "operation-target"
+      ],
+      "check": "resource-match",
+      "input": {
+        "contract": {
+          "service_level": true
+        },
+        "target": "https://erp.example.com",
+        "entry": {
+          "resource": "https://erp.example.com",
+          "resource_match": "exact"
+        }
+      },
+      "expected": {
+        "outcome": "match",
+        "reason": "explicit service-level contract; actions and constraints are still checked separately"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 1",
+        "D452"
+      ]
+    },
+    {
+      "id": "rm-resolve-04",
+      "description": "A query selects a resource outside an otherwise matching prefix",
+      "role": "resource-server",
+      "requires": [
+        "resource-match.prefix",
+        "operation-target"
+      ],
+      "check": "target-resolution",
+      "input": {
+        "request": "https://api.example/orders?redirect_to=/admin",
+        "contract": {
+          "query_selects": "redirect_to"
+        },
+        "resolved_target": "https://api.example/admin",
+        "entry": {
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "no-match",
+        "reason": "the actual target is resolved first and is outside the prefix"
+      },
+      "refs": [
+        "#1258 item 10",
+        "D447 disposition 3"
+      ]
+    }
+  ]
+}

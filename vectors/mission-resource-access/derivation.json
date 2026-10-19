@@ -1,0 +1,423 @@
+{
+  "format": "mission-resource-access-cases/1",
+  "group": "derivation",
+  "description": "Derivation refusals and narrowing: items 3, 6 and 7, and the slice 0 regressions",
+  "spec": "draft-mcguinness-oauth-mission-resource-access",
+  "cases": [
+    {
+      "id": "der-01",
+      "description": "A proposal's max_amount currency differs from the ceiling's",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "payments:payment.schedule"
+            ],
+            "constraints": {
+              "max_amount": {
+                "amount": "500.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "payments:payment.schedule"
+            ],
+            "constraints": {
+              "max_amount": {
+                "amount": "100.00",
+                "currency": "EUR"
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "differing currencies have no intersection; the ceiling is never substituted",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1263",
+        "D446"
+      ]
+    },
+    {
+      "id": "der-02",
+      "description": "A proposal's max_amount narrows the ceiling's",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "payments:payment.schedule"
+            ],
+            "constraints": {
+              "max_amount": {
+                "amount": "500.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "payments:payment.schedule"
+            ],
+            "constraints": {
+              "max_amount": {
+                "amount": "100.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "derived",
+        "reason": "the intersection is the smaller amount",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "payments:payment.schedule"
+            ],
+            "constraints": {
+              "max_amount": {
+                "amount": "100.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    },
+    {
+      "id": "der-03",
+      "description": "A proposal entry names resource_match prefix on a deployment without prefix matching",
+      "role": "authorization-server",
+      "requires": [
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "resource-match.prefix"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "unsupported prefix input is refused, never narrowed to exact",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1264",
+        "D446"
+      ]
+    },
+    {
+      "id": "der-04",
+      "description": "A ceiling entry names resource_match prefix on a deployment without prefix matching",
+      "role": "authorization-server",
+      "requires": [
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "resource-match.prefix"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "unsupported prefix input is refused",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1264"
+      ]
+    },
+    {
+      "id": "der-05",
+      "description": "An explicit resource_match exact derives as the default",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "resource_match": "exact",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "derived",
+        "reason": "exact is the default; the derived entry may state it or omit it"
+      },
+      "refs": [
+        "#1264"
+      ]
+    },
+    {
+      "id": "der-06",
+      "description": "A ceiling entry carries a Common Constraint the deployment does not implement",
+      "role": "authorization-server",
+      "requires": [
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "constraint.time_window"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "time_window": {
+                "not_before": "2026-01-01T00:00:00Z"
+              }
+            }
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an unsupported constraint is refused, never dropped",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1258 item 3",
+        "#1258 item 7",
+        "#1266"
+      ]
+    },
+    {
+      "id": "der-07",
+      "description": "A proposal carries a deployment-defined key the deployment cannot compare",
+      "role": "authorization-server",
+      "requires": [
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "constraint.x_region"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "x_region": "eu"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "registration status never decides whether a restriction can disappear",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1258 item 7"
+      ]
+    },
+    {
+      "id": "der-08",
+      "description": "A proposal adds requires_action_approval the ceiling lacks",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.requires_action_approval"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "requires_action_approval": true
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "derived",
+        "reason": "a candidate-only restriction with defined, enforceable semantics narrows",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "requires_action_approval": true
+            }
+          }
+        ]
+      },
+      "refs": [
+        "#1258 item 6"
+      ]
+    },
+    {
+      "id": "der-09",
+      "description": "A proposal adds a candidate-only key with no defined semantics",
+      "role": "authorization-server",
+      "requires": [
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "constraint.x_unknown"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "x_unknown": true
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an unknown key is not proof of narrowing",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1258 item 6"
+      ]
+    }
+  ]
+}

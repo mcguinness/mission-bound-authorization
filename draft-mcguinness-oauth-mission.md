@@ -593,6 +593,12 @@ concrete messages.
 
 ### One Mission from Approval to Revocation {#first-mission}
 
+In the examples in this document, each service's operation contract
+identifies the service's own identifier, such as
+`https://erp.example.com`, as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+
 The following example shows a registered client reading invoices
 from one ERP resource for Alice, who is both the Subject and the
 Approver; the authority source is user-delegated. The AS and ERP
@@ -3370,12 +3376,17 @@ A resource server:
    more than one carried entry applies, entries are alternative
    grants of authority, not conjunctive filters, unless the entry's
    type states otherwise.
-2. MUST fail closed (refuse the request, for example, a `403` with
-   the `insufficient_scope` error code {{RFC6750}}, or the
-   deployment's usual insufficient-authority error) on any applicable
-   entry whose type it does not implement, or whose type-defined
-   enforcement it cannot complete (an unrecognized member, an
-   unenforceable constraint, or an unrecognized matching mode).
+2. MUST treat as providing no authority any applicable entry whose
+   type it does not implement, or whose type-defined enforcement it
+   cannot complete (an unrecognized member, an unenforceable
+   constraint, or an unrecognized matching mode). It MUST refuse the
+   request (for example, a `403` with the `insufficient_scope` error
+   code {{RFC6750}}, or the deployment's usual insufficient-authority
+   error) unless another applicable entry that it can fully enforce
+   authorizes the whole request on its own, and MUST NOT combine parts
+   of several entries to authorize one request. A failure of the
+   token's own validation (above) rejects the token whatever its
+   entries carry.
 3. MUST NOT, when a token also carries `scope`, grant on the basis of
    a scope value any access broader than the corresponding
    `authorization_details` entry permits, including access that
@@ -4803,8 +4814,8 @@ any of the following, which issuance-time bounds alone do not provide:
 - approval bound to a single action; or
 - a bound the receiving resource server cannot enforce.
 
-Where the resource server or a composing runtime layer matches a
-concrete request URI against a `prefix` entry, the Resource Boundary
+Where the resource server or a composing runtime layer matches an
+operation target against a `prefix` entry, the Resource Boundary
 Canonicalization analysis of the Mission Resource Access Profile
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) gives the
 single-normalization rule for that match, for a deployment that
@@ -5634,7 +5645,8 @@ token. The resource server:
 
 - validates the JWT and verifies the request's DPoP proof against the
   key identified by the token's `cnf` claim;
-- enforces the `authorization_details` whose `resource` it serves,
+- enforces the `authorization_details` entries whose `resource`
+  matches the operation target, `https://erp.example.com`,
   permitting `invoices.read` within the Q3 issuance window and
   `journal-entries.write` up to the `max_amount` ceiling of 500.00
   USD ({{rs-enforcement}}); and
@@ -6004,7 +6016,10 @@ The five properties below restate, for a policy author, what
   absent from the derived entry, so a proposal cannot introduce a
   capability the policy did not confer. A restriction nested inside an
   already-granted delegation, such as `allowed_delegates`, narrows in
-  the ordinary direction.
+  the ordinary direction. Where the ceiling's eligibility defers to the
+  issuer's delegation policy (no `allowed_delegates`), a proposed list
+  only restricts that policy's decision and never replaces it
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 ## A Worked Rule
 
@@ -6463,6 +6478,19 @@ Cross-Domain:
   defines, so the algorithm-prefix rules bind the activation policy
   `digest` as well as `intent_hash`, `proposal_hash` and
   `authority_hash` (#1261).
+
+- Derivation Policy (#1258): where a ceiling's delegate eligibility
+  defers to the issuer's policy, a proposed `allowed_delegates` list
+  restricts that policy's decision and never replaces it.
+
+- Resource Server Enforcement (#1258): an applicable entry the resource
+  server cannot fully enforce provides no authority. Another entry
+  authorizes the request only when it covers the whole request on its
+  own; parts of entries are never combined, and a token-wide validation
+  failure still rejects the token.
+
+- Examples (#1258): the examples declare their operation contract,
+  which identifies each example service as the operation target.
 
 - Editorial: a readability pass shortens paragraphs, turns
   enumerations into lists, cuts restatement, and follows OAuth

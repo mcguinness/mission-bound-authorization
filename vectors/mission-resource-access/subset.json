@@ -1,0 +1,385 @@
+{
+  "format": "mission-resource-access-cases/1",
+  "group": "subset",
+  "description": "Item 1's four resource cases (D447), and items 5 and 6",
+  "spec": "draft-mcguinness-oauth-mission-resource-access",
+  "cases": [
+    {
+      "id": "sub-res-01",
+      "description": "exact A under exact B, equal resources",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders/123",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders/123",
+          "actions": [
+            "invoices.read",
+            "invoices.write"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "literal equality"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 subset case 1"
+      ]
+    },
+    {
+      "id": "sub-res-02",
+      "description": "exact A under exact B, host case differs",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://API.EXAMPLE/orders/123",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders/123",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "exact comparison is literal"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 subset case 1"
+      ]
+    },
+    {
+      "id": "sub-res-03",
+      "description": "exact A under exact B, A carries a query B lacks",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders?id=1",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "the query is part of the exact identity"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 disposition 3"
+      ]
+    },
+    {
+      "id": "sub-res-04",
+      "description": "exact A under prefix B",
+      "role": "authorization-server",
+      "requires": [
+        "resource-match.prefix"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders/123",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "B's prefix matcher admits A"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 subset case 2"
+      ]
+    },
+    {
+      "id": "sub-res-05",
+      "description": "exact A under prefix B, A outside the boundary",
+      "role": "authorization-server",
+      "requires": [
+        "resource-match.prefix"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/ordersx",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "not at a path-segment boundary"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 subset case 2"
+      ]
+    },
+    {
+      "id": "sub-res-06",
+      "description": "prefix A within prefix B",
+      "role": "authorization-server",
+      "requires": [
+        "resource-match.prefix"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders/2026/",
+          "resource_match": "prefix",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "B admits A's normalized base, so every target A admits"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 subset case 3"
+      ]
+    },
+    {
+      "id": "sub-res-07",
+      "description": "prefix A /orders under prefix B /orders/",
+      "role": "authorization-server",
+      "requires": [
+        "resource-match.prefix"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders/",
+          "resource_match": "prefix",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "B does not admit the bare /orders that A admits"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 subset case 3"
+      ]
+    },
+    {
+      "id": "sub-res-08",
+      "description": "prefix A under exact B",
+      "role": "authorization-server",
+      "requires": [
+        "resource-match.prefix"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "a prefix candidate is never within an exact reference"
+      },
+      "refs": [
+        "#1258 item 1",
+        "D447 subset case 4"
+      ]
+    },
+    {
+      "id": "sub-ra-01",
+      "description": "B requires_action_approval false, A omits the member",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.requires_action_approval"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": false
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "false is equivalent to omitting the member, for comparison only"
+      },
+      "refs": [
+        "#1258 item 5"
+      ]
+    },
+    {
+      "id": "sub-ra-02",
+      "description": "B requires_action_approval true, A omits the member",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.requires_action_approval"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": true
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "A would drop the approval requirement"
+      },
+      "refs": [
+        "#1258 item 5"
+      ]
+    },
+    {
+      "id": "sub-act-01",
+      "description": "A's literal action within B's action family",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "action-families"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.*"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "a literal action extending the family at a segment boundary"
+      },
+      "refs": [
+        "#1258 item 11"
+      ]
+    }
+  ]
+}
