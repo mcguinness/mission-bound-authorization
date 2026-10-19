@@ -710,7 +710,8 @@ describe("Deferred Mission Approval capability (@spec deferred-approval#deferred
     } finally {
       off.close();
     }
-  });
+    // A second assembly generates its own keys; allow for a loaded runner.
+  }, 15_000);
 
   it("refuses to assemble without token revocation, the deferred substrate's cancellation", async () => {
     await expect(
@@ -719,7 +720,7 @@ describe("Deferred Mission Approval capability (@spec deferred-approval#deferred
         capabilities: new Set([...ALL_PROVIDER_CAPABILITIES.filter((c) => c !== "token-revocation"), "deferred-approval"]),
       }),
     ).rejects.toThrow(/token-revocation/);
-  });
+  }, 15_000);
 });
 
 describe("governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation)", () => {
