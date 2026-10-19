@@ -225,7 +225,7 @@ describe("gateDelegableAuthority: per-entry enforcement over retained provenance
   });
 });
 
-describe("constructDelegatedIssuance: authority narrowing and empty-result refusal (@spec per-entry-enforcement, empty-result)", () => {
+describe("constructDelegatedIssuance — authority narrowing + empty-result refusal (@spec per-entry-enforcement, empty-result)", () => {
   const gateOver =
     (entries: AuthorityEntry[]): DelegationGate =>
     (delegate, depth) =>
@@ -240,7 +240,12 @@ describe("constructDelegatedIssuance: authority narrowing and empty-result refus
       }),
       entry({ resource: "https://b.example/mcp" }), // non-delegable
     ];
-    const issuance = constructDelegatedIssuance({ instance: inst, subjectSub: "alice", gate: gateOver(authoritySet) });
+    const issuance = constructDelegatedIssuance({
+      instance: inst,
+      subjectSub: "alice",
+      gate: gateOver(authoritySet),
+      accountedDepth: 1,
+    });
     expect(issuance.delegatedAuthority).toHaveLength(1);
     expect(issuance.delegatedAuthority?.[0]?.resource).toBe("https://a.example/mcp");
   });
@@ -249,13 +254,42 @@ describe("constructDelegatedIssuance: authority narrowing and empty-result refus
     const inst = await validateInstanceAssertion(await mintAssertion(), validateCtx());
     // Only a non-delegable entry: the delegate can carry nothing.
     const gate = gateOver([entry({ resource: "https://b.example/mcp" })]);
-    expect(() => constructDelegatedIssuance({ instance: inst, subjectSub: "alice", gate })).toThrow(
+    expect(() => constructDelegatedIssuance({ instance: inst, subjectSub: "alice", gate, accountedDepth: 1 })).toThrow(
       /invalid_target|empty authority/,
     );
     try {
-      constructDelegatedIssuance({ instance: inst, subjectSub: "alice", gate });
+      constructDelegatedIssuance({ instance: inst, subjectSub: "alice", gate, accountedDepth: 1 });
     } catch (e) {
       expect((e as InstanceAssertionError).code).toBe("invalid_target");
+    }
+  });
+
+  it("gates on the accounted depth, not the nesting of the presented act (@spec mission#delegation-constraints, D198)", async () => {
+    const inst = await validateInstanceAssertion(await mintAssertion(), validateCtx());
+    // A presented act one hop deep makes the resulting chain two long, but the
+    // accounting says depth 1, which max_depth 1 permits.
+    const inbound = { iss: AS, sub: "orchestrator", sub_profile: "ai_agent" };
+    const gate = gateOver([
+      entry({ resource: "https://a.example/mcp", delegation: { max_depth: 1, allowed_delegates: [{ sub_profile: "ai_agent" }] } }),
+    ]);
+    const issuance = constructDelegatedIssuance({ instance: inst, subjectSub: "alice", inboundAct: inbound, gate, accountedDepth: 1 });
+    expect(issuance.delegatedAuthority).toHaveLength(1);
+    expect(() =>
+      constructDelegatedIssuance({ instance: inst, subjectSub: "alice", inboundAct: inbound, gate, accountedDepth: 2 }),
+    ).toThrow(/empty authority/);
+  });
+
+  it("refuses with invalid_target when the depth cannot be established (@spec mission#delegation-constraints)", async () => {
+    const inst = await validateInstanceAssertion(await mintAssertion(), validateCtx());
+    const gate = gateOver([
+      entry({ resource: "https://a.example/mcp", delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "ai_agent" }] } }),
+    ]);
+    try {
+      constructDelegatedIssuance({ instance: inst, subjectSub: "alice", gate });
+      expect.unreachable();
+    } catch (e) {
+      expect((e as InstanceAssertionError).code).toBe("invalid_target");
+      expect((e as Error).message).toMatch(/cannot be established/);
     }
   });
 
