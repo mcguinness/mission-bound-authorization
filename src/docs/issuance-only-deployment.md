@@ -471,7 +471,8 @@ with `pnpm install --frozen-lockfile`.
   `buildAuthorizationServer` assembly restricted to the capability set of §8
   (`ISSUANCE_ONLY_CAPABILITIES`). `src/server.ts` runs the same assembly with
   no capability set: every default-on capability, with the opt-in
-  `device-authorization` and `delegation` off. It is the issuer, and its
+  `device-authorization`, `delegation` and `deferred-approval` off. It is
+  the issuer, and its
   JWKS is at `/jwks`.
 - **`plain-rs`**, at `http://localhost:4410`, audience
   `http://localhost:4410/api`.
@@ -569,8 +570,9 @@ profile is always on. Of the optional capabilities, only the lifecycle
 endpoint's `revoke` is enabled. Every other one is off, and a request for it
 gets the standard refusal its path already uses. With no `capabilities` set,
 the assembly is the full reference provider: every capability except the
-opt-in ones (`OPT_IN_PROVIDER_CAPABILITIES`, today `device-authorization`
-and `delegation`), which are on only where a capability set names them.
+opt-in ones (`OPT_IN_PROVIDER_CAPABILITIES`, today `device-authorization`,
+`delegation` and `deferred-approval`), which are on only where a capability
+set names them.
 
 How a capability is turned off:
 
@@ -605,6 +607,7 @@ launcher refuses every excluded path (#873)` unless the row says otherwise.
 | Cross-organization delegation chains | Off | 400 `unsupported_grant_type` | `the cross-organization chain exchange is refused unsupported_grant_type` |
 | Expansion exchange | Off | 400 `unsupported_grant_type` | `the expansion exchange (requested_token_type access_token) is refused unsupported_grant_type` |
 | AROP deferred grant (DTR) | Off | 400 `unsupported_grant_type` | `the AROP deferred grant is refused unsupported_grant_type` |
+| Deferred Mission Approval (`deferred-approval`: `completion_mode=deferred` creation, its `mdfr_` poll and `governed_policy` completion) | Off (opt-in) | The hint is ignored and the request reaches the approval interaction; with the AROP grant off too, the deferred grant is not registered (400 `unsupported_grant_type`) | no test in this launcher; on the default assembly, `services/authorization-server/test/deferred-mission-approval-endpoint.test.ts`, `Deferred Mission Approval capability (@spec deferred-approval#deferred-approval, deferred-approval#policy-completion) > is off by default: the hint is ignored, an mdfr_ code is unknown, and no deferral support is advertised` |
 | Templates: dispatch grant and the admin routes | Off | 400 `unsupported_grant_type`; `/templates` and `/templates/{id}/lifecycle` answer 501 `temporarily_unavailable` | `template dispatch is refused unsupported_grant_type, and the template admin routes answer 501` |
 | Containment: lifecycle `contain` | Off | 400 `invalid_request`; the Mission stays `active` at version 1 | `the lifecycle contain operation is refused invalid_request and the Mission stays active` |
 | Containment: protected-event ingestion | Off | 501 `temporarily_unavailable` | `protected-event ingestion answers 501 temporarily_unavailable` |
