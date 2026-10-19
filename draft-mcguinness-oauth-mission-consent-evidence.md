@@ -357,10 +357,7 @@ A Consent Disclosure object has these members:
   requested `intent.expires_at` beside it when the two differ, per the
   issuance profile's approval rendering,
   {{I-D.draft-mcguinness-oauth-mission}}), a display of the
-  Subject, a display of the Approver, and a display of the authority
-  source and, for `organizational`, the governed policy it draws on
-  (`authority_source.policy`), as that rendering requires. Presentation
-  wording is free.
+  Subject, and a display of the Approver. Presentation wording is free.
 
 `authority_summary`:
 : REQUIRED. An array with exactly one element per
@@ -1009,7 +1006,7 @@ Example, over the worked disclosure of {{disclosure-vector}}:
     "authority_hash":
       "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro",
     "consent_rendering_hash":
-      "sha-256:s5Z76VTPJVbPGSuxR79Z51O0oJGnU7_NRVOZVXlMD1k"
+      "sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -1033,7 +1030,7 @@ Example, over the worked disclosure of {{disclosure-vector}}:
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:s5Z76VTPJVbPGSuxR79Z51O0oJGnU7_NRVOZVXlMD1k"
+      "sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -1564,8 +1561,7 @@ The Consent Disclosure object:
     "goal": "Reconcile Q3 invoices",
     "expires_at": "2026-12-31T23:59:59Z",
     "subject_display": "alice (user_3p2q8mN1a0kV7tR)",
-    "approver_display": "alice (user_3p2q8mN1a0kV7tR)",
-    "authority_source_display": "alice's authority (user-delegated)"
+    "approver_display": "alice (user_3p2q8mN1a0kV7tR)"
   },
   "authority_summary": [
     {
@@ -1687,25 +1683,24 @@ nance":[{"applies_to":{"constraint":"max_amount","resource":"https:/
 journal-entries.write","resource":"https://erp.example.com"},"condit
 ion":"irreversible_action","statement":"Posted journal entries are n
 ot automatically reversible."}],"mission_summary":{"approver_display
-":"alice (user_3p2q8mN1a0kV7tR)","authority_source_display":"alice's
- authority (user-delegated)","expires_at":"2026-12-31T23:59:59Z","go
-al":"Reconcile Q3 invoices","subject_display":"alice (user_3p2q8mN1a
-0kV7tR)"},"rendering_template_digest":"sha-256:50S2DpJfcfNGlzi_vzZJN
-JbJKkknFX65rhWJWLiMyok","requesting_client":{"client_id":"s6BhdRkqt3
-","display":"Invoice Reconciler Agent"},"risk_summary":[{"dimension"
-:"data_access","statement":"The agent can read invoices held in the
- ERP system."},{"dimension":"spend","statement":"The agent can post
- journal entries of up to 500 US dollars."},{"dimension":"irreversib
-ility","statement":"Posted journal entries alter the ledger of recor
-d."}],"source_hashes":{"authority_hash":"sha-256:vUCCfjGulit9u0qJ0Z6
-pQSNerZtXMqRlfJNCr4PzLro","intent_hash":"sha-256:6mIFoCz79uCHNzKLfBp
-BwqFjoFXdpmpuc65486IqimQ"},"template_id":"mission-consent-standard",
-"template_version":"2026-06"}}
+":"alice (user_3p2q8mN1a0kV7tR)","expires_at":"2026-12-31T23:59:59Z"
+,"goal":"Reconcile Q3 invoices","subject_display":"alice (user_3p2q8
+mN1a0kV7tR)"},"rendering_template_digest":"sha-256:50S2DpJfcfNGlzi_v
+zZJNJbJKkknFX65rhWJWLiMyok","requesting_client":{"client_id":"s6BhdR
+kqt3","display":"Invoice Reconciler Agent"},"risk_summary":[{"dimens
+ion":"data_access","statement":"The agent can read invoices held in
+ the ERP system."},{"dimension":"spend","statement":"The agent can p
+ost journal entries of up to 500 US dollars."},{"dimension":"irrever
+sibility","statement":"Posted journal entries alter the ledger of re
+cord."}],"source_hashes":{"authority_hash":"sha-256:vUCCfjGulit9u0qJ
+0Z6pQSNerZtXMqRlfJNCr4PzLro","intent_hash":"sha-256:6mIFoCz79uCHNzKL
+fBpBwqFjoFXdpmpuc65486IqimQ"},"template_id":"mission-consent-standar
+d","template_version":"2026-06"}}
 ~~~
 
 ~~~ text
 consent_rendering_hash =
-  sha-256:s5Z76VTPJVbPGSuxR79Z51O0oJGnU7_NRVOZVXlMD1k
+  sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY
 ~~~
 
 An implementation that canonicalizes the same envelope, computes
@@ -1731,11 +1726,6 @@ encoding difference to resolve before interoperating.
 - Removed the uncited Mission Deferred Approval reference; the
   Approval Governance Record is the cited home of approval-governance
   facts.
-
-- `mission_summary` carries a display of the authority source and, for
-  `organizational`, the governed policy it draws on, matching the
-  issuance profile's approval rendering; the worked disclosure's
-  `consent_rendering_hash` changes accordingly (#1196).
 
 # Acknowledgments
 {:numbered="false"}
