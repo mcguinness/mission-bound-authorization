@@ -37653,10 +37653,10 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a policy evaluation that does not authorize activation leaves no Mission, and the pending approval either awaits a separately authenticated, full direct approval or resolves to denied",
-    "local": "Over the wire, every evaluation that does not authorize activation (no eligible consent, a refusing deciding policy, a failed activation check) creates no Mission and no token, and the pending approval resolves to denied, so the next poll is access_denied: this assembly serves no review surface for a human direct approval, so its refusal setting defaults to deny. The branch that leaves the approval pending is witnessed at the kernel."
+    "local": "Over the wire, every evaluation that does not authorize activation (no eligible consent, a refusing deciding policy, a failed activation check) creates no Mission and no token, and the pending approval resolves to denied, so the next poll is access_denied: this assembly serves no review surface for a human direct approval, so its refusal setting defaults to deny. The branch that leaves the approval pending for a separately authenticated, full direct approval is witnessed only at the kernel, so the row stays partial (D441: kernel-only endpoint obligations stay partial)."
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
