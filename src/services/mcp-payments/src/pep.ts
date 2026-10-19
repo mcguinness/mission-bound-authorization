@@ -342,7 +342,8 @@ export interface ActionMapping {
    * @spec runtime#input-authority (#825) — the operation targets one vendor,
    * named by its `vendor_id` argument. The PEP resolves that vendor from
    * authoritative store state, so the credential bound sees the vendor the
-   * operation reaches; an argument naming no stored vendor resolves to none.
+   * operation reaches; an argument naming no stored vendor is refused
+   * `unknown_vendor` before any decision (#1251, D484).
    */
   targetsVendor?: true;
   /**
@@ -1569,27 +1570,31 @@ export class Pep {
     let targetVendorId: string | undefined;
     let recipients: string[] | undefined;
     let recipientsRouted = false;
-    if (mapping.targetsVendor && args.vendor_id !== undefined) {
-      const targetVendor = this.deps.payments.getVendor(String(args.vendor_id));
-      targetVendorId = targetVendor?.id;
+    if (mapping.targetsVendor) {
       // @spec authzen#context-credential, authzen#runtime-denial-classification
       // (D324): the target is the vendor the store resolved, never the
       // argument, and it rides the request so the credential bound and the
       // Mission's vendor constraint both evaluate the target this PEP
-      // established. A vendor read is a read of that vendor object; one the
-      // store does not hold keeps the server resource and names no vendor.
+      // established. A vendor read is a read of that vendor object.
+      //
+      // @spec runtime-evidence#pre-decision-refusal (#1251, D484): a vendor
+      // the store does not hold is refused here, before the credential bound,
+      // any decision request or any Resource-policy query, as get_invoice
+      // refuses an unknown invoice; a credential naming that vendor never
+      // reaches a decision. No server-resource fallback remains.
+      const targetVendor = this.deps.payments.getVendor(String(args.vendor_id ?? ""));
+      if (targetVendor === undefined) return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view);
+      targetVendorId = targetVendor.id;
       // @spec resource-access#initial-common-constraints (#1266): the
       // vendor record's own tenant, the ownership fact a `tenant` bound reads.
-      if (targetVendorId !== undefined) {
-        resourceObj = {
-          type: "vendor",
-          id: targetVendorId,
-          properties: {
-            vendor_id: targetVendorId,
-            ...(typeof targetVendor?.tenant === "string" ? { tenant: targetVendor.tenant } : {}),
-          },
-        };
-      }
+      resourceObj = {
+        type: "vendor",
+        id: targetVendorId,
+        properties: {
+          vendor_id: targetVendorId,
+          ...(typeof targetVendor.tenant === "string" ? { tenant: targetVendor.tenant } : {}),
+        },
+      };
     }
     if (mapping.needsInvoice) {
       const invoiceId = String(args.invoice_id ?? "");
@@ -1655,7 +1660,8 @@ export class Pep {
       // @spec runtime#input-resource-policy (#828 step 5): a named vendor_id
       // is the vendor the payments store resolved, never the argument, as
       // for lookup_vendor (D324); a vendor the store does not hold is refused
-      // here, before any decision, as get_invoice refuses an unknown invoice.
+      // here, before any decision, as get_invoice refuses an unknown invoice
+      // and lookup_vendor an unknown vendor (D484).
       let requestedVendorId: string | undefined;
       if (args.vendor_id !== undefined) {
         requestedVendorId = this.deps.payments.getVendor(String(args.vendor_id))?.id;

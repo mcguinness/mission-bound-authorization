@@ -87,10 +87,10 @@ const TOKEN: TokenFacts = {
   credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
-const view = (): MissionView => ({
+const view = (state = "active"): MissionView => ({
   id: MISSION,
   issuer: "https://as.test",
-  state: "active",
+  state,
   version: 1,
   authority_hash: "sha-256:m1103",
   authority_set: [
@@ -142,11 +142,18 @@ async function harness(o: HarnessOptions = {}) {
   const payments = new PaymentsStore();
   payments.seed(
     [{ id: "acme", name: "Acme", status: "approved" }],
-    [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
+    [
+      { id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" },
+      // A second payable invoice, so a test can attempt an effect no earlier wire settled.
+      { id: "inv-2", vendor_id: "acme", amount: "90.00", currency: "USD", payee_account: "acct-acme", status: "payable" },
+    ],
   );
+  // The Mission's lifecycle state, which the PEP's live read and the PDP's view both report.
+  let missionState = "active";
+  const current = () => view(missionState);
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === MISSION && ref.issuer === "https://as.test"
-      ? { view: view(), observation: { state: view().state, version: view().version, mode: "fresh", freshness_at: now().toISOString() } }
+      ? { view: current(), observation: { state: current().state, version: current().version, mode: "fresh", freshness_at: now().toISOString() } }
       : undefined;
 
   let pepKeys: EvidenceKeyResolver | undefined;
@@ -173,7 +180,7 @@ async function harness(o: HarnessOptions = {}) {
     consumptionStatus: redemption.status,
     redeemingExecution: redemption.redeemer,
     getOptions: () => ({
-      view: view(),
+      view: current(),
       fga: alwaysAllowFga,
       modelId: "model-1103",
       now,
@@ -240,6 +247,10 @@ async function harness(o: HarnessOptions = {}) {
     server,
     reconciler,
     lastDecision: () => lastDecision,
+    /** Move the Mission to another lifecycle state, as a committed transition does. */
+    setMissionState: (state: string) => {
+      missionState = state;
+    },
     close: async () => {
       await reconciler.stop();
       await channel.close();
@@ -462,6 +473,30 @@ describe("the declared outcome reconciler runs the reconciliation (@spec runtime
       const run = await h.reconciler.runOnce();
       expect(run.claims).toEqual({ settled: [], unredeemed: [], open: [evaluationId], states: {}, errors: [] });
       expect(h.evidence.all().filter((e) => e.kind === "execution" && e.content.evaluation_id === evaluationId)).toEqual([]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("a Mission terminated while an outcome is unresolved admits no new effect under it, and reconciliation still records the outcome of the wire already initiated (@spec runtime#evidence, #1176)", async () => {
+    const h = await harness();
+    try {
+      // The wire committed and its evidence was lost: the outcome is unresolved.
+      await wireWithLostEvidence(h, key());
+      const evaluationId = String(h.connectors.ledgerEntries()[0]?.permit_id);
+      h.setMissionState("terminated");
+      // A new effect under the terminated Mission, for an invoice no wire has
+      // settled, commits nothing.
+      const fresh = await h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-2", idempotency_key: key() }, TOKEN);
+      expect(h.connectors.ledgerEntries().filter((e) => e.invoice_id === "inv-2")).toEqual([]);
+      expect(fresh).toMatchObject({ ok: false, denial_reason: "mission_inactive" });
+      // The termination left the claim in place, and reconciliation records the
+      // outcome the ledger attributes to its permit.
+      h.clock.advance(PAST_LEASE_MS);
+      const run = await h.reconciler.runOnce();
+      expect(run.claims?.states).toEqual({ [evaluationId]: "completed" });
+      expect(executions(h, "completed").map((e) => (e.kind === "execution" ? e.content.evaluation_id : undefined))).toEqual([evaluationId]);
+      expect(h.connectors.ledgerEntries()).toHaveLength(1);
     } finally {
       await h.close();
     }
