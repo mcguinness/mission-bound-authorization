@@ -3865,9 +3865,21 @@
      "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 3 (token): the access token's sub is the workload principal, its client_id the agent, and it carries no act",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 5 (same-Mission delegation): the agent designates a sub-agent, and the sub-agent's redeemed token keeps the workload principal as sub, names the sub-agent in act, binds the sub-agent's own key and carries the sub-agent as client_id",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1194. Partial: the client_id half is witnessed for a service_owned source (the agent ledger-reconciler, its workload Subject in sub, no act). The act half needs the delegated exchange of Delegation Within a Mission, which the reference AS does not implement (#869); the test records that step as a todo. Proved by overwriting client_id with the Subject in the JWT customizer (provider.ts)."
+   "notes": "#1194. Witnessed for a service_owned source (the agent ledger-reconciler, workload Subject agt_ledger_reconciler): client_id names the Agent and the Subject stays in sub (step 3), and a delegate the agent designates appears in act with sub unchanged (step 5); and for user_delegated by the delegation-exchange witness. Partial: the organizational source is not exercised for client_id or for a delegate in act. Proofs: overwriting client_id with the Subject in the JWT customizer fails step 3; omitting act at redemption fails step 5; taking sub from the delegate fails step 5 only with both the redemption's account and the customizer's Subject assignment disabled (either alone keeps sub)."
   },
   {
    "id": "core.approval-event.approver-establishment-not-from-client-input",
@@ -6924,9 +6936,15 @@
      "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 5 (same-Mission delegation): the agent designates a sub-agent, and the sub-agent's redeemed token keeps the workload principal as sub, names the sub-agent in act, binds the sub-agent's own key and carries the sub-agent as client_id",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1194, #869: the delegated token's `client_id` is the requesting delegate, not the Mission's approved agent; minting it under the approved agent's client fails the witness."
+   "notes": "#1194, #869: the delegated token's `client_id` is the requesting delegate, not the Mission's approved agent; minting it under the approved agent's client fails the witness. Step 5 witnesses it for a service_owned Mission: the sub-agent that redeems the designation is the delegated token's client_id while the Mission's Agent stays ledger-reconciler; minting under the Mission's Agent fails step 5."
   },
   {
    "id": "core.tokens.refresh-confidential-client-binding",
