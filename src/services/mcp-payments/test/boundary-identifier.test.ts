@@ -14,7 +14,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { canonicalize, type JsonValue } from "@mission/core";
+import { canonicalize, type IdempotencyScope, idempotencyScopeDigest, type JsonValue } from "@mission/core";
 import {
   type BoundaryEvidenceKey,
   buildBoundaryEvidenceKeyResolver,
@@ -26,11 +26,14 @@ import {
   EnforcementBoundaryContext,
   type EnforcementBoundaries,
   type EvaluationRequest,
+  type EvidenceKeyResolver,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
   type Fga,
   isDecisionChannelRefusal,
+  lineageScopeDigests,
   loadRuntimePosture,
   type MissionView,
+  openEphemeralClaimDomain,
   REFUSAL_RECORD_MEDIA_TYPE,
   RUNTIME_POSTURE,
   relationForAction,
@@ -63,6 +66,7 @@ import {
   TOOLS,
   type TokenFacts,
   TokenAudienceError,
+  type WriteReservationStore,
 } from "../src/index.js";
 
 const ISSUER = "https://as.test";
@@ -239,12 +243,23 @@ const factsFor = (credentialResource = CANONICAL_RESOURCE): TokenFacts => ({
 });
 
 /** One decision point and key bundle over `statement`, shared by every PEP a test builds on it. */
-function deployment(statement: RuntimePosture, clock: () => Date = () => new Date()) {
+function deployment(statement: RuntimePosture, clock: () => Date = () => new Date(), opts: { claims?: boolean } = {}) {
   const authority = new EnforcementBoundaryContext(statement, "mcp-payments-pep", clock);
+  let settlementKeys: EvidenceKeyResolver | undefined;
+  // The PDP's Exact claim domain over the same statement, when a test needs one (#917, #853 review).
+  const claims = opts.claims
+    ? openEphemeralClaimDomain({
+        owner: RUNTIME_POSTURE.pdps[0] as string,
+        statement,
+        now: clock,
+        settlementKeys: (params) => settlementKeys?.(params),
+      })
+    : undefined;
   const point = createEphemeralDecisionPoint({
     emitterId: EMITTER,
     audience: CANONICAL_RESOURCE,
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+    ...(claims ? { claims } : {}),
     authorizesAudience: (audience) =>
       authority.authorizesEvidence({ audience, kid: "ephemeral-pdp", emitter: EMITTER, role: "pdp" }, "current", clock()),
   });
@@ -254,12 +269,14 @@ function deployment(statement: RuntimePosture, clock: () => Date = () => new Dat
   );
   const declaration = statement.enforcement_boundaries as EnforcementBoundaries;
   const resolver = buildBoundaryEvidenceKeyResolver(declaration, published);
-  return { statement, clock, point, keys, resolver, declaration };
+  settlementKeys = resolver;
+  return { statement, clock, point, keys, resolver, declaration, claims };
 }
 
 interface Built {
   server: McpPaymentsServer;
   pep: Pep;
+  writeReservations: WriteReservationStore;
   evidence: EvidenceStore;
   decided: EvaluationRequest[];
   options: DecisionOptions[];
@@ -309,6 +326,7 @@ function buildPep(
     },
     claims: d.keys.claims,
   });
+  const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep", now: d.clock });
   const server = new McpPaymentsServer({
     pep,
     payments,
@@ -318,9 +336,9 @@ function buildPep(
     txnTokenJwks: { keys: [txnJwk as never] },
     asIssuer: AS_TXN_ISSUER,
     keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: ["as-txn"] },
-    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
+    writeReservations,
   });
-  return { server, pep, evidence, decided, options, fgaCalls: () => calls };
+  return { server, pep, writeReservations, evidence, decided, options, fgaCalls: () => calls };
 }
 
 async function call(x: Built, tool: string, args: Record<string, unknown>, token: string) {
@@ -800,5 +818,110 @@ describe("a cutover between credential validation and the decision (@spec runtim
     expect(joined.validatedBoundary).toEqual(expected);
     nowMs = CUTOVER_MS - 1000;
     expect((await x.server.validateMissionToken(token)).validatedBoundary).toEqual({ boundary: LEGACY, version: "payments-boundary-v1" });
+  });
+});
+
+describe("a declared change of identifier keeps duplicate-effect protection (@spec runtime#idempotency, runtime#boundary-identifier-change, #853)", () => {
+  it("a retry of a keyed reversible write after the change retrieves its original disposition and never recreates a cancelled effect", async () => {
+    let nowMs = CUTOVER_MS - 1000;
+    const d = deployment(statementWith(CHANGE), () => new Date(nowMs));
+    const x = buildPep(d, "mcp-payments-pep");
+    const token = await mint(LEGACY);
+    const k = randomUUID();
+    const first = await x.server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: k }, await x.server.validateMissionToken(token));
+    expect(first.ok, JSON.stringify(first)).toBe(true);
+    const cancelled = await x.server.callWriteTool(
+      "cancel_scheduled_payment",
+      { invoice_id: "inv-1", idempotency_key: randomUUID() },
+      await x.server.validateMissionToken(token),
+    );
+    expect(cancelled.ok, JSON.stringify(cancelled)).toBe(true);
+    nowMs = CUTOVER_MS + 1000;
+    // The same request, its credential accepted at the new identifier through the declared alias.
+    const retry = await x.server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: k }, await x.server.validateMissionToken(token));
+    expect(retry, JSON.stringify({ first, retry })).toEqual({ ok: true, deduped: true, result: first.result });
+    // One schedule was ever created, and it stays cancelled.
+    expect(x.writeReservations.schedules().map((s) => s.state)).toEqual(["cancelled"]);
+    // The retry was decided at the new identifier; the retained record keeps the scope it was made in.
+    expect(x.decided.at(-1)?.resource.properties.audience).toBe(CANONICAL_RESOURCE);
+    expect(x.writeReservations.reservations()).toHaveLength(2);
+  });
+
+  it("a retry after the change of a write that still holds its effect returns the retained response, not schedule_exists", async () => {
+    let nowMs = CUTOVER_MS - 1000;
+    const d = deployment(statementWith(CHANGE), () => new Date(nowMs));
+    const x = buildPep(d, "mcp-payments-pep");
+    const token = await mint(LEGACY);
+    const k = randomUUID();
+    const first = await x.server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: k }, await x.server.validateMissionToken(token));
+    expect(first.ok, JSON.stringify(first)).toBe(true);
+    nowMs = CUTOVER_MS + 1000;
+    const retry = await x.server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: k }, await x.server.validateMissionToken(token));
+    expect(retry).toEqual({ ok: true, deduped: true, result: first.result });
+    expect(x.writeReservations.schedules().map((s) => s.state)).toEqual(["scheduled"]);
+  });
+
+  it("the reservation's own transaction reads a key held under a replaced identifier's scope as held, so a concurrent duplicate runs no effect", () => {
+    let nowMs = CUTOVER_MS;
+    const store = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep", now: () => new Date(nowMs) });
+    const scopeAt = (audience: string): IdempotencyScope => ({
+      mission: { iss: ISSUER, id: "msn_853" },
+      subject: { iss: ISSUER, sub: "alice" },
+      actor: { client_id: "ap-agent", act: null },
+      audience,
+      action: "payments:payment.schedule",
+      resource: { type: "invoice", id: "inv-1" },
+      phase: null,
+    });
+    const declaration = statementWith(CHANGE).enforcement_boundaries as EnforcementBoundaries;
+    const oldScope = scopeAt(LEGACY);
+    const newScope = scopeAt(CANONICAL_RESOURCE);
+    expect(lineageScopeDigests(declaration, oldScope)).toEqual([]);
+    expect(lineageScopeDigests(declaration, newScope)).toEqual([idempotencyScopeDigest(oldScope)]);
+    let effects = 0;
+    const effect = () => {
+      effects += 1;
+      return { ok: true as const, result: { n: effects } };
+    };
+    const request = (scope: IdempotencyScope) => ({
+      scope,
+      scopeDigest: idempotencyScopeDigest(scope),
+      lineageScopeDigests: lineageScopeDigests(declaration, scope),
+      idempotencyKey: "k-853",
+      action: "payments:payment.schedule",
+      operationIdentity: "op-853",
+      evaluationId: randomUUID(),
+      executionId: randomUUID(),
+      retentionMs: 60_000,
+    });
+    expect(store.reserve(request(oldScope), effect)).toEqual({ kind: "executed", result: { n: 1 } });
+    nowMs += 1000;
+    expect(store.reserve(request(newScope), effect)).toMatchObject({ kind: "existing", reservation: { result: { n: 1 } } });
+    expect(store.lookup(idempotencyScopeDigest(newScope), "k-853", lineageScopeDigests(declaration, newScope))?.result).toEqual({ n: 1 });
+    expect(effects).toBe(1);
+    // Past the retention the record is outside the guarantee, as under one identifier.
+    nowMs += 120_000;
+    expect(store.reserve(request(newScope), effect)).toEqual({ kind: "executed", result: { n: 2 } });
+    store.close();
+  });
+
+  it("the PDP claim domain finds a key claimed under the old identifier, so the retry after the change gets no second permit", async () => {
+    let nowMs = CUTOVER_MS - 1000;
+    const statement = statementWith(CHANGE);
+    const d = deployment(statement, () => new Date(nowMs), { claims: true });
+    const x = buildPep(d, "mcp-payments-pep");
+    const k = `idem_${randomUUID()}`;
+    const first = await x.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: k }, factsFor());
+    expect(first.permitted, JSON.stringify(first)).toBe(true);
+    expect(first.attempt?.audience).toBe(LEGACY);
+    nowMs = CUTOVER_MS + 1000;
+    const retried = await x.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: k }, factsFor());
+    expect(retried, JSON.stringify(retried)).toMatchObject({ permitted: false, denial_reason: "duplicate_suppressed" });
+    expect(x.decided.at(-1)?.resource.properties.audience).toBe(CANONICAL_RESOURCE);
+    // A new key is a new operation, permitted at the new identifier.
+    const fresh = await x.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, factsFor());
+    expect(fresh.permitted, JSON.stringify(fresh)).toBe(true);
+    expect(fresh.attempt?.audience).toBe(CANONICAL_RESOURCE);
+    d.claims?.close();
   });
 });

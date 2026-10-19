@@ -13,6 +13,7 @@ import { generateKeyPairSync } from "node:crypto";
 import { canonicalize, type JsonValue } from "@mission/core";
 import { describe, expect, it } from "vitest";
 import {
+  boundaryPredecessors,
   boundarySuccessors,
   buildBoundaryEvidenceKeyResolver,
   determinedKeyAuthorization,
@@ -283,5 +284,32 @@ describe("evidence keys are authorized per boundary and version (@spec runtime-e
     const twoKeys = [...published, { ...(published[0] as (typeof published)[number]), publicKey: legacyOnly.publicKey }];
     expect(await verifyEvidenceEnvelope(old, DECISION_EVIDENCE_MEDIA_TYPE, buildBoundaryEvidenceKeyResolver(CHANGE, twoKeys)))
       .toEqual({ valid: false, reason: "key_not_resolvable" });
+  });
+});
+
+describe("the identifiers a boundary replaces, for duplicate-effect lookups (@spec runtime#idempotency, runtime#boundary-identifier-change, #853)", () => {
+  it("follows declared replaces records transitively, nearest first, and stops on a cycle", () => {
+    const version = (name: string, boundary: string, replaces: { boundary: string; previous_boundary: string }[]) => ({
+      version: name,
+      effective_at: "2026-01-01T00:00:00Z",
+      boundaries: [{ boundary, pep_locations: ["erp-pep"], evidence_keys: [keyAuth("pdp-1")] }],
+      replaces: replaces.map((r) => ({ ...r, previous_version: "v0" })),
+    });
+    const chain: EnforcementBoundaries = {
+      versions: [
+        version("v1", "a", []),
+        version("v2", "b", [{ boundary: "b", previous_boundary: "a" }]),
+        version("v3", "c", [{ boundary: "c", previous_boundary: "b" }]),
+        // Renamed back: c is replaced by a, which c already succeeded.
+        version("v4", "a", [{ boundary: "a", previous_boundary: "c" }]),
+      ],
+    };
+    // Every identifier in one lineage holds the same operations, so a rename back joins it.
+    expect(boundaryPredecessors(chain, "b")).toEqual(["a", "c"]);
+    expect(boundaryPredecessors(chain, "c")).toEqual(["b", "a"]);
+    expect(boundaryPredecessors(chain, "a")).toEqual(["c", "b"]);
+    expect(boundaryPredecessors(CHANGE, ERP)).toEqual([LEGACY]);
+    expect(boundaryPredecessors(CHANGE, LEGACY)).toEqual([]);
+    expect(boundaryPredecessors(ONE_VERSION, ERP)).toEqual([]);
   });
 });

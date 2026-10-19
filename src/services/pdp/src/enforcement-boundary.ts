@@ -30,6 +30,7 @@
  * credential claim or credential type.
  */
 
+import { type IdempotencyScope, idempotencyScopeDigest } from "@mission/core";
 import type { EvidenceKeyLike, EvidenceKeyResolver } from "./runtime-evidence-integrity.js";
 
 /** The emitter roles whose records carry an `audience` and whose keys are boundary-bound. */
@@ -463,4 +464,44 @@ export function boundarySuccessors(declaration: EnforcementBoundaries, audience:
     out.push(next.boundary);
     current = next.boundary;
   }
+}
+
+/**
+ * @spec runtime#idempotency, runtime#boundary-identifier-change (#853
+ * review): the boundaries `boundary` replaces, through declared `replaces`
+ * records followed transitively, nearest first, never `boundary` itself.
+ * A rename changes the identifier, not the operations already admitted at
+ * the boundary, so a duplicate-effect store reads its records of a
+ * replaced identifier as its own (see {@link lineageScopeDigests}). It never
+ * authorizes a key or moves a permit.
+ */
+export function boundaryPredecessors(declaration: EnforcementBoundaries, boundary: string): string[] {
+  const out: string[] = [];
+  const seen = new Set([boundary]);
+  const queue = [boundary];
+  const records = [...declaration.versions].reverse().flatMap((v) => v.replaces ?? []);
+  for (let current = queue.shift(); current !== undefined; current = queue.shift()) {
+    for (const r of records) {
+      if (r.boundary !== current || seen.has(r.previous_boundary)) continue;
+      seen.add(r.previous_boundary);
+      out.push(r.previous_boundary);
+      queue.push(r.previous_boundary);
+    }
+  }
+  return out;
+}
+
+/**
+ * @spec runtime#idempotency, runtime#boundary-identifier-change (#853
+ * review): the idempotency scope digests that hold the same operations as
+ * `scope` under the identifiers its `audience` replaces ({@link
+ * boundaryPredecessors}). The PDP's claim domain and the PEP's write
+ * reservations look a key up under these as well as under `scope`, so a
+ * keyed operation consumed or reserved before a declared change is found,
+ * with its original disposition, by a retry after it. Records stay under the
+ * scope they were made in; nothing is rewritten.
+ */
+export function lineageScopeDigests(declaration: EnforcementBoundaries | undefined, scope: IdempotencyScope): string[] {
+  if (declaration === undefined) return [];
+  return boundaryPredecessors(declaration, scope.audience).map((audience) => idempotencyScopeDigest({ ...scope, audience }));
 }

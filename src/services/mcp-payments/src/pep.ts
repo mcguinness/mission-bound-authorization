@@ -43,6 +43,7 @@ import {
   type DelegatePolicy,
   type Decision,
   EnforcementBoundaryContext,
+  lineageScopeDigests,
   type EntitlementResolver,
   evaluate,
   type EvaluateOptions,
@@ -990,6 +991,14 @@ export interface EnforceResult {
 export interface WriteReservationScope {
   scope: IdempotencyScope;
   scopeDigest: string;
+  /**
+   * @spec runtime#idempotency, runtime#boundary-identifier-change (#853
+   * review): the digests of the same scope under each identifier the
+   * request's boundary replaces (`lineageScopeDigests`). Retrieval and the
+   * reservation's own transaction read a key held under any of them as held,
+   * so a declared change never makes a reserved or completed key fresh.
+   */
+  lineageScopeDigests: readonly string[];
   operationIdentity: string;
   idempotencyKey?: string;
 }
@@ -2316,6 +2325,7 @@ export class Pep {
       writeReservation = {
         scope,
         scopeDigest: idempotencyScopeDigest(scope),
+        lineageScopeDigests: lineageScopeDigests(this.boundaryContext.declaration, scope),
         operationIdentity: operationIdentity(req),
         ...(typeof key === "string" ? { idempotencyKey: key } : {}),
       };

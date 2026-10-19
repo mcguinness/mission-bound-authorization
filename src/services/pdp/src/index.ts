@@ -193,6 +193,7 @@ export {
   type BoundaryReplacement,
   type BoundaryStatementVersion,
   type BoundaryUnresolved,
+  boundaryPredecessors,
   boundarySuccessors,
   buildBoundaryEvidenceKeyResolver,
   determinedKeyAuthorization,
@@ -202,6 +203,7 @@ export {
   enforcementBoundaryFindings,
   type EvidenceAuthorizationScope,
   type EvidenceKeyUse,
+  lineageScopeDigests,
 } from "./enforcement-boundary.js";
 export {
   resolveBaselineJoin,

@@ -44,6 +44,7 @@ import {
   isVolatileScopeMember,
 } from "@mission/core";
 import { afterCommit, type Database, DurableStoreError, openDurableStore, withTransaction } from "@mission/store";
+import { lineageScopeDigests } from "./enforcement-boundary.js";
 import {
   type EnforcementScopeStatement,
   retentionWindowSeconds,
@@ -452,8 +453,7 @@ export class IdempotencyClaimDomain {
   private claimNow(input: ClaimInput): ClaimOutcome {
     // One clock reading, inside the transaction, for every decision below.
     const nowMs = input.clock();
-    const found = this.select(input.scopeDigest, input.key);
-    const row = found ? this.advance(found, nowMs) : undefined;
+    const row = this.heldRow(input, nowMs);
     if (!row) {
       this.insert(input, nowMs);
       return { kind: "claimed", ticket: this.ticket(input.evaluationId) };
@@ -820,6 +820,27 @@ export class IdempotencyClaimDomain {
 
   private windowCloseMs(row: ClaimRow): number {
     return row.valid_until_ms + this.leaseMaxMs(row) + this.windowMs;
+  }
+
+  /**
+   * @spec runtime#idempotency, runtime#boundary-identifier-change (#853
+   * review): the row that holds the pair, after time has been applied: the
+   * one under the request's own scope, or else one under the scope of a
+   * boundary its audience replaces, per this domain's statement
+   * ({@link lineageScopeDigests}). A declared change of identifier therefore
+   * never makes a claimed key fresh: a retry after it meets the original
+   * claim, which suppresses or conflicts exactly as it would have, and never
+   * retransmits (its cache key names the old audience). The row stays under
+   * the scope it was claimed in.
+   */
+  private heldRow(input: ClaimInput, nowMs: number): ClaimRow | undefined {
+    const lineage = lineageScopeDigests(this.options.statement.enforcement_boundaries, input.scope);
+    for (const digest of [input.scopeDigest, ...lineage]) {
+      const found = this.select(digest, input.key);
+      const row = found ? this.advance(found, nowMs) : undefined;
+      if (row) return row;
+    }
+    return undefined;
   }
 
   private select(scopeDigest: string, key: string): ClaimRow | undefined {

@@ -1350,7 +1350,7 @@ export class McpPaymentsServer {
     if (!pair) return this.reservationUnavailable(attempt);
     let found: WriteReservation | undefined;
     try {
-      found = pair.store.lookup(pair.scope.scopeDigest, pair.key);
+      found = pair.store.lookup(pair.scope.scopeDigest, pair.key, pair.scope.lineageScopeDigests);
     } catch {
       return this.reservationUnavailable(attempt);
     }
@@ -1553,6 +1553,7 @@ export class McpPaymentsServer {
         {
           scope: pair.scope.scope,
           scopeDigest: pair.scope.scopeDigest,
+          lineageScopeDigests: pair.scope.lineageScopeDigests,
           idempotencyKey: pair.key,
           action: attempt.action,
           operationIdentity: pair.scope.operationIdentity,

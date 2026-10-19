@@ -122,13 +122,34 @@ approved entry: an entry naming the old identifier no longer matches the
 operation target and is refused `out_of_authority`, and keeping that
 authority takes a new approval through Mission creation or derivation.
 
+## Duplicate-effect protection across a change
+
+The idempotency scope names `audience`, but a declared change renames the
+boundary, not the operations already admitted at it, so no key becomes
+fresh. The PDP's claim domain and the PEP's write reservations look a key
+up under the request's scope and under the same scope at every identifier
+the boundary replaces through declared `replaces` records
+(`boundaryPredecessors`, `lineageScopeDigests`). The PEP reads that
+lineage at retrieval and again inside the reservation's own transaction;
+the claim domain reads it inside its claim transaction, from its own
+statement.
+
+A keyed operation retried after the change therefore meets its original
+disposition: a completed reversible write returns its retained response
+(a cancelled schedule is never recreated), and a high-consequence key
+claimed before the change is suppressed rather than claimed again.
+Records stay under the scope they were made in and nothing is rewritten.
+Invalidating permits does not erase this: the retry is decided afresh at
+the new identifier, an old permit is never reused, and a retained claim
+never retransmits across the change because its cache key names the old
+audience. A rename that also moves the operation target changes the
+operation identity, so the retry is refused (`operation_identity_conflict`
+or `idempotency_conflict`), still with no second effect. Retention is
+unchanged: each record is kept for its published horizon from when it was
+made.
+
 ## Bounds
 
-- **Idempotency across a change.** The idempotency scope names `audience`,
-  so a keyed operation retried after the change under a key first used
-  before it lands in a new scope, in both the PDP claim domain and the
-  PEP's write reservations (each P7D). Schedule the change so that no such
-  retry falls inside the horizon, or refuse those retries operationally.
 - **Static key bindings.** The PDP claim domain's settlement resolver and
   the key set published at `EVIDENCE_KEY_SET_LOCATION` bind each key to the
   shipped `audience` and do not read the statement's versions; a change
