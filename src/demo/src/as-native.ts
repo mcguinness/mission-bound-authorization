@@ -5,6 +5,7 @@
  * same functions, so what they show is what the launcher runs.
  */
 import { existsSync } from "node:fs";
+import { loadSigningKeyRing, signingKeysFromEnv } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
 import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.js";
@@ -39,12 +40,15 @@ export function asNativeLaunchOptions(env: Readonly<Record<string, string | unde
     throw new Error(`MISSION_PDP_MODE must be co-resident or remote, not ${pdpMode}`);
   }
   const resourcePolicyStore = resourcePolicyStoreFromEnv(env);
+  // @spec #831: the deployment says where its signing keys come from.
+  const signingKeys = signingKeysFromEnv(env);
   return {
     openfgaUrl,
     presharedKey: env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
     ...(ca ? { caCertPath: ca } : {}),
     ...(pdpMode ? { pdpMode } : {}),
     resourcePolicyStore,
+    signingKeys,
     target: "as-native",
   };
 }
@@ -76,6 +80,17 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
   if (options.testOrdinaryTokenMinting) {
     throw new Error("the as-native launcher never enables the test-only ordinary-token minting fixture (D332)");
   }
+  // @spec #831: an unusable key ring refuses before anything connects or
+  // listens; composeStack loads it again when it builds the AS.
+  if (options.signingKeys && "ring" in options.signingKeys) {
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    await loadSigningKeyRing(options.signingKeys.ring, `http://localhost:${options.asPort ?? TOPOLOGY.ports.as}`, {
+      asToken,
+      asStatus,
+      asTxn,
+      asContinuation,
+    });
+  }
   const stack = await composeStack(options);
   const { authServer, resourceChannel } = stack;
   let closing: Promise<void> | undefined;
@@ -104,6 +119,7 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
       `  issuer             ${stack.issuer}  (JWKS ${authServer.asUrl}/jwks)`,
       `  AS capabilities    issuance profile + ${[...authServer.capabilities].join(", ")}`,
       `  dev ordinary token ${authServer.devOrdinaryIssuance ? "served" : "not served"}`,
+      `  signing keys       ${authServer.signingKeyMode === "ring" ? "key ring (kept across restarts)" : "ephemeral (new at every restart)"}`,
       `  resource audience  ${resourceChannel.url}  (HTTP MCP, DPoP verified on every request)`,
       `  PDP mode           ${stack.pdpMode}`,
       `  MAS join route     ${stack.masGovernedChannel ? "mounted" : "not mounted"}`,

@@ -40,14 +40,18 @@ import {
   CANONICAL_RESOURCE,
   Connectors,
   createEphemeralEvidenceKeys,
+  credentialAuthorityFrom,
   EvidenceStore,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
   parameterDigest,
   PaymentsStore,
   Pep,
+  REFUSAL_RECORD_MEDIA_TYPE,
+  type RefusalRecord,
   type TokenFacts,
   TransactionEngine,
+  verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
@@ -111,7 +115,21 @@ async function build(
     audience: CANONICAL_RESOURCE,
     getOptions: () => ({ view, fga: missionFga, modelId: "test", now: () => new Date(), stalenessBound, relationForAction, stateSourcePlacement: "pep" as const }),
   });
-  const pep = new Pep({ payments, evidence, fga: missionFga, modelId: "test", loadView, instanceEpoch: "epoch-828", decide: channel.decide, claims: channel.claims });
+  // Every decision request the PEP sends, whichever channel carries it.
+  const decided: unknown[] = [];
+  const pep = new Pep({
+    payments,
+    evidence,
+    fga: missionFga,
+    modelId: "test",
+    loadView,
+    instanceEpoch: "epoch-828",
+    decide: (req, opts) => {
+      decided.push(req);
+      return channel.decide(req, opts);
+    },
+    claims: channel.claims,
+  });
   const connectors = new Connectors();
   const writeReservations = openEphemeralWriteReservationStore({ owner: RUNTIME_POSTURE.mediated_scope.pep_locations[0] as string });
   const server = new McpPaymentsServer({
@@ -126,7 +144,7 @@ async function build(
     writeReservations,
   });
   const records = () => evidence.forMission(view.id);
-  return { server, pep, channel, payments, connectors, writeReservations, records };
+  return { server, pep, channel, payments, connectors, writeReservations, records, decided, resolver: keys.resolver };
 }
 
 describe("the resource enforces an independent Resource-policy refusal (@spec runtime#input-resource-policy, #828)", () => {
@@ -335,6 +353,110 @@ describe("list_invoices names its actual targets to Resource policy and binds th
       } finally {
         await x.channel.close();
         x.payments.db.close();
+      }
+    }
+  });
+});
+
+/**
+ * Vendor-read fixtures over a store holding acme only. The Mission and the
+ * credential carry the same entry: `open` constrains no vendor, and `named`
+ * names acme and umbrella, so neither bound excludes umbrella, which the
+ * store does not hold.
+ */
+function vendorRead(label: string, constraints?: { vendors: string[] }) {
+  const entry = { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"], ...(constraints ? { constraints } : {}) };
+  const view: MissionView = { ...defaultView, id: `msn_rp_vendor_${label}`, authority_hash: `sha-256:rp-vendor-${label}`, authority_set: [entry] };
+  const token: TokenFacts = {
+    ...TOKEN,
+    mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
+    credentialAuthority: credentialAuthorityFrom([entry]),
+  };
+  return { view, token, fixture: { view, seed: seedOneInvoice } };
+}
+const OPEN_VENDOR_READ = vendorRead("open");
+const NAMED_VENDOR_READ = vendorRead("named", { vendors: ["acme", "umbrella"] });
+
+describe("lookup_vendor refuses a vendor the store does not hold before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484)", () => {
+  /** Look up `vendorId` under `read`, over `mode`, with a recording Resource policy. */
+  async function lookUp(mode: (typeof MODES)[number], read: ReturnType<typeof vendorRead>, vendorId: string) {
+    const policy = resourcePolicyFixture();
+    const x = await build(mode, policy, undefined, read.fixture);
+    const res = await x.server.callReadTool("lookup_vendor", { vendor_id: vendorId }, read.token);
+    return { x, policy, res };
+  }
+
+  /** The refusal: the diagnostic, no decision request, no policy query, one verifiable signed `target_unresolvable` record and nothing else. */
+  async function expectRefusedBeforeDecision(
+    { x, policy, res }: Awaited<ReturnType<typeof lookUp>>,
+    view: MissionView,
+    mode: string,
+  ) {
+    expect(res, mode).toEqual({ ok: false, refusal_reason: "unknown_vendor" });
+    expect(x.decided, mode).toHaveLength(0);
+    expect(policy.queries, mode).toEqual([]);
+    expect(x.records().map((e) => e.kind), mode).toEqual(["refusal"]);
+    const refusal = x.records()[0] as RefusalRecord;
+    expect(refusal.content, mode).toMatchObject({
+      denial_reason: "target_unresolvable",
+      emitter: { role: "pep" },
+      action: { name: "payments:vendor.read" },
+      mission: { id: view.id, issuer: view.issuer },
+    });
+    expect(refusal.content, mode).not.toHaveProperty("resource");
+    expect(await verifyEvidenceEnvelope(refusal.content, REFUSAL_RECORD_MEDIA_TYPE, x.resolver), mode).toEqual({ valid: true });
+  }
+
+  it("a vendor the store does not hold is refused unknown_vendor: no PDP request, no policy query, no Decision Evidence, no result and a verifiable signed target_unresolvable refusal, the same over both channels", async () => {
+    for (const mode of MODES) {
+      const attempt = await lookUp(mode, OPEN_VENDOR_READ, "umbrella");
+      try {
+        await expectRefusedBeforeDecision(attempt, OPEN_VENDOR_READ.view, mode);
+      } finally {
+        await attempt.x.channel.close();
+        attempt.x.payments.db.close();
+      }
+    }
+  });
+
+  it("a Mission and a credential that name the vendor do not bypass the refusal, the same over both channels", async () => {
+    for (const mode of MODES) {
+      const attempt = await lookUp(mode, NAMED_VENDOR_READ, "umbrella");
+      try {
+        await expectRefusedBeforeDecision(attempt, NAMED_VENDOR_READ.view, mode);
+      } finally {
+        await attempt.x.channel.close();
+        attempt.x.payments.db.close();
+      }
+    }
+  });
+
+  it("a stored vendor under the same Missions and credentials reaches the PDP and the policy as vendor:<id>, which still decide it, the same over both channels", async () => {
+    for (const mode of MODES) {
+      for (const read of [OPEN_VENDOR_READ, NAMED_VENDOR_READ]) {
+        const { x, policy, res } = await lookUp(mode, read, "acme");
+        try {
+          expect(res.ok, `${mode} ${JSON.stringify(res)}`).toBe(true);
+          expect(res.result, mode).toMatchObject({ id: "acme" });
+          expect(x.decided, mode).toHaveLength(1);
+          expect((x.decided[0] as { resource: unknown }).resource, mode).toMatchObject({ type: "vendor", id: "acme" });
+          expect(policy.queries.map((q) => q.targets), mode).toEqual([[{ type: "vendor", id: "acme" }]]);
+          expect(x.records().find((e) => e.kind === "decision")?.content, mode).toMatchObject({ decision: "permit", resource: { type: "vendor", id: "acme" } });
+        } finally {
+          await x.channel.close();
+          x.payments.db.close();
+        }
+      }
+      // The policy still decides a stored vendor.
+      const refuses = await build(mode, RESOURCE_POLICY_REFUSES_ALL_FIXTURE, undefined, NAMED_VENDOR_READ.fixture);
+      try {
+        const res = await refuses.server.callReadTool("lookup_vendor", { vendor_id: "acme" }, NAMED_VENDOR_READ.token);
+        expect(res.ok, mode).toBe(false);
+        expect(res.result, mode).toBeUndefined();
+        expect(refuses.records().find((e) => e.kind === "decision")?.content, mode).toMatchObject({ decision: "deny", denial_reason: "resource_policy" });
+      } finally {
+        await refuses.channel.close();
+        refuses.payments.db.close();
       }
     }
   });

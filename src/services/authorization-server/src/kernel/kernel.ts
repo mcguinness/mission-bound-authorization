@@ -146,6 +146,8 @@ import {
 } from "./governed-policy-approval.js";
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
+import { ContinuationStore } from "./continuation-store.js";
+import { DelegationFamilyStore } from "./delegation-family-store.js";
 import { newMissionId } from "./mission-id.js";
 import { type CeilingConsent, ceilingMembersOf, consentCeiling, serializeCeiling } from "./progressive.js";
 import {
@@ -173,6 +175,7 @@ import {
   type DischargedEntry,
   type IntentSubmissionEvidenceEntry,
   type IntentSubmissionEvidenceFact,
+  isActivatingCommit,
   LEGAL_TRANSITIONS,
   type LifecycleCommit,
   type LifecycleOperation,
@@ -709,6 +712,19 @@ export class MissionKernel {
   /** @spec mission-template#dispatch-handoff (#1158): consumed handoff grants (single use). */
   readonly dispatchHandoffs: DispatchHandoffStore;
   /**
+   * @spec id-continuation-assertion, control-plane#serialization (#250) — the
+   * continuation anchors and handles, on THIS kernel's database: the
+   * approval-time root commits with the activating transition and the
+   * terminal propagation with the terminal one ({@link emitCommit}).
+   */
+  readonly continuations: ContinuationStore;
+  /**
+   * @spec async-delegation, control-plane#serialization (#250) — the
+   * delegation families, on THIS kernel's database: the terminal propagation
+   * commits with the terminal transition ({@link emitCommit}).
+   */
+  readonly delegationFamilies: DelegationFamilyStore;
+  /**
    * @spec discharge#discharge-idempotency — the durable event-dedup store, on THIS
    * kernel's database so an event row commits in the same transaction as the
    * latch it records (@spec discharge#discharge-commit, "Atomicity").
@@ -826,6 +842,8 @@ export class MissionKernel {
     );
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.dispatchHandoffs = new DispatchHandoffStore(opts.now ?? (() => new Date()));
+    this.continuations = new ContinuationStore(this.db);
+    this.delegationFamilies = new DelegationFamilyStore(this.db);
     this.now = opts.now ?? (() => new Date());
     this.allocateStatusIndex = opts.allocateStatusIndex ?? (() => randomInt(STATUS_LIST_SIZE));
     // @spec discharge#discharge-idempotency, control-plane#tombstones (issue
@@ -4492,6 +4510,21 @@ export class MissionKernel {
       ...schedule,
     };
     const persisted: PersistedLifecycleCommit = this.outbox.enqueueInCallerTx(event);
+    // @spec id-continuation-assertion, control-plane#serialization (#250) — the
+    // approval-time root is written HERE, with the activating transition, for
+    // every Mission that reaches insertRecord (approval, expansion successors,
+    // Child Missions). Rooting on the publish path instead would let a retried
+    // publication of the activation, replayed after the Mission terminated,
+    // root an active lineage for a dead Mission: each commit is published on
+    // its own, so a failed activation never holds back a later revoke.
+    if (isActivatingCommit(persisted)) {
+      this.continuations.rootGrantInCallerTx({
+        missionId: persisted.id,
+        issuer: persisted.issuer,
+        clientId: persisted.client_id,
+        createdAt: persisted.created_at,
+      });
+    }
     if (TERMINAL_STATES.has(record.state)) {
       this.tombstones.recordInCallerTx({
         issuer: record.issuer,
@@ -4502,7 +4535,22 @@ export class MissionKernel {
         transitionAt: persisted.committed_at,
         commitEventId: persisted.event_id,
       });
+      // @spec control-plane#serialization (#250) — terminal propagation in the
+      // same transaction as the tombstone: no lineage rooted in a terminated
+      // Mission resolves, whether or not the commit is ever published.
+      this.continuations.terminateMissionInCallerTx(record.id);
+      this.delegationFamilies.terminateMissionInCallerTx(record.id);
     }
+  }
+
+  /**
+   * Close the kernel's database, and with it every store that lives on it
+   * (the continuation and delegation-family tables among them). The kernel
+   * owns that handle: a caller that opened a file-backed kernel closes it
+   * here before another kernel opens the same file.
+   */
+  close(): void {
+    this.db.close();
   }
 
   private mustGet(id: string): MissionRecord {

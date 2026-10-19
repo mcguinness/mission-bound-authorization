@@ -59,16 +59,16 @@
     "content_sha256": "7eca5ad85eb5212f6589d792f41a66503302228fb612edaebe98fb4c54f525f8"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "c1afe90f6469d85a014a958970472ed4736725ee",
-    "content_sha256": "7fd56b6e9073a0f92e24c212e19c3751301076e61740a416ab9336b5f39a11f3"
+    "revision": "43511ae3d0159f95b6567ffe5b7302a03acafa38",
+    "content_sha256": "98c55e776efa33fc4b5be8d02b2b00ab286d79b1cab164b867158546158f90c0"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "2a8a1253dcd8f2f32eeeda927f38c616f668405a",
-    "content_sha256": "fdbe56fb50bfe9fc7632cc1cb387aa72550c3ed6793b16cb76072a78ad976720"
+    "revision": "eefa661963a4374d0bcbcc31a7d24939e18ce269",
+    "content_sha256": "2773eae85660e9dba220add4b27f87ec5cc335693b4f7c79415c8ec390696211"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "4e2f0ea1118418979179798fa3fa2deffd4f883a",
@@ -2288,9 +2288,45 @@
      "name": "control-plane lifecycle expiry under a refused operation > commits the expiry it discovered even when the operation it was asked for is refused",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "single-process control-plane fault boundaries > an expiry materialized under a guarded transition makes the caller's earlier version stale (@spec status#idempotency, #250)",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle expiry under a refused operation > compares expected_version with the version the expiry left: the caller's older version is stale, the expiry stays committed and published once (@spec status#idempotency, #250)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-durability.test.ts",
+     "name": "continuation and delegation-family projections in the committing transaction (#250) > roots an activated Mission in its activating commit: a refused root refuses the Mission with it",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-durability.test.ts",
+     "name": "continuation and delegation-family projections in the committing transaction (#250) > terminates every lineage in the terminal commit, so a failed publication still leaves none live; a suspension terminates nothing",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-durability.test.ts",
+     "name": "continuation and delegation-family projections in the committing transaction (#250) > roots nothing when an activation whose publication failed is replayed after the Mission terminated",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-durability.test.ts",
+     "name": "continuation and delegation-family projections across a restart (#250) > keeps anchors, handles and families across a restart, roots nothing again at boot, and keeps a terminated lineage terminal",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. The counter now carries a durable operation and artifact identity: the increment and its reservation commit together, a recorded operation identity replays its artifact instead of counting again, an unreleased reservation is never refunded because a missing local acknowledgement is not evidence that no artifact was accepted, and only an authoritative non-acceptance returns a count. A refunded operation identity is terminal and refuses a retry, so nothing issues against a count that was returned; and a pending reservation is exclusive on this instance, so two overlapping callers under one operation identity receive one artifact rather than two against one count. The lifecycle nonce claim and its committed outcome now commit with the transition, with the exact response finalized and recovered outside that transaction, and finalization is guarded on the request digest the claim was made under so a divergent retry can neither overwrite a committed success nor be retained in its place. The expiry clock commits in its own transaction ahead of the requested transition, so refusing that transition never rolls back the expiry it discovered or the expiry's publication. That claim store's additive schema migration is exercised on a file-backed database carrying the pre-migration shape: every retained outcome keeps its replay identity, and a reopen is a no-op. This does not reach tested in this slice: the artifact itself is still issued outside the kernel transaction (the provider access-token hook is synchronous and has no acceptance boundary), so authoritative issuance state and artifact material are not recorded transactionally before delivery. No multi-process claim."
+   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. The counter now carries a durable operation and artifact identity: the increment and its reservation commit together, a recorded operation identity replays its artifact instead of counting again, an unreleased reservation is never refunded because a missing local acknowledgement is not evidence that no artifact was accepted, and only an authoritative non-acceptance returns a count. A refunded operation identity is terminal and refuses a retry, so nothing issues against a count that was returned; and a pending reservation is exclusive on this instance, so two overlapping callers under one operation identity receive one artifact rather than two against one count. The lifecycle nonce claim and its committed outcome now commit with the transition, with the exact response finalized and recovered outside that transaction, and finalization is guarded on the request digest the claim was made under so a divergent retry can neither overwrite a committed success nor be retained in its place. The expiry clock commits in its own transaction ahead of the requested transition, so refusing that transition never rolls back the expiry it discovered or the expiry's publication. A request's `expected_version` is compared with the version that expiry left, so a caller's earlier version is refused `stale_version` while the expiry stays committed and published once (#250). That claim store's additive schema migration is exercised on a file-backed database carrying the pre-migration shape: every retained outcome keeps its replay identity, and a reopen is a no-op. The continuation anchors and handles and the delegation families are kernel tables written in the committing transaction: the activating commit roots a Mission's lineage with its record, the terminal commit terminates its lineages beside the tombstone, an activation replayed after the Mission terminated roots nothing, and on the file-backed kernel they survive a restart (#250). This does not reach tested in this slice: the artifact itself is still issued outside the kernel transaction (the provider access-token hook is synchronous and has no acceptance boundary), so authoritative issuance state and artifact material are not recorded transactionally before delivery. No multi-process claim."
   },
   {
    "id": "control-plane.consistency.fresh-observation",
@@ -2387,9 +2423,16 @@
     "normative": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol. A binding-native realization can map those semantics without adopting another binding's endpoint or claim. Push delivery supplies invalidation and ordered-transition information; it is not the sole evidence of active state after freshness confidence is lost. Conflicting observations are reconciled under the version and freshness rules, never by selecting the more permissive surface."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane state surfaces (#250) > reports one committed transition at one version on Status, introspection, the Status List and the lifecycle commit, and a refused stale request moves none of them",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. Not witnessed: that no parallel snapshot surface exists (a negative over the deployment), and the consumer-side clauses, that push delivery is not the sole evidence of active state after freshness confidence is lost and that conflicting observations are reconciled by version and freshness, never by the more permissive surface. The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.rollback",
@@ -2600,9 +2643,15 @@
      "name": "durable per-consumer delivery (@spec signals#delivery, #641) > refuses a SET whose embedded mission issuer is not the receiver's own",
      "level": "cross-component",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
+     "name": "Signals receiver state in the consumer's store (#250) > keeps receivers for different issuers and audiences apart in one shared file",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The complete cross-issuer seam/resource-isolation inventory remains incomplete."
+   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete."
   },
   {
    "id": "control-plane.consistency.fanout",
@@ -6028,7 +6077,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a Mission submission reaches its own approval event even when the client's user agent already holds a session and grant from an earlier approval: no authorization code, Mission or grant results from a submission without its own approval, a submission that cannot interact is refused, and the approved submission yields its own Mission, never an earlier one",
-    "local": "oidc-provider's consent prompt carries a mission_approval_required check (adapters/interaction-policy.ts): a request with mission_intent requests the interaction until it has finished for it, and prompt=none refuses consent_required; ordinary requests without mission_intent keep the provider's consent reuse"
+    "local": "oidc-provider's consent prompt carries a mission_approval_required check (adapters/interaction-policy.ts): a request with mission_intent requests the interaction until it has finished for it, and prompt=none refuses consent_required. A request without mission_intent never reuses a Mission-bound grant (core.grant-binding.no-binding-by-consent-reuse, #1259)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -6056,15 +6105,9 @@
      "name": "a new Mission submission reaches its own approval despite prior browser consent (@spec mission#approval-event, #1247) > the newly reached interaction applies the approval floor (#1234): a high-risk Intent-only submission in the same user agent is refused at its approval by a password-authenticated Approver, with no code and no Mission",
      "level": "endpoint",
      "surface": "approval-ceremony"
-    },
-    {
-     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
-     "name": "a new Mission submission reaches its own approval despite prior browser consent (@spec mission#approval-event, #1247) > an ordinary request carrying no mission_intent keeps consent reuse: the session's Grant answers it with a code and no interaction",
-     "level": "endpoint",
-     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1247. Before the check, a second Intent-only PAR from the same client under an existing browser session was answered with a code under the first Mission's grant, so its redemption minted a token for the first Mission. Proved by three mutations: removing the policy fails the four Mission witnesses; dropping the finished-approval guard re-prompts every resume and fails all five; firing the check on every request fails the ordinary consent-reuse witness."
+   "notes": "#1247. Before the check, a second Intent-only PAR from the same client under an existing browser session was answered with a code under the first Mission's grant, so its redemption minted a token for the first Mission. Proved by two mutations: removing the policy fails the four witnesses; dropping the finished-approval guard re-prompts every resume and fails all four. The ordinary consent-reuse witness this row cited endorsed the #1259 defect and was replaced by core.grant-binding.no-binding-by-consent-reuse's witnesses; firing the check on every request now fails that row's independently-ordinary-grant witness."
   },
   {
    "id": "core.response.mission-expires-at-on-creation",
@@ -6723,6 +6766,80 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "core.grant-binding.no-binding-by-consent-reuse",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding-resolution",
+   "text": "An AS that answers such a request through consent reuse, such as with a grant an authentication session holds for the client, MUST NOT select a grant bound to a Mission",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorization request carrying no mission_intent, whose reusable candidate grant (the session's grant for the client, or a finished interaction's consent grant) is bound to a Mission, is never answered under that grant: no authorization code results under it, no derivation is counted against its Mission, and the grant, its binding and the session's reference to it stay intact. A grant is bound whatever record makes it so (a Mission's own grant, a delegation family, terminal or not, or a bound-grant index entry whose Mission no longer resolves). The rule excludes only bound grants: an independently ordinary grant still answers, its code carrying no Mission binding, and derivations against the existing binding (refresh, Token Exchange) still resolve to and count against its Mission",
+    "local": "oidc-provider's loadExistingGrant is loadReusableGrant (adapters/interaction-policy.ts): the provider default's candidate is classified by kernel.findByGrant, the delegation-family store's wasEverFamily and the bound-grant index, and a request carrying mission_intent keeps the default selection. With no eligible grant the reference AS refuses access_denied interactively (its only interaction is the Mission approval, whose render and decision finish an ordinary request's interaction refused) and consent_required under prompt=none (oidc-provider's consent checks); its descriptions name no Mission. Neither code is a protocol requirement: an AS may serve ordinary consent instead"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > with only the earlier Mission's grant in the user agent, an otherwise valid interactive request is refused access_denied: no code, no Grant, no Mission, no derivation and no disclosure, and the Mission's grant stays bound and held",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > under prompt=none the same request is refused consent_required, with the same absence of effects",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > a Mission's own grant is excluded even where the bound-grant index lacks it (the record's grant_id alone)",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > a delegation-family grant is excluded, its family terminal and the bound-grant index silent: the family record alone suffices",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > a grant the bound-grant index lists whose Mission no longer resolves is excluded and refused cleanly, never a server error",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > an explicit consent-result candidate naming the Mission's grant is excluded too: the resume issues no code under it (the result is seeded: no reference surface finishes an ordinary interaction with consent)",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > an independently ordinary grant still answers an ordinary request: its code redeems to ordinary authority with no Mission binding, and the earlier Mission's accounting is unchanged",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-interaction.test.ts",
+     "name": "a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259) > the earlier Mission's own lineage still continues after a refused ordinary request: its refresh and a Token Exchange of its token stay bound to it, each counting one derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1259 (D476). Before the fix, an ordinary request in a user agent holding an approved Mission's session grant received a code under that grant, and its redemption carried the earlier Mission's mission_id and spent one of its derivations. Mutation proofs: removing the exclusion fails all eight witnesses (the bound-grant witnesses receive codes, and the unresolvable index entry instead refuses at code mint with a description naming the Mission); classifying by findByGrant alone fails the family and unresolvable-index witnesses; reading the family by live resolution fails the terminal-family witness; dropping findByGrant fails the index-gap witness; leaving the consent-result candidate unclassified fails its witness; excluding every grant fails the ordinary-grant witness; destroying the excluded grant fails the intact-grant assertions and the refresh. The family, index-gap, unresolvable-index and consent-result candidates are store-seeded: no reference flow produces them for an ordinary request. The local outcome (access_denied with no server error from the approval surface's render or decision, and login_required keeping its precedence under prompt=none) has its own witnesses in the same describe block, outside this row."
   },
   {
    "id": "core.tokens.exp-clamp",
@@ -7842,7 +7959,7 @@
      "surface": "introspection"
     }
    ],
-   "notes": "#825 acceptance item 7 (D402): introspection and the resource read the Mission access-token profile with one reader, readMissionAccessProfile in @mission/core (the typed claim set and its clock bounds, the `mission` claim's members, the authority through parseCredentialAuthority, a present `act` through the Actor Profile's validateActChain (#904, D428), and `cnf` structure through parseConfirmation), and run one negative-vector list, @mission/core/test-vectors. Each adds only its own rule: the resource requires the DPoP key it proves possession of; introspection requires `cnf` where the token's profile requires sender constraint and never proves possession, as Composite Active State says. The authority read only gates; the projection still reads the raw entries, delegation and capability bindings included. Sender constraint is required where a draft requires it of the issued token: a delegated token (the OAuth binding's Delegation section), a Child Mission's token (child-delegation, Attenuation Rules) and a dispatched template instance's token (the Template's Grant Type and Dispatch Handoff), identified by the record's template basis. The Child Mission case stubs the kernel read; the dispatch case re-signs a real dispatched token."
+   "notes": "#825 acceptance item 7 (D402): introspection and the resource read the Mission access-token profile with one reader, readMissionAccessProfile in @mission/core (the typed claim set and its clock bounds, the `mission` claim's members, the authority through parseCredentialAuthority, a present `act` through the Actor Profile's validateActChain (#904, D428), and `cnf` structure through parseConfirmation), and run one negative-vector list, @mission/core/test-vectors. Each adds only its own rule: the resource requires the DPoP key it proves possession of; introspection requires `cnf` where the token's profile requires sender constraint and never proves possession, as Composite Active State says. The authority read only gates; the projection still reads the raw entries, delegation and capability bindings included. Sender constraint is required where a draft requires it of the issued token: a delegated token (the OAuth binding's Delegation section), a Child Mission's token (child-delegation, Attenuation Rules) and a dispatched template instance's token (the Template's Dispatch request and response, and its Dispatch Handoff), identified by the record's template basis. The Child Mission case stubs the kernel read; the dispatch case re-signs a real dispatched token."
   },
   {
    "id": "core.introspection.caller-authentication",
@@ -13263,9 +13380,15 @@
      "name": "discharge compatibility: authority_changed emission and the delivery gate > wired end-to-end: a real kernel discharge() commit drives a declared receiver to rematerialize",
      "level": "cross-component",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
+     "name": "Signals receiver state in the consumer's store (#250) > keeps the high-water, the observation, the gap and rematerialization markers, the retained SET and the seen jti values across a restart",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "#562: implemented and tested is the DETECTION half only (the receiver flags the need). Not covered: the actual Mission Status refetch (no consumer in this repo calls it off this signal). See signals.discharge.producer-authority-changed-emit and signals.discharge.producer-gating-undeclared-stream for the producer-side rows this issue left todo (no discharge funnel or mission_capabilities_supported gate exists in src/). #572 (review of #562) fixed two defects and added markRematerialized(missionId, observedBaseline) so the latch this row's tests exercise is no longer permanent; also fixed contain()'s authority_changed to key on an actual EFFECTIVE-set narrowing rather than merely reaching the metadata-only commit path (see containment.test.ts and this file's builder-emission describe block). Coverage stays 'partial': the acknowledgement is still consumer-invoked bookkeeping over the detect-only latch, and the actual Mission Status refetch this row's normative text requires 'before further consequential reliance' remains unwired in this repo. #287 residual (discharge implementation): the producer side is now real, so this row gains an end-to-end mapping in which a KERNEL DISCHARGE commit (not only a contain commit) drives the receiver to latch rematerialization, which is the case the rule was written for. Coverage stays 'partial' for the unchanged reason: the receiver DETECTS the need and no consumer in this repo performs the Mission Status refetch the clause requires before further consequential reliance."
+   "notes": "#562: implemented and tested is the DETECTION half only (the receiver flags the need). Not covered: the actual Mission Status refetch (no consumer in this repo calls it off this signal). See signals.discharge.producer-authority-changed-emit and signals.discharge.producer-gating-undeclared-stream for the producer-side rows this issue left todo (no discharge funnel or mission_capabilities_supported gate exists in src/). #572 (review of #562) fixed two defects and added markRematerialized(missionId, observedBaseline) so the latch this row's tests exercise is no longer permanent; also fixed contain()'s authority_changed to key on an actual EFFECTIVE-set narrowing rather than merely reaching the metadata-only commit path (see containment.test.ts and this file's builder-emission describe block). Coverage stays 'partial': the acknowledgement is still consumer-invoked bookkeeping over the detect-only latch, and the actual Mission Status refetch this row's normative text requires 'before further consequential reliance' remains unwired in this repo. #287 residual (discharge implementation): the producer side is now real, so this row gains an end-to-end mapping in which a KERNEL DISCHARGE commit (not only a contain commit) drives the receiver to latch rematerialization, which is the case the rule was written for. Coverage stays 'partial' for the unchanged reason: the receiver DETECTS the need and no consumer in this repo performs the Mission Status refetch the clause requires before further consequential reliance. With a file-backed receiver store (#250) the latch and its marker survive a restart, and an acknowledgement that covers the marker clears it durably."
   },
   {
    "id": "signals.discharge.producer-authority-changed-emit",
@@ -17060,7 +17183,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v7, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276) and enforces the Common Constraints (#1266); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v8, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266) and refuses a lookup of a vendor the store does not hold before any decision (#1251, D484); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -17576,7 +17699,7 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority and the Resource-policy/FGA check both permit",
+     "name": "runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority, the Mission's contextual check and Resource policy all permit",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -19825,31 +19948,31 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to the Mission's contextual check, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check refuses one: the whole read refuses out_of_authority, never a narrowed result",
      "level": "endpoint",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read succeeds with exactly those two vendors' invoices",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to the Mission's contextual check, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check permits both: the read succeeds with exactly those two vendors' invoices",
      "level": "endpoint",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read denies out_of_authority, never a silently narrowed permit",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check refuses one: the whole read denies out_of_authority, never a silently narrowed permit",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read permits",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check permits both: the read permits",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
      "level": "unit",
      "surface": "resource-operation"
     },
@@ -19866,7 +19989,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> parameter_violation, #801: the entry is matched, only this vendor is excluded by its own constraint; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga, although their titles say Resource policy. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: an unconstrained read's normal form carries every vendor the payments store holds invoices for, so its parameter digest binds the read's actual targets; a change to them between decision and execution is parameter_mismatch, and the result is filtered to the bound set."
+   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> parameter_violation, #801: the entry is matched, only this vendor is excluded by its own constraint; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: an unconstrained read's normal form carries every vendor the payments store holds invoices for, so its parameter digest binds the read's actual targets; a change to them between decision and execution is parameter_mismatch, and the result is filtered to the bound set."
   },
   {
    "id": "runtime.read-binding.floor-and-no-misclassification",
@@ -19933,31 +20056,31 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to the Mission's contextual check, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check refuses one: the whole read refuses out_of_authority, never a narrowed result",
      "level": "endpoint",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read succeeds with exactly those two vendors' invoices",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to the Mission's contextual check, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check permits both: the read succeeds with exactly those two vendors' invoices",
      "level": "endpoint",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read denies out_of_authority, never a silently narrowed permit",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check refuses one: the whole read denies out_of_authority, never a silently narrowed permit",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read permits",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check permits both: the read permits",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
      "level": "unit",
      "surface": "resource-operation"
     },
@@ -19974,7 +20097,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga, although their titles say Resource policy. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: the unconstrained bulk form is bound to the vendors the store holds invoices for, named as targets and digested, not to a placeholder."
+   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: the unconstrained bulk form is bound to the vendors the store holds invoices for, named as targets and digested, not to a placeholder."
   },
   {
    "id": "runtime.metering.unmetered-bound-refusal",
@@ -20283,11 +20406,20 @@
    "surface": "evidence-emission",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "once a Mission is non-active, reconciliation may record the outcome of already-initiated work but never admits a new effect under that Mission; consumed identifiers and idempotency claims persist across the lifecycle transition and an indeterminate outcome converts to a non-reusable tombstone, never expiring into a fresh claim"
+    "normative": "once a Mission is non-active, reconciliation may record the outcome of already-initiated work but never admits a new effect under that Mission; consumed identifiers and idempotency claims persist across the lifecycle transition and an indeterminate outcome converts to a non-reusable tombstone, never expiring into a fresh claim",
+    "local": "a wire commits and its Execution Evidence is lost, then the Mission is terminated. A wire under the terminated Mission for an invoice no wire settled commits nothing (the PDP denies mission_inactive), and the declared reconciler, which reads no Mission state, still settles the unresolved claim completed from the ledger entry recorded against its permit."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > a Mission terminated while an outcome is unresolved admits no new effect under it, and reconciliation still records the outcome of the wire already initiated (@spec runtime#evidence, #1176)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1176 item 16. Partial in breadth: the cited test witnesses the quoted clause, and the claim persisting through termination until reconciliation settles it. No test here holds a consumed identifier or claim through its declared horizon after a lifecycle transition, or converts a post-termination outcome to an indeterminate tombstone; the PDP's tombstone rule is witnessed on runtime.idempotency.tombstone-retention-and-refusal."
   },
   {
    "id": "runtime.mission-receipt.must-identify-mission",
@@ -26868,7 +27000,7 @@
     },
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a vendor constraint that excludes the target records the key it evaluated and never reaches resource policy",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a vendor constraint that excludes the target records the key it evaluated and never reaches the Mission's contextual check",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -27331,9 +27463,33 @@
      "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses an undeclared argument member and an authoritative member over the endpoint as invalid_request, with no PDP call, one Refusal Record each and no effect (#253)",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "lookup_vendor refuses a vendor the store does not hold before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484) > a vendor the store does not hold is refused unknown_vendor: no PDP request, no policy query, no Decision Evidence, no result and a verifiable signed target_unresolvable refusal, the same over both channels",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-policy-pep.test.ts",
+     "name": "lookup_vendor refuses a vendor the store does not hold before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484) > a Mission and a credential that name the vendor do not bypass the refusal, the same over both channels",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "lookup_vendor refuses a vendor the store does not hold at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484) > refuses a vendor the store does not hold unknown_vendor over HTTP with DPoP: no PDP request, no policy query, no Decision Evidence, no result and a verifiable signed target_unresolvable refusal; a stored vendor on the same session reaches the PDP and the policy as vendor:<id> and permits",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "lookup_vendor refuses a vendor the store does not hold at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484) > a Mission and a presented credential that name the vendor do not bypass the refusal over HTTP with DPoP, and a stored vendor they name permits",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). target_unresolvable (the unknown_vendor diagnostic, #1251, D484): a lookup_vendor naming a vendor the store does not hold is refused with one verifiable signed Refusal Record carrying that value, no decision request and no Resource-policy query, under an unconstrained credential and under one that names the vendor, at the PEP over both decision channels and over the HTTP endpoint with DPoP; with D324's server fallback restored, the unconstrained lookup reaches the PDP and the named one signs credential_authority_insufficient, and each assertion fails. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither #1276 clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet."
   },
   {
    "id": "evidence.refusal.pdp-operation-target-invalid",
@@ -32325,9 +32481,21 @@
      "name": "Dispatch Handoff: a redemption that issues no token leaves the grant redeemable (#1163 review) > an issuance failure after the derivation is reserved releases the grant; the retry redeems and counts it once",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff-restart.test.ts",
+     "name": "Dispatch Handoff single use across a restart with durable signing keys (@spec mission-template#dispatch-handoff, #831) > refuses, after a restart, both a grant redeemed before it and one never redeemed: the consumption record does not survive, so nothing an earlier process issued redeems",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff-restart.test.ts",
+     "name": "Dispatch Handoff single use across a restart with durable signing keys (@spec mission-template#dispatch-handoff, #831) > refuses them when the restart lands in the same clock second as the grants: the check is the issuing process, not its start time",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "D361: its own store (kernel/dispatch-handoff-store.ts), not the DPoP replay cache: one INSERT on the jti primary key, no eviction of a consumed jti before exp plus skew. The store is in memory and built per boot like every AS store (D25/D27); the AS signing keys are per boot too, so no grant minted before a restart verifies after it, which is how a restart cannot revive a consumed grant here. A deployment with persistent signing keys requires persistent consumption records (#1163 review). Taking is two-phase (#1163 review P2): the jti is reserved, confirmed once the token exists, and released when none is issued; the authority source is resolved before the jti is taken. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "D361: its own store (kernel/dispatch-handoff-store.ts), not the DPoP replay cache: one INSERT on the jti primary key, no eviction of a consumed jti before exp plus skew. The store is in memory and built per boot like every AS store (D25/D27). The AS's signing keys can outlive a restart (a key ring, #831), so a restart cannot revive a consumed grant because each grant's jti names the process that issued it (a random boot identity, AdapterOptions.processBootId) and the AS refuses a grant another process issued: an unredeemed grant minted before the restart is refused too, a deliberate invalidation. An identity, not a start time: a restart within the second of issuance is refused as well (#1299 review P1, where a start-time floor accepted it). Persistent consumption records (#1163 review) would keep unredeemed grants redeemable across a restart and are #250's durable-store work. Witnessed with a key ring and a file-backed kernel, across a later second and within the same one, and proved by disabling the check and by sharing one boot identity across builds (the redeemed grant then redeems again). Taking is two-phase (#1163 review P2): the jti is reserved, confirmed once the token exists, and released when none is issued; the authority source is resolved before the jti is taken. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
   },
   {
    "id": "template.handoff.redemption-issue",
@@ -34518,7 +34686,7 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
-     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > resource policy independently narrows a Mission action covered by fresh entitlement",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > the Mission's contextual check independently narrows a Mission action covered by fresh entitlement",
      "level": "unit",
      "surface": "decision-request"
     }

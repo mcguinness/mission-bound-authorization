@@ -9,28 +9,30 @@
  * lifecycle state. The binding lives HERE, not on MissionRecord, so no kernel
  * schema migration is needed.
  *
- * Terminal propagation: a Mission reaching a terminal lifecycle state
- * (`onLifecycleCommit`) marks all of its family rows terminal; a terminal family
- * makes `resolve` return undefined, while `familiesForMission` still lists it so
- * a caller can drive the corresponding grant revocation.
+ * Terminal propagation: a Mission reaching a terminal lifecycle state marks
+ * all of its family rows terminal ({@link terminateMissionInCallerTx}); a
+ * terminal family makes `resolve` return undefined, while `familiesForMission`
+ * still lists it so a caller can drive the corresponding grant revocation.
  *
- * Structure mirrors `ContinuationStore` (SQLite via `openStore`), holding no
- * kernel reference: every operation is self-contained local state and
- * `onLifecycleCommit` receives its event by value. That method is composed into
- * the AS lifecycle-commit fan-out by a LATER PR; it is not wired here.
+ * @spec control-plane#serialization (#250) — the table lives on the KERNEL's
+ * database, which owns it and closes it with itself, and the terminal
+ * propagation is a kernel-owned write in the terminal commit, beside the
+ * tombstone. A file-backed kernel keeps every family across a restart; the
+ * provider Grant a family names does not survive one (the provider's grants
+ * are in memory), so a recovered family whose grant is gone is refused where
+ * it is presented.
  */
 
-import { type Database, openStore } from "@mission/store";
-import { TERMINAL_STATES } from "./types.js";
-import type { LifecycleCommit } from "./types.js";
+import type { Database } from "@mission/store";
 
 const SCHEMA = `
-CREATE TABLE delegation_families (
+CREATE TABLE IF NOT EXISTS delegation_families (
   grant_id TEXT PRIMARY KEY,
   mission_id TEXT NOT NULL,
   state TEXT NOT NULL,
   created_at TEXT NOT NULL
 ) STRICT;
+CREATE INDEX IF NOT EXISTS delegation_families_mission ON delegation_families (mission_id);
 `;
 
 export type DelegationFamilyState = "active" | "terminal";
@@ -48,9 +50,12 @@ interface FamilyRow {
 }
 
 export class DelegationFamilyStore {
-  readonly db: Database;
-  constructor(private readonly now: () => Date = () => new Date()) {
-    this.db = openStore(SCHEMA);
+  /** @param db the kernel's database, which owns this table. */
+  constructor(
+    readonly db: Database,
+    private readonly now: () => Date = () => new Date(),
+  ) {
+    this.db.exec(SCHEMA);
   }
 
   /** Record an active delegation family binding a grant to its Mission. */
@@ -76,16 +81,16 @@ export class DelegationFamilyStore {
   }
 
   /**
-   * Lifecycle fan-out target (wired by a later PR): when the committed Mission
-   * transition is terminal, mark ALL family rows for that Mission terminal, so
-   * every delegation lineage rooted in it stops resolving. Mirrors
-   * ContinuationStore.onLifecycleCommit.
+   * Terminal propagation: mark ALL family rows for a Mission terminal, so
+   * every delegation lineage rooted in it stops resolving. NO OWN
+   * TRANSACTION: the kernel calls this inside the terminal commit, beside the
+   * tombstone. Mirrors ContinuationStore.terminateMissionInCallerTx.
    */
-  onLifecycleCommit(commit: LifecycleCommit): void {
-    if (!TERMINAL_STATES.has(commit.state)) return;
-    this.db
-      .prepare("UPDATE delegation_families SET state = 'terminal' WHERE mission_id = ?")
-      .run(commit.id);
+  terminateMissionInCallerTx(missionId: string): void {
+    if (!this.db.inTransaction) {
+      throw new Error("delegation family termination must be written inside the terminal commit's transaction");
+    }
+    this.db.prepare("UPDATE delegation_families SET state = 'terminal' WHERE mission_id = ?").run(missionId);
   }
 
   /**

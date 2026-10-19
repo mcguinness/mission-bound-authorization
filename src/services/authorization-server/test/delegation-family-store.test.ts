@@ -1,37 +1,35 @@
 /**
  * Unit tests for the delegation family store (async-delegation foundation).
- * Key-free: the store is self-contained SQLite; `onLifecycleCommit` takes a
- * plain event by value.
+ * Key-free: the store runs on an injected SQLite database, as it does on the
+ * kernel's; the kernel-level terminal propagation is in
+ * continuation-durability.test.ts.
  */
 
+import { openStore, withTransaction } from "@mission/store";
 import { describe, expect, it } from "vitest";
 import { DelegationFamilyStore } from "../src/kernel/delegation-family-store.js";
-import type { LifecycleCommit } from "../src/kernel/types.js";
 
-const commit = (id: string, state: LifecycleCommit["state"], reason?: string): LifecycleCommit => ({
-  id,
-  issuer: "https://as.test",
-  state,
-  ...(reason ? { termination: { reason, terminated_at: new Date().toISOString(), version: 2 } } : {}),
-  version: 2,
-  committed_at: new Date().toISOString(),
-  expires_at: new Date(Date.now() + 3600_000).toISOString(),
-});
+/** A store on its own in-memory database (the kernel passes its own). */
+const newStore = (): DelegationFamilyStore => new DelegationFamilyStore(openStore(""));
+
+/** The kernel's terminal propagation, inside a transaction as the kernel runs it. */
+const terminate = (store: DelegationFamilyStore, missionId: string): void =>
+  withTransaction(store.db, () => store.terminateMissionInCallerTx(missionId));
 
 describe("DelegationFamilyStore.record / resolve", () => {
   it("resolves a recorded family to its mission and active state", () => {
-    const store = new DelegationFamilyStore();
+    const store = newStore();
     store.record({ grantId: "grant_1", missionId: "msn_1" });
     const r = store.resolve("grant_1");
     expect(r).toEqual({ missionId: "msn_1", state: "active" });
   });
 
   it("returns undefined for an unknown grant", () => {
-    expect(new DelegationFamilyStore().resolve("grant_nope")).toBeUndefined();
+    expect(newStore().resolve("grant_nope")).toBeUndefined();
   });
 
   it("familiesForMission lists every grant recorded for a mission", () => {
-    const store = new DelegationFamilyStore();
+    const store = newStore();
     store.record({ grantId: "grant_1", missionId: "msn_1" });
     store.record({ grantId: "grant_2", missionId: "msn_1" });
     store.record({ grantId: "grant_3", missionId: "msn_2" });
@@ -41,13 +39,13 @@ describe("DelegationFamilyStore.record / resolve", () => {
   });
 });
 
-describe("DelegationFamilyStore.onLifecycleCommit", () => {
+describe("DelegationFamilyStore.terminateMissionInCallerTx", () => {
   it("a terminal Mission commit stops the family resolving but leaves it listed", () => {
-    const store = new DelegationFamilyStore();
+    const store = newStore();
     store.record({ grantId: "grant_1", missionId: "msn_1" });
     expect(store.resolve("grant_1")).toBeDefined();
 
-    store.onLifecycleCommit(commit("msn_1", "terminated", "revoked"));
+    terminate(store, "msn_1");
 
     // Marked terminal, not deleted: resolve stops, but the grant is still
     // enumerable so a caller can drive its revocation.
@@ -55,18 +53,18 @@ describe("DelegationFamilyStore.onLifecycleCommit", () => {
     expect(store.familiesForMission("msn_1")).toEqual(["grant_1"]);
   });
 
-  it("a non-terminal commit (suspended) leaves the family resolving", () => {
-    const store = new DelegationFamilyStore();
+  it("is written only inside the caller's transaction, and changes nothing when refused", () => {
+    const store = newStore();
     store.record({ grantId: "grant_1", missionId: "msn_1" });
-    store.onLifecycleCommit(commit("msn_1", "suspended"));
+    expect(() => store.terminateMissionInCallerTx("msn_1")).toThrow("inside the terminal commit's transaction");
     expect(store.resolve("grant_1")).toEqual({ missionId: "msn_1", state: "active" });
   });
 
   it("only terminates families of the named Mission", () => {
-    const store = new DelegationFamilyStore();
+    const store = newStore();
     store.record({ grantId: "grant_1", missionId: "msn_1" });
     store.record({ grantId: "grant_2", missionId: "msn_2" });
-    store.onLifecycleCommit(commit("msn_1", "terminated", "completed"));
+    terminate(store, "msn_1");
     expect(store.resolve("grant_1")).toBeUndefined();
     expect(store.resolve("grant_2")).toBeDefined();
   });
