@@ -12,11 +12,14 @@
  * and the {@link ExpansionDeferralStore} (which needs a predecessor): this
  * store's completion creates a top-level Mission.
  *
- * The wire half is not here: the PAR and token-endpoint carriage of
- * `completion_mode=deferred`, the deferred-grant poll and cancellation, the
- * review surface that authenticates a human, and credential delivery. The
- * methods below are what that wiring calls, with the checks it relies on
- * (client and key binding, the pending lifetime, single redemption).
+ * The wire half is in `adapters/deferred-mission-approval.ts`: the PAR and
+ * token-endpoint carriage of `completion_mode=deferred`, the deferred-grant
+ * poll that runs policy completion and delivers the credential, and
+ * cancellation through the revocation endpoint. No review surface that
+ * authenticates a human for {@link MissionApprovalDeferralStore.approveDirect}
+ * is wired. The methods below are what the wiring calls, with the checks it
+ * relies on (client and key binding, the pending lifetime, the queue bound,
+ * single redemption).
  *
  * Each pending approval carries ONE `approval_event_id`, allocated when it
  * opens, so every completion path (policy, human, retry, race) resolves it to
@@ -36,7 +39,13 @@ import {
 } from "./governed-policy-approval.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
-import type { AuthorityEntry, MissionIntent, MissionRecord } from "./types.js";
+import type {
+  AuthorityEntry,
+  IntentSubmissionEvidenceEntry,
+  IntentSubmissionEvidenceFact,
+  MissionIntent,
+  MissionRecord,
+} from "./types.js";
 
 /** @spec deferred-approval#state-machine: `approved`, `denied`, `expired`, and `cancelled` are terminal. */
 export type MissionApprovalState = "pending" | "approved" | "denied" | "expired" | "cancelled";
@@ -84,7 +93,27 @@ export interface MissionApprovalDeferralOptions {
    */
   onPolicyRefusal?: "await_human" | "deny";
   modelAdvisor?: ModelAdvisor;
+  /**
+   * @spec deferred-approval#queue-pressure: the most pending approvals one
+   * client may hold at once; {@link MissionApprovalDeferralStore.open}
+   * refuses another until the queue drains. No Approver is named when a
+   * proposal is submitted (a reviewer or the policy decides later), so the
+   * bound is per client, which bounds every (client, Approver) pair.
+   * Default {@link DEFAULT_MAX_PENDING_PER_CLIENT}.
+   */
+  maxPendingPerClient?: number;
+  /**
+   * @spec mission#intent-submission-evidence: the evidence types the
+   * deployment's policy requires of a client's submissions, applied again
+   * when a pending approval activates (the activation is where the
+   * synchronous approval would verify). Absent, none is required; presented
+   * evidence is verified either way.
+   */
+  requiredEvidenceTypes?: (clientId: string) => readonly string[];
 }
+
+/** @spec deferred-approval#queue-pressure: the default per-client bound on pending approvals. */
+export const DEFAULT_MAX_PENDING_PER_CLIENT = 10;
 
 export type PolicyCompletionResult =
   | { outcome: "approved"; mission: MissionRecord; record: ApprovalGovernanceRecord }
@@ -97,12 +126,45 @@ export type MissionApprovalPoll =
   | { error: "expired_token" }
   | { error: "access_denied" }
   | { error: "invalid_grant" }
-  | { mission: MissionRecord };
+  /**
+   * An approved approval's Mission, claimed for delivery under `delivery`.
+   * The caller delivers the credential, then settles the claim with
+   * {@link MissionApprovalDeferralStore.confirmDelivery} (the credential is
+   * sent only when that confirms) or, on a failure before the response,
+   * {@link MissionApprovalDeferralStore.releaseDelivery}.
+   */
+  | { mission: MissionRecord; delivery: string; resource?: string };
+
+/** What settling a delivery claim found. */
+export type DeliveryConfirmation = "confirmed" | "cancelled" | "superseded";
+
+/**
+ * How long a delivery claim holds before another poll may claim the same
+ * approval: a delivery that crashed after claiming becomes deliverable again.
+ */
+export const DELIVERY_CLAIM_STALE_S = 30;
+
+/** Columns added after the table first shipped (#1185): added in place, so a database created earlier opens. */
+const ADDED_COLUMNS: ReadonlyArray<[string, string]> = [
+  ["delivery_claim", "TEXT"],
+  ["delivery_claimed_at", "INTEGER"],
+  ["resource", "TEXT"],
+  ["evidence_json", "TEXT"],
+];
+
+function migrate(db: Database): void {
+  const columns = new Set(
+    (db.prepare("PRAGMA table_info(mission_approval_deferrals)").all() as Array<{ name: string }>).map((c) => c.name),
+  );
+  for (const [column, type] of ADDED_COLUMNS) {
+    if (!columns.has(column)) db.exec(`ALTER TABLE mission_approval_deferrals ADD COLUMN ${column} ${type}`);
+  }
+}
 
 /** A completion the pending approval's state no longer admits. LOCAL code. */
 export class MissionApprovalDeferralError extends Error {
   constructor(
-    readonly code: "not_pending" | "unknown_deferral",
+    readonly code: "not_pending" | "unknown_deferral" | "queue_full" | "evidence_unverified",
     message: string,
   ) {
     super(message);
@@ -123,6 +185,10 @@ interface Row {
   redeemed: number;
   created_at: number;
   last_polled_at: number | null;
+  delivery_claim: string | null;
+  delivery_claimed_at: number | null;
+  resource: string | null;
+  evidence_json: string | null;
 }
 
 /** A refusal the activation checks raise (as opposed to a fault of the issuer). */
@@ -140,6 +206,7 @@ export class MissionApprovalDeferralStore {
     // Completion and the Mission's creation commit share the kernel database.
     this.db = kernel.db;
     this.db.exec(SCHEMA);
+    migrate(this.db);
     this.now = opts.now ?? (() => kernel.nowDate());
   }
 
@@ -178,25 +245,57 @@ export class MissionApprovalDeferralStore {
    * that submitted it and to its possession key. Nothing here names an
    * approval basis or a policy: the client selects none.
    */
-  open(input: { intent: MissionIntent; proposedAuthority?: AuthorityEntry[]; clientId: string; jkt: string }): DeferralPending {
+  open(input: {
+    intent: MissionIntent;
+    proposedAuthority?: AuthorityEntry[];
+    clientId: string;
+    jkt: string;
+    /** The resource the submission selected with its resource indicator: the delivered token's audience. */
+    resource?: string;
+    /**
+     * The Submission envelope's `evidence`, as presented: with `intent`, the
+     * whole envelope, so the activation verifies it again and records its facts.
+     */
+    evidence?: IntentSubmissionEvidenceEntry[];
+  }): DeferralPending {
     const code = `mdfr_${randomBytes(18).toString("base64url")}`;
     const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
-    this.db
-      .prepare(
-        `INSERT INTO mission_approval_deferrals (deferral_code, state, client_id, jkt, intent_json, proposal_json,
-           approval_event_id, created_at)
-         VALUES (?, 'pending', ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        code,
-        input.clientId,
-        input.jkt,
-        JSON.stringify(input.intent),
-        proposal ? JSON.stringify(proposal) : null,
-        `ape_${randomBytes(16).toString("base64url")}`,
-        this.now().getTime(),
-      );
+    const nowMs = this.now().getTime();
+    // @spec deferred-approval#queue-pressure: the count and the insert share
+    // one transaction, so concurrent submissions never overrun the bound.
+    withTransaction(this.db, () => {
+      if (this.pendingCount(input.clientId, nowMs) >= (this.opts.maxPendingPerClient ?? DEFAULT_MAX_PENDING_PER_CLIENT)) {
+        throw new MissionApprovalDeferralError("queue_full", "this client holds the most pending approvals allowed");
+      }
+      this.db
+        .prepare(
+          `INSERT INTO mission_approval_deferrals (deferral_code, state, client_id, jkt, intent_json, proposal_json,
+             approval_event_id, created_at, resource, evidence_json)
+           VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          code,
+          input.clientId,
+          input.jkt,
+          JSON.stringify(input.intent),
+          proposal ? JSON.stringify(proposal) : null,
+          `ape_${randomBytes(16).toString("base64url")}`,
+          nowMs,
+          input.resource ?? null,
+          input.evidence?.length ? JSON.stringify(input.evidence) : null,
+        );
+    });
     return { error: "authorization_pending", deferral_code: code, expires_in: this.lifetimeMs() / 1000, interval: DEFERRAL_INTERVAL };
+  }
+
+  /** The client's pending approvals still inside their lifetime. */
+  private pendingCount(clientId: string, nowMs: number): number {
+    const row = this.db
+      .prepare(
+        "SELECT COUNT(*) AS n FROM mission_approval_deferrals WHERE client_id = ? AND state = 'pending' AND created_at + ? >= ?",
+      )
+      .get(clientId, this.lifetimeMs(), nowMs) as { n: number };
+    return row.n;
   }
 
   /** The current state, or undefined for an unknown code. */
@@ -256,6 +355,19 @@ export class MissionApprovalDeferralStore {
     if (this.expiryPassed(code, intent)) {
       return { outcome: "not_authorized", reason: "mission_expiry_passed", state: "denied" };
     }
+    // @spec mission#submission-processing (steps 4, 5 and 8): the evidence
+    // the submission presented is verified again here, at the activation,
+    // before any derivation, as the synchronous approval verifies it at its
+    // decision; evidence that no longer verifies creates no Mission, and the
+    // facts that do verify are what the Mission records.
+    let submissionEvidence: IntentSubmissionEvidenceFact[] | undefined;
+    try {
+      submissionEvidence = await this.verifiedEvidence(row, intent);
+    } catch (e) {
+      const why = refusalReason(e);
+      if (why === undefined) throw e;
+      return this.notAuthorized(code, why);
+    }
     const request = {
       approvalEventId: row.approval_event_id,
       intent,
@@ -279,6 +391,18 @@ export class MissionApprovalDeferralStore {
     const modelOutputs = this.opts.modelAdvisor
       ? await this.opts.modelAdvisor({ ...selected.view, client_id: row.client_id, intent })
       : [];
+    // The model call can take arbitrarily long, so the evidence is verified
+    // once more after it, with nothing awaited between that check and the
+    // commit: evidence that expired meanwhile authorizes nothing.
+    if (this.opts.modelAdvisor) {
+      try {
+        submissionEvidence = await this.verifiedEvidence(row, intent);
+      } catch (e) {
+        const why = refusalReason(e);
+        if (why === undefined) throw e;
+        return this.notAuthorized(code, why);
+      }
+    }
     const consentId = selected.consentId;
     try {
       return withTransaction(this.db, (): PolicyCompletionResult => {
@@ -287,7 +411,12 @@ export class MissionApprovalDeferralStore {
         const current = this.row(code) as Row;
         const state = this.observed(current);
         if (state !== "pending") return this.settled(code, state);
-        const activation = activateGovernedPolicy(this.kernel, { ...request, consentId, modelOutputs });
+        const activation = activateGovernedPolicy(this.kernel, {
+          ...request,
+          consentId,
+          modelOutputs,
+          ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+        });
         this.db
           .prepare(
             "UPDATE mission_approval_deferrals SET state = 'approved', mission_id = ?, basis = 'governed_policy', resolution_reason = NULL WHERE deferral_code = ? AND state = 'pending'",
@@ -300,6 +429,23 @@ export class MissionApprovalDeferralStore {
       if (why === undefined) throw e;
       return this.notAuthorized(code, why);
     }
+  }
+
+  /**
+   * @spec mission#intent-submission-evidence: verify the evidence this
+   * pending approval's submission presented, now, for the client that
+   * submitted it, under the deployment's current required types. Undefined
+   * when nothing was presented and nothing is required.
+   */
+  private async verifiedEvidence(row: Row, intent: MissionIntent): Promise<IntentSubmissionEvidenceFact[] | undefined> {
+    const evidence = row.evidence_json ? (JSON.parse(row.evidence_json) as IntentSubmissionEvidenceEntry[]) : undefined;
+    return this.kernel.verifySubmissionEvidence({
+      intent,
+      ...(evidence ? { evidence } : {}),
+      presenter: { clientId: row.client_id },
+      required: this.opts.requiredEvidenceTypes?.(row.client_id) ?? [],
+      requestContext: { carrier: "par" },
+    });
   }
 
   /** The outcome of an approval already settled: its governed Mission, or its state. */
@@ -321,13 +467,28 @@ export class MissionApprovalDeferralStore {
    * one `approval_event_id`. It never turns a failed `governed_policy` check
    * into a `governed_policy` activation: the Mission is `direct`, with no
    * policy adjudication.
+   *
+   * @spec mission#intent-submission-evidence: like the synchronous decision,
+   * the review surface verifies the submission's evidence at the decision
+   * and hands over the verified facts, which the Mission records. A pending
+   * approval whose submission presented evidence is refused without them.
    */
   approveDirect(
     code: string,
-    input: { approver: { iss: string; sub: string }; subject: { iss: string; sub: string } },
+    input: {
+      approver: { iss: string; sub: string };
+      subject: { iss: string; sub: string };
+      submissionEvidence?: IntentSubmissionEvidenceFact[];
+    },
   ): MissionRecord {
     const row = this.row(code);
     if (!row) throw new MissionApprovalDeferralError("unknown_deferral", "unknown deferral code");
+    if (row.evidence_json && !input.submissionEvidence?.length) {
+      throw new MissionApprovalDeferralError(
+        "evidence_unverified",
+        "the submission presented evidence: approve with the facts verified at this decision",
+      );
+    }
     const intent = JSON.parse(row.intent_json) as MissionIntent;
     const proposedAuthority = row.proposal_json ? (JSON.parse(row.proposal_json) as AuthorityEntry[]) : undefined;
     const state = this.observed(row);
@@ -346,6 +507,7 @@ export class MissionApprovalDeferralStore {
         approver: input.approver,
         clientId: current.client_id,
         approvalEventId: current.approval_event_id,
+        ...(input.submissionEvidence?.length ? { submissionEvidence: input.submissionEvidence } : {}),
       });
       if (mission.approval_basis.type !== "direct") {
         throw new MissionApprovalDeferralError("not_pending", "this approval event already committed another basis");
@@ -370,20 +532,71 @@ export class MissionApprovalDeferralStore {
   /**
    * @spec deferred-approval#state-machine: client cancellation moves a pending
    * approval to `cancelled`; only the client it is bound to can cancel it.
+   * Under the deferred substrate's cancellation rules, an approval that
+   * resolved but whose credential was never delivered is redeemed and then
+   * cancelled: it delivers nothing, and every later poll is `access_denied`.
+   * A credential already delivered is left alone.
    */
   cancel(code: string, clientId: string): boolean {
     const row = this.row(code);
-    if (!row || row.client_id !== clientId || this.observed(row) !== "pending") return false;
-    this.resolve(code, "cancelled");
-    return true;
+    if (!row || row.client_id !== clientId) return false;
+    const state = this.observed(row);
+    if (state === "pending") {
+      this.resolve(code, "cancelled");
+      return this.row(code)?.state === "cancelled";
+    }
+    if (state !== "approved") return false;
+    return (
+      this.db
+        .prepare(
+          "UPDATE mission_approval_deferrals SET redeemed = 1, resolution_reason = 'cancelled' WHERE deferral_code = ? AND state = 'approved' AND redeemed = 0",
+        )
+        .run(code).changes === 1
+    );
+  }
+
+  /** True when a pending approval was polled less than the interval ago. */
+  private tooSoon(row: Row, nowMs: number): boolean {
+    return row.last_polled_at != null && nowMs - row.last_polled_at < DEFERRAL_INTERVAL * 1000;
+  }
+
+  /**
+   * @spec deferred-approval#policy-completion, deferred-approval#deferred-sequencing
+   * (step 5): the poll the token endpoint serves. It first checks that the
+   * presenter is the client and key the approval is bound to (anything else
+   * is `invalid_grant`, with no side effect) and the polling interval. A
+   * pending approval that no policy evaluation has resolved then runs
+   * {@link completeByPolicy}: the issuer's selection and the policy's
+   * decision, never the client's. The poll that follows reports the outcome
+   * and delivers an approved Mission once.
+   *
+   * A completion that faults (a signing or persistence failure) commits
+   * nothing and leaves the approval pending; the fault propagates, and a
+   * later poll, no sooner than the interval, retries it under the same
+   * approval event.
+   */
+  async pollAndComplete(code: string, presenter: { clientId: string; jkt: string }): Promise<MissionApprovalPoll> {
+    const row = this.row(code);
+    if (!row || row.client_id !== presenter.clientId || row.jkt !== presenter.jkt) return { error: "invalid_grant" };
+    const nowMs = this.now().getTime();
+    if (this.observed(row) === "pending" && row.resolution_reason === null && !this.tooSoon(row, nowMs)) {
+      try {
+        await this.completeByPolicy(code);
+      } catch (e) {
+        this.db.prepare("UPDATE mission_approval_deferrals SET last_polled_at = ? WHERE deferral_code = ?").run(nowMs, code);
+        throw e;
+      }
+    }
+    return this.poll(code, presenter);
   }
 
   /**
    * @spec deferred-approval#deferred-sequencing (step 5): poll a pending
    * approval. Bound to the client and possession key that opened it; a poll
    * faster than the interval is `slow_down`; past the pending lifetime it is
-   * `expired_token`; a denial is `access_denied`; an approved approval
-   * delivers its Mission once, and only while that Mission is active.
+   * `expired_token`; a denial or a cancellation is `access_denied`; an
+   * approved approval delivers its Mission once, and only while that Mission
+   * is active.
    */
   poll(code: string, presenter: { clientId: string; jkt: string }): MissionApprovalPoll {
     const row = this.row(code);
@@ -394,11 +607,10 @@ export class MissionApprovalDeferralStore {
       case "expired":
         return { error: "expired_token" };
       case "denied":
-        return { error: "access_denied" };
       case "cancelled":
-        return { error: "invalid_grant" };
+        return { error: "access_denied" };
       case "pending": {
-        if (row.last_polled_at != null && nowMs - row.last_polled_at < DEFERRAL_INTERVAL * 1000) {
+        if (this.tooSoon(row, nowMs)) {
           return { error: "slow_down", deferral_code: code, expires_in: this.lifetimeMs() / 1000, interval: DEFERRAL_INTERVAL + 5 };
         }
         this.db.prepare("UPDATE mission_approval_deferrals SET last_polled_at = ? WHERE deferral_code = ?").run(nowMs, code);
@@ -410,13 +622,62 @@ export class MissionApprovalDeferralStore {
         };
       }
       case "approved": {
+        if (row.resolution_reason === "cancelled") return { error: "access_denied" };
         const mission = row.mission_id ? this.kernel.get(row.mission_id) : undefined;
         if (!mission || this.kernel.applyExpiry(mission).state !== "active") return { error: "access_denied" };
-        const redeemed = this.db
-          .prepare("UPDATE mission_approval_deferrals SET redeemed = 1 WHERE deferral_code = ? AND redeemed = 0")
-          .run(code).changes;
-        return redeemed === 1 ? { mission } : { error: "invalid_grant" };
+        if (row.redeemed === 1) return { error: "invalid_grant" };
+        // Claim the delivery: one live claim at a time, so concurrent polls
+        // never deliver twice. The approval is redeemed only when the
+        // claimant confirms after its credential exists; a delivery that
+        // fails first releases the claim, and one that crashed lapses.
+        const delivery = `dlv_${randomBytes(12).toString("base64url")}`;
+        const claimed = this.db
+          .prepare(
+            `UPDATE mission_approval_deferrals SET delivery_claim = ?, delivery_claimed_at = ?
+             WHERE deferral_code = ? AND state = 'approved' AND redeemed = 0
+               AND (delivery_claim IS NULL OR delivery_claimed_at <= ?)`,
+          )
+          .run(delivery, nowMs, code, nowMs - DELIVERY_CLAIM_STALE_S * 1000).changes;
+        if (claimed === 1) return { mission, delivery, ...(row.resource ? { resource: row.resource } : {}) };
+        const current = this.row(code) as Row;
+        // A cancellation that won the race delivers nothing either.
+        if (current.resolution_reason === "cancelled") return { error: "access_denied" };
+        if (current.redeemed === 1) return { error: "invalid_grant" };
+        // Another poll is delivering: not delivered yet, so still pending.
+        return {
+          error: "authorization_pending",
+          deferral_code: code,
+          expires_in: Math.max(0, Math.ceil((row.created_at + this.lifetimeMs() - nowMs) / 1000)),
+          interval: DEFERRAL_INTERVAL,
+        };
       }
     }
+  }
+
+  /**
+   * @spec deferred-approval#deferred-sequencing (step 5): settle a delivery
+   * claim once the credential exists. `confirmed` redeems the approval, and
+   * only then may the credential be sent. `cancelled` means the client
+   * cancelled before delivery, and `superseded` that another claim delivered;
+   * in either case the credential is not sent.
+   */
+  confirmDelivery(code: string, delivery: string): DeliveryConfirmation {
+    const confirmed = this.db
+      .prepare(
+        `UPDATE mission_approval_deferrals SET redeemed = 1, delivery_claim = NULL
+         WHERE deferral_code = ? AND delivery_claim = ? AND redeemed = 0`,
+      )
+      .run(code, delivery).changes;
+    if (confirmed === 1) return "confirmed";
+    return this.row(code)?.resolution_reason === "cancelled" ? "cancelled" : "superseded";
+  }
+
+  /** Release a delivery claim whose credential could not be produced: the approval stays deliverable. */
+  releaseDelivery(code: string, delivery: string): void {
+    this.db
+      .prepare(
+        "UPDATE mission_approval_deferrals SET delivery_claim = NULL, delivery_claimed_at = NULL WHERE deferral_code = ? AND delivery_claim = ?",
+      )
+      .run(code, delivery);
   }
 }
