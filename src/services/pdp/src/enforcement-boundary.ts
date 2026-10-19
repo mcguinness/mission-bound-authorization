@@ -293,6 +293,18 @@ export interface EvidenceKeyUse {
 export type EvidenceAuthorizationScope = "current" | "historical";
 
 /**
+ * The declared version in force at `atMs`: the last whose cutover has been
+ * reached, or `undefined` before the first (or with no declaration). Every
+ * reader of one declaration, a PEP's boundary context and the PDP's claim
+ * domain included, selects the version this way.
+ */
+export function versionInForceAt(declaration: EnforcementBoundaries | undefined, atMs: number): BoundaryStatementVersion | undefined {
+  let active: BoundaryStatementVersion | undefined;
+  for (const v of declaration?.versions ?? []) if (Date.parse(v.effective_at) <= atMs) active = v;
+  return active;
+}
+
+/**
  * One PEP location's view of the declaration: the boundary it serves at an
  * instant, the `aud` rule for that boundary, and the evidence-key
  * authorization every producer reads. Constructed from a statement it
@@ -315,10 +327,7 @@ export class EnforcementBoundaryContext {
 
   /** The version in force at `at`: the last whose cutover has been reached. */
   versionInForce(at: Date = this.clock()): BoundaryStatementVersion | undefined {
-    const now = at.getTime();
-    let active: BoundaryStatementVersion | undefined;
-    for (const v of this.declaration.versions) if (Date.parse(v.effective_at) <= now) active = v;
-    return active;
+    return versionInForceAt(this.declaration, at.getTime());
   }
 
   /**

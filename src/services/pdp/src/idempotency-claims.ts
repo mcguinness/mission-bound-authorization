@@ -45,7 +45,7 @@ import {
   type JsonValue,
 } from "@mission/core";
 import { afterCommit, type Database, DurableStoreError, openDurableStore, withTransaction } from "@mission/store";
-import { type BoundaryConsumer, lineageScopeDigests } from "./enforcement-boundary.js";
+import { type BoundaryConsumer, lineageScopeDigests, versionInForceAt } from "./enforcement-boundary.js";
 import {
   type EnforcementScopeStatement,
   retentionWindowSeconds,
@@ -200,6 +200,8 @@ interface ClaimRow {
   claimed_at_ms: number;
   terminal_at_ms: number | null;
   retain_until_ms: number | null;
+  /** The statement generation the claim was made under (`generationAt`); `null` on a row from before the column. */
+  statement_version: string | null;
 }
 
 export interface ClaimInput {
@@ -229,7 +231,7 @@ export type ClaimOutcome =
   | { kind: "conflict" }
   /** Same key and identity, and no permit may issue. */
   | { kind: "suppressed"; state: ClaimState; transient: boolean; retryAfterSeconds?: number }
-  /** Conditions 1 to 5 of a retransmission hold; condition 6 is asked next. */
+  /** Conditions 1 to 5 of a retransmission hold, in the generation the claim was made under; condition 6 is asked next. */
   | { kind: "retransmission_candidate"; evaluationId: string; pepEpoch: string };
 
 export interface ClaimTicket {
@@ -307,6 +309,10 @@ const MIGRATIONS = [
     cause TEXT NOT NULL,
     at_ms INTEGER NOT NULL
   ) STRICT;`,
+  // @spec runtime#boundary-identifier-change (#1327 re-review): the statement
+  // generation each claim was made under. A row from before this column
+  // holds NULL, and a NULL row never retransmits.
+  "ALTER TABLE claims ADD COLUMN statement_version TEXT;",
 ];
 
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
@@ -494,6 +500,7 @@ export class IdempotencyClaimDomain {
         if (
           row.execution_id === null &&
           row.cache_key === input.cacheKey &&
+          row.statement_version === this.generationAt(nowMs) &&
           nowMs < row.valid_until_ms &&
           row.pep_id === input.requester.pep_id &&
           row.pep_epoch === input.requester.pep_epoch &&
@@ -517,10 +524,11 @@ export class IdempotencyClaimDomain {
   }
 
   /**
-   * Retransmission condition 6, then a recheck of 1 to 5 against the row as
-   * it stands after the query: a settlement, a sweep or the clock may have
-   * moved it while the PEP was answering, so the recheck reads the clock
-   * again, inside its transaction, after the await. Returns the stored decision byte for byte,
+   * Retransmission condition 6, then a recheck of 1 to 5 and the claim's
+   * generation against the row as it stands after the query: a settlement,
+   * a sweep or the clock (a cutover included) may have moved it while the
+   * PEP was answering, so the recheck reads the clock again, inside its
+   * transaction, after the await. Returns the stored decision byte for byte,
    * or `undefined` to suppress. The stored Decision Evidence is returned
    * with it and never re-emitted: a second emission would be a second signed
    * record for one `evaluation_id`.
@@ -543,6 +551,7 @@ export class IdempotencyClaimDomain {
         row.execution_id !== null ||
         row.operation_identity !== input.operationIdentity ||
         row.cache_key !== input.cacheKey ||
+        row.statement_version !== this.generationAt(nowMs) ||
         nowMs >= row.valid_until_ms ||
         row.pep_id !== input.requester.pep_id ||
         row.pep_epoch !== input.requester.pep_epoch ||
@@ -865,6 +874,22 @@ export class IdempotencyClaimDomain {
     return undefined;
   }
 
+  /**
+   * @spec runtime#boundary-identifier-change, runtime#idempotency (#1327
+   * re-review): the statement generation in force at `nowMs` under this
+   * domain's own statement: the declared version whose cutover was reached
+   * last, or `""` where none is in force. A claim records the generation it
+   * is made under, and its stored permit is a retransmission candidate only
+   * while that generation is still in force. The reference invalidates
+   * every permit at a new statement version, so a permit decided before a
+   * cutover is never returned after it, even when the boundary identifier,
+   * and with it the cache key, is unchanged: the retry is suppressed under
+   * the original claim and never claims afresh.
+   */
+  private generationAt(nowMs: number): string {
+    return versionInForceAt(this.options.statement.enforcement_boundaries, nowMs)?.version ?? "";
+  }
+
   private select(scopeDigest: string, key: string): ClaimRow | undefined {
     return this.db
       .prepare("SELECT * FROM claims WHERE scope_digest = ? AND idempotency_key = ?")
@@ -875,8 +900,8 @@ export class IdempotencyClaimDomain {
     this.db
       .prepare(
         `INSERT INTO claims (scope_digest, idempotency_key, scope_json, action_class, operation_identity, cache_key,
-           evaluation_id, pdp_boot, pep_id, pep_epoch, state, valid_until_ms, claimed_at_ms)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'claimed', ?, ?)`,
+           evaluation_id, pdp_boot, pep_id, pep_epoch, state, valid_until_ms, claimed_at_ms, statement_version)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'claimed', ?, ?, ?)`,
       )
       .run(
         input.scopeDigest,
@@ -891,6 +916,7 @@ export class IdempotencyClaimDomain {
         input.requester.pep_epoch,
         input.validUntilMs,
         nowMs,
+        this.generationAt(nowMs),
       );
     this.inFlight.add(input.evaluationId);
     this.logKeys(input.scopeDigest, input.key, input.evaluationId, null, "claimed", "claimed", nowMs);
@@ -899,7 +925,8 @@ export class IdempotencyClaimDomain {
   private adopt(row: ClaimRow, input: ClaimInput, nowMs: number): void {
     this.db
       .prepare(
-        `UPDATE claims SET evaluation_id = ?, cache_key = ?, pdp_boot = ?, pep_id = ?, pep_epoch = ?, valid_until_ms = ?, claimed_at_ms = ?
+        `UPDATE claims SET evaluation_id = ?, cache_key = ?, pdp_boot = ?, pep_id = ?, pep_epoch = ?, valid_until_ms = ?, claimed_at_ms = ?,
+           statement_version = ?
          WHERE scope_digest = ? AND idempotency_key = ? AND state = 'claimed' AND decision_json IS NULL`,
       )
       .run(
@@ -910,6 +937,7 @@ export class IdempotencyClaimDomain {
         input.requester.pep_epoch,
         input.validUntilMs,
         nowMs,
+        this.generationAt(nowMs),
         row.scope_digest,
         row.idempotency_key,
       );
