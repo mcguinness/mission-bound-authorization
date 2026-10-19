@@ -20,11 +20,15 @@
     "@mission/telemetry": "workspace:*",
     "@mission/transparency": "workspace:*",
     "hono": "^4.9.11",
-    "jose": "^6.1.3"
+    "jose": "^6.1.3",
+    "oidc-provider": "9.10.0"
   },
   "scripts": {
     "exhibit": "node ../scripts/exhibit.mjs",
     "typecheck": "tsc --build",
     "serve": "tsx src/server.ts"
+  },
+  "devDependencies": {
+    "@types/oidc-provider": "9.5.0"
   }
 }

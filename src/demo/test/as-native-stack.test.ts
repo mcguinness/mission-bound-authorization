@@ -28,12 +28,19 @@ import { mkdtempSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { createRequire } from "node:module";
-import { connect, createServer } from "node:net";
+import { connect, createServer, Server as NetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { ALL_PROVIDER_CAPABILITIES, initSigningKeyRing, MissionKernel, type ProviderCapability, STATUS_LIST_ID } from "@mission/authorization-server";
-import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair } from "jose";
+import {
+  ALL_PROVIDER_CAPABILITIES,
+  ApprovalSessionStore,
+  initSigningKeyRing,
+  MissionKernel,
+  type ProviderCapability,
+  STATUS_LIST_ID,
+} from "@mission/authorization-server";
+import { calculateJwkThumbprint, decodeJwt, decodeProtectedHeader, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, type MockInstance, vi } from "vitest";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import {
@@ -45,7 +52,7 @@ import {
   type McpPaymentsServer,
 } from "@mission/mcp-payments";
 import { DOMAIN_MODEL, Fga } from "@mission/pdp";
-import { issueMissionToken, logInAgain } from "../src/approval-console.js";
+import { issueMissionToken, resolveMissionApproval, type UpstreamApprovalConsole } from "../src/approval-console.js";
 import { asNativeLaunchOptions, launchAsNative } from "../src/as-native.js";
 import { ISSUANCE_ONLY_CAPABILITIES } from "../src/issuance-only.js";
 import { requestLifecycle } from "../src/lifecycle-client.js";
@@ -578,7 +585,159 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
     return { challenge, txnToken };
   };
 
+  /**
+   * @spec mission#approval-authentication (#1320, D496): the trusted
+   * console's upstream login, and the same Approver answering the provider's
+   * second factor with `secondFactor`.
+   */
+  const upstreamConsole = (secondFactor: "code" | "skip" = "code"): UpstreamApprovalConsole => {
+    const console_ = authServer().approverConsole;
+    if (!("upstream" in console_)) throw new Error("the as-native target logs its Approver in upstream");
+    return { upstream: { ...console_.upstream, secondFactor } };
+  };
+  const provider = () => {
+    const p = authServer().approverProvider;
+    if (!p) throw new Error("the as-native target runs the upstream Approver login provider");
+    return p;
+  };
+  const REMIT_INTENT = {
+    missionIntent: JSON.stringify({
+      intent: { goal: "Send the Acme remittance", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+    }),
+    authorizationDetails: JSON.stringify([
+      {
+        type: "mission_resource_access",
+        resource: CANONICAL_RESOURCE,
+        actions: ["payments:invoice.read", "payments:remittance.send"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ]),
+  };
+  /**
+   * A high-risk approval through the upstream login that the AS refuses:
+   * it yields no code, and no Mission exists after it. Returns the refusal.
+   */
+  const expectHighRiskRefused = async (approver: UpstreamApprovalConsole, beforeDecision?: () => void): Promise<string> => {
+    const missions = stack.kernel.allMissions().length;
+    const pending = await submitMissionApproval(asUrl, authServer().agentClientJwk, REMIT_INTENT);
+    beforeDecision?.();
+    const refused = await resolveMissionApproval(asUrl, approver, pending, "approve").then(
+      (code) => {
+        throw new Error(`the approval yielded a code: ${code}`);
+      },
+      (e: unknown) => (e as Error).message,
+    );
+    expect(stack.kernel.allMissions().length).toBe(missions);
+    return refused;
+  };
+
   return {
+    // @spec mission#approval-authentication (#1320, D496, #253 acceptance):
+    // Bob logs in at the upstream provider with his password and the code his
+    // device receives. The provider asserts mfa from that authentication; the
+    // AS records the acr and auth_time of the ID Token it validates, and the
+    // published floor admits the remittance.
+    async upstreamMfaApproval(): Promise<void> {
+      const logins = provider().logins.length;
+      const established = vi.spyOn(ApprovalSessionStore.prototype, "establish");
+      try {
+        const issued = await issueMissionToken(asUrl, authServer().agentClientJwk, REMIT_INTENT, upstreamConsole());
+        const login = provider().logins.slice(logins);
+        expect(login).toEqual([{ sub: "idp-bob", factors: ["pwd", "otp"], acr: "mfa", auth_time: login[0]?.auth_time }]);
+        expect(established).toHaveBeenCalledTimes(1);
+        expect(established.mock.calls[0]?.[1]).toEqual({ sub: "bob", acr: "mfa", auth_time: login[0]?.auth_time, subject: "alice" });
+        const id = missionIdOf(issued.accessToken);
+        const record = stack.kernel.get(id);
+        expect(record?.approval_basis?.consent_principal?.sub).toBe("bob");
+        expect(record?.subject?.sub).toBe("alice");
+        expect(record?.authority_set.flatMap((e) => e.actions)).toContain("payments:remittance.send");
+      } finally {
+        established.mockRestore();
+      }
+    },
+
+    // A password-only login: the provider asserts pwd, and the floor refuses
+    // the remittance before any Mission or code exists.
+    async upstreamPasswordOnly(): Promise<void> {
+      const logins = provider().logins.length;
+      const refused = await expectHighRiskRefused(upstreamConsole("skip"));
+      expect(refused).toMatch(/approval did not yield a code: access_denied/);
+      expect(provider().logins.slice(logins).map((l) => l.acr)).toEqual(["pwd"]);
+    },
+
+    // A real mfa login that is older than the floor allows when the decision
+    // is made: the AS's clock is moved past the floor's 300 s after the
+    // agent's request, and the floor refuses.
+    async upstreamStale(): Promise<void> {
+      const logins = provider().logins.length;
+      const nowDate = vi.spyOn(stack.kernel, "nowDate");
+      try {
+        const refused = await expectHighRiskRefused(upstreamConsole(), () =>
+          nowDate.mockImplementation(() => new Date(Date.now() + 301_000)),
+        );
+        expect(refused).toMatch(/approval did not yield a code: access_denied/);
+      } finally {
+        nowDate.mockRestore();
+      }
+      expect(provider().logins.slice(logins).map((l) => l.acr)).toEqual(["mfa"]);
+    },
+
+    // A password-only login whose ID Token is rewritten in transit to claim
+    // mfa, and re-signed under a key the provider never published: the AS
+    // records no login, so the decision is unauthenticated.
+    async upstreamUnverifiable(): Promise<void> {
+      const logins = provider().logins.length;
+      const tokenEndpoint = `${provider().issuer}/token`;
+      const attacker = await generateKeyPair("ES256");
+      const realFetch = globalThis.fetch;
+      let rewritten = 0;
+      const intercept = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+        const res = await realFetch(input, init);
+        if (String(input) !== tokenEndpoint) return res;
+        const body = (await res.json()) as Record<string, unknown>;
+        const idToken = body.id_token as string;
+        const forged = await new SignJWT({ ...decodeJwt(idToken), acr: "mfa" })
+          .setProtectedHeader(decodeProtectedHeader(idToken) as { alg: string })
+          .sign(attacker.privateKey);
+        rewritten += 1;
+        return new Response(JSON.stringify({ ...body, id_token: forged }), {
+          status: res.status,
+          headers: { "content-type": "application/json" },
+        });
+      });
+      try {
+        const refused = await expectHighRiskRefused(upstreamConsole("skip"));
+        expect(refused).toMatch(/approver login refused: 401 .*does not verify against the provider's keys/);
+      } finally {
+        intercept.mockRestore();
+      }
+      expect(rewritten).toBe(1);
+      expect(provider().logins.slice(logins).map((l) => l.acr)).toEqual(["pwd"]);
+    },
+
+    // The floor covers only high-risk authority: a password-only login
+    // approves a read Mission.
+    async upstreamLowRisk(): Promise<void> {
+      const logins = provider().logins.length;
+      const missions = stack.kernel.allMissions().length;
+      const read = await issueMissionToken(
+        asUrl,
+        authServer().agentClientJwk,
+        {
+          missionIntent: JSON.stringify({
+            intent: { goal: "Read approved Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+          }),
+          authorizationDetails: JSON.stringify([
+            { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } },
+          ]),
+        },
+        upstreamConsole("skip"),
+      );
+      expect(decodeJwt(read.accessToken).mission).toBeTruthy();
+      expect(stack.kernel.allMissions().length).toBe(missions + 1);
+      expect(provider().logins.slice(logins).map((l) => l.acr)).toEqual(["pwd"]);
+    },
+
     async setup(): Promise<void> {
       if (!opts.live) {
         fgaBootstrap = vi.spyOn(Fga, "bootstrap").mockResolvedValue(STUB_BOOTSTRAP);
@@ -1000,9 +1159,6 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
     // fresh decision, so a Mission revoked after a permitted preflight and
     // prepare refuses the commit decision mission_inactive, and no wire exists.
     async commitAfterRevoke(): Promise<void> {
-      // The published floor (D425) admits a high-risk approval only within 300
-      // seconds of the Approver's login; earlier tests can outlast it.
-      logInAgain(stack.approverLogin);
       const pay = await issue(["payments:invoice.read", "payments:payment.execute"], {
         max_amount: { amount: "500.00", currency: "USD" },
         vendors: ["acme"],
@@ -1053,7 +1209,6 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
     // re-read Mission state after the decision (contract §4); the next
     // decision refuses mission_inactive.
     async runToCompletion(): Promise<void> {
-      logInAgain(stack.approverLogin);
       const pay = await issue(["payments:invoice.read", "payments:payment.execute"], {
         max_amount: { amount: "500.00", currency: "USD" },
         vendors: ["acme"],
@@ -1099,7 +1254,6 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
     // presented again executes nothing. Settlement from the connector ledger
     // waits on the permit and lease, so the unit witnesses carry it.
     async emissionFailure(): Promise<void> {
-      logInAgain(stack.approverLogin);
       const holder = await issue(["payments:invoice.read", "payments:remittance.send"], {
         max_amount: { amount: "500.00", currency: "USD" },
         vendors: ["acme"],
@@ -1179,6 +1333,21 @@ describe("the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (
   it("denies send_remittance_email with a transaction challenge, redeems the approval at the AS transaction endpoint, and executes the retry under the transaction token exactly once", async () => {
     await stubbed.remittanceApproval();
   });
+  it("admits a high-risk approval after a fresh login at the upstream provider with Bob's password and the one-time code his device received: the provider asserts mfa, and the AS records that token's acr and auth_time (#1320)", async () => {
+    await stubbed.upstreamMfaApproval();
+  });
+  it("refuses a high-risk approval after a password-only login at the upstream provider (acr pwd): access_denied, with no Mission and no code (#1320)", async () => {
+    await stubbed.upstreamPasswordOnly();
+  });
+  it("refuses a high-risk approval when the upstream login is older than the floor's 300 seconds at the decision: access_denied, with no Mission and no code (#1320)", async () => {
+    await stubbed.upstreamStale();
+  });
+  it("refuses a login whose ID Token does not verify against the upstream provider's keys, a password-only login rewritten to claim mfa: no login is recorded, and no Mission or code exists (#1320)", async () => {
+    await stubbed.upstreamUnverifiable();
+  });
+  it("admits a low-risk approval after a password-only login at the upstream provider: the floor does not apply (#1320)", async () => {
+    await stubbed.upstreamLowRisk();
+  });
 });
 
 /**
@@ -1206,6 +1375,8 @@ describe("the as-native target with the test-only ordinary-token minting fixture
  * store files stay out of the tree.
  */
 const LAUNCH_AS_PORT = 14111;
+/** The upstream Approver login provider's port, pinned only where a failed startup's release is probed (#1320). */
+const LAUNCH_IDP_PORT = 14114;
 const AUDIENCE = new URL(CANONICAL_RESOURCE);
 
 describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () => {
@@ -1274,6 +1445,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
           "  kernel store       in memory (lost at restart)",
           `  resource audience  ${CANONICAL_RESOURCE}  (HTTP MCP, DPoP verified on every request)`,
           "  MAS join route     not mounted",
+          `  approver login     ${launched.stack.authServer?.approverProvider?.issuer}  (upstream OpenID Provider: password, then a one-time code for mfa)`,
         ]),
       );
     } finally {
@@ -1327,7 +1499,6 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       expect(first.summary).toContain(`  kernel store       ${kernelFile} (kept across restarts)`);
       const as = first.stack.authServer;
       if (!as) throw new Error("the as-native target runs the AS");
-      logInAgain(first.stack.approverLogin);
       const issued = await issueMissionToken(
         as.asUrl,
         as.agentClientJwk,
@@ -1402,19 +1573,24 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     const ring = join(dir, "keys", "ring.json");
     await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
     const env = { MISSION_KEY_RING: ring, MISSION_KERNEL_STORE: join(dir, "state", "kernel.db") };
+    // The upstream Approver login provider starts before the AS, so a failed
+    // startup releases its port too (#1320): pinned here so it can be probed.
+    const provider = `http://127.0.0.1:${LAUNCH_IDP_PORT}`;
     const kernelClose = vi.spyOn(MissionKernel.prototype, "close");
     try {
       let free = await holdPort(LAUNCH_AS_PORT);
       try {
-        await expect(launchAsNative(launchOptions(env, files))).rejects.toThrow(/EADDRINUSE/);
+        await expect(launchAsNative({ ...launchOptions(env, files), approverIdpPort: LAUNCH_IDP_PORT })).rejects.toThrow(/EADDRINUSE/);
         expect(kernelClose).toHaveBeenCalledTimes(1);
+        expect(await accepts(provider)).toBe(false);
       } finally {
         await free();
       }
       free = await holdPort(Number(AUDIENCE.port), AUDIENCE.hostname);
       try {
-        await expect(launchAsNative(launchOptions(env, files))).rejects.toThrow(/EADDRINUSE/);
+        await expect(launchAsNative({ ...launchOptions(env, files), approverIdpPort: LAUNCH_IDP_PORT })).rejects.toThrow(/EADDRINUSE/);
         expect(await accepts(`http://localhost:${LAUNCH_AS_PORT}`)).toBe(false);
+        expect(await accepts(provider)).toBe(false);
         expect(kernelClose).toHaveBeenCalledTimes(2);
       } finally {
         await free();
@@ -1428,12 +1604,39 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     }
   });
 
+  it("refuses startup when the AS cannot be built, its kernel file a directory, and keeps no listener it opened, the upstream Approver login provider's included (#1320)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "as-native-build-"));
+    // Every listener this composition opens, whatever its port.
+    const opened = new Set<NetServer>();
+    const listen = NetServer.prototype.listen;
+    const listening = vi.spyOn(NetServer.prototype, "listen").mockImplementation(function (this: NetServer, ...args: unknown[]) {
+      opened.add(this);
+      return listen.apply(this, args as never);
+    } as never);
+    try {
+      await expect(
+        launchAsNative({ ...launchOptions(), kernelStore: { file: dir }, approverIdpPort: LAUNCH_IDP_PORT }),
+      ).rejects.toThrow(/unable to open database/);
+      // The discovery listener and the provider were open when the build failed.
+      expect(opened.size).toBeGreaterThanOrEqual(2);
+      for (const server of opened) expect(server.listening).toBe(false);
+      expect(await accepts(`http://127.0.0.1:${LAUNCH_IDP_PORT}`)).toBe(false);
+    } finally {
+      listening.mockRestore();
+      await Promise.all(
+        [...opened].filter((server) => server.listening).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))),
+      );
+    }
+  });
+
   it("closes every listener it published and releases both store files on shutdown, in co-resident and remote PDP mode", async () => {
     for (const mode of ["co-resident", "remote"] as const) {
       const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
       const launched = await launchAsNative(launchOptions({ MISSION_PDP_MODE: mode }, files));
-      const listeners = await publishedListeners();
-      expect(listeners, mode).toHaveLength(mode === "remote" ? 4 : 3);
+      const published = await publishedListeners();
+      expect(published, mode).toHaveLength(mode === "remote" ? 4 : 3);
+      // The upstream Approver login provider is a listener of the target too (#1320).
+      const listeners = [...published, launched.stack.authServer?.approverProvider?.issuer as string];
       for (const url of listeners) expect(await accepts(url), `${mode} ${url}`).toBe(true);
       await launched.close();
       for (const url of listeners) expect(await accepts(url), `${mode} ${url} after close`).toBe(false);
@@ -1619,6 +1822,7 @@ describe("the as-native launcher process, the entry pnpm as-native runs, against
       expect(run.stdout()).toContain("  dev ordinary token not served");
       expect(run.stdout()).toContain(`  resource audience  ${CANONICAL_RESOURCE}  (HTTP MCP, DPoP verified on every request)`);
       expect(run.stdout()).toContain("  MAS join route     not mounted");
+      expect(run.stdout()).toMatch(/  approver login     http:\/\/127\.0\.0\.1:\d+  \(upstream OpenID Provider: password, then a one-time code for mfa\)/);
       expect(run.stdout()).toContain("  reconciliation     every 300 s (window 900 s), operator alerts on stderr");
       // It connected to the configured OpenFGA under the configured key and,
       // with no store configured, bootstrapped and seeded a development
@@ -1752,6 +1956,21 @@ dLive("the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315
   it("reports a completed record that cannot be written as an emission_failed gap, not a refusal: the effect stands once, nothing records it completed, and the same transaction token executes nothing again (#253)", async () => {
     await live.emissionFailure();
   }, 60_000);
+  it("admits a high-risk approval after a fresh login at the upstream provider with Bob's password and the one-time code his device received: the provider asserts mfa, and the AS records that token's acr and auth_time (#1320)", async () => {
+    await live.upstreamMfaApproval();
+  });
+  it("refuses a high-risk approval after a password-only login at the upstream provider (acr pwd): access_denied, with no Mission and no code (#1320)", async () => {
+    await live.upstreamPasswordOnly();
+  });
+  it("refuses a high-risk approval when the upstream login is older than the floor's 300 seconds at the decision: access_denied, with no Mission and no code (#1320)", async () => {
+    await live.upstreamStale();
+  });
+  it("refuses a login whose ID Token does not verify against the upstream provider's keys, a password-only login rewritten to claim mfa: no login is recorded, and no Mission or code exists (#1320)", async () => {
+    await live.upstreamUnverifiable();
+  });
+  it("admits a low-risk approval after a password-only login at the upstream provider: the floor does not apply (#1320)", async () => {
+    await live.upstreamLowRisk();
+  });
 });
 
 const liveJoin = targetFixture({ live: true, asPort: 14108, ordinaryTokenMinting: true });
@@ -1924,7 +2143,6 @@ dLive("the as-native target restarted on the same store files against a live Ope
   const issueSchedule = (stack: DemoStack): Promise<IssuedMission> => {
     const as = stack.authServer;
     if (!as) throw new Error("the as-native target runs the AS");
-    logInAgain(stack.approverLogin);
     return issueMissionToken(
       as.asUrl,
       as.agentClientJwk,

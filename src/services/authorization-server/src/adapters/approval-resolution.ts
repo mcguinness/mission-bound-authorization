@@ -30,10 +30,13 @@ export function validApprovalPrincipal(value: unknown): value is ApprovalPrincip
 }
 
 /**
- * Trusted-login integration, never an HTTP login or agent-callable API.
- * The OAuth interaction cookie is NOT an approver login: it is also held by
- * the initiating client. A separate login establishes this interaction-bound
- * session, with achieved context retained server-side and a CSRF secret.
+ * Trusted-login integration, never an agent-callable API. A login is recorded
+ * here by a trusted in-process caller or by the approval surface's upstream
+ * OpenID Connect login once it has validated the provider's ID Token
+ * (`approver-login.ts`, #1320). The OAuth interaction cookie is NOT an
+ * approver login: it is also held by the initiating client. A separate login
+ * establishes this interaction-bound session, with achieved context retained
+ * server-side and a CSRF secret.
  */
 export class ApprovalSessionStore {
   private readonly sessions = new Map<string, { uid: string; principal: ApprovalPrincipal; csrf: string; expires: number }>();
