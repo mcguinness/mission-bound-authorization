@@ -1,12 +1,23 @@
-# payments-runtime-profile-v7
+# payments-runtime-profile-v8
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v7`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v8`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v8** (#853, D487): the canonical resource URI is the enforcement
+  boundary identifier the Enforcement Scope Statement declares for
+  `mcp-payments-pep`. The PEP establishes it from that declaration, never
+  from the token; a token's `aud` names it directly or through an alias
+  the statement declares for the token's issuer and profile (the shipped
+  statement declares none), and an array is read by membership. Decision
+  requests, permits and all three evidence forms carry the boundary,
+  never an `aud` value, and each signing key signs only for a boundary the
+  statement authorizes it for. A permit decided under an earlier boundary
+  is suppressed `kill_switch` at use. Decision bytes are unchanged from v7.
 
 - **v7** (#1266, D457): the resource enforces the Mission Resource Access
   Common Constraints listed under "Constraint enforcement: Common
@@ -52,9 +63,13 @@ The file name is the document's stable name and does not carry the version.
 
 - Canonical MCP resource URI (byte-for-byte everywhere per D38):
   `http://localhost:4403/mcp` (overridable via `.env`; whatever the value,
-  it is used identically in PRM, OAuth `resource`, token `aud`, AuthZEN
+  it is used identically in PRM, OAuth `resource`, the Enforcement Scope
+  Statement's boundary declaration, AuthZEN
   `resource.properties.audience`, the operation target below, and
-  evidence).
+  evidence). It is the enforcement boundary identifier (#853): token
+  `aud` names it directly or through a declared alias, and no `aud`
+  value or alias is ever carried in its place
+  (`docs/boundary-identifier-change.md`).
 - Tool ids (capability source `tool_id`): `mcp://payments.demo/tools/<name>`.
 - AuthZEN action ids: `payments:<operation>` as listed below.
 
@@ -102,9 +117,10 @@ within that service. Each `TOOL_ACTIONS` row declares the contract
   and the Mission's entries against it with the Resource Access matcher:
   literal `exact` only; a `prefix` entry or an unrecognized
   `resource_match` provides no authority, and a credential carrying one is
-  refused. `audience` stays the token-validation and decision-channel scope
-  input; `resource.type` and `resource.id` stay Resource-policy object
-  identity.
+  refused. `audience` is the boundary identifier, the token-validation
+  and decision-channel scope input, and an audience alias never rewrites
+  an entry or the target; `resource.type` and `resource.id` stay
+  Resource-policy object identity.
 - The target is the effective parameters' `resource`, so the parameter
   digest and the operation key bind it, and it is part of operation
   identity and of the cache key.
