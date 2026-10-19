@@ -13,7 +13,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { type CryptoKey, generateKeyPair } from "jose";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
   delegatePermitted,
@@ -21,7 +22,11 @@ import {
   IntentError,
   isSubsetEntry,
   type MissionIntent,
+  MissionKernel,
+  type OriginProjection,
+  validateMissionIntent,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const DIR = fileURLToPath(new URL("../../../../vectors/mission-resource-access/", import.meta.url));
 const FORMAT = "mission-resource-access-cases/1";
@@ -33,6 +38,9 @@ const IMPLEMENTED = new Set([
   "constraint.requires_action_approval",
   "refusal.unsupported-input",
   "delegate-matcher",
+  // #1275 (D457): retained eligibility provenance and the delegation-authorization policy hook.
+  "delegation.policy",
+  "delegation.inherited-eligibility",
 ]);
 
 /** The declared capability vocabulary (README.md). */
@@ -139,12 +147,108 @@ function run(c: Case): void {
       expect(permitted, c.expected.reason).toBe(c.expected.outcome === "permitted");
       return;
     }
+    case "delegate-eligibility":
+      runDelegateEligibility(c);
+      return;
     default:
       throw new Error(`${c.id}: no executor for check ${c.check}`);
   }
 }
 
-const EXECUTABLE_CHECKS = new Set(["subset", "derive", "delegate-matcher"]);
+/** The Mission Issuer, resource and action a delegate-eligibility case's kernel runs with. */
+const CASE_ISSUER = "https://as.cases.example";
+const CASE_RESOURCE = "https://erp.example.com";
+const CASE_ACTION = "invoices.read";
+let statusKey: CryptoKey;
+beforeAll(async () => {
+  ({ privateKey: statusKey } = await generateKeyPair("ES256", { extractable: true }));
+});
+
+type DelegationMember = { max_depth: number; allowed_delegates?: Array<{ sub?: string; sub_profile?: string }> };
+
+/**
+ * #1275 (D457): a `delegate-eligibility` case through the real derivation,
+ * persistence and gate. A kernel whose ceiling holds the case's ceiling entry
+ * derives the approved entry from a proposal carrying the approved entry's
+ * `delegation`, retains its provenance with the Mission, and decides the
+ * presented entry's eligibility for the authenticated delegate at the accounted
+ * depth, under a policy hook permitting exactly `policy.permit` (the reference
+ * default denies every delegate). The two unresolvable contexts are produced
+ * on the same path: a presented entry no approved entry backs, and a Mission
+ * whose stored provenance is gone.
+ */
+function runDelegateEligibility(c: Case): void {
+  const input = c.input as {
+    ceiling_entry_delegation: DelegationMember | null;
+    approved_entry_delegation: DelegationMember | null;
+    entry_delegation?: DelegationMember;
+    context?: "approved-entry-unresolvable" | "provenance-unresolvable";
+    policy: { permit?: string[]; deny?: string[] };
+    delegate: { sub: string; sub_profile?: string };
+    depth: number;
+  };
+  const entryWith = (delegation: DelegationMember | null | undefined, action = CASE_ACTION): AuthorityEntry => ({
+    type: "mission_resource_access",
+    resource: CASE_RESOURCE,
+    actions: [action],
+    ...(delegation ? { delegation } : {}),
+  });
+  // A case naming no ceiling entry (its provenance is what cannot be
+  // resolved) derives the approved entry under a ceiling entry carrying it.
+  const ceiling = [entryWith(input.ceiling_entry_delegation ?? input.approved_entry_delegation)];
+  const permit = input.policy.permit ?? [];
+  const deny = input.policy.deny ?? [];
+  const kernel = new MissionKernel({
+    issuer: CASE_ISSUER,
+    policy: { policy_version: "resource-access-cases", ceiling },
+    authoritySourceCatalog: testAuthoritySourceCatalog(ceiling, ["agent"], ["bob"]),
+    statusKey,
+    statusKid: "cases-status",
+    delegationPolicy: ({ delegate }) => permit.includes(delegate.sub) && !deny.includes(delegate.sub),
+  });
+  const mission = kernel.approve({
+    intent: validateMissionIntent(
+      JSON.stringify({
+        goal: "Decide one delegate-eligibility case",
+        target_resources: [CASE_RESOURCE],
+        expires_at: "2099-01-01T00:00:00Z",
+      }),
+    ),
+    proposedAuthority: [entryWith(input.approved_entry_delegation ?? input.ceiling_entry_delegation)],
+    subject: { iss: CASE_ISSUER, sub: "alice" },
+    approver: { iss: CASE_ISSUER, sub: "bob" },
+    clientId: "agent",
+    approvalEventId: `apev-${c.id}`,
+  });
+  if (input.approved_entry_delegation) {
+    expect(mission.authority_set[0]?.delegation, `${c.id}: the derived approved entry`).toEqual(
+      input.approved_entry_delegation,
+    );
+  }
+  if (input.context === "provenance-unresolvable") {
+    kernel.db.prepare("UPDATE missions SET eligibility_provenance_json = NULL WHERE id = ?").run(mission.id);
+  }
+  const record = kernel.get(mission.id);
+  if (!record) throw new Error(`${c.id}: no Mission`);
+  let candidates: Array<OriginProjection<AuthorityEntry>>;
+  if (input.context === "approved-entry-unresolvable") {
+    // A presented entry the Mission holds no approved entry for resolves to none.
+    const presented = entryWith(input.ceiling_entry_delegation, "invoices.approve");
+    expect(kernel.projectCredentialWithOrigin(record, [presented])).toEqual([]);
+    candidates = [{ entry: presented, origins: [] }];
+  } else if (input.entry_delegation) {
+    // The entry presented at the exchange, resolved to its approved entries.
+    candidates = kernel.projectCredentialWithOrigin(record, [entryWith(input.entry_delegation)]);
+  } else {
+    candidates = kernel.effectiveDelegationCandidates(record);
+  }
+  expect(candidates, `${c.id}: one candidate entry`).toHaveLength(1);
+  const delegate = { sub: input.delegate.sub, assertedProfile: input.delegate.sub_profile };
+  const [decision] = kernel.delegationEligibility(record, candidates, delegate, input.depth);
+  expect(decision?.outcome, c.expected.reason).toBe(c.expected.outcome);
+}
+
+const EXECUTABLE_CHECKS = new Set(["subset", "derive", "delegate-matcher", "delegate-eligibility"]);
 
 /** A capability is known when the README names it, or it is one `constraints` key or entry member. */
 const knownCapability = (cap: string) => KNOWN_CAPABILITIES.has(cap) || /^(constraint|member)\.[a-z0-9_]+$/.test(cap);
@@ -163,7 +267,20 @@ function skipReason(c: Case, implemented: ReadonlySet<string> = IMPLEMENTED): st
  * Cases the conformance ledger cites as witnesses. Each runs once, in the static
  * block below, under a literal test name the ledger can resolve; the loop skips it.
  */
-const CITED = new Set(["sub-res-01", "sub-res-02", "sub-res-03", "sub-ra-01", "sub-ra-02"]);
+const CITED = new Set([
+  "sub-res-01",
+  "sub-res-02",
+  "sub-res-03",
+  "sub-ra-01",
+  "sub-ra-02",
+  "dg-inherit-01",
+  "dg-inherit-02",
+  "dg-inherit-03",
+  "dg-inherit-04",
+  "dg-inherit-05",
+  "dg-inherit-06",
+  "dg-inherit-07",
+]);
 const byId = new Map(files.flatMap(({ doc }) => doc.cases.map((c) => [c.id, c] as const)));
 function runCited(id: string): void {
   const c = byId.get(id);
@@ -228,6 +345,27 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
     });
     it("sub-ra-02: a candidate omitting requires_action_approval is not within a reference carrying true", () => {
       runCited("sub-ra-02");
+    });
+    it("dg-inherit-01: the inherited policy denies Carol although the derived entry's list names her", () => {
+      runCited("dg-inherit-01");
+    });
+    it("dg-inherit-02: the list omits Bob although the inherited policy permits him", () => {
+      runCited("dg-inherit-02");
+    });
+    it("dg-inherit-03: a presented entry no approved entry backs narrows out", () => {
+      runCited("dg-inherit-03");
+    });
+    it("dg-inherit-04: a list the proposal added over a policy-deferring ceiling entry does not admit a delegate the policy denies", () => {
+      runCited("dg-inherit-04");
+    });
+    it("dg-inherit-05: a delegate the inherited policy and the list both permit is eligible within the depth bound", () => {
+      runCited("dg-inherit-05");
+    });
+    it("dg-inherit-06: an approved entry whose provenance is gone narrows out though list and policy would permit", () => {
+      runCited("dg-inherit-06");
+    });
+    it("dg-inherit-07: a proposal-added list over a policy-deferring ceiling entry admits a delegate both permit", () => {
+      runCited("dg-inherit-07");
     });
   });
 
