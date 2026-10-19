@@ -1046,8 +1046,15 @@ export interface ExecutionAttempt {
    * against which the request's credential was validated. The
    * `enforcement_boundary` use check refuses the permit once another version
    * is in force.
+   *
+   * #1327 re-review: read from the permit's retained Decision Evidence row
+   * (its `boundary_version`, `evidence.ts`), which records it when the
+   * permit is first retained, never from the request that happens to
+   * receive the permit: a PDP retransmission re-presents an earlier permit,
+   * which keeps its own version. Absent where that row records none, which
+   * no version in force matches.
    */
-  boundaryVersion: string;
+  boundaryVersion?: string;
   /**
    * @spec resource-access#resource-matching (#1276, D457): the operation
    * target the permit was decided on, exactly as this PEP sent it in
@@ -2071,8 +2078,11 @@ export class Pep {
     // this PEP acts on is `decision` itself, and the retention below changes
     // nothing about that.
     const emitted = decision.context.decision_evidence as DecisionEvidenceObject | undefined;
+    // #1327 re-review: a newly retained record binds the version this request
+    // was established at; a re-presented one keeps the version it was first
+    // retained under.
     const retention = emitted
-      ? await this.deps.evidence.retainDecision(emitted)
+      ? await this.deps.evidence.retainDecision(emitted, { boundaryVersion })
       : ({ retained: false, reason: "absent" } as const);
     if (!retention.retained && decision.decision) {
       // Fail closed on a permit: an action whose decision left no verifiable
@@ -2194,6 +2204,12 @@ export class Pep {
     // carries authorization facts from the RETAINED record (the authorized
     // digest included) rather than from the response context or the request.
     const retained = retention.retained ? retention.record.content : undefined;
+    // @spec runtime#boundary-identifier-change (#1327 re-review): the version
+    // the permit was decided under, from its retained row, never the one
+    // established for this request. A PDP retransmission re-presents an
+    // earlier permit; given the version now in force it would pass the
+    // `enforcement_boundary` use check after a cutover.
+    const permitVersion = retention.retained ? retention.record.boundary_version : undefined;
     const attempt: ExecutionAttempt = {
       evaluationId: decision.context.decision_id as string,
       mission: {
@@ -2202,7 +2218,7 @@ export class Pep {
         ...(missionAnchor.authority_hash !== undefined ? { authority_hash: missionAnchor.authority_hash } : {}),
       },
       audience: boundary,
-      boundaryVersion,
+      ...(permitVersion !== undefined ? { boundaryVersion: permitVersion } : {}),
       operationTarget,
       action: mapping.action,
       tool,

@@ -235,6 +235,15 @@ export interface DecisionEvidence {
   mission_id: string;
   trace_id?: string;
   at: string;
+  /**
+   * @spec runtime#boundary-identifier-change (#1327 re-review): the
+   * statement version the retaining PEP established for the request this
+   * decision answered. A local retention member, not a Decision Evidence
+   * member: set when the record is first retained and never changed, so a
+   * permit re-presented later (a PDP retransmission) keeps the version it
+   * was decided under and never takes the one in force.
+   */
+  boundary_version?: string;
   content: DecisionEvidenceObject;
 }
 
@@ -1011,8 +1020,17 @@ export class EvidenceStore {
    * This method allocates no sequence: Decision Evidence carries the PDP's
    * own per-Mission counter, from the PDP's emission path. Only the records
    * this store EMITS take their sequence from the durable counter.
+   *
+   * @param binding (#1327 re-review) `boundaryVersion`, the statement
+   * version the retaining PEP established for the request: recorded on a
+   * newly retained row ({@link DecisionEvidence.boundary_version}). A held
+   * row is returned as it was retained, its version included, whatever
+   * version a re-presentation names.
    */
-  async retainDecision(record: DecisionEvidenceObject): Promise<DecisionEvidenceRetention> {
+  async retainDecision(
+    record: DecisionEvidenceObject,
+    binding: { boundaryVersion?: string } = {},
+  ): Promise<DecisionEvidenceRetention> {
     if (!this.resolveDecisionEvidenceKey) {
       return { retained: false, reason: "no_verification_keys" };
     }
@@ -1034,8 +1052,9 @@ export class EvidenceStore {
     }
     // @spec runtime#idempotency (#917): a retransmitted permit re-presents
     // the record already retained for its evaluation, byte for byte. That is
-    // accepted idempotently (the held row, never a second copy); a different
-    // record under the same identifier is not.
+    // accepted idempotently (the held row, never a second copy, keeping the
+    // boundary version it was first retained under); a different record
+    // under the same identifier is not.
     const held = this.records.find(
       (e): e is DecisionEvidence => e.kind === "decision" && e.content.evidence_id === record.evidence_id,
     );
@@ -1050,6 +1069,7 @@ export class EvidenceStore {
       mission_id: record.mission.id,
       ...(traceId !== undefined ? { trace_id: traceId } : {}),
       at: record.evaluated_at,
+      ...(binding.boundaryVersion !== undefined ? { boundary_version: binding.boundaryVersion } : {}),
       content: deepFreeze(record),
     });
     this.retainDurably("decision", record.evidence_id, row, record);
