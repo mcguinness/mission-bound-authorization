@@ -631,7 +631,7 @@ The deployment chooses where the AS's signing keys come from (#831).
 `pnpm keys init --ring <path>`: the four AS role keys (`as-token`,
 `as-status`, `as-txn`, `as-continuation`) under their configured `kid`,
 kept across restarts, so a token or Status response signed before a restart
-still verifies after it. `MISSION_EPHEMERAL_KEYS=1` generates them at each
+still verifies after it. For development the ring lives at `src/var/keys/as-signing-keys.json`, which git ignores (`src/.gitignore` ignores `/var/`). From `src/`, `pnpm keys init --ring var/keys/as-signing-keys.json` creates it once, and `MISSION_KEY_RING="$PWD/var/keys/as-signing-keys.json"` names it. The launchers set no default: the variable is always explicit. `MISSION_EPHEMERAL_KEYS=1` generates them at each
 boot instead. Neither, both, a relative path, or a ring that is missing, open
 to others or created for another issuer refuses startup before anything
 connects:
