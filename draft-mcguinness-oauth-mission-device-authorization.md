@@ -41,6 +41,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC7009:
   RFC9126:
   RFC9449:
@@ -496,6 +504,11 @@ action.
 --- back
 
 # Example {#example}
+
+In the ERP examples in this document, the operation contract identifies
+`https://erp.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
 
 The following is an example of a device authorization request from
 the public client `cli-agent`. The `mission_intent` and

@@ -2,5 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
   "include": ["src"],
-  "references": [{ "path": "../../packages/store" }, { "path": "../authorization-server" }, { "path": "../ras" }]
+  "references": [
+    { "path": "../../packages/mission-core" },
+    { "path": "../../packages/store" },
+    { "path": "../authorization-server" },
+    { "path": "../ras" }
+  ]
 }

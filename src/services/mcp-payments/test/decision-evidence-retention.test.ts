@@ -447,7 +447,7 @@ describe("the record survives the remote decision channel byte-identically (@spe
 
     const request: EvaluationRequest = {
       subject: { id: "alice" },
-      resource: { type: "invoice", id: "inv-1", properties: { audience: CANONICAL_RESOURCE, vendor_id: "acme" } },
+      resource: { type: "invoice", id: "inv-1", properties: { audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE, vendor_id: "acme" } },
       action: { name: "payments:invoice.read" },
       context: {
         mission: { id: "msn_ret", issuer: ISSUER },

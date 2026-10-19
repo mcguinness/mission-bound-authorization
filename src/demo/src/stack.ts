@@ -31,6 +31,7 @@ import {
   type AuthorityEntry as PdpAuthorityEntry,
   createDecisionPoint,
   createDecisionChannel,
+  createPdpRefusalRecorder,
   type IdempotencyClaimDomain,
   loadRuntimePosture,
   openIdempotencyClaimDomain,
@@ -580,6 +581,17 @@ export async function composeStack(opts: {
     if (!asContinuationPub) {
       throw new Error(`AS jwks_uri is missing the ${asContinuationKey.kid} continuation key`);
     }
+    const saas = new SaasMcpServer({
+      rasIssuer: RAS_ISS,
+      rasJwks: { keys: [rasPub as never] },
+      resource: saasResource,
+    });
+    // @spec resource-access#resource-access-type (#1266): the RAS emits for
+    // the SaaS resource only the constraints keys its metadata advertises.
+    const saasConstraints = saas.protectedResourceMetadata().mission_constraints_supported;
+    if (!Array.isArray(saasConstraints) || !saasConstraints.every((k) => typeof k === "string")) {
+      throw new Error("SaaS protected resource metadata is missing mission_constraints_supported");
+    }
     const ras = new ResourceAuthorizationServer({
       localCeiling: RAS_LOCAL_POLICY.ceiling,
       localPolicyVersion: RAS_LOCAL_POLICY.policy_version,
@@ -628,11 +640,7 @@ export async function composeStack(opts: {
         }),
       },
       entitlementStalenessBoundSeconds: 86_400,
-    });
-    const saas = new SaasMcpServer({
-      rasIssuer: RAS_ISS,
-      rasJwks: { keys: [rasPub as never] },
-      resource: saasResource,
+      resourceConstraintsSupported: { [saasResource]: saasConstraints as string[] },
     });
     const resourceToAs = (r: string) => (r === saasResource ? RAS_ISS : asUrl);
     authServer = {
@@ -759,6 +767,29 @@ export async function composeStack(opts: {
     },
     claims: pdpClaims,
     resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer), clients: issuerLocalClients(issuer) }),
+    // @spec authzen#pdp-request consistency check 11 (#1276, D457): a request
+    // refused before evaluation (`operation_target_invalid`) is recorded as a
+    // PDP Refusal Record, signed under the PDP's own published key and
+    // retained in the deployment's evidence retention store (declared below;
+    // a refusal arrives only once the stack serves requests).
+    refusals: createPdpRefusalRecorder({
+      signer: { kid: decisionEvidenceKey.kid, key: decisionEvidenceKeys.privateKey },
+      emitterId: CANONICAL_RESOURCE,
+      scope: CANONICAL_RESOURCE,
+      retain: (record) => {
+        const missionId = "unknown";
+        evidenceRetention.retain({
+          kind: "refusal",
+          record_id: record.refusal_id,
+          mission_id: missionId,
+          emitter_id: record.emitter.id,
+          emitter_role: "pdp",
+          signing_kid: decisionEvidenceKey.kid,
+          row: { kind: "refusal", mission_id: missionId, at: record.evaluated_at, content: record } as never,
+          record: record as never,
+        });
+      },
+    }),
   });
   // @spec runtime#idempotency (#918, D223): the PEP's own durable,
   // single-writer reservation store for keyed reversible writes, named in

@@ -99,6 +99,19 @@ export {
   normalizeCapabilitySources,
 } from "./capability-binding.js";
 export {
+  type CommonConstraintIntersection,
+  type CommonConstraintKey,
+  type CommonConstraintTrace,
+  type ConstraintFacts,
+  commonConstraintGates,
+  commonConstraintsNoBroader,
+  IMPLEMENTED_COMMON_CONSTRAINTS,
+  intersectCommonConstraints,
+  isImplementedCommonConstraint,
+  timeWindowEndMs,
+  validCommonConstraint,
+} from "./common-constraints.js";
+export {
   type CompromiseBoundaryOutcome,
   evaluateCompromiseBoundary,
   type ProofCommitment,
@@ -189,6 +202,19 @@ export {
   parseMissionReferenceField,
 } from "./mission-reference.js";
 export {
+  ENFORCED_RESOURCE_MATCHES,
+  entryMatchesTarget,
+  establishOperationTarget,
+  isOperationTarget,
+  matchResource,
+  type OperationContract,
+  type OperationTargetRefusal,
+  type OperationTargetResolution,
+  type ResourceMatch,
+  resolveOperationTarget,
+  type ServiceLevelContract,
+} from "./operation-target.js";
+export {
   type EntitlementAuthorityEntry,
   type EntitlementObservation,
   type EntitlementResolver,
@@ -198,6 +224,14 @@ export {
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
 } from "./origin-principal.js";
+export {
+  compareInstants,
+  type Instant,
+  instantFloorMs,
+  instantFromMs,
+  isRfc3339Instant,
+  parseRfc3339Instant,
+} from "./rfc3339-instant.js";
 export {
   type AudienceScopeMapping,
   delegatedRoutingRefusal,

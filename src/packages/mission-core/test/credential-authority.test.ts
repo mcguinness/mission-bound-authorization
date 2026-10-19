@@ -55,7 +55,7 @@ describe("parseCredentialAuthority: a credential's authority is read in full or 
     ["an empty resource", [entry({ resource: "" })]],
     ["no actions", [entry({ actions: [] })]],
     ["a non-string action", [entry({ actions: [1] })]],
-    ["an unknown constraint", [entry({ constraints: { time_window: "business-hours" } })]],
+    ["an unknown constraint", [entry({ constraints: { office_hours: "business-hours" } })]],
     [
       "a non-decimal amount cap",
       [entry({ constraints: { max_amount: { amount: "1e3", currency: "USD" } } })],
