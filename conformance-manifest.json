@@ -141,10 +141,6 @@
    "draft-mcguinness-oauth-mission-device-authorization.md": {
     "revision": "6c1c73f0955c0837c2c8435cc4c50db6b7ce3ffc",
     "content_sha256": "68f1ab69f8c48630c370c2ae10ebb8880fbf3add9d0b138ff6273ccf50575e59"
-   },
-   "draft-mcguinness-oauth-mission-consent-evidence.md": {
-    "revision": "fb3beefd4df1c5f22a51691bd452830b7cdae6ad",
-    "content_sha256": "c036ef0a18e9d7b1826c0fb22c3c36cc129a9be5d9a232af03bfba02bf50c054"
    }
   }
  },
@@ -286,8 +282,7 @@
    "aauth-management.update-position",
    "aauth-management.delegation-tree",
    "device-authorization.carriage",
-   "core.dpop-nonce",
-   "consent-evidence.disclosure"
+   "core.dpop-nonce"
   ]
  },
  "profiles": [
@@ -43673,52 +43668,6 @@
     }
    ],
    "notes": "#1202: an assembly without the opt-in device-authorization capability answers a device authorization request carrying mission_intent 404 and creates no Mission. Proved by enabling the capability by default (the request then yields a device_code). Partial: only the device authorization request is witnessed, and only on an AS without the device grant."
-  },
-  {
-   "id": "consent-evidence.disclosure.mission-summary-authority-source",
-   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
-   "anchor": "consent-disclosure",
-   "text": "a display of the authority source and, for `organizational`, the governed policy it draws on (`authority_source.policy`), as that rendering requires",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "consent-evidence.disclosure"
-   },
-   "profiles": [],
-   "surface": "commitment",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "every Consent Disclosure object's mission_summary displays the Mission's established authority source, whichever of user_delegated, service_owned, or organizational it is, so consent_rendering_hash commits that display; a mission_summary without it does not conform",
-    "local": "the reference implementation records no Consent Disclosure object and no Consent Evidence (src/PLAN.md O-11, Consent Evidence scope, is open); its approval page renders the source and, for organizational, the policy id and version under the OAuth binding's step 5 (core.approval-event.authority-source-rendering, tested), which witnesses that rendering, not this member"
-   },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1196 review fix (PR #1295). No discriminating witness: the reference implementation builds no Consent Disclosure object, so todo until O-11 is ruled and the disclosure, with consent_rendering_hash, is built; a witness must fail with the display removed."
-  },
-  {
-   "id": "consent-evidence.disclosure.mission-summary-governed-policy",
-   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
-   "anchor": "consent-disclosure",
-   "text": "a display of the authority source and, for `organizational`, the governed policy it draws on (`authority_source.policy`), as that rendering requires",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "consent-evidence.disclosure"
-   },
-   "profiles": [],
-   "surface": "commitment",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "for an organizational Mission, mission_summary also displays the governed policy that authority_source.policy identifies; a disclosure naming the source without that policy does not conform, and a user_delegated or service_owned Mission carries no policy display",
-    "local": "the reference implementation records no Consent Disclosure object and no Consent Evidence (src/PLAN.md O-11, Consent Evidence scope, is open); its approval page renders the source and, for organizational, the policy id and version under the OAuth binding's step 5 (core.approval-event.authority-source-rendering, tested), which witnesses that rendering, not this member"
-   },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1196 review fix (PR #1295). No discriminating witness: the reference implementation builds no Consent Disclosure object, so todo until O-11 is ruled and the disclosure, with consent_rendering_hash, is built; a witness must fail with the display removed."
   }
  ]
 }
