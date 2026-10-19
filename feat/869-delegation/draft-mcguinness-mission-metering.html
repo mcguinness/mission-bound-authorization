@@ -2478,8 +2478,9 @@ reservation remains charged and reconciles as an unknown outcome.<a href="#secti
 </li>
             <li class="normal" id="section-12.1.2-2.4">
               <p id="section-12.1.2-2.4.1"><strong>Unknown outcome</strong> (no evidence within the reservation lease): a
-reservation <span class="bcp14">MUST</span> carry a bounded lease so a crashed or abandoned
-reservation does not consume the budget permanently. On lease
+reservation <span class="bcp14">MUST</span> carry a bounded lease, which bounds how long a
+crashed or abandoned reservation waits before reconciliation begins;
+the lease never releases it. On lease
 expiry without settlement the PDP reconciles the reservation
 through the runtime profile's orphaned-evidence process
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), which queries the
@@ -2699,11 +2700,11 @@ exhausted.<a href="#section-14-2.4.1" class="pilcrow">¶</a></p>
           <p id="section-14-2.5.1"><strong>Reservation starvation.</strong> An attacker who opens reservations and
 never settles them can consume a budget with no executed action,
 denying the Mission its remaining authority. The bounded reservation
-lease (<a href="#settlement-exchange" class="auto internal xref">Section 12.1</a>) caps this: an unsettled reservation is
-reconciled on lease expiry, and reconciliation that finds no effect
-at the resource returns the budget. An outcome reconciliation cannot
-establish stays charged and is escalated, never released by a
-timer.<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
+lease (<a href="#settlement-exchange" class="auto internal xref">Section 12.1</a>) bounds how long this goes
+unexamined: an unsettled reservation is reconciled on lease expiry,
+and reconciliation that establishes affirmative non-execution returns
+the budget. An outcome reconciliation cannot establish stays charged
+and is escalated, never released by a timer.<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.6">
           <p id="section-14-2.6.1"><strong>Latch burning.</strong> Because the first matching action latches an
@@ -2865,12 +2866,18 @@ this registry.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Conformance: the consented bounds are rendered at each human
-approval, including a standing consent such as a Mission Template's
-consent (#1078).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Settlement by Evidence State and Reservation starvation: the
+reservation lease bounds how long an unsettled reservation waits
+before reconciliation begins and never releases it; reconciliation
+returns the budget only on affirmative non-execution (#1269).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Exclusivity Across Missions (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>): an
+          <p id="appendix-A-2.2.1">Conformance: the consented bounds are rendered at each human
+approval, including a standing consent such as a Mission Template's
+consent (#1078).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Exclusivity Across Missions (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>): an
 exclusivity group is one shared latch across the delegation (children,
 descendants, successors, carryover replacements), established
 atomically before a derived Mission issues usable authority, retained
@@ -2878,10 +2885,10 @@ while derived authority remains usable, and relaxed only by an
 explicit, scoped, disclosed approval that keeps the historical latch.
 Settlement releases a latch only when every participating action is
 affirmatively not executed. Template instances are scoped per
-instance, with that limit disclosed.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+instance, with that limit disclosed.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
 Mission is charged to every ancestor's bound or holds an escrowed
 allocation whose remainder returns only after the allocation is
 closed, a successor or carryover replacement continues its
@@ -2891,10 +2898,10 @@ per-instance bound with <code>max_active</code> and <code>dispatch_rate</code>. 
 expiry no longer releases an unsettled reservation for an
 idempotent or reversible action class (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>), and a
 metered high-consequence idempotency horizon reaches the Mission's
-<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
 <code>max_duration</code>, <code>max_egress_volume</code>, and <code>exclusive</code> move from
 <code>controls.&lt;name&gt;</code> to named top-level Mission Intent members, since
 the issuance profile retires the <code>controls</code> bucket entirely
@@ -2908,16 +2915,16 @@ of <code>exclusive</code> against <a href="#promotion-criteria" class="auto inte
 gate NOT MET (issue #117): it remains EXPERIMENTAL and unpromoted,
 now explicitly marked as such at its own definition (<a href="#bounds" class="auto internal xref">Section 6</a>).
 <code>max_derivations</code> renamed to <code>derivation_limit</code> in cross-references
-to the issuance profile.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+to the issuance profile.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">One informative cross-reference in Settlement by Evidence State
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">One informative cross-reference in Settlement by Evidence State
 (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>): a containment overlay's contain transition
 is not settlement evidence. An open reservation or duration lease
 still settles unchanged under the existing evidence-state rules, and
 contain narrows only forward draw, a new reservation or a lease
 renewal, through the ordinary permit check against the narrowed
-Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

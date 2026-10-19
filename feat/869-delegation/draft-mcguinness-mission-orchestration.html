@@ -2085,22 +2085,30 @@ plan says <code>cancel_if_possible</code>.<a href="#section-8-4.4.1" class="pilc
 <dt id="section-8-4.5">
 <code>committed</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-4.6">
-          <p id="section-8-4.6.1">The action's effect occurred or the deployment cannot prove it did
-not occur. The orchestrator <span class="bcp14">MUST</span> apply post-completion behavior.<a href="#section-8-4.6.1" class="pilcrow">¶</a></p>
+          <p id="section-8-4.6.1">Evidence establishes that the action's effect occurred, such as
+Execution Evidence with <code>outcome</code> <code>completed</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). The orchestrator
+<span class="bcp14">MUST</span> apply post-completion behavior.<a href="#section-8-4.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-4.7">
 <code>unknown</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-4.8">
-          <p id="section-8-4.8.1">The orchestrator cannot determine whether the action committed. The
-orchestrator <span class="bcp14">MUST</span> treat the outcome as requiring human review unless
-deployment policy defines a stricter default.<a href="#section-8-4.8.1" class="pilcrow">¶</a></p>
+          <p id="section-8-4.8.1">No evidence yet establishes whether the action's effect occurred.
+The orchestrator <span class="bcp14">MUST</span> treat the outcome as requiring human review
+unless deployment policy defines a stricter default, and <span class="bcp14">MUST NOT</span>
+apply post-completion behavior to it. This is the runtime profile's
+undetermined outcome (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>): it
+leaves this class only when evidence, such as that profile's outcome
+reconciliation, establishes the outcome.<a href="#section-8-4.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
 <p id="section-8-5">For irreversible actions, external commitments, and privileged
 administration, an <code>unknown</code> outcome <span class="bcp14">MUST NOT</span> be treated as success or
-as harmless suppression.<a href="#section-8-5" class="pilcrow">¶</a></p>
+as harmless suppression. Handling an <code>unknown</code> outcome conservatively,
+for example by keeping it charged against a consumption bound, does
+not make it <code>committed</code>.<a href="#section-8-5" class="pilcrow">¶</a></p>
 <div id="cancellation">
 <section id="section-8.1">
         <h3 id="name-cancellation-attempt">
@@ -2116,8 +2124,8 @@ as harmless suppression.<a href="#section-8-5" class="pilcrow">¶</a></p>
 unknown;<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-8.1-2.3">
-            <p id="section-8.1-2.3.1">continue to classify the outcome as <code>unknown</code> until it has evidence
-that the action did not commit; and<a href="#section-8.1-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-8.1-2.3.1">continue to classify the outcome as <code>unknown</code> until evidence
+establishes whether the action committed; and<a href="#section-8.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-8.1-2.4">
             <p id="section-8.1-2.4.1">emit Orchestration Evidence.<a href="#section-8.1-2.4.1" class="pilcrow">¶</a></p>
@@ -2629,7 +2637,8 @@ dispatch, failing closed if the commit fails
           <p id="section-13-2.4.1">classify in-flight steps under <a href="#in-flight" class="auto internal xref">Section 8</a>;<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.5">
-          <p id="section-13-2.5.1">apply post-completion behavior for committed or unknown outcomes;<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-13-2.5.1">apply post-completion behavior for committed outcomes, and route
+unknown outcomes to human review;<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.6">
           <p id="section-13-2.6.1">emit Orchestration Evidence; and<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
@@ -2816,14 +2825,22 @@ and avoid recording raw user content when identifiers are sufficient.<a href="#s
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The non-active states are <code>terminated</code>, with its termination
+          <p id="appendix-A-2.1.1">In-Flight Requests (<a href="#in-flight" class="auto internal xref">Section 8</a>): <code>committed</code> requires evidence
+that the effect occurred, and an outcome the deployment cannot
+establish is <code>unknown</code>, the runtime profile's undetermined outcome.
+Post-completion behavior, including <code>compensate</code>, applies to
+<code>committed</code> outcomes only; an <code>unknown</code> outcome goes to human review
+(#1269).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">The non-active states are <code>terminated</code>, with its termination
 reason, and <code>suspended</code>. Orchestration Evidence carries
 <code>mission_termination</code> beside a <code>terminated</code> <code>mission_state</code>, and
 continued work after reason <code>superseded</code> proceeds under the
-<code>termination.successor</code> (#705).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+<code>termination.successor</code> (#705).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Authority-Narrowing Behavior (<a href="#authority-narrowing" class="auto internal xref">Section 7.1</a>): a third
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Authority-Narrowing Behavior (<a href="#authority-narrowing" class="auto internal xref">Section 7.1</a>): a third
 State-Change Behavior trigger, independent of the non-active and
 staleness sequences, for a <code>mission.lifecycle-change</code> event's
 generic <code>authority_changed</code> true at unchanged <code>state</code>. The
@@ -2835,7 +2852,7 @@ is suppressed or paused, a denied <code>dispatched_not_committed</code> step
 follows its existing <code>in_flight_behavior</code>, and a <code>committed</code> step is
 never compensated on narrowing alone. <code>step_id</code> is <span class="bcp14">REQUIRED</span> on
 Orchestration Evidence reporting this trigger. Signals promoted from
-an informative to a normative reference (#670).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+an informative to a normative reference (#670).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
