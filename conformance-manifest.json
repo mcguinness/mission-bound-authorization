@@ -7,24 +7,24 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "928829f8c6cae5168d4c28ccc2b0eb771ee78a51",
-    "content_sha256": "e4d473c69645c633ee99dbc66725d8367af229f213b01d4d067eea1260e4d60d"
+    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
+    "content_sha256": "9ab0d9cd14e281ccac15fd887f0ae1b20ff77492f0add5fd102f0d9083fd62c1"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "0d2e92792394295ffcaeb6374318fcd9b2983a21",
-    "content_sha256": "7586c06a155ede87033d466599593597ca343dc24fdc5b6deb6a3d44419f3bde"
+    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
+    "content_sha256": "bc31ca55bf2c3ce25d67d5ef1f2200962781df53b4e6590f2b8bd617da154593"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "e2578581ffea1974ac81ca4f90f3a28ed43baf39",
-    "content_sha256": "7ad8098f25e4546b1830e8fb967d38d68edd455e1c932e20ca3d97f884adcd0a"
+    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
+    "content_sha256": "5b376783f4b883229928a7f632dcfe6ac07adc97ceb4afcf6e47d300cd0792fa"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "026520e825327dcb33d83e2ae86e83528ad3575d",
-    "content_sha256": "ae15aac09f395bd2e9035bf0053a980540d514076781c958b7215bab9882391e"
+    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
+    "content_sha256": "8a3a2543f85ab7d5e59ca56c9e378a73a6d2e97bd100956c637f6d2fb58e21d8"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "1f11bbe47aa41369c0445cc5c7f1ce1ff86b0da4",
-    "content_sha256": "e13696c334cf2d0911974be74a5562ac25f219b74c385cf28f7d579ad085bf34"
+    "revision": "cf1df8b8a9cb1a34f14edd167fab926c9a0fe7b1",
+    "content_sha256": "ce52e5606cce029d19088a87c9d9a2e5d75fd25b91aae8d2b163b359058f06e8"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
@@ -35,8 +35,8 @@
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "b35d256e641cf64448aff25b55dad62ce664316a",
-    "content_sha256": "abbe9f5252d1fc2a52bc762303c71258ddde0d0272427c250890d0beedb746c5"
+    "revision": "cf1df8b8a9cb1a34f14edd167fab926c9a0fe7b1",
+    "content_sha256": "186978cebc8cf52630af5a5fd106d718fd05d495ec5428e89a7bfa19dbe6fce1"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "5a1e06044ef2d0ab5e1e29cdb4ec7efeff29e920",
@@ -47,12 +47,12 @@
     "content_sha256": "bc20eb11b403f3abfc4f5d85f786e9e2f4953bd760fd5e5ec52cd3b7722858ae"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "c3738f99a00ce740009c67c4ee707aea16c92672",
-    "content_sha256": "ed5097446b15dee094b1e855d568a2684d34831241c6a9da9da33a9625253722"
+    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
+    "content_sha256": "42a54d2831dfb7d84e3f5bed57b6e872f425e6cbb49f9a52c86b0bc3d75af0bf"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "5702bdd0c504744d6283fea328675175065cbe5f",
-    "content_sha256": "f0fecb61aa70d5707c51896952d25adf243f30b830b37efa39e702bce11865db"
+    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
+    "content_sha256": "2830e6028442e6c724b628fe4565a54f8aa91da38bace81b6044ed1a4afdfbf8"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "f9c4eb28516517c5955734a70c61ae8c6d42309b",
@@ -75,8 +75,8 @@
     "content_sha256": "2f4991ce177d9c6ce42a9632ec6077183ab6b1b27e5ed6e7407c76e6a6d36565"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "438bce98d6283f92a50e4459f010977922ad345b",
-    "content_sha256": "e66f4eb68db2842f8b2f7aef23c99258b6a782721918a6462327e3de792d6864"
+    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
+    "content_sha256": "732c556335d33b8fc13d6d9b45d49897431699354ae91e81054c9dada49ebf8c"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
@@ -103,8 +103,8 @@
     "content_sha256": "d88875b2ad94d43f21401d0f0e23bb669f0cc66ae639665a31ea3adebee25f12"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "1b89ca722bea7c15bc24eb93ad963554504f7c71",
-    "content_sha256": "52a6c948b534991b34997fe798382008770faabecf6764dee4fc4fa110b145d8"
+    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
+    "content_sha256": "bf5bd973b072d4647d8efc42916d129514c7775574c8928d1076bbc23390cb35"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
@@ -131,16 +131,16 @@
     "content_sha256": "0af450d300a722cd9a6e2ae480ecab221646d2d1b2e9a15b5b630f8d48b425e0"
    },
    "draft-mcguinness-mission-mandate.md": {
-    "revision": "46be47c6fd251bc12497dca05968c5eaa16a37f6",
-    "content_sha256": "4f8b85890777de9b580a511bfcc15e31cba4284603f2438b152ef4aeb26840b9"
+    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
+    "content_sha256": "9300a74faad9a069b145faa4ee4947dce000a12ec527ac4a73edbaf925e4e0e4"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
-    "revision": "62a7c5bbea04dcc7bf598d791c788b0b9f2def31",
-    "content_sha256": "26b6d44e7435641dd9a7d515f816eef5c0db707ecd870abf7f27c17ea5d1fe29"
+    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
+    "content_sha256": "96fe0378b56daecb3bebd073d4f9b723bac2a5d280d9380ce4e3d006e55c174d"
    },
    "draft-mcguinness-oauth-mission-device-authorization.md": {
-    "revision": "6c1c73f0955c0837c2c8435cc4c50db6b7ce3ffc",
-    "content_sha256": "68f1ab69f8c48630c370c2ae10ebb8880fbf3add9d0b138ff6273ccf50575e59"
+    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
+    "content_sha256": "9fed26c01952abd13356bc1f0f2e4c886a566b0355fee21148e5f0e67d74f3db"
    }
   }
  },
@@ -17283,6 +17283,29 @@
    "notes": "Both MUSTs are now fully asserted, but at the PEP/RS resource-operation boundary, not inside a PDP unit test (this row's original misfit reasoning stands: evaluate() is never invoked on either path, so there is no decision-request event to observe). runtime-refusal-backlog.test.ts's new test signs a token with no `mission` claim, drives it through the full in-memory mediated channel, and shows the call denies invalid_credential with ZERO evidence recorded -- proving evaluate() (and so the PDP) was never asked, not merely that the caller's return value says false. mcp-channel.test.ts's 3b (CI-only) shows the same for a bad-signature token. Kept partial rather than tested: the checker's endpoint-level coverage rule requires a mapping whose surface matches the row's OWN declared surface (decision-request) for `tested`, and reclassifying this row's surface to resource-operation to reach it is a separate, deliberate manifest-structure decision this slice defers rather than makes as a side effect of adding tests (see the Wave 2 PR description)."
   },
   {
+   "id": "runtime.oauth.authority-operation-target-match",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "authorization-details-mapping",
+   "text": "For an entry of type `mission_resource_access`, the operation target MUST match that entry's `resource` ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section \"Resource Matching\"), and the invoked action or tool identity MUST be within its `actions`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on the OAuth credential profile, a mission_resource_access entry authorizes an action only when the PEP-established operation target matches the entry's resource under Resource Matching and the invoked identity is within its actions; equality of the entry's resource with the token audience is not a match"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+  },
+  {
    "id": "runtime.token-validation.channel-integrity-and-token-forwarding",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "decision-channel",
@@ -18875,7 +18898,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "Tested for the authorizing entry (entry_digest) only; the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, policy-view version, and lifetime control bindings are not independently asserted by a test."
+   "notes": "Tested for the authorizing entry (entry_digest) only; the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, policy-view version, and lifetime control bindings are not independently asserted by a test. #1276: the resource item includes the operation target an authority-entry match uses; no test establishes that a permit binds the target."
   },
   {
    "id": "runtime.permit-binding.high-consequence-single-use-required",
@@ -21187,10 +21210,10 @@
    "tests": []
   },
   {
-   "id": "authzen.pdp-request.audience-match-mandatory",
+   "id": "authzen.pdp-request.operation-target-match",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "A PDP MUST perform the entry match against `resource.properties.audience`; matching it against `resource.type` or `resource.id` is non-conforming and will diverge across deployments.",
+   "text": "A PDP MUST match each such entry's `resource` against that target under {{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section \"Resource Matching\", in the credential's authority ({{context-credential}}), in the current effective authority ({{I-D.draft-mcguinness-mission-runtime}}), and in any other `mission_resource_access` authority bound it applies.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -21202,24 +21225,104 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PDP matches the approved Authority Set entry's resource against resource.properties.audience, never against the AuthZEN resource object's type/id identity"
+    "normative": "for every mission_resource_access entry in the credential authority, the current effective authority and any other mission_resource_access bound, the PDP matches the entry's resource against resource.properties.operation_target with the Resource Access matcher (exact character for character, prefix at a path-segment boundary after comparison normalization); a request whose target is outside every entry of a bound is denied even when its audience equals the entry's resource"
    },
    "level": "endpoint",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
-     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.audience > matches the approved entry's resource against resource.properties.audience, with no context.audience and a resource id that names an object",
-     "level": "endpoint",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
-     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.audience > never matches on the resource object's id or type: an id naming the entry's resource under another audience is out_of_authority",
-     "level": "endpoint",
-     "surface": "decision-request"
-    }
-   ]
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) replaces authzen.pdp-request.audience-match-mandatory, which required the entry match against resource.properties.audience and was tested on the reference PDP's audience match. Those tests witness the retired operand, so they are not cited here. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness."
+  },
+  {
+   "id": "authzen.pdp-request.no-audience-or-object-identity-match",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "A PDP MUST NOT match an entry against `resource.properties.audience`, `resource.type` or `resource.id`, or substitute any of them for the operation target.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose resource equals the request's audience, resource.type or resource.id, but does not match its operation_target, authorizes nothing; a request without operation_target is never matched through audience, type or id instead"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457). The reference PDP still matches entries on resource.properties.audience, which this row forbids; the earlier type/id test expects an out_of_authority denial for a request that now lacks a required operation_target, so it is not a witness. #1276's implementation step owns the witness."
+  },
+  {
+   "id": "authzen.context-operation-target.required",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-operation-target",
+   "text": "REQUIRED for an action evaluated against `mission_resource_access` authority.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every decision request for an action evaluated against mission_resource_access authority carries resource.properties.operation_target as a string holding one absolute URI"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+  },
+  {
+   "id": "authzen.context-operation-target.pep-trusted-derivation",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-operation-target",
+   "text": "The PEP MUST NOT derive the target from the credential's entries, the Mission's entries, or a target value the caller asserts.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the operation_target a PEP sends is the one its trusted operation contract derives from the validated operation and arguments; a caller-supplied target argument, a presented token entry or a Mission entry never becomes or changes it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+  },
+  {
+   "id": "authzen.context-operation-target.pep-refuses-unestablishable",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-operation-target",
+   "text": "A PEP that cannot establish one unambiguous target MUST refuse the operation before requesting a decision ({{failure-condition-coverage}}).",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an operation with no contract-established target, or with more than one candidate target, is refused with no decision request, no effect and no fallback to the metadata identifier or audience; the Refusal Record names target_unresolvable"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
   },
   {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
@@ -21998,7 +22101,8 @@
      "level": "unit",
      "surface": "evidence-emission"
     }
-   ]
+   ],
+   "notes": "#1276 (D457): these witnesses establish the whole-entry and classification rules with the entry resource matched against resource.properties.audience, the operand D457 retires; the resource operand itself is owned by authzen.pdp-request.operation-target-match (todo). The implementation step must re-witness these tests with resource.properties.operation_target."
   },
   {
    "id": "authzen.context-credential.failure-classification",
@@ -22070,7 +22174,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "D324 extends #801's split to the credential bound: reordering it after the Mission's own checks alone was declined, since a narrower credential's identical constraint failure would still be classified differently. Discharge and approval keep their dedicated handling (unestablished-condition, context-approval)."
+   "notes": "D324 extends #801's split to the credential bound: reordering it after the Mission's own checks alone was declined, since a narrower credential's identical constraint failure would still be classified differently. Discharge and approval keep their dedicated handling (unestablished-condition, context-approval). #1276 (D457): these witnesses establish the whole-entry and classification rules with the entry resource matched against resource.properties.audience, the operand D457 retires; the resource operand itself is owned by authzen.pdp-request.operation-target-match (todo). The implementation step must re-witness these tests with resource.properties.operation_target."
   },
   {
    "id": "authzen.evidence.authority-bound-required",
@@ -22313,6 +22417,29 @@
      "surface": "decision-request"
     }
    ]
+  },
+  {
+   "id": "authzen.pdp-request.operation-target-consistency",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "For an action evaluated against `mission_resource_access` authority, `resource.properties.operation_target` is present, is a string holding one absolute URI, and names a resource within the declared enforcement scope for which the requesting PEP is authorized ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Remote Decision Channel\"). Otherwise the PDP MUST refuse the request before evaluation, with no fallback to `resource.properties.audience`, `resource.type` or `resource.id`, and MUST record the refusal as a Refusal Record with `denial_reason` `operation_target_invalid` ({{I-D.draft-mcguinness-mission-runtime-evidence}}).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose operation_target is absent, not a string, not one absolute URI, or outside the requesting PEP's enforcement scope is refused before evaluation with a Refusal Record naming operation_target_invalid, and is never evaluated against audience, type or id instead; a well-formed exact target reaches the matcher unrewritten"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
   },
   {
    "id": "authzen.parameter-digest.parameters-must-be-normalized-object",
@@ -23495,6 +23622,29 @@
    "notes": "Classified by call site, never by the reason string the two carriers share."
   },
   {
+   "id": "authzen.failure-condition-coverage.target-drift-versus-parameter-mismatch",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "A target-determining argument that changed under a parameter-bound permit is a parameter deviation, `parameter_mismatch`; `target_drift` records an operation target that differs while the bound parameters do not.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a changed target-determining argument under a parameter-bound permit is recorded parameter_mismatch; a target that differs at use while the bound parameters are unchanged, or cannot be established at use, is recorded target_drift"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+  },
+  {
    "id": "authzen.permit-binding-split.same-identity-no-relay",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "permit-binding-split",
@@ -23567,6 +23717,52 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "authzen.permit-binding-split.execute-only-evaluated-target",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "permit-binding-split",
+   "text": "At each use of a permit, cached or not, the executing PEP establishes the operation target again from its operation contract and the arguments it executes with. It MUST NOT release an effect on a target other than the request's `operation_target`, and requests a new decision for the changed operation instead ({{failure-condition-coverage}}).",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a permit, cached or fresh, evaluated for one operation target releases no effect on another, even when audience, action and resource type/id are equal; the changed operation is evaluated anew and the unused permit ends suppressed with target_drift"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+  },
+  {
+   "id": "authzen.projections.operation-target-in-every-projection",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "projections",
+   "text": "Each projection includes the operation target, so two requests that differ only in their target differ in all three, including cacheable reads that carry no `parameter_digest`.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "two requests equal in every member except operation_target have different operation identities, authorization bindings and cache keys, so neither a cached read permit nor an idempotency claim made for one serves the other"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
   },
   {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
@@ -26790,7 +26986,7 @@
    "id": "evidence.refusal.denial-reason-enum-and-boundary",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `request_invalid` (the PEP established the action, and the supplied arguments fail its required input schema, including an unknown or authoritative member, a missing required member, a wrong type, or a pattern failure), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
+   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `request_invalid` (the PEP established the action, and the supplied arguments fail its required input schema, including an unknown or authoritative member, a missing required member, a wrong type, or a pattern failure), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve, or the PEP cannot establish one unambiguous operation target for the request), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -26802,7 +26998,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
+    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing, operation_target_invalid), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
    "coverage": "partial",
@@ -26898,7 +27094,30 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet."
+  },
+  {
+   "id": "evidence.refusal.pdp-operation-target-invalid",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for one whose operation target is absent, malformed, or outside the enforcement scope the requesting PEP is authorized for ({{I-D.draft-mcguinness-mission-authzen}}), `operation_target_invalid`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PDP's pre-evaluation refusal of a request whose operation target is absent, malformed or outside the requesting PEP's enforcement scope is a Refusal Record with denial_reason operation_target_invalid, a value in the PDP's closed set only"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. The reference evidence store's PDP closed set holds only mission_context_missing."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
@@ -27651,6 +27870,29 @@
     }
    ],
    "notes": "The transaction-authorization profile mandates duplicate_suppressed as the wire reason for this refusal; the signed record names the operation-identity conflict instead, and the two are different carriers."
+  },
+  {
+   "id": "evidence.execution.error-target-drift-operation-target",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`target_drift` (a declared bound evaluation context, or the operation target the permit was evaluated for, differs or cannot be established at use)",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit not executed because the operation target established at use differs from, or cannot re-establish, the evaluated target is recorded suppressed with error target_drift"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo."
   },
   {
    "id": "evidence.execution.error-condition-unrecognized",
