@@ -11,7 +11,13 @@
  * endpoint actually publishes.
  */
 
-import { isActivationPolicyRef, SUPPORTED_CONSTRAINT_KEYS, type JsonValue } from "@mission/core";
+import {
+  isActivationPolicyRef,
+  isImplementedCommonConstraint,
+  SUPPORTED_CONSTRAINT_KEYS,
+  type JsonValue,
+  validCommonConstraint,
+} from "@mission/core";
 
 /** @spec mission#authorization-derivation — the sole type this AS derives. */
 export const MISSION_RESOURCE_ACCESS_TYPE = "mission_resource_access" as const;
@@ -80,6 +86,10 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
             additionalProperties: false,
           },
         },
+        // @spec resource-access#initial-common-constraints (#1266) — RFC 3339
+        // date-time values compared as UTC instants (common-constraints.ts).
+        resource_issued_after: { type: "string", format: "date-time" },
+        resource_issued_before: { type: "string", format: "date-time" },
       },
       // @spec mission#derivation-policy (issue #784) — CLOSED to
       // SUPPORTED_CONSTRAINT_KEYS: an unsupported key is refused at intake,
@@ -220,6 +230,14 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
     }
     if (c.requires_action_approval !== undefined && typeof c.requires_action_approval !== "boolean") {
       return "constraints.requires_action_approval must be a boolean";
+    }
+    // @spec resource-access#initial-common-constraints (#1266) — each
+    // implemented Common Constraint's value syntax, from the shared table the
+    // config loader, derivation and the resource server also read.
+    for (const key of Object.keys(c)) {
+      if (isImplementedCommonConstraint(key) && !validCommonConstraint(key, c[key])) {
+        return `constraints.${key} is malformed`;
+      }
     }
     if (c.max_amount !== undefined) {
       if (

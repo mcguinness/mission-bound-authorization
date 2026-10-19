@@ -1,12 +1,20 @@
-# payments-runtime-profile-v4
+# payments-runtime-profile-v5
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v4`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v5`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v5** (#1266, D457): the resource enforces the Mission Resource Access
+  Common Constraints listed under "Constraint enforcement: Common
+  Constraints" below against facts it reads from its own records, carries
+  those facts on the decision request, and advertises exactly the enforced
+  keys in `mission_constraints_supported`. Decision requests for an
+  invoice target gain `resource.properties.issued_at` when the invoice
+  record carries one; `parameter_digest` bytes are unchanged.
 
 - **v4** (#828, D429): the Resource policy also evaluates the
   authenticated client, which must hold `authorized_client` on every
@@ -87,6 +95,29 @@ merely because the mapped action's own schema declares one.
 | amount absent from the request context | refuses (`parameter_violation`) |
 | amount not a valid decimal string | refuses (`parameter_violation`) |
 | cap denominated in a different currency than the invoice's | refuses (`parameter_violation`), never converted |
+
+## Constraint enforcement: Common Constraints
+
+The resource enforces these Mission Resource Access Common Constraints
+(#1266), and `mission_constraints_supported` names exactly them beside
+`max_amount` and `vendors`. Each is evaluated through the shared
+semantics in `packages/mission-core/src/common-constraints.ts`, on the
+matched Mission entry (the PDP) and on the credential's own entries (the
+PEP before any decision, and the PDP), against facts the PEP reads from
+the payments store, never from tool arguments. A fact the store does not
+hold refuses, as does a malformed constraint value. The Authorization
+Server refuses every other Common Constraint at intake, configuration load
+and derivation, and the PDP refuses a matched entry that carries one.
+
+| Key | Authoritative fact | Decision request member | Targets without the fact |
+|---|---|---|---|
+| `resource_issued_after`, `resource_issued_before` | the invoice record's `issued_at` (RFC 3339), compared as a UTC instant, both bounds inclusive | `resource.properties.issued_at` | `list_invoices` and `lookup_vendor` (no single invoice), and an invoice with no `issued_at`: refused |
+
+A change to an invoice record between the decision and a write's
+execution changes its version, which `parameter_digest` binds, so the
+write refuses `parameter_mismatch`. Refusals are `parameter_violation`
+on the Mission bound and `out_of_authority` at the PEP's credential
+bound.
 
 ## Parameter schemas and normalization
 

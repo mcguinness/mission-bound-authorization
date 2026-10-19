@@ -1090,7 +1090,11 @@ interface RefusalEstablished {
  * `resource` identity and its object-scoped members, before the request's
  * `resource.properties.audience` is added.
  */
-type TargetObject = { type: string; id: string; properties?: { vendor_id?: string; vendor_ids?: string[] } };
+type TargetObject = {
+  type: string;
+  id: string;
+  properties?: { vendor_id?: string; vendor_ids?: string[]; issued_at?: string };
+};
 
 export class Pep {
   readonly capabilityCatalog: CapabilityCatalog;
@@ -1360,7 +1364,19 @@ export class Pep {
       }
       effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE });
       amount = effective.amount;
-      resourceObj = { type: "invoice", id: invoice.id, properties: { vendor_id: vendor.id } };
+      // @spec resource-access#initial-common-constraints (#1266): the
+      // invoice's issuance instant is this service's own record, never an
+      // argument; an invoice with none carries no fact, which satisfies no
+      // issuance bound. The invoice version the parameter digest binds moves
+      // with any change to it, so a changed fact refuses at reverification.
+      resourceObj = {
+        type: "invoice",
+        id: invoice.id,
+        properties: {
+          vendor_id: vendor.id,
+          ...(typeof invoice.issued_at === "string" ? { issued_at: invoice.issued_at } : {}),
+        },
+      };
     } else if (mapping.bindsVendorScope) {
       // @spec runtime#read-binding — "a consequential read whose parameters
       // ... request a bulk or export-like result ... MUST bind those
@@ -1454,6 +1470,14 @@ export class Pep {
           ? ((resourceObj.properties?.vendor_ids as readonly string[] | undefined) ?? [resourceObj.id])
           : []) as readonly string[],
       ...(amount ? { amount } : {}),
+      // @spec resource-access#rs-enforcement (#1266): the facts the
+      // implemented Common Constraints read, as this PEP established them
+      // above (the same values the decision request carries).
+      constraintFacts: {
+        ...(resourceObj.properties?.issued_at !== undefined
+          ? { resourceIssuedAt: resourceObj.properties.issued_at }
+          : {}),
+      },
     };
     if (token.mission !== undefined) {
       const covered =

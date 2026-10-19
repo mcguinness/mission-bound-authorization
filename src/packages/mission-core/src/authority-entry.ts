@@ -109,6 +109,17 @@ export interface AuthorityEntry {
      * cannot override a `true` ancestor.
      */
     requires_action_approval?: boolean;
+    /**
+     * @spec resource-access#initial-common-constraints — the action applies
+     * only to resources issued at or after this RFC 3339 instant. Semantics
+     * in `common-constraints.ts`.
+     */
+    resource_issued_after?: string;
+    /**
+     * @spec resource-access#initial-common-constraints — the action applies
+     * only to resources issued at or before this RFC 3339 instant.
+     */
+    resource_issued_before?: string;
   };
   /**
    * @spec attenuation#delegation, child-delegation#fanout — per-entry delegation

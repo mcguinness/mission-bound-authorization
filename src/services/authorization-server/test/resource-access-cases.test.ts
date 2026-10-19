@@ -31,6 +31,8 @@ const IMPLEMENTED = new Set([
   "subset.exact-resource",
   "constraint.max_amount",
   "constraint.requires_action_approval",
+  "constraint.resource_issued_after",
+  "constraint.resource_issued_before",
   "refusal.unsupported-input",
   "delegate-matcher",
 ]);

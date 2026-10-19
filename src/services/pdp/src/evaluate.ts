@@ -17,8 +17,10 @@ import { type ContextActor, validateContextActor } from "@mission/actor-chain";
 import {
   AUTHORITY_ENTRY_TYP,
   type AuthorityEntry as CoreAuthorityEntry,
+  commonConstraintGates,
   compareAmounts,
   computeAnchor,
+  type ConstraintFacts,
   conditionsNoBroader,
   type CredentialAuthorityEntry,
   credentialConstraintGates,
@@ -36,6 +38,7 @@ import {
   type OriginPrincipal,
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
+  SUPPORTED_CONSTRAINT_KEYS,
 } from "@mission/core";
 import { randomUUID } from "node:crypto";
 import { getTracer } from "@mission/telemetry";
@@ -158,6 +161,14 @@ export interface EvaluationRequest {
       audience: string;
       vendor_id?: string;
       vendor_ids?: string[];
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the RFC 3339
+       * issuance instant of the one object the action targets, read by the
+       * PEP from the resource's own record, never from tool arguments. The
+       * `resource_issued_after`/`resource_issued_before` bounds read it, and
+       * an absent value satisfies neither.
+       */
+      issued_at?: string;
     };
   };
   action: {
@@ -1294,6 +1305,15 @@ async function evaluateInner(
   const credentialVendorIds: readonly string[] =
     req.resource.properties?.vendor_ids ??
     (req.resource.properties?.vendor_id ? [req.resource.properties.vendor_id] : []);
+  // @spec resource-access#rs-enforcement, runtime#input-parameters (#1266):
+  // the authoritative facts the implemented Common Constraints read, as the
+  // authenticated PEP established them. One reading serves the credential
+  // bound here and the Mission bound at step 7a.
+  const constraintFacts: ConstraintFacts = {
+    ...(typeof req.resource.properties?.issued_at === "string"
+      ? { resourceIssuedAt: req.resource.properties.issued_at }
+      : {}),
+  };
   let viewHoldsFullSet: boolean | undefined;
   const credentialDischarge = (
     c: CredentialAuthorityEntry,
@@ -1330,6 +1350,7 @@ async function evaluateInner(
     action: req.action.name,
     vendorIds: credentialVendorIds,
     ...(req.context.amount ? { amount: req.context.amount } : {}),
+    constraintFacts,
   };
   const credentialMatches = credentialAuthority.filter((c) => entryMatchesAction(c, credentialFacts));
   if (credentialMatches.length === 0) return deny("out_of_authority", "credential");
@@ -1379,6 +1400,16 @@ async function evaluateInner(
         (recorded.catalog_digest !== undefined && presented.catalog_digest !== recorded.catalog_digest)) {
       return deny("capability_drift");
     }
+  }
+
+  // 5d. @spec resource-access#rs-enforcement (#1266): "MUST fail closed on any
+  // `constraints` key it does not understand, or understands but cannot
+  // enforce". The matched Mission entry is evaluated whole: a key outside the
+  // set this PDP evaluates refuses here, never passes as though absent, so a
+  // Common Constraint this deployment does not yet implement cannot reach a
+  // permit unenforced.
+  if (entry.constraints && Object.keys(entry.constraints).some((k) => !SUPPORTED_CONSTRAINT_KEYS.includes(k))) {
+    return deny("parameter_violation", "mission");
   }
 
   const mapping = opts.relationForAction(req.action.name);
@@ -1521,6 +1552,15 @@ async function evaluateInner(
       return deny("parameter_violation", "mission");
     }
   }
+
+  // 7a. The implemented Common Constraints (@spec resource-access#rs-enforcement,
+  // runtime#input-parameters; #1266): each key the matched entry carries is
+  // evaluated against the facts the PEP established, through the same shared
+  // gate the credential bound uses. Keyed on the constraint's own presence; an
+  // absent fact or a malformed value refuses, never permits open.
+  const commonGates = commonConstraintGates(entry.constraints, constraintFacts);
+  for (const key of commonGates.evaluated) contributions.add(key);
+  if (!commonGates.satisfied) return deny("parameter_violation", "mission");
 
   // 8. Action-bound approval (@spec authzen#context-approval): when policy
   //    requires one, the presented approval MUST match the request's

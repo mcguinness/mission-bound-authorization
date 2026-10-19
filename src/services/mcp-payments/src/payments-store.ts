@@ -21,6 +21,7 @@ CREATE TABLE invoices (
   currency TEXT NOT NULL,
   payee_account TEXT NOT NULL,
   status TEXT NOT NULL,
+  issued_at TEXT,
   version INTEGER NOT NULL DEFAULT 1
 ) STRICT;
 CREATE TABLE ledger (
@@ -46,6 +47,13 @@ export interface Invoice {
   currency: string;
   payee_account: string;
   status: string;
+  /**
+   * @spec resource-access#initial-common-constraints (#1266): the RFC 3339
+   * instant the invoice was issued, as this service recorded it. The
+   * authoritative fact `resource_issued_after`/`resource_issued_before` read;
+   * absent (`null`) when the record carries none, which satisfies neither.
+   */
+  issued_at?: string | null;
   version: number;
 }
 
@@ -59,9 +67,11 @@ export class PaymentsStore {
     const v = this.db.prepare("INSERT INTO vendors (id, name, status) VALUES (?, ?, ?)");
     for (const x of vendors) v.run(x.id, x.name, x.status);
     const i = this.db.prepare(
-      "INSERT INTO invoices (id, vendor_id, amount, currency, payee_account, status) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO invoices (id, vendor_id, amount, currency, payee_account, status, issued_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     );
-    for (const x of invoices) i.run(x.id, x.vendor_id, x.amount, x.currency, x.payee_account, x.status);
+    for (const x of invoices) {
+      i.run(x.id, x.vendor_id, x.amount, x.currency, x.payee_account, x.status, x.issued_at ?? null);
+    }
   }
 
   getInvoice(id: string): Invoice | undefined {
@@ -81,6 +91,11 @@ export class PaymentsStore {
         ? this.db.prepare("SELECT * FROM invoices WHERE vendor_id = ?").all(vendorId)
         : this.db.prepare("SELECT * FROM invoices").all()
     ) as Invoice[];
+  }
+
+  /** Change an invoice's recorded issuance instant (test hook for a changed authoritative fact: bumps version). */
+  setInvoiceIssuedAt(id: string, issuedAt: string | null): void {
+    this.db.prepare("UPDATE invoices SET issued_at = ?, version = version + 1 WHERE id = ?").run(issuedAt, id);
   }
 
   /** Mutate an invoice (test hook for TOCTOU: bumps version). */

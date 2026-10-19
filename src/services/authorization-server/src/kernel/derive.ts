@@ -11,6 +11,8 @@
 import {
   capabilitySourceIdentity,
   compareAmounts,
+  IMPLEMENTED_COMMON_CONSTRAINTS,
+  intersectCommonConstraints,
   isValidAmount,
   isSubsetEntry,
   isSubsetSet,
@@ -374,6 +376,20 @@ function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): Authority
     ceiling.constraints?.terminal_when,
   );
   if (conditions) constraints.terminal_when = conditions;
+  // @spec resource-access#common-constraints, resource-access#initial-common-constraints
+  // (#1266) — each implemented Common Constraint by its own intersection rule
+  // (common-constraints.ts): a key on one operand is carried, a key on both
+  // narrows. An empty intersection fails the combination, as differing
+  // `max_amount` currencies do (D446): the submitted proposal is refused,
+  // never answered with the ceiling's value or silently omitted.
+  const common = intersectCommonConstraints(proposal.constraints, ceiling.constraints);
+  if (!common.ok) {
+    throw new IntentError(
+      "invalid_authorization_details",
+      `${common.reason}: no intersection between the proposal and the ceiling`,
+    );
+  }
+  Object.assign(constraints, common.values);
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   const delegation = narrowDelegation(proposal.delegation, ceiling.delegation);
   if (delegation) entry.delegation = delegation;
@@ -567,6 +583,9 @@ const PROJECTABLE_CONSTRAINTS = new Set([
   // @spec discharge#terminal-when — projectable: the fragment carries the UNION of
   // both sides' conditions, which is no broader than either.
   "terminal_when",
+  // @spec resource-access#common-constraints (#1266) — each by its own
+  // intersection rule; an empty intersection drops the fragment.
+  ...IMPLEMENTED_COMMON_CONSTRAINTS,
 ]);
 
 function onlyProjectableConstraints(constraints: AuthorityEntry["constraints"]): boolean {
@@ -702,6 +721,12 @@ function intersectForProjection(
     return null;
   }
   if (conditions) constraints.terminal_when = conditions;
+  // @spec resource-access#common-constraints (#1266) — the shared intersection
+  // rule; a pairing with no intersection yields no fragment (nothing to refuse
+  // here: both sides are already-derived entries).
+  const common = intersectCommonConstraints(candidate.constraints, effective.constraints);
+  if (!common.ok) return null;
+  Object.assign(constraints, common.values);
   // @spec capability-binding#capability-source-binding — the fragment must
   // preserve effective-side issuer provenance even when the candidate came
   // from a binding-free wire projection. Two recorded sides must still agree;

@@ -16,6 +16,14 @@ import type { AATConstraint, AATTools } from "./attenuation-chain.js";
 import { parseAatToolId } from "./attenuation-chain.js";
 import type { AuthorityEntry, TerminalWhenCondition } from "./authority-entry.js";
 import { conditionCanonicalBytes } from "./authority-subset.js";
+import {
+  type CommonConstraintKey,
+  type ConstraintFacts,
+  commonConstraintGates,
+  IMPLEMENTED_COMMON_CONSTRAINTS,
+  isImplementedCommonConstraint,
+  validCommonConstraint,
+} from "./common-constraints.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 
 /** One entry of a verified credential's authority. */
@@ -28,6 +36,9 @@ export interface CredentialAuthorityEntry {
     vendors?: string[];
     requires_action_approval?: boolean;
     terminal_when?: TerminalWhenCondition[];
+    /** @spec resource-access#initial-common-constraints (#1266), read through common-constraints.ts. */
+    resource_issued_after?: string;
+    resource_issued_before?: string;
   };
 }
 
@@ -42,11 +53,14 @@ export class CredentialAuthorityError extends Error {}
  */
 const IGNORED_ENTRY_MEMBERS = new Set(["delegation", "capability_sources"]);
 const EVALUATED_ENTRY_MEMBERS = new Set(["type", "resource", "actions", "constraints"]);
-const CONSTRAINT_KEYS = new Set([
+const CONSTRAINT_KEYS = new Set<string>([
   "max_amount",
   "vendors",
   "requires_action_approval",
   "terminal_when",
+  // @spec resource-access#rs-enforcement (#1266): each implemented Common
+  // Constraint, evaluated against the facts the enforcement point establishes.
+  ...IMPLEMENTED_COMMON_CONSTRAINTS,
 ]);
 
 /** @spec discharge#terminal-when — `1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )`. */
@@ -127,6 +141,15 @@ function parseConstraints(
       }
     }
     out.terminal_when = (conditions as TerminalWhenCondition[]).map((c) => ({ ...c }));
+  }
+  // @spec resource-access#initial-common-constraints (#1266): a malformed
+  // value refuses the credential, never reads as an absent bound.
+  for (const key of Object.keys(value)) {
+    if (!isImplementedCommonConstraint(key)) continue;
+    if (!validCommonConstraint(key, value[key])) {
+      throw new CredentialAuthorityError(`${at}.constraints.${key} is malformed`);
+    }
+    (out as Record<string, unknown>)[key] = structuredClone(value[key]);
   }
   return out;
 }
@@ -250,6 +273,12 @@ export interface CredentialTarget {
   /** The action's amount, resolved by the enforcement point, when it has one. */
   amount?: { amount: string; currency: string };
   /**
+   * @spec resource-access#rs-enforcement (#1266): the authoritative facts the
+   * implemented Common Constraints read, established by the enforcement point
+   * from its own records. An absent fact satisfies no bound that reads it.
+   */
+  constraintFacts?: ConstraintFacts;
+  /**
    * Whether this enforcement path independently requires an action-bound
    * approval for the action, so an entry demanding one is honored.
    */
@@ -271,18 +300,19 @@ export function entryMatchesAction(
 export interface CredentialConstraintTrace {
   satisfied: boolean;
   /** The keys whose gate ran, in order; a gate after a failed one is never reached. */
-  evaluated: ("vendors" | "max_amount")[];
+  evaluated: ("vendors" | "max_amount" | CommonConstraintKey)[];
 }
 
 /**
- * Evaluate an entry's establishable constraints gate by gate, `vendors` then
- * `max_amount`, stopping at the first that fails. `evaluated` is what Decision
- * Evidence may record for the entry: a check never reached is never listed
+ * Evaluate an entry's establishable constraints gate by gate, `vendors`, then
+ * `max_amount`, then each implemented Common Constraint (common-constraints.ts),
+ * stopping at the first that fails. `evaluated` is what Decision Evidence may
+ * record for the entry: a check never reached is never listed
  * (@spec runtime-evidence#decision-evidence-object).
  */
 export function credentialConstraintGates(
   entry: CredentialAuthorityEntry,
-  facts: Pick<CredentialFacts, "vendorIds" | "amount">,
+  facts: Pick<CredentialFacts, "vendorIds" | "amount" | "constraintFacts">,
 ): CredentialConstraintTrace {
   const c = entry.constraints;
   const evaluated: CredentialConstraintTrace["evaluated"] = [];
@@ -305,6 +335,9 @@ export function credentialConstraintGates(
       return { satisfied: false, evaluated };
     }
   }
+  const common = commonConstraintGates(c, facts.constraintFacts ?? {});
+  evaluated.push(...common.evaluated);
+  if (!common.satisfied) return { satisfied: false, evaluated };
   return { satisfied: true, evaluated };
 }
 
