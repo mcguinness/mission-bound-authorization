@@ -497,7 +497,7 @@ The environment can override the ports with `AS_PORT` and `PLAIN_RS_PORT`.
 The audience stays the mapped one. It also chooses the AS's signing keys
 (#831): `MISSION_EPHEMERAL_KEYS=1` generates them at each boot, and
 `MISSION_KEY_RING=<absolute path>` signs with a key ring created once by
-`pnpm keys init --ring <path>`, kept across restarts. Neither, both, a
+`pnpm keys init --ring <path>`, kept across restarts. For development the ring lives at `src/var/keys/as-signing-keys.json`, which git ignores (`src/.gitignore` ignores `/var/`). From `src/`, `pnpm keys init --ring var/keys/as-signing-keys.json` creates it once, and `MISSION_KEY_RING="$PWD/var/keys/as-signing-keys.json"` names it. The launchers set no default: the variable is always explicit. Neither, both, a
 relative path or an unusable ring refuses startup with one `issuance-only:`
 line. `MISSION_KERNEL_STORE=<absolute path>` keeps the Mission kernel in that
 file (Restart and recovery, above), and requires `MISSION_KEY_RING`.
