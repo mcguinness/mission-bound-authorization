@@ -21714,7 +21714,8 @@
      "level": "unit",
      "surface": "evidence-emission"
     }
-   ]
+   ],
+   "notes": "#1276 (D457): these witnesses establish the whole-entry and classification rules with the entry resource matched against resource.properties.audience, the operand D457 retires; the resource operand itself is owned by authzen.pdp-request.operation-target-match (todo). The implementation step must re-witness these tests with resource.properties.operation_target."
   },
   {
    "id": "authzen.context-credential.failure-classification",
@@ -21786,7 +21787,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "D324 extends #801's split to the credential bound: reordering it after the Mission's own checks alone was declined, since a narrower credential's identical constraint failure would still be classified differently. Discharge and approval keep their dedicated handling (unestablished-condition, context-approval)."
+   "notes": "D324 extends #801's split to the credential bound: reordering it after the Mission's own checks alone was declined, since a narrower credential's identical constraint failure would still be classified differently. Discharge and approval keep their dedicated handling (unestablished-condition, context-approval). #1276 (D457): these witnesses establish the whole-entry and classification rules with the entry resource matched against resource.properties.audience, the operand D457 retires; the resource operand itself is owned by authzen.pdp-request.operation-target-match (todo). The implementation step must re-witness these tests with resource.properties.operation_target."
   },
   {
    "id": "authzen.evidence.authority-bound-required",
