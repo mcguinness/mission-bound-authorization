@@ -170,3 +170,30 @@ describe("child_creation_policy in the lineage and ceiling comparison (#787)", (
     }
   });
 });
+
+describe("a foreign entry carrying locations is unsupported (@spec resource-access#entry-validation, #1278)", () => {
+  // Decided by presence: the falsy values are refused exactly as a populated array.
+  const VALUES: unknown[] = [["https://resource.test"], [], null, "", { uri: "https://resource.test" }];
+
+  it("isAuthorityEntry refuses an entry carrying locations, whatever its value", () => {
+    for (const locations of VALUES) {
+      expect(isAuthorityEntry({ ...entry, locations })).toBe(false);
+    }
+  });
+
+  it("narrowToCeiling retains no entry carrying locations, on either operand", () => {
+    for (const locations of VALUES) {
+      const carrying = { ...entry, locations } as AuthorityEntry;
+      expect(narrowToCeiling([carrying], [entry])).toEqual([]);
+      expect(narrowToCeiling([{ ...carrying, actions: ["read"] }], [entry])).toEqual([]);
+      expect(narrowToCeiling([entry], [carrying])).toEqual([]);
+    }
+  });
+
+  it("an entry without locations, or carrying capability_sources, stays supported", () => {
+    const bound = { ...entry, capability_sources: [binding] };
+    expect(isAuthorityEntry(entry)).toBe(true);
+    expect(isAuthorityEntry(bound)).toBe(true);
+    expect(narrowToCeiling([bound], [entry])[0]).toBe(bound);
+  });
+});

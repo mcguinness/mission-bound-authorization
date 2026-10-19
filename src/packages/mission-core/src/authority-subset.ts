@@ -80,9 +80,16 @@ export function refusedEntryMember(entry: unknown): string | undefined {
   return REFUSED_ENTRY_MEMBERS.find((member) => Object.hasOwn(entry, member));
 }
 
-/** Validate the subset engine's supported input before a foreign grant can use it. */
+/**
+ * Validate the subset engine's supported input before a foreign grant can use
+ * it. An entry carrying a {@link REFUSED_ENTRY_MEMBERS} member is unsupported,
+ * decided by presence: a destination redeeming a signed grant from a
+ * configurable trusted issuer refuses it rather than minting it into a local
+ * token, so it never reaches a resource (#1278).
+ */
 export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  if (refusedEntryMember(value) !== undefined) return false;
   const e = value as Record<string, unknown>;
   const strings = (v: unknown): v is string[] =>
     Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.length > 0);
@@ -204,7 +211,9 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
  * so a candidate lacking or altering that reference is refused; a ceiling
  * declaring no `children` grant refuses the entry carrying one, exactly as an
  * introduced delegation is refused. A surviving entry keeps the reference and
- * its retained-action `capability_sources` verbatim.
+ * its retained-action `capability_sources` verbatim. Both operands pass
+ * {@link isAuthorityEntry} first, so a surviving entry never retains a
+ * {@link REFUSED_ENTRY_MEMBERS} member.
  */
 export function narrowToCeiling(
   entries: readonly AuthorityEntry[],
