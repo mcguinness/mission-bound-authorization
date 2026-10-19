@@ -232,7 +232,13 @@ async function complete(callback: string, approver: Jar): Promise<{ status: numb
   keep(approver, res);
   const text = await res.text();
   if (res.status !== 200) {
-    return { status: res.status, description: (JSON.parse(text) as { error_description?: string }).error_description as string, callback };
+    let description = text;
+    try {
+      description = (JSON.parse(text) as { error_description?: string }).error_description ?? text;
+    } catch {
+      // Not a JSON refusal: keep the body as it came.
+    }
+    return { status: res.status, description, callback };
   }
   return { status: 200, csrf: /name="mission-approval-csrf" content="([^"]+)"/.exec(text)?.[1] as string, callback };
 }
