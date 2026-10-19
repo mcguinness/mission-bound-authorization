@@ -12,6 +12,7 @@
  */
 
 import {
+  isAbsoluteUri,
   isActivationPolicyRef,
   isImplementedCommonConstraint,
   refusedEntryMember,
@@ -239,6 +240,12 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   if (refused) return refused;
   const e = entry as Record<string, unknown>;
   if (typeof e.resource !== "string") return "resource must be a string";
+  // @spec resource-access#entry-validation (#1310, D480): the schema's
+  // `format: "uri"`, enforced with the shared RFC 3986 check; the value is
+  // kept as submitted.
+  if (!isAbsoluteUri(e.resource)) {
+    return `resource ${JSON.stringify(e.resource)} is not an RFC 3986 absolute URI`;
+  }
   // @spec resource-access#resource-matching (#1264, D446): this authorization
   // server implements `exact` resource matching only. Any other value is
   // refused at intake, never admitted and then rebuilt as an exact entry.

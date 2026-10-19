@@ -16,6 +16,7 @@ import {
   computeAnchor,
   DuplicateMemberError,
   GOVERNED_POLICY_TYP,
+  isAbsoluteUri,
   isActionPhase,
   isAuthorityEntry,
   parseScopeProjectionMapping,
@@ -990,6 +991,22 @@ function rejectRefusedMember(file: string, e: Record<string, unknown>, ctx: stri
   }
 }
 
+/**
+ * @spec resource-access#entry-validation (#1310, D480): a ceiling entry's
+ * `resource` is one RFC 3986 absolute URI under the shared check, refused at
+ * load naming the entry and the value, and otherwise kept as written.
+ */
+function wellFormedResource(file: string, e: Record<string, unknown>, ctx: string): string {
+  const resource = reqString(file, e, "resource", ctx);
+  if (!isAbsoluteUri(resource)) {
+    throw new ConfigError(
+      file,
+      `${ctx} has resource ${JSON.stringify(resource)}, which is not an RFC 3986 absolute URI`,
+    );
+  }
+  return resource;
+}
+
 export function parseCeilingEntry(file: string, raw: unknown, ctx: string): AuthorityEntry {
   const e = asObject(file, raw, ctx);
   rejectUnsupportedResourceMatch(file, e, ctx);
@@ -999,7 +1016,7 @@ export function parseCeilingEntry(file: string, raw: unknown, ctx: string): Auth
   rejectRefusedMember(file, e, ctx);
   const entry: AuthorityEntry = {
     type,
-    resource: reqString(file, e, "resource", ctx),
+    resource: wellFormedResource(file, e, ctx),
     actions: reqStringArray(file, e, "actions", ctx),
     ...(e.constraints !== undefined
       ? {
@@ -1786,7 +1803,7 @@ function loadCeilingEntries(file: string, raw: unknown, ctx: string): CeilingEnt
     rejectRefusedMember(file, e, `${ctx}[${i}]`);
     const entry: CeilingEntry = {
       type,
-      resource: reqString(file, e, "resource", `${ctx}[${i}]`),
+      resource: wellFormedResource(file, e, `${ctx}[${i}]`),
       actions: reqStringArray(file, e, "actions", `${ctx}[${i}]`),
     };
     if (e.constraints !== undefined) {
