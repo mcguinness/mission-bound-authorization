@@ -580,6 +580,17 @@ export async function composeStack(opts: {
     if (!asContinuationPub) {
       throw new Error(`AS jwks_uri is missing the ${asContinuationKey.kid} continuation key`);
     }
+    const saas = new SaasMcpServer({
+      rasIssuer: RAS_ISS,
+      rasJwks: { keys: [rasPub as never] },
+      resource: saasResource,
+    });
+    // @spec resource-access#resource-access-type (#1266): the RAS emits for
+    // the SaaS resource only the constraints keys its metadata advertises.
+    const saasConstraints = saas.protectedResourceMetadata().mission_constraints_supported;
+    if (!Array.isArray(saasConstraints) || !saasConstraints.every((k) => typeof k === "string")) {
+      throw new Error("SaaS protected resource metadata is missing mission_constraints_supported");
+    }
     const ras = new ResourceAuthorizationServer({
       localCeiling: RAS_LOCAL_POLICY.ceiling,
       localPolicyVersion: RAS_LOCAL_POLICY.policy_version,
@@ -628,11 +639,7 @@ export async function composeStack(opts: {
         }),
       },
       entitlementStalenessBoundSeconds: 86_400,
-    });
-    const saas = new SaasMcpServer({
-      rasIssuer: RAS_ISS,
-      rasJwks: { keys: [rasPub as never] },
-      resource: saasResource,
+      resourceConstraintsSupported: { [saasResource]: saasConstraints as string[] },
     });
     const resourceToAs = (r: string) => (r === saasResource ? RAS_ISS : asUrl);
     authServer = {
