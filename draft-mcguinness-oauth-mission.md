@@ -462,7 +462,7 @@ times. The following table lists where each implementer reads next.
 | Implementer | Responsibility on the starting path | Defining sections |
 | --- | --- | --- |
 | Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{mission-bound-tokens}}, {{mission-response-parameters}} |
-| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, and gate every issuance and refresh on its state and limits | {{submission-processing}}, {{authorization-derivation}}, {{approval-event}}, {{grant-binding}}, {{mission-record}}, {{issuance-gating}} |
+| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, and gate every issuance and refresh on its state and limits | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{mission-record}}, {{issuance-gating}} |
 | Mission-aware Resource Server | Validate the credential and any sender constraint, enforce the carried authority, and apply any configured Mission requirement | {{rs-enforcement}}, {{introspected-consumption}} |
 {: title="Who implements the issuance path"}
 
@@ -1575,6 +1575,8 @@ a human approval event. Under a standing-consent basis
 ({{standing-consent-bases}}), the instance is decided under an
 accountable human's earlier approval, with no fresh human approval.
 
+## Authorization Code Protection {#approval-code-protection}
+
 The direct realization runs as an OAuth 2.0 {{RFC6749}}
 authorization-code flow initiated from the PAR-issued `request_uri`
 ({{submission-via-par}}). Because the authorization code is the
@@ -1590,6 +1592,8 @@ grant.
 The AS SHOULD include the `iss` authorization-response parameter
 ({{RFC9207}}) on the authorization response, so the client can detect
 a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
+
+## Direct Approval Steps {#direct-approval-steps}
 
 At a direct approval event the AS MUST, in order:
 
@@ -1683,6 +1687,12 @@ The steps above define the `direct` approval basis (`approval_basis`,
 {{mission-record}}); a companion profile that relocates a direct
 approval keeps them unchanged ({{extensibility}}).
 
+Refusals follow {{error-mapping}}. A token-endpoint `resource` value
+outside the Authority Set is an invalid `resource` value in the sense
+of {{RFC8707}}.
+
+## Standing-Consent Instances {#standing-consent-instances}
+
 Under a standing-consent basis ({{standing-consent-bases}}), the
 standing consent and the instance's adjudication supply the human
 decision: the Approver's authentication (step 1), the Approver's
@@ -1698,9 +1708,7 @@ still bind the instance's approval event wherever they apply:
 - atomic creation deduplicated on `approval_event_id`
   ({{mission-record}}).
 
-Refusals follow {{error-mapping}}. A token-endpoint `resource` value
-outside the Authority Set is an invalid `resource` value in the sense
-of {{RFC8707}}.
+## Rendering Safeguards {#rendering-safeguards}
 
 The consent rendering is hardened against client text:
 
@@ -1719,6 +1727,8 @@ enforces each bound and what holds when that enforcer is absent.
 An AS SHOULD make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
 binds nowhere.
+
+## Changes Before the Decision {#approval-context-changes}
 
 If any of the following changes between approval rendering and the
 approval decision, the AS MUST recompute the affected values and the
@@ -6468,6 +6478,13 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Editorial (#910): Mission Approval has named subsections for
+  authorization code protection, the direct approval steps,
+  standing-consent instances, rendering safeguards, and changes before
+  the decision; the paragraph on refusals sits beside the steps it
+  concerns, and the Implementation Map's Mission Issuer row points at
+  the steps. No requirement changes.
 
 - Binding the Mission to the Grant (#1259): an authorization request
   that carries no `mission_intent` never acquires an earlier Mission's

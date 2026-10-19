@@ -714,16 +714,22 @@ export function dispatchFromTemplate(
   // origin its policy derivation recorded and the template ceiling entry's,
   // index-aligned with `final` through the capability inheritance below.
   let provenance: RetainedOrigin[];
+  // @spec child-delegation#fanout (#1304): the child-actor origins, the same
+  // way and kept apart: a template ceiling `children` grant without
+  // `allowed_child_actors` defers to the child-creation policy even where the
+  // policy derivation took a list.
+  let childActorProvenance: RetainedOrigin[];
   try {
     // The policy-derived set plays the PROPOSAL role for the second
     // derivation (the third parameter, @spec mission#authority-proposal
     // carriage: the Intent itself carries no authority members), narrowing it
     // under the template ceiling.
-    ({ entries: final, provenance } = deriveAuthoritySetWithProvenance(
+    ({ entries: final, provenance, childActorProvenance } = deriveAuthoritySetWithProvenance(
       input.intent,
       { policy_version: template.template_version, ceiling: template.ceiling },
       derived,
       first.provenance,
+      first.childActorProvenance,
     ));
   } catch (e) {
     if (e instanceof IntentError) {
@@ -847,6 +853,7 @@ export function dispatchFromTemplate(
     ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: final,
     eligibility_provenance: provenance,
+    child_actor_provenance: childActorProvenance,
     intent_hash: intentHash(template.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(template.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),

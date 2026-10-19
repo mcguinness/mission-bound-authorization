@@ -198,6 +198,9 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: authoritySet,
     eligibility_provenance: derived.provenance,
+    // @spec child-delegation#fanout (#1304): the successor's own child-actor
+    // origins, from the same fresh derivation.
+    child_actor_provenance: derived.childActorProvenance,
     intent_hash: intentHash(predecessor.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(predecessor.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
