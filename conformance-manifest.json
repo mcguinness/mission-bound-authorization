@@ -19,8 +19,8 @@
     "content_sha256": "3d0b6ce4af7bb061e0a4acf7497ab123f4c96b36bc6b90204ffe265f11c3c04c"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
-    "content_sha256": "89bf3dedc4144bf5aee77e79b8a2dc1a35c03a3ba1bf2a4f4170a52386c49310"
+    "revision": "08ba15677e6340ae24dfb497773a9a52531bf6f3",
+    "content_sha256": "1dec5e87be0167bf2b8429c77813cf9e431472621a1690c05e787766a8fe783f"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1f11bbe47aa41369c0445cc5c7f1ce1ff86b0da4",
@@ -7607,9 +7607,15 @@
      "name": "the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870) > refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, when the actor context comes only from the subject token, a same-Mission delegated token, for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
     }
    ],
-   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role); it does not establish every deployment route, and the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. Witnessed at the token endpoint on the cross-org exchange and on same-Mission delegation (#869), whose exchange refuses a target not classified Mission-aware before counting; the JWT customizer backstop is witnessed directly (unit) and at the endpoint on a real delegated mint, where a target reclassified after the exchange's own check is refused at the save (disabling the customizer's act branch issues the token). Transaction tokens (#870 review): the transaction endpoint refuses before admitting a workflow whenever either upstream carrier supplies actor context, the condition under which the issued token carries act, for the challenge issuer that becomes its audience (txn-endpoint.test.ts, delegated routing of transaction tokens, which discriminates on the challenge's act). The subject-token carrier, a delegated token presented at the transaction endpoint and reachable since #869, takes the same disjunctive gate but has no discriminating witness."
+   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role); it does not establish every deployment route, and the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. Witnessed at the token endpoint on the cross-org exchange and on same-Mission delegation (#869), whose exchange refuses a target not classified Mission-aware before counting; the JWT customizer backstop is witnessed directly (unit) and at the endpoint on a real delegated mint, where a target reclassified after the exchange's own check is refused at the save (disabling the customizer's act branch issues the token). Transaction tokens (#870 review): the transaction endpoint refuses before admitting a workflow whenever either upstream carrier supplies actor context, the condition under which the issued token carries act, for the challenge issuer that becomes its audience (txn-endpoint.test.ts, delegated routing of transaction tokens). Both carriers are witnessed as direct handler tests ending at admission: the challenge's act, and the subject token's, a real same-Mission delegated token presented by the delegate with its own key against a challenge carrying no act; restricting the gate to the challenge carrier fails the latter."
   },
   {
    "id": "core.rs-enforcement.unenforceable-entry-no-authority",
@@ -20121,6 +20127,36 @@
      "surface": "evidence-emission"
     }
    ]
+  },
+  {
+   "id": "runtime.evidence.reconciliation-attribution-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "the component MUST NOT record an outcome from resource state that the resource does not attribute to the action through an identifier recorded with the effect",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an effect the resource records against another action (another permit or operation) does not settle this action's outcome; with no attributable effect, the outcome stays undetermined and no outcome record is written for it",
+    "local": "the claim reconciler's ledger step resolves an effect only through Connectors.committedFor(evaluationId), the permit recorded with the ledger entry; another operation's wire for the same invoice leaves the redeemed permit's claim open, and no Execution Evidence is recorded for its evaluation."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > resource state alone settles nothing: another operation's wire for the same invoice leaves a redeemed permit's outcome open, with no evidence recorded for it (@spec runtime#evidence, #1271)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1271: before this rule, 'matching evidence' did not say what a match is, so an observation of resource state could be read as this action's outcome."
   },
   {
    "id": "runtime.evidence.claim-persistence-and-no-new-effect-post-termination",
@@ -34542,7 +34578,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The narrower-prefix-entry clause is unit-level only, because no issuance path here can carry a resource_match prefix entry: the kernel derivation builds each derived entry member by member (type, resource, actions, constraints, delegation) and never carries resource_match, so every Mission entry is exact, and the cross-org exchange's tool mapping emits none either. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
+   "notes": "The narrower-prefix-entry clause is unit-level only, because this deployment implements exact matching only and no issuance path can carry a prefix entry: since #1267 (#1264, D446), a resource_match other than exact is refused before approval or issuance, at PAR intake and in direct derivation (invalid_authorization_details) and by the policy.json, governed-policy.json and containment.json loaders (ConfigError), and the cross-org exchange's tool mapping emits none. Prefix matching itself is #1258's and #1266's. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
   },
   {
    "id": "resource-access.scope-projection.actions-no-aggregation",
