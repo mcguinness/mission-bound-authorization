@@ -114,12 +114,24 @@ URL or the Resource-policy object.
    operations to finish.
 3. **Invalidate old permits and caches.** The same check refuses every held
    permit for the old boundary, a cacheable read's and a compound action's
-   later phase included, and no PDP retransmission matches across the
-   change because its cache key names the audience.
+   later phase included. A permit the PDP holds for retransmission is never
+   returned after the change: its claim records the statement version it
+   was made under and retransmits only while that version is in force, so
+   a retry with its key is `duplicate_suppressed` even where the
+   identifier, and so the cache key, is unchanged. The PEP takes a permit's
+   version from its retained Decision Evidence row, recorded when the
+   record is first retained, never from the request that receives the
+   permit, so a re-presented permit keeps its own version and the use
+   check suppresses it.
 4. **Switch producers together.** Every producer reads the same
    declaration and clock, so new decisions, permits and records carry only
    the new identifier from `effective_at`; no permit comparison accepts
    both.
+
+The reference invalidates held permits at every new statement version,
+one that keeps the identifier and changes only an alias or a key
+included. That is the reference's conservative policy, not a requirement
+that every deployment invalidate on a key-only change.
 
 Evidence from before the change keeps its meaning. A disposition recorded
 after the cutover for a permit decided before it keeps the old `audience`
@@ -153,8 +165,9 @@ claimed before the change is suppressed rather than claimed again.
 Records stay under the scope they were made in and nothing is rewritten.
 Invalidating permits does not erase this: the retry is decided afresh at
 the new identifier, an old permit is never reused, and a retained claim
-never retransmits across the change because its cache key names the old
-audience. A rename that also moves the operation target changes the
+never retransmits across the change, since its cache key names the old
+audience and the statement version it was made under is no longer in
+force. A rename that also moves the operation target changes the
 operation identity, so the retry is refused (`operation_identity_conflict`
 or `idempotency_conflict`), still with no second effect. Retention is
 unchanged: each record is kept for its published horizon from when it was
@@ -194,6 +207,17 @@ deployment is reprovisioned with it. The remote claim channel's scope
 follows the boundary in force (`claimAudience`) rather than a configured
 audience.
 
+While a consumer is unprovisioned the two decision-channel topologies
+differ. Over the remote channel, settlement and reconciliation are scoped
+to the boundary in force, which is not established, so the PEP sends
+neither: they are held, a disclosed availability limitation. Unresolved
+work stays retained in the claim domain, a retry with its key is
+suppressed under the original claim, and none of it can become a fresh
+operation; settlement and reconciliation resume once every consumer is
+provisioned. Co-resident settlement reaches the claim domain directly and
+keeps verifying historical records, each under the version that produced
+it.
+
 Earlier bindings stay available: the earlier boundary's key set keeps its
 location and bindings (a published binding is append-only, and a retired
 key stays resolvable for the retention window past its last record), the
@@ -221,6 +245,9 @@ the reconciler and the published statement.
 
 Witnesses: `services/pdp/test/enforcement-boundary.test.ts`,
 `services/pdp/test/boundary-history-template.test.ts`,
+`services/pdp/test/idempotency-claim.test.ts` (a claim's statement
+version), `services/mcp-payments/test/decision-evidence-retention.test.ts`
+(the retained row's version),
 `services/mcp-payments/test/boundary-identifier.test.ts` (the payments
 server, PEP, PDP with its claim domain, evidence store, a published key
 set and settlement), and `demo/test/boundary-cutover-stack.test.ts` (the
