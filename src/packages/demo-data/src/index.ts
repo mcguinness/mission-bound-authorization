@@ -381,7 +381,9 @@ export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? DEFAULT_P
  * statement, Protected Resource Metadata and every consumer read one value
  * under MCP_PAYMENTS_RESOURCE too. Unset, the bytes are the file's.
  */
-export const RUNTIME_SCOPE_CONFIG: unknown = remapPaymentsResource(readJson("enforcement-scope.json"));
+export const RUNTIME_SCOPE_CONFIG: unknown = remapPaymentsResource(
+  readJson("enforcement-scope.json"),
+);
 
 function remapPaymentsResource(statement: unknown): unknown {
   if (CANONICAL_RESOURCE === DEFAULT_PAYMENTS_RESOURCE) return statement;
@@ -398,7 +400,9 @@ function remapPaymentsResource(statement: unknown): unknown {
   return {
     ...stmt,
     mediated_scope: { ...scope, resources: remap(scope.resources) },
-    ...(stmt.enforcement_boundaries !== undefined ? { enforcement_boundaries: remap(stmt.enforcement_boundaries) } : {}),
+    ...(stmt.enforcement_boundaries !== undefined
+      ? { enforcement_boundaries: remap(stmt.enforcement_boundaries) }
+      : {}),
   };
 }
 const runtimeStateSource = asObject(
