@@ -101,7 +101,7 @@ const resolverOpts = (
   });
 
 describe("evaluateInner cross-domain Origin Principal dual-axis (#539 stage A)", () => {
-  it("resource policy independently narrows a Mission action covered by fresh entitlement", async () => {
+  it("the Mission's contextual check independently narrows a Mission action covered by fresh entitlement", async () => {
     const options = resolverOpts(FRESH_MAPPING, { ...ENTITLED, authority: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }] }, 600);
     const allow = await evaluate(req(), options);
     const deny = await evaluate(req(), { ...options, fga: { checkWithContext: async () => false } as unknown as Fga });
