@@ -61,11 +61,22 @@ const loadViewFor = (v: MissionView) => (ref: { id: string; issuer: string }) =>
     ? { view: v, observation: { state: v.state, version: v.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 
+/**
+ * A store holding the vendor every lookup here reads, so each probe reaches
+ * the envelope it inspects; a vendor the store does not hold is refused before
+ * any decision request (#1251, D484).
+ */
+function seededPayments(): PaymentsStore {
+  const payments = new PaymentsStore();
+  payments.seed([{ id: "acme", name: "Acme", status: "approved" }], []);
+  return payments;
+}
+
 function build(): { pep: Pep; envelopes: EvaluationRequest[] } {
   const envelopes: EvaluationRequest[] = [];
   const pep = new Pep({
     decide: EVIDENCE_KEYS.decide,
-    payments: new PaymentsStore(),
+    payments: seededPayments(),
     evidence: new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver),
     fga: alwaysAllowFga,
     modelId: "unit-test-model",
@@ -145,7 +156,7 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const pep = new Pep({
       decide: EVIDENCE_KEYS.decide,
-      payments: new PaymentsStore(),
+      payments: seededPayments(),
       evidence,
       fga: alwaysAllowFga,
       modelId: "unit-test-model",
