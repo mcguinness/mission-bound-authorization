@@ -2409,10 +2409,18 @@ async function recoverChildCreation(
     // token from the same client and key reaches this check. The fan-out count
     // is not a disclosure test: it counts live siblings, which no longer
     // describe a terminal child.
-    const parentClient = isMissionClient(ctx, child.parent ? opts.kernel.get(child.parent.id) : undefined);
+    const parentRecord = child.parent ? opts.kernel.get(child.parent.id) : undefined;
+    const parentClient = isMissionClient(ctx, parentRecord);
     if (
       !parentClient ||
-      presentedTokenChildRefusal(opts.kernel, child.authority_set, child.client_id, child.parent?.depth ?? 1, presentedAuthority)
+      presentedTokenChildRefusal(
+        opts.kernel,
+        child.authority_set,
+        child.client_id,
+        child.parent?.depth ?? 1,
+        presentedAuthority,
+        parentRecord,
+      )
     ) {
       txError(ctx, 400, "invalid_request", "recorded child mission is not active");
     } else {
