@@ -27,10 +27,14 @@ import type { MissionView } from "./policy-view.js";
  * delegate, that delegate (`idempotencyScopeActor`), so a new client
  * instance, an instance-profiled leaf, or a longer chain above the leaf does
  * not split the scope; `audience` is `resource.properties.audience`, the
- * member the PDP matched the authority entry against and the remote channel
- * checked against the PEP's authorized scopes (@spec authzen#pdp-request);
- * `phase` is the validated phase, `null` where the operation is no
- * phase of a compound action.
+ * member the remote channel checked against the PEP's authorized scopes
+ * (@spec authzen#pdp-request); `phase` is the validated phase, `null` where
+ * the operation is no phase of a compound action.
+ *
+ * The operation target (#1276, D457) is deliberately NOT a scope member: it
+ * is part of operation identity below, so one key reused for a different
+ * target lands in the same scope and surfaces as `idempotency_conflict`,
+ * never as a second, unrelated claim.
  */
 export function idempotencyScopeOf(req: EvaluationRequest): IdempotencyScope | undefined {
   // validateContextActor (step 4) already refused an entry whose iss or sub
@@ -53,11 +57,19 @@ export function idempotencyScopeOf(req: EvaluationRequest): IdempotencyScope | u
  * and the normalized effectful parameters, here committed to by
  * `parameter_digest` (the PEP sends the commitment, not the parameters).
  * The plain JCS digest of that subset, not an anchor envelope.
+ *
+ * @spec resource-access#resource-matching (#1276, D457): "the resource" is
+ * the Resource-policy object (`type`/`id`) AND the operation target the PEP
+ * established, so one key never identifies two executions on different
+ * targets, even where the object identity, the action and the digest agree.
+ * The target is carried exactly as the request spelled it: it is compared,
+ * never reserialized.
  */
 export function operationIdentity(req: EvaluationRequest): string {
   return canonicalDigest({
     action: req.action.name,
     resource: { type: req.resource.type, id: req.resource.id },
+    operation_target: req.resource.properties.operation_target,
     parameter_digest: req.context.parameter_digest ?? null,
   });
 }
@@ -74,6 +86,11 @@ export function operationIdentity(req: EvaluationRequest): string {
  * generation, its `state` and `version`, stays. The authority and view
  * identity are the loaded view's authority commitment and the policy model
  * the decision ran under.
+ *
+ * `resource` is carried whole, so the operation target
+ * (`resource.properties.operation_target`, #1276, D457) is part of the
+ * binding and of the cache key below: a changed target is never a reuse of a
+ * permit, cacheable reads included.
  */
 export function authorizationBinding(req: EvaluationRequest, view: MissionView, modelId: string): JsonValue {
   const { mission_state_observation: observation, ...rest } = req.context;

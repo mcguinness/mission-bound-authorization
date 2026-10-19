@@ -711,8 +711,11 @@ function envelopeKid(envelope: EvidenceEnvelope): string {
  * @spec runtime-evidence#pre-decision-refusal (#1148, D379): the closed set a
  * Refusal Record's `denial_reason` is drawn from, by the refusing component's
  * role. A PEP names a pre-evaluation condition it established; the PDP's own
- * refusal is `mission_context_missing`, an in-scope request that reached it
- * without Mission decision context.
+ * refusals are `mission_context_missing`, an in-scope request that reached it
+ * without Mission decision context, and `operation_target_invalid`
+ * (@spec authzen#pdp-request consistency check 11, #1276, D457), a request
+ * whose operation target is absent, malformed, or outside the requesting
+ * PEP's enforcement scope.
  */
 export const REFUSAL_DENIAL_REASONS = Object.freeze({
   pep: Object.freeze([
@@ -729,7 +732,7 @@ export const REFUSAL_DENIAL_REASONS = Object.freeze({
     "pdp_unreachable",
     "state_unavailable",
   ] as const),
-  pdp: Object.freeze(["mission_context_missing"] as const),
+  pdp: Object.freeze(["mission_context_missing", "operation_target_invalid"] as const),
 });
 export type PepRefusalDenialReason = (typeof REFUSAL_DENIAL_REASONS.pep)[number];
 

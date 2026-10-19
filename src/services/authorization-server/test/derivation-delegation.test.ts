@@ -325,13 +325,13 @@ describe("demo ceiling wiring (@spec attenuation#delegation)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// (e) intersect FAILS CLOSED on a registered-but-unimplemented Common
+// (e) intersect FAILS CLOSED on a later-registered Common
 // Constraint (@spec mission#common-constraints). Before this fix an
 // unrecognized constraint key was silently dropped from the derived entry,
 // which WIDENS effective authority (the narrowing it named never applies).
 // ---------------------------------------------------------------------------
-describe("intersect fails closed on a registered-but-unimplemented Common Constraint", () => {
-  it("refuses (never silently widens) when the PROPOSAL carries an unimplemented registered constraint", () => {
+describe("intersect fails closed on a later-registered Common Constraint", () => {
+  it("refuses (never silently widens) when the PROPOSAL carries a later-registered constraint", () => {
     const ceilingEntry = entry();
     const policy = { policy_version: "t", ceiling: [ceilingEntry] };
     const intent: MissionIntent = {
@@ -341,16 +341,16 @@ describe("intersect fails closed on a registered-but-unimplemented Common Constr
     };
     const proposal = [
       entry({
-        constraints: { time_window: { not_before: "2026-01-01T00:00:00Z" } } as never,
+        constraints: { x_registered_later: "v1" } as never,
       }),
     ];
     expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(IntentError);
-    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(/time_window/);
+    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(/x_registered_later/);
   });
 
-  it("refuses when the CEILING carries an unimplemented registered constraint (never silently vanishes)", () => {
+  it("refuses when the CEILING carries a later-registered constraint (never silently vanishes)", () => {
     const ceilingEntry = entry({
-      constraints: { time_window: { not_before: "2026-01-01T00:00:00Z" } } as never,
+      constraints: { x_registered_later: "v1" } as never,
     });
     const policy = { policy_version: "t", ceiling: [ceilingEntry] };
     const intent: MissionIntent = {
@@ -359,7 +359,7 @@ describe("intersect fails closed on a registered-but-unimplemented Common Constr
       expires_at: EXP,
     };
     const proposal = [entry()];
-    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(/time_window/);
+    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(/x_registered_later/);
   });
 
   it("max_amount and vendors (implemented Common/deployment-defined constraints) still narrow normally", () => {

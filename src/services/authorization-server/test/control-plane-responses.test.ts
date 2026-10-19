@@ -427,6 +427,44 @@ describe("control-plane lifecycle expiry under a refused operation", () => {
     // And it was PUBLISHED: the commit subscriber saw the expired transition.
     expect(commits.map((c) => [c.state, c.termination?.reason])).toEqual([["terminated", "expired"]]);
   });
+
+  it("compares expected_version with the version the expiry left: the caller's older version is stale, the expiry stays committed and published once (@spec status#idempotency, #250)", async () => {
+    const record = approveOn(expiryAs, EXPIRY_ISSUER);
+    expiryAs.kernel.db
+      .prepare("UPDATE missions SET expires_at = ? WHERE id = ?")
+      .run("2020-01-01T00:00:00Z", record.id);
+    commits.length = 0;
+
+    // The caller last observed the active Mission. The expiry clock advanced the
+    // version before the comparison, so that observation is stale, and the
+    // refusal is `stale_version`, not a conflict with the expired state.
+    const nonce = freshNonce();
+    const stale = await lifecycleOn(EXPIRY_ISSUER, record.id, {
+      operation: "revoke",
+      nonce,
+      expected_version: String(record.version),
+    });
+    expect(stale.status).toBe(409);
+    expect(await stale.json()).toMatchObject({ error: "stale_version", nonce });
+    const after = expiryAs.kernel.get(record.id);
+    expect(after?.termination?.reason).toBe("expired");
+    expect(after?.version).toBe(record.version + 1);
+    expect(commits.map((c) => [c.state, c.termination?.reason, c.version])).toEqual([
+      ["terminated", "expired", record.version + 1],
+    ]);
+
+    // The version the expiry left is current, so the guard passes and the
+    // transition rule decides: revoke is not legal from `expired`.
+    const current = await lifecycleOn(EXPIRY_ISSUER, record.id, {
+      operation: "revoke",
+      nonce: freshNonce(),
+      expected_version: String(record.version + 1),
+    });
+    expect(current.status).toBe(409);
+    expect(await current.json()).toMatchObject({ error: "conflict" });
+    expect(expiryAs.kernel.get(record.id)?.version).toBe(record.version + 1);
+    expect(commits).toHaveLength(1);
+  });
 });
 
 /**

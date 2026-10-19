@@ -61,7 +61,14 @@ export type ProviderCapability =
    * 8628 device authorization endpoint. Opt-in (D412): off unless a set
    * names it.
    */
-  | "device-authorization";
+  | "device-authorization"
+  /**
+   * @spec deferred-approval (#1185): Deferred Mission Approval, the
+   * `completion_mode=deferred` creation path with its `mdfr_` poll,
+   * cancellation by revocation, and `governed_policy` completion. Opt-in:
+   * off unless a set names it, and it needs `token-revocation`.
+   */
+  | "deferred-approval";
 
 /** Every capability an absent set enables, in declaration order. */
 export const ALL_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = [
@@ -101,9 +108,14 @@ export const TOKEN_EXCHANGE_CAPABILITIES: readonly ProviderCapability[] = [
  * The capabilities no default enables (D412: nothing default-on): each is on
  * only where a capability set names it. Device authorization is experimental;
  * delegation is the core's optional Delegation capability, which neither
- * baseline elects (D415, D449).
+ * baseline elects (D415, D449); Deferred Mission Approval is an optional
+ * companion tracking an early substrate.
  */
-export const OPT_IN_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = ["device-authorization", "delegation"];
+export const OPT_IN_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = [
+  "device-authorization",
+  "delegation",
+  "deferred-approval",
+];
 
 /**
  * Whether `capability` is enabled. An absent set enables everything but the

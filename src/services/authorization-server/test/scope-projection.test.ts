@@ -1203,6 +1203,27 @@ describe("refresh preserved on a projection refusal (@spec mission#scope-project
     expect(successor.body.error).toBe("invalid_grant");
   });
 
+  it("a refresh narrowing authorization_details projects the narrowed set: a scope only the dropped entry grants refuses invalid_scope before rotation, and the same token then refreshes (#1303)", async () => {
+    const { rt, acting } = await family();
+    const onlyRead = JSON.stringify([entry([READ])]);
+    const refused = await token(
+      { grant_type: "refresh_token", refresh_token: rt, scope: "reports.write", authorization_details: onlyRead },
+      acting,
+    );
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_scope");
+    const still = await refresh(rt, acting);
+    expect(still.status, JSON.stringify(still.body)).toBe(200);
+    expect(still.body.scope).toBe("reports.read reports.write");
+    const narrowed = await token(
+      { grant_type: "refresh_token", refresh_token: still.body.refresh_token as string, authorization_details: onlyRead },
+      acting,
+    );
+    expect(narrowed.status, JSON.stringify(narrowed.body)).toBe(200);
+    expect(narrowed.body.scope).toBe("reports.read");
+    expect(decodeJwt(narrowed.body.access_token as string).scope).toBe("reports.read");
+  });
+
   it("a refresh naming a narrower scope is granted exactly it; a value never granted refuses invalid_scope without consuming the token (#871)", async () => {
     const first = await issue([entry([READ, WRITE])]);
     expect(first.status, JSON.stringify(first.body)).toBe(200);

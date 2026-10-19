@@ -75,6 +75,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC8628:
   RFC8725:
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
@@ -378,6 +386,13 @@ Claims:
   key has the `jkt` thumbprint, or a client certificate on the TLS
   connection whose SHA-256 thumbprint matches the `x5t#S256` value.
 
+In the examples in this document, the invoice API's operation contract
+identifies the collection `https://api.example.com/invoices` as the
+operation target for invoice reads
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). The entries
+carry no `resource_match`, so they are `exact` and cover only
+operations whose target is that collection.
+
 The following is an example of a decoded grant payload; the
 `authority_hash` value is illustrative:
 
@@ -394,7 +409,7 @@ The following is an example of a decoded grant payload; the
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://mas.example.com",
     "authority_hash":
-      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQr",
+      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQo",
     "expires_at": "2026-12-31T23:59:59Z"
   },
   "authorization_details": [

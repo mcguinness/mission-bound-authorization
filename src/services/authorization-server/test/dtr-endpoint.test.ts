@@ -409,6 +409,33 @@ describe("requested scope on the deferred grant (@spec mission#scope-projection)
   });
 });
 
+describe("requested entries on the deferral initiation (@spec resource-access#entry-validation, #1278)", () => {
+  // The deferred token carries the requested entries as submitted, and the
+  // subset check reads no `locations`, so without this refusal the token would
+  // carry an entry with the member this type does not use.
+  it("refuses a requested entry carrying locations with invalid_authorization_details, opening no deferral", async () => {
+    const count = () =>
+      (as.deferrals.db.prepare("SELECT COUNT(*) AS n FROM deferrals").get() as { n: number }).n;
+    for (const locations of [[], [RESOURCE]]) {
+      const before = count();
+      const requested = subset(["payments:remittance.send"]).map((e) => ({ ...e, locations }));
+      const res = await initiate(requested as AuthorityEntry[]);
+      const body = (await res.json()) as {
+        error?: string;
+        error_description?: string;
+        deferral_code?: string;
+        access_token?: string;
+      };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toMatch(/locations must be absent/);
+      expect(body.deferral_code).toBeUndefined();
+      expect(body.access_token).toBeUndefined();
+      expect(count()).toBe(before);
+    }
+  });
+});
+
 describe("the deferred grant and the Mission's expires_at (@spec mission#mission-bound-tokens)", () => {
   it("an approval expiry later than the Mission's expires_at does not let the deferred access token outlive the Mission", async () => {
     // The deferred mint clamps to approved_until, which the approver sets; the

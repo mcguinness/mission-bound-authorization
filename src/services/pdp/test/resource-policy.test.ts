@@ -64,7 +64,7 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
 
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: "alice", properties: { iss: ISSUER } },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
   context: {
     mission: { id: "msn_rp_1", issuer: ISSUER },
@@ -131,7 +131,7 @@ describe("independent Resource policy in the decision (@spec runtime#input-resou
     const dec = await evaluate(
       req({
         action: { name: "payments:invoice.list" },
-        resource: { type: "vendor", id: "acme", properties: { audience: RESOURCE, vendor_id: "acme", vendor_ids: ["acme", "globex"] } },
+        resource: { type: "vendor", id: "acme", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme", vendor_ids: ["acme", "globex"] } },
       }),
       opts({ fga: mission.fga, resourcePolicy: policy }),
     );
@@ -156,7 +156,7 @@ describe("independent Resource policy in the decision (@spec runtime#input-resou
     const dec = await evaluate(
       req({
         action: { name: "payments:invoice.list" },
-        resource: { type: "vendor", id: "acme", properties: { audience: RESOURCE, vendor_id: "acme", vendor_ids: ["acme", "globex"] } },
+        resource: { type: "vendor", id: "acme", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme", vendor_ids: ["acme", "globex"] } },
       }),
       opts({ fga: missionFga(true).fga, resourcePolicy: policy }),
     );

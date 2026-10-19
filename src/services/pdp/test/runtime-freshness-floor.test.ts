@@ -26,7 +26,7 @@ describe("consequential freshness floor (@spec runtime#state-freshness)", () => 
       authority_set: [{ type: "mission_resource_access", resource: "https://resource.test", actions: ["payments:payment.execute"] }],
     };
     const request: EvaluationRequest = {
-      subject: { id: "alice" }, resource: { type: "invoice", id: "inv-1", properties: { audience: "https://resource.test", vendor_id: "v1" } },
+      subject: { id: "alice" }, resource: { type: "invoice", id: "inv-1", properties: { audience: "https://resource.test", operation_target: "https://resource.test", vendor_id: "v1" } },
       action: { name: "payments:payment.execute" },
       context: { mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash }, action_class: "irreversible_action", parameter_digest: "sha-256:params" },
     };

@@ -11,7 +11,14 @@
  * endpoint actually publishes.
  */
 
-import { isActivationPolicyRef, SUPPORTED_CONSTRAINT_KEYS, type JsonValue } from "@mission/core";
+import {
+  isActivationPolicyRef,
+  isImplementedCommonConstraint,
+  refusedEntryMember,
+  SUPPORTED_CONSTRAINT_KEYS,
+  type JsonValue,
+  validCommonConstraint,
+} from "@mission/core";
 
 /** @spec mission#authorization-derivation — the sole type this AS derives. */
 export const MISSION_RESOURCE_ACCESS_TYPE = "mission_resource_access" as const;
@@ -33,15 +40,22 @@ export interface AuthorizationDetailsTypeMetadata {
  * machine-readable form). `constraints` covers the Common Constraints
  * structure (@spec mission#common-constraints), its member set CLOSED
  * (`additionalProperties: false`) to exactly {@link SUPPORTED_CONSTRAINT_KEYS}
- * (issue #784): `max_amount`, `requires_action_approval` and `terminal_when`
- * are the Common Constraints this derivation engine narrows (see derive.ts),
- * and `vendors` is a deployment-defined key this engine also narrows though
- * the common registry does not carry it. A `constraints` member outside that
- * set is refused here rather than admitted and then silently dropped by
- * derivation's fixed four-key rebuild: this schema describes exactly what the
- * engine supports, not a superset of registered-but-unimplemented keys.
+ * (issue #784): every initial Mission Resource Access Common Constraint
+ * (`max_amount`, `requires_action_approval`, and the seven of #1266, whose
+ * shared semantics are in `@mission/core`'s common-constraints.ts),
+ * `terminal_when`, and `vendors`, a deployment-defined key this engine also
+ * narrows though the common registry does not carry it. A `constraints`
+ * member outside that set (a Common Constraint registered later, or any other
+ * key) is refused here rather than admitted and then silently dropped by
+ * derivation: this schema describes exactly what the engine supports.
  * draft-zehavi §5: the schema "MUST restrict the `type` attribute" — done via
  * `const` below.
+ *
+ * @spec resource-access#entry-validation (#1278, D457): `locations` is
+ * prohibited by name (`"locations": false`), not by closing the top level:
+ * `additionalProperties` stays `true`, so a member another specification
+ * defines for this type (such as `capability_sources`) remains possible.
+ * {@link validateMissionResourceAccessSchema} enforces the same prohibition.
  */
 export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -51,6 +65,10 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
   properties: {
     type: { const: MISSION_RESOURCE_ACCESS_TYPE },
     resource: { type: "string", format: "uri" },
+    // @spec resource-access#entry-validation (#1278): this type does not use
+    // the RFC 9396 common `locations` field; its presence, whatever its value,
+    // fails the schema.
+    locations: false,
     actions: { type: "array", items: { type: "string" }, minItems: 1 },
     constraints: {
       type: "object",
@@ -80,6 +98,28 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
             additionalProperties: false,
           },
         },
+        // @spec resource-access#initial-common-constraints (#1266): RFC 3339
+        // date-time values compared as UTC instants (common-constraints.ts).
+        resource_issued_after: { type: "string", format: "date-time" },
+        resource_issued_before: { type: "string", format: "date-time" },
+        // Exact string comparison against the resource's own tenant record.
+        tenant: { type: "string", minLength: 1 },
+        // At least one bound; an absent bound is unbounded on its side.
+        time_window: {
+          type: "object",
+          properties: {
+            not_before: { type: "string", format: "date-time" },
+            not_after: { type: "string", format: "date-time" },
+          },
+          minProperties: 1,
+          additionalProperties: false,
+        },
+        // A DNS name; compared case-insensitively on whole labels.
+        recipient_domain: { type: "string", format: "hostname" },
+        // Exact-string labels; an empty list admits no data.
+        data_classification: { type: "array", items: { type: "string", minLength: 1 } },
+        // Exact-string tool identities; an empty list admits no tool.
+        allowed_tools: { type: "array", items: { type: "string", minLength: 1 } },
       },
       // @spec mission#derivation-policy (issue #784) — CLOSED to
       // SUPPORTED_CONSTRAINT_KEYS: an unsupported key is refused at intake,
@@ -191,6 +231,12 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
     return "authorization_details entry must be an object";
   }
+  // @spec resource-access#entry-validation (#1278, D457): the schema's
+  // `"locations": false`, enforced by presence before any other member is
+  // read, so `[]`, `null` or a malformed value is refused like a populated
+  // array.
+  const refused = refusedMemberViolation(entry);
+  if (refused) return refused;
   const e = entry as Record<string, unknown>;
   if (typeof e.resource !== "string") return "resource must be a string";
   // @spec resource-access#resource-matching (#1264, D446): this authorization
@@ -220,6 +266,14 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
     }
     if (c.requires_action_approval !== undefined && typeof c.requires_action_approval !== "boolean") {
       return "constraints.requires_action_approval must be a boolean";
+    }
+    // @spec resource-access#initial-common-constraints (#1266): each
+    // implemented Common Constraint's value syntax, from the shared table the
+    // config loader, derivation and the resource server also read.
+    for (const key of Object.keys(c)) {
+      if (isImplementedCommonConstraint(key) && !validCommonConstraint(key, c[key])) {
+        return `constraints.${key} is malformed`;
+      }
     }
     if (c.max_amount !== undefined) {
       if (
@@ -307,6 +361,36 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
         if (err) return err;
       }
     }
+  }
+  return undefined;
+}
+
+/**
+ * @spec resource-access#entry-validation (#1278, D457): the violation for a
+ * `mission_resource_access` entry carrying a member this type refuses by
+ * name ({@link refusedEntryMember}: `locations`), or undefined. Shared by the
+ * schema check above and by the token-exchange and deferred intakes that read
+ * requested entries without it, each refusing `invalid_authorization_details`.
+ */
+export function refusedMemberViolation(entry: unknown): string | undefined {
+  const member = refusedEntryMember(entry);
+  return member === undefined
+    ? undefined
+    : `${member} must be absent: the ${MISSION_RESOURCE_ACCESS_TYPE} type does not use this RFC 9396 common field`;
+}
+
+/**
+ * {@link refusedMemberViolation} over a requested `authorization_details`
+ * array, for an intake that reads requested entries without the schema check:
+ * the first `mission_resource_access` entry carrying a refused member yields
+ * the violation. Entries of another type are left to the intake's own checks,
+ * since the refusal applies only to this type.
+ */
+export function refusedMemberInRequest(entries: readonly unknown[]): string | undefined {
+  for (const entry of entries) {
+    if ((entry as { type?: unknown } | null)?.type !== MISSION_RESOURCE_ACCESS_TYPE) continue;
+    const violation = refusedMemberViolation(entry);
+    if (violation) return violation;
   }
   return undefined;
 }

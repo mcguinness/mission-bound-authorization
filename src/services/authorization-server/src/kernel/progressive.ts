@@ -42,6 +42,7 @@ import {
 } from "./activation-policy.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { entryDigest } from "./discharge.js";
+import { ceilingOrigin, inheritOrigins } from "./eligibility-provenance.js";
 import { IntentError, validateAuthorityProposal } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
@@ -453,12 +454,22 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
   // The successor's Authority Set is derived exactly as an ordinary
   // expansion's, carrying the predecessor's recorded capability bindings.
+  const derived = kernel.deriveWithProvenance(input.intent, proposal);
   const authoritySet = kernel.resolveFreshCapabilities(
-    inheritCapabilitySources(kernel.derive(input.intent, proposal), predecessor.authority_set),
+    inheritCapabilitySources(derived.entries, predecessor.authority_set),
   );
   if (!isSubsetSetIgnoringCapabilitySources(authoritySet, predecessor.authority_ceiling)) {
     throw new Error("ceiling drawdown successor is not within the consented ceiling");
   }
+  // @spec resource-access#delegate-eligibility: the drawdown keeps its own
+  // derivation's origins and every obligation of the consented ceiling entries
+  // it falls within (an entry there without `allowed_delegates` defers to
+  // policy).
+  const provenance = inheritOrigins(
+    authoritySet,
+    derived.provenance,
+    predecessor.authority_ceiling.map((entry) => ({ entry, origin: ceilingOrigin(entry) })),
+  );
   // @spec expansion#successor-source: the predecessor's Subject and source,
   // checked against the committed root's declaration current at this commit.
   const root = kernel.committedSourceBinding(predecessor.id);
@@ -504,6 +515,7 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     intent: input.intent,
     ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: authoritySet,
+    eligibility_provenance: provenance,
     intent_hash: intentHash(predecessor.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(predecessor.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),

@@ -16,7 +16,12 @@
  *   - D361: the explicit selector, malformed and conflicting selectors refused
  *     without falling through, the grant's `aud` and `client_id`, single use,
  *     and the grant's own validation (typ, aud, exp) apart from #1157's
- *     delegation-handle audience check.
+ *     delegation-handle audience check;
+ *   - #1195 (D387, D390): a Dispatcher that is its instance's selected Agent
+ *     skips the handoff and obtains its handle through the ordinary handle
+ *     exchange, counted, then opens a family with it; refusals of the wrong
+ *     client, wrong key, an inactive instance, and the instance token at the
+ *     async exchange.
  */
 
 import { type Server } from "node:http";
@@ -151,12 +156,18 @@ interface Instance {
   authority: AuthorityEntry[];
 }
 
-/** A fresh template (its own max_active and rate) and one dispatched instance. */
-async function dispatchInstance(): Promise<Instance> {
+/**
+ * A fresh template (its own max_active and rate) and one dispatched instance.
+ * `agents` replaces the template's `allowed_recipients` Agents; naming only the
+ * Dispatcher makes it a self-dispatching template (#1195).
+ */
+async function dispatchInstance(agents?: string[]): Promise<Instance> {
+  const template = demoReconciliationTemplate(ISSUER);
+  if (agents) template.recipients = { ...template.recipients, agents };
   const created = await fetch(`${ISSUER}/templates`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-    body: JSON.stringify({ ...demoReconciliationTemplate(ISSUER), approval_event_id: `handoff-tmpl-${seq++}` }),
+    body: JSON.stringify({ ...template, approval_event_id: `handoff-tmpl-${seq++}` }),
   });
   const { template_id } = (await created.json()) as { template_id: string };
   const res = await tokenRequest("dispatcher", dispatcherDpop, {
@@ -659,6 +670,22 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
     const hb = (await h.json()) as { access_token: string };
     expect(h.status, JSON.stringify(hb)).toBe(200);
     expect(actionsOf(decodeJwt(hb.access_token).authorization_details)).toEqual(actionsOf(narrow));
+  });
+
+  // @spec resource-access#entry-validation (#1278, D457): the handed-off
+  // authority is projected, which rebuilds each entry, so a requested entry
+  // carrying `locations` is refused rather than issued with the member dropped.
+  it("a requested entry carrying locations is refused invalid_authorization_details, issuing no handoff grant", async () => {
+    const instance = await dispatchInstance();
+    for (const locations of [[], [RESOURCE]]) {
+      const requested = narrowOf(instance.authority).map((e) => ({ ...e, locations }));
+      const res = await handoff(instance.token, { authorization_details: JSON.stringify(requested) });
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toMatch(/locations must be absent/);
+      expect(body.access_token).toBeUndefined();
+    }
   });
 });
 
@@ -1325,5 +1352,138 @@ describe("a dispatched instance's token is sender-constrained at introspection t
     const instance = await dispatchInstance();
     expect(await introspect(instance.token)).toMatchObject({ active: true, token_type: "DPoP", cnf: { jkt: dispatcherJkt } });
     expect(await introspect(await resignWithCnf(instance.token, tokenKey, undefined))).toEqual({ active: false });
+  });
+});
+
+describe("self-dispatch: a Dispatcher that is its instance's selected Agent skips the handoff (@spec mission-template#dispatch-handoff, continuation#transport-async, #1195, D387, D390)", () => {
+  /** A template whose one Dispatcher (ap-agent) is also its one Agent, and one dispatched instance. */
+  const selfDispatchInstance = (): Promise<Instance> => dispatchInstance([clientIds.dispatcher]);
+  /** The ordinary handle exchange as `party`, naming `audience`, under `keys`. */
+  const handleRequest = (token: string, party: Party, keys: Keys, audience: string = clientIds[party]) =>
+    tokenRequest(party, keys, delegationHandleParams(token, audience));
+  const countOf = (missionId: string): number | undefined => as.kernel.get(missionId)?.derivation_count;
+
+  it("obtains its handle through the ordinary handle exchange under the instance token's key, counted once, and opens and refreshes a family with it", async () => {
+    const instance = await selfDispatchInstance();
+    const record = as.kernel.get(instance.missionId);
+    // The Dispatcher is the selected Agent: the instance's recorded client_id
+    // is the client the Dispatch returned the token to, bound to its key.
+    expect(record?.client_id).toBe(clientIds.dispatcher);
+    expect(record?.template).toBeDefined();
+    const dispatched = decodeJwt(instance.token);
+    expect(dispatched.client_id).toBe(clientIds.dispatcher);
+    expect(dispatched.aud).toBe(RESOURCE);
+    expect((dispatched.cnf as { jkt?: string }).jkt).toBe(dispatcherJkt);
+    const before = countOf(instance.missionId) as number;
+
+    const h = await handleRequest(instance.token, "dispatcher", dispatcherDpop);
+    const hb = (await h.json()) as { access_token: string; issued_token_type?: string; authorization_details?: unknown };
+    expect(h.status, JSON.stringify(hb)).toBe(200);
+    expect(hb.issued_token_type).toBe(ACCESS_TOKEN_TOKEN_TYPE);
+    const handle = decodeJwt(hb.access_token);
+    // A client-audience delegation handle, under the instance token's key.
+    expect(handle.aud).toBe(clientIds.dispatcher);
+    expect(handle.client_id).toBe(clientIds.dispatcher);
+    expect((handle.cnf as { jkt?: string }).jkt).toBe(dispatcherJkt);
+    expect((handle.mission as { id?: string }).id).toBe(instance.missionId);
+    expect(hb.authorization_details).toEqual(instance.authority);
+    // D390: skipping the handoff skips no count; the handle exchange is one derivation.
+    expect(countOf(instance.missionId)).toBe(before + 1);
+
+    // The handle opens the async family; the family is one further derivation,
+    // and its refreshes count nothing again.
+    const fam = await asyncDelegate(hb.access_token, crypto.randomUUID(), "dispatcher", dispatcherDpop);
+    const fb = (await fam.json()) as { access_token?: string; refresh_token?: string };
+    expect(fam.status, JSON.stringify(fb)).toBe(200);
+    expect(typeof fb.refresh_token).toBe("string");
+    expect(countOf(instance.missionId)).toBe(before + 2);
+    const refreshed = await tokenRequest("dispatcher", dispatcherDpop, {
+      grant_type: "refresh_token",
+      refresh_token: fb.refresh_token as string,
+    });
+    const rfb = (await refreshed.json()) as { access_token?: string; refresh_token?: string };
+    expect(refreshed.status, JSON.stringify(rfb)).toBe(200);
+    expect((decodeJwt(rfb.access_token as string).mission as { id?: string }).id).toBe(instance.missionId);
+    expect(countOf(instance.missionId)).toBe(before + 2);
+  });
+
+  it("wrong client: another client presenting the self-dispatched instance's token, even with its key, is refused and counts nothing", async () => {
+    const instance = await selfDispatchInstance();
+    const before = countOf(instance.missionId);
+    const res = await handleRequest(instance.token, "intruder", dispatcherDpop);
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("not issued to the requesting client");
+    expect(body.access_token).toBeUndefined();
+    expect(countOf(instance.missionId)).toBe(before);
+  });
+
+  it("wrong client: a selected Agent that is not the Dispatcher cannot skip the handoff by presenting the Dispatcher's instance token, even with its key", async () => {
+    // An ordinary instance: the Agent is the approved agent (self-exchange
+    // rule 1 holds for it), but the token was issued to the Dispatcher.
+    const instance = await dispatchInstance();
+    expect(as.kernel.get(instance.missionId)?.client_id).toBe(AGENT_ID);
+    const before = countOf(instance.missionId);
+    const res = await handleRequest(instance.token, "agent", dispatcherDpop);
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("not issued to the requesting client");
+    expect(body.access_token).toBeUndefined();
+    expect(countOf(instance.missionId)).toBe(before);
+  });
+
+  it("wrong key: a DPoP proof under any key but the instance token's is refused and counts nothing", async () => {
+    const instance = await selfDispatchInstance();
+    const before = countOf(instance.missionId);
+    const res = await handleRequest(instance.token, "dispatcher", otherDpop);
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("does not match the subject_token confirmation key");
+    expect(body.access_token).toBeUndefined();
+    expect(countOf(instance.missionId)).toBe(before);
+  });
+
+  it.each([
+    ["suspended", "suspend", "suspended", "suspended"],
+    ["revoked", "revoke", "revoked", "terminated"],
+    ["completed", "complete", "completed", "terminated"],
+  ] as const)(
+    "inactive Mission: an instance %s is refused invalid_request with its mission_error, and no handle is issued or counted (D369)",
+    async (_label, operation, missionError, lifecycleState) => {
+      const instance = await selfDispatchInstance();
+      as.kernel.transition(instance.missionId, operation);
+      const before = countOf(instance.missionId);
+      const res = await handleRequest(instance.token, "dispatcher", dispatcherDpop);
+      const body = (await res.json()) as {
+        error?: string;
+        error_description?: string;
+        mission_error?: string;
+        access_token?: string;
+      };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.mission_error).toBe(missionError);
+      expect(body.error_description).toBe(`mission ${instance.missionId} is ${lifecycleState}`);
+      expect(body.access_token).toBeUndefined();
+      expect(countOf(instance.missionId)).toBe(before);
+    },
+  );
+
+  it("direct async exchange: the resource-audience instance token opens no family, though the Dispatcher is the approved agent", async () => {
+    const instance = await selfDispatchInstance();
+    // Self-exchange rule 1 holds (the Dispatcher is the recorded client) and
+    // the proof is under the token's own key: only the handle audience refuses.
+    expect(as.kernel.get(instance.missionId)?.client_id).toBe(clientIds.dispatcher);
+    const before = countOf(instance.missionId);
+    const res = await asyncDelegate(instance.token, crypto.randomUUID(), "dispatcher", dispatcherDpop);
+    const body = (await res.json()) as { error?: string; error_description?: string; refresh_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("not a delegation handle audienced to the acting client");
+    expect(body.refresh_token).toBeUndefined();
+    expect(countOf(instance.missionId)).toBe(before);
   });
 });

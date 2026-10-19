@@ -7,7 +7,8 @@ by scanning the policy after reaching a decision.
 
 The set includes entry types checked during delegate narrowing and authority
 matching, plus the `vendors`, `max_amount`, and `requires_action_approval` keys
-when their respective gates are reached. It deduplicates identifiers, as the
+and each implemented Common Constraint key (#1266, listed in the payments
+Operation Profile) when their respective gates are reached. It deduplicates identifiers, as the
 wire member names types/keys rather than individual entry instances. An early
 lifecycle or credential refusal has no invented authority contributions. A
 constraint denial does not claim that later gates or later entries ran.

@@ -4,6 +4,12 @@ import { isActivationPolicyRef } from "./anchors.js";
 import type { AuthorityEntry, DelegateMatcher, TerminalWhenCondition } from "./authority-entry.js";
 import { canonicalize, type JsonValue } from "./canonicalize.js";
 import { type CapabilitySourceBinding, capabilitySourceIdentity } from "./capability-binding.js";
+import {
+  commonConstraintsNoBroader,
+  IMPLEMENTED_COMMON_CONSTRAINTS,
+  isImplementedCommonConstraint,
+  validCommonConstraint,
+} from "./common-constraints.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 
 /**
@@ -35,28 +41,63 @@ export function entryWithinCeiling(
 /**
  * @spec mission#common-constraints, mission#derivation-policy — the
  * `constraints` member names this engine accepts on an `AuthorityEntry`,
- * config ceiling and client proposal alike (issue #784). This spans both the
+ * config ceiling and client proposal alike (issue #784). This spans the
  * Common Constraint keys the engine implements narrowing for (`max_amount`,
- * `requires_action_approval`, `terminal_when`) and `vendors`, a
- * deployment-defined key the common registry does not carry at all. Neither
- * direction of the registration/support distinction is automatic: a key
- * registered by the Common Constraints registry is not necessarily supported
- * here (e.g. `time_window`, `tenant`), and `vendors` being unregistered does
- * not exempt it from the same obligation. This is the SINGLE declaration of
- * that supported set; every boundary that admits an `AuthorityEntry` (typed
- * config load, PAR intake) reuses it rather than keeping a parallel list that
- * can drift.
+ * `requires_action_approval`, `terminal_when`, and the
+ * {@link IMPLEMENTED_COMMON_CONSTRAINTS} of `common-constraints.ts`, #1266)
+ * and `vendors`, a deployment-defined key the common registry does not carry
+ * at all. Neither direction of the registration/support distinction is
+ * automatic: a key registered by the Common Constraints registry is not
+ * supported here until every path retains and enforces it, and `vendors`
+ * being unregistered does not exempt it from the same obligation. This is
+ * the SINGLE declaration of that supported set; every boundary that admits
+ * an `AuthorityEntry` (typed config load, PAR intake) reuses it rather than
+ * keeping a parallel list that can drift.
  */
-export const SUPPORTED_CONSTRAINT_KEYS = [
+export const SUPPORTED_CONSTRAINT_KEYS: readonly string[] = Object.freeze([
   "max_amount",
   "vendors",
   "requires_action_approval",
   "terminal_when",
-] as const;
+  ...IMPLEMENTED_COMMON_CONSTRAINTS,
+]);
 
-/** Validate the subset engine's supported input before a foreign grant can use it. */
+/**
+ * @spec resource-access#entry-validation (#1278, D454, D457): the RFC 9396
+ * common fields a `mission_resource_access` entry does not use: `resource`
+ * identifies where an entry applies, so an entry carrying `locations` is
+ * refused. This is the SINGLE declaration every boundary that admits an
+ * entry of this type consults (PAR and the other proposal intakes, the typed
+ * config loaders, and derivation), so none admits the member and then drops
+ * it in a member-by-member rebuild. Refused by name only: the entry's top
+ * level stays open to a member another specification defines for this type,
+ * such as `capability_sources`.
+ */
+export const REFUSED_ENTRY_MEMBERS = ["locations"] as const;
+
+/**
+ * The first {@link REFUSED_ENTRY_MEMBERS} member `entry` carries, or
+ * undefined. Decided by property presence, never by value: `locations: []`,
+ * `null`, `""` or any malformed value is refused exactly as a populated array
+ * is. The caller applies it to an entry of this type and maps a hit to its
+ * boundary's own error (`invalid_authorization_details` on a protocol
+ * surface, the loader's configuration error at load).
+ */
+export function refusedEntryMember(entry: unknown): string | undefined {
+  if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return undefined;
+  return REFUSED_ENTRY_MEMBERS.find((member) => Object.hasOwn(entry, member));
+}
+
+/**
+ * Validate the subset engine's supported input before a foreign grant can use
+ * it. An entry carrying a {@link REFUSED_ENTRY_MEMBERS} member is unsupported,
+ * decided by presence: a destination redeeming a signed grant from a
+ * configurable trusted issuer refuses it rather than minting it into a local
+ * token, so it never reaches a resource (#1278).
+ */
 export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  if (refusedEntryMember(value) !== undefined) return false;
   const e = value as Record<string, unknown>;
   const strings = (v: unknown): v is string[] =>
     Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.length > 0);
@@ -71,8 +112,12 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
     if (!e.constraints || typeof e.constraints !== "object" || Array.isArray(e.constraints))
       return false;
     const c = e.constraints as Record<string, unknown>;
-    if (Object.keys(c).some((k) => !(SUPPORTED_CONSTRAINT_KEYS as readonly string[]).includes(k)))
-      return false;
+    if (Object.keys(c).some((k) => !SUPPORTED_CONSTRAINT_KEYS.includes(k))) return false;
+    // @spec resource-access#initial-common-constraints (#1266): each
+    // implemented Common Constraint's value syntax, from the shared table.
+    for (const key of Object.keys(c)) {
+      if (isImplementedCommonConstraint(key) && !validCommonConstraint(key, c[key])) return false;
+    }
     if (c.vendors !== undefined && !strings(c.vendors)) return false;
     if (c.requires_action_approval !== undefined && typeof c.requires_action_approval !== "boolean")
       return false;
@@ -178,7 +223,9 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
  * so a candidate lacking or altering that reference is refused; a ceiling
  * declaring no `children` grant refuses the entry carrying one, exactly as an
  * introduced delegation is refused. A surviving entry keeps the reference and
- * its retained-action `capability_sources` verbatim.
+ * its retained-action `capability_sources` verbatim. Both operands pass
+ * {@link isAuthorityEntry} first, so a surviving entry never retains a
+ * {@link REFUSED_ENTRY_MEMBERS} member.
  */
 export function narrowToCeiling(
   entries: readonly AuthorityEntry[],
@@ -302,6 +349,10 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   ) {
     return false;
   }
+  // @spec resource-access#subset step 3, resource-access#value-space-comparison
+  // (#1266): every implemented Common Constraint the grantor carries, kept
+  // and no broader in value space; a malformed value on either side fails.
+  if (!commonConstraintsNoBroader(candidate.constraints, granted.constraints)) return false;
   // @spec discharge#subset-extension — a derived entry carries every parent
   // completion condition unchanged and MAY add more: dropping or altering one
   // WIDENS (a verifier cannot tell from opaque event types whether a changed
@@ -380,7 +431,14 @@ function bindingKey(binding: CapabilitySourceBinding): string | null {
 
 /** A restriction-list subset test mirroring the vendors rule: grantor-absent is
  *  unconstrained (any candidate ⊆); grantor-present + candidate-absent is
- *  broader (fails); both present requires candidate ⊆ granted on identity. */
+ *  broader (fails); both present requires candidate ⊆ granted on identity.
+ *
+ *  @spec resource-access#subset, resource-access#delegate-eligibility (#1275):
+ *  structural only. A grantor without a list defers eligibility to the
+ *  authorization server's policy, and a candidate list only restricts that
+ *  decision. A `true` here is never authorization to delegate: a caller that
+ *  derives a candidate keeps the grantor's inherited origin, and the
+ *  authorization server decides eligibility at each delegated issuance. */
 function matchersSubset(
   candidate: DelegateMatcher[] | undefined,
   granted: DelegateMatcher[] | undefined,

@@ -434,7 +434,10 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
   };
 
   function build(): { pep: Pep; evidence: EvidenceStore } {
-    const payments = new PaymentsStore();
+    // The store holds the vendor these lookups read, so each permit reaches
+    // the decision-output check under test; a vendor the store does not hold
+    // is refused before any decision (#1251, D484).
+    const payments = seedPayments();
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const pep = new Pep({
       decide,

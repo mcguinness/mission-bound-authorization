@@ -13,6 +13,7 @@ import { randomBytes } from "node:crypto";
 import type { ActObject } from "@mission/actor-chain";
 import { SignJWT, type CryptoKey, type JWTPayload } from "jose";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import type { DelegateCandidate } from "./delegate-matcher.js";
 import { projectThroughEffective } from "./derive.js";
 import type { MissionKernel } from "./kernel.js";
 import type { AuthorityEntry, MissionRecord } from "./types.js";
@@ -105,6 +106,17 @@ export interface IssueGrantInput {
    */
   authorityFilter?: (entries: AuthorityEntry[]) => AuthorityEntry[];
   /**
+   * @spec mission#delegation-constraints, resource-access#delegate-eligibility
+   * (#1275): the delegate this grant is issued to and the accounted delegation
+   * depth of the grant. When present at a depth above 0, the audience-scoped
+   * entries are first narrowed to those the delegate may carry
+   * (MissionKernel.delegableEntries), evaluated against the Mission as the
+   * derivation gate admits it, with the current delegation-authorization
+   * policy: a decision taken before the gate is never reused. `authorityFilter`
+   * then applies to the result.
+   */
+  delegation?: { delegate: DelegateCandidate; depth: number };
+  /**
    * @spec id-continuation-assertion — runs once the derivation gate, the count
    * and the audience projection have admitted the grant, and before it is
    * signed. A throw aborts issuance: nothing is signed. The continuation
@@ -166,14 +178,21 @@ async function mintCrossDomainGrant(
   const record: MissionRecord = admitted.record;
 
   // Containment: the audience-scoped projection draws on the EFFECTIVE set, so
-  // a contained capability never crosses the domain boundary.
-  const scoped = audienceScopedAuthority(
-    kernel.effectiveAuthoritySet(record),
-    input.resourceToAs,
-    input.targetAs,
+  // a contained capability never crosses the domain boundary. Each scoped
+  // entry keeps the approved record entry it was computed from, which the
+  // delegation gate resolves to its retained provenance.
+  const candidates = kernel.effectiveDelegationCandidates(
+    record,
+    (e) => input.resourceToAs(e.resource) === input.targetAs,
   );
+  const scoped = candidates.map((c) => c.entry);
   if (scoped.length === 0) throw new Error("no audience-scoped authority for the target Resource AS");
-  const carried = input.authorityFilter ? input.authorityFilter(scoped) : scoped;
+  const delegation = input.delegation;
+  const delegable =
+    delegation && delegation.depth > 0
+      ? kernel.delegableEntries(record, candidates, delegation.delegate, delegation.depth)
+      : scoped;
+  const carried = input.authorityFilter ? input.authorityFilter(delegable) : delegable;
   if (carried.length === 0) {
     throw new AuthorityNarrowedToEmptyError("no audience-scoped authority remains for this grant once narrowed");
   }

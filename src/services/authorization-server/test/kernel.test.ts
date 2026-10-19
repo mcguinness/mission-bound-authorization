@@ -321,11 +321,11 @@ describe("derivation (@spec mission#authorization-derivation)", () => {
 
   // @spec mission#common-constraints, review #745 P2 — the self-intersect
   // fallback (`[proposal]`) still runs a mapped candidate through `intersect`,
-  // which fails closed on a registered-but-unimplemented Common Constraint
+  // which fails closed on a Common Constraint registered after this implementation
   // (@spec mission#authorization-derivation). A ceiling entry carrying one
   // must still refuse in configured-mapping mode, not silently pass through
   // now that it is paired against itself instead of its siblings.
-  it("configured-mapping mode still fails closed on a registered-but-unimplemented Common Constraint", () => {
+  it("configured-mapping mode still fails closed on a Common Constraint registered after this implementation", () => {
     const withUnimplemented = {
       policy_version: "t",
       ceiling: [
@@ -333,13 +333,13 @@ describe("derivation (@spec mission#authorization-derivation)", () => {
           type: "mission_resource_access",
           resource: RESOURCE,
           actions: ["payments:invoice.read"],
-          constraints: { time_window: { not_before: "2026-01-01T00:00:00Z" } },
+          constraints: { x_registered_later: "v1" },
         },
       ],
     };
     const mapped = validateMissionIntent(intent());
     expect(() => deriveAuthoritySet(mapped, withUnimplemented as never, undefined)).toThrow(IntentError);
-    expect(() => deriveAuthoritySet(mapped, withUnimplemented as never, undefined)).toThrow(/time_window/);
+    expect(() => deriveAuthoritySet(mapped, withUnimplemented as never, undefined)).toThrow(/x_registered_later/);
   });
 
   // @spec mission#authorization-derivation (#743, review #745 P2) — the P2

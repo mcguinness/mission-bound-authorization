@@ -418,6 +418,62 @@
       "refs": [
         "#1258 item 6"
       ]
+    },
+    {
+      "id": "der-10",
+      "description": "A ceiling entry carries time_window and the proposal omits it, on a deployment that implements time_window",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.time_window"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "time_window": {
+                "not_before": "2026-01-01T00:00:00Z"
+              }
+            }
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "derived",
+        "reason": "the supported constraint is carried into the derived entry, never dropped; the counterpart of der-06",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "time_window": {
+                "not_before": "2026-01-01T00:00:00Z"
+              }
+            }
+          }
+        ]
+      },
+      "refs": [
+        "#1258 item 7",
+        "#1266"
+      ]
     }
   ]
 }

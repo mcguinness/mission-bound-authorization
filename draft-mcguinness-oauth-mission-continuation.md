@@ -436,7 +436,10 @@ current effective authority. The exchange is a no-actor self-exchange
 under the issuance profile's Self-Exchange Down-Scoping rules
 ({{I-D.draft-mcguinness-oauth-mission}}). A dispatched Mission's
 selected Agent instead redeems the Template profile's Dispatch Handoff
-for its handle ({{I-D.draft-mcguinness-oauth-mission-template}}).
+for its handle ({{I-D.draft-mcguinness-oauth-mission-template}}),
+unless it is also the Dispatcher (the same authenticated client),
+which obtains its handle through this exchange from the instance's
+access token.
 
 This is the "scheduled continuation roots in durable
 authorization" case: the Mission is that durable authorization. Successive
@@ -640,3 +643,6 @@ constrains their use and introduces none of its own.
   draft requires, replacing the re-binding to the acting key. An agent
   obtains its handle with a no-actor self-exchange naming its own
   `client_id` as `audience` (#1157).
+- A dispatched Mission's selected Agent that is also its Dispatcher
+  obtains its delegation handle through that self-exchange, from the
+  instance's access token, instead of the Dispatch Handoff (#1195).

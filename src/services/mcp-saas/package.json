@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@mission/core": "workspace:*",
     "@mission/store": "workspace:*",
     "jose": "^6.1.3",
     "@mission/authorization-server": "workspace:*",
