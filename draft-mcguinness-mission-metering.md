@@ -1111,9 +1111,9 @@ re-evaluation request that carries the prior permit's `evaluation_id`
 in `context.prior_evaluation_id`, so the PDP continues the same metered
 activity rather than opening a new reservation.
 
-The PDP MUST verify that the renewal's Mission, subject, action, and
-audience match the evaluation named by `prior_evaluation_id`. A
-deployment sizes lease
+The PDP MUST verify that the renewal's Mission, subject, action,
+operation target and audience match the evaluation named by
+`prior_evaluation_id`. A deployment sizes lease
 intervals to amortize renewals: an interval materially shorter than
 the action class's staleness bound adds decision load without
 tightening the revocation cutoff. This exchange requires
@@ -1153,7 +1153,8 @@ prior permit expires; the action is not parameter-bound, so no
     "type": "ledger",
     "id": "ledger_main",
     "properties": {
-      "audience": "https://erp.example.com"
+      "audience": "https://erp.example.com",
+      "operation_target": "https://erp.example.com"
     }
   },
   "action": { "name": "reconciliation.run" },
@@ -1303,6 +1304,11 @@ this registry.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Duration-Lease Renewal: a renewal continues the lease only when its
+  operation target, as well as its Mission, subject, action and
+  audience, matches the renewed evaluation's; the example carries
+  `resource.properties.operation_target` (#1276).
 
 - The `exclusive` selector matches a consequential action whose
   operation target equals the selector's `resource` (#1276).

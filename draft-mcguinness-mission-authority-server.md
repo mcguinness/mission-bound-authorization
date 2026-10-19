@@ -1165,8 +1165,9 @@ Mission binding, the Mission state it observed in the MAS's signed
 Mission Status response as `context.mission_state_observation`, the
 authenticated client as `context.actor.client_id`, the entries the
 token's `scope` maps to under the mapping contract as
-`context.credential.authority`, and the other decision inputs per
-{{I-D.draft-mcguinness-mission-authzen}}:
+`context.credential.authority`, the operation target its operation
+contract establishes as `resource.properties.operation_target`, and
+the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
 
 ~~~ json
 {
@@ -1178,7 +1179,10 @@ token's `scope` maps to under the mapping contract as
   "resource": {
     "type": "invoice",
     "id": "inv_2026Q3_842",
-    "properties": { "audience": "https://erp.example.com" }
+    "properties": {
+      "audience": "https://erp.example.com",
+      "operation_target": "https://erp.example.com"
+    }
   },
   "action": { "name": "invoices.read" },
   "context": {
