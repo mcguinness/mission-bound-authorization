@@ -271,6 +271,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-template:
+    title: "Mission Template for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -3449,30 +3457,36 @@ containment hierarchy ({{three-objects}}).
 ## The Standing-Agent Pattern {#standing-agent}
 
 The **standing-agent pattern** governs the agent whose work never
-ends. The agent stands; the authority cycles. The standing thing is a
-charter: a Mission with a consented authority ceiling and drawdown
-policy ({{I-D.draft-mcguinness-oauth-mission-progressive}},
-experimental). The working thing is the bounded Mission each unit of
-work draws under the charter, as an in-ceiling successor or a
-policy-approved Child Mission
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Each unit
-Mission expires and discharges as its unit completes
-({{I-D.draft-mcguinness-oauth-mission-status}},
-{{I-D.draft-mcguinness-oauth-mission-discharge}}).
+ends. The agent stands; the authority cycles: each unit of work runs
+under its own bounded Mission, which expires and discharges as its
+unit completes ({{I-D.draft-mcguinness-oauth-mission-status}},
+{{I-D.draft-mcguinness-oauth-mission-discharge}}). The pattern has two
+paths:
 
-The progressive profile's prohibited set keeps the high-consequence
-classes on a fresh human approval inside the ceiling. Its Ceiling
-Review bounds the chain in time with an evidence-rendering renewal.
+- **A charter with workers.** The charter is a Mission approved once
+  whose delegation policy admits policy-approved Child Missions
+  (`policy_drawdown`,
+  {{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Each unit
+  is a Child Mission for a distinct worker client: the parent never
+  holds child tokens, so a unit's work runs under its worker's own
+  credentials.
+- **One agent doing each unit itself.** The agent proposes each unit
+  Mission, and a policy version a human approved activates it,
+  resolving the pending request with no reviewer (`governed_policy`,
+  {{I-D.draft-mcguinness-mission-approval-governance}}). The
+  experimental Template profile
+  ({{I-D.draft-mcguinness-oauth-mission-template}}) instead dispatches
+  each unit from a template consented once, and the experimental
+  Progressive profile
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}) draws each as
+  an in-ceiling successor under a consented ceiling; its prohibited
+  set keeps the high-consequence classes on a fresh human approval,
+  and its Ceiling Review bounds the chain in time.
 
-Without the progressive profile, the same pattern runs as ordinary,
-freshly approved unit Missions with deferred approval
+Without either path, the units run as ordinary, freshly approved
+Missions, with deferred approval
 ({{I-D.draft-mcguinness-oauth-mission-approval}}) absorbing the
-volume: the experimental profile changes the unit economics, not the
-governance shape. A single agent can also propose each unit Mission
-itself and have a policy approve it under a policy version a human
-approved (`governed_policy`,
-{{I-D.draft-mcguinness-mission-approval-governance}}), resolving the
-pending request with no reviewer.
+volume.
 
 ## The Mission Deployment Profile {#deployment-profile}
 
@@ -4302,6 +4316,11 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Standing-Agent Pattern states its two paths: a charter whose
+  policy-approved Child Missions go to distinct worker clients, and
+  one agent doing each unit itself under `governed_policy` or the
+  experimental Template or Progressive profiles (#1196).
 
 - The conventional-stack table cites the OAuth binding's sections by
   their current titles, "Relationship to Existing OAuth Objects" and
