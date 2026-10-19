@@ -2,9 +2,27 @@ name: "Reader Editions"
 
 on:
   pull_request:
+    paths-ignore:
+    - 'src/**'
+    - 'notes/**'
+    - conformance-manifest.json
+    - family-manifest.json
+    - candidate-gate.json
+    - DRAFTS.md
   push:
     branches:
     - main
+    paths-ignore:
+    - 'src/**'
+    - 'notes/**'
+    - conformance-manifest.json
+    - family-manifest.json
+    - candidate-gate.json
+    - DRAFTS.md
+
+concurrency:
+  group: reader-editions-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
