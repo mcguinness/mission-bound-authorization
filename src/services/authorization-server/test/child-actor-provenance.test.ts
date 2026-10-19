@@ -16,6 +16,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { activationPolicyDigest } from "@mission/core";
 import { DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -182,6 +183,54 @@ describe("the kernel retains child-actor provenance with the Mission and reads i
     } catch (e) {
       expect((e as ChildDelegationError).reason).toBe("child_actor_not_allowed");
       expect((e as ChildDelegationError).evidence?.decision).toBe("denied");
+    }
+    expect(kernel.findChildren(parent.id)).toHaveLength(0);
+  });
+
+  it("a permitting policy creates no children grant and relaxes no control: the on-switch, max_children and max_child_depth still refuse", () => {
+    const kernel = kernelOver(
+      [entry([READ], { max_depth: 2, children: { max_children: 1, max_child_depth: 1 } }), entry([LIST])],
+      () => true,
+    );
+    const parent = approveOn(kernel, [entry([READ]), entry([LIST])]);
+    expect(parent.child_actor_provenance).toEqual(["policy", "list"]);
+    const reasonOf = (fn: () => unknown): string => {
+      try {
+        fn();
+      } catch (e) {
+        return (e as ChildDelegationError).reason;
+      }
+      return "created";
+    };
+    // No children grant on the list entry: the policy cannot supply one.
+    expect(reasonOf(() => childOn(kernel, parent.id, "carol", [entry([LIST])]))).toBe("delegation_not_permitted");
+    const childEntry = entry([READ], { max_depth: 1, children: { max_children: 1, max_child_depth: 1 } });
+    const child = childOn(kernel, parent.id, "carol", [childEntry]);
+    // max_children 1 is full: the policy does not lift it.
+    expect(reasonOf(() => childOn(kernel, parent.id, "dave", [childEntry]))).toBe("fanout_exceeded");
+    // A grandchild at depth 2 exceeds max_child_depth 1: the policy does not lift it.
+    expect(reasonOf(() => childOn(kernel, child.id, "erin", [entry([READ], { max_depth: 1 })]))).toBe("fanout_exceeded");
+  });
+
+  it("an entry's child_creation_policy reference admits no actor by itself: with no list and no installed policy, a verified reference still refuses", () => {
+    const snapshot = { version: "1", content_type: "application/json", content: '{"rule":"one child per invoice"}' };
+    const ref = { id: "urn:policy:child-drawdown", version: "1", digest: activationPolicyDigest(ISS, snapshot) };
+    const ceiling = [entry([READ], { max_depth: 2, children: { max_children: 5, child_creation_policy: ref } })];
+    const kernel = new MissionKernel({
+      issuer: ISS,
+      policy: { policy_version: "child-actor-1", ceiling },
+      authoritySourceCatalog: testAuthoritySourceCatalog(ceiling, ["agent"], ["bob"]),
+      statusKey,
+      statusKid: "as-status",
+      activationPolicies: { [ref.id]: snapshot },
+    });
+    const parent = approveOn(kernel, [entry([READ])]);
+    expect(parent.child_actor_provenance).toEqual(["policy"]);
+    try {
+      childOn(kernel, parent.id, "carol", [entry([READ], { max_depth: 1, children: { max_children: 1, child_creation_policy: ref } })]);
+      expect.unreachable();
+    } catch (e) {
+      expect((e as ChildDelegationError).reason).toBe("child_actor_not_allowed");
     }
     expect(kernel.findChildren(parent.id)).toHaveLength(0);
   });
