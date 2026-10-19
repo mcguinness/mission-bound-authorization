@@ -69,6 +69,7 @@ import type {
   ApprovalBasisGovernedPolicy,
   AuthorityEntry,
   AuthoritySourceType,
+  IntentSubmissionEvidenceFact,
   MissionIntent,
   MissionRecord,
 } from "./types.js";
@@ -815,6 +816,13 @@ export interface GovernedActivationInput {
   clientId: string;
   /** Model outputs gathered for this activation: recorded inputs only. */
   modelOutputs?: readonly RecordedModelOutput[];
+  /**
+   * @spec mission#intent-submission-evidence, mission#submission-processing
+   * (step 8): the Intent Submission Evidence facts the issuer verified for
+   * this activation, recorded on the Mission as `submission_evidence`
+   * (provenance outside every anchor), as a direct approval records them.
+   */
+  submissionEvidence?: readonly IntentSubmissionEvidenceFact[];
 }
 
 export interface GovernedActivation {
@@ -1186,6 +1194,7 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
     expires_at: expiresAt,
     version: 1,
     derivation_limit: kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
+    ...(input.submissionEvidence?.length ? { submission_evidence: [...input.submissionEvidence] } : {}),
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,
