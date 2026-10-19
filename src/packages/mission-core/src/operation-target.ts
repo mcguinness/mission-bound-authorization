@@ -121,23 +121,37 @@ const ABSOLUTE_URI = new RegExp(String.raw`^(?<scheme>${SCHEME}):${HIER_PART}(?:
 const HTTP_SCHEME = /^https?$/i;
 
 /**
- * Whether `value` is a well-formed operation target: a string holding one
- * RFC 3986 `absolute-URI` (Section 4.3), so with no fragment, in which every
- * `%` begins a `pct-encoded` triplet and every character is one the grammar
- * permits where it appears; an `http` or `https` target also names a
- * non-empty host. Syntax only: the value is matched as given and never
- * parsed into, or replaced by, a different spelling, so an `exact`
- * comparison reads the operand as given. The WHATWG URL parser is not used:
- * it accepts what this grammar refuses (`%zz`, a trailing `%`, `https:x`,
- * `https:///x`) and refuses what it permits (an `IPvFuture` literal, a
- * dotted `reg-name` such as `1.2.3.256`).
+ * Whether `value` is a string holding one RFC 3986 `absolute-URI` (Section
+ * 4.3), so with no fragment, in which every `%` begins a `pct-encoded`
+ * triplet and every character is one the grammar permits where it appears;
+ * an `http` or `https` URI also names a non-empty host. Syntax only: the
+ * value is matched as given and never parsed into, or replaced by, a
+ * different spelling, so a recorded or committed value keeps the submitted
+ * bytes and an `exact` comparison reads it as given. The WHATWG URL parser
+ * is not used: it accepts what this grammar refuses (`%zz`, a trailing `%`,
+ * `https:x`, `https:///x`) and refuses what it permits (an `IPvFuture`
+ * literal, a dotted `reg-name` such as `1.2.3.256`).
+ *
+ * @spec resource-access#entry-validation, mission#mission-intent (#1310,
+ * D480) — the one check every resource identifier the issuer accepts goes
+ * through: a Mission Intent's `target_resources`, an entry's `resource` at
+ * every intake, configuration load and derivation, and an operation target
+ * ({@link isOperationTarget}).
  */
-export function isOperationTarget(value: unknown): value is string {
+export function isAbsoluteUri(value: unknown): value is string {
   if (typeof value !== "string") return false;
   const m = ABSOLUTE_URI.exec(value);
   if (m === null) return false;
   const { scheme, host } = m.groups ?? {};
   return !HTTP_SCHEME.test(scheme ?? "") || (host !== undefined && host.length > 0);
+}
+
+/**
+ * Whether `value` is a well-formed operation target: one {@link
+ * isAbsoluteUri} value, matched as given.
+ */
+export function isOperationTarget(value: unknown): value is string {
+  return isAbsoluteUri(value);
 }
 
 /** The outcome of matching one entry against an operation target. */

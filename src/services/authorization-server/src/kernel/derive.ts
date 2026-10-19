@@ -13,6 +13,7 @@ import {
   compareAmounts,
   IMPLEMENTED_COMMON_CONSTRAINTS,
   intersectCommonConstraints,
+  isAbsoluteUri,
   isValidAmount,
   isSubsetEntry,
   isSubsetSet,
@@ -86,6 +87,23 @@ function assertNoRefusedMembers(entries: readonly AuthorityEntry[]): void {
       throw new IntentError(
         "invalid_authorization_details",
         `authorization_details entry carries ${member}, which the mission_resource_access type does not use; refusing rather than silently dropping it`,
+      );
+    }
+  }
+}
+
+/**
+ * @spec resource-access#entry-validation (#1310, D480): every entry's
+ * `resource` is one RFC 3986 absolute URI under the shared check, over the
+ * full ceiling and proposal, so a programmatic caller that bypasses intake
+ * and the config loader cannot derive from a malformed identifier.
+ */
+function assertWellFormedResources(entries: readonly AuthorityEntry[]): void {
+  for (const entry of entries) {
+    if (!isAbsoluteUri(entry.resource)) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry resource ${JSON.stringify(entry.resource)} is not an RFC 3986 absolute URI`,
       );
     }
   }
@@ -324,6 +342,8 @@ export function deriveAuthoritySetWithProvenance(
   if (proposal) assertExactResourceMatch(proposal);
   assertNoRefusedMembers(policy.ceiling);
   if (proposal) assertNoRefusedMembers(proposal);
+  assertWellFormedResources(policy.ceiling);
+  if (proposal) assertWellFormedResources(proposal);
 
   // @spec mission#error-mapping — captured BEFORE the template-mode fallback
   // below reassigns `proposals`: whether the client actually submitted an

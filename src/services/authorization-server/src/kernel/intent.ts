@@ -22,6 +22,7 @@ import {
   computeAnchor,
   DuplicateMemberError,
   intentHash,
+  isAbsoluteUri,
   type JsonValue,
   MISSION_INTENT_EVIDENCE_TYP,
   parseStrictJson,
@@ -509,6 +510,8 @@ function validateMissionIntentObject(
   if (!isStringArray(targetResources) || targetResources.length === 0 || targetResources.length > MAX_ARRAY_LEN) {
     throw new IntentError("invalid_request", "target_resources is required (non-empty string array)");
   }
+  // @spec mission#mission-intent (#1310, D480): each value is one RFC 3986
+  // absolute URI under the shared check, recorded and committed as submitted.
   for (const r of targetResources) {
     if (!isAbsoluteUri(r)) throw new IntentError("invalid_request", `resource is not an absolute URI: ${r}`);
   }
@@ -641,11 +644,3 @@ function isStringArray(v: JsonValue | undefined): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === "string");
 }
 
-function isAbsoluteUri(v: string): boolean {
-  try {
-    const u = new URL(v);
-    return u.protocol.length > 0;
-  } catch {
-    return false;
-  }
-}
