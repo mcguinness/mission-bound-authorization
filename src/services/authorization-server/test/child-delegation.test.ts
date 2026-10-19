@@ -748,6 +748,10 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       state: "active",
       intent: { goal: "root", target_resources: [R], expires_at: PARENT_EXP },
       authority_set: [entryOf("100.00", 1), entryOf("500.00", 5)],
+      // @spec child-delegation#fanout (#1304): the child-actor origins a
+      // derivation would have retained: both entries derive from a ceiling
+      // entry whose `children` names its actors, so each list decides.
+      child_actor_provenance: ["list", "list"],
       intent_hash: "sha-256:d-intent",
       authority_hash: "sha-256:d-authority",
       subject: { iss: ISS, sub: "alice" },

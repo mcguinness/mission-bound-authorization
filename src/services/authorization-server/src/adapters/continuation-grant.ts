@@ -78,6 +78,7 @@ import {
   createChildMission,
   presentedTokenChildRefusal,
   presentedTokenFanoutRefusal,
+  recordedChildActorRefusal,
 } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
@@ -2369,8 +2370,20 @@ async function recoverChildCreation(
     return;
   }
   const recordedParent = child.parent ? opts.kernel.get(child.parent.id) : undefined;
+  // @spec child-delegation#fanout (#1304, D486): recovery applies the same
+  // child-actor rule as creation: the token's lists, deferring only under a
+  // parent entry whose retained origin is `policy`, and the parent's retained
+  // origins, lists and current child-creation policy.
   const refusal =
-    presentedTokenChildRefusal(opts.kernel, child.authority_set, child.client_id, child.parent?.depth ?? 1, presentedAuthority) ??
+    presentedTokenChildRefusal(
+      opts.kernel,
+      child.authority_set,
+      child.client_id,
+      child.parent?.depth ?? 1,
+      presentedAuthority,
+      recordedParent,
+    ) ??
+    (recordedParent ? recordedChildActorRefusal(opts.kernel, recordedParent, child) : undefined) ??
     (recordedParent
       ? presentedTokenFanoutRefusal(opts.kernel, recordedParent, child.authority_set, presentedAuthority, true)
       : undefined);
