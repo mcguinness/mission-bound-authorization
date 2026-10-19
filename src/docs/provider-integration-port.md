@@ -40,16 +40,26 @@ references are to version 9.10.0 under `lib/`. Tests are in
   of this path and appear only where a shared hook behaves differently for
   them.
 
-Five stores take part. No transaction spans two of them. The runtime overlay
+Four stores take part. No transaction spans two of them. The runtime overlay
 adds its own stores (the deployment contract's §7).
 
 | Store | Holds | Persistence |
 |---|---|---|
-| Kernel database (`MissionKernel.db`) | Mission Records, `derivation_count`, `grant_id`, lifecycle events and outbox, tombstones, derivation reservations, lifecycle and creation replay rows | In memory by default. A file-backed single writer is an opt-in (`kernelStore.file` on `buildAuthorizationServer`). `server.ts` uses the default. |
+| Kernel database (`MissionKernel.db`) | Mission Records, `derivation_count`, `grant_id`, lifecycle events and outbox, tombstones, derivation reservations, lifecycle and creation replay rows, and the continuation anchors and handles and delegation families (`ContinuationStore`, `DelegationFamilyStore`), written in the committing transaction (#250 step 2) | In memory by default. A file-backed single writer is an opt-in (`kernelStore.file` on `buildAuthorizationServer`). `server.ts`, `pnpm issuance-only` and `pnpm as-native` use the default. |
 | oidc-provider adapter | Interactions, grants, authorization codes, refresh tokens | In memory. `buildProvider` configures no `adapter`, so oidc-provider's memory adapter applies. |
 | `MissionBoundGrantStore` (`kernel.missionBoundGrants`) | Grant id to Mission, append-only | Its own in-memory handle, built per boot, also when the kernel is file-backed |
 | `TokenIssuanceStore` | (`iss`, `jti`) to the grant id that minted the token | Its own in-memory handle, built per boot |
-| `DelegationFamilyStore` | Family grant id to Mission | Its own in-memory handle, built per boot |
+
+The AS's four signing keys (`as-token`, `as-status`, `as-txn`,
+`as-continuation`) come from a key ring file, created once by
+`pnpm keys init` and named by `MISSION_KEY_RING`, or are generated at each
+boot under `MISSION_EPHEMERAL_KEYS=1`. `server.ts`, `pnpm issuance-only` and
+`pnpm as-native` each refuse to start with neither or both
+(`signingKeysFromEnv`, #831 slice 1); a composition that names no source, as
+the tests and the shared demo do, generates them per boot
+(`buildAuthorizationServer`). A ring keeps the keys across a restart; it
+holds one generation per key, and rotation and resource-side JWKS refresh
+are #831's.
 
 ## 2. Desired contract
 
@@ -114,8 +124,8 @@ the store.
 | Record and grant binding | Yes | `kernel.prepareApproval`; `grant.save()` under the interaction's grant identity; `kernel.approve` and `insertRecord`, committing the record already bound; the code on the resume request (§3.4) | Every refusal before any write, except the progressive ceiling consent at the commit; the record commits bound (§4.1); the grant save precedes it and the code follows it on a later request | Publication of the activating event | A failure before the commit leaves an inert grant and no Mission; after it, an `active`, bound Mission whose code is not issued yet; provider state is lost at restart (§4.5) | Yes, HTTP (§3.4) | `{#approval-event}` step 7 record/code atomicity not met: the code is issued on a later request (#250; §3.4) |
 | Issuance | Yes | `at.save()`: `extraTokenClaims`, `formats.customizers.jwt`, `access_token.issued` (§3.5) | The counter `UPDATE` autocommits before signing; no acceptance callback (§4.2) | None before delivery | The count stays consumed; nothing reconciles it (§4.3) | Yes, HTTP (§3.5) | Uncoupled counter: a failure after the count stays counted (§4.3); revoke-versus-issue window (§3.5) |
 | Refresh and revocation gating | Yes | `rotateRefreshToken`; the gates in `extraTokenClaims`; the lifecycle route (§3.6) | The lifecycle commit is one kernel transaction; grant destruction follows it | Grant destruction and publication | File-backed state survives; provider grants do not (§4.5) | Yes, HTTP (§3.6) | A state change between the refresh pre-check and the save-time gate is refused after rotation consumes the presented token (§3.6; #250); a fully contained family is refused after rotation, losing no recoverable issuance authority (§3.6) |
-| Scope projection | Yes (`plain-rs` is `scope_only`) | `earlyScopeRefusal`; the decision check; `decideMissionScope`; `preCheckRefreshProjection`; the JWT customizer (§3.7) | In request, before the state gate and before refresh consumption; reads only | None | The mapping is configuration, strictly loaded at boot | Yes, HTTP (§3.7) | Code-exchange refusal after code consumption; JWT-customizer backstop has no test (§3.7) |
-| Protected introspection | JWT-plus-introspection configuration only | `/introspect` route in `makeRoutes` (§3.8) | Per-request read of current kernel state; may commit an expiry | None | Index and keys are per boot; pre-restart tokens introspect `active: false` | Yes, HTTP (§3.8) | No test for a signed token with no issuance record (§3.8) |
+| Scope projection | Yes (`plain-rs` is `scope_only`) | `earlyScopeRefusal`; the decision check; `decideMissionScope`; `preCheckRefreshProjection`; the JWT customizer (§3.7) | In request, before the state gate and before refresh consumption; reads only | None | The mapping is configuration, strictly loaded at boot | Yes, HTTP; the JWT customizer directly and on a delegated mint (§3.7) | Code-exchange refusal after code consumption (§3.7) |
+| Protected introspection | JWT-plus-introspection configuration only | `/introspect` route in `makeRoutes` (§3.8) | Per-request read of current kernel state; may commit an expiry | None | The index is per boot, and so are the keys unless a key ring keeps them; pre-restart tokens introspect `active: false` either way (§3.8) | Yes, HTTP (§3.8) | None: a signed token with no issuance record is never active (§3.8) |
 
 ### 3.1 Trusted approval input and achieved authentication context
 
@@ -687,6 +697,18 @@ the store.
   - `scope projection on derived tokens (@spec mission#scope-projection) > Token Exchange projects the family token's scope from its confined subset, keeps it on the family refresh, and refuses an unenforced constraint before creating a family`: asserts `derivation_count` is unchanged after the refusal.
 - **Tests (unit, `packages/mission-core/test/scope-projection.test.ts`):**
   `projectScope (@spec mission#scope-projection) > an unknown mapping refuses invalid_target even when the request names a scope value`.
+- **Tests (the JWT-customizer backstop).** Two surfaces. Invoked directly:
+  the customizer this AS configured, called the way oidc-provider 9.10.0
+  calls it, with a token the projection decided at a real issuance
+  (`scope-projection.test.ts`):
+  - `the JWT customizer backstop, invoked directly (@spec mission#scope-projection, mission#rs-enforcement) > refuses invalid_target a Mission-bound payload whose token the scope projection did not decide, and applies the decided scope for a projected token`
+  - `the JWT customizer backstop, invoked directly (@spec mission#scope-projection, mission#rs-enforcement) > refuses invalid_target an act-bearing Mission-bound payload to an audience not classified Mission-aware or not mapped, and passes it to a Mission-aware audience`
+
+  At the token endpoint, on a real same-Mission delegated mint (the opt-in
+  `delegation` capability, off at the issuance-only launcher), with the
+  target reclassified after the exchange's own routing check
+  (`delegation-exchange.test.ts`):
+  `the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870) > refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check`.
 - **Unsupported or residual.**
   - At the code exchange the projection runs after the code is consumed
     (`authorization_code.js` L89, then L127). A refusal there spends the
@@ -695,7 +717,6 @@ the store.
     here.
   - No test asserts `derivation_count` after a projection refusal on the code
     or refresh path. The Token Exchange tests above assert it on their path.
-  - The JWT-customizer backstop has no test.
   - The decision-time check ignores `capability_sources` (§3.3).
 
 ### 3.8 Protected introspection
@@ -737,10 +758,12 @@ the store.
   fresh call for every request and caches nothing (`introspectActive`;
   `plain-rs introspection failure contract (#873) > introspects every request: two requests make two calls, and a positive first result does not admit the second once the endpoint says active false`).
 - **Asynchronous work.** None.
-- **Crash and recovery.** The issuance index, the provider grants and the
-  signing keys are per boot. A pre-restart token fails verification against
-  the new keys, and would miss the index if it verified. Both answer
-  `active: false`. Fail closed; no assembly-level restart test.
+- **Crash and recovery.** The issuance index and the provider grants are per
+  boot. With per-boot keys a pre-restart token fails verification against the
+  new keys; with a key ring it verifies and misses the index. Both answer
+  `active: false`, fail closed:
+  `an AS signing from a key ring across restarts (@spec #831 slice 1) > an access token signed before a restart verifies against the restarted AS's JWKS; its introspection does not survive the restart (#250)`
+  (AS-level).
 - **Tests (HTTP):**
   - `composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details` (`introspection-endpoint.test.ts`)
   - `caller authentication (@spec mission#caller-authorization-and-minimization) > refuses an unauthenticated call with 401 + WWW-Authenticate` (`introspection-endpoint.test.ts`)
@@ -863,21 +886,26 @@ in-memory default, so a restart there loses the Mission kernel as well. For
 this path, a restart on the file-backed kernel leaves:
 
 - **Retained:** Mission Records, their committed authority-source roots,
-  `derivation_count`, `grant_id`, lifecycle events and tombstones.
+  `derivation_count`, `grant_id`, lifecycle events and tombstones, and the
+  continuation anchors and handles and delegation families, a lineage
+  terminated before the restart staying terminal (#250 step 2).
 - **Lost:** provider interactions, grants, codes and refresh tokens. Every
   outstanding refresh token is unknown, and oidc-provider refuses it
-  `invalid_grant` (`refresh token not found`).
-- **Empty:** `TokenIssuanceStore`, `MissionBoundGrantStore` and
-  `DelegationFamilyStore`.
-- **Regenerated:** the signing keys (D25). A pre-restart access token fails
-  introspection. A Resource Server with a cached JWKS keeps accepting it until
-  `exp` (`issuance-only-deployment.md` §2).
+  `invalid_grant` (`refresh token not found`). A recovered delegation family
+  whose grant is gone is refused where it is presented.
+- **Empty:** `TokenIssuanceStore` and `MissionBoundGrantStore`.
+- **Signing keys:** kept with a key ring, so a pre-restart access token still
+  verifies, misses the issuance index and introspects `active: false`;
+  regenerated under `MISSION_EPHEMERAL_KEYS=1` (D25), so a pre-restart token
+  fails introspection and a Resource Server with a cached JWKS keeps
+  accepting it until `exp` (`issuance-only-deployment.md` §2).
 - **Stranded:** an `active` Mission whose grant is gone. Nothing can derive
   from it, and it stays `active` until `expires_at` or a revocation.
 
-A restart is not revocation: a consumer holding the old key keeps accepting
-pre-restart tokens until `exp` plus tolerance. Durable signing identities are
-#831's.
+A restart is not revocation either way: with per-boot keys a consumer holding
+the old key keeps accepting pre-restart tokens until `exp` plus tolerance,
+and with a ring the key does not change. Rotation and resource-side JWKS
+refresh are #831's.
 
 Committed authority-source roots are the one thing reconciled at kernel
 construction (#827). A row that predates them gains one only from trusted
@@ -890,10 +918,18 @@ dispatch. A match in the current catalog is never evidence. A derived
 row takes its origin's root; a row without evidence stays unbound and every
 drawdown from it refuses. Nothing else on this path is reconciled, because it
 has no reservations to settle.
-Each unsupported recovery refuses rather than serves. No test boots the
-assembled AS on a file-backed kernel. The restart test,
+Each unsupported recovery refuses rather than serves. No test restarts the
+AS as a new process. The restart tests witness the kernel side:
 `restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart`
-(`control-plane-fanout.test.ts`), is kernel-level.
+(`control-plane-fanout.test.ts`) at the kernel, and
+`continuation and delegation-family projections across a restart (#250) > keeps anchors, handles and families across a restart, roots nothing again at boot, and keeps a terminated lineage terminal`
+(`continuation-durability.test.ts`), which rebuilds the AS in the same
+process on a file-backed kernel. oidc-provider's memory adapter is
+process-global, so an in-process rebuild still holds the earlier provider
+grants and witnesses only the kernel's side
+([control-plane-deployment.md](control-plane-deployment.md), Restart
+inventory). The key ring is witnessed the same way:
+`an AS signing from a key ring across restarts (@spec #831 slice 1) > an access token signed before a restart verifies against the restarted AS's JWKS; its introspection does not survive the restart (#250)`.
 
 ### 4.6 Where #250 owns the open work
 
@@ -934,7 +970,8 @@ the store and restart table (§7) and the acceptance vectors (§10). This
 section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) or naming a later merged
 issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `e3f4e789`, those naming
-D436 or D483 at `897716ef`, and every `file:line` citation is read at `04b11481`.
+D436 or D483 at `897716ef`, those on signing keys and restart (#1299, #1307) at `73a2e86b`, and
+every `file:line` citation is read at `04b11481`.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -962,7 +999,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 
 | Obligation | Required for this path | Hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
-| Credential validation | Yes. Met (D411): the PEP and the PDP each enforce the credential's own authority, and introspection, which this path does not consume, validates as the resource does (D402) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check, and the `context.credential` carrier the PDP enforces (§5.1) | In request, before any claim is a decision input | None | DPoP replay cache and signing keys are per boot; a pre-restart token fails validation | HTTP transport, PEP- and PDP-level (§5.1) | The mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
+| Credential validation | Yes. Met (D411): the PEP and the PDP each enforce the credential's own authority, and introspection, which this path does not consume, validates as the resource does (D402) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check, and the `context.credential` carrier the PDP enforces (§5.1) | In request, before any claim is a decision input | None | The DPoP replay cache is per boot. With per-boot AS keys a pre-restart token fails validation; with a key ring it validates, and its Mission, lost with the in-memory kernel, refuses `unknown_mission` (§5.1, §5.3) | HTTP transport, PEP- and PDP-level (§5.1) | The mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
 | Independent Resource policy | Yes, met (#828 closed, D436) | The decision point's bound `ResourcePolicy`, OpenFGA stored entitlements in `stack.ts` (§5.2) | In the decision | None | Entitlements are stored in OpenFGA; startup attaches or bootstraps a development store (§5.2) | PDP- and PEP-level, [FGA] (§5.2) | Live witnesses CI-only (§5.2) |
 | Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `Pep.intake` (closed schema, NFC) before any decision work; `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level and MCP channel, [FGA] (§5.4) | A single-record read re-derives no digest at use (§5.4) |
@@ -1011,10 +1048,13 @@ drives an AS-issued Mission-bound token through that assembled path.
   Decision Evidence names the bound that refused (`authority_bound`, D348).
 - **Boundary.** In request, before any claim reaches a decision.
 - **Asynchronous work.** None.
-- **Crash and recovery.** The DPoP replay cache is in memory. Signing keys are
-  generated per boot (D25), so a pre-restart token fails signature
-  validation. The PEP fetches the AS JWKS once at assembly (`stack.ts:545`);
-  refresh is #831's.
+- **Crash and recovery.** The DPoP replay cache is in memory. The AS signing
+  keys are generated per boot or kept in a key ring (§1). With per-boot keys
+  a pre-restart token fails signature validation. With a ring it validates,
+  but the Mission it names does not survive: the kernel runs in memory on
+  `pnpm as-native`, so the PEP's loader finds no Mission and refuses
+  `unknown_mission` before any decision (§5.3). The PEP fetches the AS JWKS
+  once at assembly (`stack.ts:545`); refresh is #831's.
 - **Tests:**
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4b: DISCRIMINATING mismatched-key (DPoP proof signed by a DIFFERENT key than cnf.jkt) is rejected BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
@@ -1107,14 +1147,17 @@ drives an AS-issued Mission-bound token through that assembled path.
   §4).
 - **Asynchronous work.** None.
 - **Crash and recovery.** The read goes to the floor's kernel (§4.5); there is
-  no cache to recover.
+  no cache to recover. `pnpm as-native` runs that kernel in memory, so after
+  a restart no earlier Mission resolves: the loader finds none, and the PEP
+  refuses `unknown_mission` with a signed `state_unavailable` Refusal Record
+  before any decision (`pep.ts:1357`).
 - **Tests:**
   - `the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, carries the loader's observation at context.mission_state_observation, with state, mode and freshness_at, and no context.freshness` (PEP-level)
   - `AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own revoked view against a PEP-supplied active state denies mission_inactive: the PDP's view wins` (PDP-level)
   - `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare` (server-level)
 - **Residual.** A PEP or PDP separated from the AS has no demonstrated source;
   #1101 owns the authenticated Status or introspection adapter. A Mission the
-  loader does not find has no test on the Mission-bound path. The
+  loader does not find has no test on the Mission-bound path (#1329). The
   run-to-completion interval is witnessed on the assembled path (D483; the
   contract's §4).
 
@@ -1400,12 +1443,18 @@ Runtime overlay:
 
 7. A state source for a PEP or PDP separated from the AS (#1101). This target
    uses the declared local read (D293). §5.3.
-10. An assembled deployment of exactly the contract's components:
-    `pnpm as-native` runs the D332 AS capability set (the issuance profile
-    plus exactly `lifecycle-revoke` and `transaction-authorization`, with
-    `dev-token` and dev ordinary issuance off) and mounts no MAS join route,
-    but it builds the cross-domain RAS and SaaS objects in process, with no
-    listener (#1105).
+10. An assembled deployment of exactly the contract's components. What
+    `pnpm as-native` enables and exposes: the AS, on its port, with the D332
+    capability set (the issuance profile plus exactly `lifecycle-revoke` and
+    `transaction-authorization`, with `dev-token` and dev ordinary issuance
+    off); the resource's HTTP MCP endpoint at the declared audience; the
+    listener serving the resource's `txn_challenge_jwks_uri`; in remote PDP
+    mode, the loopback PDP hop; and, in process, the PDP, its OpenFGA client
+    and the approval service. It mounts no MAS join route. It also constructs
+    the cross-domain RAS and SaaS objects and their keys in process
+    (`demo/src/stack.ts`, the cross-domain block), which no listener, route
+    or enabled AS capability reaches (`cross-org` and `continuation` refuse,
+    the contract's §2). #253 owns this residual pending #1331.
 
 **Residual.**
 
@@ -1456,13 +1505,12 @@ Runtime overlay:
 - Issuance: revoke versus issue (§3.5).
 - Gating: refresh against an earlier grant after revocation (§3.6).
 - Scope projection: `derivation_count` after a code or refresh projection
-  refusal; the JWT-customizer backstop (§3.7).
-- Introspection: a signed token with no issuance record (§3.8).
+  refusal (§3.7).
 - Replay: authorization-code reuse (§4.4).
-- Recovery: an assembled AS restarted on a file-backed kernel (§4.5).
+- Recovery: the AS restarted as a new process on a file-backed kernel (§4.5).
 - Runtime overlay: a Mission the loader does not find on the Mission-bound
-  path (§5.3); the assembled-path tests against a live OpenFGA run only in
-  CI (§5).
+  path (§5.3, #1329); the assembled-path tests against a live OpenFGA run
+  only in CI (§5).
 
 ## 7. Provider-specific notes (oidc-provider 9.10)
 
