@@ -304,7 +304,7 @@ describe("delegate eligibility with retained provenance at the ICA continuation 
     });
   });
 
-  it("an entry with no list that defers to policy is never delegable under the deny-all default", async () => {
+  it("an entry with no list that defers to policy is not delegable while the policy permits nobody: absence is never a grant", async () => {
     // No proposal list: the approved entry inherits the ceiling's delegation, no list.
     const { root } = approve([entry(INHERIT, [READ])]);
     const reason = await refused(await continueAs(root, "svc-b"));
