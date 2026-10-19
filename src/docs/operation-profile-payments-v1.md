@@ -1,12 +1,30 @@
-# payments-runtime-profile-v6
+# payments-runtime-profile-v8
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v6`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v8`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v8** (#1251, D484): a `lookup_vendor` naming a vendor the store does
+  not hold is refused `unknown_vendor` (`target_unresolvable`) before any
+  decision request or Resource-policy query, as an unknown invoice is.
+  It no longer targets the server resource, so a vendor constraint or
+  Resource policy never refuses a target that does not exist. A stored
+  vendor's decision bytes are unchanged from v7.
+
+- **v7** (#1266, D457): the resource enforces the Mission Resource Access
+  Common Constraints listed under "Constraint enforcement: Common
+  Constraints" below against facts it reads from its own records, carries
+  those facts on the decision request, and advertises exactly the enforced
+  keys in `mission_constraints_supported`. Decision requests gain the
+  facts the table lists, where the store's records carry them.
+  `send_remittance_email` resolves its recipients from the vendor's
+  remittance routing; for a vendor whose record names its own routing the
+  effective parameters gain `recipients`, so that operation's
+  `parameter_digest` binds them. Every other digest is unchanged.
 
 - **v6** (#1276, D457): declares the operation contract (below). Every
   payments operation's target is the service the canonical resource URI
@@ -131,6 +149,48 @@ merely because the mapped action's own schema declares one.
 | amount not a valid decimal string | refuses (`parameter_violation`) |
 | cap denominated in a different currency than the invoice's | refuses (`parameter_violation`), never converted |
 
+## Constraint enforcement: Common Constraints
+
+The resource enforces these Mission Resource Access Common Constraints
+(#1266), and `mission_constraints_supported` names exactly them beside
+`max_amount` and `vendors`. Each is evaluated through the shared
+semantics in `packages/mission-core/src/common-constraints.ts`, on the
+matched Mission entry (the PDP) and on the credential's own entries (the
+PEP before any decision, and the PDP), against facts the PEP reads from
+the payments store, never from tool arguments. A fact the store does not
+hold refuses, as does a malformed constraint value. The Authorization
+Server refuses every other constraints key (a Common Constraint registered
+later, or an unknown key) at intake, configuration load and derivation,
+and the PDP refuses a matched entry that carries one.
+
+| Key | Authoritative fact | Decision request member | Targets without the fact |
+|---|---|---|---|
+| `resource_issued_after`, `resource_issued_before` | the invoice record's `issued_at` (RFC 3339), compared as a UTC instant, both bounds inclusive | `resource.properties.issued_at` | `list_invoices` and `lookup_vendor` (no single invoice), and an invoice with no `issued_at`: refused |
+| `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string | `resource.properties.tenant` | `list_invoices` (no single owner), and a vendor record naming no tenant: refused |
+| `time_window` | the evaluating component's own clock at the point of use (the PEP's credential check and the PDP's decision), both bounds inclusive | none: the PDP reads its own clock | none: every operation has a time |
+| `recipient_domain` | every final recipient `send_remittance_email` reaches: the vendor's remittance addresses with each distribution list expanded to its members, or the vendor's default address; each must be within the domain (case-insensitive, whole labels) | `action.properties.recipients` | every operation that addresses no recipient: refused |
+| `data_classification` | the invoice record's `classification` label, compared as an exact string; every label the operation touches must be named | `resource.properties.data_classification` | `list_invoices` and `lookup_vendor` (no single labeled record), and an invoice with no label: refused |
+| `allowed_tools` | the tool this PEP dispatched the operation to, from its Operation Profile (`TOOL_ACTIONS`), compared as an exact string; the phases of `payments:payment.execute` are distinct tools | `action.properties.tool` (on every decision request) | none: every operation has a dispatched tool |
+
+`time_window` is also enforced after the decision: the PDP caps the
+permit's `valid_until` at the matched entry's `not_after` (and, for the
+credential bound, at the latest `not_after` among the covering credential
+entries when each carries one), so every later use the PEP checks
+(`PERMIT_USE_CHECKS`), a retransmitted permit and an execution lease
+derived from the permit all end with the window. A window that closes at
+the decision instant refuses `parameter_violation`.
+
+A change to an invoice or vendor record between the decision and a
+write's execution changes its version, which `parameter_digest` binds, so
+the write refuses `parameter_mismatch`. Refusals are `parameter_violation`
+on the Mission bound and `out_of_authority` at the PEP's credential
+bound.
+
+Recipients the routing cannot resolve (a list that contains itself,
+nesting past eight levels, no final recipient) refuse
+`unresolvable_recipients` before any decision, and the email connector
+sends to exactly the recipients the decision evaluated.
+
 ## Parameter schemas and normalization
 
 All request parameters are JSON objects. At the tool boundary the PEP
@@ -163,7 +223,9 @@ Caller-supplied: `invoice_id`, `vendor_id` (the `lookup_vendor` target and
 the `list_invoices` filter) and `idempotency_key`. Authoritative (loaded by
 the PEP from the payments store, never from the caller): invoice `amount`,
 `currency`, `payee_account`, `vendor_id`-of-invoice, invoice `status`,
-vendor `status`, and the record versions. No served schema declares an
+vendor `status`, the record versions, and the facts the Common
+Constraints read (invoice `issued_at` and `classification`, vendor
+`tenant`, and the remittance recipients). No served schema declares an
 authoritative field, so its presence in a request is a schema violation,
 refused at the tool boundary.
 
@@ -193,19 +255,23 @@ JCS canonicalization of that object (the anchor encoding family; computed
 with `@mission/core`). The digest binds decision to execution: the PEP
 recomputes it immediately before commit after conditionally re-reading the
 same record versions; any mismatch (record changed, parameter mutated) is
-a refusal with reason `parameter_mismatch`.
+a refusal with reason `parameter_mismatch`. For `send_remittance_email` to
+a vendor whose record names its own remittance routing, the object also
+carries `recipients`: the sorted final recipients, so a routing or list
+change between decision and commit is a mismatch.
 
 ## Targets
 
 Every target is resolved from the payments store, never taken from an
 argument (#828). An invoice-scoped tool targets the invoice; an invoice the
 store does not hold is refused `unknown_invoice` before any decision
-request. `lookup_vendor` targets the vendor the store resolves (D324); a
-vendor the store does not hold names the server resource and no vendor, so
-a vendor constraint on the credential or the Mission refuses it, and
-otherwise Resource policy, which administers no server resource, refuses it
-`resource_policy`. `list_invoices` targets the vendors of its list form,
-below.
+request. `lookup_vendor` targets the vendor the store resolves (D324), and
+the credential bound, the Mission and Resource policy each evaluate that
+vendor. A vendor the store does not hold is refused `unknown_vendor`
+(`target_unresolvable`) after intake and before the credential bound, any
+decision request or any Resource-policy query, with no effect, whatever
+vendors the credential or the Mission names (D484). `list_invoices`
+targets the vendors of its list form, below.
 
 ## List form
 

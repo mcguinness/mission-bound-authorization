@@ -19,8 +19,10 @@ import { type ContextActor, validateContextActor } from "@mission/actor-chain";
 import {
   AUTHORITY_ENTRY_TYP,
   type AuthorityEntry as CoreAuthorityEntry,
+  commonConstraintGates,
   compareAmounts,
   computeAnchor,
+  type ConstraintFacts,
   conditionsNoBroader,
   type CredentialAuthorityEntry,
   entryMatchesTarget,
@@ -40,6 +42,8 @@ import {
   type OriginPrincipal,
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
+  SUPPORTED_CONSTRAINT_KEYS,
+  timeWindowEndMs,
 } from "@mission/core";
 import { randomUUID } from "node:crypto";
 import { getTracer } from "@mission/telemetry";
@@ -180,6 +184,28 @@ export interface EvaluationRequest {
       operation_target: string;
       vendor_id?: string;
       vendor_ids?: string[];
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the RFC 3339
+       * issuance instant of the one object the action targets, read by the
+       * PEP from the resource's own record, never from tool arguments. The
+       * `resource_issued_after`/`resource_issued_before` bounds read it, and
+       * an absent value satisfies neither.
+       */
+      issued_at?: string;
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the tenant
+       * that owns the one object the action targets, read by the PEP from the
+       * resource's own record, never from the request. The `tenant` bound
+       * reads it, and an absent value never satisfies it.
+       */
+      tenant?: string;
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the
+       * classification label of the data the action targets, from the
+       * resource's own labels, never from the request. The
+       * `data_classification` bound reads it; an absent label satisfies none.
+       */
+      data_classification?: string;
     };
   };
   action: {
@@ -191,7 +217,24 @@ export interface EvaluationRequest {
      * Typed `string` deliberately: a malformed value is refused at the claim
      * step, never admitted by the type system.
      */
-    properties?: { idempotency_key?: string };
+    properties?: {
+      idempotency_key?: string;
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): every final
+       * recipient the action reaches, routing and list expansion applied,
+       * resolved by the PEP from the resource's own records and never from
+       * tool arguments. The `recipient_domain` bound reads it; an absent or
+       * empty list satisfies no such bound.
+       */
+      recipients?: string[];
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the tool
+       * the PEP dispatched this operation to, from its trusted operation
+       * contract, never a name the caller supplies. The `allowed_tools` bound
+       * reads it; an absent identity satisfies no such bound.
+       */
+      tool?: string;
+    };
   };
   context: {
     mission: {
@@ -1456,6 +1499,34 @@ async function evaluateInner(
   const credentialVendorIds: readonly string[] =
     req.resource.properties?.vendor_ids ??
     (req.resource.properties?.vendor_id ? [req.resource.properties.vendor_id] : []);
+  // @spec resource-access#rs-enforcement, runtime#input-parameters (#1266):
+  // the authoritative facts the implemented Common Constraints read, as the
+  // authenticated PEP established them. One reading serves the credential
+  // bound here and the Mission bound at step 7a.
+  const constraintFacts: ConstraintFacts = {
+    ...(typeof req.resource.properties?.issued_at === "string"
+      ? { resourceIssuedAt: req.resource.properties.issued_at }
+      : {}),
+    ...(typeof req.resource.properties?.tenant === "string" ? { tenant: req.resource.properties.tenant } : {}),
+    ...(typeof req.resource.properties?.data_classification === "string"
+      ? { dataClassification: [req.resource.properties.data_classification] }
+      : {}),
+    ...(typeof req.action.properties?.tool === "string" ? { tool: req.action.properties.tool } : {}),
+    // `time_window` reads this PDP's own clock at the decision, never a
+    // request member; the permit's `valid_until` carries the window's end to
+    // every later use (step 8a's ceiling).
+    now: now().getTime(),
+    // A list with any member that is not a string is unreadable as a whole:
+    // it is carried as empty, which satisfies no recipient bound, rather than
+    // filtered to the members that happen to read.
+    ...(Array.isArray(req.action.properties?.recipients)
+      ? {
+          recipients: req.action.properties.recipients.every((r) => typeof r === "string")
+            ? [...req.action.properties.recipients]
+            : [],
+        }
+      : {}),
+  };
   let viewHoldsFullSet: boolean | undefined;
   const credentialDischarge = (
     c: CredentialAuthorityEntry,
@@ -1495,6 +1566,7 @@ async function evaluateInner(
     action: req.action.name,
     vendorIds: credentialVendorIds,
     ...(req.context.amount ? { amount: req.context.amount } : {}),
+    constraintFacts,
   };
   const credentialMatches = credentialAuthority.filter((c) => entryMatchesAction(c, credentialFacts));
   if (credentialMatches.length === 0) return deny("out_of_authority", "credential");
@@ -1544,6 +1616,16 @@ async function evaluateInner(
         (recorded.catalog_digest !== undefined && presented.catalog_digest !== recorded.catalog_digest)) {
       return deny("capability_drift");
     }
+  }
+
+  // 5d. @spec resource-access#rs-enforcement (#1266): "MUST fail closed on any
+  // `constraints` key it does not understand, or understands but cannot
+  // enforce". The matched Mission entry is evaluated whole: a key outside the
+  // set this PDP evaluates refuses here, never passes as though absent, so a
+  // Common Constraint this deployment does not yet implement cannot reach a
+  // permit unenforced.
+  if (entry.constraints && Object.keys(entry.constraints).some((k) => !SUPPORTED_CONSTRAINT_KEYS.includes(k))) {
+    return deny("parameter_violation", "mission");
   }
 
   const mapping = opts.relationForAction(req.action.name);
@@ -1687,6 +1769,15 @@ async function evaluateInner(
     }
   }
 
+  // 7a. The implemented Common Constraints (@spec resource-access#rs-enforcement,
+  // runtime#input-parameters; #1266): each key the matched entry carries is
+  // evaluated against the facts the PEP established, through the same shared
+  // gate the credential bound uses. Keyed on the constraint's own presence; an
+  // absent fact or a malformed value refuses, never permits open.
+  const commonGates = commonConstraintGates(entry.constraints, constraintFacts);
+  for (const key of commonGates.evaluated) contributions.add(key);
+  if (!commonGates.satisfied) return deny("parameter_violation", "mission");
+
   // 8. Action-bound approval (@spec authzen#context-approval): when policy
   //    requires one, the presented approval MUST match the request's
   //    parameter_digest and be within the max approval age; else deny
@@ -1773,6 +1864,18 @@ async function evaluateInner(
   // ceiling here, measured from the same decision instant, so the permit
   // never outlives the window the published retention was validated against.
   const decisionNowMs = now().getTime();
+  const windowCeilings: Array<{ name: string; atMs: number }> = [];
+  const missionWindowEnd = timeWindowEndMs(entry.constraints);
+  if (missionWindowEnd !== undefined) {
+    windowCeilings.push({ name: "mission_time_window_not_after", atMs: missionWindowEnd });
+  }
+  const credentialWindowEnds = credentialCandidates.map((c) => timeWindowEndMs(c.constraints));
+  if (credentialWindowEnds.length > 0 && credentialWindowEnds.every((end) => end !== undefined)) {
+    windowCeilings.push({
+      name: "credential_time_window_not_after",
+      atMs: Math.max(...(credentialWindowEnds as number[])),
+    });
+  }
   const reversibleWriteMaxSeconds = HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass ?? "")
     ? undefined
     : (
@@ -1791,9 +1894,20 @@ async function evaluateInner(
         : []),
       // #1049 review P2-a: a verified status response's signed state ceiling.
       ...(signedFreshUntilMs !== undefined ? [{ name: "signed_state_fresh_until", atMs: signedFreshUntilMs }] : []),
+      // @spec resource-access#initial-common-constraints (`time_window`,
+      // #1266): the permit expires no later than the matched entry's window,
+      // so neither a retained permit nor an execution lease derived from it
+      // reaches past the window's end. The credential bound rests on any one
+      // satisfying candidate, so its ceiling is the latest of their window
+      // ends, and none when one of them carries no end.
+      ...windowCeilings,
     ],
   });
-  if (deadline.kind === "elapsed") return deny("stale_state");
+  if (deadline.kind === "elapsed") {
+    // A window that closes at the decision instant leaves no time to rely on
+    // the permit: the window refuses it, not the state view.
+    return deny(deadline.source.endsWith("time_window_not_after") ? "parameter_violation" : "stale_state");
+  }
   const validUntil = deadline.validUntil;
   // @spec runtime#classification: the high-consequence classes are
   // irreversible_action, external_commitment, and privileged_administration

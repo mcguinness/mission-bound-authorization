@@ -28,7 +28,7 @@ import {
   type JWK,
 } from "jose";
 import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
-import { missionInteractionPolicy } from "./interaction-policy.js";
+import { loadReusableGrant, missionInteractionPolicy, ORDINARY_REQUEST_REFUSAL } from "./interaction-policy.js";
 import {
   delegatedRoutingRefusal,
   earlyScopeRefusal,
@@ -1000,6 +1000,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
   }
 
   /**
+   * @spec mission#grant-binding-resolution (#1259): whether this AS ever bound
+   * `grantId` to a Mission, by any of its three records: a Mission's own grant,
+   * the delegation-family store (a terminal family included), and the durable
+   * bound-grant index (an entry whose Mission no longer resolves included).
+   * Liveness plays no part, so a known binding never passes as an ordinary
+   * grant, and nothing here throws.
+   */
+  function knownMissionBound(grantId: string): boolean {
+    return (
+      kernel.findByGrant(grantId) !== undefined ||
+      opts.familyStore?.wasEverFamily(grantId) === true ||
+      kernel.missionBoundGrants.resolve(grantId) !== undefined
+    );
+  }
+
+  /**
    * @spec mission#issuance-gating — the Mission a token minted under
    * `grantId` is gated against, and how, resolved ONCE for both the save-time
    * gate (`extraTokenClaims`) and the refresh pre-check (`rotateRefreshToken`):
@@ -1573,6 +1589,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // authorization-code flow and the device flow alike.
       policy: missionInteractionPolicy(),
     },
+    // @spec mission#grant-binding-resolution (#1259): a request carrying no
+    // `mission_intent` never reuses a Mission-bound grant.
+    loadExistingGrant: (ctx) => loadReusableGrant(ctx, knownMissionBound),
     // @spec mission#downgrade-by-omission — the per-client Mission-governance
     // flag (a deployment MAY register a client as Mission-governed). Declared so
     // oidc-provider retains it on the client registration; read by the RAR
@@ -3053,6 +3072,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     if (interactionMatch && ctx.method === "GET") {
       const details = await provider.interactionDetails(ctx.req, ctx.res);
       const params = details.params as Record<string, unknown>;
+      // @spec mission#grant-binding-resolution (#1259): this surface serves
+      // only the Mission approval. An interaction for a request carrying no
+      // `mission_intent` (a login, or consent no eligible grant supplies)
+      // finishes refused, through the provider's authorization response.
+      if ((details as { deviceCode?: string }).deviceCode === undefined && params.mission_intent === undefined) {
+        await provider.interactionFinished(ctx.req, ctx.res, ORDINARY_REQUEST_REFUSAL, { mergeWithLastSubmission: false });
+        return;
+      }
       // @spec deferred-approval#front-channel: a pushed request that opted in
       // to deferral completes into the deferred state here, with no user
       // interaction and no approval decision.
@@ -4915,6 +4942,13 @@ async function decide(
       isolated ? { ...result, [HEADLESS_APPROVAL_RESULT]: true } : result,
     );
   };
+  // @spec mission#grant-binding-resolution (#1259): no Mission approval is
+  // pending on an interaction for a request carrying no `mission_intent`, so a
+  // decision on it finishes refused, as its render does.
+  if (params.mission_intent === undefined) {
+    await finish(ORDINARY_REQUEST_REFUSAL);
+    return;
+  }
   // @spec mission#submission-via-par — re-parse the pushed Submission envelope;
   // approval and intent_hash cover exactly the semantic `intent`.
   const submission = opts.kernel.validateSubmission(String(params.mission_intent));
