@@ -7589,9 +7589,15 @@
      "name": "the exchange selector (@spec mission#delegation) > a delegated token reaches only a Mission-aware target: otherwise invalid_target, counting nothing (D166)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870) > refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role), at the token endpoint on the cross-org exchange and on the JWT customizer backstop by direct invocation (unit: no oidc-provider mint carries act today; the endpoint witness follows a same-Mission delegation mint, #869). It does not establish every deployment route: the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. The transaction endpoint applies the same gate before admitting a workflow (txn-endpoint.test.ts, delegated routing of transaction tokens); that coverage is reviewed separately."
+   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role); it does not establish every deployment route, and the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. Witnessed at the token endpoint on the cross-org exchange and on same-Mission delegation (#869), whose exchange refuses a target not classified Mission-aware before counting; the JWT customizer backstop is witnessed directly (unit) and at the endpoint on a real delegated mint, where a target reclassified after the exchange's own check is refused at the save (disabling the customizer's act branch issues the token). Transaction tokens (#870 review): the transaction endpoint refuses before admitting a workflow whenever either upstream carrier supplies actor context, the condition under which the issued token carries act, for the challenge issuer that becomes its audience (txn-endpoint.test.ts, delegated routing of transaction tokens, which discriminates on the challenge's act). The subject-token carrier, a delegated token presented at the transaction endpoint and reachable since #869, takes the same disjunctive gate but has no discriminating witness."
   },
   {
    "id": "core.rs-enforcement.unenforceable-entry-no-authority",
