@@ -143,7 +143,7 @@ export type PolicyCheck = (approved: AuthorityEntry, entry: AuthorityEntry) => b
 export type EligibilityOutcome = "eligible" | "not-eligible" | "narrowed-out";
 
 /**
- * @spec resource-access#delegate-eligibility — decide whether `delegate` may
+ * @spec resource-access#delegate-eligibility: decide whether `delegate` may
  * carry `candidate.entry` in a token issued at accounted delegation depth
  * `depth`.
  *
@@ -192,7 +192,7 @@ export function delegateEligibility(
 
 /**
  * @spec mission#delegation-constraints (per-entry enforcement),
- * resource-access#delegate-eligibility — the entries `delegate` may carry at
+ * resource-access#delegate-eligibility: the entries `delegate` may carry at
  * accounted depth `depth`: those {@link delegateEligibility} finds `eligible`.
  * The rest narrow out, consistent with the subset rule; surviving entries keep
  * their `delegation` member intact, so the next hop is evaluated the same way.
@@ -209,7 +209,7 @@ export function gateDelegableAuthority(
 }
 
 /**
- * @spec resource-access#delegate-eligibility — the authorization server's
+ * @spec resource-access#delegate-eligibility: the authorization server's
  * delegation-authorization policy, consulted at every delegated issuance for
  * an approved entry whose eligibility defers to it. It returns `true` only to
  * permit; anything else denies.
