@@ -83,8 +83,8 @@
     "content_sha256": "fde328e1de5cc5d286402164d12f799916c15b7b804348484ca941d943208740"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "c2d67bddf5001cf09f5ee8b388ee213118c9f5e4da8fb401d0bc794464378d6e"
+    "revision": "6537beb53ead90ec3804f8888711a28fbc68abc0",
+    "content_sha256": "915888b4ae997213b0e3093f1750a7fcb1e81d7fd0e95dd5c2e441bf7f4157c6"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
     "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
@@ -30452,6 +30452,64 @@
     }
    ],
    "notes": "Split from compensates-evaluation-id-required per the PR #731 review (P2): the evidence-emission facet of the compensation correlator (required when compensate, fail closed when absent, never folded into linked_evidence) is fully tested; the decision-request facet is tracked separately as partial on the sibling row above."
+  },
+  {
+   "id": "orchestration.in-flight.committed-requires-established-effect",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "in-flight",
+   "text": "Evidence establishes that the action's effect occurred, such as Execution Evidence with `outcome` `completed`",
+   "role": "orchestrator",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an outcome is classified `committed` only when evidence establishes that the effect occurred; an operation state that establishes neither occurrence nor non-occurrence is never `committed`",
+    "local": "classifyOutcome maps only the D36 states connector_committed, evidence_emitted and reconciled to committed; abandoned (dropped before any established commit) and an undefined or unrecognized state map to unknown, fail closed."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "in-flight classification (@spec orchestration#state-change-behavior) > 6: maps D36 OpState fixtures onto the correct outcome class",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1269: the earlier definition also classified an outcome the deployment cannot prove absent as committed, overlapping unknown."
+  },
+  {
+   "id": "orchestration.in-flight.unknown-no-post-completion",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "in-flight",
+   "text": "The orchestrator MUST treat the outcome as requiring human review unless deployment policy defines a stricter default, and MUST NOT apply post-completion behavior to it.",
+   "role": "orchestrator",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an `unknown` step goes to human review and its post-completion behavior is never applied: a step whose unwind plan says `compensate` is not compensated while its outcome is unknown",
+    "local": "classifyStep returns human_review for every unknown step without reading post_completion_behavior, even in the established non-active sequence where post-completion runs for committed steps."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/orchestration.test.ts",
+     "name": "state-change behavior (@spec orchestration#state-change-behavior) > an unknown step never runs its post-completion behavior: a compensate plan routes to human review (§ in-flight)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1269: the Conformance list applied post-completion behavior, which can be compensate, to unknown outcomes; it now routes them to human review."
   },
   {
    "id": "template.dispatch.idempotent-retry-returns-committed",

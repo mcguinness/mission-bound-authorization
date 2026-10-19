@@ -1071,8 +1071,9 @@ failure signal:
   rule per metered action class; absent a defined rule the
   reservation remains charged and reconciles as an unknown outcome.
 - **Unknown outcome** (no evidence within the reservation lease): a
-  reservation MUST carry a bounded lease so a crashed or abandoned
-  reservation does not consume the budget permanently. On lease
+  reservation MUST carry a bounded lease, which bounds how long a
+  crashed or abandoned reservation waits before reconciliation begins;
+  the lease never releases it. On lease
   expiry without settlement the PDP reconciles the reservation
   through the runtime profile's orphaned-evidence process
   ({{I-D.draft-mcguinness-mission-runtime}}), which queries the
@@ -1246,11 +1247,11 @@ Their enforcement, however, is only as good as the metering:
 - **Reservation starvation.** An attacker who opens reservations and
   never settles them can consume a budget with no executed action,
   denying the Mission its remaining authority. The bounded reservation
-  lease ({{settlement-exchange}}) caps this: an unsettled reservation is
-  reconciled on lease expiry, and reconciliation that finds no effect
-  at the resource returns the budget. An outcome reconciliation cannot
-  establish stays charged and is escalated, never released by a
-  timer.
+  lease ({{settlement-exchange}}) bounds how long this goes
+  unexamined: an unsettled reservation is reconciled on lease expiry,
+  and reconciliation that establishes affirmative non-execution returns
+  the budget. An outcome reconciliation cannot establish stays charged
+  and is escalated, never released by a timer.
 - **Latch burning.** Because the first matching action latches an
   exclusivity group, an injected agent can try to burn a group by
   driving the side it wants foreclosed, denying the Mission the other
@@ -1312,6 +1313,11 @@ this registry.
 
 - The `exclusive` selector matches a consequential action whose
   operation target equals the selector's `resource` (#1276).
+
+- Settlement by Evidence State and Reservation starvation: the
+  reservation lease bounds how long an unsettled reservation waits
+  before reconciliation begins and never releases it; reconciliation
+  returns the budget only on affirmative non-execution (#1269).
 
 - Conformance: the consented bounds are rendered at each human
   approval, including a standing consent such as a Mission Template's
