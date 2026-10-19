@@ -252,27 +252,31 @@ async function frontChannel(
     evidence?: unknown[];
     /** Stop once the authorization request names its interaction, before visiting it. */
     stopAtInteraction?: boolean;
+    /** RFC 8707 `resource` parameters, each sent as its own parameter (repeats included). */
+    resources?: string[];
   } = {},
 ): Promise<FrontChannel> {
   const client = o.client ?? AGENT;
+  const body = new URLSearchParams({
+    client_id: client,
+    response_type: "code",
+    redirect_uri: REDIRECT_URI,
+    code_challenge: await challenge(),
+    code_challenge_method: "S256",
+    state: "st-1185",
+    mission_intent: submission(o.intent, o.evidence),
+    ...(o.authorizationDetails === null
+      ? {}
+      : { authorization_details: JSON.stringify(o.authorizationDetails ?? [readEntry(["payments:invoice.read"])]) }),
+    ...(o.completionMode === null ? {} : { completion_mode: o.completionMode ?? "deferred" }),
+    ...(o.extra ?? {}),
+    ...(await clientAuth(client)),
+  });
+  for (const r of o.resources ?? []) body.append("resource", r);
   const par = await fetch(`${ISSUER}/request`, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: client,
-      response_type: "code",
-      redirect_uri: REDIRECT_URI,
-      code_challenge: await challenge(),
-      code_challenge_method: "S256",
-      state: "st-1185",
-      mission_intent: submission(o.intent, o.evidence),
-      ...(o.authorizationDetails === null
-        ? {}
-        : { authorization_details: JSON.stringify(o.authorizationDetails ?? [readEntry(["payments:invoice.read"])]) }),
-      ...(o.completionMode === null ? {} : { completion_mode: o.completionMode ?? "deferred" }),
-      ...(o.extra ?? {}),
-      ...(await clientAuth(client)),
-    }).toString(),
+    body: body.toString(),
   });
   expect(par.status, await par.clone().text()).toBe(201);
   const { request_uri } = (await par.json()) as { request_uri: string };
@@ -560,6 +564,27 @@ describe("deferred Mission approval wire path (@spec deferred-approval#deferred-
     const issued = await redeem(new URL(location).searchParams.get("code") as string, keys);
     expect(issued.status, JSON.stringify(issued.body)).toBe(200);
     expect(audienceOf(issued.body)).toBe(LEDGER);
+  });
+
+  it("honors a repeated PAR resource and refuses an ambiguous one, never falling back to another audience", async () => {
+    useRoot(rootDoc({ authority_ceiling: [readEntry(), ledgerEntry()] as never }));
+    const both = {
+      intent: { target_resources: [RESOURCE, LEDGER] },
+      authorizationDetails: [readEntry(["payments:invoice.read"]), ledgerEntry()],
+    };
+    const keys = await newKeys();
+    // The ledger named twice is one selection: a ledger token, never payments.
+    const repeated = await poll(await openDeferral(keys, { ...both, resources: [LEDGER, LEDGER] }), keys);
+    expect(repeated.status, JSON.stringify(repeated.body)).toBe(200);
+    expect(decodeJwt(repeated.body.access_token as string).aud).toBe(LEDGER);
+    // Two distinct resources and no selection at the token endpoint: one
+    // deferral delivers one token, so the redemption is refused and opens nothing.
+    const ambiguous = await frontChannel({ ...both, resources: [LEDGER, RESOURCE] });
+    expect(ambiguous.code).toBeDefined();
+    const refused = await redeem(ambiguous.code as string, keys);
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toBe("invalid_target");
+    expect(refused.body).not.toHaveProperty("deferral_code");
   });
 
   it("keeps an approval deliverable when saving its token fails, then delivers exactly one token", async () => {

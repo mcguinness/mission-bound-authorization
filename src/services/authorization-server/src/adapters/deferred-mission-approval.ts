@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS mission_deferred_authorization_codes (
 
 /** Columns added after the table first existed: added in place, so an earlier database opens. */
 const ADDED_COLUMNS: ReadonlyArray<[string, string]> = [
-  ["resource", "TEXT"],
+  ["resources_json", "TEXT"],
   ["evidence_json", "TEXT"],
 ];
 
@@ -107,12 +107,41 @@ interface StagedCode {
   dpop_jkt: string | null;
   intent_json: string;
   proposal_json: string | null;
-  /** The single `resource` the request selected, or null. */
-  resource: string | null;
+  /** Every `resource` the authorization request named, distinct, as a JSON array; null for none. */
+  resources_json: string | null;
   /** The Submission envelope's `evidence`, as presented, or null. */
   evidence_json: string | null;
   expires_at: number;
   deferral_code: string | null;
+}
+
+/**
+ * The resources a request names with RFC 8707 `resource` parameters, one or
+ * repeated, distinct and in order. The provider's own default resource (the
+ * issuer), filled in when a request names none, names nothing.
+ */
+export function namedResources(value: unknown, issuer: string): string[] {
+  const values = typeof value === "string" ? [value] : Array.isArray(value) ? value : [];
+  return [...new Set(values.filter((v): v is string => typeof v === "string" && v !== issuer))];
+}
+
+/** A resource selection the pending request cannot honor. */
+class ResourceSelectionError extends Error {}
+
+/**
+ * @spec deferred-approval#deferred-sequencing ("Deferral changes only the
+ * timing of the approval event"): the one audience a deferral delivers its
+ * token for. One deferral delivers one access token, so the authorization
+ * request's resources must name one audience; several are ambiguous and
+ * refused. None selects nothing: the delivery then uses the first entry of
+ * the Mission's effective set.
+ */
+function selectedResource(staged: StagedCode): string | undefined {
+  const named = staged.resources_json ? (JSON.parse(staged.resources_json) as string[]) : [];
+  if (named.length > 1) {
+    throw new ResourceSelectionError("the authorization request named several resources; a deferred approval delivers one token");
+  }
+  return named[0];
 }
 
 /** @spec deferred-approval#deferred-approval: whether `completion_mode` includes `deferred`; other values are ignored. */
@@ -146,7 +175,7 @@ export class DeferredAuthorizationCodes {
     this.store.db
       .prepare(
         `INSERT INTO mission_deferred_authorization_codes (code, client_id, redirect_uri, code_challenge, dpop_jkt,
-           intent_json, proposal_json, resource, evidence_json, expires_at)
+           intent_json, proposal_json, resources_json, evidence_json, expires_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
@@ -157,7 +186,7 @@ export class DeferredAuthorizationCodes {
         row.dpop_jkt,
         row.intent_json,
         row.proposal_json,
-        row.resource,
+        row.resources_json,
         row.evidence_json,
         row.expires_at,
       );
@@ -173,14 +202,14 @@ export class DeferredAuthorizationCodes {
    * Open the code's one pending approval and record the code redeemed, in
    * one commit: a second redemption, concurrent or later, opens nothing.
    */
-  openOnce(staged: StagedCode, jkt: string): ReturnType<MissionApprovalDeferralStore["open"]> {
+  openOnce(staged: StagedCode, jkt: string, resource: string | undefined): ReturnType<MissionApprovalDeferralStore["open"]> {
     return withTransaction(this.store.db, () => {
       const pending = this.store.open({
         intent: JSON.parse(staged.intent_json) as MissionIntent,
         ...(staged.proposal_json ? { proposedAuthority: JSON.parse(staged.proposal_json) as AuthorityEntry[] } : {}),
         clientId: staged.client_id,
         jkt,
-        ...(staged.resource ? { resource: staged.resource } : {}),
+        ...(resource ? { resource } : {}),
         ...(staged.evidence_json ? { evidence: JSON.parse(staged.evidence_json) as IntentSubmissionEvidenceEntry[] } : {}),
       });
       const claimed = this.store.db
@@ -252,6 +281,7 @@ export async function completeDeferredAuthorization(
   }
   const code = `mdac_${randomBytes(32).toString("base64url")}`;
   const nowMs = opts.kernel.nowDate().getTime();
+  const named = namedResources(params.resource, opts.issuer);
   codes.stage(
     {
       code,
@@ -261,11 +291,10 @@ export async function completeDeferredAuthorization(
       dpop_jkt: typeof params.dpop_jkt === "string" ? params.dpop_jkt : null,
       intent_json: JSON.stringify(intent),
       proposal_json: proposal?.length ? JSON.stringify(proposal) : null,
-      // The audience the request selected (RFC 8707), validated by the
-      // provider at PAR. With several, or none, the delivery uses the first
-      // entry's resource; the provider's own default when a request names
-      // none (the issuer) selects nothing.
-      resource: typeof params.resource === "string" && params.resource !== opts.issuer ? params.resource : null,
+      // Every resource the request named (RFC 8707), validated by the
+      // provider at PAR and kept whole, so the redemption selects among
+      // exactly them.
+      resources_json: named.length ? JSON.stringify(named) : null,
       evidence_json: evidence?.length ? JSON.stringify(evidence) : null,
       expires_at: nowMs + DEFERRED_CODE_TTL_S * 1000,
     },
@@ -373,9 +402,18 @@ async function redeemDeferredCode(
     return new errors.InvalidGrant("authorization code already used");
   };
   if (staged.deferral_code !== null) throw replayed();
+  // The one audience the delivery will serve; a selection the pending
+  // request cannot honor is refused here, consuming nothing.
+  let resource: string | undefined;
+  try {
+    resource = selectedResource(staged);
+  } catch (e) {
+    if (e instanceof ResourceSelectionError) throw new errors.InvalidTarget(e.message);
+    throw e;
+  }
   let pending: ReturnType<MissionApprovalDeferralStore["open"]>;
   try {
-    pending = codes.openOnce(staged, verified.proof.jkt);
+    pending = codes.openOnce(staged, verified.proof.jkt, resource);
   } catch (e) {
     if (e instanceof CodeAlreadyRedeemed) throw replayed();
     if (e instanceof MissionApprovalDeferralError && e.code === "queue_full") {

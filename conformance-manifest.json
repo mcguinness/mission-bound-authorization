@@ -38096,7 +38096,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the token a resolved deferral delivers is audienced to the resource the submission selected with its resource indicator, as a synchronous approval of the same submission would issue it",
-    "local": "The PAR's single `resource` value is carried through the pending-request code and the pending approval to the delivery, and the witness shows a synchronous approval of the same submission audienced the same way. With none (or several), the deferred token is audienced to the first entry of the effective set; the direct path instead audiences such a request to the provider's default resource (the issuer), which this assembly's scope projection refuses. The token's authorization_details are the whole effective set on both paths."
+    "local": "Every `resource` the PAR names is carried through the pending-request code; duplicates collapse. One resource selects the delivered token's audience; several distinct ones with no selection at the token endpoint are refused invalid_target at redemption, before anything is opened, because one deferral delivers one access token and RFC 8707 has the client name one of several authorized resources at the token endpoint. The first entry of the effective set is the audience only when no resource was selected at all. The direct path instead audiences an unselected request to the provider's default resource (the issuer), which this assembly's scope projection refuses. The token's authorization_details are the whole effective set on both paths."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -38106,9 +38106,15 @@
      "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > delivers the token for the resource the submission selected",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > honors a repeated PAR resource and refuses an ambiguous one, never falling back to another audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1300 review (D474)."
+   "notes": "#1300 review (D474). #1300 second review."
   },
   {
    "id": "deferred-approval.deferral.timing-only-evidence",
