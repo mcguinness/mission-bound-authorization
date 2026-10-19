@@ -70,6 +70,8 @@ export {
   isSubsetSet,
   isSubsetSetIgnoringCapabilitySources,
   narrowToCeiling,
+  REFUSED_ENTRY_MEMBERS,
+  refusedEntryMember,
   SUPPORTED_CONSTRAINT_KEYS,
   withoutCapabilitySources,
 } from "./authority-subset.js";
@@ -199,6 +201,19 @@ export {
   parseMcpReferenceMeta,
   parseMissionReferenceField,
 } from "./mission-reference.js";
+export {
+  ENFORCED_RESOURCE_MATCHES,
+  entryMatchesTarget,
+  establishOperationTarget,
+  isOperationTarget,
+  matchResource,
+  type OperationContract,
+  type OperationTargetRefusal,
+  type OperationTargetResolution,
+  type ResourceMatch,
+  resolveOperationTarget,
+  type ServiceLevelContract,
+} from "./operation-target.js";
 export {
   type EntitlementAuthorityEntry,
   type EntitlementObservation,

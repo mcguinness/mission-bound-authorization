@@ -25,11 +25,18 @@ import {
   validCommonConstraint,
 } from "./common-constraints.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
+import { ENFORCED_RESOURCE_MATCHES, entryMatchesTarget } from "./operation-target.js";
 
 /** One entry of a verified credential's authority. */
 export interface CredentialAuthorityEntry {
   type: "mission_resource_access";
   resource: string;
+  /**
+   * @spec resource-access#resource-matching (#1276): carried only when the
+   * credential states it, and only as `exact`, the one form this bound
+   * enforces; absent is `exact` too.
+   */
+  resource_match?: "exact";
   actions: string[];
   constraints?: {
     max_amount?: { amount: string; currency: string };
@@ -57,7 +64,13 @@ export class CredentialAuthorityError extends Error {}
  * point of use, so neither can be lost by not evaluating it here.
  */
 const IGNORED_ENTRY_MEMBERS = new Set(["delegation", "capability_sources"]);
-const EVALUATED_ENTRY_MEMBERS = new Set(["type", "resource", "actions", "constraints"]);
+const EVALUATED_ENTRY_MEMBERS = new Set([
+  "type",
+  "resource",
+  "resource_match",
+  "actions",
+  "constraints",
+]);
 const CONSTRAINT_KEYS = new Set<string>([
   "max_amount",
   "vendors",
@@ -183,6 +196,19 @@ export function parseCredentialAuthority(value: unknown): readonly CredentialAut
       }
       if (!nonEmptyString(raw.resource))
         throw new CredentialAuthorityError(`${at}.resource must be a non-empty string`);
+      // @spec resource-access#rs-enforcement (#1276): an entry whose
+      // `resource_match` this enforcement point does not enforce (`prefix`,
+      // or a value it does not recognize) cannot be evaluated in full, so it
+      // refuses the whole credential like any other such member, never read
+      // as `exact`.
+      if (
+        raw.resource_match !== undefined &&
+        !ENFORCED_RESOURCE_MATCHES.includes(raw.resource_match as string)
+      ) {
+        throw new CredentialAuthorityError(
+          `${at}.resource_match ${JSON.stringify(raw.resource_match)} is not enforceable here`,
+        );
+      }
       if (
         !Array.isArray(raw.actions) ||
         raw.actions.length === 0 ||
@@ -196,6 +222,7 @@ export function parseCredentialAuthority(value: unknown): readonly CredentialAut
       const entry: CredentialAuthorityEntry = {
         type: "mission_resource_access",
         resource: raw.resource,
+        ...(raw.resource_match === "exact" ? { resource_match: "exact" as const } : {}),
         actions: [...raw.actions],
         ...(constraints !== undefined ? { constraints } : {}),
       };
@@ -266,7 +293,11 @@ export function credentialEntriesFromAatTools(
 
 /** What the enforcement point established about the action it is about to authorize. */
 export interface CredentialTarget {
-  /** The canonical resource identifier the action targets. */
+  /**
+   * @spec resource-access#resource-matching (#1276, D457): the operation
+   * target the enforcement point established from its trusted operation
+   * contract, never the token's audience and never an entry's `resource`.
+   */
   resource: string;
   action: string;
   /**
@@ -293,12 +324,16 @@ export interface CredentialTarget {
 /** The facts about an action an enforcement point establishes by itself. */
 export type CredentialFacts = Omit<CredentialTarget, "approvalEnforced">;
 
-/** Whether an entry names the action's resource and action, before any constraint. */
+/**
+ * Whether an entry names the action's operation target and action, before any
+ * constraint. The target is matched with the Resource Access matcher
+ * (@spec resource-access#resource-matching, #1276).
+ */
 export function entryMatchesAction(
   entry: CredentialAuthorityEntry,
   facts: Pick<CredentialFacts, "resource" | "action">,
 ): boolean {
-  return entry.resource === facts.resource && entry.actions.includes(facts.action);
+  return entryMatchesTarget(entry, facts.resource) && entry.actions.includes(facts.action);
 }
 
 /** The constraint gates an evaluation of one entry reached, and whether each held. */

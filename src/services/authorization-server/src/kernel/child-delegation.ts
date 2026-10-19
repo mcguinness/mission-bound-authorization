@@ -34,6 +34,7 @@ import type { EvaluatedActivationPolicy } from "./activation-policy-snapshots.js
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
+import { inheritOrigins } from "./eligibility-provenance.js";
 import { withoutCapabilitySources } from "@mission/core";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
@@ -404,9 +405,21 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // is the EFFECTIVE set, unlike createExpansion's approved-set grantor: a
   // contained capability MUST NOT re-derive into a child, while an Expansion
   // successor's own approval MAY restore one.
+  const derived = kernel.deriveWithProvenance(input.intent, proposal);
   const childAuthority = inheritCapabilitySources(
-    inheritActionApprovalRequirement(kernel.derive(input.intent, proposal), parentEffective),
+    inheritActionApprovalRequirement(derived.entries, parentEffective),
     parentEffective,
+  );
+  // @spec resource-access#delegate-eligibility, resource-access#subset: a
+  // child entry is derived from the parent entries it falls within, so it
+  // keeps its own derivation's origin and every one of theirs. Where a parent
+  // entry's eligibility defers to policy, a child list only restricts that
+  // decision: the strict-subset proof below is structural and admits the
+  // list, and this provenance keeps the policy obligation.
+  const childProvenance = inheritOrigins(
+    childAuthority,
+    derived.provenance,
+    kernel.effectiveEntriesWithRetainedOrigin(parent),
   );
 
   // @spec mission#authority-sources — a child drawdown draws on the PARENT's
@@ -665,6 +678,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     intent: input.intent,
     ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: childAuthority,
+    eligibility_provenance: childProvenance,
     intent_hash: intentHash(parent.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(parent.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),

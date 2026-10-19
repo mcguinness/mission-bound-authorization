@@ -17,10 +17,14 @@ import {
   type CredentialAuthorityEntry,
   coveringCredentialEntries,
   credentialEntriesFromAuthority,
+  entryMatchesTarget,
+  establishOperationTarget,
   type IdempotencyScope,
   idempotencyScopeDigest,
   isActionPhase,
   type JsonValue,
+  type OperationContract,
+  type OperationTargetResolution,
   type PropagatedMissionReference,
   TXN_AUTHORIZATION_REQUIRED,
   type TxnMissionClaim,
@@ -258,6 +262,22 @@ export interface ActionMapping {
    * served catalog cannot drift.
    */
   phase?: ActionPhase;
+  /**
+   * @spec resource-access#resource-matching (#1276, D447, D457): this
+   * operation's documented, trusted operation contract: how the PEP
+   * establishes its target before any authority is matched. The payments
+   * contract is service-level: every payments tool acts on the service
+   * {@link CANONICAL_RESOURCE} names, and actions and constraints determine
+   * the permitted operations within it
+   * (`src/docs/operation-profile-payments-v1.md`).
+   *
+   * Absent means no contract: the operation is refused before any decision
+   * request, never matched against the protected resource's metadata
+   * identifier or the token's audience by default. A finer contract form is
+   * unsupported and refuses too, and declarations naming different targets
+   * are ambiguous and refuse. Never read from an agent argument.
+   */
+  target?: OperationContract | readonly OperationContract[];
   needsInvoice: boolean;
   /**
    * @spec runtime#idempotency, authzen#parameter-digest (#917, #918): the
@@ -330,16 +350,26 @@ export function recipientParams(
  * prepare permit from a commit permit, which is exactly what the phase
  * binding exists to catch.
  */
+/**
+ * @spec resource-access#resource-matching (#1276, D447, D452, D457): the
+ * payments operation contract: explicitly service-level. Every payments tool
+ * acts on the service {@link CANONICAL_RESOURCE} identifies, so an `exact`
+ * entry naming that identifier covers the tool's action there, and actions
+ * and constraints determine the permitted operations within the service.
+ * Declared per tool below, never assumed for a tool that omits it.
+ */
+const PAYMENTS_SERVICE_CONTRACT: OperationContract = Object.freeze({ service: CANONICAL_RESOURCE });
+
 const TOOL_ACTIONS: Record<string, ActionMapping> = {
-  list_invoices: { action: "payments:invoice.list", actionClass: "consequential_read", needsInvoice: false, bindsVendorScope: true },
-  get_invoice: { action: "payments:invoice.read", actionClass: "consequential_read", needsInvoice: true },
-  lookup_vendor: { action: "payments:vendor.read", actionClass: "consequential_read", needsInvoice: false, targetsVendor: true },
-  schedule_payment: { action: "payments:payment.schedule", actionClass: "consequential_write", needsInvoice: true, idempotencyKey: true },
-  cancel_scheduled_payment: { action: "payments:payment.schedule.cancel", actionClass: "consequential_write", needsInvoice: true, idempotencyKey: true },
-  check_transfer: { action: "payments:payment.execute", phase: "preflight", actionClass: "consequential_read", needsInvoice: true },
-  hold_transfer: { action: "payments:payment.execute", phase: "prepare", actionClass: "consequential_write", needsInvoice: true },
-  execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", tier: "transaction-assurance", needsInvoice: true, idempotencyKey: true },
-  send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", needsInvoice: true, idempotencyKey: true, reachesRecipients: true },
+  list_invoices: { action: "payments:invoice.list", actionClass: "consequential_read", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: false, bindsVendorScope: true },
+  get_invoice: { action: "payments:invoice.read", actionClass: "consequential_read", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true },
+  lookup_vendor: { action: "payments:vendor.read", actionClass: "consequential_read", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: false, targetsVendor: true },
+  schedule_payment: { action: "payments:payment.schedule", actionClass: "consequential_write", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true },
+  cancel_scheduled_payment: { action: "payments:payment.schedule.cancel", actionClass: "consequential_write", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true },
+  check_transfer: { action: "payments:payment.execute", phase: "preflight", actionClass: "consequential_read", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true },
+  hold_transfer: { action: "payments:payment.execute", phase: "prepare", actionClass: "consequential_write", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true },
+  execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true },
+  send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true, reachesRecipients: true },
 };
 
 /**
@@ -479,6 +509,26 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
       // the same refusal: neither establishes the phase the permit bound.
       if (!isActionPhase(bound)) return "phase_mismatch";
       return bound === crossing ? undefined : "phase_mismatch";
+    },
+  },
+  {
+    // @spec resource-access#resource-matching (#1276, D447, D457): "MUST
+    // execute the operation on the target it matched: matching a different
+    // target never authorizes the execution." The target is re-established
+    // from the LIVE Operation Profile at every use, exactly as the phase is,
+    // and compared with the target the permit was decided on. A contract that
+    // moved, or that no longer establishes one target, refuses: a permit is
+    // never carried to another target, cacheable reads included.
+    //
+    // `target_drift` is the closed set's value for a bound decision input
+    // that "differs or cannot be established at use"; the Runtime Evidence
+    // text names Evaluation-Context Binding there, so this use awaits the
+    // #1276 specification change to name the operation target (coordination
+    // item, not a new value).
+    name: "operation_target",
+    failure: (attempt, { profile }) => {
+      const current = establishOperationTarget(profile?.target);
+      return current.ok && current.target === attempt.operationTarget ? undefined : "target_drift";
     },
   },
   {
@@ -884,6 +934,14 @@ export interface ExecutionAttempt {
   /** The governing Mission, from `resolvedMission`, never `token.mission`. */
   mission: { id: string; issuer: string; authority_hash?: string };
   audience: string;
+  /**
+   * @spec resource-access#resource-matching (#1276, D457): the operation
+   * target the permit was decided on, exactly as this PEP sent it in
+   * `resource.properties.operation_target`. The `operation_target` use check
+   * compares the target the live Operation Profile establishes against it
+   * before every release.
+   */
+  operationTarget: string;
   action: string;
   /**
    * The tool whose crossing this attempt is about to make. The PEP re-derives
@@ -962,6 +1020,7 @@ export type PepRefusalDiagnostic =
   | "unknown_mission"
   | "unknown_invoice"
   | "unknown_vendor"
+  | "operation_target_unresolvable"
   | "out_of_authority"
   | "instance_revoked"
   | "mission_reference_conflict"
@@ -997,6 +1056,11 @@ export const PRE_DECISION_DENIAL_REASON: Readonly<Record<PepRefusalDiagnostic, P
   // The named target object does not resolve here.
   unknown_invoice: "target_unresolvable",
   unknown_vendor: "target_unresolvable",
+  // @spec resource-access#resource-matching (#1276, D447): the operation's
+  // trusted contract establishes no one target (none declared, a form this
+  // surface does not support, or declarations naming different targets), so
+  // the operation is refused before any decision request.
+  operation_target_unresolvable: "target_unresolvable",
   // The acting credential's OWN authority does not cover the request (an
   // attenuated leaf, or the baseline-Join rule-8 bound), determined before any
   // decision request. Distinct from the PDP's evaluated `out_of_authority`
@@ -1159,6 +1223,17 @@ export class Pep {
   private reachesRecipients(action: string): boolean {
     const profile = this.deps.operationProfile?.() ?? TOOL_ACTIONS;
     return Object.values(profile).some((m) => m.action === action && m.reachesRecipients === true);
+  }
+
+  /**
+   * @spec resource-access#resource-matching (#1276, D447, D457): the
+   * operation target this surface establishes for `tool`, from the trusted
+   * contract its LIVE Operation Profile declares, independently of any
+   * presented entry, the token's audience, and the caller's arguments. A
+   * missing, unsupported or ambiguous contract establishes none.
+   */
+  operationTargetFor(tool: string): OperationTargetResolution {
+    return establishOperationTarget(this.toolAction(tool)?.target);
   }
 
   /** The permit `conditions` members this PEP recognizes (@spec authzen#response-context). */
@@ -1375,6 +1450,17 @@ export class Pep {
       }
     }
 
+    // @spec resource-access#resource-matching (#1276, D447, D457): "Before
+    // matching authority, the resource server establishes the operation's
+    // target". From the tool's trusted contract only: never an entry, the
+    // token's audience, or an argument (an agent-supplied `operation_target`
+    // or `resource` argument is never read). No one target, no operation:
+    // refused before any decision request, with no fallback to this
+    // resource's metadata identifier.
+    const established = this.operationTargetFor(tool);
+    if (!established.ok) return await this.refuse(token, "operation_target_unresolvable", mapping.action, view);
+    const operationTarget = established.target;
+
     // Effective parameters from authoritative store state (D34).
     let effective: EffectiveParams | undefined;
     let listEffective: ListEffectiveParams | undefined;
@@ -1429,10 +1515,12 @@ export class Pep {
         recipients = resolved.recipients;
         recipientsRouted = resolved.routed;
       }
+      // The operation target is the effective parameters' `resource`, so the
+      // parameter digest, the operation key and every recheck bind it too.
       // The routed set binds into the digest; a vendor's default address is
       // a function of `vendor_id`, which the digest already binds.
       const bound = recipients && recipientsRouted ? { recipients } : {};
-      effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE, ...bound });
+      effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: operationTarget, ...bound });
       amount = effective.amount;
       // @spec resource-access#initial-common-constraints (#1266): the
       // invoice's issuance instant is this service's own record, never an
@@ -1464,7 +1552,7 @@ export class Pep {
       // reached the PDP request or the reverification the write/transaction
       // paths already perform.
       const entry = view.authority_set.find(
-        (e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action),
+        (e) => entryMatchesTarget(e, operationTarget) && e.actions.includes(mapping.action),
       );
       // @spec runtime#input-resource-policy (#828 step 5): a named vendor_id
       // is the vendor the payments store resolved, never the argument, as
@@ -1476,7 +1564,7 @@ export class Pep {
         if (requestedVendorId === undefined) return await this.refuse(token, "unknown_vendor", mapping.action, view);
       }
       const scope = deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds());
-      listEffective = buildListEffectiveParams({ action: mapping.action, resource: CANONICAL_RESOURCE, ...scope });
+      listEffective = buildListEffectiveParams({ action: mapping.action, resource: operationTarget, ...scope });
       listDigest = parameterDigest(listEffective);
       // The RESULT-SET filter (server.ts's execute()) is a SEPARATE,
       // additional authorization-enforcement control, not the binding itself:
@@ -1535,7 +1623,9 @@ export class Pep {
     // so they reach the PDP with the credential's authority and the PDP
     // decides them (D312).
     const establishedFacts = {
-      resource: CANONICAL_RESOURCE,
+      // #1276, D457: the operation target, matched with the Resource Access
+      // matcher, as the PDP will match it.
+      resource: operationTarget,
       action: mapping.action,
       vendorIds: (effective
         ? [effective.vendor_id]
@@ -1603,9 +1693,14 @@ export class Pep {
       // @spec authzen#context-audience-freshness, authzen#pdp-request: this
       // PEP's protected-resource identifier rides `resource.properties.audience`
       // on every request, beside the target object's own resource-scoped
-      // members; the PDP matches the approved entry against it, never against
-      // `type`/`id`.
-      resource: { ...resourceObj, properties: { ...resourceObj.properties, audience: CANONICAL_RESOURCE } },
+      // members. @spec resource-access#resource-matching (#1276, D457): the
+      // operation target this PEP established rides beside it, and the PDP
+      // matches the credential's and the Mission's entries against the
+      // target, never against the audience or `type`/`id`.
+      resource: {
+        ...resourceObj,
+        properties: { ...resourceObj.properties, audience: CANONICAL_RESOURCE, operation_target: operationTarget },
+      },
       // @spec authzen#parameter-digest `idempotency_key` (#917): forwarded
       // exactly as the caller supplied it, distinct from `parameter_digest`.
       // A missing or malformed key is the PDP's to refuse; this PEP neither
@@ -1832,7 +1927,7 @@ export class Pep {
         // no PDP-local member such as the loader's `join_delegation`), less
         // its issuer provenance.
         const requested = view.authority_set
-          .filter((e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action))
+          .filter((e) => entryMatchesTarget(e, operationTarget) && e.actions.includes(mapping.action))
           .map((e) => {
             const { capability_sources: _issuerProvenance, ...committed } = committedEntry(e);
             return { ...committed, actions: [mapping.action] };
@@ -1893,10 +1988,10 @@ export class Pep {
       // capability would contradict restore-only-via-Expansion.
       if (
         decision.context.denial_reason === "out_of_authority" &&
-        !view.authority_set.some((e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action))
+        !view.authority_set.some((e) => entryMatchesTarget(e, operationTarget) && e.actions.includes(mapping.action))
       ) {
         result.insufficient_authorization = buildInsufficientAuthorization([
-          { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [mapping.action] },
+          { type: "mission_resource_access", resource: operationTarget, actions: [mapping.action] },
         ]);
       }
       return result;
@@ -1917,6 +2012,7 @@ export class Pep {
         ...(missionAnchor.authority_hash !== undefined ? { authority_hash: missionAnchor.authority_hash } : {}),
       },
       audience: CANONICAL_RESOURCE,
+      operationTarget,
       action: mapping.action,
       tool,
       // @spec authzen#response-context — the permit's own bound conditions,
@@ -1977,7 +2073,7 @@ export class Pep {
             issuer: missionAnchor.issuer,
           });
           const entry = loaded?.view.authority_set.find(
-            (e) => e.resource === listEffective.resource && e.actions.includes(listEffective.action),
+            (e) => entryMatchesTarget(e, listEffective.resource) && e.actions.includes(listEffective.action),
           );
           const requestedVendorId =
             listEffective.vendor_scope_source === "requested" ? listEffective.vendor_scope[0] : undefined;
@@ -2302,7 +2398,7 @@ export class Pep {
       issuer: attempt.mission.issuer,
     });
     const entry = loaded?.view.authority_set.find(
-      (e) => e.resource === effective.resource && e.actions.includes(effective.action),
+      (e) => entryMatchesTarget(e, effective.resource) && e.actions.includes(effective.action),
     );
     const requestedVendorId =
       effective.vendor_scope_source === "requested" ? effective.vendor_scope[0] : undefined;

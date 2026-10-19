@@ -8,6 +8,7 @@
  * (consequential, reversible).
  */
 
+import { entryMatchesTarget, establishOperationTarget, type OperationContract } from "@mission/core";
 import { calculateJwkThumbprint, createLocalJWKSet, decodeProtectedHeader, jwtVerify, type JWK } from "jose";
 
 export const SAAS_RESOURCE = "http://localhost:4406/mcp";
@@ -46,6 +47,7 @@ export const SAAS_ENFORCED_CONSTRAINTS: readonly string[] = Object.freeze(Object
 
 interface SaasEntry {
   resource: string;
+  resource_match?: unknown;
   actions: string[];
   constraints?: unknown;
 }
@@ -56,9 +58,12 @@ interface SaasEntry {
  * enforce, or a malformed `constraints` member, provides no authority: no key
  * is ever set aside as advisory.
  */
-function entryCovers(entry: SaasEntry, resource: string, action: string, args: Record<string, unknown>): boolean {
+function entryCovers(entry: SaasEntry, target: string, action: string, args: Record<string, unknown>): boolean {
   if (!entry || typeof entry !== "object") return false;
-  if (entry.resource !== resource || !Array.isArray(entry.actions) || !entry.actions.includes(action)) return false;
+  // The entry matches the operation target with the Resource Access matcher (#1276).
+  if (!entryMatchesTarget(entry, target) || !Array.isArray(entry.actions) || !entry.actions.includes(action)) {
+    return false;
+  }
   if (entry.constraints === undefined) return true;
   const c = entry.constraints;
   if (!c || typeof c !== "object" || Array.isArray(c)) return false;
@@ -66,6 +71,23 @@ function entryCovers(entry: SaasEntry, resource: string, action: string, args: R
     const gate = Object.hasOwn(CONSTRAINT_GATES, key) ? CONSTRAINT_GATES[key] : undefined;
     return gate !== undefined && gate(value, args);
   });
+}
+
+/**
+ * @spec resource-access#resource-matching (#1276, D447, D457): the operation
+ * contract a tool declares: how this server establishes the tool's target. A
+ * tool with no declaration has no target and is refused.
+ */
+export type SaasOperationContracts = Readonly<Record<string, OperationContract | readonly OperationContract[] | undefined>>;
+
+/**
+ * The LedgerCloud operation contract: explicitly service-level. Every SaaS
+ * tool acts on the service `resource` identifies, so an `exact` entry naming
+ * that identifier covers the tool's action there; actions determine the
+ * permitted operations within the service.
+ */
+export function serviceLevelContracts(resource: string): SaasOperationContracts {
+  return Object.fromEntries(SAAS_TOOLS.map((t) => [t.name, { service: resource }]));
 }
 
 interface SaasToken {
@@ -83,13 +105,21 @@ interface SaasToken {
 export class SaasMcpServer {
   private readonly resolveKey;
   private readonly resource: string;
+  private readonly contracts: SaasOperationContracts;
   private readonly journal: Array<{ vendor_id: string; amount: string; mission_id: string }> = [];
 
   constructor(
-    private readonly deps: { rasIssuer: string; rasJwks: { keys: JWK[] }; resource?: string },
+    private readonly deps: {
+      rasIssuer: string;
+      rasJwks: { keys: JWK[] };
+      resource?: string;
+      /** The tools' operation contracts; defaults to {@link serviceLevelContracts} over `resource`. */
+      operationContracts?: SaasOperationContracts;
+    },
   ) {
     this.resolveKey = createLocalJWKSet(deps.rasJwks as never);
     this.resource = deps.resource ?? SAAS_RESOURCE;
+    this.contracts = deps.operationContracts ?? serviceLevelContracts(this.resource);
   }
 
   /** RFC 9728 PRM + EMA declaration (client uses ID-JAG/EMA, not local login). */
@@ -147,7 +177,14 @@ export class SaasMcpServer {
     }
     const def = SAAS_TOOLS.find((t) => t.name === tool);
     if (!def) return { ok: false, error: "unknown_tool" };
-    const authorized = token.authorizationDetails.some((e) => entryCovers(e, this.resource, def.action, args));
+    // @spec resource-access#resource-matching (#1276, D447, D457): the
+    // operation target comes from the tool's declared contract, never from
+    // this server's own identifier by default, an entry, or an argument. No
+    // one target, no operation. The token's audience was validated above, as
+    // its own check.
+    const target = establishOperationTarget(Object.hasOwn(this.contracts, def.name) ? this.contracts[def.name] : undefined);
+    if (!target.ok) return { ok: false, error: "target_unresolvable" };
+    const authorized = token.authorizationDetails.some((e) => entryCovers(e, target.target, def.action, args));
     if (!authorized) return { ok: false, error: "out_of_authority" };
     if (tool === "post_journal_entry") {
       this.journal.push({

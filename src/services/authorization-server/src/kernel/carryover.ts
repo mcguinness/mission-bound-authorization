@@ -52,6 +52,7 @@ import {
 import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
 import { entryDigest } from "./discharge.js";
 import { isSubsetSet } from "./derive.js";
+import { inheritOrigins } from "./eligibility-provenance.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import {
@@ -1453,6 +1454,16 @@ export function applyCarryoverInCallerTx(
     const oldChildWithOrigin = kernel.effectiveEntriesWithOrigin(oldChild);
     const oldChildEffective = oldChildWithOrigin.map((e) => e.entry);
     const authority = replacementAuthority(oldChildEffective, parentEffective);
+    // @spec resource-access#delegate-eligibility: a replacement entry is the
+    // old child's effective entry (index-aligned through the per-entry
+    // inheritance), now within its new parent: it keeps the origin retained
+    // for the old child's approved entry and every origin of the new parent
+    // entries it falls within.
+    const replacementProvenance = inheritOrigins(
+      authority,
+      kernel.effectiveEntriesWithRetainedOrigin(oldChild).map((e) => e.origin),
+      kernel.effectiveEntriesWithRetainedOrigin(newParent),
+    );
     // @spec child-delegation#carryover-evidence — the per-entry pairing,
     // computed here during re-derivation rather than inferred later.
     const pairs = carryoverEntryPairs(
@@ -1584,6 +1595,7 @@ export function applyCarryoverInCallerTx(
       state: "active",
       intent: oldChild.intent,
       authority_set: authority,
+      eligibility_provenance: replacementProvenance,
       intent_hash: oldChild.intent_hash,
       authority_hash: replacementAuthorityHash,
       subject: oldChild.subject,

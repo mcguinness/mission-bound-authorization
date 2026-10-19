@@ -203,6 +203,31 @@ describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)
     }
   });
 
+  // @spec resource-access#entry-validation (#1278): trusted issuers are
+  // configurable, so the RAS refuses a signed grant whose entry carries the
+  // RFC 9396 locations field itself, by presence, rather than relying on the
+  // originating AS. A covering ceiling would otherwise mint the entry verbatim.
+  it("a signed grant whose entry carries locations, whatever its value, is refused, minting no local token", async () => {
+    const server = await ras();
+    for (const locations of [[AUDIENCE], [], null, "", { uri: AUDIENCE }]) {
+      for (const authority of [[{ ...delegated, locations }], [DEFAULT_CEILING[1], { ...delegated, locations }]]) {
+        await expect(server.redeem(await mintGrant({ authorizationDetails: authority }), clientJkt)).rejects.toMatchObject({
+          code: "invalid_grant",
+          message: "local policy check failed",
+        });
+      }
+    }
+  });
+
+  it("a grant without locations, or carrying capability_sources, still mints", async () => {
+    const bindings = delegated.actions.map(action => ({ action, tool_id: action, source_uri: "https://catalog.test", source_digest: "sha-256:" + Buffer.alloc(32).toString("base64url"), operation_ref: action }));
+    const server = await ras();
+    for (const entry of [delegated, { ...delegated, capability_sources: bindings }]) {
+      const result = await server.redeem(await mintGrant({ authorizationDetails: [entry] }), clientJkt);
+      expect(details(result.access_token)).toEqual([entry]);
+    }
+  });
+
   // #787: `child_creation_policy` is an issuer-recorded reference that becomes a
   // child's approval-basis root_commitment, so the destination ceiling compares it
   // rather than stripping it: a declared reference binds, and the minted entry
@@ -240,7 +265,7 @@ describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)
   });
 
   it("absent, empty, malformed, or issuer-binding-bearing local configuration fails at startup", async () => {
-    for (const localCeiling of [undefined, [], [{}], [{ ...delegated, capability_sources: [] }]]) {
+    for (const localCeiling of [undefined, [], [{}], [{ ...delegated, capability_sources: [] }], [{ ...delegated, locations: [] }]]) {
       await expect(ras({ localCeiling } as unknown as Partial<RasConfig>)).rejects.toThrow("RAS local policy");
     }
     await expect(ras({ localPolicyVersion: "" })).rejects.toThrow("RAS local policy");

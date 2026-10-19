@@ -53,7 +53,7 @@ const view = (maxAmount: string): MissionView => ({
 
 const request = (amount: string, currency = "USD"): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:payment.execute" },
   context: {
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
@@ -77,7 +77,7 @@ const optsFor = (v: MissionView) => ({
  *  (never an empty/zero amount): the PEP simply did not supply one. */
 const requestWithoutAmount = (action = "payments:payment.execute"): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: action },
   context: {
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },

@@ -62,9 +62,42 @@ export const SUPPORTED_CONSTRAINT_KEYS: readonly string[] = Object.freeze([
   ...IMPLEMENTED_COMMON_CONSTRAINTS,
 ]);
 
-/** Validate the subset engine's supported input before a foreign grant can use it. */
+/**
+ * @spec resource-access#entry-validation (#1278, D454, D457): the RFC 9396
+ * common fields a `mission_resource_access` entry does not use: `resource`
+ * identifies where an entry applies, so an entry carrying `locations` is
+ * refused. This is the SINGLE declaration every boundary that admits an
+ * entry of this type consults (PAR and the other proposal intakes, the typed
+ * config loaders, and derivation), so none admits the member and then drops
+ * it in a member-by-member rebuild. Refused by name only: the entry's top
+ * level stays open to a member another specification defines for this type,
+ * such as `capability_sources`.
+ */
+export const REFUSED_ENTRY_MEMBERS = ["locations"] as const;
+
+/**
+ * The first {@link REFUSED_ENTRY_MEMBERS} member `entry` carries, or
+ * undefined. Decided by property presence, never by value: `locations: []`,
+ * `null`, `""` or any malformed value is refused exactly as a populated array
+ * is. The caller applies it to an entry of this type and maps a hit to its
+ * boundary's own error (`invalid_authorization_details` on a protocol
+ * surface, the loader's configuration error at load).
+ */
+export function refusedEntryMember(entry: unknown): string | undefined {
+  if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return undefined;
+  return REFUSED_ENTRY_MEMBERS.find((member) => Object.hasOwn(entry, member));
+}
+
+/**
+ * Validate the subset engine's supported input before a foreign grant can use
+ * it. An entry carrying a {@link REFUSED_ENTRY_MEMBERS} member is unsupported,
+ * decided by presence: a destination redeeming a signed grant from a
+ * configurable trusted issuer refuses it rather than minting it into a local
+ * token, so it never reaches a resource (#1278).
+ */
 export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  if (refusedEntryMember(value) !== undefined) return false;
   const e = value as Record<string, unknown>;
   const strings = (v: unknown): v is string[] =>
     Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.length > 0);
@@ -190,7 +223,9 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
  * so a candidate lacking or altering that reference is refused; a ceiling
  * declaring no `children` grant refuses the entry carrying one, exactly as an
  * introduced delegation is refused. A surviving entry keeps the reference and
- * its retained-action `capability_sources` verbatim.
+ * its retained-action `capability_sources` verbatim. Both operands pass
+ * {@link isAuthorityEntry} first, so a surviving entry never retains a
+ * {@link REFUSED_ENTRY_MEMBERS} member.
  */
 export function narrowToCeiling(
   entries: readonly AuthorityEntry[],
@@ -396,7 +431,14 @@ function bindingKey(binding: CapabilitySourceBinding): string | null {
 
 /** A restriction-list subset test mirroring the vendors rule: grantor-absent is
  *  unconstrained (any candidate ⊆); grantor-present + candidate-absent is
- *  broader (fails); both present requires candidate ⊆ granted on identity. */
+ *  broader (fails); both present requires candidate ⊆ granted on identity.
+ *
+ *  @spec resource-access#subset, resource-access#delegate-eligibility (#1275):
+ *  structural only. A grantor without a list defers eligibility to the
+ *  authorization server's policy, and a candidate list only restricts that
+ *  decision. A `true` here is never authorization to delegate: a caller that
+ *  derives a candidate keeps the grantor's inherited origin, and the
+ *  authorization server decides eligibility at each delegated issuance. */
 function matchersSubset(
   candidate: DelegateMatcher[] | undefined,
   granted: DelegateMatcher[] | undefined,

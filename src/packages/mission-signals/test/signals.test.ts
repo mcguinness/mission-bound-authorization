@@ -147,7 +147,7 @@ async function bootstrap() {
     resource: {
       type: "invoice",
       id: "inv-1",
-      properties: { audience: RESOURCE, vendor_id: "acme" },
+      properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" },
     },
     action: { name: "payments:invoice.read" },
     context: {

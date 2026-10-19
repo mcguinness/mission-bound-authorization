@@ -127,7 +127,7 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
     const decision = await evaluate(
       {
         subject: { id: "alice" },
-        resource: { type: "vendor", id: "acme", properties: { audience: CANONICAL_RESOURCE, vendor_id: "acme", vendor_ids: ["acme"] } },
+        resource: { type: "vendor", id: "acme", properties: { audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE, vendor_id: "acme", vendor_ids: ["acme"] } },
         action: { name: "payments:invoice.list" },
         context: {
           mission: { id: MISSION_ID, issuer: ISS, authority_hash: "sha-256:testhash" },
@@ -153,7 +153,7 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
     const decision = await evaluate(
       {
         subject: { id: "alice" },
-        resource: { type: "invoice", id: "inv-1", properties: { audience: CANONICAL_RESOURCE, vendor_id: "acme" } },
+        resource: { type: "invoice", id: "inv-1", properties: { audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE, vendor_id: "acme" } },
         action: { name: "payments:payment.execute" },
         context: {
           mission: { id: MISSION_ID, issuer: ISS, authority_hash: "sha-256:testhash" },

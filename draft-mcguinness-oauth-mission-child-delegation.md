@@ -89,6 +89,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC8126:
   I-D.draft-gerber-oauth-deferred-token-response:
   I-D.draft-mcguinness-oauth-client-instance-id:
@@ -870,6 +878,11 @@ created.
 
 ## Worked Example {#worked-example}
 
+In the ERP examples in this document, the operation contract identifies
+`https://erp.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+
 Under the Q3 reconciliation Mission
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`, the approved agent
 `s6BhdRkqt3`, acting for `alice`, spawns a read-only invoice
@@ -935,7 +948,7 @@ parent. The decoded child access token:
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
       "authority_hash":
-        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6",
+        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR4",
       "depth": 1,
       "delegation_id": "dlg_7pQ4m",
       "cascade_mode": "immediate"
@@ -1071,7 +1084,7 @@ Example:
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
       "authority_hash":
-        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6",
+        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR4",
       "depth": 1,
       "delegation_id": "dlg_7pQ4m",
       "cascade_mode": "immediate",
@@ -2000,7 +2013,7 @@ Example:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6"
+      "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR4"
   },
   "child": {
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
