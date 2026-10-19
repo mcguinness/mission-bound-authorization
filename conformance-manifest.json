@@ -8248,9 +8248,15 @@
      "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > redemption re-evaluates eligibility: a delegate whose AS-asserted profile is withdrawn after the designation is refused invalid_target, counting nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > a policy change between designation and redemption is enforced at redemption: refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers. Every clause is witnessed at a redemption: the source grant or family's validity (an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses; requiring the row alone fails that witness), the Mission's state, the designation's own expiry, the delegation policy (a delegate whose AS-asserted profile is withdrawn after the designation is refused; skipping the redemption's eligibility gate fails it), the Mission's current authority (a containment after the designation narrows the result, or refuses when nothing is left; skipping the projection through current authority fails it), and a separate count per redemption, none for a refusal (#869 acceptance review)."
+   "notes": "#869 (D449): proven by disabling the code it covers. Every clause is witnessed at a redemption: the source grant or family's validity (an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses; requiring the row alone fails that witness), the Mission's state, the designation's own expiry, the delegation policy (a delegate whose AS-asserted profile is withdrawn after the designation is refused; skipping the redemption's eligibility gate fails it), the Mission's current authority (a containment after the designation narrows the result, or refuses when nothing is left; skipping the projection through current authority fails it), and a separate count per redemption, none for a refusal (#869 acceptance review). #1275: the delegation-authorization policy is also witnessed changing between a designation and its redemption (the redemption is refused; skipping the gate at redemption, or caching the policy decision, fails that witness)."
   },
   {
    "id": "core.delegation-constraints.designation-adds-no-delegate",
@@ -35352,9 +35358,64 @@
     "normative": "a derived list never admits a delegate the inherited policy decision denies, whether the parent entry has no list or carries one over a policy-deferring ceiling"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 8, #1277 review finding 2 (D454). Not met by the reference: derivation (narrowMatchers) and subset comparison (matchersSubset) adopt a candidate list where the reference has none and then evaluate only the list (#1275). Cases dg-inherit-01, 02, 04, 05 and 07 skipped."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an approved entry whose ceiling entry defers to policy, with a list the proposal added > policy denies, list permits: the delegate the list names is refused invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > a list requested at a later exchange restricts the issued grant but admits nobody the policy denies at the next",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > a Child Mission's proposal list over a policy-deferring parent entry only restricts: the policy still decides at the child's exchange",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > policy denies, list permits: designating the client the list names is refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/eligibility-provenance.test.ts",
+     "name": "derivation records each entry's eligibility origin (@spec resource-access#delegate-eligibility) > a list the proposal adds over a ceiling entry without one is kept as a restriction, and the entry's origin is policy",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/eligibility-provenance.test.ts",
+     "name": "an entry derived from an approved entry inherits its origin (@spec resource-access#subset, resource-access#delegate-eligibility) > a Child Mission's list over a policy-deferring parent entry keeps the policy origin",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/eligibility-provenance.test.ts",
+     "name": "an entry derived from an approved entry inherits its origin (@spec resource-access#subset, resource-access#delegate-eligibility) > a Child Mission drawn on a parent entry whose provenance is gone retains no origin for that entry",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > dg-inherit-01: the inherited policy denies Carol although the derived entry's list names her",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > dg-inherit-04: a list the proposal added over a policy-deferring ceiling entry does not admit a delegate the policy denies",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1258 item 8, #1277 review finding 2 (D454); #1275 (D457). Derivation keeps a candidate list as a restriction and records the entry's origin (policy where the reference entry has no list); narrowMatchers and matchersSubset stay structural, and a Child Mission keeps every origin of the parent entries it falls within. Eligibility is decided at each delegated issuance against the approved entry, its retained origin, every list and the current policy. Endpoint witnesses: the ICA continuation exchange (a proposal-added list, a list requested at a later exchange, a Child Mission's list) and designation. Proven by disabling the code it covers: recording every origin as list, dropping the policy check, dropping the proposal's list, or ignoring the parent's origin each fails its witness. Cases dg-inherit-01 and 04 run through the reader (kernel level)."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
@@ -35376,9 +35437,70 @@
     "normative": "with depth within bounds, a delegate the list permits but the inherited policy denies is not eligible, one the policy permits but the list omits is not eligible, and one both permit is eligible"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 8 (D444 multi-hop case), #1277 review finding 4. Cases dg-inherit-01 (policy denial alone), dg-inherit-02 (list denial alone) and dg-inherit-05 (both permit) skipped (delegation.policy; #1275)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an approved entry whose ceiling entry defers to policy, with a list the proposal added > policy denies, list permits: the delegate the list names is refused invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an approved entry whose ceiling entry defers to policy, with a list the proposal added > policy permits, list omits: a delegate the policy permits is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an approved entry whose ceiling entry defers to policy, with a list the proposal added > policy and list both permit: the delegate is issued the entry, its approved list intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an approved entry whose ceiling entry defers to policy, with a list the proposal added > both permit only within the accounted depth bound: depth 2 above max_depth 1 is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > policy denies, list permits: designating the client the list names is refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > policy permits, list omits: designating a client the policy permits but the list omits is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > policy and list both permit: the designation and the delegated token are issued, the approved list intact, the policy asked at each step",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > dg-inherit-01: the inherited policy denies Carol although the derived entry's list names her",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > dg-inherit-02: the list omits Bob although the inherited policy permits him",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > dg-inherit-05: a delegate the inherited policy and the list both permit is eligible within the depth bound",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1258 item 8 (D444 multi-hop case), #1277 review finding 4; #1275 (D457). Witnessed at the ICA continuation exchange and at designation and redemption, with two independently controlled delegates and a permitting policy hook the test installs (the reference default denies every delegate). Proven by disabling the code it covers: dropping the policy check fails the policy-denial witnesses, dropping the list check on a policy-origin entry fails the list-denial witnesses, and dropping the depth bound fails the depth witness. Cases dg-inherit-01, 02 and 05 run through the reader (kernel level)."
   },
   {
    "id": "resource-access.delegate-eligibility.unresolved-context-narrows-out",
@@ -35400,9 +35522,58 @@
     "normative": "an entry whose approved entry or inherited-policy provenance cannot be resolved narrows out of the delegated token, even where the list and policy would permit"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 8, #1277 review finding 2 (D454). Cases dg-inherit-03 (approved entry) and dg-inherit-06 (provenance) skipped (delegation.inherited-eligibility)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > missing provenance: an entry whose retained provenance is gone narrows out although its list and the policy permit",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > an entry whose retained provenance is gone narrows out at redemption although its list and the policy permit",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > an entry the AS cannot resolve to an approved Mission Record entry narrows out: under an injected source carrying no origin, a designation its list permits is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/eligibility-provenance.test.ts",
+     "name": "the kernel retains provenance with the Mission and resolves it at each delegated issuance (@spec resource-access#delegate-eligibility) > a stored value it does not recognize reads as unresolved, and that entry narrows out",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/eligibility-provenance.test.ts",
+     "name": "the kernel retains provenance with the Mission and resolves it at each delegated issuance (@spec resource-access#delegate-eligibility) > a presented entry resolving to overlapping approved entries of different origins narrows out, even where the policy permits",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/eligibility-provenance.test.ts",
+     "name": "the kernel retains provenance with the Mission and resolves it at each delegated issuance (@spec resource-access#delegate-eligibility) > an origin that is not an entry of the Mission Record resolves nothing and narrows out",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > dg-inherit-03: a presented entry no approved entry backs narrows out",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > dg-inherit-06: an approved entry whose provenance is gone narrows out though list and policy would permit",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1258 item 8, #1277 review finding 2 (D454); #1275 (D457). Provenance: a Mission whose stored provenance is gone narrows the entry out at the ICA continuation exchange and at redemption. Approved entry: under an injected Effective Authority Set source, whose entries are not the Mission Record's own, a designation the list permits is refused; at kernel level, an origin outside the record, an unreadable stored value, and overlapping approved entries of different origins each narrow out. Proven by disabling the code it covers: reading missing provenance as list, resolving an origin by bytes or by resource, or taking the first of two origins each fails its witness. Cases dg-inherit-03 and 06 run through the reader (kernel level)."
   },
   {
    "id": "resource-access.delegate-eligibility.provenance-from-initial-derivation",
@@ -35424,9 +35595,58 @@
     "normative": "a delegate named by a list the proposal added over a policy-deferring ceiling entry is not eligible when the policy denies it, and is eligible when both permit"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1277 review finding 2 (D454). Not met by the reference, which adopts the proposal list and evaluates only it (#1275). Cases dg-inherit-04 and dg-inherit-07 skipped."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an approved entry whose ceiling entry defers to policy, with a list the proposal added > policy denies, list permits: the delegate the list names is refused invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an approved entry whose ceiling entry defers to policy, with a list the proposal added > policy and list both permit: the delegate is issued the entry, its approved list intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > the approved entry keeps the proposal's list and retains its policy origin with the Mission",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > policy denies, list permits: designating the client the list names is refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > policy and list both permit: the designation and the delegated token are issued, the approved list intact, the policy asked at each step",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/eligibility-provenance.test.ts",
+     "name": "derivation records each entry's eligibility origin (@spec resource-access#delegate-eligibility) > a list the proposal adds over a ceiling entry without one is kept as a restriction, and the entry's origin is policy",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > dg-inherit-04: a list the proposal added over a policy-deferring ceiling entry does not admit a delegate the policy denies",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > dg-inherit-07: a proposal-added list over a policy-deferring ceiling entry admits a delegate both permit",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1277 review finding 2 (D454); #1275 (D457). The approved entry keeps the list the proposal added over a policy-deferring ceiling entry, and its policy origin is recorded at derivation. Proven by disabling the code it covers: recording the origin as list admits the policy-denied delegate, and dropping the proposal's list admits a delegate the list omits. Cases dg-inherit-04 and 07 run through the reader (kernel level)."
   },
   {
    "id": "resource-access.delegate-eligibility.provenance-retained",
@@ -35448,9 +35668,58 @@
     "normative": "every later exchange evaluates eligibility against the approved entry and its retained inherited-policy provenance, never against a presented token alone"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1277 review finding 2 (D454). Authorization-server-held state; its witness is the eligibility decision at a later exchange (dg-inherit-04, 06, 07). The reference retains no such provenance (#1275)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > the approved entry keeps the proposal's list and retains its policy origin with the Mission",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > a policy change between designation and redemption is enforced at redemption: refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > an entry whose retained provenance is gone narrows out at redemption although its list and the policy permit",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > a list requested at a later exchange restricts the issued grant but admits nobody the policy denies at the next",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > policy change between issuance steps: a permit at one exchange is never reused at the next",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > the policy is asked again at the mint: a decision that changes after the pre-check refuses, with no hop",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > overlapping origins: each approved entry keeps its own origin, so a list-origin overlap never lends a policy-origin entry its eligibility",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/eligibility-provenance.test.ts",
+     "name": "the kernel retains provenance with the Mission and resolves it at each delegated issuance (@spec resource-access#delegate-eligibility) > approval persists each approved entry's origin, read back from the store",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1277 review finding 2 (D454); #1275 (D457). Retained as authorization-server state (MissionRecord.eligibility_provenance, persisted with the record, never on the wire); the endpoint witness approves through PAR and the interaction and reads the origin back from the store. Direct approval and child creation are witnessed; expansion, progressive drawdown, template dispatch, governed-policy activation and carryover replacement record it through the same derivation but have no witness here. Later exchanges evaluate the approved entry and its origin, not the presented token: a list requested at a later exchange admits nobody the policy denies, a policy change between designation and redemption is enforced at redemption, and the policy is asked again at the ICA mint. Proven by disabling the code it covers: not persisting the provenance, caching the policy decision, skipping the gate at the mint or at redemption, or resolving an origin by resource each fails its witness."
   },
   {
    "id": "resource-access.delegate-eligibility.matcher-conjunction",

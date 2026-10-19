@@ -18,8 +18,7 @@ import {
   generateKeyPair,
 } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
-import { continuationAuthorityFilter } from "../src/adapters/continuation-grant.js";
-import { gateDelegableAuthority } from "../src/kernel/delegation.js";
+import { continuationResourceFilter } from "../src/adapters/continuation-grant.js";
 import {
   AuthorityNarrowedToEmptyError,
   issueCrossDomainGrant,
@@ -244,7 +243,7 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
     expect(calls).toBe(0);
   });
 
-  it("continuationAuthorityFilter in-mint: the delegation gate, then the requested resources, and an empty composition is refused before beforeSign (@spec id-continuation-assertion)", async () => {
+  it("in-mint narrowing: the delegation gate, then the requested resources, and an empty composition is refused before beforeSign (@spec id-continuation-assertion)", async () => {
     // A Mission holding RESOURCE (non-delegable) and RESOURCE_2 (delegable to delegate-svc).
     const approveBoth = (n: number): MissionRecord =>
       kernel.approve({
@@ -264,31 +263,32 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
         clientId: "ap-agent",
         approvalEventId: `apev-${n}`,
       });
-    const depth0 = (entries: Parameters<typeof gateDelegableAuthority>[0]) => entries;
-    const depth1 = (entries: Parameters<typeof gateDelegableAuthority>[0]) =>
-      gateDelegableAuthority(entries, { sub: "delegate-svc" }, 1);
+    const depth0 = { delegate: { sub: "delegate-svc" }, depth: 0 };
+    const depth1 = { delegate: { sub: "delegate-svc" }, depth: 1 };
     let next = 30;
-    const resourcesOf = async (filter: ReturnType<typeof continuationAuthorityFilter>) => {
+    const resourcesOf = async (delegation: typeof depth0, resources: string[]) => {
       const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
         ...legacyInput(approveBoth(next++).id),
-        authorityFilter: filter,
+        delegation,
+        authorityFilter: continuationResourceFilter(resources),
       });
       return (decodeJwt(grant).authorization_details as Array<{ resource: string }>).map((d) => d.resource).sort();
     };
 
     // Depth 0: resource narrowing alone.
-    expect(await resourcesOf(continuationAuthorityFilter(depth0, []))).toEqual([RESOURCE, RESOURCE_2].sort());
-    expect(await resourcesOf(continuationAuthorityFilter(depth0, [RESOURCE]))).toEqual([RESOURCE]);
+    expect(await resourcesOf(depth0, [])).toEqual([RESOURCE, RESOURCE_2].sort());
+    expect(await resourcesOf(depth0, [RESOURCE])).toEqual([RESOURCE]);
     // Depth 1: the gate keeps only RESOURCE_2; naming it keeps it.
-    expect(await resourcesOf(continuationAuthorityFilter(depth1, []))).toEqual([RESOURCE_2]);
-    expect(await resourcesOf(continuationAuthorityFilter(depth1, [RESOURCE_2]))).toEqual([RESOURCE_2]);
+    expect(await resourcesOf(depth1, [])).toEqual([RESOURCE_2]);
+    expect(await resourcesOf(depth1, [RESOURCE_2])).toEqual([RESOURCE_2]);
 
     // Depth 1 naming the gated-out RESOURCE: nothing remains, refused before signing.
     let calls = 0;
     await expect(
       issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
         ...legacyInput(approveBoth(29).id),
-        authorityFilter: continuationAuthorityFilter(depth1, [RESOURCE]),
+        delegation: depth1,
+        authorityFilter: continuationResourceFilter([RESOURCE]),
         beforeSign: () => {
           calls += 1;
         },
