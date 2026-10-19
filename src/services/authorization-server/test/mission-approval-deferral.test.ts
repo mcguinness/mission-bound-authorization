@@ -334,6 +334,30 @@ describe("deferred approval store bounds and cancellation (@spec deferred-approv
     expect(store.poll(racing, presenter)).toEqual({ error: "access_denied" });
   });
 
+  it("refuses a human direct approval of evidence-bearing submissions without verified facts, and records the facts it is given", async () => {
+    const { kernel, store } = setup();
+    const evidence = [{ type: "urn:test:unregistered-evidence", assertion: "artifact" }];
+    // Policy completion verifies the presented evidence again; a type this
+    // issuer does not support refuses, with no Mission.
+    const byPolicy = open(store, { evidence });
+    expect(await store.completeByPolicy(byPolicy)).toMatchObject({
+      outcome: "not_authorized",
+      reason: "invalid_mission_intent_evidence",
+    });
+    expect(kernel.allMissions()).toHaveLength(0);
+    // The human path takes the facts its review surface verified, and is
+    // refused without them.
+    const byHuman = open(store, { evidence });
+    expect(() => store.approveDirect(byHuman, { approver: DANA, subject: SUBJECT })).toThrow(
+      expect.objectContaining({ code: "evidence_unverified" }),
+    );
+    expect(kernel.allMissions()).toHaveLength(0);
+    const facts = [{ type: "urn:test:unregistered-evidence", artifact_hash: "sha-256:x", verified_at: now().toISOString(), facts: { ok: true } }];
+    const mission = store.approveDirect(byHuman, { approver: DANA, subject: SUBJECT, submissionEvidence: facts });
+    expect(mission.submission_evidence).toEqual(facts);
+    expect(kernel.get(mission.id)?.submission_evidence).toEqual(facts);
+  });
+
   it("redeems an approval only when its delivery confirms: a failed delivery stays deliverable, and one claim delivers at a time", async () => {
     const { kernel, store } = setup();
     const code = open(store);

@@ -51,7 +51,12 @@ import {
   MissionApprovalDeferralError,
   type MissionApprovalDeferralStore,
 } from "../kernel/mission-approval-deferral.js";
-import type { AuthorityEntry, MissionIntent, MissionRecord } from "../kernel/types.js";
+import type {
+  AuthorityEntry,
+  IntentSubmissionEvidenceEntry,
+  MissionIntent,
+  MissionRecord,
+} from "../kernel/types.js";
 import { verifyTokenEndpointDpop } from "./continuation-grant.js";
 import { refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
@@ -86,7 +91,10 @@ CREATE TABLE IF NOT EXISTS mission_deferred_authorization_codes (
 `;
 
 /** Columns added after the table first existed: added in place, so an earlier database opens. */
-const ADDED_COLUMNS: ReadonlyArray<[string, string]> = [["resource", "TEXT"]];
+const ADDED_COLUMNS: ReadonlyArray<[string, string]> = [
+  ["resource", "TEXT"],
+  ["evidence_json", "TEXT"],
+];
 
 interface StagedCode {
   code: string;
@@ -98,6 +106,8 @@ interface StagedCode {
   proposal_json: string | null;
   /** The single `resource` the request selected, or null. */
   resource: string | null;
+  /** The Submission envelope's `evidence`, as presented, or null. */
+  evidence_json: string | null;
   expires_at: number;
   deferral_code: string | null;
 }
@@ -133,8 +143,8 @@ export class DeferredAuthorizationCodes {
     this.store.db
       .prepare(
         `INSERT INTO mission_deferred_authorization_codes (code, client_id, redirect_uri, code_challenge, dpop_jkt,
-           intent_json, proposal_json, resource, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           intent_json, proposal_json, resource, evidence_json, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         row.code,
@@ -145,6 +155,7 @@ export class DeferredAuthorizationCodes {
         row.intent_json,
         row.proposal_json,
         row.resource,
+        row.evidence_json,
         row.expires_at,
       );
   }
@@ -167,6 +178,7 @@ export class DeferredAuthorizationCodes {
         clientId: staged.client_id,
         jkt,
         ...(staged.resource ? { resource: staged.resource } : {}),
+        ...(staged.evidence_json ? { evidence: JSON.parse(staged.evidence_json) as IntentSubmissionEvidenceEntry[] } : {}),
       });
       const claimed = this.store.db
         .prepare(
@@ -220,9 +232,12 @@ export async function completeDeferredAuthorization(
     return;
   }
   let intent: MissionIntent;
+  let evidence: IntentSubmissionEvidenceEntry[] | undefined;
   let proposal: AuthorityEntry[] | undefined;
   try {
-    intent = opts.kernel.validateSubmission(String(params.mission_intent)).intent;
+    // The whole Submission envelope rides the deferral: the semantic Intent
+    // and the presented evidence, which the activation verifies again.
+    ({ intent, evidence } = opts.kernel.validateSubmission(String(params.mission_intent)));
     const raw = clientProposalParam(params);
     proposal = raw !== undefined ? opts.kernel.validateProposal(raw, intent.target_resources) : undefined;
   } catch (e) {
@@ -248,6 +263,7 @@ export async function completeDeferredAuthorization(
       // entry's resource; the provider's own default when a request names
       // none (the issuer) selects nothing.
       resource: typeof params.resource === "string" && params.resource !== opts.issuer ? params.resource : null,
+      evidence_json: evidence?.length ? JSON.stringify(evidence) : null,
       expires_at: nowMs + DEFERRED_CODE_TTL_S * 1000,
     },
     nowMs,

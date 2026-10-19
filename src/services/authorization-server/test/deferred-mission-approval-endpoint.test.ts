@@ -40,6 +40,9 @@ import {
   type RegisteredActivationPolicy,
   verifyApprovalGovernanceRecord,
   withdrawGovernedPolicyConsent,
+  IntentError,
+  registerIntentSubmissionEvidenceType,
+  unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
@@ -183,7 +186,7 @@ const newKeys = async (): Promise<Keys> => {
 const challenge = async (verifier = VERIFIER) =>
   Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))).toString("base64url");
 
-const submission = (intent: Record<string, unknown> = {}) =>
+const submission = (intent: Record<string, unknown> = {}, evidence?: unknown[]) =>
   JSON.stringify({
     intent: {
       goal: "Reconcile Acme invoices against the ledger",
@@ -191,7 +194,36 @@ const submission = (intent: Record<string, unknown> = {}) =>
       expires_at: "2027-01-01T00:00:00Z",
       ...intent,
     },
+    ...(evidence ? { evidence } : {}),
   });
+
+/**
+ * A test Intent Submission Evidence type: an artifact that verifies until
+ * its own `expires_at`, judged against the verifier's (the kernel's) clock.
+ */
+const EVIDENCE_TYPE = "urn:test:mission:intent-evidence:expiring-admission";
+registerIntentSubmissionEvidenceType(EVIDENCE_TYPE, {
+  validate(entry) {
+    for (const k of Object.keys(entry)) {
+      if (!["type", "assertion", "expires_at"].includes(k)) {
+        throw new IntentError("invalid_mission_intent_evidence", `unknown member: ${k}`);
+      }
+    }
+    if (typeof entry.assertion !== "string" || typeof entry.expires_at !== "string") {
+      throw new IntentError("invalid_mission_intent_evidence", "assertion and expires_at are required");
+    }
+  },
+  async verify(input) {
+    if (Date.parse(String(input.entry.expires_at)) <= input.now.getTime()) throw new Error("admission artifact expired");
+    return { presenter_client: input.presenter.clientId, bound_intent_hash: input.intentHash };
+  },
+});
+afterAll(() => unregisterIntentSubmissionEvidenceType(EVIDENCE_TYPE));
+const evidenceUntil = (ms: number) => ({
+  type: EVIDENCE_TYPE,
+  assertion: `admission-${ms}`,
+  expires_at: new Date(ms).toISOString(),
+});
 
 interface FrontChannel {
   code?: string;
@@ -216,6 +248,8 @@ async function frontChannel(
     extra?: Record<string, string>;
     authorizationDetails?: unknown[] | null;
     intent?: Record<string, unknown>;
+    /** The Submission envelope's `evidence`. */
+    evidence?: unknown[];
     /** Stop once the authorization request names its interaction, before visiting it. */
     stopAtInteraction?: boolean;
   } = {},
@@ -231,7 +265,7 @@ async function frontChannel(
       code_challenge: await challenge(),
       code_challenge_method: "S256",
       state: "st-1185",
-      mission_intent: submission(o.intent),
+      mission_intent: submission(o.intent, o.evidence),
       ...(o.authorizationDetails === null
         ? {}
         : { authorization_details: JSON.stringify(o.authorizationDetails ?? [readEntry(["payments:invoice.read"])]) }),
@@ -1003,6 +1037,38 @@ describe("governed policy completion over the wire (@spec deferred-approval#poli
     expect(admitted.records).toBe(1);
     const mission = as.kernel.get(admitted.body.mission_id as string) as MissionRecord;
     expect(mission.authority_set.flatMap((e) => e.actions)).toContain("payments:payment.execute");
+  });
+
+  it("re-verifies submission evidence at activation, refusing evidence that lapsed and recording evidence that verifies", async () => {
+    useRoot(rootDoc());
+    const keys = await newKeys();
+    // Verifies at PAR, lapses before the activation: no Mission, no token.
+    const before = missionCount();
+    const lapsing = await openDeferral(keys, { evidence: [evidenceUntil(clockMs + 120_000)] });
+    clockMs += 180_000;
+    const refused = await poll(lapsing, keys);
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toBe("access_denied");
+    expect(refused.body).not.toHaveProperty("access_token");
+    expect(missionCount()).toBe(before);
+    expect(as.missionApprovalDeferrals?.resolutionReason(lapsing)).toBe("invalid_mission_intent_evidence");
+
+    // Still valid: verified again at the activation, and the facts that
+    // verification produced are recorded on the Mission.
+    const lasting = await openDeferral(keys, { evidence: [evidenceUntil(clockMs + 3_600_000)] });
+    clockMs += 10_000;
+    const activatedAt = new Date(clockMs).toISOString();
+    const delivered = await poll(lasting, keys);
+    expect(delivered.status, JSON.stringify(delivered.body)).toBe(200);
+    const mission = as.kernel.get(delivered.body.mission_id as string) as MissionRecord;
+    expect(mission.submission_evidence).toEqual([
+      {
+        type: EVIDENCE_TYPE,
+        artifact_hash: expect.any(String),
+        verified_at: activatedAt,
+        facts: { presenter_client: AGENT, bound_intent_hash: mission.intent_hash },
+      },
+    ]);
   });
 
   it("never counts a model output bound to another approval event", async () => {

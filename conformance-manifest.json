@@ -38075,6 +38075,42 @@
    "notes": "#1300 review (D474)."
   },
   {
+   "id": "deferred-approval.deferral.timing-only-evidence",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-sequencing",
+   "text": "Deferral changes only the timing of the approval event.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Intent Submission Evidence a deferred submission presented is verified again at the activation, which creates no Mission when the evidence no longer verifies, and the verified facts are recorded on the Mission as submission_evidence, as at a synchronous approval",
+    "local": "The whole Submission envelope (intent and evidence) is carried through the deferral. The evidence is re-verified at the governed_policy activation under the deployment's current required types for the client; a failure resolves the approval (denied under this assembly's refusal setting) with the reason invalid_mission_intent_evidence recorded issuer-side, and the poll answers access_denied, not invalid_mission_intent_evidence. The unwired human path (approveDirect) refuses to commit when the approval carries evidence and no verified facts are supplied."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > re-verifies submission evidence at activation, refusing evidence that lapsed and recording evidence that verifies",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
+     "name": "deferred approval store bounds and cancellation (@spec deferred-approval#queue-pressure, deferred-approval#state-machine) > refuses a human direct approval of evidence-bearing submissions without verified facts, and records the facts it is given",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1300 review (D474)."
+  },
+  {
    "id": "deferred-approval.deferral.code-binding",
    "spec": "draft-mcguinness-oauth-mission-approval.md",
    "anchor": "front-channel",

@@ -39,7 +39,13 @@ import {
 } from "./governed-policy-approval.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
-import type { AuthorityEntry, MissionIntent, MissionRecord } from "./types.js";
+import type {
+  AuthorityEntry,
+  IntentSubmissionEvidenceEntry,
+  IntentSubmissionEvidenceFact,
+  MissionIntent,
+  MissionRecord,
+} from "./types.js";
 
 /** @spec deferred-approval#state-machine: `approved`, `denied`, `expired`, and `cancelled` are terminal. */
 export type MissionApprovalState = "pending" | "approved" | "denied" | "expired" | "cancelled";
@@ -96,6 +102,14 @@ export interface MissionApprovalDeferralOptions {
    * Default {@link DEFAULT_MAX_PENDING_PER_CLIENT}.
    */
   maxPendingPerClient?: number;
+  /**
+   * @spec mission#intent-submission-evidence: the evidence types the
+   * deployment's policy requires of a client's submissions, applied again
+   * when a pending approval activates (the activation is where the
+   * synchronous approval would verify). Absent, none is required; presented
+   * evidence is verified either way.
+   */
+  requiredEvidenceTypes?: (clientId: string) => readonly string[];
 }
 
 /** @spec deferred-approval#queue-pressure: the default per-client bound on pending approvals. */
@@ -135,6 +149,7 @@ const ADDED_COLUMNS: ReadonlyArray<[string, string]> = [
   ["delivery_claim", "TEXT"],
   ["delivery_claimed_at", "INTEGER"],
   ["resource", "TEXT"],
+  ["evidence_json", "TEXT"],
 ];
 
 function migrate(db: Database): void {
@@ -149,7 +164,7 @@ function migrate(db: Database): void {
 /** A completion the pending approval's state no longer admits. LOCAL code. */
 export class MissionApprovalDeferralError extends Error {
   constructor(
-    readonly code: "not_pending" | "unknown_deferral" | "queue_full",
+    readonly code: "not_pending" | "unknown_deferral" | "queue_full" | "evidence_unverified",
     message: string,
   ) {
     super(message);
@@ -173,6 +188,7 @@ interface Row {
   delivery_claim: string | null;
   delivery_claimed_at: number | null;
   resource: string | null;
+  evidence_json: string | null;
 }
 
 /** A refusal the activation checks raise (as opposed to a fault of the issuer). */
@@ -236,6 +252,11 @@ export class MissionApprovalDeferralStore {
     jkt: string;
     /** The resource the submission selected with its resource indicator: the delivered token's audience. */
     resource?: string;
+    /**
+     * The Submission envelope's `evidence`, as presented: with `intent`, the
+     * whole envelope, so the activation verifies it again and records its facts.
+     */
+    evidence?: IntentSubmissionEvidenceEntry[];
   }): DeferralPending {
     const code = `mdfr_${randomBytes(18).toString("base64url")}`;
     const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
@@ -249,8 +270,8 @@ export class MissionApprovalDeferralStore {
       this.db
         .prepare(
           `INSERT INTO mission_approval_deferrals (deferral_code, state, client_id, jkt, intent_json, proposal_json,
-             approval_event_id, created_at, resource)
-           VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
+             approval_event_id, created_at, resource, evidence_json)
+           VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           code,
@@ -261,6 +282,7 @@ export class MissionApprovalDeferralStore {
           `ape_${randomBytes(16).toString("base64url")}`,
           nowMs,
           input.resource ?? null,
+          input.evidence?.length ? JSON.stringify(input.evidence) : null,
         );
     });
     return { error: "authorization_pending", deferral_code: code, expires_in: this.lifetimeMs() / 1000, interval: DEFERRAL_INTERVAL };
@@ -333,6 +355,19 @@ export class MissionApprovalDeferralStore {
     if (this.expiryPassed(code, intent)) {
       return { outcome: "not_authorized", reason: "mission_expiry_passed", state: "denied" };
     }
+    // @spec mission#submission-processing (steps 4, 5 and 8): the evidence
+    // the submission presented is verified again here, at the activation,
+    // before any derivation, as the synchronous approval verifies it at its
+    // decision; evidence that no longer verifies creates no Mission, and the
+    // facts that do verify are what the Mission records.
+    let submissionEvidence: IntentSubmissionEvidenceFact[] | undefined;
+    try {
+      submissionEvidence = await this.verifiedEvidence(row, intent);
+    } catch (e) {
+      const why = refusalReason(e);
+      if (why === undefined) throw e;
+      return this.notAuthorized(code, why);
+    }
     const request = {
       approvalEventId: row.approval_event_id,
       intent,
@@ -364,7 +399,12 @@ export class MissionApprovalDeferralStore {
         const current = this.row(code) as Row;
         const state = this.observed(current);
         if (state !== "pending") return this.settled(code, state);
-        const activation = activateGovernedPolicy(this.kernel, { ...request, consentId, modelOutputs });
+        const activation = activateGovernedPolicy(this.kernel, {
+          ...request,
+          consentId,
+          modelOutputs,
+          ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+        });
         this.db
           .prepare(
             "UPDATE mission_approval_deferrals SET state = 'approved', mission_id = ?, basis = 'governed_policy', resolution_reason = NULL WHERE deferral_code = ? AND state = 'pending'",
@@ -377,6 +417,23 @@ export class MissionApprovalDeferralStore {
       if (why === undefined) throw e;
       return this.notAuthorized(code, why);
     }
+  }
+
+  /**
+   * @spec mission#intent-submission-evidence: verify the evidence this
+   * pending approval's submission presented, now, for the client that
+   * submitted it, under the deployment's current required types. Undefined
+   * when nothing was presented and nothing is required.
+   */
+  private async verifiedEvidence(row: Row, intent: MissionIntent): Promise<IntentSubmissionEvidenceFact[] | undefined> {
+    const evidence = row.evidence_json ? (JSON.parse(row.evidence_json) as IntentSubmissionEvidenceEntry[]) : undefined;
+    return this.kernel.verifySubmissionEvidence({
+      intent,
+      ...(evidence ? { evidence } : {}),
+      presenter: { clientId: row.client_id },
+      required: this.opts.requiredEvidenceTypes?.(row.client_id) ?? [],
+      requestContext: { carrier: "par" },
+    });
   }
 
   /** The outcome of an approval already settled: its governed Mission, or its state. */
@@ -398,13 +455,28 @@ export class MissionApprovalDeferralStore {
    * one `approval_event_id`. It never turns a failed `governed_policy` check
    * into a `governed_policy` activation: the Mission is `direct`, with no
    * policy adjudication.
+   *
+   * @spec mission#intent-submission-evidence: like the synchronous decision,
+   * the review surface verifies the submission's evidence at the decision
+   * and hands over the verified facts, which the Mission records. A pending
+   * approval whose submission presented evidence is refused without them.
    */
   approveDirect(
     code: string,
-    input: { approver: { iss: string; sub: string }; subject: { iss: string; sub: string } },
+    input: {
+      approver: { iss: string; sub: string };
+      subject: { iss: string; sub: string };
+      submissionEvidence?: IntentSubmissionEvidenceFact[];
+    },
   ): MissionRecord {
     const row = this.row(code);
     if (!row) throw new MissionApprovalDeferralError("unknown_deferral", "unknown deferral code");
+    if (row.evidence_json && !input.submissionEvidence?.length) {
+      throw new MissionApprovalDeferralError(
+        "evidence_unverified",
+        "the submission presented evidence: approve with the facts verified at this decision",
+      );
+    }
     const intent = JSON.parse(row.intent_json) as MissionIntent;
     const proposedAuthority = row.proposal_json ? (JSON.parse(row.proposal_json) as AuthorityEntry[]) : undefined;
     const state = this.observed(row);
@@ -423,6 +495,7 @@ export class MissionApprovalDeferralStore {
         approver: input.approver,
         clientId: current.client_id,
         approvalEventId: current.approval_event_id,
+        ...(input.submissionEvidence?.length ? { submissionEvidence: input.submissionEvidence } : {}),
       });
       if (mission.approval_basis.type !== "direct") {
         throw new MissionApprovalDeferralError("not_pending", "this approval event already committed another basis");

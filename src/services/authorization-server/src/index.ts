@@ -1382,8 +1382,35 @@ export async function buildAuthorizationServer(opts: {
   const creationIdempotency = new CreationIdempotencyStore(kernel);
   // @spec deferred-approval#deferred-approval: the Deferred Mission Approval
   // store, on the kernel database, only where the opt-in capability is on.
+  // The client registrations this assembly serves (the provider's, below).
+  const clientRegistrations: Record<string, unknown>[] = [
+    agent.metadata,
+    // The child actor is also the demo templates' selected Agent, which
+    // redeems a Dispatch Handoff (@spec mission-template#dispatch-handoff),
+    // and the shipped same-Mission delegate (@spec mission#delegation, #869).
+    ...(capabilityEnabled(opts, "child-delegation") ||
+    capabilityEnabled(opts, "templates") ||
+    capabilityEnabled(opts, "delegation")
+      ? [child.metadata]
+      : []),
+    governed.metadata,
+    ledgerReconciler.metadata,
+    ...(opts.testClients ?? []),
+    ...lifecycleClientMetadata,
+  ];
+  // @spec mission#intent-submission-evidence: the deployment-global required
+  // evidence types, unioned with the client's registered ones, as the
+  // synchronous decision applies them (requiredEvidenceTypesFor).
+  const requiredEvidenceTypes = (clientId: string): string[] => {
+    const required = new Set(opts.requiredIntentEvidenceTypes ?? []);
+    const registration = clientRegistrations.find((c) => c.client_id === clientId);
+    const perClient = registration?.required_intent_evidence_types;
+    if (Array.isArray(perClient)) for (const t of perClient) if (typeof t === "string") required.add(t);
+    return [...required];
+  };
   const missionApprovalDeferrals = capabilityEnabled(opts, "deferred-approval")
     ? new MissionApprovalDeferralStore(kernel, {
+        requiredEvidenceTypes,
         onPolicyRefusal: opts.deferredApproval?.onPolicyRefusal ?? "deny",
         ...(opts.deferredApproval?.pendingLifetimeS !== undefined
           ? { pendingLifetimeS: opts.deferredApproval.pendingLifetimeS }
@@ -1424,21 +1451,7 @@ export async function buildAuthorizationServer(opts: {
     ...(missionApprovalDeferrals ? { missionApprovalDeferrals } : {}),
     creationIdempotency,
     statusListPublisher,
-    clients: [
-      agent.metadata,
-      // The child actor is also the demo templates' selected Agent, which
-      // redeems a Dispatch Handoff (@spec mission-template#dispatch-handoff),
-      // and the shipped same-Mission delegate (@spec mission#delegation, #869).
-      ...(capabilityEnabled(opts, "child-delegation") ||
-      capabilityEnabled(opts, "templates") ||
-      capabilityEnabled(opts, "delegation")
-        ? [child.metadata]
-        : []),
-      governed.metadata,
-      ledgerReconciler.metadata,
-      ...(opts.testClients ?? []),
-      ...lifecycleClientMetadata,
-    ],
+    clients: clientRegistrations,
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
