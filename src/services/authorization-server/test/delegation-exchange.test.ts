@@ -323,6 +323,9 @@ async function acrossTheBoundary<T>(h: Harness, startMs: number, afterMs: number
   }
 }
 
+/** The main harness's own scope-projection mapping (a deep copy of the shipped one). */
+const onMapping = structuredClone(SCOPE_PROJECTION) as typeof SCOPE_PROJECTION;
+
 let on: Harness;
 let off: Harness;
 let only: Harness;
@@ -335,6 +338,8 @@ beforeAll(async () => {
   on = await harness(14870, {
     capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
     testIntrospectionPrincipals: [rsAlias, rsLate],
+    // Its own copy of the mapping, so a test can reclassify a target mid-issuance.
+    scopeProjection: onMapping,
   });
   // The default deployment: no capability set, so the opt-in delegation is off.
   off = await harness(14871, {});
@@ -937,6 +942,38 @@ describe("the exchange selector (@spec mission#delegation)", () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_target");
     expect(derivations(only, missionId)).toBe(before);
+  });
+});
+
+describe("the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870)", () => {
+  it("refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = (await designate(on, accessToken, SUBAGENT)).body.access_token as string;
+    const target = onMapping.audiences[RESOURCE] as { mission_aware: boolean };
+    // Reclassify the target between the exchange's routing check and the save:
+    // only the customizer's `act` branch stands between it and an act-bearing token.
+    const gate = on.as.kernel.gateDerivation.bind(on.as.kernel);
+    const spy = vi.spyOn(on.as.kernel, "gateDerivation").mockImplementationOnce((id: string) => {
+      const record = gate(id);
+      target.mission_aware = false;
+      return record;
+    });
+    const recorded = vi.spyOn(TokenIssuanceStore.prototype, "recordDelegation");
+    try {
+      const res = await redeem(on, designation);
+      expect(res.status, JSON.stringify(res.body)).toBe(400);
+      expect(res.body.error).toBe("invalid_target");
+      expect(res.body.access_token).toBeUndefined();
+      const jti = (recorded.mock.calls[0]?.[0] as { jti: string }).jti;
+      expect(on.as.tokenIssuanceStore.resolve(on.issuer, jti)).toBeUndefined();
+    } finally {
+      spy.mockRestore();
+      recorded.mockRestore();
+      target.mission_aware = true;
+    }
+    // Reclassified back, the same designation redeems: the refusal was the classification's.
+    expect((await redeem(on, designation)).status).toBe(200);
+    expect(on.as.kernel.get(missionId)?.state).toBe("active");
   });
 });
 
