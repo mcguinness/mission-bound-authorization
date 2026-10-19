@@ -1004,7 +1004,7 @@ Beyond the `parameter_digest`, the permit MUST also bind:
 
 - the Mission reference;
 - the credential issuer, when available;
-- the credential audience or protected resource;
+- the boundary identifier ({{boundary-identifier}});
 - the authenticated subject identifier;
 - the client identity;
 - the actor context, including the immediate actor;
@@ -1145,6 +1145,7 @@ A record MUST contain:
 
 - the decision or refusal result and, on refusal, the failure condition
   from {{failure-modes}};
+- the boundary identifier ({{boundary-identifier}});
 - the request time (RFC 3339 {{RFC3339}}); and
 - the `parameter_digest` for parameter-bound classes, or a digest of
   the evaluation request otherwise, over the input the runtime evidence
@@ -1159,8 +1160,7 @@ and trusted for the refusal or decision path:
   source its credential profile names
   ({{I-D.draft-mcguinness-mission-runtime-oauth}} names the OAuth
   sources);
-- the credential issuer and audience or protected-resource identifier
-  when available;
+- the credential issuer when available;
 - the authenticated subject identifier, the client identity, a
   client-instance identifier (a deployment-defined correlator) when
   present, the sender-constraint confirmation key when present, and the
@@ -1272,6 +1272,11 @@ Enforcement scope:
   placements, supported authority-entry types, state sources, and
   evidence mechanisms for which a deployment claims conformance to this
   profile.
+
+Boundary identifier:
+: The one identifier of an enforcement boundary, which every decision,
+  permit, and record for that boundary carries
+  ({{boundary-identifier}}).
 
 Operation Profile:
 : The per-operation statement of normalization and binding rules a
@@ -1554,6 +1559,101 @@ discovery mechanism, registry, or wire format for publishing it.
 Different deployments can document scope through configuration,
 operational policy, resource-server metadata defined elsewhere, or a
 contractual profile.
+
+## Enforcement Boundary Identifier {#boundary-identifier}
+
+Each `mediated` resource entry of the Enforcement Scope Statement
+({{runtime-conformance}}) is an **enforcement boundary**, and its
+resource string is that boundary's one **boundary identifier**.
+Reconstructed and unrecorded entries are not enforcement boundaries.
+A PEP can serve several boundaries, each with its own identifier. The
+credential profile fixes which value a boundary's identifier takes;
+the OAuth realization is the protected resource's identifier
+({{I-D.draft-mcguinness-mission-runtime-oauth}}, Section "Boundary
+and Audience").
+
+The PEP MUST establish the boundary a request is for from its trusted
+routing or configuration, independently of the credential's audience
+values, their order, and the Authority Set entries. The credential
+profile's audience check then validates the credential against that
+boundary; it never selects the boundary. A PDP MUST accept a boundary
+identifier only from a PEP authorized for that boundary
+({{decision-channel}}).
+
+The decision inputs, the permit binding ({{permit-binding}}) and any
+permit cache, Decision Evidence, Execution Evidence, pre-decision
+Refusal Records, and evidence-key authorization
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) MUST use that same
+identifier, byte for byte. A denial establishes it without a permit.
+
+A PEP that cannot establish the boundary MUST refuse the request and
+MUST NOT supply a boundary identifier taken from the credential, a
+default, or a guess. That refusal lies outside every declared scope:
+the deployment can log it by its own means, but MUST NOT emit it as a
+runtime enforcement evidence record ({{evidence}}), every form of
+which names a boundary.
+
+The boundary identifier is distinct from the request's transport URL,
+the Resource-policy object identity, and the operation target an
+authority-entry match uses ({{input-authority}}); none substitutes for
+another.
+
+### Changing a Boundary Identifier {#boundary-identifier-change}
+
+A deployment that changes a boundary's identifier MUST publish a new
+version of its Enforcement Scope Statement naming the old and new
+identifiers, the credential profile's audience aliases for each,
+scoped as that profile requires
+({{I-D.draft-mcguinness-mission-runtime-oauth}}), the evidence
+signing keys authorized for each, and the effective cutover. Each
+PEP, PDP, and evidence verifier for the boundary MUST obtain that
+version from a source it trusts for the deployment's statements. The
+deployment MUST retain each earlier version, with its key
+authorizations, for as long as evidence produced under it must
+verify.
+
+The deployment MUST complete the cutover in this order:
+
+1. Every consumer of the identifier (PDPs, permit caches, and
+   evidence verifiers) accepts the new version.
+2. Admission under the old identifier stops, and each in-flight
+   operation is drained, or refused or restarted under the new
+   identifier.
+3. Every permit and permit-cache entry bound to the old identifier is
+   invalidated, including those for cacheable reads and for later
+   phases of a compound action ({{compound-actions}}).
+4. Every producer for the boundary switches together. New decisions,
+   permits, and evidence then carry only the new identifier; no
+   component chooses between the two, and no permit comparison
+   accepts both.
+
+Evidence produced before the cutover keeps its meaning:
+
+- Evidence delivered after the cutover for an operation admitted
+  before it keeps that operation's facts and old identifier. It is
+  verified as historical evidence, never accepted as a permit.
+- No signed record is rewritten. A verifier verifies each record
+  under the statement version whose identifier and key authorization
+  it was produced under, and fails verification when the declared
+  versions do not determine that version
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}, Section
+  "Integrity").
+- Correlating records across versions through the declared old and
+  new identifiers happens after verification and MUST NOT change a
+  signed payload or extend a key's authorization to another boundary.
+
+A credential that names the old identifier through a declared alias
+stays usable under its unchanged validation and lifetime. The alias
+map never rewrites an approved entry's `resource` or a commitment
+over it. Where an entry cannot keep its original operation-target
+authority under the new identifier, the deployment MUST refuse the
+action or obtain explicit reauthorization through the normal Mission
+creation or derivation path, and MUST NOT rewrite an existing approval
+or integrity preimage.
+
+The cutover uses the statement's versions and the records' existing
+authenticated content; it adds no record member, credential claim, or
+credential type.
 
 ## Action Classification {#classification}
 
@@ -2931,7 +3031,8 @@ whether before a PDP decision (for example, credential-validation
 failure or PDP unreachability) or after a PDP permit (for example, a
 `parameter_digest` mismatch), MUST likewise produce a runtime
 enforcement evidence record with the available fields and the failure
-condition. This document fixes the minimum record content and local
+condition. A refusal for which no enforcement boundary is established
+produces none ({{boundary-identifier}}). This document fixes the minimum record content and local
 integrity requirements; the concrete record schemas, canonical byte
 representation, and integrity envelope, together with the Mission
 Receipt's portable schema ({{mission-receipt}}), are defined by Mission
@@ -3581,16 +3682,18 @@ within the bound but adds no capacity
 ## Confused Deputy Across Resources
 
 The permit binding of {{permit-binding}} ties a decision to the
-Mission, the credential audience or protected resource, the subject,
-the client identity, the actor context, the action, and the resource
-it evaluated. It follows that a PDP
-decision for one protected resource, audience, tenant, or operation is
+Mission, the boundary identifier ({{boundary-identifier}}), the
+subject, the client identity, the actor context, the action, and the
+resource it evaluated. It follows that a PDP
+decision for one enforcement boundary, tenant, or operation is
 not reusable at another: the executing PEP, which reverifies those
 bindings before acting ({{parameter-binding}}), refuses a permit whose
 bindings do not match the boundary at which it is presented. A
 deployment MUST NOT relax those bindings in a way that would let a
 permit cross a resource, audience, tenant, or operation boundary it
-was not issued for.
+was not issued for. Because the PEP establishes the boundary
+independently of the credential's audience order, a credential that
+names several recipients cannot choose the boundary that evaluates it.
 
 ## Decision Channel and Credential Disclosure
 
@@ -3795,6 +3898,19 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Enforcement Boundary Identifier: each mediated resource entry of the
+  Enforcement Scope Statement is an enforcement boundary with one
+  identifier, which the PEP establishes from trusted routing or
+  configuration, never from the credential's audience order or its
+  entries. Decision inputs, permits and permit caches, the three
+  evidence forms, and evidence-key authorization use it byte for
+  byte, and Permit Binding, Required Decision Evidence, and Confused
+  Deputy name it in place of "the credential audience or protected
+  resource". A request whose boundary cannot be established is
+  refused, with no record naming a boundary. Changing a Boundary
+  Identifier defines the versioned statement, the ordered cutover,
+  historical verification, and that aliases never rewrite approved
+  entries (#853).
 - Execution-Outcome Evidence: reconciliation records an outcome only
   from an effect the resource attributes to the action through an
   identifier recorded with it, never from resource state alone; the
