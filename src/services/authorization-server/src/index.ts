@@ -70,8 +70,8 @@ import { type ProgressiveDrawdownOptions, validateProgressiveDrawdownOptions } f
 import { createTemplate, type DispatchPolicies } from "./kernel/template.js";
 import { trustedCapabilityResolver } from "./adapters/capability-resolver.js";
 import { TemplateStore } from "./kernel/template-store.js";
-import { isActivatingCommit, TERMINAL_STATES } from "./kernel/types.js";
-import type { ActivatingLifecycleCommit, LifecycleCommit, MissionRecord } from "./kernel/types.js";
+import { TERMINAL_STATES } from "./kernel/types.js";
+import type { LifecycleCommit, MissionRecord } from "./kernel/types.js";
 
 export {
   MissionKernel,
@@ -644,49 +644,6 @@ export {
 } from "./kernel/status-list.js";
 
 /**
- * @spec id-continuation-assertion — root a durable grant anchor and mint the
- * INITIAL continuation handle for a newly-activated Mission. Invoked from the
- * lifecycle-commit fan-out on the activating commit. Idempotency guard: a Mission
- * that already carries a handle is left untouched, so the anchor is never
- * duplicated (belt-and-suspenders with the kernel already not emitting a commit on
- * idempotent re-approval).
- *
- * Auth envelope: this is the DEMO's ROOTING-EVENT envelope. `auth_time` is the
- * approval timestamp (from `created_at`); `acr` and `amr` are omitted. The
- * Approver's achieved authentication context is approval-time provenance,
- * never a Mission Intent or Mission Record member
- * (@spec mission#approval-authentication): a real deployment that records
- * Mission Consent Evidence sources it from that profile's
- * `authentication_context` member instead of synthesising it from the
- * approval here.
- *
- * The initial handle binds the Mission's actor: the agent CLIENT
- * (iss = AS issuer, sub = client_id), matching the /token current-actor check's
- * `currentActor`. No cnf is bound (no DPoP key exists at approval); that check
- * validates the PRESENTED key at /token, never this stored handle's cnf.
- */
-function rootMissionContinuation(
-  store: ContinuationStore,
-  commit: ActivatingLifecycleCommit,
-): void {
-  if (store.handlesForMission(commit.id).length > 0) return; // never double-root
-  const anchorId = store.rootGrantAnchor({
-    missionId: commit.id,
-    authEnvelope: {
-      authTime: Math.floor(Date.parse(commit.created_at) / 1000),
-    },
-  });
-  store.mint({
-    anchorId,
-    missionId: commit.id,
-    actor: { iss: commit.issuer, sub: commit.client_id },
-    // No root ID-JAG carries this hop: its RAS audience is this AS, where the
-    // Mission's grant is issued (ICA -02 5.1.2).
-    audience: commit.issuer,
-  });
-}
-
-/**
  * @spec mission#introspection (issue #541 P1-4) — strip EVERY RFC 7517/7518
  * private-key member so a JWK is safe to publish on jwks_uri: an EC key's
  * sole private member is `d`, but an RSA key ALSO carries `p, q, dp, dq, qi`
@@ -1212,16 +1169,6 @@ export async function buildAuthorizationServer(opts: {
   // only fires at runtime (post-construction), so the forward reference is safe;
   // the publisher takes a build thunk, never the kernel, to avoid an import cycle.
   let statusListPublisher: StatusListPublisher | undefined;
-  // @spec id-continuation-assertion — the continuation handle store. Holds no
-  // kernel reference; constructed before the kernel so it can join the
-  // lifecycle-commit fan-out below (a terminal Mission terminates every
-  // continuation anchor/handle rooted in it, so its lineages stop resolving).
-  const continuationStore = new ContinuationStore();
-  // @spec async-delegation — the per-delegation FAMILY store. Holds no kernel
-  // reference; constructed before the kernel so it can join the lifecycle-commit
-  // fan-out below (a terminal Mission terminates every delegation family rooted in
-  // it, and the provider-capturing terminal subscriber revokes each family's grant).
-  const delegationFamilyStore = new DelegationFamilyStore();
   const tokenIssuanceStore = new TokenIssuanceStore();
   // @spec mission-template — the Mission Template store, seeded with one demo
   // read-only reconciliation template. Independent of the kernel (dispatch is a
@@ -1308,38 +1255,26 @@ export async function buildAuthorizationServer(opts: {
     statusKey: statusKeys.privateKey,
     statusKid: asStatus.kid,
     ...(opts.now ? { now: opts.now } : {}),
-    // Fan the committed transition out to the Status List republisher (PULL), the
-    // continuation store (terminal propagation), and any injected subscriber, e.g.
-    // the Mission Signals emitter (PUSH).
+    // Fan the committed transition out to the Status List republisher (PULL) and
+    // any injected subscriber, e.g. the Mission Signals emitter (PUSH). The
+    // continuation and delegation-family projections are not subscribers: the
+    // kernel writes them in the committing transaction (kernel.continuations,
+    // kernel.delegationFamilies), so a commit that is never published still
+    // roots or terminates them.
     onLifecycleCommit: (commit) => {
       statusListPublisher?.markDirty();
-      continuationStore.onLifecycleCommit(commit);
-      // @spec async-delegation — terminal propagation for delegation families. A
-      // terminal Mission marks all of its family rows terminal (so resolve stops).
-      delegationFamilyStore.onLifecycleCommit(commit);
-      // @spec id-continuation-assertion — approval-time grant-anchor rooting. The
-      // ACTIVATING commit (version 1, no prior_state, active) of a newly-approved
-      // Mission roots the durable grant-anchored continuation root + an INITIAL
-      // handle, so a continuation chain can actually begin from an approved
-      // Mission. This is the single funnel that fires for kernel.approve() as well
-      // as expansion successors and Child Missions (all reach insertRecord ->
-      // emitCommit); every activated Mission is thus a durable root. Purely
-      // additive: a Mission that never continues is unaffected (the anchor/handle
-      // sit inert). Not fired on idempotent re-approval: a duplicate
-      // approval_event_id throws before emitCommit, so no commit is emitted.
-      //
-      // @spec control-plane#fanout — rooted from the PAYLOAD, never from a live
-      // `kernel.get(commit.id)`: on a redelivery after a restart that read
-      // returns a record that has since advanced, or none at all, which would
-      // make this subscriber replay-unsafe. `created_at` and `client_id` are the
-      // only record facts the rooting needs and both ride the event.
-      if (isActivatingCommit(commit)) rootMissionContinuation(continuationStore, commit);
       // @spec status#mission-lifecycle-endpoint ("Operations"): arm the timer
       // of a committed schedule, cancel it when its suspension ends.
       suspensionScheduler?.onLifecycleCommit(commit);
       opts.onLifecycleCommit?.(commit);
     },
   });
+  // @spec id-continuation-assertion, async-delegation, control-plane#serialization
+  // (#250): the continuation and delegation-family projections live on the
+  // kernel's database and are written in its committing transactions; the
+  // adapters reach them through these names.
+  const continuationStore = kernel.continuations;
+  const delegationFamilyStore = kernel.delegationFamilies;
   if (schedulesAdopted) {
     suspensionScheduler = new SuspensionScheduler(kernel, {
       ...(opts.suspensionSchedules?.timers ? { timers: opts.suspensionSchedules.timers } : {}),
@@ -1381,9 +1316,9 @@ export async function buildAuthorizationServer(opts: {
   //
   // `capture` runs inside the commit transaction and SNAPSHOTS the family grant
   // identifiers, so the delivery is payload-only: a retry after a restart
-  // revokes exactly the grants the transition owed, not whatever the rebuilt
-  // in-memory family projection happens to hold. Cascade re-enters per
-  // descendant commit, so a child's own family gets its own row.
+  // revokes exactly the grants the transition owed, not whatever the family
+  // table holds when the retry runs. Cascade re-enters per descendant commit,
+  // so a child's own family gets its own row.
   kernel.registerDurableSubscriber<{ grants: string[] }>({
     id: "delegation-family-grant-revoke",
     capture: (commit) => {

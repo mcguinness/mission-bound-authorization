@@ -27,16 +27,14 @@ identity and the same commit timestamp, at startup or on the next request
 path. Subscribers are classified rather than each given retry state. The
 Signals subscriber's synchronous journal insert is its durable acceptance and
 its unique event key makes a redelivery a no-op. The Status List republisher
-rebuilds from the authoritative record set. The continuation store and the
-delegation-family store are in-memory projections that start empty at each
-boot, and recovery replays only committed-but-unpublished events, so an
-activation event that was already published does not repopulate them. Both are
-idempotent per Mission and both fail closed on a row they do not hold: after a
-restart an unknown continuation handle and an unknown family grant resolve to
-nothing, so continuation resolution and family refresh refuse rather than
-serve authority the process cannot account for. Rebuilding those two
-projections from a durable source is follow-on work and no restart-recovery
-claim is made for them. A subscriber whose effect leaves the process gets a
+rebuilds from the authoritative record set. The continuation anchors and
+handles and the delegation families are not subscribers: they are tables on
+the kernel database, and the kernel writes them in its committing
+transactions. The activating commit roots a Mission's anchor and initial handle
+with the record, and the terminal commit marks every anchor, handle and family
+of the Mission terminal beside the tombstone, so a commit that is never
+published still leaves the projections right, and nothing is rebuilt from the
+outbox. A subscriber whose effect leaves the process gets a
 durable delivery row with attempts and a next-retry time, drained by an
 awaited call from startup and from request paths, never from a commit
 callback. Those drains are serialized on the kernel's outbox: one pass runs at
@@ -244,6 +242,36 @@ treats the SET `iss` and the event's `mission.issuer` as one identity and
 refuses a SET that separates them. Its tests prove equal Mission and event IDs
 at distinct issuers remain independent, not an exhaustive audit of all
 cross-issuer services, quotas or replication authority.
+
+## Restart inventory
+
+What a process restart keeps, for the AS's state and the state it depends on.
+"File-backed" means the kernel opened with `kernelStore: { file }`; no shipped
+launcher sets it (`server.ts`, `pnpm as-native` and `pnpm issuance-only` run the
+kernel in memory), so on every shipped launcher the kernel rows are lost too.
+
+| State | Where it lives | Across a restart |
+|---|---|---|
+| Mission records, lifecycle events and deliveries, tombstones, creation idempotency, lifecycle responses | Kernel database | Durable on the file-backed kernel |
+| Continuation anchors and handles, delegation families | Kernel database | Durable on the file-backed kernel; a lineage terminated before the restart stays terminal |
+| Provider Grants, refresh tokens, authorization codes, sessions, interactions | oidc-provider's memory adapter (no adapter is configured) | Lost, and not reconstructible from the kernel: refresh continuity is not established. A recovered family whose grant is gone is refused `invalid_grant` |
+| `missions.grant_id` (the approval binding) | Kernel database | Durable, but names a provider Grant that is gone |
+| Mission-bound grant index | Its own in-memory database, deliberately off the kernel's | Lost with the grants it classifies |
+| Token issuance index | Its own in-memory database | Lost: introspection of an earlier token answers inactive |
+| Dispatch Handoff consumption records | Its own in-memory database | Lost; every earlier handoff grant is deliberately invalidated (per-boot AS keys, or the process-start floor with a key ring, PR #1299) |
+| AS signing keys | Generated per boot | Deliberately invalidated: no earlier token or record verifies. PR #1299 adds a durable key ring |
+| Access tokens | Self-contained JWTs | Verify only while their signing key survives |
+| Durable grant revocations still pending | Kernel database | Attempted at boot; a revocation whose grant was lost with the provider is acknowledged with nothing left to revoke |
+| Signals receiver high-water | Receiver memory (no shipped service constructs a receiver) | Lost |
+
+oidc-provider's memory adapter is process-global, so an AS rebuilt in the
+same process still holds the previous provider's grants. A restart test that
+rebuilds in-process witnesses the kernel side only, and the provider's loss is
+emulated by destroying the grant.
+
+The derivation counter and artifact issuance stay outside one transaction
+(the provider access-token hook has no acceptance boundary), and the kernel's
+file mode adds no owner, lock or schema version; both remain open.
 
 Rollback resistance is partial. A restart on the file-backed store keeps the
 state version and the terminal tombstone, so no lower version is served after
