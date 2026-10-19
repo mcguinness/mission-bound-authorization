@@ -32,9 +32,10 @@ import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash }
 import { verifiedActivationPolicy } from "./activation-policy.js";
 import type { EvaluatedActivationPolicy } from "./activation-policy-snapshots.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
-import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
+import { childActorRefusal, inheritChildActorOrigins, presentedChildActorPermitted } from "./child-actor-eligibility.js";
+import type { DelegateCandidate } from "./delegate-matcher.js";
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
-import { inheritOrigins } from "./eligibility-provenance.js";
+import { inheritOrigins, retainedOrigins } from "./eligibility-provenance.js";
 import { withoutCapabilitySources } from "@mission/core";
 import type { CreationIdempotencyStore } from "./creation-idempotency.js";
 import type { MissionKernel } from "./kernel.js";
@@ -253,6 +254,14 @@ export interface PresentedTokenRefusal {
  * it) MUST admit the child actor (`allowed_child_actors`) and the child's
  * depth (`max_child_depth`), alongside the parent entry's controls. The count control is
  * {@link presentedTokenFanoutRefusal}, run inside the creation transaction.
+ *
+ * @spec child-delegation#fanout (#1304, D486): a token entry's list only
+ * restricts. Where the token entry carries none, it defers to the
+ * child-creation policy only when the parent entry justifying that child
+ * entry (in `parent`, first-in-order) retains a `policy` child-actor origin;
+ * the policy itself is asked by the parent gate ({@link childActorRefusal})
+ * at creation, never on recovery of a committed one.
+ * Otherwise, an unresolved origin included, an absent list denies as before.
  */
 export function presentedTokenChildRefusal(
   kernel: MissionKernel,
@@ -260,6 +269,7 @@ export function presentedTokenChildRefusal(
   childActorSub: string,
   depth: number,
   presentedAuthority: readonly AuthorityEntry[],
+  parent: MissionRecord | undefined,
 ): PresentedTokenRefusal | undefined {
   const token = withoutCapabilitySources(presentedAuthority);
   const tokenIdx = childAuthority.map((ce) => presentedTokenJustification(ce, presentedAuthority));
@@ -271,8 +281,13 @@ export function presentedTokenChildRefusal(
   // token entry without one (a token without the delegation right).
   const drawn = [...new Set(tokenIdx)].map((ti) => token[ti] as AuthorityEntry);
   const candidate: DelegateCandidate = { sub: childActorSub, assertedProfile: kernel.actorProfile(childActorSub) };
-  if (drawn.some((te) => !delegatePermitted(candidate, childrenOf(te)?.allowed_child_actors))) {
-    return { reason: "child_actor_not_allowed", message: "child actor is not permitted by the presented token's allowed_child_actors" };
+  const origins = parent ? retainedOrigins(parent.authority_set, parent.child_actor_provenance) : [];
+  for (let i = 0; i < childAuthority.length; i++) {
+    const te = token[tokenIdx[i] as number] as AuthorityEntry;
+    const pi = parent ? justifyingIndex(childAuthority[i] as AuthorityEntry, parent.authority_set) : -1;
+    if (!presentedChildActorPermitted(te, pi < 0 ? null : (origins[pi] ?? null), candidate)) {
+      return { reason: "child_actor_not_allowed", message: "child actor is not permitted by the presented token's allowed_child_actors" };
+    }
   }
   for (const te of drawn) {
     const maxChildDepth = asNum(childrenOf(te)?.max_child_depth) ?? 1;
@@ -446,6 +461,16 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     derived.provenance,
     kernel.effectiveEntriesWithRetainedOrigin(parent),
   );
+  // @spec child-delegation#fanout (#1304, D486): the child-actor origins the
+  // same way, kept apart from the delegate origins: a child entry keeps its
+  // own derivation's origin and every one of the parent entries it falls
+  // within, so a child list over a policy-deferring parent entry only
+  // restricts the child-creation policy decision at the next generation.
+  const childActorProvenance = inheritChildActorOrigins(
+    childAuthority,
+    derived.childActorProvenance,
+    kernel.effectiveEntriesWithRetainedChildActorOrigin(parent),
+  );
 
   // @spec mission#authority-sources — a child drawdown draws on the PARENT's
   // established source, so the child inherits `authority_source` verbatim: the
@@ -506,7 +531,14 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // bindings, not authority, so they are set aside here (they are checked
   // against the parent above). The evidence names this bound.
   if (input.presentedAuthority) {
-    const refusal = presentedTokenChildRefusal(kernel, childAuthority, input.childActor.sub, depth, input.presentedAuthority);
+    const refusal = presentedTokenChildRefusal(
+      kernel,
+      childAuthority,
+      input.childActor.sub,
+      depth,
+      input.presentedAuthority,
+      parent,
+    );
     if (refusal) {
       throw new ChildDelegationError(
         refusal.reason,
@@ -563,25 +595,42 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
 
   // @spec child-delegation#fanout — allowed_child_actors: the child actor MUST be
   // permitted by every justifying entry, under the SAME shared matcher as the
-  // core's allowed_delegates ({@link delegatePermitted}). The child actor's
+  // core's allowed_delegates. The child actor's
   // `sub_profile` is matched ONLY against the profile the AS asserts for its `sub`
   // (kernel.actorProfile, from deployment config); the request-supplied
   // `input.childActor.sub_profile` is self-asserted and is used ONLY for the act
-  // chain and Child Evidence, never to satisfy a `sub_profile` matcher. An absent
-  // allowed_child_actors list DENIES (fail-closed), never blanket-allows.
+  // chain and Child Evidence, never to satisfy a `sub_profile` matcher.
+  //
+  // @spec child-delegation#fanout (#1304, D486): each justifying entry is
+  // decided by its RETAINED child-actor origin ({@link childActorRefusal}). A
+  // `list` origin keeps the list rule (an absent list denies) and never asks
+  // the policy. A `policy` origin needs the child-creation policy, asked now,
+  // AND every list the entry carries: an absent list defers to the policy and
+  // is never a grant. An unresolved origin refuses. The gate runs here and
+  // again at the creation commit (`assertFanout` below), where the policy is
+  // asked afresh: a permit given here is never what admits the commit.
   const childCandidate: DelegateCandidate = {
     sub: input.childActor.sub,
     assertedProfile: kernel.actorProfile(input.childActor.sub),
   };
-  for (const pi of drawnOn) {
-    if (!delegatePermitted(childCandidate, childrenOf(parentEntry(pi))?.allowed_child_actors)) {
+  const assertChildActorEligible = (): void => {
+    const refusal = childActorRefusal(
+      kernel.childActorParent(parent),
+      drawnOn,
+      childCandidate,
+      depth,
+      "creation",
+      kernel.childCreationPolicy(),
+    );
+    if (refusal) {
       throw new ChildDelegationError(
         "child_actor_not_allowed",
-        "child actor is not permitted by a justifying entry's allowed_child_actors",
+        refusal.message,
         makeEvidence("denied", "strict_subset", "child_actor_not_allowed"),
       );
     }
-  }
+  };
+  assertChildActorEligible();
 
   // @spec child-delegation#fanout — max_child_depth: a per-entry, DECREMENTING
   // ceiling (default 1) the child-generation `depth` is measured against. The
@@ -611,6 +660,10 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // cap. Admission runs inside the same transaction as insertion.
   let buckets: ReturnType<typeof countChildBuckets>;
   const assertFanout = () => {
+    // @spec child-delegation#request-processing (step 10), #fanout (#1304):
+    // the authoritative child-actor gate at the creation commit, inside the
+    // creation transaction: the child-creation policy is asked again here.
+    assertChildActorEligible();
     buckets = countChildBuckets(kernel, parent);
     for (const pi of drawnOn) {
       const maxChildren = asNum(childrenOf(parentEntry(pi))?.max_children);
@@ -704,6 +757,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: childAuthority,
     eligibility_provenance: childProvenance,
+    child_actor_provenance: childActorProvenance,
     intent_hash: intentHash(parent.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(parent.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),

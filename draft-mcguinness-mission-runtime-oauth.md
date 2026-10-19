@@ -30,6 +30,7 @@ normative:
   I-D.draft-mcguinness-oauth-client-instance-id:
   RFC6749:
   RFC6750:
+  RFC7519:
   RFC7662:
   RFC8705:
   RFC9068:
@@ -241,7 +242,8 @@ resource and request, including its audience and, for a
 sender-constrained token, proof of possession of the confirmation key.
 
 The issuance profile defines that validation for both of its token
-forms; this document adds no validation step of its own:
+forms; this document adds only the audience rule of
+{{boundary-audience}}:
 
 - A JWT access token is validated under the issuance profile's
   resource server rules, which apply {{RFC9068}} and verify any
@@ -319,14 +321,69 @@ requires Mission-bound tokens: a resource that advertises
 "Protected Resource Metadata"), whatever reference the deployment could
 establish externally.
 
+## Boundary and Audience {#boundary-audience}
+
+On this profile, the runtime core's boundary identifier
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Enforcement
+Boundary Identifier") is the resource identifier of the protected
+resource the PEP guards ({{Section 1.2 of RFC9728}}), spelled exactly
+as its protected resource metadata `resource` value
+({{Section 2 of RFC9728}}); the Enforcement Scope Statement declares
+the boundary by that string. Trusted static configuration MAY supply
+the value. A PEP that retrieves the metadata validates it under
+{{Section 3.3 of RFC9728}} and compares identifiers as
+{{Section 6 of RFC9728}} requires.
+
+The PEP establishes the boundary before it reads `aud`, then checks
+that `aud` names it; this is how the resource server determines the
+identifier it expects for itself ({{Section 4 of RFC9068}}). `aud`, in
+a validated JWT or an introspection response, is a string or an array
+of strings ({{Section 4.1.3 of RFC7519}}), and the issuance profile
+lets it name a resource server, API, or security domain
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission-Bound Access
+Tokens"). An `aud` value names the boundary when it equals the
+boundary identifier or is an audience alias for it. An audience alias
+is trusted deployment configuration, scoped to one validated issuer
+and token profile, that maps an `aud` value to exactly one protected
+resource identifier; several aliases MAY map to one boundary. The PEP
+MUST NOT accept an alias mapping that the request or the token
+supplies.
+
+The PEP MUST refuse, as a token-validation failure before any PDP
+decision ({{token-validation}}), a token whose `aud` is absent or
+malformed or names the boundary neither directly nor through an
+alias, and a token whose issuer and token profile have an alias that
+maps to more than one protected resource. For an array, the PEP
+checks that at least one member names the boundary. It MUST NOT
+select a boundary from `aud`: not the first member, not a
+serialization of the array, and not whichever member an alias maps
+first. Member order and duplicate members that name the same
+boundary do not change the result. A member that names another
+recipient does not authorize this boundary and does not by itself
+invalidate the token. A token profile whose audience rule is
+stricter, for example one that requires a single audience, keeps that
+rule.
+
+The decision, the permit binding, and the evidence carry the boundary
+identifier, never an `aud` value or an alias. Across a boundary
+identifier change ({{I-D.draft-mcguinness-mission-runtime}}, Section
+"Changing a Boundary Identifier"), the new statement version declares
+the aliases per issuer and token profile. A token whose `aud` names
+the old identifier stays acceptable through a declared alias, under
+its unchanged validation and lifetime, and the alias never rewrites an
+entry's `resource`.
+
 # Runtime Input Mapping {#claims-mapping}
 
 The runtime core states its decision inputs, permit binding, and
 required evidence fields as abstract roles
 ({{I-D.draft-mcguinness-mission-runtime}}). This section is their
-complete, normative realization on this profile. Each value is read
-from the validated credential context ({{token-validation}}): a JWT
-claim, or the introspection response member of the same name.
+complete, normative realization on this profile. Each value is an
+established runtime input: a credential-derived value is read from the
+validated credential context ({{token-validation}}), as a JWT claim or
+the introspection response member of the same name, and the boundary
+identifier comes from the PEP's trusted routing or configuration
+({{boundary-audience}}).
 
 | Runtime-core role or input | OAuth realization |
 |---|---|
@@ -337,7 +394,7 @@ claim, or the introspection response member of the same name.
 | Actor-delegation chain | `act`, when delegation is in effect |
 | Attester-verified actor context | Instance Context: the `client_instance` claim or introspection member ({{I-D.draft-mcguinness-oauth-client-instance-id}}), validated as that profile's Context Consumer requires; it identifies the instance that obtained the token and grants no authority, and attributing a presentation to it requires the presenter association of {{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.5: an instance-unique key under direct Client Attestation validation, and authenticated provenance for context preserved from an input token |
 | Sender-constraint confirmation | `cnf`, verified during validation ({{token-validation}}) |
-| Credential audience or protected resource | The protected resource the PEP guards; validation has established that `aud` names it |
+| Boundary identifier | The resource identifier of the protected resource the PEP guards, which `aud` names directly or through an alias ({{boundary-audience}}) |
 | Authority entry | The applicable entry of the credential authority for a Mission-bound token; under a join, the applicable entry of the Mission's authority ({{authorization-details-mapping}}) |
 | Current effective authority | The approved Authority Set as narrowed, from a source that reports the narrowing ({{authorization-details-mapping}}) |
 | Credential issuer | `iss` |
@@ -355,10 +412,14 @@ Four pairs in the table are related but distinct inputs:
   of the runtime actor context and refuse a chain that is missing or
   malformed; when an `act` claim is present, the PDP MUST NOT treat
   `client_id` alone as the immediate actor.
-- `aud` and the protected resource. Validation establishes that `aud`
-  names the protected resource the PEP guards; the decision, the
-  permit binding, and the evidence then identify that protected
-  resource, the target of the action.
+- `aud` and the boundary identifier. Validation establishes that
+  `aud` names the boundary ({{boundary-audience}}); the decision, the
+  permit binding, and the evidence carry the boundary identifier. It
+  is not the action's target: the request's transport URL, the
+  Resource-policy `type` and `id`, and the operation target an entry
+  is matched against ({{authorization-details-mapping}}) are distinct
+  values, and an alias never rewrites an entry's `resource` or makes
+  it match another target.
 - The credential authority and the current effective authority. The
   action falls within both ({{authorization-details-mapping}}).
 - Credential expiry and Mission expiry. The PDP MUST refuse if the decision
@@ -621,6 +682,13 @@ directly, rather than the minimum credential-derived claims a PEP needs
 to convey, MUST treat it as a credential, protect it against
 disclosure, and MUST NOT use it outside the declared enforcement scope.
 
+Selecting the boundary from `aud`, rather than checking `aud` against
+a boundary established from routing or configuration, would let a
+token with several audiences choose where it is evaluated, and let
+the order of its members change the permit binding and the evidence.
+An alias taken from the request, or one alias naming two resources,
+does the same; {{boundary-audience}} refuses both.
+
 Evaluating an action against the approved Authority Set in place of
 the credential authority would let a narrowed token act with its Mission's
 broader authority, undoing the narrowing the issuance profile applied;
@@ -654,6 +722,18 @@ The Mission-bound token claims this document maps are registered by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Boundary and Audience: the runtime core's boundary identifier is the
+  protected resource's resource identifier, spelled as its RFC 9728
+  `resource` value, which trusted static configuration can supply.
+  `aud`, a string or an array, names it directly or through an
+  audience alias, trusted configuration scoped to the validated
+  issuer and token profile; an array is checked for membership, never
+  by order. An absent, malformed, or nonmatching audience, or an
+  ambiguous alias, is refused before any decision, and a stricter
+  token profile keeps its rule. The input mapping names the boundary
+  identifier and no longer calls the protected resource the target of
+  the action. Adds RFC 7519 as a normative reference (#853).
 
 - Credential Authority and Current Effective Authority: a
   `mission_resource_access` entry's `resource` matches the operation

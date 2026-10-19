@@ -2419,10 +2419,18 @@ async function recoverChildCreation(
     // token from the same client and key reaches this check. The fan-out count
     // is not a disclosure test: it counts live siblings, which no longer
     // describe a terminal child.
-    const parentClient = isMissionClient(ctx, child.parent ? opts.kernel.get(child.parent.id) : undefined);
+    const parentRecord = child.parent ? opts.kernel.get(child.parent.id) : undefined;
+    const parentClient = isMissionClient(ctx, parentRecord);
     if (
       !parentClient ||
-      presentedTokenChildRefusal(opts.kernel, child.authority_set, child.client_id, child.parent?.depth ?? 1, presentedAuthority)
+      presentedTokenChildRefusal(
+        opts.kernel,
+        child.authority_set,
+        child.client_id,
+        child.parent?.depth ?? 1,
+        presentedAuthority,
+        parentRecord,
+      )
     ) {
       txError(ctx, 400, "invalid_request", "recorded child mission is not active");
     } else {
@@ -2431,8 +2439,22 @@ async function recoverChildCreation(
     return;
   }
   const recordedParent = child.parent ? opts.kernel.get(child.parent.id) : undefined;
+  // @spec child-delegation#fanout, child-delegation#creation-idempotency
+  // (#1304, D486): the presented token's lists still restrict the recorded
+  // child, an absent one deferring only under a parent entry whose retained
+  // origin is `policy`. The child-creation policy is not asked again: it
+  // gates the creation and carryover commits, and recovery delivers a
+  // committed creation, so a later policy change refuses new creations
+  // without retroactively denying this one.
   const refusal =
-    presentedTokenChildRefusal(opts.kernel, child.authority_set, child.client_id, child.parent?.depth ?? 1, presentedAuthority) ??
+    presentedTokenChildRefusal(
+      opts.kernel,
+      child.authority_set,
+      child.client_id,
+      child.parent?.depth ?? 1,
+      presentedAuthority,
+      recordedParent,
+    ) ??
     (recordedParent
       ? presentedTokenFanoutRefusal(opts.kernel, recordedParent, child.authority_set, presentedAuthority, true)
       : undefined);
