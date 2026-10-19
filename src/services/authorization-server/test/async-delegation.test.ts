@@ -3020,3 +3020,93 @@ describe("mission_error on the async-delegation exchange's explicit lifecycle re
     expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
   });
 });
+
+describe("child creation acting-agent authorization (@spec child-delegation#request-processing step 4, #1326)", () => {
+  type Refusal = { error?: string; error_description?: string; mission_error?: string; mission_id?: string; access_token?: string };
+
+  /** The child-creation exchange presenting `subjectToken` under `actingDpop`, authenticated as `actingAs` (default ap-agent). */
+  async function createChildAs(
+    subjectToken: string,
+    parentId: string,
+    creationRequestId: string,
+    actingAs?: ActingClient,
+  ): Promise<Response> {
+    const params: Record<string, string> = {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: subjectToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      creation_request_id: creationRequestId,
+      parent: parentId,
+      mission_intent: JSON.stringify({
+        intent: { goal: "Extract Acme invoices", target_resources: [RESOURCE], expires_at: FAR_EXP },
+      }),
+      authorization_details: JSON.stringify(confinedAuthority()),
+      child_actor: JSON.stringify({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" }),
+    };
+    const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+      fetch(`${ISSUER}/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(actingDpop, extra) },
+        body: new URLSearchParams({
+          ...params,
+          client_assertion: await assertionFor(actingAs),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        }).toString(),
+      });
+    let res = await send();
+    const nonce = res.headers.get("dpop-nonce");
+    if (res.status === 400 && nonce) res = await send({ nonce });
+    return res;
+  }
+
+  it("an unrelated client holding the parent token and key is refused invalid_request, creating no child, reservation or child grant; the parent's own client creates the same child", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const before = as.kernel.findChildren(missionId).length;
+    const crid = crypto.randomUUID();
+    const res = await createChildAs(baseAccessToken, missionId, crid, "exchanger");
+    const body = (await res.json()) as Refusal;
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("not authorized to create a child");
+    expect(body.access_token).toBeUndefined();
+    expect(body.mission_id).toBeUndefined();
+    expect(body.mission_error).toBeUndefined();
+    expect(as.kernel.findChildren(missionId)).toHaveLength(before);
+    expect(as.creationIdempotency.find(EXCHANGER_CLIENT_ID, crid)).toBeUndefined();
+
+    const own = await createChildAs(baseAccessToken, missionId, crypto.randomUUID());
+    const ownBody = (await own.json()) as Refusal;
+    expect(own.status, JSON.stringify(ownBody)).toBe(200);
+    expect(typeof ownBody.access_token).toBe("string");
+    expect(as.kernel.findChildren(missionId)).toHaveLength(before + 1);
+  });
+
+  it("a retained child-creation operation another client recorded is refused before recovery, minting no fresh child grant", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const crid = crypto.randomUUID();
+    // Seeded as an operation recorded before the check existed: while the
+    // parent briefly names the unrelated client as its own, that client
+    // creates a child under one creation_request_id.
+    const setClient = (clientId: string) =>
+      as.kernel.db.prepare("UPDATE missions SET client_id = ? WHERE id = ?").run(clientId, missionId);
+    setClient(EXCHANGER_CLIENT_ID);
+    let created: Response;
+    try {
+      created = await createChildAs(baseAccessToken, missionId, crid, "exchanger");
+    } finally {
+      setClient("ap-agent");
+    }
+    const createdBody = (await created.json()) as Refusal;
+    expect(created.status, JSON.stringify(createdBody)).toBe(200);
+    expect(as.creationIdempotency.find(EXCHANGER_CLIENT_ID, crid)?.state).toBe("completed");
+
+    const retry = await createChildAs(baseAccessToken, missionId, crid, "exchanger");
+    const body = (await retry.json()) as Refusal;
+    expect(retry.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("not authorized to create a child");
+    expect(body.access_token).toBeUndefined();
+    expect(body.mission_id).toBeUndefined();
+  });
+});
