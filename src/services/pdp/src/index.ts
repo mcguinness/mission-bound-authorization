@@ -54,7 +54,13 @@ export {
   type OriginPrincipal,
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
+  DecisionRequestRefused,
+  type PdpRefusal,
+  type PdpRefusalReason,
+  type PdpRefusalRecorder,
+  pdpRefusalOf,
 } from "./evaluate.js";
+export { createPdpRefusalRecorder, type PdpRefusalRecord, type PdpRefusalRecorderConfig } from "./refusal-record.js";
 export {
   type MissionStateObservation,
   parseStateObservation,

@@ -95,7 +95,7 @@ describe("the PEP sends the AuthZEN profile's members (@spec authzen#context-aud
     expect(f.requests[0]?.resource).toEqual({
       type: "invoice",
       id: "inv-1",
-      properties: { audience: CANONICAL_RESOURCE, vendor_id: "acme" },
+      properties: { audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE, vendor_id: "acme" },
     });
   });
 

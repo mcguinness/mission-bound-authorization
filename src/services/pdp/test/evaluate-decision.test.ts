@@ -56,7 +56,7 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
 
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
   context: {
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
@@ -259,7 +259,7 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
   };
   const listReq = (vendorIds: string[]): EvaluationRequest => ({
     subject: { id: "alice" },
-    resource: { type: "vendor", id: vendorIds[0] as string, properties: { audience: LIST_RESOURCE, vendor_id: vendorIds[0], vendor_ids: vendorIds } },
+    resource: { type: "vendor", id: vendorIds[0] as string, properties: { audience: LIST_RESOURCE, operation_target: LIST_RESOURCE, vendor_id: vendorIds[0], vendor_ids: vendorIds } },
     action: { name: "payments:invoice.list" },
     context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } },
   });
@@ -293,7 +293,7 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
   it("without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check", async () => {
     const req: EvaluationRequest = {
       subject: { id: "alice" },
-      resource: { type: "vendor", id: "acme", properties: { audience: LIST_RESOURCE, vendor_id: "acme" } },
+      resource: { type: "vendor", id: "acme", properties: { audience: LIST_RESOURCE, operation_target: LIST_RESOURCE, vendor_id: "acme" } },
       action: { name: "payments:invoice.list" },
       context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } },
     };
@@ -322,7 +322,7 @@ describe("a permit expires no later than the state view it was decided against (
   });
   const execReq = (observedAt: string): EvaluationRequest => ({
     subject: { id: "alice" },
-    resource: { type: "invoice", id: "inv-1", properties: { audience: EXEC_RESOURCE, vendor_id: "acme" } },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: EXEC_RESOURCE, operation_target: EXEC_RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:payment.execute", properties: { idempotency_key: freshKey() } },
     context: {
       mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
@@ -385,7 +385,7 @@ describe("compound-action phase carriers on the decision (@spec authzen#context-
   });
   const phaseReq = (actionPhase: string | undefined): EvaluationRequest => ({
     subject: { id: "alice" },
-    resource: { type: "invoice", id: "inv-1", properties: { audience: PHASE_RESOURCE, vendor_id: "acme" } },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: PHASE_RESOURCE, operation_target: PHASE_RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:payment.execute" },
     context: {
       mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },

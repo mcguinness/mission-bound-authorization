@@ -464,9 +464,12 @@ Each entry is enforced under its type's own specification, as the
 issuance profile requires of a resource server
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server
 Enforcement"). For an entry of type `mission_resource_access`, the
-action's `resource` and invoked action or tool identity MUST be within
-that entry's `resource` and `actions`, under the subset rule of
-{{I-D.draft-mcguinness-oauth-mission-resource-access}}. The PEP asserts
+operation target MUST match that entry's `resource`
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
+"Resource Matching"), and the invoked action or tool identity MUST be
+within its `actions`. The PEP establishes the target from its trusted
+operation contract, independently of the presented entries; the
+token's audience is a separate check. The PEP asserts
 the capability identity (for example, the tool or function name) it
 will invoke, and the PDP MUST refuse an identity outside the approved
 `actions`. For any other `authorization_details` type, the PDP MUST
@@ -651,6 +654,12 @@ The Mission-bound token claims this document maps are registered by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Credential Authority and Current Effective Authority: a
+  `mission_resource_access` entry's `resource` matches the operation
+  target the PEP establishes from its trusted operation contract,
+  under Resource Access's Resource Matching rules; the token's
+  audience remains a separate check (#1276).
 
 - Runtime Input Mapping and Mission State Sources: a state source
   reports an expired Mission as `terminated` with reason `expired`,

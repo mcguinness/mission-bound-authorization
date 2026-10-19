@@ -1,7 +1,8 @@
 /**
  * @spec authzen#pdp-request, authzen#context-audience-freshness (#1004): the
  * PDP reads the AuthZEN profile's own members. The approved entry's resource
- * is matched against `resource.properties.audience`, never the AuthZEN
+ * is matched against the PEP-established `resource.properties.operation_target`
+ * (#1276, D457), never against `resource.properties.audience` or the AuthZEN
  * `resource` object's `type`/`id` identity.
  *
  * The FGA layer is a stub that always permits, so only evaluate()'s own
@@ -92,7 +93,7 @@ interface ObservedRequest {
 const observedRequest = (o: ObservedRequest = {}): EvaluationRequest =>
   ({
     subject: { id: "alice", properties: { iss: "https://as.test" } },
-    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:payment.execute", properties: { idempotency_key: freshKey() } },
     context: {
       mission: { id: "msn_1004", issuer: "https://as.test" },
@@ -512,17 +513,21 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
     });
   });
 
-  describe("the entry match reads resource.properties.audience", () => {
-    it("matches the approved entry's resource against resource.properties.audience, with no context.audience and a resource id that names an object", async () => {
-      const req = readRequest({ type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } });
+  describe("the entry match reads resource.properties.operation_target (#1276, D457)", () => {
+    it("matches the approved entry's resource against the operation target, with no context.audience, a resource id that names an object, and an audience the entry does not name", async () => {
+      const req = readRequest({
+        type: "invoice",
+        id: "inv-1",
+        properties: { audience: "urn:example:payments-pep", operation_target: RESOURCE, vendor_id: "acme" },
+      });
       expect((req.context as Record<string, unknown>).audience).toBeUndefined();
       const dec = await evaluate(req, options());
       expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
     });
 
-    it("never matches on the resource object's id or type: an id naming the entry's resource under another audience is out_of_authority", async () => {
+    it("never matches on the resource object's id or type: an id and type naming the entry's resource under another target are out_of_authority", async () => {
       const dec = await evaluate(
-        readRequest({ type: RESOURCE, id: RESOURCE, properties: { audience: OTHER_RESOURCE, vendor_id: "acme" } }),
+        readRequest({ type: RESOURCE, id: RESOURCE, properties: { audience: RESOURCE, operation_target: OTHER_RESOURCE, vendor_id: "acme" } }),
         options(),
       );
       expect(dec.decision).toBe(false);

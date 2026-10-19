@@ -67,8 +67,12 @@ const req = (
   resource: {
     type: over.vendors ? "vendor" : "invoice",
     id: over.vendors ? (over.vendors[0] as string) : "inv-1",
+    // #1276 (D457): the entries are matched against the operation target. The
+    // audience is a logical identifier no entry names, so a match on it could
+    // never permit.
     properties: {
-      audience: RESOURCE,
+      audience: "urn:example:payments-pep",
+      operation_target: RESOURCE,
       vendor_id: over.vendor ?? "acme",
       ...(over.vendors ? { vendor_ids: over.vendors } : {}),
     },
@@ -273,7 +277,7 @@ describe("credential facts the PDP cannot use refuse credential_invalid (@spec a
 
   it.each([
     ["an entry type it does not understand", [{ type: "other", resource: RESOURCE, actions: ["payments:invoice.read"] }]],
-    ["a constraint it cannot enforce", [entry(["payments:invoice.read"], { time_window: "9-5" })]],
+    ["a constraint it cannot enforce", [entry(["payments:invoice.read"], { office_hours: "9-5" })]],
     ["a malformed amount cap", [entry(["payments:invoice.read"], { max_amount: { amount: "ten", currency: "USD" } })]],
     ["a non-array value", { type: "mission_resource_access" }],
     ["an empty discharge condition list", [entry(["payments:invoice.read"], { terminal_when: [] })]],

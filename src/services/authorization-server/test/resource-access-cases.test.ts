@@ -13,6 +13,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { establishOperationTarget, matchResource, resolveOperationTarget } from "@mission/core";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -31,14 +32,33 @@ import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 const DIR = fileURLToPath(new URL("../../../../vectors/mission-resource-access/", import.meta.url));
 const FORMAT = "mission-resource-access-cases/1";
 
-/** The deployment capability configuration: what this reference implementation implements. */
+/**
+ * The deployment capability configuration: what this reference implementation implements.
+ *
+ * `operation-target` and `resource-match.exact` (#1276, D457): the payments PEP and the
+ * SaaS resource establish each operation's target from an explicit service-level
+ * operation contract and refuse a missing, unsupported or ambiguous one; the PDP, the
+ * payments PEP and the SaaS resource match entries against that target with the one
+ * Resource Access matcher in `@mission/core`. The executors below run that same matcher
+ * and contract evaluation (helper level). `resource-match.prefix` stays unimplemented: a
+ * prefix entry provides no authority.
+ */
 const IMPLEMENTED = new Set([
   "subset.exact-resource",
   "constraint.max_amount",
   "constraint.requires_action_approval",
+  "constraint.resource_issued_after",
+  "constraint.resource_issued_before",
+  "constraint.tenant",
+  "constraint.time_window",
+  "constraint.recipient_domain",
+  "constraint.data_classification",
+  "constraint.allowed_tools",
   "refusal.unsupported-input",
   "refusal.locations",
   "delegate-matcher",
+  "operation-target",
+  "resource-match.exact",
   // #1275 (D457): retained eligibility provenance and the delegation-authorization policy hook.
   "delegation.policy",
   "delegation.inherited-eligibility",
@@ -47,8 +67,6 @@ const IMPLEMENTED = new Set([
 /** The declared capability vocabulary (README.md). */
 const KNOWN_CAPABILITIES = new Set([
   ...IMPLEMENTED,
-  "operation-target",
-  "resource-match.exact",
   "resource-match.prefix",
   "action-families",
   "constraint.resource_issued_after",
@@ -145,6 +163,34 @@ function run(c: Case): void {
       // Only an AS-asserted profile reaches the matcher; a self-asserted one never does.
       const permitted = delegatePermitted({ sub: delegate.sub, assertedProfile: delegate.sub_profile }, matchers);
       expect(permitted, c.expected.reason).toBe(c.expected.outcome === "permitted");
+      return;
+    }
+    case "resource-match": {
+      // The matcher the PDP and the resource servers enforce with (#1276). An entry
+      // given as JSON text is compared after JSON decoding, never reserialized.
+      const entry = input.entry as { resource: string; resource_match?: string };
+      const text = input.entry_resource_json_text;
+      const resource = typeof text === "string" ? (JSON.parse(text) as string) : entry.resource;
+      const target = input.target as string;
+      // An explicit service-level contract establishes the target the case names.
+      if ((input.contract as { service_level?: boolean } | undefined)?.service_level === true) {
+        expect(establishOperationTarget({ service: target })).toEqual({ ok: true, target });
+      }
+      expect(matchResource({ ...entry, resource }, target), c.expected.reason).toBe(c.expected.outcome);
+      return;
+    }
+    case "target-resolution": {
+      // Establishment from the operation contract (#1276): each refusal must be
+      // the one the case describes, never another path's refusal.
+      const contract = input.contract as { candidates?: unknown[] } | null;
+      if (c.expected.outcome !== "refuse-resolution") throw new Error(`${c.id}: no executor for ${c.expected.outcome}`);
+      if (contract === null) {
+        expect(establishOperationTarget(undefined), c.expected.reason).toEqual({ ok: false, reason: "no_contract" });
+      } else if (Array.isArray(contract.candidates)) {
+        expect(resolveOperationTarget(contract.candidates), c.expected.reason).toEqual({ ok: false, reason: "ambiguous" });
+      } else {
+        throw new Error(`${c.id}: no executor for this contract form`);
+      }
       return;
     }
     case "delegate-eligibility":
@@ -248,7 +294,14 @@ function runDelegateEligibility(c: Case): void {
   expect(decision?.outcome, c.expected.reason).toBe(c.expected.outcome);
 }
 
-const EXECUTABLE_CHECKS = new Set(["subset", "derive", "delegate-matcher", "delegate-eligibility"]);
+const EXECUTABLE_CHECKS = new Set([
+  "subset",
+  "derive",
+  "delegate-matcher",
+  "delegate-eligibility",
+  "resource-match",
+  "target-resolution",
+]);
 
 /** A capability is known when the README names it, or it is one `constraints` key or entry member. */
 const knownCapability = (cap: string) => KNOWN_CAPABILITIES.has(cap) || /^(constraint|member)\.[a-z0-9_]+$/.test(cap);
