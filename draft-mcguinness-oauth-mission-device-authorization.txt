@@ -560,6 +560,12 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-consent-
               evidence.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
+
    [RFC7009]  Lodderstedt, T., Ed., Dronia, S., and M. Scurtescu, "OAuth
               2.0 Token Revocation", RFC 7009, DOI 10.17487/RFC7009,
               August 2013, <https://www.rfc-editor.org/rfc/rfc7009>.
@@ -575,6 +581,11 @@ Table of Contents
               September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
 
 Appendix A.  Example
+
+   In the ERP examples in this document, the operation contract
+   identifies https://erp.example.com as the operation target
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).  Actions and
+   constraints determine the permitted operations within that service.
 
    The following is an example of a device authorization request from
    the public client cli-agent.  The mission_intent and

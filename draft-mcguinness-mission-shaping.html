@@ -2894,15 +2894,19 @@ registered.<a href="#section-14-1" class="pilcrow">¶</a></p>
       <h2 id="name-worked-example">
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
       </h2>
-<p id="appendix-A-1">A user asks an agent: "Reconcile the Q3 invoices in the acme-corp
+<p id="appendix-A-1">In the ERP examples in this document, the operation contract identifies
+<code>https://erp.example.com</code> as the operation target
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
+constraints determine the permitted operations within that service.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">A user asks an agent: "Reconcile the Q3 invoices in the acme-corp
 tenant and post any adjustments up to $500." The shaper scopes the
 proposal to that one
 task, bounds the work by invariants instead of enumerating invoices it
 cannot yet know, and proposes only authority it can defend from the
-request.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<p id="appendix-A-2">The following example shows the Mission Intent proposal, which the
-client sends as the <code>intent</code> member of the Submission envelope:<a href="#appendix-A-2" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="appendix-A-3">
+request.<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+<p id="appendix-A-3">The following example shows the Mission Intent proposal, which the
+client sends as the <code>intent</code> member of the Submission envelope:<a href="#appendix-A-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A-4">
 <pre>
 {
   "goal":
@@ -2916,14 +2920,14 @@ client sends as the <code>intent</code> member of the Submission envelope:<a hre
   "purpose": "urn:example:purpose:reconcile",
   "expires_at": "2026-11-05T00:00:00Z"
 }
-</pre><a href="#appendix-A-3" class="pilcrow">¶</a>
+</pre><a href="#appendix-A-4" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A-4">The following example shows the Authority Proposal, which the client
+<p id="appendix-A-5">The following example shows the Authority Proposal, which the client
 sends as the <code>authorization_details</code> parameter of the same pushed
 authorization request. It uses the <code>mission_resource_access</code> type and
 its Common Constraints
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>):<a href="#appendix-A-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="appendix-A-5">
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>):<a href="#appendix-A-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-A-6">
 <pre>
 [
   { "type": "mission_resource_access",
@@ -2942,12 +2946,12 @@ its Common Constraints
       "max_amount": { "amount": "500.00", "currency": "USD" }
     } }
 ]
-</pre><a href="#appendix-A-5" class="pilcrow">¶</a>
+</pre><a href="#appendix-A-6" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A-6">The following example shows the Shaping Evidence the shaper records
+<p id="appendix-A-7">The following example shows the Shaping Evidence the shaper records
 for this proposal. For brevity, it omits <code>proposed_intent</code> and
-<code>proposed_authorization_details</code>, which repeat the two objects above:<a href="#appendix-A-6" class="pilcrow">¶</a></p>
-<div class="breakable lang-json sourcecode" id="appendix-A-7">
+<code>proposed_authorization_details</code>, which repeat the two objects above:<a href="#appendix-A-7" class="pilcrow">¶</a></p>
+<div class="breakable lang-json sourcecode" id="appendix-A-8">
 <pre>
 {
   "shaper_id": "mission-shaper.example.com",
@@ -3003,9 +3007,9 @@ for this proposal. For brevity, it omits <code>proposed_intent</code> and
     }
   ]
 }
-</pre><a href="#appendix-A-7" class="pilcrow">¶</a>
+</pre><a href="#appendix-A-8" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A-8">This is only a proposal. The Mission Issuer, not the shaper, validates
+<p id="appendix-A-9">This is only a proposal. The Mission Issuer, not the shaper, validates
 it, narrows it to policy, and derives the Authority Set the agent is
 bound to; each derived entry narrows an entry the shaper proposed. The
 free-text <code>task_bounds</code> disclose the same bounds to the Approver and
@@ -3013,7 +3017,7 @@ grant nothing; the Mission Issuer never parses them. The invariants
 (period, tenant, and amount) bound an open-ended task whose individual
 invoices were unknown when the request was made. Had the request not
 named the tenant, the shaper would have asked the requester instead of
-guessing (<a href="#clarifications" class="auto internal xref">Section 7.1</a>).<a href="#appendix-A-8" class="pilcrow">¶</a></p>
+guessing (<a href="#clarifications" class="auto internal xref">Section 7.1</a>).<a href="#appendix-A-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="document-history">

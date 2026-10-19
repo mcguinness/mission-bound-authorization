@@ -2212,7 +2212,11 @@ created.<a href="#section-5.8-5" class="pilcrow">¶</a></p>
         <h3 id="name-worked-example">
 <a href="#section-5.9" class="section-number selfRef">5.9. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
         </h3>
-<p id="section-5.9-1">Under the Q3 reconciliation Mission
+<p id="section-5.9-1">In the ERP examples in this document, the operation contract identifies
+<code>https://erp.example.com</code> as the operation target
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
+constraints determine the permitted operations within that service.<a href="#section-5.9-1" class="pilcrow">¶</a></p>
+<p id="section-5.9-2">Under the Q3 reconciliation Mission
 <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>, the approved agent
 <code>s6BhdRkqt3</code>, acting for <code>alice</code>, spawns a read-only invoice
 extraction sub-agent and presents a child-creation token exchange whose
@@ -2220,8 +2224,8 @@ extraction sub-agent and presents a child-creation token exchange whose
 possession with a DPoP proof over the token's confirmation key
 (illustrative; this Mission's Authority Set extends the single-domain
 walkthrough's, its read entry's <code>delegation</code> carrying a <code>children</code>
-object (<a href="#fanout" class="auto internal xref">Section 8</a>), so its anchors differ from that example's):<a href="#section-5.9-1" class="pilcrow">¶</a></p>
-<div class="lang-http sourcecode" id="section-5.9-2">
+object (<a href="#fanout" class="auto internal xref">Section 8</a>), so its anchors differ from that example's):<a href="#section-5.9-2" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="section-5.9-3">
 <pre>
 POST /token HTTP/1.1
 Host: as.example.com
@@ -2240,17 +2244,17 @@ child_actor=%7B%22sub%22%3A%22subagent-invoice-extractor%22%2C
   %22sub_profile%22%3A%22ai_agent%22%7D&amp;
 creation_request_id=812d8100-565d-5f56-9cd3-66783a16259e&amp;
 client_id=s6BhdRkqt3
-</pre><a href="#section-5.9-2" class="pilcrow">¶</a>
+</pre><a href="#section-5.9-3" class="pilcrow">¶</a>
 </div>
-<p id="section-5.9-3">The Mission Issuer resolves the parent from <code>subject_token</code>, verifies
+<p id="section-5.9-4">The Mission Issuer resolves the parent from <code>subject_token</code>, verifies
 the presenter controls the token's confirmation key, processes the
 request per <a href="#request-processing" class="auto internal xref">Section 5.7</a>, and, as this child is a strict
 subset of the parent, completes synchronously (<a href="#completion" class="auto internal xref">Section 5.4</a>) and
 creates the Child Mission. The sub-agent then authenticates as
 <code>subagent-invoice-extractor</code> at the token endpoint and redeems its own
 grant (<a href="#child-client-identity" class="auto internal xref">Section 5.1</a>); no child credential transits the
-parent. The decoded child access token:<a href="#section-5.9-3" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-5.9-4">
+parent. The decoded child access token:<a href="#section-5.9-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.9-5">
 <pre>
 {
   "iss": "https://as.example.com",
@@ -2284,15 +2288,15 @@ parent. The decoded child access token:<a href="#section-5.9-3" class="pilcrow">
     }
   }
 }
-</pre><a href="#section-5.9-4" class="pilcrow">¶</a>
+</pre><a href="#section-5.9-5" class="pilcrow">¶</a>
 </div>
-<p id="section-5.9-5"><code>mission.id</code> is the Child Mission, on the issuance profile's baseline
+<p id="section-5.9-6"><code>mission.id</code> is the Child Mission, on the issuance profile's baseline
 <code>{id, issuer}</code> claim (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); the
 child's own <code>authority_hash</code>, which commits its Authority Set, is
 recorded on its Mission record and is not carried on the claim by
 default. The <code>parent</code> object is lineage, this profile's own member,
 with <code>depth</code> 1 for a child of a root Mission. The <code>cnf</code> key is the
-sub-agent's own (<a href="#child-client-identity" class="auto internal xref">Section 5.1</a>).<a href="#section-5.9-5" class="pilcrow">¶</a></p>
+sub-agent's own (<a href="#child-client-identity" class="auto internal xref">Section 5.1</a>).<a href="#section-5.9-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="denial-reasons">
@@ -4222,6 +4226,10 @@ token-exchange grant the rest of the Mission family already uses.<a href="#secti
 <dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>

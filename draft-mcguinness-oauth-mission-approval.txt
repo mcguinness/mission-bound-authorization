@@ -425,6 +425,11 @@ Table of Contents
 
 6.  Worked Example
 
+   In the ERP examples in this document, the operation contract
+   identifies https://erp.example.com as the operation target
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).  Actions and
+   constraints determine the permitted operations within that service.
+
    Agent s6BhdRkqt3, acting for alice, proposes a Mission to reconcile
    Q3 invoices with read access to the ERP.  It submits the Mission
    Intent through PAR and opts in to deferral on the token request:
@@ -614,6 +619,12 @@ Table of Contents
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
 Appendix A.  Document History
 
