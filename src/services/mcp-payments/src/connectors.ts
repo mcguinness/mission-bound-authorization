@@ -1,11 +1,17 @@
 /**
- * @spec operation-profile-payments-v1 (idempotency keys), D36 (commit point)
+ * @spec operation-profile-payments-v1 (idempotency keys, settlement identity), D36 (commit point)
  *
  * Simulated irreversible connectors: the wire-transfer ledger and the email
  * outbox. Both accept an operation idempotency key and dedupe on it, so a
  * recovery re-drive after a mid-flight crash cannot double-execute. These are
  * also the side-effect oracle (D40): every mutation records its authorizing
  * permit, giving evals ground truth for "zero unauthorized side effects".
+ *
+ * @spec runtime#security-considerations (#1270) — an operation key names one
+ * request, not the business event it carries out. A wire settles an invoice,
+ * and the invoice is its settlement identity: the ledger settles each invoice
+ * at most once, whatever Mission, operation key or caller key a later wire
+ * arrives under, and refuses that wire with no effect.
  */
 
 import { openStore, type Database } from "@mission/store";
@@ -21,6 +27,7 @@ CREATE TABLE ledger (
   mission_id TEXT NOT NULL,
   committed_at INTEGER NOT NULL
 ) STRICT;
+CREATE UNIQUE INDEX ledger_settlement ON ledger (invoice_id);
 CREATE TABLE outbox (
   op_key TEXT PRIMARY KEY,
   invoice_id TEXT NOT NULL,
@@ -51,6 +58,8 @@ export interface EmailCommit {
 export interface CommitResult {
   committed: boolean;
   deduped: boolean;
+  /** Present when the connector refused the commit with no effect: the invoice is already settled. */
+  refusal?: "already_settled";
 }
 
 /** One committed effect, on either connector. */
@@ -71,16 +80,28 @@ export class Connectors {
     this.nowMs = () => now().getTime();
   }
 
-  /** The commit point (D36): after this returns committed, the wire is real. */
+  /**
+   * The commit point (D36): after this returns committed, the wire is real.
+   * A retry under the same operation key is deduped; a wire for an invoice
+   * another operation already settled is refused with no effect (#1270). The
+   * check and the insert are one synchronous step, and the unique settlement
+   * index holds the invariant even if they were not.
+   */
   postWire(c: WireCommit): CommitResult {
     const existing = this.db.prepare("SELECT op_key FROM ledger WHERE op_key = ?").get(c.opKey);
     if (existing) return { committed: true, deduped: true };
+    if (this.settled(c.invoiceId)) return { committed: false, deduped: false, refusal: "already_settled" };
     this.db
       .prepare(
         "INSERT INTO ledger (op_key, invoice_id, payee_account, amount, currency, permit_id, mission_id, committed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       )
       .run(c.opKey, c.invoiceId, c.payeeAccount, c.amount, c.currency, c.permitId, c.missionId, this.nowMs());
     return { committed: true, deduped: false };
+  }
+
+  /** Whether a wire has settled this invoice: the settlement identity (#1270). */
+  settled(invoiceId: string): boolean {
+    return this.db.prepare("SELECT 1 FROM ledger WHERE invoice_id = ?").get(invoiceId) !== undefined;
   }
 
   sendEmail(c: EmailCommit): CommitResult {
