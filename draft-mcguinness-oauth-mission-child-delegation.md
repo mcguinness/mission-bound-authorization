@@ -1497,7 +1497,8 @@ decision, and so does every entry derived from it, including a Child
 Mission's and a carryover replacement's: the child actor is eligible
 only where the policy permits it and every list the entry carries
 permits it too. An entry derived from a reference entry that names its
-child actors keeps the list rule. This is the delegate rule of
+child actors is decided by its list alone; the child-creation policy
+is not consulted for it. This is the delegate rule of
 {{I-D.draft-mcguinness-oauth-mission-resource-access}} (Section
 "Delegate Eligibility") applied to child actors.
 
