@@ -1511,9 +1511,10 @@ grant.
 
 The agent calls the ERP resource server (`erp.partner.example.com`)
 with that token. The resource server validates the JWT and the `cnf`
-binding and enforces the `authorization_details` whose `resource` it
-serves, permitting `invoices.read` and `journal-entries.write` up to
-a `max_amount` of 500.00 USD
+binding and enforces the `authorization_details` whose `resource`
+matches the operation target, `https://erp.partner.example.com`,
+permitting `invoices.read` and `journal-entries.write` up to a
+`max_amount` of 500.00 USD
 ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Resource Server Enforcement"). It treats the
 `mission` claim as an audit anchor; holding only this audience's

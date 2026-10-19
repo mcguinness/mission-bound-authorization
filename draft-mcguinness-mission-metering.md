@@ -405,7 +405,7 @@ It consumes these optional capabilities:
 | Capability | Consumption | Scope of consumption |
 | --- | --- | --- |
 | Lifecycle-Gated Authorization | required | Inherited scope: metering is performed by the runtime profile's PDP within a documented enforcement scope ({{relationship}}), so every metered decision is already gated on the only-`active`-permits rule; this document adds counters to that gate and defines no second one |
-| Structured Authority | required when a call class or an exclusive selector is drawn from the Authority Set's identifiers | Two consumers. A `call_class` value SHOULD be drawn from the `actions` identifiers of the entry's `mission_resource_access`, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable ({{bounds}}). The `exclusive` control consumes it even then: its selectors are interpreted in the identifier space of the approved Authority Set entries and compared with each consequential action, `resource` by equality and the invoked action by membership in `actions`, per group and per Mission; selector semantics are owned by this document ({{bounds}}, {{exclusivity}}) |
+| Structured Authority | required when a call class or an exclusive selector is drawn from the Authority Set's identifiers | Two consumers. A `call_class` value SHOULD be drawn from the `actions` identifiers of the entry's `mission_resource_access`, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable ({{bounds}}). The `exclusive` control consumes it even then: its selectors are interpreted in the identifier space of the approved Authority Set entries and compared with each consequential action, `resource` by equality with the action's operation target ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) and the invoked action by membership in `actions`, per group and per Mission; selector semantics are owned by this document ({{bounds}}, {{exclusivity}}) |
 | State-Observable | not consumed | Mission state is established by the runtime decision this document adds counters to, under that profile's freshness rules, not by this document ({{I-D.draft-mcguinness-mission-runtime}}) |
 | Monotonic Derivation | not consumed | Ancestor charging and escrowed allocations ({{capacity-across-missions}}) and lineage-keyed counters ({{aggregate-bounds}}) read a Mission's lineage to choose its counters; they compare remaining capacity, not authority, and add nothing to the no-broader-than comparison |
 | Credential-Bound | not consumed | This document defines no binding of its own: enforcement composes through the runtime profile's Mission binding establishment step ({{I-D.draft-mcguinness-mission-runtime}}) |
@@ -485,11 +485,13 @@ that a companion profile may add a named member coordinated with it:
   #117). An array of exclusivity groups, each an array of two or
   more selectors. A selector is an object with `resource` (REQUIRED,
   a string) and `actions` (OPTIONAL, an array of strings); it matches
-  a consequential action whose resource equals `resource` and, when
-  `actions` is present, whose invoked action is within it. Within a
-  group, the selectors name authority the Approver consents MUST NOT
-  be combined under this Mission or any Mission derived from it,
-  absent an explicitly approved relaxation ({{exclusivity}}).
+  a consequential action whose operation target
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) equals
+  `resource` and, when `actions` is present, whose invoked action is
+  within it. Within a group, the selectors name authority the
+  Approver consents MUST NOT be combined under this Mission or any
+  Mission derived from it, absent an explicitly approved relaxation
+  ({{exclusivity}}).
 
 The bounds are carried on the Mission and committed by `intent_hash`.
 They are not enforced by the authorization server at issuance; they are
@@ -1301,6 +1303,9 @@ this registry.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The `exclusive` selector matches a consequential action whose
+  operation target equals the selector's `resource` (#1276).
 
 - Conformance: the consented bounds are rendered at each human
   approval, including a standing consent such as a Mission Template's
