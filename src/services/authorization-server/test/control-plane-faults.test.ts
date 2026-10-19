@@ -8,6 +8,10 @@ import {
   MissionKernel,
   type MissionRecord,
   ObservationWatermarkError,
+  STATUS_INVALID,
+  STATUS_SUSPENDED,
+  STATUS_VALID,
+  StaleVersionError,
   validateMissionIntent,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
@@ -116,6 +120,26 @@ describe("single-process control-plane fault boundaries", () => {
       expect(commits.mock.calls[0]![0]).toMatchObject({ state: "terminated", termination: { reason: "expired" } });
     } finally { kernel.db.close(); }
   });
+  it("an expiry materialized under a guarded transition makes the caller's earlier version stale (@spec status#idempotency, #250)", () => {
+    const { kernel, record, commits, clock } = setup();
+    try {
+      clock.at = new Date("2027-02-01T00:00:00Z");
+      // The guard is compared with the record the expiry left, so the version
+      // the caller observed before it is stale, not a conflict with `expired`.
+      expect(() => kernel.transition(record.id, "revoke", { expectedVersion: record.version })).toThrow(
+        StaleVersionError,
+      );
+      const after = kernel.get(record.id);
+      expect(after?.termination?.reason).toBe("expired");
+      expect(after?.version).toBe(record.version + 1);
+      expect(commits).toHaveBeenCalledTimes(1);
+      // The version the expiry left passes the guard; the transition rule refuses.
+      expect(() => kernel.transition(record.id, "revoke", { expectedVersion: record.version + 1 })).toThrow(
+        LifecycleConflictError,
+      );
+      expect(commits).toHaveBeenCalledTimes(1);
+    } finally { kernel.db.close(); }
+  });
   it("one-issuer stores refuse foreign records and independent issuers can retain the same local id", () => {
     const a = setup();
     const b = setup("https://issuer-two.test");
@@ -133,6 +157,81 @@ describe("single-process control-plane fault boundaries", () => {
       expect(a.kernel.get(a.record.id)?.state).toBe("active");
       expect(a.kernel.get(a.record.id)?.issuer).not.toBe(b.kernel.get(a.record.id)?.issuer);
     } finally { a.kernel.db.close(); b.kernel.db.close(); }
+  });
+});
+
+/**
+ * @spec control-plane#state-surfaces — the existing state surfaces, inventoried.
+ *
+ * One committed transition is reported by every surface the issuer serves, in
+ * that surface's own semantics: the Status observation and introspection carry
+ * the state and its version, the Status List carries the state's bit, and the
+ * lifecycle commit (the Signals event's source) carries the transition and its
+ * version. No surface is a parallel snapshot, and a refused request moves none
+ * of them.
+ */
+describe("control-plane state surfaces (#250)", () => {
+  it("reports one committed transition at one version on Status, introspection, the Status List and the lifecycle commit, and a refused stale request moves none of them", () => {
+    const { kernel, record, commits } = setup();
+    try {
+      const idx = kernel.participateInStatusList(record.id);
+      const surfaces = () => {
+        const stored = kernel.get(record.id) as MissionRecord;
+        const status = kernel.statusObservation(record.id, { requester: "svc:reader" }).payload.mission as Record<
+          string,
+          unknown
+        >;
+        const introspection = kernel.introspectionMission(stored);
+        const entry = kernel.statusListEntries().find((e) => e.idx === idx);
+        return {
+          status: [status.state, status.version],
+          introspection: [introspection.state, introspection.version],
+          bit: entry?.bit,
+        };
+      };
+      expect(surfaces()).toEqual({
+        status: ["active", record.version],
+        introspection: ["active", record.version],
+        bit: STATUS_VALID,
+      });
+
+      const suspended = kernel.transition(record.id, "suspend", { expectedVersion: record.version });
+      expect(suspended.version).toBe(record.version + 1);
+      const afterSuspend = {
+        status: ["suspended", suspended.version],
+        introspection: ["suspended", suspended.version],
+        bit: STATUS_SUSPENDED,
+      };
+      expect(surfaces()).toEqual(afterSuspend);
+      expect(commits).toHaveBeenCalledTimes(1);
+      expect(commits.mock.calls[0]![0]).toMatchObject({
+        id: record.id,
+        prior_state: "active",
+        state: "suspended",
+        version: suspended.version,
+      });
+
+      // The caller's guard predates the suspend: refused, and nothing moves.
+      expect(() => kernel.transition(record.id, "revoke", { expectedVersion: record.version })).toThrow(
+        StaleVersionError,
+      );
+      expect(surfaces()).toEqual(afterSuspend);
+      expect(commits).toHaveBeenCalledTimes(1);
+
+      const revoked = kernel.transition(record.id, "revoke", { expectedVersion: suspended.version });
+      expect(surfaces()).toEqual({
+        status: ["terminated", revoked.version],
+        introspection: ["terminated", revoked.version],
+        bit: STATUS_INVALID,
+      });
+      expect(commits).toHaveBeenCalledTimes(2);
+      expect(commits.mock.calls[1]![0]).toMatchObject({
+        prior_state: "suspended",
+        state: "terminated",
+        termination: { reason: "revoked", version: revoked.version },
+        version: revoked.version,
+      });
+    } finally { kernel.db.close(); }
   });
 });
 

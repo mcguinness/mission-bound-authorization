@@ -11,6 +11,8 @@
 import {
   capabilitySourceIdentity,
   compareAmounts,
+  IMPLEMENTED_COMMON_CONSTRAINTS,
+  intersectCommonConstraints,
   isValidAmount,
   isSubsetEntry,
   isSubsetSet,
@@ -20,6 +22,7 @@ import {
 export { isSubsetEntry, isSubsetSet } from "@mission/core";
 import type { CapabilitySourceBinding, JsonValue } from "@mission/core";
 import { unionConditions } from "./discharge.js";
+import { ceilingOrigin, combineOrigins, type RetainedOrigin } from "./eligibility-provenance.js";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } from "./types.js";
 
@@ -31,12 +34,12 @@ import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } fr
  * and PAR intake (`authorization-details-metadata.ts`, `intent.ts`), so the
  * three admission boundaries cannot drift apart (issue #784). This spans both
  * a specification-defined Common Constraint this engine does not implement
- * narrowing for (e.g. `time_window`, `tenant`: registered by the core
- * ({{common-constraints}}) but not accepted here) and any other unregistered
- * key (registration is not the test; support is). Silently dropping the key
- * (the prior behavior: `intersect` below rebuilds only its four known
- * members) would widen effective authority: the entry's narrowing intent
- * would vanish from the derived entry with no trace.
+ * narrowing for (one registered by Mission Resource Access but outside
+ * `IMPLEMENTED_COMMON_CONSTRAINTS`, #1266) and any other unregistered key
+ * (registration is not the test; support is). Silently dropping the key
+ * (the prior behavior: `intersect` below rebuilt only its known members)
+ * would widen effective authority: the entry's narrowing intent would vanish
+ * from the derived entry with no trace.
  *
  * Called over the FULL `policy.ceiling` array and the FULL submitted
  * `proposal` array, before any resource/action filtering narrows either down
@@ -264,6 +267,38 @@ export function deriveAuthoritySet(
   policy: DerivationPolicy,
   proposal?: readonly AuthorityEntry[],
 ): AuthorityEntry[] {
+  return deriveAuthoritySetWithProvenance(intent, policy, proposal).entries;
+}
+
+/**
+ * A derived Authority Set and, index-aligned with it, each entry's delegate
+ * eligibility origin (@spec resource-access#delegate-eligibility).
+ */
+export interface DerivedAuthority {
+  entries: AuthorityEntry[];
+  provenance: RetainedOrigin[];
+}
+
+/**
+ * {@link deriveAuthoritySet}, also recording each derived entry's eligibility
+ * origin from the ceiling entry it was intersected with (@spec
+ * resource-access#delegate-eligibility, #1275): `policy` where that ceiling
+ * entry's `delegation` carries no `allowed_delegates`, even when the proposal
+ * added a list, which the derived entry keeps as a restriction. The entries
+ * are exactly deriveAuthoritySet's.
+ *
+ * `proposalProvenance`, index-aligned with `proposal`, is given when the
+ * proposal is itself an already-derived set re-derived under a further
+ * ceiling (a template's or a governed root's): each derived entry then keeps
+ * its proposal entry's origin as well ({@link combineOrigins}), so a second
+ * derivation never drops an obligation the first one recorded.
+ */
+export function deriveAuthoritySetWithProvenance(
+  intent: MissionIntent,
+  policy: DerivationPolicy,
+  proposal?: readonly AuthorityEntry[],
+  proposalProvenance?: readonly RetainedOrigin[],
+): DerivedAuthority {
   // @spec mission#common-constraints (issue #784, review on PR #803) — every
   // ceiling entry and every submitted proposal entry is checked for an
   // unsupported `constraints` key BEFORE the resource/action filtering below
@@ -319,15 +354,25 @@ export function deriveAuthoritySet(
   // sole "ceiling" it fans across, so `intersect(entry, entry)` reconstructs
   // the entry unchanged rather than pairing it with its siblings.
   const derived: AuthorityEntry[] = [];
-  for (const proposal of proposals) {
+  const provenance: RetainedOrigin[] = [];
+  proposals.forEach((proposal, p) => {
     const matchingCeilings = hasProposal
       ? policy.ceiling.filter((c) => c.resource === proposal.resource)
       : [proposal];
+    // An already-derived proposal entry contributes the origin it carries; a
+    // client proposal contributes none of its own.
+    const inherited: RetainedOrigin =
+      hasProposal && proposalProvenance ? (proposalProvenance[p] ?? null) : "list";
     for (const ceiling of matchingCeilings) {
       const entry = intersect(proposal, ceiling);
-      if (entry) derived.push(entry);
+      if (!entry) continue;
+      derived.push(entry);
+      // @spec resource-access#delegate-eligibility: the origin is recorded
+      // here, from the exact ceiling entry this one was derived from, and
+      // retained with the Mission, never inferred later from the entry's list.
+      provenance.push(combineOrigins(ceilingOrigin(ceiling), inherited));
     }
-  }
+  });
   if (derived.length === 0) {
     // @spec mission#error-mapping: a submitted RAR proposal that derives
     // nothing is invalid_authorization_details (an actual proposal was
@@ -341,7 +386,7 @@ export function deriveAuthoritySet(
         : "Intent yields no valid Authority Set under configured-mapping policy",
     );
   }
-  return derived;
+  return { entries: derived, provenance };
 }
 
 /**
@@ -397,6 +442,20 @@ function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): Authority
     ceiling.constraints?.terminal_when,
   );
   if (conditions) constraints.terminal_when = conditions;
+  // @spec resource-access#common-constraints, resource-access#initial-common-constraints
+  // (#1266): each implemented Common Constraint by its own intersection rule
+  // (common-constraints.ts): a key on one operand is carried, a key on both
+  // narrows. An empty intersection fails the combination, as differing
+  // `max_amount` currencies do (D446): the submitted proposal is refused,
+  // never answered with the ceiling's value or silently omitted.
+  const common = intersectCommonConstraints(proposal.constraints, ceiling.constraints);
+  if (!common.ok) {
+    throw new IntentError(
+      "invalid_authorization_details",
+      `${common.reason}: no intersection between the proposal and the ceiling`,
+    );
+  }
+  Object.assign(constraints, common.values);
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   const delegation = narrowDelegation(proposal.delegation, ceiling.delegation);
   if (delegation) entry.delegation = delegation;
@@ -513,6 +572,12 @@ function minNum(a: number | undefined, b: number | undefined): number | undefine
  * vendors an empty intersection does NOT kill the entry: delegation is a policy
  * on an otherwise-valid entry, so an empty delegate list just means "delegable
  * to nobody", never "the authority is void".
+ *
+ * Structural only. A list taken where the ceiling has none restricts the
+ * delegation-authorization policy decision that ceiling defers to and never
+ * replaces it: the caller records the entry's `policy` origin
+ * ({@link deriveAuthoritySetWithProvenance}), and eligibility is decided at
+ * each delegated issuance (@spec resource-access#delegate-eligibility, #1275).
  */
 function narrowMatchers(
   proposal: DelegateMatcher[] | undefined,
@@ -578,8 +643,8 @@ function bindingKey(binding: CapabilitySourceBinding): string | null {
 
 /**
  * The `constraints` keys this PROJECTION can intersect. Everything else (a
- * registered-but-unimplemented Common Constraint, or a deployment-defined key
- * this code does not model) makes a pairing unprojectable: see
+ * Common Constraint registered after this implementation, or a
+ * deployment-defined key this code does not model) makes a pairing unprojectable: see
  * {@link projectThroughEffective}, which drops such a fragment rather than
  * guessing at, or silently discarding, a narrowing it cannot evaluate.
  */
@@ -590,6 +655,9 @@ const PROJECTABLE_CONSTRAINTS = new Set([
   // @spec discharge#terminal-when — projectable: the fragment carries the UNION of
   // both sides' conditions, which is no broader than either.
   "terminal_when",
+  // @spec resource-access#common-constraints (#1266): each by its own
+  // intersection rule; an empty intersection drops the fragment.
+  ...IMPLEMENTED_COMMON_CONSTRAINTS,
 ]);
 
 function onlyProjectableConstraints(constraints: AuthorityEntry["constraints"]): boolean {
@@ -725,6 +793,12 @@ function intersectForProjection(
     return null;
   }
   if (conditions) constraints.terminal_when = conditions;
+  // @spec resource-access#common-constraints (#1266): the shared intersection
+  // rule; a pairing with no intersection yields no fragment (nothing to refuse
+  // here: both sides are already-derived entries).
+  const common = intersectCommonConstraints(candidate.constraints, effective.constraints);
+  if (!common.ok) return null;
+  Object.assign(constraints, common.values);
   // @spec capability-binding#capability-source-binding — the fragment must
   // preserve effective-side issuer provenance even when the candidate came
   // from a binding-free wire projection. Two recorded sides must still agree;

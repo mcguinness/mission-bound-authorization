@@ -258,7 +258,8 @@ describe("child-creation idempotency (@spec child-delegation#creation-request-id
     const insert = vi.spyOn(as.kernel, "insertRecord").mockImplementationOnce((record, precondition, options) =>
       originalInsert({ ...record, created_at: record.expires_at }, precondition, options),
     );
-    const derive = vi.spyOn(as.kernel, "derive");
+    // Every derivation (kernel.derive included) runs through deriveWithProvenance.
+    const derive = vi.spyOn(as.kernel, "deriveWithProvenance");
     try {
       const first = await tokenRequest(childParams(parent.accessToken, requestId));
       const body = await first.json();

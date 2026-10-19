@@ -1,4 +1,4 @@
-export { PaymentsStore, type Invoice, type Vendor } from "./payments-store.js";
+export { defaultRemittanceAddress, PaymentsStore, type Invoice, type ResolvedRecipients, type Vendor } from "./payments-store.js";
 export { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 export { type KeyRole, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
 export {

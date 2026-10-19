@@ -75,7 +75,7 @@ const OBSERVED = { state: "active", mode: "fresh", freshness_at: NOW.toISOString
 
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: LOCAL.sub, properties: { iss: LOCAL.iss } },
-  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
   context: {
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash", subject: ORIGIN },

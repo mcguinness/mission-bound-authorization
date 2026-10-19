@@ -1287,6 +1287,11 @@ registered.
 
 # Worked Example {#example}
 
+In the ERP examples in this document, the operation contract identifies
+`https://erp.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+
 A user asks an agent: "Reconcile the Q3 invoices in the acme-corp
 tenant and post any adjustments up to $500." The shaper scopes the
 proposal to that one

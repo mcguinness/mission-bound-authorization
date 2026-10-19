@@ -58,9 +58,9 @@ import {
   resolveRenderingSource,
   validateAuthoritySourceCatalog,
 } from "./authority-source.js";
-import type { DerivationPolicy, ExpiryCeilings } from "./derive.js";
+import type { DerivationPolicy, DerivedAuthority, ExpiryCeilings } from "./derive.js";
 import {
-  deriveAuthoritySet,
+  deriveAuthoritySetWithProvenance,
   isSubsetSet,
   type OriginProjection,
   projectThroughEffectiveWithOrigin,
@@ -94,6 +94,17 @@ import {
 } from "./source-binding-reconciliation.js";
 import { SourceBindingStore } from "./source-binding-store.js";
 import { DischargeSelectorStore } from "./discharge-selector-store.js";
+import type { DelegateCandidate } from "./delegate-matcher.js";
+import {
+  DENY_ALL_DELEGATION_POLICY,
+  type DelegationAuthorizationPolicy,
+  type DelegationCandidate,
+  delegateEligibility,
+  type EligibilityOutcome,
+  readOrigin,
+  type RetainedOrigin,
+  retainedOrigins,
+} from "./eligibility-provenance.js";
 import { justifyingIndex } from "./child-delegation.js";
 import type { CarryoverEntryPair, CarryoverMap } from "./carryover.js";
 import {
@@ -239,7 +250,8 @@ CREATE TABLE IF NOT EXISTS missions (
   submission_evidence_json TEXT,
   termination_json TEXT,
   ceiling_json TEXT,
-  schedule_json TEXT
+  schedule_json TEXT,
+  eligibility_provenance_json TEXT
 ) STRICT;
 CREATE TABLE IF NOT EXISTS approval_reservations (
   approval_event_id TEXT PRIMARY KEY,
@@ -295,6 +307,13 @@ function migrateMissions(db: Database): void {
   // holds no schedule, which is what it always meant.
   if (!columns.has("schedule_json")) {
     db.exec("ALTER TABLE missions ADD COLUMN schedule_json TEXT");
+  }
+  // @spec resource-access#delegate-eligibility (#1275): each approved entry's
+  // eligibility origin, written once at creation. Nullable with no default: a
+  // row that predates it retains no provenance, so its delegable entries
+  // narrow out of every delegated token rather than being guessed.
+  if (!columns.has("eligibility_provenance_json")) {
+    db.exec("ALTER TABLE missions ADD COLUMN eligibility_provenance_json TEXT");
   }
 }
 
@@ -399,6 +418,11 @@ export interface ApproveInput {
 export interface PreparedApproval {
   proposal: AuthorityEntry[] | undefined;
   authoritySet: AuthorityEntry[];
+  /**
+   * @spec resource-access#delegate-eligibility: each entry's eligibility
+   * origin from the derivation, index-aligned with `authoritySet`.
+   */
+  provenance: RetainedOrigin[];
   resolvedSource: AuthoritySourceResolution;
 }
 
@@ -531,6 +555,14 @@ export interface KernelOptions {
    * class for any actor, so only `{ "sub": ... }` matchers can admit a delegate.
    */
   actorProfiles?: Record<string, string>;
+  /**
+   * @spec resource-access#delegate-eligibility (#1275, D457): the
+   * authorization server's delegation-authorization policy, consulted at every
+   * delegated issuance for an approved entry whose eligibility defers to it.
+   * Read at each call, never cached. Absent, the reference policy denies every
+   * delegate ({@link DENY_ALL_DELEGATION_POLICY}).
+   */
+  delegationPolicy?: DelegationAuthorizationPolicy;
   /**
    * @spec mission#standing-consent-bases — the activation policies this issuer
    * evaluates for a policy-adjudicated child creation, keyed by policy `id`
@@ -890,13 +922,24 @@ export class MissionKernel {
   }
 
   derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {
-    const derived = deriveAuthoritySet(intent, this.opts.policy, proposal);
-    // @spec discharge#discharge-authority — resolve every `discharge_authority`
+    return this.deriveWithProvenance(intent, proposal).entries;
+  }
+
+  /**
+   * {@link derive}, with each derived entry's delegate eligibility origin
+   * (@spec resource-access#delegate-eligibility, #1275), index-aligned with
+   * the entries. A creating surface records it on the Mission as
+   * `eligibility_provenance`, carried through any order-preserving
+   * per-entry transform it applies before the record commits.
+   */
+  deriveWithProvenance(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): DerivedAuthority {
+    const derived = deriveAuthoritySetWithProvenance(intent, this.opts.policy, proposal);
+    // @spec discharge#discharge-authority: resolve every `discharge_authority`
     // selector the derived entries carry, refusing the derivation when one maps
     // to nothing. Early and typed here (an IntentError the submission carriers
     // already map); `insertRecord` re-checks as the single record funnel, which
     // also covers child creation (a requested subset, never a fresh derivation).
-    assertDischargeAuthoritiesResolvable(derived, this.opts.dischargeAuthority);
+    assertDischargeAuthoritiesResolvable(derived.entries, this.opts.dischargeAuthority);
     return derived;
   }
 
@@ -1217,8 +1260,11 @@ export class MissionKernel {
     // `authorityHash` below, so `authority_hash` covers them by construction.
     // An unresolvable catalog-sourced action refuses the derivation
     // (IntentError) rather than being approved unbound.
+    // @spec resource-access#delegate-eligibility: the derivation's origins
+    // stay index-aligned through the two per-entry capability transforms.
+    const derived = this.deriveWithProvenance(input.intent, proposal);
     const authoritySet = this.resolveFreshCapabilities(attachCapabilitySources(
-      this.derive(input.intent, proposal),
+      derived.entries,
       this.opts.capabilityResolver ? undefined : input.capabilityResolution,
     ));
     // @spec mission#approval-event (step 3) — establish the authority source
@@ -1233,7 +1279,7 @@ export class MissionKernel {
       approver: input.approver,
     });
     this.assertAuthorityWithinSource(resolvedSource, authoritySet);
-    return { proposal, authoritySet, resolvedSource };
+    return { proposal, authoritySet, provenance: derived.provenance, resolvedSource };
   }
 
   /**
@@ -1316,7 +1362,7 @@ export class MissionKernel {
     const prepared = preparedEarlier
       ? { ...preparedEarlier, resolvedSource: this.revalidatePreparedSource(input, preparedEarlier) }
       : this.prepareApproval(input);
-    const { proposal, authoritySet, resolvedSource } = prepared;
+    const { proposal, authoritySet, provenance, resolvedSource } = prepared;
     const authoritySource = resolvedSource.provenance;
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
     // drawn from the single mission-id.ts minting helper.
@@ -1357,6 +1403,8 @@ export class MissionKernel {
       intent: input.intent,
       ...(proposal ? { proposed_authority: proposal } : {}),
       authority_set: authoritySet,
+      // @spec resource-access#delegate-eligibility: retained from the derivation.
+      eligibility_provenance: provenance,
       intent_hash: intentHash(this.opts.issuer, input.intent as never),
       ...(proposal ? { proposal_hash: proposalHash(this.opts.issuer, proposal as never) } : {}),
       // @spec mission#intent-submission-evidence — verified facts land on the
@@ -1456,6 +1504,15 @@ export class MissionKernel {
   ): void {
     // @spec control-plane#isolation — one issuer owns a kernel store.
     if (record.issuer !== this.opts.issuer) throw new Error("record issuer does not own this kernel");
+    // @spec resource-access#delegate-eligibility: provenance a creating surface
+    // records is index-aligned with the Authority Set it commits; a misaligned
+    // array is a creation defect, refused rather than stored.
+    if (
+      record.eligibility_provenance !== undefined &&
+      record.eligibility_provenance.length !== record.authority_set.length
+    ) {
+      throw new Error(`mission ${record.id}: eligibility provenance is not aligned with its Authority Set`);
+    }
     const inheritedPin = this.inheritedPinResolver(record, options.inheritPinsFrom);
     // @spec discharge#discharge-authority — the LAST point at which a
     // `terminal_when` condition can enter an immutable Mission-record entry: the
@@ -1528,8 +1585,9 @@ export class MissionKernel {
            approval_basis_json, authority_source_json, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, derivation_limit,
            derivation_count, grant_id, predecessor, related_to, parent_id, parent_json, template_id,
-           template_json, projected_from, submission_evidence_json, ceiling_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           template_json, projected_from, submission_evidence_json, ceiling_json,
+           eligibility_provenance_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -1591,6 +1649,10 @@ export class MissionKernel {
           // @spec progressive#progressive-authorization: the consented ceiling,
           // immutable after creation, written only here.
           serializeCeiling(record),
+          // @spec resource-access#delegate-eligibility: retained provenance,
+          // immutable after creation, written only here (null when the
+          // creating surface recorded none).
+          record.eligibility_provenance ? JSON.stringify(record.eligibility_provenance) : null,
         );
       // @spec mission#authority-sources (#827): the committed root, in the
       // SAME transaction as the record: a Mission never exists without the
@@ -3271,6 +3333,94 @@ export class MissionKernel {
   }
 
   /**
+   * @spec resource-access#delegate-eligibility (#1275, D457): the Mission's
+   * effective entries as delegation candidates, each naming the approved
+   * record entry it was computed from, optionally limited by `include` (for
+   * example to one audience). The candidates resolve against this same
+   * `record` object.
+   */
+  effectiveDelegationCandidates(
+    record: MissionRecord,
+    include: (entry: AuthorityEntry) => boolean = () => true,
+  ): Array<OriginProjection<AuthorityEntry>> {
+    return this.effectiveEntriesWithOrigin(record)
+      .filter((e) => include(e.entry))
+      .map((e) => ({ entry: e.entry, origins: [e.origin] }));
+  }
+
+  /**
+   * @spec resource-access#delegate-eligibility, mission#delegation-constraints
+   * (#1275, D457): decide, for each candidate, whether `delegate` may carry it
+   * in a token issued at accounted delegation depth `depth`.
+   *
+   * A candidate is an entry with the approved Mission Record entries it
+   * derives from, as {@link effectiveDelegationCandidates} or
+   * {@link projectCredentialWithOrigin} produce them over this same `record`
+   * object. Each origin resolves, by position in `authority_set`, to the
+   * provenance retained with the Mission at its derivation; an origin that is
+   * not an entry of `record`, or whose provenance is absent, is unresolved and
+   * narrows the candidate out. The delegation-authorization policy is read and
+   * asked afresh at every call: a permit at an earlier exchange is never
+   * reused.
+   */
+  delegationEligibility(
+    record: MissionRecord,
+    candidates: ReadonlyArray<OriginProjection<AuthorityEntry>>,
+    delegate: DelegateCandidate,
+    depth: number,
+  ): Array<{ entry: AuthorityEntry; outcome: EligibilityOutcome }> {
+    const origins = retainedOrigins(record.authority_set, record.eligibility_provenance);
+    const policy = this.opts.delegationPolicy ?? DENY_ALL_DELEGATION_POLICY;
+    const mission = {
+      id: record.id,
+      issuer: record.issuer,
+      client_id: record.client_id,
+      subject: record.subject,
+    };
+    const permits = (approved: AuthorityEntry, entry: AuthorityEntry): boolean =>
+      policy({ mission, approved, entry, delegate, depth }) === true;
+    return candidates.map((candidate) => {
+      const resolved: DelegationCandidate = {
+        entry: candidate.entry,
+        approved: candidate.origins.map((origin) => {
+          const index = record.authority_set.indexOf(origin);
+          return { entry: origin, origin: index < 0 ? null : (origins[index] ?? null) };
+        }),
+      };
+      return { entry: candidate.entry, outcome: delegateEligibility(resolved, delegate, depth, permits) };
+    });
+  }
+
+  /**
+   * The candidates `delegate` may carry at accounted depth `depth`
+   * ({@link delegationEligibility}'s `eligible` ones), in candidate order.
+   */
+  delegableEntries(
+    record: MissionRecord,
+    candidates: ReadonlyArray<OriginProjection<AuthorityEntry>>,
+    delegate: DelegateCandidate,
+    depth: number,
+  ): AuthorityEntry[] {
+    return this.delegationEligibility(record, candidates, delegate, depth)
+      .filter((d) => d.outcome === "eligible")
+      .map((d) => d.entry);
+  }
+
+  /**
+   * @spec resource-access#delegate-eligibility: each approved entry of
+   * `record`'s effective set with the eligibility origin retained for the
+   * approved entry it was computed from. A surface deriving a new Mission
+   * within this one inherits these origins ({@link inheritOrigins}).
+   */
+  effectiveEntriesWithRetainedOrigin(record: MissionRecord): Array<{ entry: AuthorityEntry; origin: RetainedOrigin }> {
+    const origins = retainedOrigins(record.authority_set, record.eligibility_provenance);
+    return this.effectiveEntriesWithOrigin(record).map((e) => {
+      const index = record.authority_set.indexOf(e.origin);
+      return { entry: e.entry, origin: index < 0 ? null : (origins[index] ?? null) };
+    });
+  }
+
+  /**
    * @spec mission#lifecycle, child-delegation#child-state: the record as
    * every decision sees it, with no write. Its own expiry first: from
    * `expires_at`, an `active` or `suspended` record is `terminated` with
@@ -4441,6 +4591,10 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
       ? { proposed_authority: JSON.parse(row.proposed_authority_json as string) as AuthorityEntry[] }
       : {}),
     authority_set: JSON.parse(row.authority_set_json as string) as AuthorityEntry[],
+    // @spec resource-access#delegate-eligibility: absent when the row retains
+    // none or what it retains is unreadable; an unrecognized value reads as
+    // unresolved. Read fail-closed, never widened.
+    ...provenanceMemberOf(row.eligibility_provenance_json),
     intent_hash: row.intent_hash as string,
     ...(row.proposal_hash ? { proposal_hash: row.proposal_hash as string } : {}),
     ...(row.submission_evidence_json
@@ -4495,6 +4649,21 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     // @spec progressive#progressive-authorization: absent means no ceiling.
     ...ceilingMembersOf(row.ceiling_json),
   };
+}
+
+/**
+ * @spec resource-access#delegate-eligibility: the stored provenance column as
+ * the record member, or no member where none is stored or it cannot be read.
+ */
+function provenanceMemberOf(text: unknown): { eligibility_provenance?: RetainedOrigin[] } {
+  if (typeof text !== "string" || text === "") return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return {};
+  }
+  return Array.isArray(parsed) ? { eligibility_provenance: parsed.map(readOrigin) } : {};
 }
 
 /** `condition_digest`, or undefined for a structurally invalid condition (never throws). */

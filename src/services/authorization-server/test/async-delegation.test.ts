@@ -1240,6 +1240,25 @@ describe("containment refresh-path conformance (derivation MUST NOT carry a cont
     expect(payload.authorization_details).toEqual(withoutRemittance(missionId));
   });
 
+  // @spec mission#error-mapping — the requested RAR subset exceeds the
+  // Mission's granted authority: the presented handle still carries the
+  // contained capability, so only the Mission's effective set refuses it.
+  it("contain, then open a family naming the contained capability: refused invalid_authorization_details as exceeding the Mission authority, though the presented token carries it", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const handle = await delegationHandle(baseAccessToken);
+    const recorded = as.kernel.get(missionId)?.authority_set ?? [];
+    expect(recorded.some((e) => e.actions.includes("payments:remittance.send"))).toBe(true);
+    containRemittance(missionId, "ce-async-exceed");
+    const countBefore = as.kernel.get(missionId)?.derivation_count;
+    const res = await asyncDelegate(handle, { rawSubject: true, authorizationDetails: recorded });
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(body.error_description).toContain("Mission authority");
+    expect(body.access_token).toBeUndefined();
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+  });
+
   it("full containment (#589): containing the WHOLE resource fails a CODE-FLOW refresh invalid_grant (authority fully contained)", async () => {
     const { missionId, missionRefreshToken } = await issueBaseMission();
     as.kernel.contain(missionId, {

@@ -129,7 +129,7 @@ export function credentialProfileVectors(
       claims: details(entry(undefined, { unknown_member: true })),
     },
     { label: "an entry with no actions", claims: details(entry(undefined, { actions: [] })) },
-    { label: "an unknown constraint", claims: details(entry({ time_window: "9-5" })) },
+    { label: "an unknown constraint", claims: details(entry({ office_hours: "9-5" })) },
     {
       label: "a malformed amount cap",
       claims: details(entry({ max_amount: { amount: "ten", currency: "USD" } })),

@@ -232,6 +232,10 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
   /** A remittance Mission's token, under its own DPoP key: a second holder. */
   let remit: IssuedMission;
   const decisions: { audience: string; permit: boolean }[] = [];
+  /** The fixture's decision recorder: the stack's one PEP observer, which a test that observes too must keep calling. */
+  const recordDecision: Parameters<DemoStack["onEnforce"]>[0] = (e) => {
+    decisions.push({ audience: e.envelope.resource.properties.audience, permit: e.decision.decision });
+  };
   const asUrl = `http://localhost:${opts.asPort}`;
 
   /** Evidence and decisions so far: a refusal at the gate leaves both unchanged. */
@@ -507,13 +511,16 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
   /**
    * @spec txn-authorization#resource-challenge, txn-authorization#challenge-redemption:
    * a fresh, unconsumed transaction token for `send_remittance_email` on
-   * `args`, under the remittance Mission's key.
+   * `args`, under `holder`'s key (the remittance Mission's by default).
    */
-  const redeemRemittanceChallenge = async (args: Record<string, unknown>): Promise<{ challenge: string; txnToken: string }> => {
+  const redeemRemittanceChallenge = async (
+    args: Record<string, unknown>,
+    holder: IssuedMission = remit,
+  ): Promise<{ challenge: string; txnToken: string }> => {
     const as = authServer();
     // 1. The gated tool over the endpoint, with the base token and the
     //    client's Accept-Txn-Challenge signal: denied, with a challenge.
-    const agent = await createHttpMediatedClient(CANONICAL_RESOURCE, remit.accessToken, remit.dpopKeys, {
+    const agent = await createHttpMediatedClient(CANONICAL_RESOURCE, holder.accessToken, holder.dpopKeys, {
       "accept-txn-challenge": "?1",
     });
     let challenge: string;
@@ -538,7 +545,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
         method: "POST",
         headers: {
           "content-type": "application/x-www-form-urlencoded",
-          dpop: await dpopProofFor(remit.dpopKeys, txnEndpoint, "POST"),
+          dpop: await dpopProofFor(holder.dpopKeys, txnEndpoint, "POST"),
         },
         body: new URLSearchParams({
           client_id: "ap-agent",
@@ -551,7 +558,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
     };
     const admitted = await postTxn({
       transaction_challenge: challenge,
-      subject_token: remit.accessToken,
+      subject_token: holder.accessToken,
       subject_token_type: AT_TYPE,
     });
     expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
@@ -589,9 +596,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
         resourcePolicyStore: { bootstrap: "development" },
         ...(opts.ordinaryTokenMinting ? { testOrdinaryTokenMinting: true } : {}),
       });
-      stack.onEnforce((e) =>
-        decisions.push({ audience: e.envelope.resource.properties.audience, permit: e.decision.decision }),
-      );
+      stack.onEnforce(recordDecision);
       issued = await issueRead();
       const claims = decodeJwt(issued.accessToken);
       if (!claims.mission) throw new Error("the AS issued no Mission-bound token");
@@ -1039,6 +1044,98 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       const record = stack.kernel.get(missionId);
       expect(record?.subject?.sub).toBe("alice");
       expect(record?.approval_basis?.consent_principal?.sub).toBe("bob");
+    },
+
+    // @spec runtime#execution-reverification (#253 acceptance): no
+    // instantaneous revocation is claimed. A Mission revoked after its permit
+    // and before the effect: the admitted wire runs to completion once, with
+    // completed Execution Evidence, because the transaction tier does not
+    // re-read Mission state after the decision (contract §4); the next
+    // decision refuses mission_inactive.
+    async runToCompletion(): Promise<void> {
+      logInAgain(stack.approverLogin);
+      const pay = await issue(["payments:invoice.read", "payments:payment.execute"], {
+        max_amount: { amount: "500.00", currency: "USD" },
+        vendors: ["acme"],
+      });
+      const payId = missionIdOf(pay.accessToken);
+      // The revocation lands inside the PEP, right after the permit and before
+      // redemption, reverification and the commit.
+      let revokedAfterPermit = false;
+      stack.onEnforce((e) => {
+        recordDecision(e);
+        if (!revokedAfterPermit && e.decision.decision && e.tool === "execute_wire_transfer" && e.token.mission?.id === payId) {
+          stack.kernel.transition(payId, "revoke");
+          revokedAfterPermit = true;
+        }
+      });
+      const { client, close } = await createHttpMediatedClient(CANONICAL_RESOURCE, pay.accessToken, pay.dpopKeys);
+      try {
+        const executed = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+        expect(revokedAfterPermit).toBe(true);
+        expect(stack.kernel.get(payId)?.termination?.reason).toBe("revoked");
+        expect(executed.ok, JSON.stringify(executed)).toBe(true);
+        expect(stack.connectors.ledgerEntries(payId)).toHaveLength(1);
+        const completed = stack.evidence
+          .forMission(payId)
+          .filter((e) => e.kind === "execution" && (e.content as { outcome?: string }).outcome === "completed");
+        expect(completed).toHaveLength(1);
+
+        const before = snapshot();
+        const next = await client.callTool("get_invoice", { invoice_id: "inv-1" });
+        expect(next.ok).toBe(false);
+        expect(next.denial_reason, JSON.stringify(next)).toBe("mission_inactive");
+        expect(decisions.slice(before.decisions)).toEqual([{ audience: CANONICAL_RESOURCE, permit: false }]);
+      } finally {
+        stack.onEnforce(recordDecision);
+        await close();
+      }
+    },
+
+    // @spec runtime-evidence#execution-evidence-object (#1104, #253
+    // acceptance): the effect commits and its completed record cannot be
+    // written. The caller is told the gap, not a refusal; the effect stands
+    // once; nothing records it completed; and the same transaction token
+    // presented again executes nothing. Settlement from the connector ledger
+    // waits on the permit and lease, so the unit witnesses carry it.
+    async emissionFailure(): Promise<void> {
+      logInAgain(stack.approverLogin);
+      const holder = await issue(["payments:invoice.read", "payments:remittance.send"], {
+        max_amount: { amount: "500.00", currency: "USD" },
+        vendors: ["acme"],
+      });
+      const holderId = missionIdOf(holder.accessToken);
+      const args = { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` };
+      const { txnToken } = await redeemRemittanceChallenge(args, holder);
+      const effects = () => stack.connectors.committedEffects(holderId);
+      const completed = () =>
+        stack.evidence
+          .forMission(holderId)
+          .filter((e) => e.kind === "execution" && (e.content as { outcome?: string }).outcome === "completed");
+      const original = stack.evidence.recordExecution.bind(stack.evidence);
+      const failing = vi.spyOn(stack.evidence, "recordExecution").mockImplementation(async (emitterId, role, input) => {
+        if (role === "executor") throw new Error("completed write failed");
+        return original(emitterId, role, input);
+      });
+      const agent = await createHttpMediatedClient(CANONICAL_RESOURCE, txnToken, holder.dpopKeys);
+      try {
+        const first = await agent.client.callTool("send_remittance_email", args);
+        expect(first, JSON.stringify(first)).toMatchObject({ ok: false, gap: "emission_failed", result: { executed: true, invoice_id: "inv-1" } });
+        expect(first.refusal_reason).toBeUndefined();
+        expect(first.denial_reason).toBeUndefined();
+        expect(effects()).toHaveLength(1);
+        expect(completed()).toHaveLength(0);
+        failing.mockRestore();
+
+        const again = await agent.client.callTool("send_remittance_email", args);
+        expect(again.ok).toBe(false);
+        expect(again.refusal_reason, JSON.stringify(again)).toBe("duplicate_suppressed");
+        expect(effects()).toHaveLength(1);
+        expect(completed()).toHaveLength(0);
+      } finally {
+        failing.mockRestore();
+        await agent.close();
+      }
     },
   };
 }
@@ -1541,6 +1638,12 @@ dLive("the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315
   it("names the Subject in the token and the Approver in the Mission record: Bob approves for Alice without openid (#253)", () => {
     live.subjectAndApprover();
   });
+  it("runs an admitted wire to completion once when the Mission is revoked after its permit, with completed Execution Evidence, and refuses the next decision mission_inactive (#253)", async () => {
+    await live.runToCompletion();
+  }, 60_000);
+  it("reports a completed record that cannot be written as an emission_failed gap, not a refusal: the effect stands once, nothing records it completed, and the same transaction token executes nothing again (#253)", async () => {
+    await live.emissionFailure();
+  }, 60_000);
 });
 
 const liveJoin = targetFixture({ live: true, asPort: 14108, ordinaryTokenMinting: true });
@@ -1685,4 +1788,90 @@ dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a 
       }
     }, 180_000);
   }
+});
+
+/**
+ * @spec runtime#idempotency (#918), #253 acceptance (contract §7): the
+ * assembled target restarted on the same store files. Tokens and Missions do
+ * not survive a restart here (keys rotate and the AS stores are per boot), so
+ * no retry under the same key crosses it; what does is the PEP's durable
+ * write-reservation store, which the second boot reopens with the first boot's
+ * record. [FGA] only.
+ */
+const RESTART_AS_PORT = 14113;
+dLive("the as-native target restarted on the same store files against a live OpenFGA (@spec runtime#idempotency, #253)", () => {
+  const BASE_ENV = { OPENFGA_HTTP_URL: API_URL, OPENFGA_PRESHARED_KEY: KEY, ...(CA ? { OPENFGA_CA_CERT: CA } : {}) };
+
+  /** One boot of the launcher on this block's AS port and the given store files. */
+  const launch = (files: { claimsFile: string; writeReservationsFile: string }) =>
+    launchAsNative({ ...asNativeLaunchOptions(BASE_ENV), asPort: RESTART_AS_PORT, ...files });
+
+  const shutdown = async (launched: Awaited<ReturnType<typeof launchAsNative>>) => {
+    await launched.close();
+    launched.stack.payments.db.close();
+    launched.stack.kernel.db.close();
+  };
+
+  /** A schedule Mission's AS-issued, DPoP-bound token for Alice, approved by Bob at the browser console. */
+  const issueSchedule = (stack: DemoStack): Promise<IssuedMission> => {
+    const as = stack.authServer;
+    if (!as) throw new Error("the as-native target runs the AS");
+    logInAgain(stack.approverLogin);
+    return issueMissionToken(
+      as.asUrl,
+      as.agentClientJwk,
+      {
+        missionIntent: JSON.stringify({
+          intent: { goal: "Schedule the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+        }),
+        authorizationDetails: JSON.stringify([
+          {
+            type: "mission_resource_access",
+            resource: CANONICAL_RESOURCE,
+            actions: ["payments:invoice.read", "payments:payment.schedule"],
+            constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+          },
+        ]),
+      },
+      as.approverConsole,
+    );
+  };
+
+  /** One schedule_payment over its own HTTP MCP session. */
+  const schedule = async (issued: IssuedMission, key: string) => {
+    const { client, close } = await createHttpMediatedClient(CANONICAL_RESOURCE, issued.accessToken, issued.dpopKeys);
+    try {
+      return await client.callTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: key });
+    } finally {
+      await close();
+    }
+  };
+
+  it("reopens the PEP's write reservations: a key scheduled before the restart is still recorded completed after it, and the restarted target schedules afresh (co-resident)", async () => {
+    const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
+    const key = `idem_${randomUUID()}`;
+
+    const first = await launch(files);
+    try {
+      const scheduled = await schedule(await issueSchedule(first.stack), key);
+      expect(scheduled.ok, JSON.stringify(scheduled)).toBe(true);
+      expect(first.stack.writeReservations.reservations().filter((r) => r.idempotencyKey === key && r.state === "completed")).toHaveLength(1);
+    } finally {
+      await shutdown(first);
+    }
+
+    const second = await launch(files);
+    try {
+      // The prior boot's record, read back from the same file.
+      const kept = second.stack.writeReservations.reservations().filter((r) => r.idempotencyKey === key);
+      expect(kept).toHaveLength(1);
+      expect(kept[0]?.state).toBe("completed");
+      expect(kept[0]?.result).toMatchObject({ scheduled: true, invoice_id: "inv-1" });
+      // The restarted target issues and schedules afresh under a new key.
+      const again = await schedule(await issueSchedule(second.stack), `idem_${randomUUID()}`);
+      expect(again.ok, JSON.stringify(again)).toBe(true);
+    } finally {
+      await shutdown(second);
+    }
+  }, 180_000);
 });

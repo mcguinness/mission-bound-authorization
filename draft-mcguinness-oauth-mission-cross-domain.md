@@ -1375,6 +1375,11 @@ is behind the Resource AS `ras.partner.example.com`, so the agent's
 next step is a cross-domain projection rather than a home-domain
 access token.
 
+In the examples in this document, the partner ERP's operation contract
+identifies `https://erp.partner.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+
 ## Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)
 
 The agent needs the partner ERP, behind the Resource AS
@@ -1506,9 +1511,10 @@ grant.
 
 The agent calls the ERP resource server (`erp.partner.example.com`)
 with that token. The resource server validates the JWT and the `cnf`
-binding and enforces the `authorization_details` whose `resource` it
-serves, permitting `invoices.read` and `journal-entries.write` up to
-a `max_amount` of 500.00 USD
+binding and enforces the `authorization_details` whose `resource`
+matches the operation target, `https://erp.partner.example.com`,
+permitting `invoices.read` and `journal-entries.write` up to a
+`max_amount` of 500.00 USD
 ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Resource Server Enforcement"). It treats the
 `mission` claim as an audit anchor; holding only this audience's
