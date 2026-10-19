@@ -17729,7 +17729,7 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority and the Resource-policy/FGA check both permit",
+     "name": "runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority, the Mission's contextual check and Resource policy all permit",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -19978,31 +19978,31 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to the Mission's contextual check, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check refuses one: the whole read refuses out_of_authority, never a narrowed result",
      "level": "endpoint",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read succeeds with exactly those two vendors' invoices",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to the Mission's contextual check, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check permits both: the read succeeds with exactly those two vendors' invoices",
      "level": "endpoint",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read denies out_of_authority, never a silently narrowed permit",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check refuses one: the whole read denies out_of_authority, never a silently narrowed permit",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read permits",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check permits both: the read permits",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
      "level": "unit",
      "surface": "resource-operation"
     },
@@ -20019,7 +20019,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> parameter_violation, #801: the entry is matched, only this vendor is excluded by its own constraint; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga, although their titles say Resource policy. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: an unconstrained read's normal form carries every vendor the payments store holds invoices for, so its parameter digest binds the read's actual targets; a change to them between decision and execution is parameter_mismatch, and the result is filtered to the bound set."
+   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> parameter_violation, #801: the entry is matched, only this vendor is excluded by its own constraint; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: an unconstrained read's normal form carries every vendor the payments store holds invoices for, so its parameter digest binds the read's actual targets; a change to them between decision and execution is parameter_mismatch, and the result is filtered to the bound set."
   },
   {
    "id": "runtime.read-binding.floor-and-no-misclassification",
@@ -20086,31 +20086,31 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to the Mission's contextual check, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check refuses one: the whole read refuses out_of_authority, never a narrowed result",
      "level": "endpoint",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read succeeds with exactly those two vendors' invoices",
+     "name": "finding 3: a multi-vendor list_invoices names every returned vendor to the Mission's contextual check, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check permits both: the read succeeds with exactly those two vendors' invoices",
      "level": "endpoint",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read denies out_of_authority, never a silently narrowed permit",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check refuses one: the whole read denies out_of_authority, never a silently narrowed permit",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy permits both: the read permits",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > Mission authority includes two vendors; the Mission's contextual check permits both: the read permits",
      "level": "unit",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
-     "name": "a bound bulk read's Resource-policy check covers every returned vendor, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
+     "name": "the Mission's contextual check covers every vendor a bound bulk read returns, not just one representative (@spec read-binding) > without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check",
      "level": "unit",
      "surface": "resource-operation"
     },
@@ -20127,7 +20127,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga, although their titles say Resource policy. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: the unconstrained bulk form is bound to the vendors the store holds invoices for, named as targets and digested, not to a placeholder."
+   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: the unconstrained bulk form is bound to the vendors the store holds invoices for, named as targets and digested, not to a placeholder."
   },
   {
    "id": "runtime.metering.unmetered-bound-refusal",
@@ -27030,7 +27030,7 @@
     },
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a vendor constraint that excludes the target records the key it evaluated and never reaches resource policy",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > a vendor constraint that excludes the target records the key it evaluated and never reaches the Mission's contextual check",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -34704,7 +34704,7 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-origin-principal.test.ts",
-     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > resource policy independently narrows a Mission action covered by fresh entitlement",
+     "name": "evaluateInner cross-domain Origin Principal dual-axis (#539 stage A) > the Mission's contextual check independently narrows a Mission action covered by fresh entitlement",
      "level": "unit",
      "surface": "decision-request"
     }
