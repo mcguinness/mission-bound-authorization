@@ -502,6 +502,8 @@ describe("deferred Mission approval front channel (@spec deferred-approval#front
     const noHint = await redeem(code, keys, { params: { completion_mode: "" } });
     expect(noHint.status).toBe(400);
     expect(noHint.body.error).toBe("invalid_request");
+    // The code is pending-request state: no redemption of it yields a token.
+    expect(noHint.body).not.toHaveProperty("access_token");
     // Wrong PKCE verifier, wrong redirect URI, another client: refused.
     const wrongVerifier = await redeem(code, keys, { params: { code_verifier: "x".repeat(50) } });
     expect(wrongVerifier.body.error).toBe("invalid_grant");
