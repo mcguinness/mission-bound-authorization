@@ -1119,13 +1119,12 @@ Table of Contents
    evaluation_id in context.prior_evaluation_id, so the PDP continues
    the same metered activity rather than opening a new reservation.
 
-   The PDP MUST verify that the renewal's Mission, subject, action,
-   operation target and audience match the evaluation named by
-   prior_evaluation_id.  A deployment sizes lease intervals to amortize
-   renewals: an interval materially shorter than the action class's
-   staleness bound adds decision load without tightening the revocation
-   cutoff.  This exchange requires one request member and one evidence
-   member:
+   The PDP MUST verify that the renewal's Mission, subject, action, and
+   audience match the evaluation named by prior_evaluation_id.  A
+   deployment sizes lease intervals to amortize renewals: an interval
+   materially shorter than the action class's staleness bound adds
+   decision load without tightening the revocation cutoff.  This
+   exchange requires one request member and one evidence member:
 
    context.prior_evaluation_id:  OPTIONAL.  A string.  Present on a
       duration-lease renewal request, carrying the evaluation_id of the
@@ -1351,6 +1350,12 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-consent-
               evidence.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -1400,12 +1405,6 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
 
-   [I-D.draft-mcguinness-oauth-mission-resource-access]
-              McGuinness, K., "Mission Resource Access Profile for OAuth
-              2.0", 2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-resource-
-              access.html>.
-
    [I-D.draft-mcguinness-oauth-mission-template]
               McGuinness, K., "Mission Template for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -1420,9 +1419,7 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
-   *  Duration-Lease Renewal: a renewal continues the lease only when
-      its operation target, as well as its Mission, subject, action and
-      audience, matches the renewed evaluation's; the example carries
+   *  Duration-Lease Renewal: the renewal example carries
       resource.properties.operation_target (#1276).
 
    *  The exclusive selector matches a consequential action whose
