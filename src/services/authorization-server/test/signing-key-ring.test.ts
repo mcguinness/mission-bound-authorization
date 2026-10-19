@@ -289,6 +289,7 @@ describe("the signing key ring file (@spec #831 slice 1)", () => {
     expect(() => signingKeysFromEnv({})).toThrow(/choose the signing keys: MISSION_KEY_RING=<path>/);
     expect(() => signingKeysFromEnv({ MISSION_EPHEMERAL_KEYS: "true" })).toThrow(/choose the signing keys/);
     expect(() => signingKeysFromEnv({ MISSION_KEY_RING: "/r.json", MISSION_EPHEMERAL_KEYS: "1" })).toThrow(/not both/);
+    expect(() => signingKeysFromEnv({ MISSION_KEY_RING: "var/keys/ring.json" })).toThrow(/must be an absolute path, not var\/keys\/ring\.json/);
   });
 });
 

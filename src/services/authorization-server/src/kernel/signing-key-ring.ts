@@ -25,7 +25,7 @@
  */
 
 import { closeSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync, writeSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import { exportJWK, generateKeyPair, importJWK, type JWK } from "jose";
 
 /** The AS signing roles, in `TOPOLOGY.keys` names. */
@@ -237,14 +237,19 @@ export type SigningKeySource = { ring: string } | { ephemeral: true };
 
 /**
  * A deployment entry point's key source, from its environment: a ring at
- * `MISSION_KEY_RING`, or ephemeral keys when `MISSION_EPHEMERAL_KEYS=1`.
- * Neither, or both, refuses: a deployment says which it runs.
+ * `MISSION_KEY_RING` (an absolute path, since launchers do not run in the
+ * directory they were started from), or ephemeral keys when
+ * `MISSION_EPHEMERAL_KEYS=1`. Neither, or both, refuses: a deployment says
+ * which it runs.
  */
-export function signingKeysFromEnv(env: Record<string, string | undefined>): SigningKeySource {
+export function signingKeysFromEnv(env: Readonly<Record<string, string | undefined>>): SigningKeySource {
   const ring = env.MISSION_KEY_RING?.trim();
   const ephemeral = env.MISSION_EPHEMERAL_KEYS === "1";
   if (ring && ephemeral) {
     throw new SigningKeyRingError("set MISSION_KEY_RING or MISSION_EPHEMERAL_KEYS=1, not both");
+  }
+  if (ring && !isAbsolute(ring)) {
+    throw new SigningKeyRingError(`MISSION_KEY_RING must be an absolute path, not ${ring}`);
   }
   if (ring) return { ring };
   if (ephemeral) return { ephemeral: true };
