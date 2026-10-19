@@ -5972,7 +5972,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "Partial (#916, D415). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry or a concurrent decision by another Approver, Subject or client is refused before the grant is touched: a synchronous per-interaction reservation, taken before the asynchronous grant save, so the Mission's Approver and the grant's account always agree); the commit revalidates the prepared authority source (same root and provenance, every gate) and a withdrawn source refuses, and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
+   "notes": "Partial (#916, D415; #916 closed, D461). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry or a concurrent decision by another Approver, Subject or client is refused before the grant is touched: a synchronous per-interaction reservation, taken before the asynchronous grant save, so the Mission's Approver and the grant's account always agree); the commit revalidates the prepared authority source (same root and provenance, every gate) and a withdrawn source refuses, and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. A second residual is a delivery gap: a code issued whose redirect response is lost, which atomic record/code issuance would not remove, bounded by the code's 60 s lifetime clamped to the Mission's expires_at (provider-integration-port.md section 3.4; code reading, no test). The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
   },
   {
    "id": "core.approval-event.every-mission-own-event",
@@ -8101,7 +8101,7 @@
     "normative": "each redemption re-checks the validity of the credential the designation was derived from and of its grant, the Mission's state, the delegation policy and the Mission's current authority, and is counted as a derivation; a revoked source grant or family, or a Mission that is not active, refuses a redemption even after an earlier redemption of the same designation succeeded"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
@@ -8138,9 +8138,21 @@
      "name": "lifetimes are absolute across the request (@spec mission#designation, #1279 review) > a redemption whose designation expires while the exchange awaits its checks is refused invalid_request, counting nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > redemption re-reads the Mission's current authority: a containment after the designation narrows the delegated token, and one leaving nothing refuses invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > redemption re-evaluates eligibility: a delegate whose AS-asserted profile is withdrawn after the designation is refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers. Witnessed: the source grant or family's validity (skipping the liveness check fails two witnesses), the Mission's state, and a separate count per redemption. Partial: the delegation policy and the Mission's current authority are evaluated at every redemption, but no witness changes either between a designation and its redemption. #1279 review: an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses the exchanges (requiring the row alone fails that witness); the designation's own expiry is rechecked after every awaited check."
+   "notes": "#869 (D449): proven by disabling the code it covers. Every clause is witnessed at a redemption: the source grant or family's validity (an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses; requiring the row alone fails that witness), the Mission's state, the designation's own expiry, the delegation policy (a delegate whose AS-asserted profile is withdrawn after the designation is refused; skipping the redemption's eligibility gate fails it), the Mission's current authority (a containment after the designation narrows the result, or refuses when nothing is left; skipping the projection through current authority fails it), and a separate count per redemption, none for a refusal (#869 acceptance review)."
   },
   {
    "id": "core.delegation-constraints.designation-adds-no-delegate",
@@ -8246,7 +8258,7 @@
     "normative": "a designation's authorization_details are a subset of the presented token's, and its mission claim equals the presented token's"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
@@ -8259,9 +8271,15 @@
      "name": "who presents which proof (@spec mission#designation, mission#delegation) > a designation carries only entries the named client may be delegated: a client no entry admits is refused invalid_target",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > a credential narrower than its Mission: neither the designation nor the delegated token regains the omitted action",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers: carrying the presented authority unfiltered fails the eligibility witness. Partial: the presented token's authority equals the Mission's here, so substituting the Mission's set for the presented token's would not be caught."
+   "notes": "#869 (D449): proven by disabling the code it covers. A credential narrower than its Mission (an async-family token issued with one of the Mission's two actions) is designated and redeemed, and neither result regains the omitted action; substituting the Mission's set for the presented credential's at the designation, or for the designation's at the redemption, fails that witness. Carrying the presented authority unfiltered fails the eligibility witness (#869 acceptance review)."
   },
   {
    "id": "core.designation.audience-names-client",

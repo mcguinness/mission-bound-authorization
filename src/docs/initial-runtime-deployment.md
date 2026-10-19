@@ -71,7 +71,8 @@ target: the PEP and the PDP each enforce the credential's own authority
 (D411). Introspection reads a token with the resource's own Mission
 access-token profile reader (D402), for paths that consume it; this target
 validates tokens and DPoP locally and does not.
-The PDP enforces Resource policy, but #828's acceptance is still open.
+Resource policy is met for this target too: #828 closed with every
+acceptance item witnessed (D436).
 
 ## 2. Dimension contract
 
@@ -81,7 +82,7 @@ The PDP enforces Resource policy, but #828's acceptance is still open.
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation over HTTP MCP, with a DPoP proof verified on every request, and the AuthZEN request (§4, §5). The in-process mediated channel is outside this target (D315). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, and the shared demo mounts a MAS join route there; the target mounts none, and a configuration that would mount one fails startup: `the as-native target excludes the MAS join route at startup (D315) > fails startup, before connecting to anything, when the payments resource is configured governed` | HTTP entry point only (D315) | #818 owns MAS; #956 Q2 its declaration in the shared demo |
 | Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1192`). Arguments outside a tool's served schema are refused `invalid_request` before any PDP call (§3) | Partial | None open: `hold_transfer`'s control is implemented (§3); #1106 is closed |
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:874-881`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
-| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP and the PDP: the PEP refuses an action outside the verified token's own `authorization_details` before the PDP, and carries that authority to the PDP, which enforces it as its own bound (D341); the token-authority gate is met (D411). Independent Resource policy is enforced by the PDP over stored OpenFGA entitlements; its acceptance is open (§5) | Token authority met (D411); Resource policy required, not met: blocks acceptance | Token authority: none (D411); introspection validates as the resource does (D402). Resource policy: #828 |
+| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP and the PDP: the PEP refuses an action outside the verified token's own `authorization_details` before the PDP, and carries that authority to the PDP, which enforces it as its own bound (D341); the token-authority gate is met (D411). Independent Resource policy is enforced by the PDP over stored OpenFGA entitlements, for the subject and the authenticated client within the vendor's tenant; it is met for this target (#828 closed, D436; §5) | Token authority met (D411); Resource policy met (D436) | Token authority: none (D411); introspection validates as the resource does (D402). Resource policy: none (#828 closed, D436); the disclosures in §5 remain (#1251) |
 | Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | none: the running reconciler settles a reported emission gap from the ledger (§7) |
 | Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain and the PEP write reservations are durable files; every other store is in memory (§7). The declared reconciler runs in the launched PEP process; a restarted process cannot reconcile a prior one's claims, a stated bound (§7) | Partial | #250, #831 |
 | Claims | Per-action limits only; execution and transaction handling for applicable operations; no aggregate cap, compromise containment or unattended prohibited-class exception | §8 | Partial | §8 |
@@ -204,8 +205,9 @@ profile's run-to-completion rule;
 
 ## 5. Policy conjunction
 
-All three parts are required. Token authority and independent Resource
-policy are not met; §10 makes each an acceptance gate.
+All three parts are required, and §10 makes each an acceptance gate. Token
+authority (D411) and independent Resource policy (#828 closed, D436) are met
+for this target.
 
 **Current effective Mission authority** (PDP, `evaluate.ts`): view consistency
 (`view_inconsistent`), state (`mission_inactive`), the entry matching
@@ -256,7 +258,8 @@ profile reader and the same negative vectors before projecting its authority
 for paths that consume it; this target's PEP validates tokens and DPoP
 locally and reads Mission state from the committed kernel.
 
-**Independently administered Resource policy:** partial; #828. The decision
+**Independently administered Resource policy:** met for this target
+(#828 closed, D436). The decision
 point binds a `ResourcePolicy` that `evaluate()` requires (it throws without
 one, and `createDecisionPoint` refuses construction) and asks after every
 Mission-authority gate, with the verified subject and its issuer, the
@@ -304,9 +307,10 @@ refuse, and restoring each permits:
 [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > the client and the tenant are policy dimensions (D429): another client, a revoked client entitlement, and the same subject outside the vendor's tenant each deny resource_policy; restoring each permits`,
 [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read is refused resource_policy with no effect once the administrator revokes only its client's entitlement on acme, the subject's unchanged, and permitted once it is restored (co-resident) (D429)` and
 [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read is refused resource_policy with no effect once the administrator revokes only its client's entitlement on acme, the subject's unchanged, and permitted once it is restored (remote) (D429)`.
-Remaining under #828: the live witnesses run only in CI; a vendor the
-store does not hold keeps `lookup_vendor`'s server target (D324), which a
-vendor constraint or the policy refuses.
+Disclosed, not acceptance gaps (#828 closed, D436): the live witnesses run
+only in CI; a vendor the store does not hold keeps `lookup_vendor`'s server
+target (D324), which a vendor constraint or the policy refuses (#1251
+proposes refusing it before any decision).
 
 Deployment-administered gates that do exist: the action-bound approval for
 `payments:remittance.send` (§3), the action-to-relation map (`out_of_authority`,
@@ -365,11 +369,11 @@ unsupported obligation is refused or its claim excluded.
 
 | Action path | Claimed | Not claimed | Residuals and owners |
 |---|---|---|---|
-| Reads (`list_invoices`, `get_invoice`, `lookup_vendor`, `check_transfer`) | per-call decision on current Mission authority and state; per-action `vendors` | Execution Evidence on success | #828 (required, §1) |
+| Reads (`list_invoices`, `get_invoice`, `lookup_vendor`, `check_transfer`) | per-call decision on current Mission authority and state; per-action `vendors` | Execution Evidence on success | none: Resource policy (#828) is met (D436) |
 | Keyed writes (`schedule_payment`, `cancel_scheduled_payment`) | per-action `max_amount` and `vendors`; PEP-reserved idempotency with a durable record, swept by the declared reconciler | resolving a `reserved` row: no tool produces one, and the reconciler escalates one without executing it | none |
 | Prepare (`hold_transfer`) | per-call decision; phase binding; single-use permit redeemed once in the PEP's durable store | idempotency across separately authorized holds; any stored effect (the hold is a stub) | none: single-use enforcement, not a durable business hold (D317) |
 | Transaction tier (`execute_wire_transfer`, `send_remittance_email`) | single-use permit, execution lease, PDP-held Exact claim, digest and phase binding, Execution Evidence; action-bound approval for remittance | restart recovery beyond the claim store, a stated bound (§7); transaction-grade resource witnesses; a failed commit predicate that retains the permit | #250, #817 |
-| Every path | per-action limits only | any aggregate cap; compromise containment; unattended prohibited-class exception | excluded by D284; token authority (#825, met for this target, D411) and Resource policy (#828) are required, not excluded (§1) |
+| Every path | per-action limits only | any aggregate cap; compromise containment; unattended prohibited-class exception | excluded by D284; token authority (#825, D411) and Resource policy (#828, D436), both met for this target, are required, not excluded (§1) |
 
 **High-consequence claims hold on the HTTP entry point only.** The HTTP
 transport verifies a DPoP proof of possession; the in-process mediated
@@ -386,11 +390,12 @@ That test uses another member; no test names `max_budget`.
 
 **Unmet obligations by owner:**
 
-- Blocking acceptance: #828 (Resource policy). Token authority is met for this target (D411).
+- Blocking high-risk approval acceptance: a deployment login integration that supplies the Approver's achieved context; the demo console's login is simulated (D438). Token authority (D411) and Resource policy (#828 closed, D436) are met for this target.
 - Acceptance-pack prerequisites: #1105 (`pnpm as-native` still builds the cross-domain objects in process; its AS capability set is D332's, §2).
 - Separated deployment only: #1101 (state source under D293).
-- Also open: #826 (Approver versus Subject, implemented by #1074 (D306) and #1229 (D424); the approval-authentication floor (D425) this target's high-risk approvals meet; awaiting acceptance), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
+- Also open: #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue; full approval record/code atomicity), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
 - #917 and #918 are closed as implemented (D245, D247); their leftovers are resolved by #1103 and #1080.
+- #826 is closed (D438): Approver and Subject stay separate identities, and the published approval-authentication floor (D425) is enforced. #916 is closed (D461): the approval decision's ordering and retry safety are accepted, and full record/code atomicity stays #250's.
 
 ## 9. Pinned adoption closure
 
@@ -455,20 +460,22 @@ drives an AS-issued Mission-bound token with a DPoP proof over that endpoint
 through `mcp-payments` and the real PDP: [FGA]
 `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > carries the AS-issued Mission-bound token with a valid DPoP proof through mcp-payments and the PDP to one permitted read`.
 
-The pack cannot pass while #828 is unmet (§1); the token-authority gate is met (D411).
+Both required gates are met for this target: token authority (D411) and
+Resource policy (#828, D436). High-risk approval acceptance still waits on a
+deployment login integration (D438).
 
 | Vector | Existing witness | Gap |
 |---|---|---|
 | Valid request | [FGA] `M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded` | not on the assembled path |
 | Narrowed token | at the PEP: `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > narrows by vendor independently of the Mission`; at the PDP: `the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > holds the credential's vendor constraint for one object and for every member of a collection` and `Remote Decision Channel (@spec runtime#decision-channel) > enforces the credential bound at the remote PDP: an allowing Mission and policy never override a narrower credential (@spec runtime#input-authority, #825 PR 2b)` | not on the assembled path |
-| Independent policy revocation | [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (co-resident)` and `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (remote)` | none for revocation on the assembled path; #828 stays open for client and tenant policy (D426), required, blocks acceptance |
+| Independent policy revocation | [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (co-resident)` and `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read permits; the administrator's revocation of only Alice's acme entitlement refuses the next read resource_policy with no effect; restoring it permits; and after a restart attached to the same store a revocation made before it still refuses until restored (remote)` | none for revocation on the assembled path; client and tenant policy are witnessed too (D434), and #828 is closed (D436) |
 | Stale or non-active Mission at admission and at each fresh commit-phase decision | the §4 refusal table; `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare` | not on the assembled path |
 | Run to completion after an earlier valid permit | none | no test yet that an admitted action completes only inside its permit and lease bounds and that the next decision refuses; no instantaneous revocation is implied (§4) |
 | Parameter digest mismatch | [FGA] `M4 core enforcement tier > scenario 3: TOCTOU -- invoice mutated between decision and execute -> parameter_mismatch refusal` | |
 | Permit replay | [FGA] `M5 transaction-assurance tier > the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands` | |
 | Phase mismatch | `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting check_transfer's preflight permit` | |
 | Failed commit predicate with the permit retained | none | applies only to a connector that claims a commit-point predicate; none does at this revision (#817), so the guarantee stays excluded (§8) |
-| Bob for Alice, with and without `openid` | `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject` and `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves for another principal without openid: the token and introspection carry the Subject, the record the Approver, and the provider account and session the Approver` | not on the assembled path; #826 awaits implementation acceptance |
+| Bob for Alice, with and without `openid` | `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject` and `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves for another principal without openid: the token and introspection carry the Subject, the record the Approver, and the provider account and session the Approver` | not on the assembled path; #826 is closed (D438) |
 | High-risk approval below the published floor | `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority approved headlessly, even when the approval service's registration claims mfa` and `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority, with no client request, from a browser Approver whose achieved acr the floor does not accept: no Mission, Grant, code or Subject session` | |
 | Revoke during issuance | none on this surface | #250, #873 |
 | Restart and uncertain recovery | the unit-level witnesses in §7 | no assembled restart test; a prior process's unsettled claims close indeterminate with an operator alert, a stated bound (§7) |
@@ -569,8 +576,8 @@ is #253 Sketch step 1. The runtime integration port (step 2) is
 the overlay's obligations to their hooks in the port's eight columns. Next:
 
 1. **Acceptance pack (step 3):** `pnpm as-native` (#1105) and the vectors of
-   §10, after the required enforcement gap #828 is resolved (the
-   token-authority gate is met, D411).
+   §10, now that both required gates are met (token authority, D411;
+   Resource policy, D436).
 2. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
    independently and separately pinned.
 

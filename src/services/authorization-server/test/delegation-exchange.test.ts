@@ -148,7 +148,10 @@ function storeCookies(res: Response, jar: Map<string, string>): void {
 const cookieHeader = (jar: Map<string, string>) => [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
 
 /** PAR, approval and code exchange as ap-agent: an active Mission and its access token. */
-async function baseMission(h: Harness, authority: unknown[] = [delegable()]): Promise<{ missionId: string; accessToken: string }> {
+async function baseMission(
+  h: Harness,
+  authority: unknown[] = [delegable()],
+): Promise<{ missionId: string; accessToken: string; refreshToken: string }> {
   const jar = new Map<string, string>();
   const verifier = "delegation-exchange-verifier-0123456789-0123456789-01";
   const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))).toString("base64url");
@@ -198,7 +201,11 @@ async function baseMission(h: Harness, authority: unknown[] = [delegable()]): Pr
   });
   expect(tok.status, JSON.stringify(tok.body)).toBe(200);
   const accessToken = tok.body.access_token as string;
-  return { missionId: (decodeJwt(accessToken) as { mission: { id: string } }).mission.id, accessToken };
+  return {
+    missionId: (decodeJwt(accessToken) as { mission: { id: string } }).mission.id,
+    accessToken,
+    refreshToken: tok.body.refresh_token as string,
+  };
 }
 
 /** A designation: `client`, proving `keys`, names `designee` for the presented token. */
@@ -607,6 +614,98 @@ describe("who presents which proof (@spec mission#designation, mission#delegatio
     });
     expect(family.status).toBe(400);
     expect(family.body.error).toBe("invalid_request");
+  });
+});
+
+const actionsOf = (jwt: string): string[] =>
+  ((decodeJwt(jwt) as { authorization_details: Body[] }).authorization_details.flatMap((e) => e.actions as string[])).sort();
+
+/** A Mission whose single delegable entry grants two read actions. */
+const broadReads = () => ({
+  ...delegable(),
+  actions: ["payments:invoice.list", "payments:invoice.read"],
+  constraints: { vendors: ["acme"] },
+});
+
+/** Narrow the Mission's containment by removing `actions` on the payments resource (an authoritative narrowing). */
+function contain(h: Harness, missionId: string, actions: string[]): void {
+  h.as.kernel.contain(missionId, {
+    event: { type: "test.narrowing", source: "delegation-exchange.test", observed_at: new Date().toISOString(), event_id: crypto.randomUUID() },
+    remove: [{ resource: RESOURCE, actions }],
+  });
+}
+
+describe("authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance)", () => {
+  it("a credential narrower than its Mission: neither the designation nor the delegated token regains the omitted action", async () => {
+    const { missionId, accessToken } = await baseMission(on, [broadReads()]);
+    const recorded = (on.as.kernel.get(missionId)?.authority_set as Body[])[0] as Body;
+    expect((recorded.actions as string[]).sort()).toEqual(["payments:invoice.list", "payments:invoice.read"]);
+    // The issuer narrows the credential at the async-delegation exchange: a
+    // family token carrying one of the Mission's two actions.
+    const agent = dpop.get("ap-agent") as Keys;
+    const handle = await designate(on, accessToken, "ap-agent");
+    expect(handle.status, JSON.stringify(handle.body)).toBe(200);
+    const narrow = await token(on, "ap-agent", agent, {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      request_refresh_token: "true",
+      subject_token: handle.body.access_token as string,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      resource: RESOURCE,
+      creation_request_id: crypto.randomUUID(),
+      authorization_details: JSON.stringify([{ ...recorded, actions: ["payments:invoice.read"] }]),
+    });
+    expect(narrow.status, JSON.stringify(narrow.body)).toBe(200);
+    const credential = narrow.body.access_token as string;
+    expect(actionsOf(credential)).toEqual(["payments:invoice.read"]);
+
+    const designation = await designate(on, credential, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect(actionsOf(designation.body.access_token as string)).toEqual(["payments:invoice.read"]);
+    const delegated = await redeem(on, designation.body.access_token as string);
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect(actionsOf(delegated.body.access_token as string)).toEqual(["payments:invoice.read"]);
+  });
+
+  it("redemption re-reads the Mission's current authority: a containment after the designation narrows the delegated token, and one leaving nothing refuses invalid_target, counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on, [broadReads()]);
+    const designation = (await designate(on, accessToken, SUBAGENT)).body.access_token as string;
+    expect(actionsOf(designation)).toEqual(["payments:invoice.list", "payments:invoice.read"]);
+    // Control: unchanged, the redemption carries both.
+    const control = await redeem(on, designation);
+    expect(control.status, JSON.stringify(control.body)).toBe(200);
+    expect(actionsOf(control.body.access_token as string)).toEqual(["payments:invoice.list", "payments:invoice.read"]);
+
+    contain(on, missionId, ["payments:invoice.list"]);
+    const narrowed = await redeem(on, designation);
+    expect(narrowed.status, JSON.stringify(narrowed.body)).toBe(200);
+    expect(actionsOf(narrowed.body.access_token as string)).toEqual(["payments:invoice.read"]);
+
+    contain(on, missionId, ["payments:invoice.read"]);
+    const before = derivations(on, missionId);
+    const refused = await redeem(on, designation);
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toBe("invalid_target");
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
+  it("redemption re-evaluates eligibility: a delegate whose AS-asserted profile is withdrawn after the designation is refused invalid_target, counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = (await designate(on, accessToken, SUBAGENT)).body.access_token as string;
+    // Control: while eligible, the redemption succeeds.
+    expect((await redeem(on, designation)).status).toBe(200);
+
+    // The AS's actor-profile registry no longer asserts `ai_agent` for the sub-agent.
+    const profile = on.as.kernel.actorProfile.bind(on.as.kernel);
+    const spy = vi.spyOn(on.as.kernel, "actorProfile").mockImplementation((sub: string) => (sub === SUBAGENT ? undefined : profile(sub)));
+    try {
+      const before = derivations(on, missionId);
+      const refused = await redeem(on, designation);
+      expect(refused.status).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      expect(derivations(on, missionId)).toBe(before);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 
