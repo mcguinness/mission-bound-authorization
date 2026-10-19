@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-19T04:51:13Z
-Source repository commit: 073c5f9dcbfcc8bb361b31680ce7423e8fb33b04
+Generated: 2026-10-19T17:55:48Z
+Source repository commit: b8c407746dc71ccad446aabf0b2dfe3ecedadee9
 Member count: 9
 
 Reading order:
@@ -1340,8 +1340,8 @@ Table of Contents
 
 7.1.  Propose
 
-   Question:  How does a user's request become a candidate approved
-      task?
+   Question:  How does a user request or upstream trigger become a
+      candidate approved task?
 
    Boundary:  The client side, in OAuth.
 
@@ -2141,7 +2141,7 @@ Table of Contents
    configured mapping keyed on structured Intent members and narrows
    those.  The prose members (goal, task_bounds) never change what is
    derived; they bound authority through disclosure, since the Approver
-   refuses authority the words do not support.  Translating a user's
+   refuses authority the words do not support.  Translating a request's
    words into structure is the shaper's job, before admission and
    outside the trust boundary ([I-D.draft-mcguinness-mission-shaping]).
 
@@ -3938,30 +3938,36 @@ Table of Contents
 12.5.  The Standing-Agent Pattern
 
    The *standing-agent pattern* governs the agent whose work never ends.
-   The agent stands; the authority cycles.  The standing thing is a
-   charter: a Mission with a consented authority ceiling and drawdown
-   policy ([I-D.draft-mcguinness-oauth-mission-progressive],
-   experimental).  The working thing is the bounded Mission each unit of
-   work draws under the charter, as an in-ceiling successor or a policy-
-   approved Child Mission
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  Each unit
-   Mission expires and discharges as its unit completes
-   ([I-D.draft-mcguinness-oauth-mission-status],
-   [I-D.draft-mcguinness-oauth-mission-discharge]).
+   The agent stands; the authority cycles: each unit of work runs under
+   its own bounded Mission, which expires and discharges as its unit
+   completes ([I-D.draft-mcguinness-oauth-mission-status],
+   [I-D.draft-mcguinness-oauth-mission-discharge]).  The pattern has two
+   paths:
 
-   The progressive profile's prohibited set keeps the high-consequence
-   classes on a fresh human approval inside the ceiling.  Its Ceiling
-   Review bounds the chain in time with an evidence-rendering renewal.
+   *  *A charter with workers.* The charter is a Mission approved once
+      whose delegation policy admits policy-approved Child Missions
+      (policy_drawdown,
+      [I-D.draft-mcguinness-oauth-mission-child-delegation]).  Each unit
+      is a Child Mission for a distinct worker client: the parent never
+      holds child tokens, so a unit's work runs under its worker's own
+      credentials.
 
-   Without the progressive profile, the same pattern runs as ordinary,
-   freshly approved unit Missions with deferred approval
-   ([I-D.draft-mcguinness-oauth-mission-approval]) absorbing the volume:
-   the experimental profile changes the unit economics, not the
-   governance shape.  A single agent can also propose each unit Mission
-   itself and have a policy approve it under a policy version a human
-   approved (governed_policy,
-   [I-D.draft-mcguinness-mission-approval-governance]), resolving the
-   pending request with no reviewer.
+   *  *One agent doing each unit itself.* The agent proposes each unit
+      Mission, and a policy version a human approved activates it,
+      resolving the pending request with no reviewer (governed_policy,
+      [I-D.draft-mcguinness-mission-approval-governance]).  The
+      experimental Template profile
+      ([I-D.draft-mcguinness-oauth-mission-template]) instead dispatches
+      each unit from a template consented once, and the experimental
+      Progressive profile
+      ([I-D.draft-mcguinness-oauth-mission-progressive]) draws each as
+      an in-ceiling successor under a consented ceiling; its prohibited
+      set keeps the high-consequence classes on a fresh human approval,
+      and its Ceiling Review bounds the chain in time.
+
+   Without either path, the units run as ordinary, freshly approved
+   Missions, with deferred approval
+   ([I-D.draft-mcguinness-oauth-mission-approval]) absorbing the volume.
 
 12.6.  The Mission Deployment Profile
 
@@ -4419,6 +4425,11 @@ Table of Contents
               OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
               bound-authorization/draft-mcguinness-oauth-mission-
               submission-evidence.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-template]
+              McGuinness, K., "Mission Template for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-template.html>.
 
    [I-D.draft-mcguinness-oauth-mission-transaction-authorization]
               McGuinness, K., "Mission Transaction Authorization Profile
@@ -5234,9 +5245,10 @@ Appendix G.  Mission Document Map
    | Document                           | Role                        |
    +====================================+=============================+
    | mission-shaping                    | Client-side shaping of a    |
-   |                                    | user's request into a       |
-   |                                    | candidate Mission Intent,   |
-   |                                    | as untrusted proposal.      |
+   |                                    | user request or upstream    |
+   |                                    | trigger into a candidate    |
+   |                                    | Mission Intent, as          |
+   |                                    | untrusted proposal.         |
    +------------------------------------+-----------------------------+
    | oauth-mission-submission-evidence  | The Intent Submission       |
    |                                    | Evidence framework: entry   |
@@ -5526,6 +5538,11 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Standing-Agent Pattern states its two paths: a charter whose
+      policy-approved Child Missions go to distinct worker clients, and
+      one agent doing each unit itself under governed_policy or the
+      experimental Template or Progressive profiles (#1196).
 
    *  The conventional-stack table cites the OAuth binding's sections by
       their current titles, "Relationship to Existing OAuth Objects" and
@@ -19987,7 +20004,11 @@ Table of Contents
       configuration, legal holds, service invariants, and risk policy;
 
    *  the runtime enforcement evidence fields and privacy treatment for
-      decision and refusal records; and
+      decision and refusal records;
+
+   *  the identifier the resource records with each executed effect,
+      which outcome reconciliation uses to attribute the effect to its
+      action (Section 11); and
 
    *  a profile identifier and version, so a change to any of the above
       is detectable and two independent implementations can name the
@@ -21021,21 +21042,27 @@ Table of Contents
    the deadline, determines the result: an outcome the component cannot
    establish stays undetermined-outcome, is escalated under the declared
    alerting obligation, and is never synthesized into a terminal result.
-   Reconciliation survives the Mission: once the Mission is non-active,
-   it MAY record the outcome of work already initiated and MUST NOT
-   admit a new effect under that Mission (an action already executing
-   follows the run-to-completion rule of Section 9.4, unchanged).
-   Consumed and reserved decision identifiers and idempotency claims
-   persist across Mission lifecycle transitions for at least the
-   reconciliation window and any declared tombstone horizon
-   (Section 9.3): termination does not erase them, so a post-termination
-   retry resolves against the recorded claim rather than executing
-   again.  An unresolved claim never becomes reusable through time
-   alone: when the window closes on an undetermined outcome, the claim
-   converts to a non-reusable indeterminate tombstone, retained for at
-   least the declared idempotency horizon and released only by an
-   evidence-recorded operational resolution, never by expiry into a
-   fresh claim.
+   Matching attributes an effect to its action: the component MUST NOT
+   record an outcome from resource state that the resource does not
+   attribute to the action through an identifier recorded with the
+   effect (the permit or evaluation identifier, the idempotency claim,
+   or a provider operation identifier returned for the request).  State
+   alone, such as an invoice now shown as paid, can have another cause
+   and leaves the outcome undetermined.  Reconciliation survives the
+   Mission: once the Mission is non-active, it MAY record the outcome of
+   work already initiated and MUST NOT admit a new effect under that
+   Mission (an action already executing follows the run-to-completion
+   rule of Section 9.4, unchanged).  Consumed and reserved decision
+   identifiers and idempotency claims persist across Mission lifecycle
+   transitions for at least the reconciliation window and any declared
+   tombstone horizon (Section 9.3): termination does not erase them, so
+   a post-termination retry resolves against the recorded claim rather
+   than executing again.  An unresolved claim never becomes reusable
+   through time alone: when the window closes on an undetermined
+   outcome, the claim converts to a non-reusable indeterminate
+   tombstone, retained for at least the declared idempotency horizon and
+   released only by an evidence-recorded operational resolution, never
+   by expiry into a fresh claim.
 
 11.2.  Mission Receipt
 
@@ -22193,6 +22220,11 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Execution-Outcome Evidence: reconciliation records an outcome only
+      from an effect the resource attributes to the action through an
+      identifier recorded with it, never from resource state alone; the
+      Resource Server runtime profile names that identifier (#1271).
 
    *  Mission Binding Establishment: names the AAuth realization of a
       credential-carried Mission reference beside the OAuth one, limited

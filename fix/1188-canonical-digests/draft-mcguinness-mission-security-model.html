@@ -2293,34 +2293,109 @@ stops or resumes Missions fleet-wide and learns Mission existence; it
 cannot mint or widen authority.<a href="#section-9-3.46.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.47">Audit tampered, dropped, or reordered:</dt>
+<dt id="section-9-3.47">Agent's own credential as the Subject's only authentication root:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.48">
-          <p id="section-9-3.48.1">Addressed by transparency: append-only log, inclusion receipts,
+          <p id="section-9-3.48.1">Addressed by keeping approval off that credential: the Approver is
+established from the authenticated approval surface, never from
+client input (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), on a surface
+the agent cannot invoke (the self-approval move above), and an
+activation the credential requests under <code>governed_policy</code> stays
+within the clients, Subjects, sources, and authority ceiling its
+consented root admits
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>). Mediated
+custody keeps the sender-constraint key out of the agent (the
+stolen-token move above). Residual: where the agent acts for its own
+workload principal, no person's authentication stands beside that
+credential, so its holder acts as the Subject in every Mission the
+agent can use and every activation its standing consents admit,
+until the credential is revoked; workload credential custody and
+rotation are the deployment's.<a href="#section-9-3.48.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.49">Mission bypass through source authority held outside any Mission:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.50">
+          <p id="section-9-3.50.1">Addressed by the downgrade-by-omission rules: no token issued
+outside a Mission for a resource designated Mission-governed, except
+under documented policy exceptions; its resource server rejecting a
+token without the <code>mission</code> claim; a client performing a Mission's
+task presenting no ordinary credential for it; and mandatory
+mediation where the runtime layer holds custody of the client's
+credentials (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Residual: a workload's
+provisioned authority exists beside any Mission that draws on it,
+and Mission state does not revoke a grant held outside any Mission;
+at an undesignated resource with no mandatory mediation, such a
+grant acts with no Mission state, revocation, or consent commitment,
+and only the client's own conformance closes that path.<a href="#section-9-3.50.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.51">Standing-authority creep through the source ceiling:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.52">
+          <p id="section-9-3.52.1">Addressed by the approval-time source check: approval activates only
+authority the source already holds, the AS verifies the derived
+Authority Set against it, and the rendering names the source and,
+for <code>organizational</code>, its governed policy
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). <code>authority_hash</code> fixes
+each Mission's Authority Set, so a later change to the source never
+widens an existing Mission, and under <code>governed_policy</code> each
+activation also stays within the authority ceiling of the root a
+human approved at its exact version
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>). Residual:
+the ceiling is only as tight as the source. Provisioning a
+workload's authority or broadening a governed policy is entitlement
+governance outside the family, and each later Mission may draw on
+what accumulates there.<a href="#section-9-3.52.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.53">No human at runtime, and operator change:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.54">
+          <p id="section-9-3.54.1">Addressed by action-bound approval where a deployment requires it:
+the PEP refuses such an action without a fresh approval from an
+independent Approver or policy authority, resolved on a surface the
+agent cannot invoke, and fails closed absent a usable approval
+mechanism (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). An operator
+change reassigns no authority: <code>approval_basis.consent_principal</code> is
+fixed at approval (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);
+Management's <code>owner</code> grants none and changes only by an authorized,
+audited re-home
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>); and a lifecycle
+change needs an explicit lifecycle authorization naming who may
+perform it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).
+Residual: outside the classes held for action-bound approval no one
+watches the agent act, so in-scope misuse surfaces only through
+audit; Missions an operator approved keep that accountable principal
+and run until expiry or revocation after the operator leaves, and
+offboarding is the deployment's.<a href="#section-9-3.54.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.55">Audit tampered, dropped, or reordered:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.56">
+          <p id="section-9-3.56.1">Addressed by transparency: append-only log, inclusion receipts,
 non-equivocation. Residual: single-service equivocation (per-service
 only; register with several); a producer can still log a false
-record.<a href="#section-9-3.48.1" class="pilcrow">¶</a></p>
+record.<a href="#section-9-3.56.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.49">Agent fabricates results or acts on false data:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.50">
-          <p id="section-9-3.50.1">Addressed by not addressed. Residual: full: semantic and grounding
-verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.50.1" class="pilcrow">¶</a></p>
+<dt id="section-9-3.57">Agent fabricates results or acts on false data:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.58">
+          <p id="section-9-3.58.1">Addressed by not addressed. Residual: full: semantic and grounding
+verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.58.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.51">A trusted-base component is compromised:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.52">
-          <p id="section-9-3.52.1">Addressed by not addressed; evidence detects it after the fact.
+<dt id="section-9-3.59">A trusted-base component is compromised:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.60">
+          <p id="section-9-3.60.1">Addressed by not addressed; evidence detects it after the fact.
 Residual: not prevented; degrades the specific guarantee per
-<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.52.1" class="pilcrow">¶</a></p>
+<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.60.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.53">Arbitrary code runs inside the agent's boundary:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.54">
-          <p id="section-9-3.54.1">Addressed by the mediated boundary an effect crosses (an interpreter,
+<dt id="section-9-3.61">Arbitrary code runs inside the agent's boundary:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.62">
+          <p id="section-9-3.62.1">Addressed by the mediated boundary an effect crosses (an interpreter,
 a spawned process, or a generated script), parameter-bound permits,
 mediated credential custody, and the harness's isolation and channel
 enumeration. Residual: unrecorded computation and channels
-outside that perimeter (<a href="#perimeter" class="auto internal xref">Section 5</a>); sandboxing owns execution.<a href="#section-9-3.54.1" class="pilcrow">¶</a></p>
+outside that perimeter (<a href="#perimeter" class="auto internal xref">Section 5</a>); sandboxing owns execution.<a href="#section-9-3.62.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2726,6 +2801,10 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-mission-aauth">[I-D.draft-mcguinness-mission-aauth]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Context Binding for AAuth"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
         <dd>
@@ -3166,6 +3245,13 @@ issuer-key-compromise concern with. Several over-long paragraphs in
 <a href="#guarantees" class="auto internal xref">Section 8</a> split for one idea per paragraph. No normative
 content, anchor, or adversary-model row, mitigation, or residual
 changed.<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.14">
+          <p id="appendix-B-2.14.1">The adversary model adds four moves for an agent acting without a
+delegating person: its own credential as the Subject's only
+authentication root, Mission bypass through source authority held
+outside any Mission, standing-authority creep through the source
+ceiling, and no human at runtime with operator change (#1196).<a href="#appendix-B-2.14.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
