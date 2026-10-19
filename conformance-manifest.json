@@ -34292,8 +34292,22 @@
     "normative": "an RS enforcing more than one applicable mission_resource_access entry treats them as alternative grants, not a conjunctive filter."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > authorizes through an unconstrained covering entry beside one it cannot enforce",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > refuses a request that only parts of two enforceable entries together cover",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Witnessed at the SaaS resource (review on PR #1298): an unconstrained entry authorizes beside one SaaS cannot enforce, and each of two entries authorizes its own action. The payments policy decision point's Mission bound takes the first matching entry (#1258 item 2), so a later applicable entry is not an alternative there, and the row stays partial."
   },
   {
    "id": "resource-access.rs-enforcement.resource-match-unrecognized-fail-closed",
@@ -34368,9 +34382,33 @@
      "name": "the payments resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement) > refuses an operation whose matched Mission entry carries a constraints key the resource does not understand",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "the SaaS resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement) > refuses a journal write whose only covering entry carries a time_window, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "the SaaS resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement) > refuses a journal write whose only covering entry carries max_amount, which this resource does not enforce",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "the SaaS resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement) > refuses an entry carrying a constraints key no specification defines",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "the SaaS resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement) > refuses an entry whose constraints member or vendors value is malformed",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1266. Witnessed for a key the matched Mission entry carries (the PDP refuses it whole). A credential carrying such a key is refused when it is read (parseCredentialAuthority), witnessed at helper level only, so the row stays partial."
+   "notes": "#1266. Witnessed at the payments resource for a key the matched Mission entry carries (the PDP refuses it whole), and at the SaaS resource, which enforces only `vendors`, for registered keys it does not enforce (`time_window`, `max_amount`), an unregistered key and a malformed value (review on PR #1298). A payments credential carrying such a key is refused when it is read (parseCredentialAuthority), witnessed at helper level only, so the row stays partial."
   },
   {
    "id": "resource-access.protected-resource-metadata.enforced-keys",
@@ -34390,7 +34428,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a resource advertising mission_constraints_supported names only constraints keys it enforces",
-    "local": "the payments resource names max_amount, vendors and each implemented Common Constraint, and no Common Constraint it does not enforce"
+    "local": "the payments resource names max_amount, vendors and each implemented Common Constraint, and no Common Constraint it does not enforce; the SaaS resource names only vendors, the one key it enforces"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -34400,9 +34438,15 @@
      "name": "protected resource metadata names only enforced constraint keys (@spec resource-access#protected-resource-metadata) > advertises exactly max_amount, vendors and the Common Constraints it enforces, and no other",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "SaaS protected resource metadata names only the constraints keys it enforces (@spec resource-access#protected-resource-metadata) > advertises exactly vendors",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1266. Proved by mutation: dropping any one of the seven implemented Common Constraints from the metadata fails the test."
+   "notes": "#1266. Proved by mutation: dropping any one of the seven implemented Common Constraints from the metadata fails the test. SaaS (review on PR #1298): omitting the member fails its test."
   },
   {
    "id": "resource-access.rs-enforcement.no-disclosure-only-constraint",
@@ -36337,9 +36381,22 @@
     "normative": "a request no single fully enforceable entry covers is refused, even when parts of several entries would together cover it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 2. The reference policy decision point's Mission bound takes the first matching entry rather than alternative grants; the credential bound evaluates entries whole. Cases fc-01..03 skipped."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > refuses a request that only parts of two enforceable entries together cover",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > refuses a request that only an entry it cannot enforce covers, while another entry still authorizes its own action",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 2. Witnessed at the SaaS resource (review on PR #1298): a write whose action is in one entry and whose vendor is in another is refused, and an entry SaaS cannot enforce lends its action to no other entry. The payments policy decision point's Mission bound takes the first matching entry and its credential bound evaluates entries whole, so neither combines entries; cases fc-01..03 stay skipped."
   },
   {
    "id": "resource-access.rs-enforcement.refuse-without-covering-entry",
@@ -36361,9 +36418,22 @@
     "normative": "with no applicable, fully enforceable entry covering the whole request, the request is refused; an entry the resource server cannot fully enforce contributes no authority"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 2. Cases fc-01, fc-02 skipped (rs.alternative-grants)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "the SaaS resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement) > refuses a journal write whose only covering entry carries a time_window, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > refuses a request that only an entry it cannot enforce covers, while another entry still authorizes its own action",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 2. Witnessed at the SaaS resource (review on PR #1298): an entry carrying a key SaaS does not enforce lends no authority, and a request no other entry covers is refused with no effect. Cases fc-01 and fc-02 stay skipped (rs.alternative-grants): their reader drives the payments policy decision point, whose Mission bound takes the first matching entry."
   },
   {
    "id": "resource-access.rs-enforcement.token-wide-failure",
