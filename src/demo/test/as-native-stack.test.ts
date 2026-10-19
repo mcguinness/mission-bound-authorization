@@ -32,7 +32,7 @@ import { connect, createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { ALL_PROVIDER_CAPABILITIES, type ProviderCapability, STATUS_LIST_ID } from "@mission/authorization-server";
+import { ALL_PROVIDER_CAPABILITIES, initSigningKeyRing, type ProviderCapability, STATUS_LIST_ID } from "@mission/authorization-server";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it, type MockInstance, vi } from "vitest";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
@@ -971,14 +971,23 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
   const launchOptions = (
     env: Record<string, string> = {},
     files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() },
-  ) => ({ ...asNativeLaunchOptions(env), asPort: LAUNCH_AS_PORT, ...files });
+  ) => ({
+    ...asNativeLaunchOptions({ ...(env.MISSION_KEY_RING ? {} : { MISSION_EPHEMERAL_KEYS: "1" }), ...env }),
+    asPort: LAUNCH_AS_PORT,
+    ...files,
+  });
 
   it("composes exactly the target from its own configuration: the D332 capability set, no dev ordinary issuance, no MAS join route and no test fixture", async () => {
-    expect(asNativeLaunchOptions({})).toEqual({
+    expect(asNativeLaunchOptions({ MISSION_EPHEMERAL_KEYS: "1" })).toEqual({
       openfgaUrl: TOPOLOGY.openfga.url,
       presharedKey: TOPOLOGY.openfga.presharedKey,
       resourcePolicyStore: { bootstrap: "development" },
+      signingKeys: { ephemeral: true },
       target: "as-native",
+    });
+    // @spec #831: a configured key ring is the AS's signing-key source.
+    expect(asNativeLaunchOptions({ MISSION_KEY_RING: "/var/keys/ring.json" }).signingKeys).toEqual({
+      ring: "/var/keys/ring.json",
     });
     const ca = fileURLToPath(import.meta.url);
     expect(
@@ -987,6 +996,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
         OPENFGA_PRESHARED_KEY: "k",
         OPENFGA_CA_CERT: ca,
         MISSION_PDP_MODE: "remote",
+        MISSION_EPHEMERAL_KEYS: "1",
       }),
     ).toEqual({
       openfgaUrl: "https://fga.test:8080",
@@ -994,11 +1004,12 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       caCertPath: ca,
       pdpMode: "remote",
       resourcePolicyStore: { bootstrap: "development" },
+      signingKeys: { ephemeral: true },
       target: "as-native",
     });
     // @spec runtime#input-resource-policy (#828): a configured store and model
     // are attached, never bootstrapped.
-    expect(asNativeLaunchOptions({ OPENFGA_STORE_ID: "store-1", OPENFGA_MODEL_ID: "model-1" }).resourcePolicyStore).toEqual({
+    expect(asNativeLaunchOptions({ OPENFGA_STORE_ID: "store-1", OPENFGA_MODEL_ID: "model-1", MISSION_EPHEMERAL_KEYS: "1" }).resourcePolicyStore).toEqual({
       attach: { storeId: "store-1", modelId: "model-1" },
     });
     const launched = await launchAsNative(launchOptions());
@@ -1011,6 +1022,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
         expect.arrayContaining([
           "  AS capabilities    issuance profile + lifecycle-revoke, transaction-authorization",
           "  dev ordinary token not served",
+          "  signing keys       ephemeral (new at every restart)",
           `  resource audience  ${CANONICAL_RESOURCE}  (HTTP MCP, DPoP verified on every request)`,
           "  MAS join route     not mounted",
         ]),
@@ -1029,6 +1041,27 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     expect(fgaBootstrap).not.toHaveBeenCalled();
   });
 
+  it("signs with a configured key ring and says so; a ring for another issuer refuses before anything connects (#831)", async () => {
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    const roles = { asToken, asStatus, asTxn, asContinuation };
+    const ring = join(mkdtempSync(join(tmpdir(), "as-native-ring-")), "keys", "ring.json");
+    await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, roles);
+    const launched = await launchAsNative(launchOptions({ MISSION_KEY_RING: ring }));
+    try {
+      expect(launched.stack.authServer?.signingKeyMode).toBe("ring");
+      expect(launched.summary).toContain("  signing keys       key ring (kept across restarts)");
+    } finally {
+      await launched.close();
+    }
+    const other = join(mkdtempSync(join(tmpdir(), "as-native-ring-")), "keys", "ring.json");
+    await initSigningKeyRing(other, "https://elsewhere.example", roles);
+    fgaBootstrap.mockClear();
+    await expect(launchAsNative(launchOptions({ MISSION_KEY_RING: other }))).rejects.toThrow(
+      /is for issuer https:\/\/elsewhere\.example/,
+    );
+    expect(fgaBootstrap).not.toHaveBeenCalled();
+  });
+
   it("refuses an unusable configuration by name, before anything connects", () => {
     const cases: [Record<string, string>, RegExp][] = [
       [{ OPENFGA_HTTP_URL: "not a url" }, /^OPENFGA_HTTP_URL is not a URL: not a url$/],
@@ -1037,6 +1070,10 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       [{ MISSION_PDP_MODE: "bogus" }, /^MISSION_PDP_MODE must be co-resident or remote, not bogus$/],
       [{ OPENFGA_STORE_ID: "store-1" }, /^set both OPENFGA_STORE_ID and OPENFGA_MODEL_ID to attach, or neither$/],
       [{ OPENFGA_MODEL_ID: "model-1" }, /^set both OPENFGA_STORE_ID and OPENFGA_MODEL_ID to attach, or neither$/],
+      // @spec #831: the deployment says where its signing keys come from.
+      [{}, /choose the signing keys: MISSION_KEY_RING=<path>/],
+      [{ MISSION_KEY_RING: "var/keys/ring.json" }, /MISSION_KEY_RING must be an absolute path, not var\/keys\/ring\.json/],
+      [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_EPHEMERAL_KEYS: "1" }, /MISSION_KEY_RING or MISSION_EPHEMERAL_KEYS=1, not both/],
     ];
     for (const [env, message] of cases) expect(() => asNativeLaunchOptions(env), JSON.stringify(env)).toThrow(message);
   });
@@ -1178,13 +1215,17 @@ function runLauncher(env: Record<string, string>) {
     "OPENFGA_STORE_ID",
     "OPENFGA_MODEL_ID",
     "MISSION_PDP_MODE",
+    "MISSION_KEY_RING",
+    "MISSION_EPHEMERAL_KEYS",
     "NODE_OPTIONS",
   ]) {
     delete inherited[name];
   }
+  // @spec #831: ephemeral signing keys unless the case names its own source.
+  const keys = env.MISSION_KEY_RING === undefined && env.MISSION_EPHEMERAL_KEYS === undefined ? { MISSION_EPHEMERAL_KEYS: "1" } : {};
   const child: ChildProcess = spawn(process.execPath, ["--import", TSX_LOADER, SERVE_ENTRY], {
     cwd: mkdtempSync(join(tmpdir(), "as-native-launch-")),
-    env: { ...inherited, ...env },
+    env: { ...inherited, ...keys, ...env },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stdout = "";
@@ -1314,6 +1355,8 @@ describe("the as-native launcher process, the entry pnpm as-native runs, against
       [{ OPENFGA_HTTP_URL: fga.url, MISSION_PDP_MODE: "bogus" }, /MISSION_PDP_MODE must be co-resident or remote, not bogus$/],
       [{ OPENFGA_HTTP_URL: fga.url, OPENFGA_CA_CERT: "/nonexistent/openfga.crt" }, /OPENFGA_CA_CERT names \/nonexistent\/openfga\.crt, which does not exist/],
       [{ OPENFGA_HTTP_URL: fga.url, OPENFGA_STORE_ID: FAKE_STORE_ID }, /set both OPENFGA_STORE_ID and OPENFGA_MODEL_ID to attach, or neither$/],
+      [{ OPENFGA_HTTP_URL: fga.url, MISSION_EPHEMERAL_KEYS: "0" }, /choose the signing keys: MISSION_KEY_RING=<path>/],
+      [{ OPENFGA_HTTP_URL: fga.url, MISSION_KEY_RING: "/nonexistent/keys/ring.json" }, /signing key ring refused: no ring at \/nonexistent\/keys\/ring\.json/],
       [{ OPENFGA_HTTP_URL: `http://127.0.0.1:${closed}` }, /^as-native: startup failed: \S/],
     ];
     for (const [env, reason] of cases) {
@@ -1398,7 +1441,7 @@ dLive("the as-native target with the test-only ordinary-token minting fixture ag
  */
 const POLICY_AS_PORT = 14112;
 dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828)", () => {
-  const BASE_ENV = { OPENFGA_HTTP_URL: API_URL, OPENFGA_PRESHARED_KEY: KEY, ...(CA ? { OPENFGA_CA_CERT: CA } : {}) };
+  const BASE_ENV = { OPENFGA_HTTP_URL: API_URL, OPENFGA_PRESHARED_KEY: KEY, MISSION_EPHEMERAL_KEYS: "1", ...(CA ? { OPENFGA_CA_CERT: CA } : {}) };
 
   /** The launcher's composition from `env`, on this block's AS port and its own store files. */
   const launch = (env: Record<string, string>) =>
