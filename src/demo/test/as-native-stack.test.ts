@@ -45,7 +45,7 @@ import {
   type McpPaymentsServer,
 } from "@mission/mcp-payments";
 import { DOMAIN_MODEL, Fga } from "@mission/pdp";
-import { issueMissionToken } from "../src/approval-console.js";
+import { issueMissionToken, logInAgain } from "../src/approval-console.js";
 import { asNativeLaunchOptions, launchAsNative } from "../src/as-native.js";
 import { ISSUANCE_ONLY_CAPABILITIES } from "../src/issuance-only.js";
 import { requestLifecycle } from "../src/lifecycle-client.js";
@@ -231,6 +231,8 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
   let missionId: string;
   /** A remittance Mission's token, under its own DPoP key: a second holder. */
   let remit: IssuedMission;
+  /** The transaction token `remittanceApproval` redeemed: one action, narrower than its Mission. */
+  let txnCredential: string | undefined;
   const decisions: { audience: string; permit: boolean }[] = [];
   const asUrl = `http://localhost:${opts.asPort}`;
 
@@ -873,6 +875,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       expect(granted.status, JSON.stringify(granted.body)).toBe(200);
       expect(granted.body.token_type).toBe("DPoP");
       const txnToken = granted.body.access_token as string;
+      txnCredential = txnToken;
 
       // 4. The retry over the endpoint, the transaction token its only
       //    credential and DPoP-bound to the same key: executed exactly once.
@@ -888,6 +891,142 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       } finally {
         await retry.close();
       }
+    },
+
+    // @spec runtime#input-authority (#253 acceptance): the transaction token is
+    // the one credential this target issues narrower than its Mission. Presented
+    // for any other tool, it is refused before a decision, and nothing executes.
+    async narrowedTransactionToken(): Promise<void> {
+      if (!txnCredential) throw new Error("runs after remittanceApproval, which redeems the transaction token");
+      const before = snapshot();
+      const holder = await createHttpMediatedClient(CANONICAL_RESOURCE, txnCredential, remit.dpopKeys);
+      try {
+        const read = await holder.client.callTool("get_invoice", { invoice_id: "inv-1" });
+        expect(read.ok).toBe(false);
+        expect(read.refusal_reason, JSON.stringify(read)).toBe("txn_action_mismatch");
+        expect(read.result).toBeUndefined();
+        const wire = await holder.client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+        expect(wire.ok).toBe(false);
+        expect(wire.result).toBeUndefined();
+      } finally {
+        await holder.close();
+      }
+      expect(decisions.length).toBe(before.decisions);
+      expect(stack.connectors.ledgerEntries().length).toBe(before.ledger);
+    },
+
+    // @spec operation-profile-payments-v1 (D316), runtime#rs-runtime-profile
+    // (#253 acceptance): intake refuses a request outside the tool's served
+    // schema over the HTTP MCP endpoint, before any PDP call, with one Refusal
+    // Record and no effect.
+    async intakeRefusals(): Promise<void> {
+      const refusals = () => stack.evidence.all().filter((e) => e.kind === "refusal");
+      const { client, close } = await createHttpMediatedClient(CANONICAL_RESOURCE, issued.accessToken, issued.dpopKeys);
+      try {
+        const cases: [string, Record<string, unknown>][] = [
+          ["get_invoice", { invoice_id: "inv-1", note: "pay this" }],
+          ["execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}`, amount: "1.00" }],
+        ];
+        for (const [tool, args] of cases) {
+          const before = snapshot();
+          const refusalsBefore = refusals().length;
+          const res = await client.callTool(tool, args);
+          expect(res.ok, tool).toBe(false);
+          expect(res.refusal_reason, `${tool} ${JSON.stringify(res)}`).toBe("invalid_request");
+          expect(decisions.length, tool).toBe(before.decisions);
+          expect(stack.connectors.ledgerEntries().length, tool).toBe(before.ledger);
+          const added = refusals().slice(refusalsBefore);
+          expect(added, tool).toHaveLength(1);
+          expect((added[0]?.content as { denial_reason?: string }).denial_reason, tool).toBe("request_invalid");
+        }
+      } finally {
+        await close();
+      }
+    },
+
+    // @spec runtime#state-freshness (#253 acceptance): this target's declared
+    // Mission-state source is the kernel's committed state, read inside each
+    // request (D293), so the decision after a revocation at the advertised
+    // lifecycle endpoint refuses mission_inactive, with no effect.
+    async revokedMission(): Promise<void> {
+      const spare = await issueRead();
+      const spareId = missionIdOf(spare.accessToken);
+      const readOnce = async () => {
+        const { client, close } = await createHttpMediatedClient(CANONICAL_RESOURCE, spare.accessToken, spare.dpopKeys);
+        try {
+          return await client.callTool("get_invoice", { invoice_id: "inv-1" });
+        } finally {
+          await close();
+        }
+      };
+      expect((await readOnce()).ok).toBe(true);
+      const revoke = await requestLifecycle(asUrl, authServer().lifecycleConsole, {
+        mission_id: spareId,
+        operation: "revoke",
+        nonce: randomUUID(),
+      });
+      expect(revoke.status, revoke.text).toBe(200);
+      expect(stack.kernel.get(spareId)?.termination?.reason).toBe("revoked");
+
+      const before = snapshot();
+      const refused = await readOnce();
+      expect(refused.ok).toBe(false);
+      expect(refused.denial_reason, JSON.stringify(refused)).toBe("mission_inactive");
+      expect(refused.result).toBeUndefined();
+      expect(decisions.slice(before.decisions)).toEqual([{ audience: CANONICAL_RESOURCE, permit: false }]);
+      const last = stack.evidence.forMission(spareId).filter((e) => e.kind === "decision").at(-1)?.content;
+      expect(last).toMatchObject({ decision: "deny", denial_reason: "mission_inactive" });
+      expect(stack.evidence.forMission(spareId).filter((e) => e.kind === "execution")).toHaveLength(0);
+    },
+
+    // @spec runtime#compound-actions (#253 acceptance): each phase is its own
+    // fresh decision, so a Mission revoked after a permitted preflight and
+    // prepare refuses the commit decision mission_inactive, and no wire exists.
+    async commitAfterRevoke(): Promise<void> {
+      // The published floor (D425) admits a high-risk approval only within 300
+      // seconds of the Approver's login; earlier tests can outlast it.
+      logInAgain(stack.approverLogin);
+      const pay = await issue(["payments:invoice.read", "payments:payment.execute"], {
+        max_amount: { amount: "500.00", currency: "USD" },
+        vendors: ["acme"],
+      });
+      const payId = missionIdOf(pay.accessToken);
+      const { client, close } = await createHttpMediatedClient(CANONICAL_RESOURCE, pay.accessToken, pay.dpopKeys);
+      try {
+        const preflight = await client.callTool("check_transfer", { invoice_id: "inv-1" });
+        expect(preflight.ok, JSON.stringify(preflight)).toBe(true);
+        expect((preflight.result as { feasible?: boolean }).feasible).toBe(true);
+        const prepare = await client.callTool("hold_transfer", { invoice_id: "inv-1" });
+        expect(prepare.ok, JSON.stringify(prepare)).toBe(true);
+
+        const revoke = await requestLifecycle(asUrl, authServer().lifecycleConsole, {
+          mission_id: payId,
+          operation: "revoke",
+          nonce: randomUUID(),
+        });
+        expect(revoke.status, revoke.text).toBe(200);
+
+        const before = snapshot();
+        const commit = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+        expect(commit.ok).toBe(false);
+        expect(commit.denial_reason, JSON.stringify(commit)).toBe("mission_inactive");
+        expect(decisions.slice(before.decisions)).toEqual([{ audience: CANONICAL_RESOURCE, permit: false }]);
+        expect(stack.connectors.ledgerEntries().length).toBe(before.ledger);
+        expect(stack.connectors.ledgerEntries(payId)).toHaveLength(0);
+        expect(stack.evidence.forMission(payId).filter((e) => e.kind === "execution")).toHaveLength(0);
+      } finally {
+        await close();
+      }
+    },
+
+    // @spec mission#approval-authentication (#826, #253 acceptance): on this
+    // target every Mission is approved by Bob for Alice without openid. The
+    // token names the Subject; the Mission record names the Approver.
+    subjectAndApprover(): void {
+      expect(decodeJwt(issued.accessToken).sub).toBe("alice");
+      const record = stack.kernel.get(missionId);
+      expect(record?.subject?.sub).toBe("alice");
+      expect(record?.approval_basis?.consent_principal?.sub).toBe("bob");
     },
   };
 }
@@ -1374,6 +1513,21 @@ dLive("the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315
   });
   it("denies send_remittance_email with a transaction challenge, redeems the approval at the AS transaction endpoint, and executes the retry under the transaction token exactly once", async () => {
     await live.remittanceApproval();
+  });
+  it("refuses the narrower transaction token for any other tool, a read or a wire, before a decision and with no effect (#253)", async () => {
+    await live.narrowedTransactionToken();
+  });
+  it("refuses an undeclared argument member and an authoritative member over the endpoint as invalid_request, with no PDP call, one Refusal Record each and no effect (#253)", async () => {
+    await live.intakeRefusals();
+  });
+  it("refuses the next read mission_inactive once the Mission is revoked at the advertised lifecycle endpoint, with the PDP's deny Decision Evidence and no effect (#253)", async () => {
+    await live.revokedMission();
+  });
+  it("refuses the fresh commit decision mission_inactive when the Mission is revoked after a permitted preflight and prepare, and no wire exists (#253)", async () => {
+    await live.commitAfterRevoke();
+  }, 60_000);
+  it("names the Subject in the token and the Approver in the Mission record: Bob approves for Alice without openid (#253)", () => {
+    live.subjectAndApprover();
   });
 });
 
