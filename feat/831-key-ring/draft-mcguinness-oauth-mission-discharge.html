@@ -2418,10 +2418,14 @@ commit.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
         <h3 id="name-worked-example">
 <a href="#section-4.6" class="section-number selfRef">4.6. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
         </h3>
-<p id="section-4.6-1">A Mission for <code>alice</code> reconciles Q3 payables. Its Authority Set has two
+<p id="section-4.6-1">In the ERP examples in this document, the operation contract identifies
+<code>https://erp.example.com</code> as the operation target
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
+constraints determine the permitted operations within that service.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
+<p id="section-4.6-2">A Mission for <code>alice</code> reconciles Q3 payables. Its Authority Set has two
 entries: a read over the ledger, and a write to post journal entries,
-bounded to under 500 USD and discharged when the Q3 close is finalized:<a href="#section-4.6-1" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4.6-2">
+bounded to under 500 USD and discharged when the Q3 close is finalized:<a href="#section-4.6-2" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.6-3">
 <pre>
 [
   { "type": "mission_resource_access",
@@ -2436,14 +2440,14 @@ bounded to under 500 USD and discharged when the Q3 close is finalized:<a href="
         { "event_type": "accounting-period-closed",
           "discharge_authority": "close-management-2026-q3" } ] } }
 ]
-</pre><a href="#section-4.6-2" class="pilcrow">¶</a>
+</pre><a href="#section-4.6-3" class="pilcrow">¶</a>
 </div>
-<p id="section-4.6-3"><code>discharge_authority</code> names the authority approved to assert this
+<p id="section-4.6-4"><code>discharge_authority</code> names the authority approved to assert this
 condition: the close-management system's workload identity, not
 <code>alice</code>'s agent, may assert <code>accounting-period-closed</code>
 (<a href="#discharge-authority" class="auto internal xref">Section 4.3.1</a>). The agent cannot drive its own discharge: it
-holds no <code>mission_discharge</code> authorization for that <code>event_type</code>.<a href="#section-4.6-3" class="pilcrow">¶</a></p>
-<p id="section-4.6-4">While the period is open, the authorization server derives both entries.
+holds no <code>mission_discharge</code> authorization for that <code>event_type</code>.<a href="#section-4.6-4" class="pilcrow">¶</a></p>
+<p id="section-4.6-5">While the period is open, the authorization server derives both entries.
 When the finance team finalizes the Q3 close, the close-management
 system calls <code>discharge</code> on the Mission Lifecycle endpoint, naming the
 write entry's <code>entry_digest</code>, this condition's <code>condition_digest</code>,
@@ -2454,14 +2458,14 @@ and returns a signed <code>discharge_result</code> of outcome <code>discharged</
 (<a href="#discharge-result" class="auto internal xref">Section 4.3.4</a>). A resource server that holds a token for the
 write entry, and so cannot compute the record entry's digest, names
 the same target by the condition selector it reads from introspection
-(<a href="#condition-selectors" class="auto internal xref">Section 4.2</a>).<a href="#section-4.6-4" class="pilcrow">¶</a></p>
-<p id="section-4.6-5">From then on the
+(<a href="#condition-selectors" class="auto internal xref">Section 4.2</a>).<a href="#section-4.6-5" class="pilcrow">¶</a></p>
+<p id="section-4.6-6">From then on the
 authorization server refuses to derive the write entry: a refresh
 returns a token carrying only the read entry. The Mission stays
 <code>active</code>, so the agent can still read the ledger to finish its
 reconciliation report, but it can no longer post journal entries. No
 revoke and no clock was needed; the write authority retired itself
-when the task it was granted for completed.<a href="#section-4.6-5" class="pilcrow">¶</a></p>
+when the task it was granted for completed.<a href="#section-4.6-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

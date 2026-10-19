@@ -1822,6 +1822,10 @@ action.<a href="#section-12-3" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC7009">[RFC7009]</dt>
         <dd>
 <span class="refAuthor">Lodderstedt, T., Ed.</span>, <span class="refAuthor">Dronia, S.</span>, and <span class="refAuthor">M. Scurtescu</span>, <span class="refTitle">"OAuth 2.0 Token Revocation"</span>, <span class="seriesInfo">RFC 7009</span>, <span class="seriesInfo">DOI 10.17487/RFC7009</span>, <time datetime="2013-08" class="refDate">August 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7009">https://www.rfc-editor.org/rfc/rfc7009</a>&gt;</span>. </dd>
@@ -1844,11 +1848,15 @@ action.<a href="#section-12-3" class="pilcrow">¶</a></p>
       <h2 id="name-example">
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-example" class="section-name selfRef">Example</a>
       </h2>
-<p id="appendix-A-1">The following is an example of a device authorization request from
+<p id="appendix-A-1">In the ERP examples in this document, the operation contract identifies
+<code>https://erp.example.com</code> as the operation target
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
+constraints determine the permitted operations within that service.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">The following is an example of a device authorization request from
 the public client <code>cli-agent</code>. The <code>mission_intent</code> and
 <code>authorization_details</code> values are shown decoded, with line breaks
-for display purposes only:<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<div class="lang-http sourcecode" id="appendix-A-2">
+for display purposes only:<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="appendix-A-3">
 <pre>
 POST /device_authorization HTTP/1.1
 Host: as.example.com
@@ -1862,10 +1870,10 @@ client_id=cli-agent
 &amp;authorization_details=[{"type":"mission_resource_access",
   "resource":"https://erp.example.com",
   "actions":["invoices.read"]}]
-</pre><a href="#appendix-A-2" class="pilcrow">¶</a>
+</pre><a href="#appendix-A-3" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A-3">The AS validates the submission and returns:<a href="#appendix-A-3" class="pilcrow">¶</a></p>
-<div class="lang-http sourcecode" id="appendix-A-4">
+<p id="appendix-A-4">The AS validates the submission and returns:<a href="#appendix-A-4" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="appendix-A-5">
 <pre>
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -1878,9 +1886,9 @@ Cache-Control: no-store
   "expires_in": 600,
   "interval": 5
 }
-</pre><a href="#appendix-A-4" class="pilcrow">¶</a>
+</pre><a href="#appendix-A-5" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A-5">The user <code>alice</code> visits the verification URI on her phone, enters the
+<p id="appendix-A-6">The user <code>alice</code> visits the verification URI on her phone, enters the
 code, and authenticates. The page states that the request comes from
 <code>cli-agent</code>, a client the AS did not authenticate, for the account
 <code>alice</code>; shows the goal as text; lists the derived authority, reading
@@ -1889,8 +1897,8 @@ invoices at <code>erp.example.com</code> until 31 December 2026; and displays
 she started the request. She approves, and the AS creates the Mission
 <code>active</code> atomically with her decision. A poll before her decision
 received <code>authorization_pending</code>; the next poll, with a DPoP proof,
-receives:<a href="#appendix-A-5" class="pilcrow">¶</a></p>
-<div class="lang-http sourcecode" id="appendix-A-6">
+receives:<a href="#appendix-A-6" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="appendix-A-7">
 <pre>
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -1908,10 +1916,10 @@ Cache-Control: no-store
   "mission_id": "msn_4Tq8Lw2Rx7Vn3Kp9Yd6Sb1Ze5Mc0Jh-",
   "mission_expires_at": "2026-12-31T23:59:59Z"
 }
-</pre><a href="#appendix-A-6" class="pilcrow">¶</a>
+</pre><a href="#appendix-A-7" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A-7">A further request presenting the same <code>device_code</code> receives
-<code>invalid_grant</code>.<a href="#appendix-A-7" class="pilcrow">¶</a></p>
+<p id="appendix-A-8">A further request presenting the same <code>device_code</code> receives
+<code>invalid_grant</code>.<a href="#appendix-A-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="document-history">

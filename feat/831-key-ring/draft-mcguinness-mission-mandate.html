@@ -1853,21 +1853,25 @@ retirement and is treated in <a href="#security-considerations" class="auto inte
         <h3 id="name-example">
 <a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-example" class="section-name selfRef">Example</a>
         </h3>
-<p id="section-4.5-1">A decoded Mandate for the issuance profile's worked-example Mission.
+<p id="section-4.5-1">In the ERP examples in this document, the operation contract identifies
+<code>https://erp.example.com</code> as the operation target
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
+constraints determine the permitted operations within that service.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.5-2">A decoded Mandate for the issuance profile's worked-example Mission.
 The signature value is illustrative; all other segments are computed
-from the displayed JSON.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
-<p id="section-4.5-2">Protected header:<a href="#section-4.5-2" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4.5-3">
+from the displayed JSON.<a href="#section-4.5-2" class="pilcrow">¶</a></p>
+<p id="section-4.5-3">Protected header:<a href="#section-4.5-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.5-4">
 <pre>
 {
   "typ": "mission-mandate+jwt",
   "alg": "ES256",
   "kid": "as-key-2026-q3"
 }
-</pre><a href="#section-4.5-3" class="pilcrow">¶</a>
+</pre><a href="#section-4.5-4" class="pilcrow">¶</a>
 </div>
-<p id="section-4.5-4">Payload:<a href="#section-4.5-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4.5-5">
+<p id="section-4.5-5">Payload:<a href="#section-4.5-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.5-6">
 <pre>
 {
   "iss": "https://as.example.com",
@@ -1910,20 +1914,20 @@ from the displayed JSON.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
         { "max_amount": { "amount": "500.00", "currency": "USD" } } }
   ]
 }
-</pre><a href="#section-4.5-5" class="pilcrow">¶</a>
+</pre><a href="#section-4.5-6" class="pilcrow">¶</a>
 </div>
-<p id="section-4.5-6">The JWS segments are computed over the header and payload above,
+<p id="section-4.5-7">The JWS segments are computed over the header and payload above,
 serialized with no whitespace and members in the order displayed.
-Line breaks within encoded segments are for display only.<a href="#section-4.5-6" class="pilcrow">¶</a></p>
-<p id="section-4.5-7">Protected header, base64url:<a href="#section-4.5-7" class="pilcrow">¶</a></p>
-<div class="lang-text sourcecode" id="section-4.5-8">
+Line breaks within encoded segments are for display only.<a href="#section-4.5-7" class="pilcrow">¶</a></p>
+<p id="section-4.5-8">Protected header, base64url:<a href="#section-4.5-8" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-4.5-9">
 <pre>
 eyJ0eXAiOiJtaXNzaW9uLW1hbmRhdGUrand0IiwiYWxnIjoiRVMyNTYiLCJraWQiOi
 Jhcy1rZXktMjAyNi1xMyJ9
-</pre><a href="#section-4.5-8" class="pilcrow">¶</a>
+</pre><a href="#section-4.5-9" class="pilcrow">¶</a>
 </div>
-<p id="section-4.5-9">Payload, base64url:<a href="#section-4.5-9" class="pilcrow">¶</a></p>
-<div class="lang-text sourcecode" id="section-4.5-10">
+<p id="section-4.5-10">Payload, base64url:<a href="#section-4.5-10" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-4.5-11">
 <pre>
 eyJpc3MiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiwiaWF0IjoxNzkzNjA3NDAwLC
 JqdGkiOiJtbmRfNFhxN3ZCMmtSOXNUMW1aNnBMM24iLCJtaXNzaW9uIjp7ImlkIjoi
@@ -1948,10 +1952,10 @@ oiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX3Jlc291cmNlX2FjY2VzcyIs
 InJlc291cmNlIjoiaHR0cHM6Ly9lcnAuZXhhbXBsZS5jb20iLCJhY3Rpb25zIjpbIm
 pvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJhaW50cyI6eyJtYXhfYW1vdW50
 Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5IjoiVVNEIn19fV19
-</pre><a href="#section-4.5-10" class="pilcrow">¶</a>
+</pre><a href="#section-4.5-11" class="pilcrow">¶</a>
 </div>
-<p id="section-4.5-11">JWS signing input, the two segments joined by <code>.</code>:<a href="#section-4.5-11" class="pilcrow">¶</a></p>
-<div class="lang-text sourcecode" id="section-4.5-12">
+<p id="section-4.5-12">JWS signing input, the two segments joined by <code>.</code>:<a href="#section-4.5-12" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-4.5-13">
 <pre>
 eyJ0eXAiOiJtaXNzaW9uLW1hbmRhdGUrand0IiwiYWxnIjoiRVMyNTYiLCJraWQiOi
 Jhcy1rZXktMjAyNi1xMyJ9.eyJpc3MiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiw
@@ -1978,11 +1982,11 @@ iOlt7InN1Yl9wcm9maWxlIjoiYWlfYWdlbnQifV19fSx7InR5cGUiOiJtaXNzaW9uX
 jb20iLCJhY3Rpb25zIjpbImpvdXJuYWwtZW50cmllcy53cml0ZSJdLCJjb25zdHJha
 W50cyI6eyJtYXhfYW1vdW50Ijp7ImFtb3VudCI6IjUwMC4wMCIsImN1cnJlbmN5Ijo
 iVVNEIn19fV19
-</pre><a href="#section-4.5-12" class="pilcrow">¶</a>
+</pre><a href="#section-4.5-13" class="pilcrow">¶</a>
 </div>
-<p id="section-4.5-13">The Mandate's JWS Compact Serialization appends <code>.</code> and the signature
+<p id="section-4.5-14">The Mandate's JWS Compact Serialization appends <code>.</code> and the signature
 over the signing input; the signature value depends on the issuer's
-key and is not reproduced here.<a href="#section-4.5-13" class="pilcrow">¶</a></p>
+key and is not reproduced here.<a href="#section-4.5-14" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2875,6 +2879,10 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>

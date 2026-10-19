@@ -561,6 +561,11 @@ Table of Contents
       response is the MAS counterpart of the OAuth binding's token-
       response authorization_details echo.
 
+   In the ERP examples in this document, the operation contract
+   identifies https://erp.example.com as the operation target
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).  Actions and
+   constraints determine the permitted operations within that service.
+
    The following example shows an approved status response:
 
    HTTP/1.1 200 OK
@@ -1143,8 +1148,9 @@ Table of Contents
    Mission Status response as context.mission_state_observation, the
    authenticated client as context.actor.client_id, the entries the
    token's scope maps to under the mapping contract as
-   context.credential.authority, and the other decision inputs per
-   [I-D.draft-mcguinness-mission-authzen]:
+   context.credential.authority, the operation target its operation
+   contract establishes as resource.properties.operation_target, and the
+   other decision inputs per [I-D.draft-mcguinness-mission-authzen]:
 
    {
      "subject": {
@@ -1155,7 +1161,10 @@ Table of Contents
      "resource": {
        "type": "invoice",
        "id": "inv_2026Q3_842",
-       "properties": { "audience": "https://erp.example.com" }
+       "properties": {
+         "audience": "https://erp.example.com",
+         "operation_target": "https://erp.example.com"
+       }
      },
      "action": { "name": "invoices.read" },
      "context": {
@@ -1216,10 +1225,10 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://mas.example.com",
        "policy_view_id":
-         "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+         "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s"
      },
      "join_view_id":
-       "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
+       "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5s",
      "decision": "permit"
    }
 
@@ -3465,6 +3474,12 @@ Table of Contents
               OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
               bound-authorization/draft-mcguinness-oauth-mission-
               progressive.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

@@ -1647,10 +1647,14 @@ submitted (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref
       <h2 id="name-worked-example">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-worked-example" class="section-name selfRef">Worked Example</a>
       </h2>
-<p id="section-6-1">Agent <code>s6BhdRkqt3</code>, acting for <code>alice</code>, proposes a Mission to reconcile
+<p id="section-6-1">In the ERP examples in this document, the operation contract identifies
+<code>https://erp.example.com</code> as the operation target
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
+constraints determine the permitted operations within that service.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">Agent <code>s6BhdRkqt3</code>, acting for <code>alice</code>, proposes a Mission to reconcile
 Q3 invoices with read access to the ERP. It submits the Mission Intent
-through PAR and opts in to deferral on the token request:<a href="#section-6-1" class="pilcrow">¶</a></p>
-<div class="lang-http sourcecode" id="section-6-2">
+through PAR and opts in to deferral on the token request:<a href="#section-6-2" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="section-6-3">
 <pre>
 POST /token HTTP/1.1
 Host: as.example.com
@@ -1659,11 +1663,11 @@ Content-Type: application/x-www-form-urlencoded
 grant_type=authorization_code&amp;code=SplxlOBeZQQYbYS6WxSbIA&amp;
 client_id=s6BhdRkqt3&amp;
 completion_mode=deferred
-</pre><a href="#section-6-2" class="pilcrow">¶</a>
+</pre><a href="#section-6-3" class="pilcrow">¶</a>
 </div>
-<p id="section-6-3">The Mission Issuer routes the Proposed Mission to <code>alice</code> for review and
-defers:<a href="#section-6-3" class="pilcrow">¶</a></p>
-<div class="lang-http sourcecode" id="section-6-4">
+<p id="section-6-4">The Mission Issuer routes the Proposed Mission to <code>alice</code> for review and
+defers:<a href="#section-6-4" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="section-6-5">
 <pre>
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
@@ -1672,13 +1676,13 @@ Cache-Control: no-store
 { "error": "authorization_pending",
   "deferral_code": "dfc_7M2R4kP9sT1x",
   "expires_in": 600, "interval": 5 }
-</pre><a href="#section-6-4" class="pilcrow">¶</a>
+</pre><a href="#section-6-5" class="pilcrow">¶</a>
 </div>
-<p id="section-6-5">The agent polls with the deferred grant type. On review <code>alice</code>
+<p id="section-6-6">The agent polls with the deferred grant type. On review <code>alice</code>
 approves the proposal. The Mission record is created <code>active</code>
 atomically with her decision, and the next poll resolves to a
-Mission-bound token:<a href="#section-6-5" class="pilcrow">¶</a></p>
-<div class="lang-http sourcecode" id="section-6-6">
+Mission-bound token:<a href="#section-6-6" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="section-6-7">
 <pre>
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -1694,15 +1698,15 @@ Cache-Control: no-store
       "constraints": { "period": "2026-Q3" } } ],
   "mission_id": "msn_7Wq3nR8tV2xK5pL9yD4sB6zE1mC0fJ-",
   "mission_expires_at": "2026-12-31T23:59:59Z" }
-</pre><a href="#section-6-6" class="pilcrow">¶</a>
+</pre><a href="#section-6-7" class="pilcrow">¶</a>
 </div>
-<p id="section-6-7">The token carries the <code>mission</code> claim as the issuance profile defines
+<p id="section-6-8">The token carries the <code>mission</code> claim as the issuance profile defines
 it; the response also surfaces the optional <code>mission_id</code> parameter
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) for correlation. Had <code>alice</code> approved only a subset, the deferral would
 resolve to <code>access_denied</code> and the agent would submit a fresh, narrower
 Mission Intent, unless the deployment runs the experimental revision
-companion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>).<a href="#section-6-7" class="pilcrow">¶</a></p>
-<p id="section-6-8">A headless agent can drive the request itself. Agent
+companion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>).<a href="#section-6-8" class="pilcrow">¶</a></p>
+<p id="section-6-9">A headless agent can drive the request itself. Agent
 <code>ledger-reconciler</code>, with no user present, submits its Mission Intent
 through PAR and sends the authorization request, which the endpoint
 completes into the deferred state without user interaction
@@ -1717,7 +1721,7 @@ approves, and the Subject is established there as that workload
 principal. The resolving poll returns a Mission-bound token whose
 <code>sub</code> is <code>agt_ledger_reconciler</code> and whose <code>client_id</code> is
 <code>ledger-reconciler</code>; the record names <code>adm_4Hq9Tz</code> as
-<code>approval_basis.consent_principal</code>.<a href="#section-6-8" class="pilcrow">¶</a></p>
+<code>approval_basis.consent_principal</code>.<a href="#section-6-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">
@@ -1858,8 +1862,12 @@ the deferred grant type are registered by the deferred substrate
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>

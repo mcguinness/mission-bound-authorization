@@ -1653,9 +1653,12 @@ therefore evaluated at its own narrower entry.<a href="#section-5.1-3" class="pi
 issuance profile requires of a resource server
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Resource Server
 Enforcement"). For an entry of type <code>mission_resource_access</code>, the
-action's <code>resource</code> and invoked action or tool identity <span class="bcp14">MUST</span> be within
-that entry's <code>resource</code> and <code>actions</code>, under the subset rule of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>. The PEP asserts
+operation target <span class="bcp14">MUST</span> match that entry's <code>resource</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>, Section
+"Resource Matching"), and the invoked action or tool identity <span class="bcp14">MUST</span> be
+within its <code>actions</code>. The PEP establishes the target from its trusted
+operation contract, independently of the presented entries; the
+token's audience is a separate check. The PEP asserts
 the capability identity (for example, the tool or function name) it
 will invoke, and the PDP <span class="bcp14">MUST</span> refuse an identity outside the approved
 <code>actions</code>. For any other <code>authorization_details</code> type, the PDP <span class="bcp14">MUST</span>
@@ -2078,18 +2081,25 @@ action identifiers to minimum runtime action classes.<a href="#section-10.1-2.2.
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Runtime Input Mapping and Mission State Sources: a state source
-reports an expired Mission as <code>terminated</code> with reason <code>expired</code>,
-and the Status List cannot provide the termination reason or its
-references (#705).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Credential Authority and Current Effective Authority: a
+<code>mission_resource_access</code> entry's <code>resource</code> matches the operation
+target the PEP establishes from its trusted operation contract,
+under Resource Access's Resource Matching rules; the token's
+audience remains a separate check (#1276).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Establishing Validated Credential Context: the OAuth realization of
+          <p id="appendix-A-2.2.1">Runtime Input Mapping and Mission State Sources: a state source
+reports an expired Mission as <code>terminated</code> with reason <code>expired</code>,
+and the Status List cannot provide the termination reason or its
+references (#705).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Establishing Validated Credential Context: the OAuth realization of
 the runtime core's sender-constraint requirement for high-consequence
 actions: the <code>cnf</code> binding of the validated credential context (a
 JWT's claim, or an opaque token's introspection response), with a
 proof the PEP verified; a context with no binding is a bearer token.
-Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -1033,6 +1033,73 @@ Table of Contents
       resumes Missions fleet-wide and learns Mission existence; it
       cannot mint or widen authority.
 
+   Agent's own credential as the Subject's only authentication root:  Addressed
+      by keeping approval off that credential: the Approver is
+      established from the authenticated approval surface, never from
+      client input ([I-D.draft-mcguinness-oauth-mission]), on a surface
+      the agent cannot invoke (the self-approval move above), and an
+      activation the credential requests under governed_policy stays
+      within the clients, Subjects, sources, and authority ceiling its
+      consented root admits
+      ([I-D.draft-mcguinness-mission-approval-governance]).  Mediated
+      custody keeps the sender-constraint key out of the agent (the
+      stolen-token move above).  Residual: where the agent acts for its
+      own workload principal, no person's authentication stands beside
+      that credential, so its holder acts as the Subject in every
+      Mission the agent can use and every activation its standing
+      consents admit, until the credential is revoked; workload
+      credential custody and rotation are the deployment's.
+
+   Mission bypass through source authority held outside any Mission:  Addressed
+      by the downgrade-by-omission rules: no token issued outside a
+      Mission for a resource designated Mission-governed, except under
+      documented policy exceptions; its resource server rejecting a
+      token without the mission claim; a client performing a Mission's
+      task presenting no ordinary credential for it; and mandatory
+      mediation where the runtime layer holds custody of the client's
+      credentials ([I-D.draft-mcguinness-oauth-mission],
+      [I-D.draft-mcguinness-mission-runtime]).  Residual: a workload's
+      provisioned authority exists beside any Mission that draws on it,
+      and Mission state does not revoke a grant held outside any
+      Mission; at an undesignated resource with no mandatory mediation,
+      such a grant acts with no Mission state, revocation, or consent
+      commitment, and only the client's own conformance closes that
+      path.
+
+   Standing-authority creep through the source ceiling:  Addressed by
+      the approval-time source check: approval activates only authority
+      the source already holds, the AS verifies the derived Authority
+      Set against it, and the rendering names the source and, for
+      organizational, its governed policy
+      ([I-D.draft-mcguinness-oauth-mission]). authority_hash fixes each
+      Mission's Authority Set, so a later change to the source never
+      widens an existing Mission, and under governed_policy each
+      activation also stays within the authority ceiling of the root a
+      human approved at its exact version
+      ([I-D.draft-mcguinness-mission-approval-governance]).  Residual:
+      the ceiling is only as tight as the source.  Provisioning a
+      workload's authority or broadening a governed policy is
+      entitlement governance outside the family, and each later Mission
+      may draw on what accumulates there.
+
+   No human at runtime, and operator change:  Addressed by action-bound
+      approval where a deployment requires it: the PEP refuses such an
+      action without a fresh approval from an independent Approver or
+      policy authority, resolved on a surface the agent cannot invoke,
+      and fails closed absent a usable approval mechanism
+      ([I-D.draft-mcguinness-mission-runtime]).  An operator change
+      reassigns no authority: approval_basis.consent_principal is fixed
+      at approval ([I-D.draft-mcguinness-oauth-mission]); Management's
+      owner grants none and changes only by an authorized, audited re-
+      home ([I-D.draft-mcguinness-oauth-mission-management]); and a
+      lifecycle change needs an explicit lifecycle authorization naming
+      who may perform it ([I-D.draft-mcguinness-oauth-mission-status]).
+      Residual: outside the classes held for action-bound approval no
+      one watches the agent act, so in-scope misuse surfaces only
+      through audit; Missions an operator approved keep that accountable
+      principal and run until expiry or revocation after the operator
+      leaves, and offboarding is the deployment's.
+
    Audit tampered, dropped, or reordered:  Addressed by transparency:
       append-only log, inclusion receipts, non-equivocation.  Residual:
       single-service equivocation (per-service only; register with
@@ -1382,6 +1449,11 @@ Table of Contents
               McGuinness, K., "Mission Context Binding for AAuth", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-aauth.html>.
+
+   [I-D.draft-mcguinness-mission-approval-governance]
+              McGuinness, K., "Mission Approval Governance", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-approval-governance.html>.
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound
@@ -1835,6 +1907,12 @@ Appendix B.  Document History
       in Section 8 split for one idea per paragraph.  No normative
       content, anchor, or adversary-model row, mitigation, or residual
       changed.
+
+   *  The adversary model adds four moves for an agent acting without a
+      delegating person: its own credential as the Subject's only
+      authentication root, Mission bypass through source authority held
+      outside any Mission, standing-authority creep through the source
+      ceiling, and no human at runtime with operator change (#1196).
 
 Acknowledgments
 

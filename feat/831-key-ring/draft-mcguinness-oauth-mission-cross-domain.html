@@ -2927,6 +2927,10 @@ walkthrough's, so its anchors differ from that example's). The partner ERP
 is behind the Resource AS <code>ras.partner.example.com</code>, so the agent's
 next step is a cross-domain projection rather than a home-domain
 access token.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
+<p id="appendix-A-6">In the examples in this document, the partner ERP's operation contract
+identifies <code>https://erp.partner.example.com</code> as the operation target
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
+constraints determine the permitted operations within that service.<a href="#appendix-A-6" class="pilcrow">¶</a></p>
 <div id="stage-2-cross-domain-projection-via-id-jag-between-domains">
 <section id="appendix-A.1">
         <h3 id="name-stage-2-cross-domain-projec">
@@ -3067,9 +3071,10 @@ grant.<a href="#appendix-A.2-5" class="pilcrow">¶</a></p>
         </h3>
 <p id="appendix-A.3-1">The agent calls the ERP resource server (<code>erp.partner.example.com</code>)
 with that token. The resource server validates the JWT and the <code>cnf</code>
-binding and enforces the <code>authorization_details</code> whose <code>resource</code> it
-serves, permitting <code>invoices.read</code> and <code>journal-entries.write</code> up to
-a <code>max_amount</code> of 500.00 USD
+binding and enforces the <code>authorization_details</code> whose <code>resource</code>
+matches the operation target, <code>https://erp.partner.example.com</code>,
+permitting <code>invoices.read</code> and <code>journal-entries.write</code> up to a
+<code>max_amount</code> of 500.00 USD
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
 "Resource Server Enforcement"). It treats the
 <code>mission</code> claim as an audit anchor; holding only this audience's
