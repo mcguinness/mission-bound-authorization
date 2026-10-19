@@ -35055,12 +35055,44 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a proposed entry carrying the RFC 9396 locations field is refused with invalid_authorization_details"
+    "normative": "a proposed or requested entry carrying the RFC 9396 locations field is refused with invalid_authorization_details, whatever its value",
+    "local": "the reference AS decides by property presence, so [], null, an empty string and a malformed value are refused like a populated array; PAR and device submission refuse before any request_uri, device_code or Mission, and the deferred initiation, dispatch handoff and async-delegation exchanges refuse before any deferral, grant, family or derivation count"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 4; refusal approved in the #1277 review (D454). Not met by the reference: PAR admits locations and derivation drops it (#1278). Case fc-08 skipped (refusal.locations)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses a proposal entry carrying locations, whatever its value, before any interaction, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > refuses a proposal entry carrying locations, whatever its value, with invalid_authorization_details, issuing no device_code",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "requested entries on the deferral initiation (@spec resource-access#entry-validation, #1278) > refuses a requested entry carrying locations with invalid_authorization_details, opening no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > a requested entry carrying locations is refused invalid_authorization_details, issuing no handoff grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation issuance (@spec async-delegation) > confinement: a requested entry carrying locations is refused invalid_authorization_details, opening no family and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1258 item 4; refusal approved in the #1277 review (D454), shape ruled in D457; implemented by #1278. One presence check (refusedEntryMember in @mission/core) backs every boundary: the published schema carries \"locations\": false with the top level open, validateMissionResourceAccessSchema covers PAR, device submission and the other proposal intakes, and the deferred, handoff and async-delegation exchanges check requested entries before projecting them. Proved by disabling each guard in turn: the validator's check (the PAR and device tests fail), and the deferred, handoff and async-delegation checks (each test fails). The config loaders (ConfigError naming the entry and locations), direct derivation (invalid_authorization_details) and the template admin plane are witnessed in locations-refused.test.ts and template-dispatch-endpoint.test.ts and are not cited, since their errors or level differ from this row. A capability_sources entry is still admitted at PAR. Case fc-08 runs (refusal.locations)."
   },
   {
    "id": "resource-access.common-constraints.no-drop-any-key",
