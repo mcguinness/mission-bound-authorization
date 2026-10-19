@@ -587,6 +587,48 @@ describe("deferred Mission approval wire path (@spec deferred-approval#deferred-
     expect(refused.body).not.toHaveProperty("deferral_code");
   });
 
+  it("takes the resource selected at the token endpoint and refuses one the pending request cannot honor", async () => {
+    useRoot(rootDoc({ authority_ceiling: [readEntry(), ledgerEntry()] as never }));
+    const both = {
+      intent: { target_resources: [RESOURCE, LEDGER] },
+      authorizationDetails: [readEntry(["payments:invoice.read"]), ledgerEntry()],
+    };
+    const keys = await newKeys();
+    const audienceOf = async (deferralCode: string) => {
+      const r = await poll(deferralCode, keys);
+      expect(r.status, JSON.stringify(r.body)).toBe(200);
+      return decodeJwt(r.body.access_token as string).aud;
+    };
+    const redeemFor = (code: string, resource: string) => redeem(code, keys, { params: { resource } });
+
+    // No resource at PAR, the ledger at redemption: a ledger token.
+    const unnamed = await frontChannel(both);
+    const toLedger = await redeemFor(unnamed.code as string, LEDGER);
+    expect(toLedger.body.error).toBe("authorization_pending");
+    expect(await audienceOf(toLedger.body.deferral_code as string)).toBe(LEDGER);
+
+    // Outside the Intent's target resources: refused, consuming nothing; the
+    // same code then redeems for a resource the request can grant.
+    const outside = await frontChannel(both);
+    const refused = await redeemFor(outside.code as string, "http://localhost:4410/api");
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toBe("invalid_target");
+    expect(refused.body).not.toHaveProperty("deferral_code");
+    const honored = await redeemFor(outside.code as string, RESOURCE);
+    expect(await audienceOf(honored.body.deferral_code as string)).toBe(RESOURCE);
+
+    // Not a resource the PAR named: refused.
+    const ledgerOnly = await frontChannel({ ...both, resources: [LEDGER] });
+    const notNamed = await redeemFor(ledgerOnly.code as string, RESOURCE);
+    expect(notNamed.body.error).toBe("invalid_target");
+    expect(notNamed.body).not.toHaveProperty("deferral_code");
+
+    // Two named at PAR, one chosen at the token endpoint: that one.
+    const twoNamed = await frontChannel({ ...both, resources: [LEDGER, RESOURCE] });
+    const chosen = await redeemFor(twoNamed.code as string, RESOURCE);
+    expect(await audienceOf(chosen.body.deferral_code as string)).toBe(RESOURCE);
+  });
+
   it("keeps an approval deliverable when saving its token fails, then delivers exactly one token", async () => {
     useRoot(rootDoc());
     const keys = await newKeys();

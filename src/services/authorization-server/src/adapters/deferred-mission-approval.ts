@@ -131,17 +131,41 @@ class ResourceSelectionError extends Error {}
 /**
  * @spec deferred-approval#deferred-sequencing ("Deferral changes only the
  * timing of the approval event"): the one audience a deferral delivers its
- * token for. One deferral delivers one access token, so the authorization
- * request's resources must name one audience; several are ambiguous and
- * refused. None selects nothing: the delivery then uses the first entry of
- * the Mission's effective set.
+ * token for, as a synchronous redemption of the same request would select it
+ * (RFC 8707 Sections 2.1 and 2.2). One deferral delivers one access token:
+ * - a `resource` on the redeeming token request selects it, and must be one
+ *   the authorization request named, when it named any;
+ * - otherwise the authorization request's one resource selects it, and
+ *   several are ambiguous;
+ * - every selection must be one of the Mission Intent's target resources,
+ *   the only authority the pending request can grant.
+ * A selection the pending request cannot honor is refused. Nothing named
+ * anywhere selects nothing: the delivery then uses the first entry of the
+ * Mission's effective set.
  */
-function selectedResource(staged: StagedCode): string | undefined {
+function selectedResource(staged: StagedCode, requested: readonly string[]): string | undefined {
   const named = staged.resources_json ? (JSON.parse(staged.resources_json) as string[]) : [];
-  if (named.length > 1) {
-    throw new ResourceSelectionError("the authorization request named several resources; a deferred approval delivers one token");
+  let selected: string | undefined;
+  if (requested.length > 1) {
+    throw new ResourceSelectionError("a deferred approval delivers one token: name one resource");
   }
-  return named[0];
+  if (requested.length === 1) {
+    selected = requested[0] as string;
+    if (named.length > 0 && !named.includes(selected)) {
+      throw new ResourceSelectionError("the resource is not one the authorization request named");
+    }
+  } else if (named.length > 1) {
+    throw new ResourceSelectionError(
+      "the authorization request named several resources: name one at the token endpoint, a deferred approval delivers one token",
+    );
+  } else {
+    selected = named[0];
+  }
+  const targets = (JSON.parse(staged.intent_json) as MissionIntent).target_resources;
+  if (selected !== undefined && !targets.includes(selected)) {
+    throw new ResourceSelectionError("the resource is not one of the Mission Intent's target resources");
+  }
+  return selected;
 }
 
 /** @spec deferred-approval#deferred-approval: whether `completion_mode` includes `deferred`; other values are ignored. */
@@ -406,7 +430,7 @@ async function redeemDeferredCode(
   // request cannot honor is refused here, consuming nothing.
   let resource: string | undefined;
   try {
-    resource = selectedResource(staged);
+    resource = selectedResource(staged, namedResources(params.resource, opts.issuer));
   } catch (e) {
     if (e instanceof ResourceSelectionError) throw new errors.InvalidTarget(e.message);
     throw e;

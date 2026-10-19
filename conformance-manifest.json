@@ -38095,8 +38095,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the token a resolved deferral delivers is audienced to the resource the submission selected with its resource indicator, as a synchronous approval of the same submission would issue it",
-    "local": "Every `resource` the PAR names is carried through the pending-request code; duplicates collapse. One resource selects the delivered token's audience; several distinct ones with no selection at the token endpoint are refused invalid_target at redemption, before anything is opened, because one deferral delivers one access token and RFC 8707 has the client name one of several authorized resources at the token endpoint. The first entry of the effective set is the audience only when no resource was selected at all. The direct path instead audiences an unselected request to the provider's default resource (the issuer), which this assembly's scope projection refuses. The token's authorization_details are the whole effective set on both paths."
+    "normative": "the token a resolved deferral delivers is audienced to the resource the submission selected with its resource indicator, at the authorization request or at the token endpoint, as a synchronous approval of the same submission would issue it; a selection the pending request cannot honor is refused",
+    "local": "Every `resource` the PAR names is carried through the pending-request code; duplicates collapse. A `resource` on the redeeming token request (RFC 8707 Section 2.2) selects the audience and must be one the PAR named, when it named any; otherwise the PAR's one resource selects it; several distinct ones with no selection at the token endpoint are refused invalid_target at redemption, before anything is opened, because one deferral delivers one access token and RFC 8707 has the client name one of several authorized resources at the token endpoint. The first entry of the effective set is the audience only when no resource was selected at all. The direct path instead audiences an unselected request to the provider's default resource (the issuer), which this assembly's scope projection refuses. The token's authorization_details are the whole effective set on both paths. Every selection must be one of the Mission Intent's target resources (the authority the pending request can grant) and is refused invalid_target otherwise; a refused redemption consumes nothing."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -38110,6 +38110,12 @@
     {
      "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
      "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > honors a repeated PAR resource and refuses an ambiguous one, never falling back to another audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > takes the resource selected at the token endpoint and refuses one the pending request cannot honor",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
