@@ -7,12 +7,32 @@ on:
     - CONTRIBUTING.md
     - LICENSE.md
     - .gitignore
+    # The drafts never build from these; a decision-log row, an
+    # implementation change or a ledger re-pin needs no draft rebuild
+    # or publish.
+    - 'src/**'
+    - 'notes/**'
+    - conformance-manifest.json
+    - family-manifest.json
+    - candidate-gate.json
+    - DRAFTS.md
   pull_request:
     paths-ignore:
     - README.md
     - CONTRIBUTING.md
     - LICENSE.md
     - .gitignore
+    - 'src/**'
+    - 'notes/**'
+    - conformance-manifest.json
+    - family-manifest.json
+    - candidate-gate.json
+    - DRAFTS.md
+
+# A newer push to the same ref supersedes an older build or publish.
+concurrency:
+  group: editors-copy-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -64,9 +84,46 @@ jobs:
       with:
         token: ${{ github.token }}
 
+    # Prune stale previews just before publishing. The publish below clones
+    # gh-pages and force-pushes that clone, so a prune pushed while a slower
+    # publish is in flight is undone; pruning first means every publish
+    # clones, indexes and pushes the pruned branch.
+    - name: "Checkout gh-pages for Pruning"
+      if: ${{ github.event_name == 'push' }}
+      uses: actions/checkout@v6
+      with:
+        ref: gh-pages
+        path: .ghpages-prune
+        fetch-depth: 1
+
+    - name: "Prune Previews of Deleted or Merged Branches"
+      if: ${{ github.event_name == 'push' }}
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        bash scripts/prune-ghpages-previews.sh .ghpages-prune
+        rm -rf .ghpages-prune
+
     - name: "Update GitHub Pages"
+      id: ghpages
       uses: martinthomson/i-d-template@v1
       if: ${{ github.event_name == 'push' }}
+      continue-on-error: true
+      with:
+        make: gh-pages
+        token: ${{ github.token }}
+
+    # Another branch's publish can win the race to push gh-pages. Wait,
+    # then publish again from a fresh copy of the branch; a second
+    # failure fails the job.
+    - name: "Wait Before Retrying GitHub Pages"
+      if: ${{ github.event_name == 'push' && steps.ghpages.outcome == 'failure' }}
+      run: sleep 30
+
+    - name: "Retry GitHub Pages"
+      uses: martinthomson/i-d-template@v1
+      if: ${{ github.event_name == 'push' && steps.ghpages.outcome == 'failure' }}
       with:
         make: gh-pages
         token: ${{ github.token }}
