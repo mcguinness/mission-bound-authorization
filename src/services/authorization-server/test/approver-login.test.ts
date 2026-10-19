@@ -473,10 +473,6 @@ describe("the approval surface's upstream Approver login (@spec mission#approval
     };
     const firstCallback = await start(first.uid);
     const secondCallback = await start(second.uid);
-    // Each login's binding goes only to the callback, and the two do not collide.
-    const bindings = [...browser.values()].filter((c) => c.name.startsWith("mission_approver_login_"));
-    expect(bindings).toHaveLength(2);
-    for (const c of bindings) expect(c.path).toBe("/approver-login/callback");
     const login = async (callback: string) => {
       const res = await get(callback);
       const text = await res.text();
@@ -498,6 +494,10 @@ describe("the approval surface's upstream Approver login (@spec mission#approval
       const decision = await decide(pending.uid, pending.jar, approver, session.csrf);
       expect(decision.code, decision.description).toBeTruthy();
     }
+    // Each login's binding went only to the callback.
+    const bindings = [...browser.values()].filter((c) => !c.name.startsWith("mission_approver_session"));
+    expect(bindings).toHaveLength(2);
+    for (const c of bindings) expect(c.path).toBe("/approver-login/callback");
   });
 
   it("completes a login only in the user agent that started it, and only once", async () => {
