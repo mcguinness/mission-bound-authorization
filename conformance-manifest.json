@@ -16932,7 +16932,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v4, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v5, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -21023,41 +21023,6 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
-  },
-  {
-   "id": "authzen.pdp-request.audience-match-mandatory",
-   "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "pdp-request",
-   "text": "A PDP MUST perform the entry match against `resource.properties.audience`; matching it against `resource.type` or `resource.id` is non-conforming and will diverge across deployments.",
-   "role": "PDP",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "runtime-enforced"
-   ],
-   "surface": "decision-request",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "the PDP matches the approved Authority Set entry's resource against resource.properties.audience, never against the AuthZEN resource object's type/id identity"
-   },
-   "level": "endpoint",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
-     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.audience > matches the approved entry's resource against resource.properties.audience, with no context.audience and a resource id that names an object",
-     "level": "endpoint",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
-     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.audience > never matches on the resource object's id or type: an id naming the entry's resource under another audience is out_of_authority",
-     "level": "endpoint",
-     "surface": "decision-request"
-    }
-   ]
   },
   {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
@@ -34202,8 +34167,22 @@
     "normative": "an RS treats an unrecognized resource_match value as unenforceable and fails closed."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource matches entries with the Resource Access matcher (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276) > a prefix entry or an unrecognized resource_match provides no authority at the resource, even naming the target itself",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > under its service-level contract, only an exact entry spelled as the target authorizes; another spelling, a prefix entry or an unrecognized resource_match does not",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276: a prefix entry (unimplemented) and an unrecognized resource_match provide no authority at the payments and SaaS resources; a credential carrying one is refused whole."
   },
   {
    "id": "resource-access.rs-enforcement.prefix-normalization-before-comparison",
@@ -34629,9 +34608,22 @@
     "normative": "the resource server derives the operation target from its documented operation contract independently of the presented entries; an entry naming another identifier never changes the target"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 1 (D447). Cases rm-rpc-01..07 and rm-resolve-01..04 in vectors/mission-resource-access/resource-matching.json. The reference resource servers do not establish an operation target (cases skipped: operation-target)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > sends the contract's target beside the audience, and never reads a caller-supplied target or resource argument",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > same audience, different target: a contract naming a finer service under the same audience is decided on that target, never on the audience",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v5; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The target never follows an agent argument or a presented entry naming another identifier."
   },
   {
    "id": "resource-access.resource-matching.refuse-unresolved-target",
@@ -34653,9 +34645,28 @@
     "normative": "a missing or ambiguous operation contract refuses the operation, even when an entry naming the metadata identifier is present"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 1 (D447 disposition 1). Cases rm-resolve-01, rm-resolve-02. The reference resource servers do not establish an operation target (cases skipped: operation-target)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > refuses a tool whose profile declares no contract before any decision request, though the Mission and the credential name the service root; the declared contract permits",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > refuses an unsupported finer contract and declarations naming different targets before any decision request",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool with no contract, an unsupported contract or ambiguous contracts as target_unresolvable, though the token's entry names the service root",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v5; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). Ambiguity is reachable only through declarations naming different targets; finer contracts refuse as unsupported."
   },
   {
    "id": "resource-access.resource-matching.execute-matched-target",
@@ -34677,9 +34688,16 @@
     "normative": "the operation executes on the target that was matched; matching another target never authorizes the execution"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 1 (D447). The reference resource servers do not establish an operation target (cases skipped: operation-target)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource executes only the authorized target (@spec resource-access#resource-matching, #1276) > a contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v5; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The PEP re-establishes the target from the live profile before every release and suppresses a moved or unestablishable one (target_drift), for parameter-bound reads, a read with no parameter digest, and a write."
   },
   {
    "id": "resource-access.resource-matching.no-metadata-fallback",
@@ -34701,9 +34719,28 @@
     "normative": "without an explicit service-level operation contract, an entry naming the metadata identifier does not match an operation whose target is finer"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 1 (D447 disposition 1). Cases rm-rpc-02, rm-resolve-01, rm-resolve-03. The reference resource servers do not establish an operation target (cases skipped: operation-target)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > refuses a tool whose profile declares no contract before any decision request, though the Mission and the credential name the service root; the declared contract permits",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > same audience, different target: a contract naming a finer service under the same audience is decided on that target, never on the audience",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool with no contract, an unsupported contract or ambiguous contracts as target_unresolvable, though the token's entry names the service root",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v5; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457)."
   },
   {
    "id": "resource-access.resource-matching.exact-no-reserialization",
@@ -34725,9 +34762,22 @@
     "normative": "an exact entry and an operation target that differ by host case, default port, percent spelling, trailing slash, or query do not match; they match only as identical strings after JSON decoding of the entry"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 1 (D447 dispositions 2 and 3). Cases rm-exact-01..12. The reference resource servers do not establish an operation target (cases skipped: operation-target)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource matches entries with the Resource Access matcher (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276) > an entry spelled differently from the target never covers it: the credential's is refused before the PDP, and the Mission's is denied out_of_authority",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > under its service-level contract, only an exact entry spelled as the target authorizes; another spelling, a prefix entry or an unrecognized resource_match does not",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 1 (D447 dispositions 2 and 3). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v5; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The SaaS witness carries an entry spelled with JSON escapes in the token's JSON text. Cases rm-exact-01..12 also run at helper level."
   },
   {
    "id": "resource-access.resource-matching.exact-documented-spelling",
@@ -34775,7 +34825,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 items 1 and 10 (D447 disposition 4). Cases rm-prefix-01..15. Prefix matching is not implemented; the reference refuses prefix input (#1264)."
+   "notes": "#1258 items 1 and 10 (D447 disposition 4). Cases rm-prefix-01..15. Prefix matching is not implemented; a prefix entry provides no authority at the reference resource servers (#1264, #1276)."
   },
   {
    "id": "resource-access.resource-matching.prefix-query-path-only",
@@ -34799,7 +34849,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 10 (D447 disposition 3). Cases rm-prefix-15, rm-resolve-04."
+   "notes": "#1258 item 10 (D447 disposition 3). Cases rm-prefix-15, rm-resolve-04. Prefix matching is not implemented; a prefix entry provides no authority (#1276)."
   },
   {
    "id": "resource-access.subset.same-matcher",
@@ -35257,9 +35307,16 @@
     "normative": "a token failing token-wide validation is rejected regardless of its entries"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 2. Case fc-04 skipped (rs.enforcement)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the token's audience is validated on its own, independently of the operation target (@spec resource-access#resource-matching, #1276) > rejects a token whose aud omits this resource, though its entries name the operation target exactly",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 2. Case fc-04 skipped (rs.enforcement). Partial: audience failure only (#1276); signature and sender-constraint failures are not witnessed here against entries that would authorize."
   },
   {
    "id": "resource-access.rs-enforcement.delegation-may-disregard",
