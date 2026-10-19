@@ -149,9 +149,9 @@ function newLineage(
 }
 
 /**
- * Approve a Mission WITHOUT manually rooting a continuation: the AS assembly roots
- * the durable grant anchor + INITIAL handle at approval (see index.ts
- * rootMissionContinuation). Returns the mission id and that AUTO-rooted handle, so
+ * Approve a Mission WITHOUT manually rooting a continuation: the kernel roots
+ * the durable grant anchor + INITIAL handle in the activating commit (see
+ * ContinuationStore.rootGrantInCallerTx). Returns the mission id and that AUTO-rooted handle, so
  * the lifecycle tests prove approval-time rooting rather than test-only rooting.
  */
 function approveLineage(
@@ -1571,8 +1571,8 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     // (the approval instant itself, not a claim about authentication
     // strength) is auto-rooted here. This replaces the pre-#636 assertion
     // that `intent.controls.acr` flowed through to this envelope: that
-    // Intent member is retired with no replacement, and rootMissionContinuation
-    // (src/services/authorization-server/src/index.ts) sources no acr/amr.
+    // Intent member is retired with no replacement, and the kernel's root
+    // (ContinuationStore.rootGrantInCallerTx) sources no acr/amr.
     const approxNow = Math.floor(Date.now() / 1000);
     const { missionId, handle } = approveLineage("apev-life-root");
 
@@ -1700,7 +1700,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     const first = approveLineage("apev-life-idem");
     // Re-approving with the SAME event id is idempotent in the kernel (a duplicate
     // approval_event_id throws before emitCommit), so no second commit fires and
-    // no second anchor/handle is rooted. The guard in rootMissionContinuation is
+    // no second anchor/handle is rooted. The guard in rootGrantInCallerTx is
     // belt-and-suspenders for this.
     const second = approveLineage("apev-life-idem");
     expect(second.missionId).toBe(first.missionId);

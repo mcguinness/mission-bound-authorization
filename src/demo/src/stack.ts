@@ -24,6 +24,7 @@ import {
   missionResourceAccessProfile,
   OperationProfileRegistry,
   type ProviderCapability,
+  type SigningKeySource,
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
@@ -176,6 +177,8 @@ export interface AuthServerExtras {
    * unless its test fixture is on.
    */
   devOrdinaryIssuance: boolean;
+  /** @spec #831: whether the AS signs with a key ring's durable keys or keys generated at this boot. */
+  signingKeyMode: "ring" | "ephemeral";
 }
 
 export interface DemoStack {
@@ -320,6 +323,13 @@ export async function composeStack(opts: {
    * every request. Absent: the shared demo composition, unchanged.
    */
   target?: "as-native";
+  /**
+   * @spec #831: the AS's signing keys: a key ring (durable across restarts)
+   * or keys generated at this boot. Absent: generated at this boot, as tests
+   * and the demos run. `pnpm as-native` sets it from its environment
+   * (`signingKeysFromEnv`).
+   */
+  signingKeys?: SigningKeySource;
   /**
    * TEST FIXTURE ONLY (D332); `pnpm as-native` never sets it. Under the
    * `as-native` target, also enable `dev-token` and dev ordinary issuance, so
@@ -470,6 +480,7 @@ export async function composeStack(opts: {
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
       },
       ...(capabilities ? { capabilities } : {}),
+      ...(opts.signingKeys ? { signingKeys: opts.signingKeys } : {}),
       ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
       // @spec authority-server#mission-join (#557) — the demo's MAS-governed
       // route acts under an ORDINARY OAuth credential, and no other path in
@@ -678,6 +689,7 @@ export async function composeStack(opts: {
       },
       ...(as.capabilities ? { capabilities: as.capabilities } : {}),
       devOrdinaryIssuance: as.devOrdinaryIssuance,
+      signingKeyMode: as.signingKeyMode,
     };
   } else {
     const asKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });

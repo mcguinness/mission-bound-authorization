@@ -522,12 +522,26 @@ again. The login is simulated: the demo has no Approver identity provider,
 so no person authenticated. #253's high-risk approval acceptance therefore
 does not rest on it, and that gate stays unmet until a deployment's login
 integration supplies the achieved context. It mints no ordinary token. It prints the
-issuer, the AS capability set, the resource audience and the PDP mode, and
-needs only `pnpm setup` and `docker compose up -d` (OpenFGA).
+issuer, the AS capability set, the signing-key source, the resource audience
+and the PDP mode, and needs only `pnpm setup` and `docker compose up -d`
+(OpenFGA).
 
-Its configuration is the OpenFGA connection, the Resource-policy store and
-the PDP mode from the environment, and nothing else (`asNativeLaunchOptions`,
-`demo/src/as-native.ts:22`). With `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID`
+Its configuration is the OpenFGA connection, the Resource-policy store, the
+PDP mode and the signing-key source from the environment, and nothing else
+(`asNativeLaunchOptions`, `demo/src/as-native.ts:22`).
+
+The deployment chooses where the AS's signing keys come from (#831).
+`MISSION_KEY_RING=<absolute path>` signs with a key ring created once by
+`pnpm keys init --ring <path>`: the four AS role keys (`as-token`,
+`as-status`, `as-txn`, `as-continuation`) under their configured `kid`,
+kept across restarts, so a token or Status response signed before a restart
+still verifies after it. `MISSION_EPHEMERAL_KEYS=1` generates them at each
+boot instead. Neither, both, a relative path, or a ring that is missing, open
+to others or created for another issuer refuses startup before anything
+connects:
+`the as-native launcher in process, OpenFGA client stubbed (D332) > signs with a configured key ring and says so; a ring for another issuer refuses before anything connects (#831)`.
+The ring holds one generation per role; rotation and resource-side JWKS
+refresh are #831's next slice. With `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID`
 set it attaches to that store and model, verifying the model and creating
 nothing; with neither it bootstraps a development store seeded from
 `config/seed/resource-policy.json` and prints its ids (#828):
