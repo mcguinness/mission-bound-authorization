@@ -391,6 +391,18 @@ export class MissionApprovalDeferralStore {
     const modelOutputs = this.opts.modelAdvisor
       ? await this.opts.modelAdvisor({ ...selected.view, client_id: row.client_id, intent })
       : [];
+    // The model call can take arbitrarily long, so the evidence is verified
+    // once more after it, with nothing awaited between that check and the
+    // commit: evidence that expired meanwhile authorizes nothing.
+    if (this.opts.modelAdvisor) {
+      try {
+        submissionEvidence = await this.verifiedEvidence(row, intent);
+      } catch (e) {
+        const why = refusalReason(e);
+        if (why === undefined) throw e;
+        return this.notAuthorized(code, why);
+      }
+    }
     const consentId = selected.consentId;
     try {
       return withTransaction(this.db, (): PolicyCompletionResult => {

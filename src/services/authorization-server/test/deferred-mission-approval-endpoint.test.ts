@@ -1080,6 +1080,27 @@ describe("governed policy completion over the wire (@spec deferred-approval#poli
     ]);
   });
 
+  it("verifies submission evidence again after a delayed model call, so evidence that expires meanwhile creates no Mission", async () => {
+    useRoot(rootDoc());
+    const keys = await newKeys();
+    const before = missionCount();
+    const records = as.kernel.governanceRecords.count();
+    // Valid when the poll starts (120 s left); the model takes 180 s.
+    const code = await openDeferral(keys, { evidence: [evidenceUntil(clockMs + 120_000)] });
+    advise = async () => {
+      clockMs += 180_000;
+      return [];
+    };
+    const r = await poll(code, keys);
+    advise = async () => [];
+    expect(r.status).toBe(400);
+    expect(r.body.error).toBe("access_denied");
+    expect(r.body).not.toHaveProperty("access_token");
+    expect(missionCount()).toBe(before);
+    expect(as.kernel.governanceRecords.count()).toBe(records);
+    expect(as.missionApprovalDeferrals?.resolutionReason(code)).toBe("invalid_mission_intent_evidence");
+  });
+
   it("never counts a model output bound to another approval event", async () => {
     const model = { id: "urn:model:ledger-review", version: "m1" };
     useRoot(rootDoc({ rules: { max_entries: 3, models: [model] } }));

@@ -38126,7 +38126,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the Intent Submission Evidence a deferred submission presented is verified again at the activation, which creates no Mission when the evidence no longer verifies, and the verified facts are recorded on the Mission as submission_evidence, as at a synchronous approval",
-    "local": "The whole Submission envelope (intent and evidence) is carried through the deferral. The evidence is re-verified at the governed_policy activation under the deployment's current required types for the client; a failure resolves the approval (denied under this assembly's refusal setting) with the reason invalid_mission_intent_evidence recorded issuer-side, and the poll answers access_denied, not invalid_mission_intent_evidence. The unwired human path (approveDirect) refuses to commit when the approval carries evidence and no verified facts are supplied."
+    "local": "The whole Submission envelope (intent and evidence) is carried through the deferral. The evidence is verified at the governed_policy activation before any derivation, and again after the model call with nothing awaited before the commit, so evidence that expires while the model is consulted authorizes nothing; both checks use the deployment's current required types for the client, and the recorded facts are the last check's. A failure resolves the approval (denied under this assembly's refusal setting) with the reason invalid_mission_intent_evidence recorded issuer-side, and the poll answers access_denied, the deferred substrate's outcome for a denied deferral. The unwired human path (approveDirect) refuses to commit when the approval carries evidence and no verified facts are supplied."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -38142,9 +38142,15 @@
      "name": "deferred approval store bounds and cancellation (@spec deferred-approval#queue-pressure, deferred-approval#state-machine) > refuses a human direct approval of evidence-bearing submissions without verified facts, and records the facts it is given",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > verifies submission evidence again after a delayed model call, so evidence that expires meanwhile creates no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1300 review (D474)."
+   "notes": "#1300 review (D474). #1300 second review."
   },
   {
    "id": "deferred-approval.deferral.substrate-discovery",
