@@ -5103,7 +5103,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "lifecycle refusals carry mission_error with one of revoked, expired, superseded, derivations_exhausted, or a value a companion defines (Mission Status's suspended and completed, Child Delegation's parent_terminated)",
-    "local": "oidc-provider 9.10's err_out.js copies only error, error_description, scope and state from a thrown error, so MissionGrantError and MissionExchangeError plus a grant.error listener splice mission_error into the body wherever the Mission gate (the refresh pre-check, gateDerivation or gateActive) refuses a still-valid grant. The Token Exchange handlers that write their own refusal body (the async-delegation exchange, its family rollback and recovery, carryover retrieval, child-creation recovery, and the expansion predecessor and recovery checks) add it from the refused Mission's observed record, after client authentication and possession (#1179). The rollback stores the member with the refusal, so a replay to the same client and key repeats it. Possession of a Mission's token does not authorize the presenter, so the expansion predecessor check, expansion recovery and child-creation recovery name the Mission's state only to the predecessor's or parent's own client, the acting agent this deployment authorizes; an unrelated client holding the token and its key gets the refusal without it (witnessed at the predecessor check; the recovery gates are not witnessed, since reaching them needs an unrelated client's own creation). Child-creation recovery also requires the presented token's authority, actor and depth to admit the recorded child; a narrower token from the same client and key gets the same invalid_request without the state. These disclosure tests are local choices. Endpoint witnesses cited here: suspended on a refresh (tracer); derivations_exhausted on a capped Mission's second derivation (tracer) and on the async-delegation family rollback; superseded on a refresh of a predecessor's own refresh token after a deferred expansion activated its successor, with nothing issued, saved or counted (refresh-precheck, #1065), and on a new expansion of that superseded predecessor; expired on a Token Exchange, whose lifecycle refusal is invalid_request (#1154); suspended and revoked on the async-delegation exchange, its recovery, carryover retrieval, child-creation recovery, the expansion predecessor check and expansion recovery, and revoked on the family rollback and its replay; and parent_terminated on child-creation recovery after the parent's revocation (#1179). The shared mapper gateErrorToMissionError, which passes each termination reason through (superseded, parent_terminated, expired) and gives no value for an unrecognized one, is cited as a unit witness, not as an endpoint refusal. Partial: completed is not cited here as an endpoint refusal. This demo's own /lifecycle route destroys the underlying OAuth Grant on a terminal transition (provider.ts), so a refresh after it fails at oidc-provider's grant lookup with no mission_error; a raw kernel transition, natural expiry or supersession leaves the grant for the Mission gate."
+    "local": "oidc-provider 9.10's err_out.js copies only error, error_description, scope and state from a thrown error, so MissionGrantError and MissionExchangeError plus a grant.error listener splice mission_error into the body wherever the Mission gate (the refresh pre-check, gateDerivation or gateActive) refuses a still-valid grant. The Token Exchange handlers that write their own refusal body (the async-delegation exchange, its family rollback and recovery, carryover retrieval, child-creation recovery, and the expansion predecessor and recovery checks) add it from the refused Mission's observed record, after client authentication and possession (#1179). The rollback stores the member with the refusal, so a replay to the same client and key repeats it. Possession of a Mission's token does not authorize the presenter, so the expansion predecessor check, expansion recovery and child-creation recovery name the Mission's state only to the predecessor's or parent's own client, the acting agent this deployment authorizes; an unrelated client holding the token and its key gets the refusal without it. Since #1326 the step-4 acting-client check refuses such a client earlier, before the creation lookup on both exchanges and before redeem at the deferred poll, so these three client gates are unreachable at the endpoint and stay as defense in depth; the cross-client expansion test now witnesses that the earlier refusal carries no mission_error. Child-creation recovery also requires the presented token's authority, actor and depth to admit the recorded child; a narrower token from the same client and key gets the same invalid_request without the state. These disclosure tests are local choices. Endpoint witnesses cited here: suspended on a refresh (tracer); derivations_exhausted on a capped Mission's second derivation (tracer) and on the async-delegation family rollback; superseded on a refresh of a predecessor's own refresh token after a deferred expansion activated its successor, with nothing issued, saved or counted (refresh-precheck, #1065), and on a new expansion of that superseded predecessor; expired on a Token Exchange, whose lifecycle refusal is invalid_request (#1154); suspended and revoked on the async-delegation exchange, its recovery, carryover retrieval, child-creation recovery, the expansion predecessor check and expansion recovery, and revoked on the family rollback and its replay; and parent_terminated on child-creation recovery after the parent's revocation (#1179). The shared mapper gateErrorToMissionError, which passes each termination reason through (superseded, parent_terminated, expired) and gives no value for an unrecognized one, is cited as a unit witness, not as an endpoint refusal. Partial: completed is not cited here as an endpoint refusal. This demo's own /lifecycle route destroys the underlying OAuth Grant on a terminal transition (provider.ts), so a refresh after it fails at oidc-provider's grant lookup with no mission_error; a raw kernel transition, natural expiry or supersession leaves the grant for the Mission gate."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -28151,9 +28151,15 @@
      "name": "lookup_vendor refuses a vendor the store does not hold at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484) > a Mission and a presented credential that name the vendor do not bypass the refusal over HTTP with DPoP, and a stored vendor they name permits",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a Mission-bound credential whose Mission the loader does not hold is refused unknown_mission at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, #1329, D496) > a schedule_payment under an unknown Mission is refused with one verifiable signed refusal (state_unavailable), no PDP request, no Decision Evidence and no business effect; the same write under the held Mission schedules",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). target_unresolvable (the unknown_vendor diagnostic, #1251, D484): a lookup_vendor naming a vendor the store does not hold is refused with one verifiable signed Refusal Record carrying that value, no decision request and no Resource-policy query, under an unconstrained credential and under one that names the vendor, at the PEP over both decision channels and over the HTTP endpoint with DPoP; with D324's server fallback restored, the unconstrained lookup reaches the PDP and the named one signs credential_authority_insufficient, and each assertion fails. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither #1276 clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it; #1329, D496: a Mission-bound schedule_payment whose Mission the loader does not hold is refused at the HTTP endpoint with DPoP with one verifiable signed Refusal Record carrying that value, no decision request, no Resource-policy query and no business effect, while the same write under the held Mission schedules; treating the unknown Mission as an empty active view lets the request reach the PDP, and a different refusal reason, each fails the witness), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). target_unresolvable (the unknown_vendor diagnostic, #1251, D484): a lookup_vendor naming a vendor the store does not hold is refused with one verifiable signed Refusal Record carrying that value, no decision request and no Resource-policy query, under an unconstrained credential and under one that names the vendor, at the PEP over both decision channels and over the HTTP endpoint with DPoP; with D324's server fallback restored, the unconstrained lookup reaches the PDP and the named one signs credential_authority_insufficient, and each assertion fails. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither #1276 clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet."
   },
   {
    "id": "evidence.refusal.pdp-operation-target-invalid",
@@ -42964,6 +42970,52 @@
    "notes": "#1210 (D398). The possession arm is partial: see observation.local. The lead-in carries the MUST."
   },
   {
+   "id": "child-delegation.request-processing.acting-agent-step",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "request-processing",
+   "text": "Verify the acting agent (`actor_token`, or the request's client authentication) is authorized to create a child under this parent",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a client not authorized for the parent is refused before the creation_request_id lookup, even when it holds the parent token and its key: no child, reservation or child grant is created",
+    "local": "the reference AS authorizes only the parent's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. The check precedes the lookup, so another client's retained completed operation is refused rather than recovered. A child another client created before the check could still derive credentials: its grant redeems, and a refresh family opened from it outlives the grant. So building the AS revokes every non-terminal child whose retained creation operation names a client other than its parent's (revokeChildrenCreatedByAnotherClient), and issuance gating then refuses the grant and every credential derived from it. The child record names no creating client, so a child whose creation operation was purged before the fix cannot be identified (#1326). Partial: the actor_token arm is not exercised."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "child creation acting-agent authorization (@spec child-delegation#request-processing step 4, #1326) > an unrelated client holding the parent token and key is refused invalid_request, creating no child, reservation or child grant; the parent's own client creates the same child",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "child creation acting-agent authorization (@spec child-delegation#request-processing step 4, #1326) > a retained child-creation operation another client recorded is refused before recovery, minting no fresh child grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "child creation acting-agent authorization (@spec child-delegation#request-processing step 4, #1326) > the remediation revokes the children another client created before the check, refusing a retained grant and a refresh family opened from one; a child the parent's own client created keeps refreshing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-remediation-restart.test.ts",
+     "name": "child remediation at build (@spec child-delegation#request-processing step 4, #1326) > building the AS revokes a retained child another client created, and leaves the parent's own child active",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
    "id": "child-delegation.request-processing.failure-refusal",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "request-processing",
@@ -46752,6 +46804,41 @@
     }
    ],
    "notes": "#1210 (D398). The possession arm is partial: see observation.local. The lead-in carries the MUST."
+  },
+  {
+   "id": "expansion.verification-order.acting-agent-step",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "verification-order",
+   "text": "Verify the acting agent (`actor_token`, or the request's client authentication) is authorized to request expansion of this predecessor.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a client not authorized for the predecessor is refused before the creation_request_id lookup, even when it holds the predecessor's token and its key: no deferral or reservation is opened, and no successor is created or predecessor superseded",
+    "local": "the reference AS authorizes only the predecessor's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. Deferrals persist and the deferred poll runs no initiation check, so the poll also refuses, invalid_grant and before redeem, a deferral whose recorded client is not the predecessor's client, decided from the recorded predecessor and not the subject_token; the predecessor's own poll still completes without one (#1326). Partial: the actor_token arm, authorizing a delegated acting agent through actor_token, is not implemented, so it is not exercised."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion acting-agent authorization (@spec expansion#verification-order step 4, #1326) > an unrelated client holding the predecessor's token and key is refused invalid_request at initiation, opening no deferral or reservation and leaving the predecessor active; the predecessor's own client's request defers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion acting-agent authorization (@spec expansion#verification-order step 4, #1326) > a retained deferral another client opened is refused invalid_grant at the poll before redeem, creating no successor and leaving the predecessor active; the predecessor's own deferral still completes on a poll that carries no subject_token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "expansion.verification-order.failure-refusal",
