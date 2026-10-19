@@ -100,6 +100,7 @@ import {
   handleDispatchHandoffExchange,
 } from "./dispatch-handoff.js";
 import { DELEGATION_HANDLE_CONFLICTS, handleDelegationHandleExchange } from "./delegation-handle.js";
+import { EXPANSION_SELECTORS, handleDelegatedExchange, handleDesignationExchange } from "./delegation-exchange.js";
 import {
   childErrorCode,
   gateErrorToMissionError,
@@ -436,8 +437,24 @@ export async function handleTokenExchangeGrant(
     // delegation-handle request (expansion never carries it); its conflicts
     // were refused above, before routing.
     if (params.audience !== undefined) {
+      // @spec mission#designation (#869, D449): where delegation is on, an
+      // `audience` naming a client other than the requester is a
+      // designation; the requester's own client_id stays the handle.
+      const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+      if (params.audience !== client.clientId && capabilityEnabled(opts, "delegation")) {
+        await handleDesignationExchange(opts, provider, ctx);
+        return;
+      }
       if (profileDisabled("async-delegation")) return;
       await handleDelegationHandleExchange(opts, provider, ctx);
+      return;
+    }
+    // @spec mission#delegation (#869, D449): where delegation is on, an
+    // access-token exchange carrying none of Expansion's parameters is a
+    // delegated exchange (the redemption of a designation). Off, it is
+    // Expansion's, which refuses the missing parameters as today.
+    if (!EXPANSION_SELECTORS.some((p) => params[p] !== undefined) && capabilityEnabled(opts, "delegation")) {
+      await handleDelegatedExchange(opts, provider, ctx);
       return;
     }
     if (profileDisabled("expansion")) return;

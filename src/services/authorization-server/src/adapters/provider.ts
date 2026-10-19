@@ -585,6 +585,12 @@ export interface AdapterOptions {
    */
   introspectionPrincipals?: IntrospectionPrincipal[];
   /**
+   * @spec mission#designation (#869, D449): the clients a designation may
+   * name (config/delegation.json), the deployment's statement that no
+   * resource server accepts their identifiers as an audience.
+   */
+  designableClients?: readonly string[];
+  /**
    * @spec cross-org-delegation#projection-exchange — the destination Resource
    * AS configuration for accepting Cross-Organizational Delegation Chains.
    * Absent (the default) the chain subject_token_type is refused.
@@ -1650,6 +1656,27 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // The same resolution and gate the refresh pre-check runs
       // (missionGateTarget, missionGate), here in its authoritative mode.
       const target = missionGateTarget(grantId);
+      // @spec mission#designation, mission#delegation (#869, D449): a
+      // designation or a delegated token. Its exchange counted the derivation
+      // once, so this re-checks the Mission's state without counting, under
+      // whatever grant the token rides, and carries the claims its exchange
+      // recorded (`may_act`, or the accounted `act` chain).
+      const delegationClaims = delegationMints.get(token);
+      if (delegationClaims) {
+        if (!target) throw new errors.InvalidGrant("delegation mint whose grant resolves no Mission");
+        projectMissionBoundScope(_ctx, token as Parameters<typeof projectMissionBoundScope>[1]);
+        try {
+          const gated = kernel.gateActive(target.record.id);
+          const claim = gated.parent
+            ? childMissionClaim(kernel, gated)
+            : gated.predecessor
+              ? successorMissionClaim(kernel, gated)
+              : kernel.missionClaim(gated);
+          return { mission: claim, ...delegationClaims };
+        } catch (e) {
+          throw missionGateRefusal(e, target.record.id, _ctx);
+        }
+      }
       if (!target) return {};
       // @spec device-authorization#issuance (#1202): oidc-provider's
       // device_code grant mints from the device code, which holds no
@@ -1887,11 +1914,20 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // are subscribed so a future opaque/encrypted-format change stays covered.
   const recordTokenIssuance = (at: { jti?: string; grantId?: string; rar?: unknown }) => {
     if (!at.jti || !at.grantId) return;
+    // @spec mission#delegation-constraints (#869): the Mission the minting
+    // grant resolves to, so the delegation accounting is bound to it.
+    let missionId: string | undefined;
+    try {
+      missionId = missionGateTarget(at.grantId)?.record.id;
+    } catch {
+      missionId = undefined;
+    }
     opts.tokenIssuanceStore?.record({
       iss: opts.issuer,
       jti: at.jti,
       grantId: at.grantId,
       authorizationDetails: (Array.isArray(at.rar) ? at.rar : []) as AuthorityEntry[],
+      missionId,
     });
   };
   provider.on("access_token.issued", recordTokenIssuance);
@@ -2218,6 +2254,19 @@ const delegationHandles = new WeakSet<object>();
 /** Mark `token` (an unsaved AccessToken) as a delegation handle; see {@link delegationHandles}. */
 export function markDelegationHandle(token: object): void {
   delegationHandles.add(token);
+}
+
+/**
+ * @spec mission#designation, mission#delegation (#869, D449): the designations
+ * and delegated tokens the delegation exchanges mint, each with the claims its
+ * accounting dictates. The save-time gate re-checks the Mission's state for
+ * them without counting. Only AS code marks a token; nothing a client sends can.
+ */
+const delegationMints = new WeakMap<object, Record<string, unknown>>();
+
+/** Mark `token` (an unsaved AccessToken) as a delegation mint carrying `claims`; see {@link delegationMints}. */
+export function markDelegationMint(token: object, claims: Record<string, unknown>): void {
+  delegationMints.set(token, claims);
 }
 
 /**
@@ -2610,12 +2659,19 @@ async function handleChildJwtBearerGrant(
  * regardless of the underlying oidc-provider Grant's existence — an
  * `invalidate()` call never touches the Grant store) from an ordinary
  * approval-grant id (liveness is the oidc-provider Grant's own existence).
+ *
+ * A family is live only while BOTH hold (#1279 review): its row is live, and
+ * its oidc-provider Grant still exists. RFC 7009 revocation of the family's
+ * refresh token destroys that Grant but leaves the row, so the row alone
+ * would keep the family's tokens, and the delegations derived from them,
+ * active after revocation.
  */
-async function isGrantLive(opts: AdapterOptions, provider: Provider, grantId: string): Promise<boolean> {
+export async function isGrantLive(opts: AdapterOptions, provider: Provider, grantId: string): Promise<boolean> {
+  const grantExists = !!(await provider.Grant.find(grantId).catch(() => undefined));
   if (opts.familyStore?.wasEverFamily(grantId)) {
-    return opts.familyStore.resolve(grantId) !== undefined;
+    return opts.familyStore.resolve(grantId) !== undefined && grantExists;
   }
-  return !!(await provider.Grant.find(grantId).catch(() => undefined));
+  return grantExists;
 }
 
 /**
@@ -3823,6 +3879,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           return;
         }
         const { jti, sub, clientId, exp, iat, confirmation, act } = profile;
+        // @spec mission#composite-active, mission#designation (#869, D449): a
+        // designation authorizes no resource access, so it is inactive to
+        // every caller, with no Mission data, before its Mission is resolved.
+        if (opts.tokenIssuanceStore?.resolve(opts.issuer, jti)?.kind === "designation") {
+          ctx.body = inactive;
+          return;
+        }
         const credentialAuthority = payload.authorization_details as AuthorityEntry[];
 
         // Mission resolution: a token the AS cannot bind to a known Mission
