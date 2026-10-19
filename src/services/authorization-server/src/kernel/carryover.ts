@@ -49,7 +49,8 @@ import {
   justifyingIndex,
   MAX_CHILD_DEPTH,
 } from "./child-delegation.js";
-import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
+import { type ChildActorParent, childActorRefusal, inheritChildActorOrigins } from "./child-actor-eligibility.js";
+import type { DelegateCandidate } from "./delegate-matcher.js";
 import { entryDigest } from "./discharge.js";
 import { isSubsetSet } from "./derive.js";
 import { inheritOrigins } from "./eligibility-provenance.js";
@@ -896,15 +897,23 @@ function primaryOccupancy(
   return countChildBuckets(kernel, parent).get(primary) ?? 0;
 }
 
-/** The ordinary child fan-out, actor and depth gates, as a rendered reason or undefined. */
+/**
+ * The ordinary child fan-out, actor and depth gates, as a rendered reason or
+ * undefined. `parent` is the prospective parent with its approved entries and
+ * their retained child-actor origins (@spec child-delegation#fanout, #1304):
+ * the actor gate is creation's ({@link childActorRefusal}), so a `policy`
+ * origin asks the child-creation policy, at rendering and again at the
+ * completion commit.
+ */
 function fanoutReason(
   kernel: MissionKernel,
-  parentApproved: readonly AuthorityEntry[],
+  parent: ChildActorParent,
   parentOccupancy: Map<number, number>,
   childAuthority: readonly AuthorityEntry[],
   actor: { sub: string },
   depth: number,
 ): string | undefined {
+  const parentApproved = parent.approved;
   const justifying = childAuthority.map((ce) => justifyingIndex(ce, parentApproved as AuthorityEntry[]));
   if (justifying.some((i) => i < 0)) return "not_strict_subset";
   const drawnOn = [...new Set(justifying)];
@@ -916,10 +925,8 @@ function fanoutReason(
     sub: actor.sub,
     assertedProfile: kernel.actorProfile(actor.sub),
   };
-  for (const pi of drawnOn) {
-    if (!delegatePermitted(candidate, childrenOf(entryAt(pi))?.allowed_child_actors)) {
-      return "child_actor_not_allowed";
-    }
+  if (childActorRefusal(parent, drawnOn, candidate, depth, "carryover", kernel.childCreationPolicy())) {
+    return "child_actor_not_allowed";
   }
   if (depth > MAX_CHILD_DEPTH) return "fanout_exceeded";
   for (const pi of drawnOn) {
@@ -976,11 +983,12 @@ export function prepareCarryover(
   // submission proposes them. Committed as commitments, so a derivation-policy
   // or catalog drift between rendering and completion refuses rather than
   // silently carrying children under a set nobody approved.
+  // @spec child-delegation#fanout (#1304): with the child-actor origins the
+  // successor's own derivation records, index-aligned through the per-entry
+  // capability transforms, as the successor record will retain them.
+  const successorDerived = kernel.deriveWithProvenance(input.successorIntent, input.successorProposal);
   const successorAuthority = kernel.resolveFreshCapabilities(
-    inheritCapabilitySources(
-      kernel.derive(input.successorIntent, input.successorProposal),
-      predecessor.authority_set,
-    ),
+    inheritCapabilitySources(successorDerived.entries, predecessor.authority_set),
   );
 
   const planId = `cryp_${randomBytes(12).toString("base64url")}`;
@@ -997,7 +1005,18 @@ export function prepareCarryover(
   // deeper one, and NEVER the root successor for a deeper generation.
   const carried = new Map<string, { authority: AuthorityEntry[]; depth: number; expiresAt: string }>();
   const occupancy = new Map<string, Map<number, number>>();
-  const approvedSetOf = new Map<string, readonly AuthorityEntry[]>([[successorId, successorAuthority]]);
+  // Each prospective parent as the child-actor gate sees it: its approved set
+  // and that set's child-actor origins (@spec child-delegation#fanout, #1304).
+  const parentOf = new Map<string, ChildActorParent>([
+    [
+      successorId,
+      {
+        mission: { id: successorId, issuer, client_id: predecessor.client_id, subject: predecessor.subject },
+        approved: successorAuthority,
+        origins: successorDerived.childActorProvenance,
+      },
+    ],
+  ]);
   const effectiveSetOf = new Map<string, readonly AuthorityEntry[]>([[successorId, successorAuthority]]);
   const expiryOf = new Map<string, string>([[successorId, predecessor.expires_at]]);
   const nowIso = kernel.nowDate().toISOString();
@@ -1049,7 +1068,7 @@ export function prepareCarryover(
       continue;
     }
     const parentEffective = effectiveSetOf.get(newParentId) as readonly AuthorityEntry[];
-    const parentApproved = approvedSetOf.get(newParentId) as readonly AuthorityEntry[];
+    const prospectiveParent = parentOf.get(newParentId) as ChildActorParent;
     const candidateAuthority = replacementAuthority(oldChildEffective, parentEffective);
     if (!isSubsetSet(candidateAuthority, parentEffective as AuthorityEntry[])) {
       cascade("not_strict_subset");
@@ -1059,7 +1078,7 @@ export function prepareCarryover(
     if (!occupancy.has(newParentId)) occupancy.set(newParentId, new Map());
     const reason = fanoutReason(
       kernel,
-      parentApproved,
+      prospectiveParent,
       occupancy.get(newParentId) as Map<number, number>,
       candidateAuthority,
       { sub: child.client_id },
@@ -1102,7 +1121,18 @@ export function prepareCarryover(
       },
     });
     carried.set(replacementId, { authority: candidateAuthority, depth, expiresAt });
-    approvedSetOf.set(replacementId, candidateAuthority);
+    // The prospective replacement as a parent: its child-actor origins are
+    // the ones its record will retain, the old child's and those of every
+    // prospective-parent entry it falls within.
+    parentOf.set(replacementId, {
+      mission: { id: replacementId, issuer, client_id: child.client_id, subject: child.subject },
+      approved: candidateAuthority,
+      origins: inheritChildActorOrigins(
+        candidateAuthority,
+        kernel.effectiveEntriesWithRetainedChildActorOrigin(child).map((e) => e.origin),
+        prospectiveParent.approved.map((entry, i) => ({ entry, origin: prospectiveParent.origins[i] ?? null })),
+      ),
+    });
     effectiveSetOf.set(replacementId, candidateAuthority);
     expiryOf.set(replacementId, expiresAt);
   }
@@ -1464,6 +1494,13 @@ export function applyCarryoverInCallerTx(
       kernel.effectiveEntriesWithRetainedOrigin(oldChild).map((e) => e.origin),
       kernel.effectiveEntriesWithRetainedOrigin(newParent),
     );
+    // @spec child-delegation#fanout (#1304): the child-actor origins the same
+    // way, kept apart from the delegate origins.
+    const replacementChildActorProvenance = inheritChildActorOrigins(
+      authority,
+      kernel.effectiveEntriesWithRetainedChildActorOrigin(oldChild).map((e) => e.origin),
+      kernel.effectiveEntriesWithRetainedChildActorOrigin(newParent),
+    );
     // @spec child-delegation#carryover-evidence — the per-entry pairing,
     // computed here during re-derivation rather than inferred later.
     const pairs = carryoverEntryPairs(
@@ -1519,10 +1556,13 @@ export function applyCarryoverInCallerTx(
     // The ordinary fan-out, actor, depth and children-control gates, recounted
     // against the NEW parent's justifying entries in this same serialization
     // domain, so concurrently non-terminal occupants and every already-inserted
-    // carried generation count.
+    // carried generation count. The actor gate reads the new parent's retained
+    // child-actor origins and asks the child-creation policy afresh here, at
+    // the commit (@spec child-delegation#fanout, #1304): the decision rendered
+    // into the manifest is never what admits the replacement.
     const occupancy = countChildBuckets(kernel, newParent);
     const depth = (newParent.parent?.depth ?? 0) + 1;
-    const reason = fanoutReason(kernel, newParent.authority_set, occupancy, authority, proposal.actor, depth);
+    const reason = fanoutReason(kernel, kernel.childActorParent(newParent), occupancy, authority, proposal.actor, depth);
     if (reason) {
       throw new CarryoverError(
         "snapshot_moved",
@@ -1596,6 +1636,7 @@ export function applyCarryoverInCallerTx(
       intent: oldChild.intent,
       authority_set: authority,
       eligibility_provenance: replacementProvenance,
+      child_actor_provenance: replacementChildActorProvenance,
       intent_hash: oldChild.intent_hash,
       authority_hash: replacementAuthorityHash,
       subject: oldChild.subject,

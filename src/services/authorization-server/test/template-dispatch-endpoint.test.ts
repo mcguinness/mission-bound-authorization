@@ -53,23 +53,32 @@ const RESOURCE = CANONICAL_RESOURCE;
 const FAR_FUTURE = "2099-01-01T00:00:00Z";
 
 type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
+/** A client this file authenticates as with private_key_jwt (its `kid` is `<id>-auth`). */
+type Client = { id: string; key: CryptoKey };
+
+/** A second permitted Dispatcher, registered only for this file (#1325). */
+const SCHEDULER = "erp-scheduler";
 
 let as: BuiltAs;
 let asServer: Server;
 let clientKey: CryptoKey;
+let schedulerKey: CryptoKey;
 let dpopKeys: DpopKeys;
 let seq = 0;
 
-async function clientAssertion(): Promise<string> {
+const apAgent = (): Client => ({ id: "ap-agent", key: clientKey });
+const scheduler = (): Client => ({ id: SCHEDULER, key: schedulerKey });
+
+async function clientAssertion(client: Client = apAgent()): Promise<string> {
   return new SignJWT({})
-    .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
-    .setIssuer("ap-agent")
-    .setSubject("ap-agent")
+    .setProtectedHeader({ alg: "ES256", kid: `${client.id}-auth` })
+    .setIssuer(client.id)
+    .setSubject(client.id)
     .setAudience(ISSUER)
     .setIssuedAt()
     .setExpirationTime("2m")
     .setJti(crypto.randomUUID())
-    .sign(clientKey);
+    .sign(client.key);
 }
 
 async function dpopProof(htu: string, htm: string, extra: Record<string, unknown> = {}): Promise<string> {
@@ -94,6 +103,7 @@ async function rawProof(claims: Record<string, unknown>): Promise<string> {
 async function tokenRequest(
   params: Record<string, string>,
   makeProof?: (extra: Record<string, unknown>) => Promise<string>,
+  client?: Client,
 ): Promise<Response> {
   const htu = `${ISSUER}/token`;
   const proof = makeProof ?? ((extra: Record<string, unknown>) => dpopProof(htu, "POST", extra));
@@ -103,7 +113,7 @@ async function tokenRequest(
       headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
       body: new URLSearchParams({
         ...params,
-        client_assertion: await clientAssertion(),
+        client_assertion: await clientAssertion(client),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     });
@@ -168,6 +178,8 @@ async function dispatch(params: {
    *  standard authorization_details parameter of the dispatch grant. */
   authorizationDetails?: string;
   makeProof?: (extra: Record<string, unknown>) => Promise<string>;
+  /** The authenticated Dispatcher; ap-agent when omitted. */
+  client?: Client;
 }): Promise<Response> {
   return tokenRequest(
     {
@@ -178,6 +190,7 @@ async function dispatch(params: {
       ...(params.authorizationDetails ? { authorization_details: params.authorizationDetails } : {}),
     },
     params.makeProof,
+    params.client,
   );
 }
 
@@ -192,11 +205,34 @@ const heldPolicy = (id: string, rule: { select_agent?: string } = {}) => ({
 const replay = switchableDpopReplay();
 
 beforeAll(async () => {
+  const schedulerKeys = await generateKeyPair("ES256", { extractable: true });
+  schedulerKey = schedulerKeys.privateKey;
+  const schedulerJwk = {
+    ...(await exportJWK(schedulerKeys.publicKey)),
+    kid: `${SCHEDULER}-auth`,
+    alg: "ES256",
+    use: "sig",
+  };
   as = await buildAuthorizationServer({
     // @spec #1173 (D375): switchable to full for the cache-bound cases.
     dpopProofReplay: replay,
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
+    // @spec mission-template#dispatch (#1325): a second Dispatcher, so the
+    // recorded activation_actor can be told apart by authenticated client.
+    testClients: [
+      {
+        client_id: SCHEDULER,
+        client_name: "ERP scheduler (a second Dispatcher)",
+        grant_types: [MISSION_DISPATCH_GRANT_TYPE],
+        response_types: [],
+        redirect_uris: [],
+        token_endpoint_auth_method: "private_key_jwt",
+        token_endpoint_auth_signing_alg: "ES256",
+        jwks: { keys: [schedulerJwk] },
+        authorization_details_types: ["mission_resource_access"],
+      },
+    ],
     // @spec mission-template#the-mission-template, mission#standing-consent-bases
     // — deployment Dispatch Policies: each held snapshot (whose digest a
     // template commits) and, for multi-Agent templates, an Agent selection rule.
@@ -571,6 +607,27 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     expect(body.mission_denial_reason).toBe("review_overdue");
     expect(body.access_token).toBeUndefined();
   }, 15_000);
+});
+
+describe("activation_actor is the authenticated Dispatcher (@spec mission-template#dispatch, #1325)", () => {
+  it("records each instance's activation_actor as the Mission Issuer and the client_id its Dispatch authenticated, for two permitted Dispatchers, never the consenting human", async () => {
+    const created = await createTemplateAdmin({ ...readOnlyTemplateBody(), dispatchers: ["ap-agent", SCHEDULER] });
+    const createdBody = (await created.json()) as { template_id?: string };
+    expect(created.status, JSON.stringify(createdBody)).toBe(201);
+    for (const client of [apAgent(), scheduler()]) {
+      const res = await dispatch({
+        templateId: createdBody.template_id as string,
+        intent: readOnlyIntent(),
+        dispatchEventId: `evt-actor-${client.id}`,
+        client,
+      });
+      const body = (await res.json()) as { mission_id?: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      const basis = as.kernel.get(body.mission_id as string)?.approval_basis;
+      expect(basis?.activation_actor).toEqual({ iss: ISSUER, sub: client.id });
+      expect(basis?.activation_actor).not.toEqual(basis?.consent_principal);
+    }
+  });
 });
 
 describe("Dispatch idempotency at /token (@spec mission-template#dispatch, mission#intent-submission-evidence)", () => {

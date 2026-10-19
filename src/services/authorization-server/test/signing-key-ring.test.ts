@@ -27,6 +27,7 @@ import {
   loadSigningKeyRing,
   SIGNING_KEY_RING_FORMAT,
   SigningKeyRingError,
+  kernelStoreFromEnv,
   signingKeysFromEnv,
 } from "../src/index.js";
 
@@ -290,6 +291,21 @@ describe("the signing key ring file (@spec #831 slice 1)", () => {
     expect(() => signingKeysFromEnv({ MISSION_EPHEMERAL_KEYS: "true" })).toThrow(/choose the signing keys/);
     expect(() => signingKeysFromEnv({ MISSION_KEY_RING: "/r.json", MISSION_EPHEMERAL_KEYS: "1" })).toThrow(/not both/);
     expect(() => signingKeysFromEnv({ MISSION_KEY_RING: "var/keys/ring.json" })).toThrow(/must be an absolute path, not var\/keys\/ring\.json/);
+  });
+
+  it("a deployment keeps its kernel in a file only with a key ring: MISSION_KERNEL_STORE is an absolute path, and absent means in memory (#250)", () => {
+    const ring = { MISSION_KEY_RING: "/var/keys/ring.json" };
+    expect(kernelStoreFromEnv({})).toBeUndefined();
+    expect(kernelStoreFromEnv({ ...ring, MISSION_KERNEL_STORE: "" })).toBeUndefined();
+    expect(kernelStoreFromEnv({ ...ring, MISSION_KERNEL_STORE: "/var/state/kernel.db" })).toEqual({ file: "/var/state/kernel.db" });
+    expect(() => kernelStoreFromEnv({ ...ring, MISSION_KERNEL_STORE: "state/kernel.db" })).toThrow(
+      /^MISSION_KERNEL_STORE must be an absolute path, not state\/kernel\.db$/,
+    );
+    for (const keys of [{}, { MISSION_EPHEMERAL_KEYS: "1" }, { MISSION_KEY_RING: " " }]) {
+      expect(() => kernelStoreFromEnv({ ...keys, MISSION_KERNEL_STORE: "/var/state/kernel.db" }), JSON.stringify(keys)).toThrow(
+        /^MISSION_KERNEL_STORE requires MISSION_KEY_RING/,
+      );
+    }
   });
 });
 

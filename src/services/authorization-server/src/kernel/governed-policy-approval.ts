@@ -61,6 +61,7 @@ import {
   resolveFreshCapabilitySources,
 } from "./capability-binding.js";
 import { deriveAuthoritySetWithProvenance, isSubsetSet } from "./derive.js";
+import { inheritChildActorOrigins } from "./child-actor-eligibility.js";
 import { inheritOrigins, type RetainedOrigin } from "./eligibility-provenance.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
@@ -950,6 +951,11 @@ interface PreparedActivation {
    * eligibility origin from both derivations, index-aligned with `bounded`.
    */
   boundedProvenance: RetainedOrigin[];
+  /**
+   * @spec child-delegation#fanout (#1304): each bounded entry's child-actor
+   * origin from both derivations, kept apart, index-aligned with `bounded`.
+   */
+  boundedChildActorProvenance: RetainedOrigin[];
   intentHash: string;
   boundedHash: string;
 }
@@ -1009,12 +1015,18 @@ function prepareGovernedActivation(
   // @spec resource-access#delegate-eligibility: the root-ceiling derivation
   // keeps the policy derivation's origins and adds the root ceiling's.
   let boundedProvenance: RetainedOrigin[];
+  let boundedChildActorProvenance: RetainedOrigin[];
   try {
-    ({ entries: bounded, provenance: boundedProvenance } = deriveAuthoritySetWithProvenance(
+    ({
+      entries: bounded,
+      provenance: boundedProvenance,
+      childActorProvenance: boundedChildActorProvenance,
+    } = deriveAuthoritySetWithProvenance(
       input.intent,
       { policy_version: consent.root.version, ceiling: root.authority_ceiling },
       derived,
       first.provenance,
+      first.childActorProvenance,
     ));
   } catch (e) {
     if (e instanceof IntentError) {
@@ -1036,6 +1048,7 @@ function prepareGovernedActivation(
     ...(proposal ? { proposal } : {}),
     bounded,
     boundedProvenance,
+    boundedChildActorProvenance,
     intentHash: intentHash(issuer, input.intent as never),
     boundedHash: authorityHash(issuer, bounded as never),
   };
@@ -1123,6 +1136,12 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
     final.map((): RetainedOrigin => "list"),
     bounded.map((entry, i) => ({ entry, origin: prepared.boundedProvenance[i] ?? null })),
   );
+  // @spec child-delegation#fanout (#1304): the child-actor origins the same way.
+  const finalChildActorProvenance = inheritChildActorOrigins(
+    final,
+    final.map((): RetainedOrigin => "list"),
+    bounded.map((entry, i) => ({ entry, origin: prepared.boundedChildActorProvenance[i] ?? null })),
+  );
   const expiresAt = kernel.resolveEffectiveExpiry({
     requested: input.intent.expires_at,
     createdAt,
@@ -1181,6 +1200,7 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
     ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: final,
     eligibility_provenance: finalProvenance,
+    child_actor_provenance: finalChildActorProvenance,
     intent_hash: iHash,
     ...(proposal ? { proposal_hash: proposalHash(issuer, proposal as never) } : {}),
     authority_hash: aHash,

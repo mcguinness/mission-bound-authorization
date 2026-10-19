@@ -335,6 +335,14 @@ export async function composeStack(opts: {
    */
   signingKeys?: SigningKeySource;
   /**
+   * @spec #250: the kernel's file, kept across restarts (the AS's OPT-IN
+   * single-writer store). Absent: the kernel is in memory. `pnpm as-native`
+   * sets it from `MISSION_KERNEL_STORE` (`kernelStoreFromEnv`), which requires
+   * a key ring. The composition creates the file's directory; whoever
+   * composed the stack closes the kernel (`DemoStack.kernel.close()`).
+   */
+  kernelStore?: { file: string };
+  /**
    * @spec runtime#boundary-identifier-change (#853 review): the Enforcement
    * Scope Statement this stack runs under, validated by `loadRuntimePosture`.
    * Absent: the published one (`config/enforcement-scope.json`). One value
@@ -482,6 +490,7 @@ export async function composeStack(opts: {
         : AS_NATIVE_CAPABILITIES
       : undefined;
     const lifecycleConsole = await newLifecycleConsole();
+    if (opts.kernelStore) mkdirSync(dirname(opts.kernelStore.file), { recursive: true });
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
@@ -495,6 +504,7 @@ export async function composeStack(opts: {
       },
       ...(capabilities ? { capabilities } : {}),
       ...(opts.signingKeys ? { signingKeys: opts.signingKeys } : {}),
+      ...(opts.kernelStore ? { kernelStore: opts.kernelStore } : {}),
       ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
       // @spec authority-server#mission-join (#557) — the demo's MAS-governed
       // route acts under an ORDINARY OAuth credential, and no other path in
@@ -556,6 +566,8 @@ export async function composeStack(opts: {
     const asServer = as.provider.listen(asPort);
     // A port already in use refuses startup here, with the discovery
     // listener released, rather than surfacing as an unhandled error event.
+    // @spec #250: a kernel kept in a file is released too; the caller never
+    // receives the stack that would close it.
     try {
       await new Promise<void>((resolve, reject) => {
         asServer.once("listening", () => resolve());
@@ -563,6 +575,7 @@ export async function composeStack(opts: {
       });
     } catch (err) {
       await metadataServer.close();
+      if (opts.kernelStore) as.kernel.close();
       throw err;
     }
     kernel = as.kernel;
@@ -1190,13 +1203,15 @@ export async function composeStack(opts: {
   if (asNative) {
     const audience = new URL(CANONICAL_RESOURCE);
     // A failed startup releases what it already opened: the AS and discovery
-    // listeners, the decision channel and both single-writer store files.
+    // listeners, the decision channel, both single-writer store files and,
+    // last, a kernel kept in a file (#250).
     const release = async (): Promise<void> => {
       await reconciler.stop();
       await authServer?.closeAuthServer();
       await decisionChannel.close();
       pdpClaims.close();
       writeReservations.close();
+      if (opts.kernelStore) kernel.close();
     };
     try {
       resourceChannel = await createHttpMcpChannel(server, { host: audience.hostname, port: Number(audience.port) });

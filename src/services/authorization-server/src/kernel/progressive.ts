@@ -42,6 +42,7 @@ import {
 } from "./activation-policy.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { entryDigest } from "./discharge.js";
+import { childActorCeilingOrigin, inheritChildActorOrigins } from "./child-actor-eligibility.js";
 import { ceilingOrigin, inheritOrigins } from "./eligibility-provenance.js";
 import { IntentError, validateAuthorityProposal } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
@@ -470,6 +471,14 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     derived.provenance,
     predecessor.authority_ceiling.map((entry) => ({ entry, origin: ceilingOrigin(entry) })),
   );
+  // @spec child-delegation#fanout (#1304): the child-actor origins the same
+  // way, kept apart (a consented ceiling `children` grant without
+  // `allowed_child_actors` defers to the child-creation policy).
+  const childActorProvenance = inheritChildActorOrigins(
+    authoritySet,
+    derived.childActorProvenance,
+    predecessor.authority_ceiling.map((entry) => ({ entry, origin: childActorCeilingOrigin(entry) })),
+  );
   // @spec expansion#successor-source: the predecessor's Subject and source,
   // checked against the committed root's declaration current at this commit.
   const root = kernel.committedSourceBinding(predecessor.id);
@@ -516,6 +525,7 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: authoritySet,
     eligibility_provenance: provenance,
+    child_actor_provenance: childActorProvenance,
     intent_hash: intentHash(predecessor.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(predecessor.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
