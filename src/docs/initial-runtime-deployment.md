@@ -276,7 +276,7 @@ the stack's issuer ([fga-hygiene.md](fga-hygiene.md)). Its owner is the
 deployment's OpenFGA administrator, who changes it with `pnpm resource-policy`
 (`FgaDomainAdmin`, attached to the configured store, never creating one):
 `pnpm resource-policy administers the stored entitlements (@spec runtime#input-resource-policy, #828) > attaches to the configured store and model and never bootstraps one; without both ids it refuses before connecting`.
-The Operation Profile (`payments-runtime-profile-v7`) declares its owner,
+The Operation Profile (`payments-runtime-profile-v8`) declares its owner,
 principals (subject and client), relations, tenant, freshness (current as of the decision, separate from
 Mission-state freshness) and failure behavior; the Enforcement Scope
 Statement's baseline has no Resource-policy member, and the runtime profile
@@ -307,10 +307,19 @@ refuse, and restoring each permits:
 [FGA] `independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828) > the client and the tenant are policy dimensions (D429): another client, a revoked client entitlement, and the same subject outside the vendor's tenant each deny resource_policy; restoring each permits`,
 [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read is refused resource_policy with no effect once the administrator revokes only its client's entitlement on acme, the subject's unchanged, and permitted once it is restored (co-resident) (D429)` and
 [FGA] `the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828) > an AS-issued DPoP-bound read is refused resource_policy with no effect once the administrator revokes only its client's entitlement on acme, the subject's unchanged, and permitted once it is restored (remote) (D429)`.
-Disclosed, not acceptance gaps (#828 closed, D436): the live witnesses run
-only in CI; a vendor the store does not hold keeps `lookup_vendor`'s server
-target (D324), which a vendor constraint or the policy refuses (#1251
-proposes refusing it before any decision).
+A target that does not exist is never attributed to the policy: a
+`lookup_vendor` naming a vendor the store does not hold is refused
+`unknown_vendor` before any decision request or policy query, with a signed
+`target_unresolvable` Refusal Record and no result, whether or not the
+credential and the Mission name that vendor, while a stored vendor reaches
+the PDP and the policy as `vendor:<id>` (#1251, D484):
+`lookup_vendor refuses a vendor the store does not hold before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484) > a vendor the store does not hold is refused unknown_vendor: no PDP request, no policy query, no Decision Evidence, no result and a verifiable signed target_unresolvable refusal, the same over both channels`,
+`lookup_vendor refuses a vendor the store does not hold before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484) > a Mission and a credential that name the vendor do not bypass the refusal, the same over both channels`,
+`lookup_vendor refuses a vendor the store does not hold before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484) > a stored vendor under the same Missions and credentials reaches the PDP and the policy as vendor:<id>, which still decide it, the same over both channels` and, over the resource's HTTP endpoint with DPoP,
+`lookup_vendor refuses a vendor the store does not hold at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484) > refuses a vendor the store does not hold unknown_vendor over HTTP with DPoP: no PDP request, no policy query, no Decision Evidence, no result and a verifiable signed target_unresolvable refusal; a stored vendor on the same session reaches the PDP and the policy as vendor:<id> and permits` and
+`lookup_vendor refuses a vendor the store does not hold at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484) > a Mission and a presented credential that name the vendor do not bypass the refusal over HTTP with DPoP, and a stored vendor they name permits`.
+Disclosed, not an acceptance gap (#828 closed, D436): the live witnesses run
+only in CI.
 
 Deployment-administered gates that do exist: the action-bound approval for
 `payments:remittance.send` (§3), the action-to-relation map (`out_of_authority`,

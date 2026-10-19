@@ -1,12 +1,19 @@
-# payments-runtime-profile-v7
+# payments-runtime-profile-v8
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v7`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v8`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v8** (#1251, D484): a `lookup_vendor` naming a vendor the store does
+  not hold is refused `unknown_vendor` (`target_unresolvable`) before any
+  decision request or Resource-policy query, as an unknown invoice is.
+  It no longer targets the server resource, so a vendor constraint or
+  Resource policy never refuses a target that does not exist. A stored
+  vendor's decision bytes are unchanged from v7.
 
 - **v7** (#1266, D457): the resource enforces the Mission Resource Access
   Common Constraints listed under "Constraint enforcement: Common
@@ -258,12 +265,13 @@ change between decision and commit is a mismatch.
 Every target is resolved from the payments store, never taken from an
 argument (#828). An invoice-scoped tool targets the invoice; an invoice the
 store does not hold is refused `unknown_invoice` before any decision
-request. `lookup_vendor` targets the vendor the store resolves (D324); a
-vendor the store does not hold names the server resource and no vendor, so
-a vendor constraint on the credential or the Mission refuses it, and
-otherwise Resource policy, which administers no server resource, refuses it
-`resource_policy`. `list_invoices` targets the vendors of its list form,
-below.
+request. `lookup_vendor` targets the vendor the store resolves (D324), and
+the credential bound, the Mission and Resource policy each evaluate that
+vendor. A vendor the store does not hold is refused `unknown_vendor`
+(`target_unresolvable`) after intake and before the credential bound, any
+decision request or any Resource-policy query, with no effect, whatever
+vendors the credential or the Mission names (D484). `list_invoices`
+targets the vendors of its list form, below.
 
 ## List form
 
