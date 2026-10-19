@@ -246,9 +246,14 @@ cross-issuer services, quotas or replication authority.
 ## Restart inventory
 
 What a process restart keeps, for the AS's state and the state it depends on.
-"File-backed" means the kernel opened with `kernelStore: { file }`; no shipped
-launcher sets it (`server.ts`, `pnpm as-native` and `pnpm issuance-only` run the
-kernel in memory), so on every shipped launcher the kernel rows are lost too.
+"File-backed" means the kernel opened with `kernelStore: { file }`. The shipped
+launchers (`server.ts`, `pnpm as-native` and `pnpm issuance-only`) run the
+kernel in memory unless `MISSION_KERNEL_STORE=<absolute path>` names its file,
+which requires a key ring (`MISSION_KEY_RING`), so that what the kept kernel
+issued or signed still verifies after a restart. That is restart recovery for
+one process on one host: the file takes no lock, so a second process on the same
+file is not refused, and a restore from an older backup is not detected, which
+remain #250's restore and fencing step.
 
 | State | Where it lives | Across a restart |
 |---|---|---|

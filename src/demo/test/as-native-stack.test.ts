@@ -1271,6 +1271,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
           "  AS capabilities    issuance profile + lifecycle-revoke, transaction-authorization",
           "  dev ordinary token not served",
           "  signing keys       ephemeral (new at every restart)",
+          "  kernel store       in memory (lost at restart)",
           `  resource audience  ${CANONICAL_RESOURCE}  (HTTP MCP, DPoP verified on every request)`,
           "  MAS join route     not mounted",
         ]),
@@ -1310,6 +1311,53 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     expect(fgaBootstrap).not.toHaveBeenCalled();
   });
 
+  it("keeps the kernel in the file MISSION_KERNEL_STORE names, with a key ring: a Mission issued before a restart is the same record after it (#250)", async () => {
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    const dir = mkdtempSync(join(tmpdir(), "as-native-kernel-"));
+    const ring = join(dir, "keys", "ring.json");
+    await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
+    const kernelFile = join(dir, "state", "kernel.db");
+    const env = { MISSION_KEY_RING: ring, MISSION_KERNEL_STORE: kernelFile };
+    const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
+
+    const first = await launchAsNative(launchOptions(env, files));
+    let missionId: string;
+    let version: number;
+    try {
+      expect(first.summary).toContain(`  kernel store       ${kernelFile} (kept across restarts)`);
+      const as = first.stack.authServer;
+      if (!as) throw new Error("the as-native target runs the AS");
+      logInAgain(first.stack.approverLogin);
+      const issued = await issueMissionToken(
+        as.asUrl,
+        as.agentClientJwk,
+        {
+          missionIntent: JSON.stringify({
+            intent: { goal: "Read the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+          }),
+          authorizationDetails: JSON.stringify([
+            { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
+          ]),
+        },
+        as.approverConsole,
+      );
+      missionId = (decodeJwt(issued.accessToken).mission as { id: string }).id;
+      version = first.stack.kernel.get(missionId)?.version as number;
+      expect(version).toBeGreaterThanOrEqual(1);
+    } finally {
+      await first.close();
+    }
+    // The launcher released the kernel's file on close.
+    expect(() => first.stack.kernel.get(missionId)).toThrow();
+
+    const second = await launchAsNative(launchOptions(env, files));
+    try {
+      expect(second.stack.kernel.get(missionId)).toMatchObject({ id: missionId, state: "active", version });
+    } finally {
+      await second.close();
+    }
+  });
+
   it("refuses an unusable configuration by name, before anything connects", () => {
     const cases: [Record<string, string>, RegExp][] = [
       [{ OPENFGA_HTTP_URL: "not a url" }, /^OPENFGA_HTTP_URL is not a URL: not a url$/],
@@ -1322,6 +1370,9 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       [{}, /choose the signing keys: MISSION_KEY_RING=<path>/],
       [{ MISSION_KEY_RING: "var/keys/ring.json" }, /MISSION_KEY_RING must be an absolute path, not var\/keys\/ring\.json/],
       [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_EPHEMERAL_KEYS: "1" }, /MISSION_KEY_RING or MISSION_EPHEMERAL_KEYS=1, not both/],
+      // @spec #250: a kernel kept across restarts needs keys kept across them.
+      [{ MISSION_EPHEMERAL_KEYS: "1", MISSION_KERNEL_STORE: "/var/state/kernel.db" }, /^MISSION_KERNEL_STORE requires MISSION_KEY_RING/],
+      [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KERNEL_STORE: "state/kernel.db" }, /^MISSION_KERNEL_STORE must be an absolute path, not state\/kernel\.db$/],
     ];
     for (const [env, message] of cases) expect(() => asNativeLaunchOptions(env), JSON.stringify(env)).toThrow(message);
   });

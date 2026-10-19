@@ -328,6 +328,14 @@ export async function composeStack(opts: {
    */
   signingKeys?: SigningKeySource;
   /**
+   * @spec #250: the kernel's file, kept across restarts (the AS's OPT-IN
+   * single-writer store). Absent: the kernel is in memory. `pnpm as-native`
+   * sets it from `MISSION_KERNEL_STORE` (`kernelStoreFromEnv`), which requires
+   * a key ring. The composition creates the file's directory; whoever
+   * composed the stack closes the kernel (`DemoStack.kernel.close()`).
+   */
+  kernelStore?: { file: string };
+  /**
    * TEST FIXTURE ONLY (D332); `pnpm as-native` never sets it. Under the
    * `as-native` target, also enable `dev-token` and dev ordinary issuance, so
    * a negative test can mint the ordinary credential a baseline Join would
@@ -465,6 +473,7 @@ export async function composeStack(opts: {
         : AS_NATIVE_CAPABILITIES
       : undefined;
     const lifecycleConsole = await newLifecycleConsole();
+    if (opts.kernelStore) mkdirSync(dirname(opts.kernelStore.file), { recursive: true });
     const as = await buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
@@ -478,6 +487,7 @@ export async function composeStack(opts: {
       },
       ...(capabilities ? { capabilities } : {}),
       ...(opts.signingKeys ? { signingKeys: opts.signingKeys } : {}),
+      ...(opts.kernelStore ? { kernelStore: opts.kernelStore } : {}),
       ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
       // @spec authority-server#mission-join (#557) — the demo's MAS-governed
       // route acts under an ORDINARY OAuth credential, and no other path in
